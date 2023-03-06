@@ -126,7 +126,7 @@ describe('sfc props transform', () => {
       <script setup lang="ts">
       const { foo = 1, bar = 2, 'foo:bar': fooBar = 'foo-bar' } = defineProps<{ 
           "foo": number // double-quoted string
-          "bar": number // single-quoted string
+          'bar': number // single-quoted string
           'foo:bar': string // single-quoted string containing symbols
           "onUpdate:modelValue": (val: number)=>void } // double-quoted string containing symbols
           >()

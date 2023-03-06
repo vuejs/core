@@ -834,7 +834,7 @@ export function compileScript(
         }
 
         const { type, required } = props[key]
-        const finalKey = getFinalPropsKey(key)
+        const finalKey = getEscapedKey(key)
         if (!isProd) {
           return `${finalKey}: { type: ${toRuntimeTypeString(
             type
@@ -1628,7 +1628,7 @@ export function compileScript(
       const defaults: string[] = []
       for (const key in propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(key)
-        if (d) defaults.push(`${getFinalPropsKey(key)}: ${d}`)
+        if (d) defaults.push(`${getEscapedKey(key)}: ${d}`)
       }
       if (defaults.length) {
         declCode = `${helper(
@@ -2364,6 +2364,7 @@ export function resolveObjectKey(node: Node, computed: boolean) {
  * key may contain symbols such
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
+export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 function getEscapedKey(key: string) {
-  return /^[a-z0-9]+$/i.test(key) ? key : `"${key}"`
+  return escapeSymbolsRE.test(key) ? `"${key}"` : key
 }
