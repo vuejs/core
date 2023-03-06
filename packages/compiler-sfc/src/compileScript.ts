@@ -2366,5 +2366,5 @@ export function resolveObjectKey(node: Node, computed: boolean) {
  */
 export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 function getEscapedKey(key: string) {
-  return escapeSymbolsRE.test(key) ? `"${key}"` : key
+  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
 }
