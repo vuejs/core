@@ -83,10 +83,15 @@ export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
   hydrate: RootHydrateFunction
 }
 
+/**
+ * `boolean` is kept for backwards compatibility with the old `isSVG` attribute.
+ */
+export type ElementNamespace = boolean | 'svg' | 'mathml' | undefined
+
 export type RootRenderFunction<HostElement = RendererElement> = (
   vnode: VNode | null,
   container: HostElement,
-  namespace?: 'svg' | 'mathml'
+  namespace?: ElementNamespace
 ) => void
 
 export interface RendererOptions<
@@ -98,7 +103,7 @@ export interface RendererOptions<
     key: string,
     prevValue: any,
     nextValue: any,
-    namespace?: 'svg' | 'mathml',
+    namespace?: ElementNamespace,
     prevChildren?: VNode<HostNode, HostElement>[],
     parentComponent?: ComponentInternalInstance | null,
     parentSuspense?: SuspenseBoundary | null,
@@ -108,7 +113,7 @@ export interface RendererOptions<
   remove(el: HostNode): void
   createElement(
     type: string,
-    namespace?: 'svg' | 'mathml',
+    namespace?: ElementNamespace,
     isCustomizedBuiltIn?: string,
     vnodeProps?: (VNodeProps & { [key: string]: any }) | null
   ): HostElement
@@ -125,7 +130,7 @@ export interface RendererOptions<
     content: string,
     parent: HostElement,
     anchor: HostNode | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     start?: HostNode | null,
     end?: HostNode | null
   ): [HostNode, HostNode]
@@ -170,7 +175,7 @@ type PatchFn = (
   anchor?: RendererNode | null,
   parentComponent?: ComponentInternalInstance | null,
   parentSuspense?: SuspenseBoundary | null,
-  namespace?: 'svg' | 'mathml',
+  namespace?: ElementNamespace,
   slotScopeIds?: string[] | null,
   optimized?: boolean
 ) => void
@@ -181,7 +186,7 @@ type MountChildrenFn = (
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean,
   start?: number
@@ -194,7 +199,7 @@ type PatchChildrenFn = (
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean
 ) => void
@@ -205,7 +210,7 @@ type PatchBlockChildrenFn = (
   fallbackContainer: RendererElement,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null
 ) => void
 
@@ -244,7 +249,7 @@ export type MountComponentFn = (
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   optimized: boolean
 ) => void
 
@@ -261,7 +266,7 @@ export type SetupRenderEffectFn = (
   container: RendererElement,
   anchor: RendererNode | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   optimized: boolean
 ) => void
 
@@ -509,7 +514,7 @@ function baseCreateRenderer(
     n2: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
-    namespace?: 'svg' | 'mathml'
+    namespace: ElementNamespace
   ) => {
     // static nodes are only present when used with compiler-dom/runtime-dom
     // which guarantees presence of hostInsertStaticContent.
@@ -530,7 +535,7 @@ function baseCreateRenderer(
     n1: VNode,
     n2: VNode,
     container: RendererElement,
-    namespace?: 'svg' | 'mathml'
+    namespace: ElementNamespace
   ) => {
     // static nodes are only patched during dev for HMR
     if (n2.children !== n1.children) {
@@ -581,7 +586,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -624,7 +629,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -697,7 +702,7 @@ function baseCreateRenderer(
        * affect non-DOM renderers)
        */
       if ('value' in props) {
-        hostPatchProp(el, 'value', null, props.value)
+        hostPatchProp(el, 'value', null, props.value, namespace)
       }
       if ((vnodeHook = props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHook, parentComponent, vnode)
@@ -781,7 +786,7 @@ function baseCreateRenderer(
     anchor,
     parentComponent,
     parentSuspense,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds,
     optimized,
     start = 0
@@ -809,7 +814,7 @@ function baseCreateRenderer(
     n2: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -974,7 +979,7 @@ function baseCreateRenderer(
     fallbackContainer,
     parentComponent,
     parentSuspense,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds
   ) => {
     for (let i = 0; i < newChildren.length; i++) {
@@ -1018,7 +1023,7 @@ function baseCreateRenderer(
     newProps: Data,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined
+    namespace: ElementNamespace
   ) => {
     if (oldProps !== newProps) {
       if (oldProps !== EMPTY_OBJ) {
@@ -1059,7 +1064,7 @@ function baseCreateRenderer(
         }
       }
       if ('value' in newProps) {
-        hostPatchProp(el, 'value', oldProps.value, newProps.value)
+        hostPatchProp(el, 'value', oldProps.value, newProps.value, namespace)
       }
     }
   }
@@ -1071,7 +1076,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -1174,7 +1179,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -1210,7 +1215,7 @@ function baseCreateRenderer(
     anchor,
     parentComponent,
     parentSuspense,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     optimized
   ) => {
     // 2.x compat may pre-create the component instance before actually
@@ -1321,7 +1326,7 @@ function baseCreateRenderer(
     container,
     anchor,
     parentSuspense,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     optimized
   ) => {
     const componentUpdateFn = () => {
@@ -1624,7 +1629,7 @@ function baseCreateRenderer(
     anchor,
     parentComponent,
     parentSuspense,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds,
     optimized = false
   ) => {
@@ -1726,7 +1731,7 @@ function baseCreateRenderer(
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
@@ -1786,7 +1791,7 @@ function baseCreateRenderer(
     parentAnchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {

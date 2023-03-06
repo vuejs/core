@@ -16,7 +16,7 @@ import {
   ComponentPublicInstance
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
+import { ElementNamespace, RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
@@ -47,7 +47,7 @@ export interface App<HostElement = any> {
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    namespace?: 'svg' | 'mathml'
+    namespace?: ElementNamespace
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this

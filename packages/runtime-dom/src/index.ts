@@ -10,7 +10,8 @@ import {
   RootHydrateFunction,
   isRuntimeOnly,
   DeprecationTypes,
-  compatUtils
+  compatUtils,
+  ElementNamespace
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -100,7 +101,7 @@ export const createApp = ((...args) => {
 
     // clear content before mounting
     container.innerHTML = ''
-    let namespace: 'svg' | 'mathml' | undefined
+    let namespace: ElementNamespace
     if (container instanceof SVGElement) namespace = 'svg'
     else if (container instanceof MathMLElement) namespace = 'mathml'
     const proxy = mount(container, false, namespace)
@@ -126,7 +127,7 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      let namespace: 'svg' | 'mathml' | undefined
+      let namespace: ElementNamespace
       if (container instanceof SVGElement) namespace = 'svg'
       else if (container instanceof MathMLElement) namespace = 'mathml'
       return mount(container, true, namespace)

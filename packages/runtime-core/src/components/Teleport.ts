@@ -6,7 +6,8 @@ import {
   RendererElement,
   RendererNode,
   RendererOptions,
-  traverseStaticChildren
+  traverseStaticChildren,
+  ElementNamespace
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
@@ -75,7 +76,7 @@ export const TeleportImpl = {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals
@@ -112,7 +113,7 @@ export const TeleportImpl = {
       if (target) {
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        if (namespace === 'svg' || isTargetSVG(target)) {
+        if (namespace === true || namespace === 'svg' || isTargetSVG(target)) {
           namespace = 'svg'
         }
         if (namespace === 'mathml' || isTargetMathML(target)) {
@@ -154,7 +155,7 @@ export const TeleportImpl = {
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
-      if (namespace === 'svg' || isTargetSVG(target)) {
+      if (namespace === true || namespace === 'svg' || isTargetSVG(target)) {
         namespace = 'svg'
       }
       if (namespace === 'mathml' || isTargetMathML(target)) {

@@ -4,7 +4,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
-import { RendererOptions } from '@vue/runtime-core'
+import { RendererOptions, ElementNamespace } from '@vue/runtime-core'
 
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
@@ -20,7 +20,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   key,
   prevValue,
   nextValue,
-  namespace = undefined,
+  namespace,
   prevChildren,
   parentComponent,
   parentSuspense,
@@ -69,9 +69,9 @@ function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
-  namespace?: 'svg' | 'mathml'
+  namespace?: ElementNamespace
 ) {
-  if (namespace === 'svg') {
+  if (namespace === 'svg' || namespace === true) {
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent
     if (key === 'innerHTML' || key === 'textContent') {

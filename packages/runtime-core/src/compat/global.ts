@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
-import { RootRenderFunction } from '../renderer'
+import { ElementNamespace, RootRenderFunction } from '../renderer'
 import {
   App,
   AppConfig,
@@ -503,7 +503,7 @@ function installCompatMount(
         container = selectorOrEl || document.createElement('div')
       }
 
-      let namespace: 'svg' | 'mathml' | undefined
+      let namespace: ElementNamespace
       if (container instanceof SVGElement) namespace = 'svg'
       else if (container instanceof MathMLElement) namespace = 'mathml'
 

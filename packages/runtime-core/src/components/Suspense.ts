@@ -18,7 +18,8 @@ import {
   MoveType,
   SetupRenderEffectFn,
   RendererNode,
-  RendererElement
+  RendererElement,
+  ElementNamespace
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
@@ -63,7 +64,7 @@ export const SuspenseImpl = {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean,
     // platform-specific impl passed from renderer
@@ -130,7 +131,7 @@ function mountSuspense(
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals
@@ -195,7 +196,7 @@ function patchSuspense(
   container: RendererElement,
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean,
   { p: patch, um: unmount, o: { createElement } }: RendererInternals
@@ -376,7 +377,7 @@ export interface SuspenseBoundary {
   vnode: VNode<RendererNode, RendererElement, SuspenseProps>
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
-  namespace: 'svg' | 'mathml' | undefined
+  namespace: ElementNamespace
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
@@ -413,7 +414,7 @@ function createSuspenseBoundary(
   container: RendererElement,
   hiddenContainer: RendererElement,
   anchor: RendererNode | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,
@@ -721,7 +722,7 @@ function hydrateSuspense(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
-  namespace: 'svg' | 'mathml' | undefined,
+  namespace: ElementNamespace,
   slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,

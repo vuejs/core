@@ -37,7 +37,8 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode
+  RendererNode,
+  ElementNamespace
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
@@ -64,7 +65,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
     vnode: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
-    namespace: 'svg' | 'mathml' | undefined,
+    namespace: ElementNamespace,
     optimized: boolean
   ) => void
   deactivate: (vnode: VNode) => void

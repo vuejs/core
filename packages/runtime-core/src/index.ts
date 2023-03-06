@@ -260,7 +260,8 @@ export type {
   RendererElement,
   HydrationRenderer,
   RendererOptions,
-  RootRenderFunction
+  RootRenderFunction,
+  ElementNamespace
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
 export type { Slot, Slots, SlotsType } from './componentSlots'
