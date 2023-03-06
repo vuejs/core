@@ -585,11 +585,13 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    if (n2.type === 'svg') {
-      namespace = 'svg'
-    }
-    if ((n2.type as string) === 'math') {
-      namespace = 'mathml'
+    switch (n2.type) {
+      case 'svg':
+        namespace = 'svg'
+        break
+      case 'math':
+        namespace = 'mathml'
+        break
     }
 
     if (n1 == null) {
