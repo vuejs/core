@@ -259,8 +259,9 @@ function parseChildren(
       const node = nodes[i]
       if (node.type === NodeTypes.TEXT) {
         if (!context.inPre) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
-            if (nodes.length === 1 && !shouldCondense) continue // #7789
+          const isAllWhitespacesText =
+            nodes.length === 1 && /^ +$/.test(node.content) // #7789
+          if (!/[^\t\r\n\f ]/.test(node.content) && !isAllWhitespacesText) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // Remove if:
