@@ -317,7 +317,7 @@ export function createAppAPI<HostElement>(
             namespace = 'svg'
           }
 
-          if (namespace === false) {
+          else if (namespace === false) {
             namespace = undefined
           }
 

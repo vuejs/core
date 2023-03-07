@@ -116,7 +116,7 @@ export const TeleportImpl = {
         if (namespace === 'svg' || isTargetSVG(target)) {
           namespace = 'svg'
         }
-        if (namespace === 'mathml' || isTargetMathML(target)) {
+        else if (namespace === 'mathml' || isTargetMathML(target)) {
           namespace = 'mathml'
         }
       } else if (__DEV__ && !disabled) {
@@ -158,7 +158,7 @@ export const TeleportImpl = {
       if (namespace === 'svg' || isTargetSVG(target)) {
         namespace = 'svg'
       }
-      if (namespace === 'mathml' || isTargetMathML(target)) {
+      else if (namespace === 'mathml' || isTargetMathML(target)) {
         namespace = 'mathml'
       }
 
