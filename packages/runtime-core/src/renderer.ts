@@ -86,7 +86,7 @@ export interface HydrationRenderer extends Renderer<Element | ShadowRoot> {
 /**
  * `boolean` is kept for backwards compatibility with the old `isSVG` attribute.
  */
-export type ElementNamespace = boolean | 'svg' | 'mathml' | undefined
+export type ElementNamespace = 'svg' | 'mathml' | undefined
 
 export type RootRenderFunction<HostElement = RendererElement> = (
   vnode: VNode | null,

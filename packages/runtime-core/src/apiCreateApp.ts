@@ -47,7 +47,7 @@ export interface App<HostElement = any> {
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    namespace?: ElementNamespace
+    namespace?: boolean | ElementNamespace
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -297,7 +297,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        namespace?: 'svg' | 'mathml'
+        namespace?: boolean | ElementNamespace
       ): any {
         if (!isMounted) {
           // #5571
@@ -313,10 +313,24 @@ export function createAppAPI<HostElement>(
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
 
+          if (namespace === true) {
+            namespace = 'svg'
+          }
+
+          if (namespace === false) {
+            namespace = undefined
+          }
+
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
-              render(cloneVNode(vnode), rootContainer, namespace)
+              // casting to ElementNamespace because TS doesn't guarantee type narrowing
+              // over function boundaries
+              render(
+                cloneVNode(vnode),
+                rootContainer,
+                namespace as ElementNamespace
+              )
             }
           }
 

@@ -30,7 +30,7 @@ const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
 const isTargetMathML = (target: RendererElement): boolean =>
-  typeof MathMLElement !== 'undefined' && target instanceof MathMLElement
+  typeof MathMLElement === 'function' && target instanceof MathMLElement
 
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
@@ -113,7 +113,7 @@ export const TeleportImpl = {
       if (target) {
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        if (namespace === true || namespace === 'svg' || isTargetSVG(target)) {
+        if (namespace === 'svg' || isTargetSVG(target)) {
           namespace = 'svg'
         }
         if (namespace === 'mathml' || isTargetMathML(target)) {
@@ -155,7 +155,7 @@ export const TeleportImpl = {
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
 
-      if (namespace === true || namespace === 'svg' || isTargetSVG(target)) {
+      if (namespace === 'svg' || isTargetSVG(target)) {
         namespace = 'svg'
       }
       if (namespace === 'mathml' || isTargetMathML(target)) {

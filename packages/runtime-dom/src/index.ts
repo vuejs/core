@@ -103,7 +103,11 @@ export const createApp = ((...args) => {
     container.innerHTML = ''
     let namespace: ElementNamespace
     if (container instanceof SVGElement) namespace = 'svg'
-    else if (container instanceof MathMLElement) namespace = 'mathml'
+    else if (
+      typeof MathMLElement === 'function' &&
+      container instanceof MathMLElement
+    )
+      namespace = 'mathml'
     const proxy = mount(container, false, namespace)
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
@@ -129,7 +133,11 @@ export const createSSRApp = ((...args) => {
     if (container) {
       let namespace: ElementNamespace
       if (container instanceof SVGElement) namespace = 'svg'
-      else if (container instanceof MathMLElement) namespace = 'mathml'
+      else if (
+        typeof MathMLElement === 'function' &&
+        container instanceof MathMLElement
+      )
+        namespace = 'mathml'
       return mount(container, true, namespace)
     }
   }

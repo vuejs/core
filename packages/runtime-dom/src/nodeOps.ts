@@ -93,7 +93,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       }
 
       const template = templateContainer.content
-      if (namespace === true || namespace === 'svg' || namespace === 'mathml') {
+      if (namespace === 'svg' || namespace === 'mathml') {
         // remove outer svg/math wrapper
         const wrapper = template.firstChild!
         while (wrapper.firstChild) {

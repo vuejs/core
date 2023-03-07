@@ -19,7 +19,7 @@ export function patchClass(
   }
   if (value == null) {
     el.removeAttribute('class')
-  } else if (namespace === 'svg' || namespace === true) {
+  } else if (namespace === 'svg') {
     el.setAttribute('class', value)
   } else {
     el.className = value

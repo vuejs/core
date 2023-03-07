@@ -20,7 +20,7 @@ export function patchAttr(
   namespace?: ElementNamespace,
   instance?: ComponentInternalInstance | null
 ) {
-  if ((namespace === true || namespace === 'svg') && key.startsWith('xlink:')) {
+  if (namespace === 'svg' && key.startsWith('xlink:')) {
     if (value == null) {
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {

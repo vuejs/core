@@ -505,7 +505,11 @@ function installCompatMount(
 
       let namespace: ElementNamespace
       if (container instanceof SVGElement) namespace = 'svg'
-      else if (container instanceof MathMLElement) namespace = 'mathml'
+      else if (
+        typeof MathMLElement === 'function' &&
+        container instanceof MathMLElement
+      )
+        namespace = 'mathml'
 
       // HMR root reload
       if (__DEV__) {

@@ -71,7 +71,7 @@ function shouldSetAsProp(
   value: unknown,
   namespace?: ElementNamespace
 ) {
-  if (namespace === 'svg' || namespace === true) {
+  if (namespace === 'svg') {
     // most keys must be set as attribute on svg elements to work
     // ...except innerHTML & textContent
     if (key === 'innerHTML' || key === 'textContent') {
