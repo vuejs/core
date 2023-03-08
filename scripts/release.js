@@ -221,9 +221,6 @@ async function main() {
     }
   }
 
-  // TODO: update README if isCanary
-  // Reference: <https://github.com/knightlyjs/knightly/blob/main/src/template.ts>
-
   // publish packages
   step('\nPublishing packages...')
   for (const pkg of packages) {
