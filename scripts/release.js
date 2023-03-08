@@ -156,7 +156,7 @@ async function main() {
 
   if (!skipTests) {
     step('Checking CI status for HEAD...')
-    let isCIPassed = await checkCIStatus()
+    let isCIPassed = await getCIResult()
     skipTests ||= isCIPassed
 
     if (isCIPassed && !skipPrompts) {
@@ -251,7 +251,7 @@ async function main() {
   console.log()
 }
 
-async function checkCIStatus() {
+async function getCIResult() {
   try {
     const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
     const res = await fetch(
