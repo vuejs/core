@@ -81,7 +81,7 @@ async function main() {
     const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
     const dd = date.getUTCDate().toString().padStart(2, '0')
 
-    const major = 3
+    const major = semver.major(currentVersion)
     const minor = `${yyyy}${MM}${dd}`
     const patch = 0
     let canaryVersion = `${major}.${minor}.${patch}`
