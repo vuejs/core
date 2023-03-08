@@ -3,7 +3,7 @@ on:
   # Runs every Monday at 1 AM UTC (9:00 AM in Singapore)
   schedule:
     - cron: 0 1 * * MON
-  # TODO: a workflow_dispatch trigger to manually release a patch
+  workflow_dispatch:
 
 jobs:
   canary:

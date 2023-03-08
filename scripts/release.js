@@ -24,6 +24,7 @@ const skipGit = args.skipGit || args.canary
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
+
 const isCorePackage = pkgName => {
   if (!pkgName) return
 
@@ -36,6 +37,7 @@ const isCorePackage = pkgName => {
     packages.includes(pkgName.replace(/^@vue\//, ''))
   )
 }
+
 const renamePackageToCanary = pkgName => {
   if (pkgName === 'vue') {
     return '@vue/canary'
@@ -47,6 +49,7 @@ const renamePackageToCanary = pkgName => {
 
   return pkgName
 }
+
 const keepThePackageName = pkgName => pkgName
 
 const skippedPackages = []
@@ -77,8 +80,29 @@ async function main() {
     const yyyy = date.getUTCFullYear()
     const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
     const dd = date.getUTCDate().toString().padStart(2, '0')
-    const canaryVersion = `3.${yyyy}${MM}${dd}.0`
-    // TODO: allow manually releasing a patch canary version
+
+    const major = 3
+    const minor = `${yyyy}${MM}${dd}`
+    const patch = 0
+    let canaryVersion = `${major}.${minor}.${patch}`
+
+    // check the registry to avoid version collision
+    // in case we need to publish more than one canary versions in a day
+    try {
+      const pkgName = renamePackageToCanary('vue')
+      const { stdout } = await run(
+        'pnpm',
+        ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
+        { stdio: 'pipe' }
+      )
+      const versions = JSON.parse(stdout)
+      const latestSameDayPatch = /** @type {string} */ (
+        semver.maxSatisfying(versions, `~${canaryVersion}`)
+      )
+      canaryVersion = /** @type {string} */ (
+        semver.inc(latestSameDayPatch, 'patch')
+      )
+    } catch (e) {}
 
     targetVersion = canaryVersion
   }
@@ -111,7 +135,13 @@ async function main() {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 
-  if (!skipPrompts) {
+  if (skipPrompts) {
+    step(
+      isCanary
+        ? `Releasing canary version v${targetVersion}...`
+        : `Releasing v${targetVersion}...`
+    )
+  } else {
     // @ts-ignore
     const { yes: confirmRelease } = await prompt({
       type: 'confirm',
