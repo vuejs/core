@@ -297,7 +297,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
       console.log(
         chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
       )
-      deps[dep] = version
+      deps[dep] = newVersion
     }
   })
 }
