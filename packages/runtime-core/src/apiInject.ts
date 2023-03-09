@@ -1,8 +1,9 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
-import { App, currentApp } from './apiCreateApp'
+import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
+import { ComponentPublicInstance } from './componentPublicInstance'
 
 export interface InjectionKey<T> extends Symbol {}
 
@@ -64,7 +65,9 @@ export function inject(
       return provides[key as string]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
-        ? defaultValue.call((instance as App & { proxy: undefined }).proxy)
+        ? defaultValue.call(
+            (instance as { proxy?: ComponentPublicInstance | null }).proxy
+          )
         : defaultValue
     } else if (__DEV__) {
       warn(`injection "${String(key)}" not found.`)
