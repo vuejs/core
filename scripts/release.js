@@ -28,7 +28,7 @@ const packages = fs
 const isCorePackage = pkgName => {
   if (!pkgName) return
 
-  if (pkgName === 'vue') {
+  if (pkgName === 'vue' || pkgName === '@vue/compat') {
     return true
   }
 
