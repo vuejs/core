@@ -835,6 +835,8 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
           ret[key] = existing
             ? [].concat(existing as any, incoming as any)
             : incoming
+        } else if (incoming === '') {
+          ret[key] = toMerge[key]
         }
       } else if (key !== '') {
         ret[key] = toMerge[key]
