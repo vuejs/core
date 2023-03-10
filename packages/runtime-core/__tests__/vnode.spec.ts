@@ -458,12 +458,17 @@ describe('vnode', () => {
       let props1: Data = { foo: 'c' }
       let props2: Data = { foo: {}, bar: ['cc'] }
       let props3: Data = { baz: { ccc: true } }
-      let props4: Data = { 'on-baz': '' }
-      expect(mergeProps(props1, props2, props3, props4)).toMatchObject({
+      let props4: Data = { 'on-foo': false }
+      let props5: Data = { 'on-bar': 0 }
+      let props6: Data = { 'on-baz': () => {} }
+      expect(
+        mergeProps(props1, props2, props3, props4, props5, props6)
+      ).toMatchObject({
         foo: {},
         bar: ['cc'],
         baz: { ccc: true },
-        'on-baz': ''
+        'on-foo': false,
+        'on-bar': 0
       })
     })
   })
