@@ -96,7 +96,7 @@
     "rollup-plugin-node-globals": "^1.4.0",
     "rollup-plugin-polyfill-node": "^0.11.0",
     "semver": "^7.3.2",
-    "serve": "^12.0.0",
+    "serve": "^14.2.0",
     "simple-git-hooks": "^2.8.1",
     "terser": "^5.15.1",
     "todomvc-app-css": "^2.3.0",
