@@ -509,4 +509,62 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  // #7898
+  // When `TransitionGroup` is updated,
+  // the async component does not have resolve and will not report an error
+  // It seems that this error cannot be caught in puppeteer,
+  // but we can still achieve single testing by checking whether the expected rendering is met
+  test(
+    'TransitionGroup is updated & the async component does not have resolve',
+    async () => {
+      await page().evaluate(() => {
+        const { createApp, defineAsyncComponent, shallowRef, onMounted } = (
+          window as any
+        ).Vue
+        createApp({
+          template: `
+              <div id="container">
+								<transition-group name="test">
+								 <component :is="component" 
+								 v-for="(component, index) in components" 
+								 :key="index" 
+								</transition-group>
+							</div>
+            `,
+          setup: () => {
+            const components = shallowRef([newComponent(1)])
+            function sleep(millis: number, index: number) {
+              return new Promise(resolve =>
+                setTimeout(() => {
+                  resolve({
+                    render() {
+                      return `foo${index}`
+                    }
+                  })
+                }, millis)
+              )
+            }
+
+            function newComponent(index: number) {
+              return defineAsyncComponent(() => sleep(1000, index))
+            }
+
+            function addComponent() {
+              components.value = [...components.value, newComponent(2)]
+            }
+            onMounted(() => {
+              addComponent()
+            })
+
+            return { components }
+          }
+        }).mount('#app')
+      })
+
+      await transitionFinish(1000)
+      expect(await html('#container')).toBe('foo1foo2')
+    },
+    E2E_TIMEOUT
+  )
 })

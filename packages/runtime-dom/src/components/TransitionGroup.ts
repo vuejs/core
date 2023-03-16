@@ -55,6 +55,8 @@ const TransitionGroupImpl: ComponentOptions = {
       if (!prevChildren.length) {
         return
       }
+
+      // #7898
       if (
         isAsyncWrapper(prevChildren[0]) &&
         prevChildren[0].component &&
@@ -140,6 +142,7 @@ const TransitionGroupImpl: ComponentOptions = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
+          // #7898
           ;(child.el as Element).getBoundingClientRect
             ? positionMap.set(
                 child,
