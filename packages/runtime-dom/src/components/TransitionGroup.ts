@@ -26,6 +26,7 @@ import {
   ComponentOptions
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
+import { isAsyncWrapper } from '@vue/runtime-core'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
@@ -52,6 +53,13 @@ const TransitionGroupImpl: ComponentOptions = {
     onUpdated(() => {
       // children is guaranteed to exist after initial render
       if (!prevChildren.length) {
+        return
+      }
+      if (
+        isAsyncWrapper(prevChildren[0]) &&
+        prevChildren[0].component &&
+        !prevChildren[0].component.asyncResolved
+      ) {
         return
       }
       const moveClass = props.moveClass || `${props.name || 'v'}-move`
@@ -132,7 +140,12 @@ const TransitionGroupImpl: ComponentOptions = {
             child,
             resolveTransitionHooks(child, cssTransitionProps, state, instance)
           )
-          positionMap.set(child, (child.el as Element).getBoundingClientRect())
+          ;(child.el as Element).getBoundingClientRect
+            ? positionMap.set(
+                child,
+                (child.el as Element).getBoundingClientRect()
+              )
+            : positionMap.set(child, new DOMRect())
         }
       }
 

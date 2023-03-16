@@ -58,7 +58,7 @@ export {
 export { provide, inject } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
-export { defineAsyncComponent } from './apiAsyncComponent'
+export { defineAsyncComponent, isAsyncWrapper } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
