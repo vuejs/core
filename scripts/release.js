@@ -17,9 +17,40 @@ const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 let skipTests = args.skipTests
 const skipBuild = args.skipBuild
+const isCanary = args.canary
+const skipPrompts = args.skipPrompts || args.canary
+const skipGit = args.skipGit || args.canary
+
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
   .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
+
+const isCorePackage = pkgName => {
+  if (!pkgName) return
+
+  if (pkgName === 'vue' || pkgName === '@vue/compat') {
+    return true
+  }
+
+  return (
+    pkgName.startsWith('@vue') &&
+    packages.includes(pkgName.replace(/^@vue\//, ''))
+  )
+}
+
+const renamePackageToCanary = pkgName => {
+  if (pkgName === 'vue') {
+    return '@vue/canary'
+  }
+
+  if (isCorePackage(pkgName)) {
+    return `${pkgName}-canary`
+  }
+
+  return pkgName
+}
+
+const keepThePackageName = pkgName => pkgName
 
 const skippedPackages = []
 
@@ -41,6 +72,40 @@ const step = msg => console.log(chalk.cyan(msg))
 
 async function main() {
   let targetVersion = args._[0]
+
+  if (isCanary) {
+    // The canary version string format is `3.yyyyMMdd.0`.
+    // Use UTC date so that it's consistent across CI and maintainers' machines
+    const date = new Date()
+    const yyyy = date.getUTCFullYear()
+    const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
+    const dd = date.getUTCDate().toString().padStart(2, '0')
+
+    const major = semver.major(currentVersion)
+    const minor = `${yyyy}${MM}${dd}`
+    const patch = 0
+    let canaryVersion = `${major}.${minor}.${patch}`
+
+    // check the registry to avoid version collision
+    // in case we need to publish more than one canary versions in a day
+    try {
+      const pkgName = renamePackageToCanary('vue')
+      const { stdout } = await run(
+        'pnpm',
+        ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
+        { stdio: 'pipe' }
+      )
+      const versions = JSON.parse(stdout)
+      const latestSameDayPatch = /** @type {string} */ (
+        semver.maxSatisfying(versions, `~${canaryVersion}`)
+      )
+      canaryVersion = /** @type {string} */ (
+        semver.inc(latestSameDayPatch, 'patch')
+      )
+    } catch (e) {}
+
+    targetVersion = canaryVersion
+  }
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
@@ -70,40 +135,39 @@ async function main() {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
 
-  // @ts-ignore
-  const { yes: confirmRelease } = await prompt({
-    type: 'confirm',
-    name: 'yes',
-    message: `Releasing v${targetVersion}. Confirm?`
-  })
-
-  if (!confirmRelease) {
-    return
-  }
-
-  step('Checking CI status for HEAD...')
-  let isCIPassed = true
-  try {
-    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
-    const res = await fetch(
-      `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
-        `&status=success&exclude_pull_requests=true`
+  if (skipPrompts) {
+    step(
+      isCanary
+        ? `Releasing canary version v${targetVersion}...`
+        : `Releasing v${targetVersion}...`
     )
-    const data = await res.json()
-    isCIPassed = data.workflow_runs.length > 0
-  } catch (e) {
-    isCIPassed = false
-  }
-
-  if (isCIPassed) {
+  } else {
     // @ts-ignore
-    const { yes: promptSkipTests } = await prompt({
+    const { yes: confirmRelease } = await prompt({
       type: 'confirm',
       name: 'yes',
-      message: `CI for this commit passed. Skip local tests?`
+      message: `Releasing v${targetVersion}. Confirm?`
     })
-    if (promptSkipTests) {
-      skipTests = true
+
+    if (!confirmRelease) {
+      return
+    }
+  }
+
+  if (!skipTests) {
+    step('Checking CI status for HEAD...')
+    let isCIPassed = await getCIResult()
+    skipTests ||= isCIPassed
+
+    if (isCIPassed && !skipPrompts) {
+      // @ts-ignore
+      const { yes: promptSkipTests } = await prompt({
+        type: 'confirm',
+        name: 'yes',
+        message: `CI for this commit passed. Skip local tests?`
+      })
+
+      skipTests = promptSkipTests
     }
   }
 
@@ -120,7 +184,10 @@ async function main() {
 
   // update all package versions and inter-dependencies
   step('\nUpdating cross dependencies...')
-  updateVersions(targetVersion)
+  updateVersions(
+    targetVersion,
+    isCanary ? renamePackageToCanary : keepThePackageName
+  )
 
   // build all packages with types
   step('\nBuilding all packages...')
@@ -137,29 +204,36 @@ async function main() {
   await run(`pnpm`, ['run', 'changelog'])
 
   // update pnpm-lock.yaml
-  step('\nUpdating lockfile...')
-  await run(`pnpm`, ['install', '--prefer-offline'])
+  // skipped during canary release because the package names changed and installing with `workspace:*` would fail
+  if (!isCanary) {
+    step('\nUpdating lockfile...')
+    await run(`pnpm`, ['install', '--prefer-offline'])
+  }
 
-  const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
-  if (stdout) {
-    step('\nCommitting changes...')
-    await runIfNotDry('git', ['add', '-A'])
-    await runIfNotDry('git', ['commit', '-m', `release: v${targetVersion}`])
-  } else {
-    console.log('No changes to commit.')
+  if (!skipGit) {
+    const { stdout } = await run('git', ['diff'], { stdio: 'pipe' })
+    if (stdout) {
+      step('\nCommitting changes...')
+      await runIfNotDry('git', ['add', '-A'])
+      await runIfNotDry('git', ['commit', '-m', `release: v${targetVersion}`])
+    } else {
+      console.log('No changes to commit.')
+    }
   }
 
   // publish packages
   step('\nPublishing packages...')
   for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion, runIfNotDry)
+    await publishPackage(pkg, targetVersion)
   }
 
   // push to GitHub
-  step('\nPushing to GitHub...')
-  await runIfNotDry('git', ['tag', `v${targetVersion}`])
-  await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
-  await runIfNotDry('git', ['push'])
+  if (!skipGit) {
+    step('\nPushing to GitHub...')
+    await runIfNotDry('git', ['tag', `v${targetVersion}`])
+    await runIfNotDry('git', ['push', 'origin', `refs/tags/v${targetVersion}`])
+    await runIfNotDry('git', ['push'])
+  }
 
   if (isDryRun) {
     console.log(`\nDry run finished - run git diff to see package changes.`)
@@ -177,42 +251,58 @@ async function main() {
   console.log()
 }
 
-function updateVersions(version) {
-  // 1. update root package.json
-  updatePackage(path.resolve(__dirname, '..'), version)
-  // 2. update all packages
-  packages.forEach(p => updatePackage(getPkgRoot(p), version))
+async function getCIResult() {
+  try {
+    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
+    const res = await fetch(
+      `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
+        `&status=success&exclude_pull_requests=true`
+    )
+    const data = await res.json()
+    return data.workflow_runs.length > 0
+  } catch (e) {
+    return false
+  }
 }
 
-function updatePackage(pkgRoot, version) {
+function updateVersions(version, getNewPackageName = keepThePackageName) {
+  // 1. update root package.json
+  updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
+  // 2. update all packages
+  packages.forEach(p =>
+    updatePackage(getPkgRoot(p), version, getNewPackageName)
+  )
+}
+
+function updatePackage(pkgRoot, version, getNewPackageName) {
   const pkgPath = path.resolve(pkgRoot, 'package.json')
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
+  pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
-  updateDeps(pkg, 'dependencies', version)
-  updateDeps(pkg, 'peerDependencies', version)
+  updateDeps(pkg, 'dependencies', version, getNewPackageName)
+  updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
-function updateDeps(pkg, depType, version) {
+function updateDeps(pkg, depType, version, getNewPackageName) {
   const deps = pkg[depType]
   if (!deps) return
   Object.keys(deps).forEach(dep => {
     if (deps[dep] === 'workspace:*') {
       return
     }
-    if (
-      dep === 'vue' ||
-      (dep.startsWith('@vue') && packages.includes(dep.replace(/^@vue\//, '')))
-    ) {
+    if (isCorePackage(dep)) {
+      const newName = getNewPackageName(dep)
+      const newVersion = newName === dep ? version : `npm:${newName}@${version}`
       console.log(
-        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${version}`)
+        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
       )
-      deps[dep] = version
+      deps[dep] = newVersion
     }
   })
 }
 
-async function publishPackage(pkgName, version, runIfNotDry) {
+async function publishPackage(pkgName, version) {
   if (skippedPackages.includes(pkgName)) {
     return
   }
@@ -246,7 +336,8 @@ async function publishPackage(pkgName, version, runIfNotDry) {
         version,
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
-        'public'
+        'public',
+        ...(skipGit ? ['--no-commit-hooks', '--no-git-tag-version'] : [])
       ],
       {
         cwd: pkgRoot,
