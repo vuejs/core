@@ -35,7 +35,7 @@
     "magic-string": "^0.30.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.20.12",
-    "@babel/types": "^7.20.7"
+    "@babel/core": "^7.21.3",
+    "@babel/types": "^7.21.3"
   }
 }
