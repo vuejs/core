@@ -134,10 +134,12 @@ describe('component: slots', () => {
     }
 
     const oldSlots = {
-      header: 'header'
+      header: 'header',
+      footer: undefined,
     }
     const newSlots = {
-      footer: 'footer'
+      header: undefined,
+      footer: 'footer',
     }
 
     const Comp = {
