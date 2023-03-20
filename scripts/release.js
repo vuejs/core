@@ -95,14 +95,21 @@ async function main() {
         ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
         { stdio: 'pipe' }
       )
-      const versions = JSON.parse(stdout)
+      let versions = JSON.parse(stdout)
+      versions = Array.isArray(versions) ? versions : [versions]
       const latestSameDayPatch = /** @type {string} */ (
         semver.maxSatisfying(versions, `~${canaryVersion}`)
       )
       canaryVersion = /** @type {string} */ (
         semver.inc(latestSameDayPatch, 'patch')
       )
-    } catch (e) {}
+    } catch (e) {
+      if (/E404/.test(e.message)) {
+        // the first patch version on that day
+      } else {
+        throw e
+      }
+    }
 
     targetVersion = canaryVersion
   }
