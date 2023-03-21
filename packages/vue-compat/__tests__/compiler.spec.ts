@@ -32,7 +32,7 @@ test('COMPILER_IS_ON_ELEMENT', () => {
     }
   }).$mount()
 
-  expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(`<div>text</div>`)
   expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
 })
@@ -49,7 +49,7 @@ test('COMPILER_IS_ON_ELEMENT (dynamic)', () => {
     }
   }).$mount()
 
-  expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(`<div>text</div>`)
   expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
 })
