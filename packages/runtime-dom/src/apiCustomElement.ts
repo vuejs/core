@@ -351,7 +351,8 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
-        // bwsy
+        // Reference the _addStyles method on the instance,
+        // which will be used to add styles in the child components of the custom element
         instance.addCEChildStyle = this._addStyles.bind(this)
         // HMR
         if (__DEV__) {
@@ -423,7 +424,8 @@ export class VueElement extends BaseClass {
     }
   }
 
-  // bwsy
+  // The method used by custom element child components
+  // to add styles to the shadow dom
   protected _addStyles(
     styles: string[] | undefined,
     anchor: RendererNode | null | undefined

@@ -547,7 +547,34 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
     })
+
+    test('child components in shadow dom should have styles', async () => {
+      const Child = {
+        styles: [`.Child { color: blue; }`],
+        render() {
+          return h('div', { class: 'Child' }, 'hello')
+        }
+      }
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', {}, ['hello', h(Child)])
+        }
+      })
+      customElements.define('my-el-with-child-styles', Foo)
+      container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
+      await nextTick()
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`div { color: red; }`)
+      expect(style[1].textContent).toBe(`.Child { color: blue; }`)
+    })
   })
+  // TODO: async child style
+  // TODO: nested child style
 
   describe('async', () => {
     test('should work', async () => {

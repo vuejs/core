@@ -710,7 +710,9 @@ function baseCreateRenderer(
       transition!.beforeEnter(el)
     }
 
-    // bwsy
+    // The component has styles
+    // and is a child component of a custom element,
+    // then inject the style into the shadow dom
     if (parentComponent) {
       const styles =
         (parentComponent.isCEChild &&
@@ -721,7 +723,6 @@ function baseCreateRenderer(
         parentComponent.addCEChildStyle(styles, anchor)
       }
     }
-    // bwsy
 
     hostInsert(el, container, anchor)
     if (
