@@ -130,7 +130,19 @@ export function defineCustomElement<
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
 export function defineCustomElement(options: {
-  new (...args: any[]): ComponentPublicInstance
+  new (...args: any[]): ComponentPublicInstance<
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any,
+    any
+  >
 }): VueElementConstructor
 
 export function defineCustomElement(
