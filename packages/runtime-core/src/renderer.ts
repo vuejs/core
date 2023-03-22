@@ -16,6 +16,7 @@ import {
 import {
   ComponentInternalInstance,
   ComponentOptions,
+  ConcreteComponent,
   createComponentInstance,
   Data,
   setupComponent
@@ -708,6 +709,20 @@ function baseCreateRenderer(
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
+
+    // bwsy
+    if (parentComponent) {
+      const styles =
+        (parentComponent.isCEChild &&
+          (parentComponent.type as ConcreteComponent & { styles?: string[] })
+            .styles) ||
+        null
+      if (parentComponent.addCEChildStyle && styles) {
+        parentComponent.addCEChildStyle(styles, anchor)
+      }
+    }
+    // bwsy
+
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||

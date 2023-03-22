@@ -72,6 +72,7 @@ import {
 } from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
+import { RendererNode } from './renderer'
 
 export type Data = Record<string, unknown>
 
@@ -381,6 +382,12 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
+
+  // bwsy
+  isCEChild: boolean | null
+  addCEChildStyle:
+    | null
+    | ((styles: string[], anchor?: RendererNode | null) => void)
   /**
    * @internal
    */
@@ -530,6 +537,12 @@ export function createComponentInstance(
     isMounted: false,
     isUnmounted: false,
     isDeactivated: false,
+
+    // bwsy
+    isCEChild: parent && (parent.isCE || parent.isCEChild),
+    addCEChildStyle:
+      parent && parent.addCEChildStyle ? parent.addCEChildStyle : null,
+
     bc: null,
     c: null,
     bm: null,

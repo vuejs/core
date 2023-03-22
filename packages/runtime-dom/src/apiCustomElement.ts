@@ -20,7 +20,8 @@ import {
   warn,
   ConcreteComponent,
   ComponentOptions,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  RendererNode
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -350,6 +351,8 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
+        // bwsy
+        instance.addCEChildStyle = this._addStyles.bind(this)
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -399,17 +402,32 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(styles: string[] | undefined) {
+  private _applyStyles(
+    styles: string[] | undefined,
+    anchor?: RendererNode | null
+  ) {
     if (styles) {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        this.shadowRoot!.appendChild(s)
+        if (anchor) {
+          this.shadowRoot!.insertBefore(s, anchor as Node)
+        } else {
+          this.shadowRoot!.appendChild(s)
+        }
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
         }
       })
     }
+  }
+
+  // bwsy
+  protected _addStyles(
+    styles: string[] | undefined,
+    anchor: RendererNode | null | undefined
+  ) {
+    this._applyStyles(styles, anchor)
   }
 }
