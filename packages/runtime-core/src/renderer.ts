@@ -713,7 +713,13 @@ function baseCreateRenderer(
     // The component has styles
     // and is a child component of a custom element,
     // then inject the style into the shadow dom
-    if (parentComponent) {
+    if (
+      parentComponent &&
+      parentComponent.parent &&
+      // If the parent component is wrapped by an defineAsyncComponent function,
+      // it will not be processed
+      !(parentComponent.parent.type as ComponentOptions).__asyncLoader
+    ) {
       const styles =
         (parentComponent.isCEChild &&
           (parentComponent.type as ConcreteComponent & { styles?: string[] })
