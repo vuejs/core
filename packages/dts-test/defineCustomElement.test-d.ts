@@ -3,7 +3,7 @@ import {
   defineComponent,
   type VueElementConstructor
 } from 'vue'
-import { expectType, describe } from './utils'
+import { expectType, describe, test } from './utils'
 
 describe('inject', () => {
   // with object inject
