@@ -12,11 +12,13 @@ import {
   ParentNode,
   JSChildNode,
   CallExpression,
-  createArrayExpression
+  createArrayExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
-import { getVNodeBlockHelper, getVNodeHelper, isSlotOutlet } from '../utils'
+import { isSlotOutlet } from '../utils'
 import {
   OPEN_BLOCK,
   GUARD_REACTIVE_PROPS,

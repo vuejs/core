@@ -563,7 +563,7 @@ describe('with mixins', () => {
       expectType<string>(props.z)
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
-      // from Base
+      // from MixinA
       expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
@@ -575,7 +575,7 @@ describe('with mixins', () => {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
-      // from Base
+      // from MixinA
       expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
