@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="./packages/vue-compat/dist/vue.global.js"></script>
+    <title>Title</title>
+    <style>
+        .bad {
+            background-color: red;
+        }
+
+        .good {
+            background-color: lightgreen;
+        }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+</body>
+<script>
+    const { createApp } = Vue;
+
+    const template = '<p class="bad">{{ text }}</p>';
+
+    const Child = {
+        props: ["text"],
+        template,
+    };
+
+    const ChildWithCommentNode = {
+        props: ["text"],
+        template: `<!-- A comment node --> ${template}`
+    };
+
+    const App = {
+        components: {
+            Child,
+            ChildWithCommentNode,
+        },
+        template: `
+
+<ChildWithCommentNode class="good" text="this should be green but is not" />
+`
+    };
+
+    const app = createApp(App, {
+
+    })
+    // app.config.compilerOptions.whitespace = 'condense'
+    app.mount("#app");
+</script>
+</html>
