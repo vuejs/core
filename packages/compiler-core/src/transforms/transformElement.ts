@@ -210,13 +210,14 @@ export const transformElement: NodeTransform = (node, context) => {
       if (__DEV__) {
         if (patchFlag < 0) {
           // special flags (negative and mutually exclusive)
-          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+          vnodePatchFlag =
+            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
         } else {
           // bitwise flags
           const flagNames = Object.keys(PatchFlagNames)
             .map(Number)
             .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n])
+            .map(n => PatchFlagNames[n as PatchFlags])
             .join(`, `)
           vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
         }
