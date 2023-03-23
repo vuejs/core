@@ -89,7 +89,7 @@
     "prettier": "^2.7.1",
     "pug": "^3.0.1",
     "puppeteer": "^19.6.3",
-    "rollup": "~3.10.0",
+    "rollup": "^3.20.0",
     "rollup-plugin-dts": "^5.1.1",
     "rollup-plugin-esbuild": "^5.0.0",
     "rollup-plugin-node-builtins": "^2.1.2",
