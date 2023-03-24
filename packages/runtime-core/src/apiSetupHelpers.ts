@@ -1,4 +1,4 @@
-import { isArray, isPromise, isFunction } from '@vue/shared'
+import { isArray, isPromise, isFunction, Prettify } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
@@ -55,18 +55,20 @@ const warnRuntimeUsage = (method: string) =>
 // overload 1: runtime props w/ array
 export function defineProps<PropNames extends string = string>(
   props: PropNames[]
-): Readonly<{ [key in PropNames]?: any }>
+): Prettify<Readonly<{ [key in PropNames]?: any }>>
 // overload 2: runtime props w/ object
 export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
->(props: PP): Readonly<ExtractPropTypes<PP>>
+>(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Readonly<
-  Omit<TypeProps, BooleanKey<TypeProps>> & {
-    [K in keyof Pick<TypeProps, BooleanKey<TypeProps>>]-?: NotUndefined<
-      TypeProps[K]
-    >
-  }
+export function defineProps<TypeProps>(): Prettify<
+  Readonly<
+    Omit<TypeProps, BooleanKey<TypeProps>> & {
+      [K in keyof Pick<TypeProps, BooleanKey<TypeProps>>]-?: NotUndefined<
+        TypeProps[K]
+      >
+    }
+  >
 >
 // implementation
 export function defineProps() {
