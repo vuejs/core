@@ -16,6 +16,9 @@ expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
 expectType<JSX.Element>(
   <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
 )
+expectType<JSX.Element>(
+  <div style={[undefined, {background: 'green'}]} />
+)
 
 // @ts-expect-error unknown prop
 ;<div foo="bar" />
