@@ -34,7 +34,4 @@ export namespace JSX {
     [name: string]: any
   }
   export interface IntrinsicAttributes extends ReservedProps {}
-  export interface ElementChildrenAttribute {
-    $slots: {}
-  }
 }
