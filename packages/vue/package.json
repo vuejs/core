@@ -13,6 +13,8 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
+    "jsx-runtime",
+    "jsx.d.ts",
     "macros.d.ts",
     "macros-global.d.ts",
     "ref-macros.d.ts"
@@ -35,6 +37,14 @@
       "types": "./compiler-sfc/index.d.ts",
       "import": "./compiler-sfc/index.mjs",
       "require": "./compiler-sfc/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx-runtime/index.d.ts",
+      "import": "./jsx-runtime/index.mjs",
+      "require": "./jsx-runtime/index.js"
+    },
+    "./jsx": {
+      "types": "./jsx.d.ts"
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json",
