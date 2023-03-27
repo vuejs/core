@@ -122,7 +122,7 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
-  test('component’s own methods have higher priority than global properties', async () => {
+  test("component's own methods have higher priority than global properties", async () => {
     const app = createApp({
       methods: {
         foo() {
@@ -667,7 +667,7 @@ describe('api: options', () => {
 
   test('mixins', () => {
     const calls: string[] = []
-    const mixinA = {
+    const mixinA = defineComponent({
       data() {
         return {
           a: 1
@@ -682,8 +682,8 @@ describe('api: options', () => {
       mounted() {
         calls.push('mixinA mounted')
       }
-    }
-    const mixinB = {
+    })
+    const mixinB = defineComponent({
       props: {
         bP: {
           type: String
@@ -705,7 +705,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('mixinB mounted')
       }
-    }
+    })
     const mixinC = defineComponent({
       props: ['cP1', 'cP2'],
       data() {
@@ -727,7 +727,7 @@ describe('api: options', () => {
       props: {
         aaa: String
       },
-      mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
+      mixins: [mixinA, mixinB, mixinC],
       data() {
         return {
           c: 4,
@@ -817,6 +817,22 @@ describe('api: options', () => {
     ])
   })
 
+  test('unlikely mixin usage', () => {
+    const MixinA = {
+      data() {}
+    }
+    const MixinB = {
+      data() {}
+    }
+    defineComponent({
+      // @ts-expect-error edge case after #7963, unlikely to happen in practice
+      // since the user will want to type the mixins themselves.
+      mixins: [defineComponent(MixinA), defineComponent(MixinB)],
+      // @ts-expect-error
+      data() {}
+    })
+  })
+
   test('chained extends in mixins', () => {
     const calls: string[] = []
 
@@ -863,7 +879,7 @@ describe('api: options', () => {
 
   test('extends', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
@@ -878,9 +894,9 @@ describe('api: options', () => {
         expect(this.b).toBe(2)
         calls.push('base')
       }
-    }
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
+      extends: Base,
       data() {
         return {
           b: 2
@@ -900,7 +916,7 @@ describe('api: options', () => {
 
   test('extends with mixins', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
@@ -916,8 +932,8 @@ describe('api: options', () => {
         expect(this.c).toBe(2)
         calls.push('base')
       }
-    }
-    const Mixin = {
+    })
+    const Mixin = defineComponent({
       data() {
         return {
           b: true,
@@ -930,10 +946,10 @@ describe('api: options', () => {
         expect(this.c).toBe(2)
         calls.push('mixin')
       }
-    }
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
-      mixins: [defineComponent(Mixin)],
+      extends: Base,
+      mixins: [Mixin],
       data() {
         return {
           c: 2
