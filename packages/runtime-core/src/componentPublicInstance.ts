@@ -14,7 +14,8 @@ import {
   extend,
   isString,
   isFunction,
-  UnionToIntersection
+  UnionToIntersection,
+  Prettify
 } from '@vue/shared'
 import {
   toRaw,
@@ -185,9 +186,11 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-    : P & PublicProps
+  $props: Prettify<
+    MakeDefaultsOptional extends true
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
+      : P & PublicProps
+  >
   $attrs: Data
   $refs: Data
   $slots: Slots
