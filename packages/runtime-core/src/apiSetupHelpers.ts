@@ -61,15 +61,7 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Prettify<
-  Readonly<
-    Omit<TypeProps, BooleanKey<TypeProps>> & {
-      [K in keyof Pick<TypeProps, BooleanKey<TypeProps>>]-?: NotUndefined<
-        TypeProps[K]
-      >
-    }
-  >
->
+export function defineProps<TypeProps>(): ResolveProps<TypeProps>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -77,6 +69,20 @@ export function defineProps() {
   }
   return null as any
 }
+
+type ResolveProps<T, BooleanKeys extends keyof T = BooleanKey<T>> = Prettify<
+  Readonly<
+    T & {
+      [K in BooleanKeys]-?: boolean
+    }
+  >
+>
+
+type BooleanKey<T, K extends keyof T = keyof T> = K extends any
+  ? [T[K]] extends [boolean | undefined]
+    ? K
+    : never
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's emitted
@@ -138,12 +144,6 @@ export function defineExpose<
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
-
-type BooleanKey<T, K extends keyof T = keyof T> = K extends any
-  ? [T[K]] extends [boolean | undefined]
-    ? K
-    : never
-  : never
 
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
