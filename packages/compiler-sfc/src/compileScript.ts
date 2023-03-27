@@ -514,6 +514,11 @@ export function compileScript(
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
+    warnOnce(
+      `withDefaults() has been deprecated. ` +
+        `Props destructure is now reactive by default - ` +
+        `use destructure with default values instead.`
+    )
     if (processDefineProps(node.arguments[0], declId, declKind)) {
       if (propsRuntimeDecl) {
         error(
