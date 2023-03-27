@@ -91,26 +91,11 @@ export interface SFCScriptCompileOptions {
   /**
    * (Experimental) Enable syntax transform for using refs without `.value` and
    * using destructured props with reactivity
+   * @deprecated the Reactivity Transform proposal has been dropped. This
+   * feature will be removed from Vue core in 3.4. If you intend to continue
+   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
    */
   reactivityTransform?: boolean
-  /**
-   * (Experimental) Enable syntax transform for using refs without `.value`
-   * https://github.com/vuejs/rfcs/discussions/369
-   * @deprecated now part of `reactivityTransform`
-   * @default false
-   */
-  refTransform?: boolean
-  /**
-   * (Experimental) Enable syntax transform for destructuring from defineProps()
-   * https://github.com/vuejs/rfcs/discussions/394
-   * @deprecated now part of `reactivityTransform`
-   * @default false
-   */
-  propsDestructureTransform?: boolean
-  /**
-   * @deprecated use `reactivityTransform` instead.
-   */
-  refSugar?: boolean
   /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
@@ -154,12 +139,8 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   // TODO remove support for deprecated options when out of experimental
-  const enableReactivityTransform =
-    !!options.reactivityTransform ||
-    !!options.refSugar ||
-    !!options.refTransform
-  const enablePropsTransform =
-    !!options.reactivityTransform || !!options.propsDestructureTransform
+  const enableReactivityTransform = !!options.reactivityTransform
+  const enablePropsTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   let refBindings: string[] | undefined
