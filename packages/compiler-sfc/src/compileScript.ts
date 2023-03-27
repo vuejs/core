@@ -59,6 +59,7 @@ import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
+import { transformDestructuredProps } from './compileScriptPropsDestructure'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -132,6 +133,14 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+export type PropsDestructureBindings = Record<
+  string, // public prop key
+  {
+    local: string // local identifier, may be different
+    default?: Expression
+  }
+>
+
 type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
 type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 type EmitsDeclType = FromNormalScript<
@@ -151,7 +160,6 @@ export function compileScript(
   // feature flags
   // TODO remove support for deprecated options when out of experimental
   const enableReactivityTransform = !!options.reactivityTransform
-  const enablePropsTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   const hoistStatic = options.hoistStatic !== false && !script
@@ -310,14 +318,8 @@ export function compileScript(
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
   // props destructure data
-  const propsDestructuredBindings: Record<
-    string, // public prop key
-    {
-      local: string // local identifier, may be different
-      default?: Expression
-      isConst: boolean
-    }
-  > = Object.create(null)
+  const propsDestructuredBindings: PropsDestructureBindings =
+    Object.create(null)
 
   // magic-string state
   const s = new MagicString(source)
@@ -452,10 +454,9 @@ export function compileScript(
     }
 
     if (declId) {
-      const isConst = declKind === 'const'
-      if (enablePropsTransform && declId.type === 'ObjectPattern') {
+      // handle props destructure
+      if (declId.type === 'ObjectPattern') {
         propsDestructureDecl = declId
-        // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
           if (prop.type === 'ObjectProperty') {
             const propKey = resolveObjectKey(prop.key, prop.computed)
@@ -479,14 +480,12 @@ export function compileScript(
               // store default value
               propsDestructuredBindings[propKey] = {
                 local: left.name,
-                default: right,
-                isConst
+                default: right
               }
             } else if (prop.value.type === 'Identifier') {
               // simple destructure
               propsDestructuredBindings[propKey] = {
-                local: prop.value.name,
-                isConst
+                local: prop.value.name
               }
             } else {
               error(
@@ -1220,6 +1219,7 @@ export function compileScript(
     }
 
     // apply reactivity transform
+    // TODO remove in 3.4
     if (enableReactivityTransform && shouldTransform(script.content)) {
       const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
@@ -1416,19 +1416,28 @@ export function compileScript(
     }
   }
 
-  // 3. Apply reactivity transform
+  // 3.1 props destructure transform
+  if (propsDestructureDecl) {
+    transformDestructuredProps(
+      scriptSetupAst,
+      s,
+      startOffset,
+      propsDestructuredBindings
+    )
+  }
+
+  // 3.2 Apply reactivity transform
+  // TODO remove in 3.4
   if (
-    (enableReactivityTransform &&
-      // normal <script> had ref bindings that maybe used in <script setup>
-      (refBindings || shouldTransform(scriptSetup.content))) ||
-    propsDestructureDecl
+    enableReactivityTransform &&
+    // normal <script> had ref bindings that maybe used in <script setup>
+    (refBindings || shouldTransform(scriptSetup.content))
   ) {
     const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,
-      refBindings,
-      propsDestructuredBindings
+      refBindings
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
@@ -1444,7 +1453,7 @@ export function compileScript(
     extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
   }
 
-  // 5. check useOptions args to make sure it doesn't reference setup scope
+  // 5. check macro args to make sure it doesn't reference setup scope
   // variables
   checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
