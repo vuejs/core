@@ -1315,7 +1315,16 @@ describe('function syntax w/ runtime props', () => {
   )
 
   defineComponent(
-    (_props: { msg: string }) => {
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg']
+    }
+  )
+
+  defineComponent(
+    <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
     {
