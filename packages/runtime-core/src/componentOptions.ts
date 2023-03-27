@@ -15,7 +15,8 @@ import {
   isArray,
   NOOP,
   isPromise,
-  LooseRequired
+  LooseRequired,
+  Prettify
 } from '@vue/shared'
 import { isRef, Ref } from '@vue/reactivity'
 import { computed } from './apiComputed'
@@ -112,14 +113,14 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: Readonly<
-      LooseRequired<
-        Props &
+    props: LooseRequired<
+      Props &
+        Prettify<
           UnwrapMixinsType<
             IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
             'P'
           >
-      >
+        >
     >,
     ctx: SetupContext<E>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
@@ -262,7 +263,7 @@ export type ComponentOptionsWithArrayProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
+  Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -307,7 +308,7 @@ export type ComponentOptionsWithObjectProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
+  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
   Props,
