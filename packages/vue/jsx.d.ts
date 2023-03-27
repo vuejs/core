@@ -9,8 +9,6 @@ declare global {
       extends JSXInternal.ElementAttributesProperty {}
     interface IntrinsicElements extends JSXInternal.IntrinsicElements {}
     interface IntrinsicAttributes extends JSXInternal.IntrinsicAttributes {}
-    interface ElementChildrenAttribute
-      extends JSXInternal.ElementChildrenAttribute {}
   }
 }
 
