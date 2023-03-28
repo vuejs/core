@@ -1027,6 +1027,20 @@ return { ref }
 }"
 `;
 
+exports[`SFC compile <script setup> > imports > should support module string names syntax 1`] = `
+"import { \\"😏\\" as foo } from './foo'
+      
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+        
+return { get foo() { return foo } }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > avoid unref() when necessary 1`] = `
 "import { unref as _unref, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, withCtx as _withCtx, createVNode as _createVNode, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
