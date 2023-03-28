@@ -14,7 +14,8 @@ import {
   extend,
   isString,
   isFunction,
-  UnionToIntersection
+  UnionToIntersection,
+  Prettify
 } from '@vue/shared'
 import {
   toRaw,
@@ -100,11 +101,11 @@ type ExtractMixin<T> = {
   Mixin: MixinToOptionTypes<T>
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
-type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
+export type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
   ? OptionTypesType<{}, {}, {}, {}, {}>
   : UnionToIntersection<ExtractMixin<T>>
 
-type UnwrapMixinsType<
+export type UnwrapMixinsType<
   T,
   Type extends OptionTypesKeys
 > = T extends OptionTypesType ? T[Type] : never
@@ -185,9 +186,11 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-    : P & PublicProps
+  $props: Prettify<
+    MakeDefaultsOptional extends true
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
+      : P & PublicProps
+  >
   $attrs: Data
   $refs: Data
   $slots: Slots

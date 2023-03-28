@@ -17,7 +17,8 @@ import {
   TemplateLiteral,
   createVNodeCall,
   ConstantTypes,
-  ArrayExpression
+  ArrayExpression,
+  convertToBlock
 } from './ast'
 import {
   isString,
@@ -36,7 +37,7 @@ import {
   helperNameMap,
   CREATE_COMMENT
 } from './runtimeHelpers'
-import { isVSlot, makeBlock } from './utils'
+import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -348,7 +349,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        makeBlock(codegenNode, context)
+        convertToBlock(codegenNode, context)
       }
       root.codegenNode = codegenNode
     } else {
