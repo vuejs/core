@@ -51,44 +51,54 @@ export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
 export class ReactiveEffect<T = any> {
+  // 用于判断 ReactiveEffect 对象是否处于激活状态
   active = true
+  // 存储依赖于此 ReactiveEffect 对象的所有依赖项 Dep 对象
   deps: Dep[] = []
+  // 该 ReactiveEffect 对象的父级 ReactiveEffect 对象，用于构建调用层级树
   parent: ReactiveEffect | undefined = undefined
-
   /**
    * Can be attached after creation
    * @internal
+   *  计算属性对象（如果副作用函数是计算属性生成的）
    */
   computed?: ComputedRefImpl<T>
   /**
    * @internal
+   * 是否允许递归地追踪依赖
    */
   allowRecurse?: boolean
   /**
    * @internal
+   * 是否延迟停止副作用函数的运行
    */
   private deferStop?: boolean
 
-  onStop?: () => void
-  // dev only
+  onStop?: () => void // 停止响应式函数运行时的回调函数
+  // dev only 添加依赖追踪时的回调函数，仅用于开发环境
   onTrack?: (event: DebuggerEvent) => void
-  // dev only
+  // dev only 添加副作用触发时的回调函数，仅用于开发环境
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(
-    public fn: () => T,
-    public scheduler: EffectScheduler | null = null,
-    scope?: EffectScope
+    public fn: () => T, // 响应式函数，用于收集依赖和触发副作用
+    public scheduler: EffectScheduler | null = null, // 副作用函数执行时的调度器
+    scope?: EffectScope // 执行副作用函数的作用域
   ) {
-    recordEffectScope(this, scope)
+    recordEffectScope(this, scope) //  将副作用函数和作用域关联起来
   }
 
+  /**
+   * 执行响应式函数，并将响应式函数的返回值作为run函数的返回值。
+   */
   run() {
+    // 如果副作用函数不处于活动状态，则直接执行响应式函数
     if (!this.active) {
       return this.fn()
     }
     let parent: ReactiveEffect | undefined = activeEffect
     let lastShouldTrack = shouldTrack
+    // 检查是否有相同的副作用函数在调用栈上，防止无限递归
     while (parent) {
       if (parent === this) {
         return
@@ -96,19 +106,23 @@ export class ReactiveEffect<T = any> {
       parent = parent.parent
     }
     try {
-      this.parent = activeEffect
-      activeEffect = this
-      shouldTrack = true
+      this.parent = activeEffect // 设置当前副作用函数的父级副作用函数为调用栈上的活动副作用函数
+      activeEffect = this // 将当前副作用函数设置为活动副作用函数
+      shouldTrack = true // 允许收集依赖
 
+      // 用二进制位记录当前副作用函数相关的事件
       trackOpBit = 1 << ++effectTrackDepth
 
+      // 当前事件数量未超过限制时，初始化相关事件
       if (effectTrackDepth <= maxMarkerBits) {
         initDepMarkers(this)
       } else {
+        // 超过限制时，删除该副作用函数的依赖关系
         cleanupEffect(this)
       }
-      return this.fn()
+      return this.fn() // // 执行响应式函数
     } finally {
+      //  清空 depMarkers，并将 trackOpBit 的值回退
       if (effectTrackDepth <= maxMarkerBits) {
         finalizeDepMarkers(this)
       }
@@ -125,6 +139,9 @@ export class ReactiveEffect<T = any> {
     }
   }
 
+  /**
+   * 停止副作用函数的运行，并且清空副作用函数的依赖关系。
+   */
   stop() {
     // stopped while running itself - defer the cleanup
     if (activeEffect === this) {
@@ -171,14 +188,18 @@ export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
 ): ReactiveEffectRunner {
+  //  如果 fn 已经是一个副作用函数，则将 fn 赋值为原始函数
   if ((fn as ReactiveEffectRunner).effect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
+  // 构造一个ReactiveEffect实例
   const _effect = new ReactiveEffect(fn)
   if (options) {
     extend(_effect, options)
-    if (options.scope) recordEffectScope(_effect, options.scope)
+    if (options.scope) {
+      recordEffectScope(_effect, options.scope)
+    }
   }
   if (!options || !options.lazy) {
     _effect.run()

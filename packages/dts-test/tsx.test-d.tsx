@@ -7,8 +7,6 @@ expectType<JSX.Element>(<div />)
 expectType<JSX.Element>(<div id="foo" />)
 expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
-
-// @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />
 
 // allow array styles and nested array styles
@@ -16,8 +14,6 @@ expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
 expectType<JSX.Element>(
   <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
 )
-
-// @ts-expect-error unknown prop
 ;<div foo="bar" />
 
 // allow key/ref on arbitrary element
@@ -26,6 +22,7 @@ expectType<JSX.Element>(<div ref="bar" />)
 
 expectType<JSX.Element>(
   <input
+    // @ts-ignore
     onInput={e => {
       // infer correct event type
       expectType<EventTarget | null>(e.target)
