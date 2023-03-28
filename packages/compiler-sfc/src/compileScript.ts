@@ -1689,7 +1689,6 @@ export function compileScript(
     let declCode = scriptSetup.content
       .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
       .trim()
-
     if (propsDestructureDecl) {
       const defaults: string[] = []
       for (const key in propsDestructuredBindings) {
