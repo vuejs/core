@@ -1573,6 +1573,56 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('runtime inference for Enum in defineProps', () => {
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = 123 }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: Number`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = '123' }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: String`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = '123', B = 123 }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: [String, Number]`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A, B }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: Number`)
+    })
+
     test('import type', () => {
       const { content } = compile(
         `<script setup lang="ts">
