@@ -1,19 +1,18 @@
 import { RESOLVE_FILTER } from '../runtimeHelpers'
 import {
+  ExpressionNode,
   AttributeNode,
   DirectiveNode,
-  NodeTransform,
   NodeTypes,
-  SimpleExpressionNode,
-  toValidAssetId,
-  TransformContext
-} from '@vue/compiler-core'
+  SimpleExpressionNode
+} from '../ast'
 import {
   CompilerDeprecationTypes,
   isCompatEnabled,
   warnDeprecation
 } from './compatConfig'
-import { ExpressionNode } from '../ast'
+import { NodeTransform, TransformContext } from '../transform'
+import { toValidAssetId } from '../utils'
 
 const validDivisionCharRE = /[\w).+\-_$\]]/
 

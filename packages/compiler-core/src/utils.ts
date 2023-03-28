@@ -35,12 +35,7 @@ import {
   TO_HANDLERS,
   NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
-  CREATE_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_VNODE,
-  CREATE_ELEMENT_VNODE,
-  WITH_MEMO,
-  OPEN_BLOCK
+  WITH_MEMO
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
@@ -331,14 +326,6 @@ export function isSlotOutlet(
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
 
-export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
-}
-
-export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
-}
-
 const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
@@ -530,17 +517,5 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
     return node.arguments[1].returns as VNodeCall
   } else {
     return node
-  }
-}
-
-export function makeBlock(
-  node: VNodeCall,
-  { helper, removeHelper, inSSR }: TransformContext
-) {
-  if (!node.isBlock) {
-    node.isBlock = true
-    removeHelper(getVNodeHelper(inSSR, node.isComponent))
-    helper(OPEN_BLOCK)
-    helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }

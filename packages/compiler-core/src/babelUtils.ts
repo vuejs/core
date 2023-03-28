@@ -6,7 +6,10 @@ import type {
   Function,
   ObjectProperty,
   BlockStatement,
-  Program
+  Program,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  ImportSpecifier
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -38,9 +41,7 @@ export function walkIdentifiers(
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -245,6 +246,17 @@ export const isStaticProperty = (node: Node): node is ObjectProperty =>
 export const isStaticPropertyKey = (node: Node, parent: Node) =>
   isStaticProperty(parent) && parent.key === node
 
+export function getImportedName(
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+) {
+  if (specifier.type === 'ImportSpecifier')
+    return specifier.imported.type === 'Identifier'
+      ? specifier.imported.name
+      : specifier.imported.value
+  else if (specifier.type === 'ImportNamespaceSpecifier') return '*'
+  return 'default'
+}
+
 /**
  * Copied from https://github.com/babel/babel/blob/main/packages/babel-types/src/validators/isReferenced.ts
  * To avoid runtime dependency on @babel/types (which includes process references)
@@ -421,4 +433,19 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
   }
 
   return true
+}
+
+export const TS_NODE_TYPES = [
+  'TSAsExpression', // foo as number
+  'TSTypeAssertion', // (<number>foo)
+  'TSNonNullExpression', // foo!
+  'TSInstantiationExpression', // foo<string>
+  'TSSatisfiesExpression' // foo satisfies T
+]
+export function unwrapTSNode(node: Node): Node {
+  if (TS_NODE_TYPES.includes(node.type)) {
+    return unwrapTSNode((node as any).expression)
+  } else {
+    return node
+  }
 }

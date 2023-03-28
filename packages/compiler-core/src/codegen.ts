@@ -24,14 +24,14 @@ import {
   AssignmentExpression,
   ReturnStatement,
   VNodeCall,
-  SequenceExpression
+  SequenceExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map'
 import {
   advancePositionWithMutation,
   assert,
-  getVNodeBlockHelper,
-  getVNodeHelper,
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'

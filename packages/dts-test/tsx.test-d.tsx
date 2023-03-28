@@ -5,6 +5,7 @@ import { expectType } from './utils'
 expectType<VNode>(<div />)
 expectType<JSX.Element>(<div />)
 expectType<JSX.Element>(<div id="foo" />)
+expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
 
 // @ts-expect-error style css property validation

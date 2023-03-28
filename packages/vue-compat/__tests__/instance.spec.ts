@@ -319,6 +319,7 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(
     `<div class="foo" style="color: red;"><div id="ok"></div></div>`
   )

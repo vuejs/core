@@ -112,7 +112,11 @@ export const enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const'
 }
 
 export type BindingMetadata = {

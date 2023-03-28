@@ -1,6 +1,9 @@
 // This directory contains a number of d.ts assertions
 // use \@ts-expect-error where errors are expected.
 
+// register global JSX
+import 'vue/jsx'
+
 export function describe(_name: string, _fn: () => void): void
 export function test(_name: string, _fn: () => any): void
 

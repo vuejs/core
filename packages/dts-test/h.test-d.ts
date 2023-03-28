@@ -157,7 +157,7 @@ describe('h support for generic component type', () => {
 describe('describeComponent extends Component', () => {
   // functional
   expectAssignable<Component>(
-    defineComponent((_props: { foo?: string; bar: number }) => {})
+    defineComponent((_props: { foo?: string; bar: number }) => () => {})
   )
 
   // typed props

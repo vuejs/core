@@ -68,6 +68,7 @@ export {
   defineProps,
   defineEmits,
   defineExpose,
+  defineOptions,
   withDefaults,
   // internal
   mergeDefaults,

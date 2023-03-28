@@ -13,6 +13,7 @@ permissions:
 jobs:
   unit-test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@v3
 
@@ -32,6 +33,7 @@ jobs:
 
   e2e-test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@v3
 
@@ -57,6 +59,7 @@ jobs:
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
       - uses: actions/checkout@v3
 
@@ -82,6 +85,7 @@ jobs:
 
   size:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     env:
       CI_JOB_NUMBER: 1
     steps:
@@ -98,10 +102,3 @@ jobs:
 
       - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
       - run: pnpm run size
-
-      # - name: Check build size
-      #   uses: posva/size-check-action@v1.1.2
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     build_script: size
-      #     files: packages/vue/dist/vue.global.prod.js packages/runtime-dom/dist/runtime-dom.global.prod.js packages/size-check/dist/index.js

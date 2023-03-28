@@ -24,6 +24,16 @@ describe('defineProps w/ type declaration', () => {
   expectType<boolean>(props.boolAndUndefined)
 })
 
+describe('defineProps w/ generics', () => {
+  function test<T extends boolean>() {
+    const props = defineProps<{ foo: T; bar: string; x?: boolean }>()
+    expectType<T>(props.foo)
+    expectType<string>(props.bar)
+    expectType<boolean>(props.x)
+  }
+  test()
+})
+
 describe('defineProps w/ type declaration + withDefaults', () => {
   const res = withDefaults(
     defineProps<{

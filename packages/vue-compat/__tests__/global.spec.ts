@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { expect, vi } from 'vitest'
 import Vue from '@vue/compat'
 import { effect, isReactive } from '@vue/reactivity'
 import { h, nextTick } from '@vue/runtime-core'
@@ -122,6 +122,7 @@ describe('GLOBAL_EXTEND', () => {
       template: '<div><foo></foo><bar></bar></div>',
       components: { foo, bar }
     }).$mount()
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe('<span>foo</span><span>bar</span>')
   })
 
@@ -221,6 +222,7 @@ describe('GLOBAL_EXTEND', () => {
     const b = new B({
       template: '<div><aa></aa><bb></bb></div>'
     }).$mount()
+    expect(b.$el).toBeInstanceOf(HTMLDivElement)
     expect(b.$el.innerHTML).toBe('<div>A</div><div>B</div>')
   })
 
@@ -388,6 +390,7 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
       },
       template: `<div>{{ foo }}</div>`
     }).$mount() as any
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.textContent).toBe('1')
     vm.foo = 2
     await nextTick()
@@ -455,7 +458,7 @@ test('post-facto global asset registration should affect apps created via create
     template: '<foo/>'
   })
   Vue.component('foo', { template: 'foo' })
-  const vm = app.mount(document.createElement('div')) as any
+  const vm = app.mount(document.createElement('div'))
   expect(vm.$el.textContent).toBe('foo')
   delete singletonApp._context.components.foo
 })

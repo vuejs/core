@@ -43,6 +43,7 @@ describe('FILTERS', () => {
         msg: 'hi'
       })
     }).$mount()
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.textContent).toBe('HI')
     expect(deprecationData[DeprecationTypes.FILTERS].message).toHaveBeenWarned()
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()

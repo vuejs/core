@@ -1,8 +1,10 @@
 # @vue/reactivity-transform
 
-> ⚠️ This is experimental and currently only provided for testing and feedback. It may break during patches or even be removed. Use at your own risk!
+> ⚠️ This is experimental and the proposal has been dropped.
+> The feature is now marked as deprecated and will be removed from Vue core
+> in 3.4.
 >
-> Follow https://github.com/vuejs/rfcs/discussions/369 for details and updates.
+> See reason for deprecation [here](https://github.com/vuejs/rfcs/discussions/369#discussioncomment-5059028).
 
 ## Basic Rules
 

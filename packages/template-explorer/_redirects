@@ -1,0 +1,2 @@
+https://vue-next-template-explorer.netlify.app https://template-explorer.vuejs.org 301!
+https://vue-next-template-explorer.netlify.app/* https://template-explorer.vuejs.org/:splat 301!
