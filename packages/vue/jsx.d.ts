@@ -3,6 +3,8 @@
 import { VNode, VNodeRef } from '@vue/runtime-dom'
 import { IntrinsicElementAttributes } from './jsx-runtime/dom'
 
+export * from './jsx-runtime/dom'
+
 export type ReservedProps = {
   key?: string | number | symbol
   ref?: VNodeRef
