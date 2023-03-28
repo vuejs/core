@@ -206,23 +206,3 @@ return () => {}
 
 }"
 `;
-
-exports[`sfc props transform > unwrap TS node 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { toDisplayString as _toDisplayString } from \\"vue\\"
-
-
-export default /*#__PURE__*/_defineComponent({
-  props: ['foo'],
-  setup(__props) {
-
-      
-      console.log(__props.foo)
-      
-return (_ctx: any,_cache: any) => {
-  return _toDisplayString(__props.foo)
-}
-}
-
-})"
-`;
