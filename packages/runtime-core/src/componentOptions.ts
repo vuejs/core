@@ -16,7 +16,7 @@ import {
   NOOP,
   isPromise,
   LooseRequired,
-  UnionToIntersection
+  Prettify
 } from '@vue/shared'
 import { isRef, Ref } from '@vue/reactivity'
 import { computed } from './apiComputed'
@@ -58,7 +58,9 @@ import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstance,
-  isReservedPrefix
+  isReservedPrefix,
+  IntersectionMixin,
+  UnwrapMixinsType
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
@@ -93,21 +95,6 @@ export interface ComponentCustomOptions {}
 
 export type RenderFunction = () => VNodeChild
 
-type ExtractOptionProp<T> = T extends ComponentOptionsBase<
-  infer P, // Props
-  any, // RawBindings
-  any, // D
-  any, // C
-  any, // M
-  any, // Mixin
-  any, // Extends
-  any // EmitsOptions
->
-  ? unknown extends P
-    ? {}
-    : P
-  : {}
-
 export interface ComponentOptionsBase<
   Props,
   RawBindings,
@@ -126,12 +113,14 @@ export interface ComponentOptionsBase<
     ComponentCustomOptions {
   setup?: (
     this: void,
-    props: Readonly<
-      LooseRequired<
-        Props &
-          UnionToIntersection<ExtractOptionProp<Mixin>> &
-          UnionToIntersection<ExtractOptionProp<Extends>>
-      >
+    props: LooseRequired<
+      Props &
+        Prettify<
+          UnwrapMixinsType<
+            IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
+            'P'
+          >
+        >
     >,
     ctx: SetupContext<E>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
@@ -274,7 +263,7 @@ export type ComponentOptionsWithArrayProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }> & EmitsToProps<E>
+  Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -319,7 +308,7 @@ export type ComponentOptionsWithObjectProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<ExtractPropTypes<PropsOptions>> & EmitsToProps<E>,
+  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
   Props,
