@@ -1677,6 +1677,8 @@ interface Test {}
 
       type Alias = number[]
 
+      enum Enum { one = '1', two = '2' }
+
       
 export default /*#__PURE__*/_defineComponent({
   props: {
@@ -1702,6 +1704,7 @@ export default /*#__PURE__*/_defineComponent({
     symbol: { type: Symbol, required: true },
     extract: { type: Number, required: true },
     exclude: { type: [Number, Boolean], required: true },
+    enum: { type: Object, required: true },
     uppercase: { type: String, required: true },
     params: { type: Array, required: true },
     nonNull: { type: String, required: true },
@@ -1719,7 +1722,7 @@ export default /*#__PURE__*/_defineComponent({
 
       
       
-return {  }
+return { Enum }
 }
 
 })"
