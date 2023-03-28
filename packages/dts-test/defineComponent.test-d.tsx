@@ -1300,6 +1300,22 @@ describe('function syntax w/ emits', () => {
   expectType<JSX.Element>(<Foo msg="hi" onFoo={() => {}} />)
   // @ts-expect-error
   expectType<JSX.Element>(<Foo msg="hi" onBar={() => {}} />)
+
+  defineComponent(
+    (props: { msg: string }, ctx) => {
+      ctx.emit('foo', 'hi')
+      // @ts-expect-error
+      ctx.emit('foo')
+      // @ts-expect-error
+      ctx.emit('bar')
+      return () => {}
+    },
+    {
+      emits: {
+        foo: (a: string) => true
+      }
+    }
+  )
 })
 
 describe('function syntax w/ runtime props', () => {
