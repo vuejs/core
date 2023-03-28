@@ -2,6 +2,17 @@ import { BindingTypes } from '@vue/compiler-core'
 import { compileSFCScript as compile, assertCode, mockId } from './utils'
 
 describe('SFC compile <script setup>', () => {
+  test('should compile JS syntax', () => {
+    const { content } = compile(`
+      <script setup lang='js'>
+      const a = 1
+      const b = 2
+      </script>
+    `)
+    expect(content).toMatch(`return { a, b }`)
+    assertCode(content)
+  })
+
   test('should expose top level declarations', () => {
     const { content, bindings } = compile(`
       <script setup>
@@ -158,6 +169,23 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`const a = 1;`) // test correct removal
     expect(content).toMatch(`props: ['item'],`)
     expect(content).toMatch(`emits: ['a'],`)
+  })
+
+  // #7422
+  test('defineProps/defineEmits in multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emits = defineEmits(['foo']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['foo'],`)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
   })
 
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
@@ -975,6 +1003,11 @@ const emit = defineEmits(['a', 'b'])
         alias: Alias
         method(): void
         symbol: symbol
+        extract: Extract<1 | 2 | boolean, 2>
+        exclude: Exclude<1 | 2 | boolean, 2>
+        uppercase: Uppercase<'foo'>
+        params: Parameters<(foo: any) => void>
+        nonNull: NonNullable<string | null>
         objectOrFn: {
           (): void
           foo: string
@@ -985,6 +1018,7 @@ const emit = defineEmits(['a', 'b'])
         literalUnionNumber: 1 | 2 | 3 | 4 | 5
         literalUnionMixed: 'foo' | 1 | boolean
         intersection: Test & {}
+        intersection2: 'foo' & ('foo' | 'bar')
         foo: ((item: any) => boolean) | null
       }>()
       </script>`)
@@ -1012,6 +1046,13 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `objectOrFn: { type: [Function, Object], required: true },`
       )
+      expect(content).toMatch(`extract: { type: Number, required: true }`)
+      expect(content).toMatch(
+        `exclude: { type: [Number, Boolean], required: true }`
+      )
+      expect(content).toMatch(`uppercase: { type: String, required: true }`)
+      expect(content).toMatch(`params: { type: Array, required: true }`)
+      expect(content).toMatch(`nonNull: { type: String, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -1023,6 +1064,7 @@ const emit = defineEmits(['a', 'b'])
         `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
       )
       expect(content).toMatch(`intersection: { type: Object, required: true }`)
+      expect(content).toMatch(`intersection2: { type: String, required: true }`)
       expect(content).toMatch(`foo: { type: [Function, null], required: true }`)
       expect(bindings).toStrictEqual({
         string: BindingTypes.PROPS,
@@ -1046,12 +1088,18 @@ const emit = defineEmits(['a', 'b'])
         method: BindingTypes.PROPS,
         symbol: BindingTypes.PROPS,
         objectOrFn: BindingTypes.PROPS,
+        extract: BindingTypes.PROPS,
+        exclude: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
         literalUnionMixed: BindingTypes.PROPS,
         intersection: BindingTypes.PROPS,
-        foo: BindingTypes.PROPS
+        intersection2: BindingTypes.PROPS,
+        foo: BindingTypes.PROPS,
+        uppercase: BindingTypes.PROPS,
+        params: BindingTypes.PROPS,
+        nonNull: BindingTypes.PROPS
       })
     })
 
@@ -1149,6 +1197,19 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`x: { type: Number, required: false }`)
       expect(bindings).toStrictEqual({
         x: BindingTypes.PROPS
+      })
+    })
+
+    test('defineProps w/ TS assertion', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        defineProps(['foo'])! as any
+      </script>
+    `)
+      expect(content).toMatch(`props: ['foo']`)
+      assertCode(content)
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.PROPS
       })
     })
 

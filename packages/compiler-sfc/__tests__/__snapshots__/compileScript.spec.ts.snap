@@ -754,6 +754,24 @@ return { a, props, emit }
 }"
 `;
 
+exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #7422 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['foo'],
+  setup(__props, { expose, emit: emits }) {
+  expose();
+
+const props = __props;
+
+    const a = 0,
+          b = 0;
+    
+return { props, emits, a, b }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > dev mode import usage check > TS annotations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz, Qux, Fred } from './x'
@@ -1291,6 +1309,21 @@ return () => {}
 }"
 `;
 
+exports[`SFC compile <script setup> > should compile JS syntax 1`] = `
+"const a = 1
+      const b = 2
+      
+export default {
+  setup(__props, { expose }) {
+  expose();
+
+      
+return { a, b }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > should expose top level declarations 1`] = `
 "import { x } from './x'
       
@@ -1500,6 +1533,22 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineProps w/ TS assertion 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: ['foo'],
+  setup(__props, { expose }) {
+  expose();
+
+        
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
@@ -1633,12 +1682,18 @@ export default /*#__PURE__*/_defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
+    extract: { type: Number, required: true },
+    exclude: { type: [Number, Boolean], required: true },
+    uppercase: { type: String, required: true },
+    params: { type: Array, required: true },
+    nonNull: { type: String, required: true },
     objectOrFn: { type: [Function, Object], required: true },
     union: { type: [String, Number], required: true },
     literalUnion: { type: String, required: true },
     literalUnionNumber: { type: Number, required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true },
+    intersection2: { type: String, required: true },
     foo: { type: [Function, null], required: true }
   },
   setup(__props: any, { expose }) {

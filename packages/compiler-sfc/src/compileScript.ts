@@ -10,7 +10,8 @@ import {
   SimpleExpressionNode,
   isFunctionType,
   walkIdentifiers,
-  getImportedName
+  getImportedName,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import {
@@ -167,6 +168,11 @@ export function compileScript(
   const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isJS =
+    scriptLang === 'js' ||
+    scriptLang === 'jsx' ||
+    scriptSetupLang === 'js' ||
+    scriptSetupLang === 'jsx'
   const isTS =
     scriptLang === 'ts' ||
     scriptLang === 'tsx' ||
@@ -196,7 +202,7 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && !isTS && scriptLang !== 'jsx') {
+    if (scriptLang && !isJS && !isTS) {
       // do not process non js/ts script blocks
       return script
     }
@@ -264,7 +270,7 @@ export function compileScript(
     )
   }
 
-  if (scriptSetupLang && !isTS && scriptSetupLang !== 'jsx') {
+  if (scriptSetupLang && !isJS && !isTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
@@ -1221,17 +1227,18 @@ export function compileScript(
     }
 
     if (node.type === 'ExpressionStatement') {
+      const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
       if (
-        processDefineProps(node.expression) ||
-        processDefineEmits(node.expression) ||
-        processDefineOptions(node.expression) ||
-        processWithDefaults(node.expression)
+        processDefineProps(expr) ||
+        processDefineEmits(expr) ||
+        processDefineOptions(expr) ||
+        processWithDefaults(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
-      } else if (processDefineExpose(node.expression)) {
+      } else if (processDefineExpose(expr)) {
         // defineExpose({}) -> expose({})
-        const callee = (node.expression as CallExpression).callee
+        const callee = (expr as CallExpression).callee
         s.overwrite(
           callee.start! + startOffset,
           callee.end! + startOffset,
@@ -1243,10 +1250,13 @@ export function compileScript(
     if (node.type === 'VariableDeclaration' && !node.declare) {
       const total = node.declarations.length
       let left = total
+      let lastNonRemoved: number | undefined
+
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
-        if (decl.init) {
-          if (processDefineOptions(decl.init)) {
+        const init = decl.init && unwrapTSNode(decl.init)
+        if (init) {
+          if (processDefineOptions(init)) {
             error(
               `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
               node
@@ -1255,25 +1265,29 @@ export function compileScript(
 
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(decl.init, decl.id, node.kind) ||
-            processWithDefaults(decl.init, decl.id, node.kind)
-          const isDefineEmits = processDefineEmits(decl.init, decl.id)
+            processDefineProps(init, decl.id, node.kind) ||
+            processWithDefaults(init, decl.id, node.kind)
+          const isDefineEmits = processDefineEmits(init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
-              if (i === 0) {
-                // first one, locate the start of the next
-                end = node.declarations[i + 1].start! + startOffset
+              if (i === total - 1) {
+                // last one, locate the end of the last one that is not removed
+                // if we arrive at this branch, there must have been a
+                // non-removed decl before us, so lastNonRemoved is non-null.
+                start = node.declarations[lastNonRemoved!].end! + startOffset
               } else {
-                // not first one, locate the end of the prev
-                start = node.declarations[i - 1].end! + startOffset
+                // not the last one, locate the start of the next
+                end = node.declarations[i + 1].start! + startOffset
               }
               s.remove(start, end)
               left--
             }
+          } else {
+            lastNonRemoved = i
           }
         }
       }
@@ -1793,7 +1807,8 @@ function walkDeclaration(
       )
 
     // export const foo = ...
-    for (const { id, init } of node.declarations) {
+    for (const { id, init: _init } of node.declarations) {
+      const init = _init && unwrapTSNode(_init)
       const isDefineCall = !!(
         isConst &&
         isCallOf(
@@ -2044,16 +2059,51 @@ function inferRuntimeType(
           case 'Date':
           case 'Promise':
             return [node.typeName.name]
-          case 'Record':
+
+          // TS built-in utility types
+          // https://www.typescriptlang.org/docs/handbook/utility-types.html
           case 'Partial':
+          case 'Required':
           case 'Readonly':
+          case 'Record':
           case 'Pick':
           case 'Omit':
-          case 'Exclude':
-          case 'Extract':
-          case 'Required':
           case 'InstanceType':
             return ['Object']
+
+          case 'Uppercase':
+          case 'Lowercase':
+          case 'Capitalize':
+          case 'Uncapitalize':
+            return ['String']
+
+          case 'Parameters':
+          case 'ConstructorParameters':
+            return ['Array']
+
+          case 'NonNullable':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              ).filter(t => t !== 'null')
+            }
+          case 'Extract':
+            if (node.typeParameters && node.typeParameters.params[1]) {
+              return inferRuntimeType(
+                node.typeParameters.params[1],
+                declaredTypes
+              )
+            }
+          case 'Exclude':
+          case 'OmitThisParameter':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              )
+            }
+          // cannot infer, fallback to null: ThisParameterType
         }
       }
       return [`null`]
@@ -2061,6 +2111,7 @@ function inferRuntimeType(
     case 'TSParenthesizedType':
       return inferRuntimeType(node.typeAnnotation, declaredTypes)
     case 'TSUnionType':
+    case 'TSIntersectionType':
       return [
         ...new Set(
           [].concat(
@@ -2068,8 +2119,6 @@ function inferRuntimeType(
           )
         )
       ]
-    case 'TSIntersectionType':
-      return ['Object']
 
     case 'TSSymbolKeyword':
       return ['Symbol']
