@@ -44,7 +44,7 @@
     "source-map": "^0.6.1"
   },
   "devDependencies": {
-    "@babel/types": "^7.16.0",
+    "@babel/types": "^7.21.3",
     "@types/estree": "^0.0.48",
     "@types/lru-cache": "^5.1.0",
     "@vue/consolidate": "^0.17.3",
