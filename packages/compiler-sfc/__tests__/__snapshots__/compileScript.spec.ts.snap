@@ -1643,6 +1643,7 @@ export default /*#__PURE__*/_defineComponent({
     literalUnionNumber: { type: Number, required: true },
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true },
+    intersection2: { type: String, required: true },
     foo: { type: [Function, null], required: true }
   },
   setup(__props: any, { expose }) {
