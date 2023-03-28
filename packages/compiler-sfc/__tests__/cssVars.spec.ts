@@ -269,7 +269,7 @@ describe('CSS vars injection', () => {
              </style>`
       )
       expect(content).toMatch(
-        `import { useCssVars as _useCssVars, unref as _unref } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`
+        `export default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
       )
     })
   })
