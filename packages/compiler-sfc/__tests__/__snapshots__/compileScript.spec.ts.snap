@@ -1712,7 +1712,10 @@ export default /*#__PURE__*/_defineComponent({
     literalUnionMixed: { type: [String, Number, Boolean], required: true },
     intersection: { type: Object, required: true },
     intersection2: { type: String, required: true },
-    foo: { type: [Function, null], required: true }
+    foo: { type: [Function, null], required: true },
+    unknown: { type: null, required: true },
+    unknownUnion: { type: null, required: true },
+    unknownIntersection: { type: Object, required: true }
   },
   setup(__props: any, { expose }) {
   expose();
