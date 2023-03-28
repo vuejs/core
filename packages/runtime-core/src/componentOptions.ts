@@ -89,7 +89,9 @@ import { LifecycleHooks } from './enums'
  * }
  * ```
  */
-export interface ComponentCustomOptions {}
+export interface ComponentCustomOptions {
+  shadowRoot?: boolean
+}
 
 export type RenderFunction = () => VNodeChild
 
