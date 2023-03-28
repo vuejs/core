@@ -44,7 +44,8 @@ import {
   ObjectMethod,
   LVal,
   Expression,
-  VariableDeclaration
+  VariableDeclaration,
+  TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -1369,14 +1370,15 @@ export function compileScript(
     if (isTS) {
       // move all Type declarations to outer scope
       if (
-        (node.type.startsWith('TS') ||
-          (node.type === 'ExportNamedDeclaration' &&
-            node.exportKind === 'type') ||
-          (node.type === 'VariableDeclaration' && node.declare)) &&
-        node.type !== 'TSEnumDeclaration'
+        node.type.startsWith('TS') ||
+        (node.type === 'ExportNamedDeclaration' &&
+          node.exportKind === 'type') ||
+        (node.type === 'VariableDeclaration' && node.declare)
       ) {
         recordType(node, declaredTypes)
-        hoistNode(node)
+        if (node.type !== 'TSEnumDeclaration') {
+          hoistNode(node)
+        }
       }
     }
   }
@@ -1966,6 +1968,8 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
     )
   } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
     recordType(node.declaration, declaredTypes)
+  } else if (node.type === 'TSEnumDeclaration') {
+    declaredTypes[node.id.name] = inferEnumType(node)
   }
 }
 
@@ -2150,6 +2154,23 @@ function flattenTypes(
 
 function toRuntimeTypeString(types: string[]) {
   return types.length > 1 ? `[${types.join(', ')}]` : types[0]
+}
+
+function inferEnumType(node: TSEnumDeclaration): string[] {
+  const types = new Set<string>()
+  for (const m of node.members) {
+    if (m.initializer) {
+      switch (m.initializer.type) {
+        case 'StringLiteral':
+          types.add('String')
+          break
+        case 'NumericLiteral':
+          types.add('Number')
+          break
+      }
+    }
+  }
+  return types.size ? [...types] : ['Number']
 }
 
 function extractRuntimeEmits(
