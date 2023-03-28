@@ -66,8 +66,8 @@ exports[`SFC compile <script setup> > <script> and <script setup> co-usage > exp
       const __default__ = fn();
       
 export default /*#__PURE__*/Object.assign(__default__, {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
       console.log('foo')
       
@@ -776,8 +776,8 @@ exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable 
 "export default {
   props: ['item'],
   emits: ['foo'],
-  setup(__props, { expose, emit: emits }) {
-  expose();
+  setup(__props, { expose: __expose, emit: emits }) {
+  __expose();
 
 const props = __props;
 
@@ -1031,8 +1031,8 @@ exports[`SFC compile <script setup> > imports > should support module string nam
 "import { \\"😏\\" as foo } from './foo'
       
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
         
 return { get foo() { return foo } }
@@ -1332,8 +1332,8 @@ exports[`SFC compile <script setup> > should compile JS syntax 1`] = `
       const b = 2
       
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
       
 return { a, b }
@@ -1556,8 +1556,8 @@ exports[`SFC compile <script setup> > with TypeScript > defineProps w/ TS assert
 
 export default /*#__PURE__*/_defineComponent({
   props: ['foo'],
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
         
       
