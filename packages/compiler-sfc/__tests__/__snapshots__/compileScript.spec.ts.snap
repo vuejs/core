@@ -1,11 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`SFC analyze <script> bindings > auto name inference > basic 1`] = `
-"export default {
+"const a = 1
+export default {
   __name: 'FooBar',
   setup(__props, { expose }) {
   expose();
-const a = 1
+
 return { a }
 }
 
@@ -683,7 +684,9 @@ return { props, get x() { return x } }
 `;
 
 exports[`SFC compile <script setup> > defineProps() 1`] = `
-"export default {
+"const bar = 1
+
+export default {
   props: {
   foo: String
 },
@@ -693,7 +696,6 @@ exports[`SFC compile <script setup> > defineProps() 1`] = `
 const props = __props;
 
 
-const bar = 1
 
 return { props, bar }
 }
@@ -755,12 +757,12 @@ return { a, props, emit }
 exports[`SFC compile <script setup> > dev mode import usage check > TS annotations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz, Qux, Fred } from './x'
+        const a = 1
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose();
 
-        const a = 1
         function b() {}
         
 return { a, b, get Baz() { return Baz } }
@@ -772,12 +774,12 @@ return { a, b, get Baz() { return Baz } }
 exports[`SFC compile <script setup> > dev mode import usage check > attribute expressions 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { bar, baz } from './x'
+        const cond = true
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose();
 
-        const cond = true
         
 return { cond, get bar() { return bar }, get baz() { return baz } }
 }
@@ -788,12 +790,12 @@ return { cond, get bar() { return bar }, get baz() { return baz } }
 exports[`SFC compile <script setup> > dev mode import usage check > components 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { FooBar, FooBaz, FooQux, foo } from './x'
+        const fooBar: FooBar = 1
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose();
 
-        const fooBar: FooBar = 1
         
 return { fooBar, get FooBaz() { return FooBaz }, get FooQux() { return FooQux }, get foo() { return foo } }
 }
@@ -886,7 +888,9 @@ return { get bar() { return bar } }
 `;
 
 exports[`SFC compile <script setup> > errors > should allow defineProps/Emit() referencing scope var 1`] = `
-"export default {
+"const bar = 1
+          
+export default {
   props: {
             foo: {
               default: bar => bar + 1
@@ -898,7 +902,6 @@ exports[`SFC compile <script setup> > errors > should allow defineProps/Emit() r
   setup(__props, { expose }) {
   expose();
 
-          const bar = 1
           
           
         
@@ -1722,8 +1725,7 @@ return { Foo }
 
 exports[`SFC compile <script setup> > with TypeScript > runtime Enum in normal script 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-enum Foo { A = 123 }
-        
+
           export enum D { D = \\"D\\" }
           const enum C { C = \\"C\\" }
           enum B { B = \\"B\\" }
@@ -1732,6 +1734,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose }) {
   expose();
 
+        enum Foo { A = 123 }
         
 return { D, C, B, Foo }
 }

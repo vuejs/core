@@ -111,6 +111,13 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
+
+  /**
+   * Hoist <script setup> static constants.
+   * - Only enables when one `<script setup>` exists.
+   * @default true
+   */
+  hoistStatic?: boolean
 }
 
 export interface ImportBinding {
@@ -144,6 +151,7 @@ export function compileScript(
   const enablePropsTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
+  const hoistStatic = options.hoistStatic !== false && !script
   let refBindings: string[] | undefined
 
   if (!options.id) {
@@ -743,7 +751,8 @@ export function compileScript(
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
     if (!node) return
     walkIdentifiers(node, id => {
-      if (setupBindings[id.name]) {
+      const binding = setupBindings[id.name]
+      if (binding && (binding !== BindingTypes.LITERAL_CONST || !hoistStatic)) {
         error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
@@ -905,7 +914,7 @@ export function compileScript(
         destructured.default.start!,
         destructured.default.end!
       )
-      const isLiteral = destructured.default.type.endsWith('Literal')
+      const isLiteral = isLiteralNode(destructured.default)
       return isLiteral ? value : `() => (${value})`
     }
   }
@@ -1276,14 +1285,21 @@ export function compileScript(
       }
     }
 
+    let isAllLiteral = false
     // walk declarations to record declared bindings
     if (
       (node.type === 'VariableDeclaration' ||
         node.type === 'FunctionDeclaration' ||
-        node.type === 'ClassDeclaration') &&
+        node.type === 'ClassDeclaration' ||
+        node.type === 'TSEnumDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupBindings, vueImportAliases)
+      isAllLiteral = walkDeclaration(node, setupBindings, vueImportAliases)
+    }
+
+    // hoist literal constants
+    if (hoistStatic && isAllLiteral) {
+      hoistNode(node)
     }
 
     // walk statements & named exports / variable declarations for top level
@@ -1342,17 +1358,13 @@ export function compileScript(
     }
 
     if (isTS) {
-      // runtime enum
-      if (node.type === 'TSEnumDeclaration') {
-        registerBinding(setupBindings, node.id, BindingTypes.SETUP_CONST)
-      }
-
       // move all Type declarations to outer scope
       if (
-        node.type.startsWith('TS') ||
-        (node.type === 'ExportNamedDeclaration' &&
-          node.exportKind === 'type') ||
-        (node.type === 'VariableDeclaration' && node.declare)
+        (node.type.startsWith('TS') ||
+          (node.type === 'ExportNamedDeclaration' &&
+            node.exportKind === 'type') ||
+          (node.type === 'VariableDeclaration' && node.declare)) &&
+        node.type !== 'TSEnumDeclaration'
       ) {
         recordType(node, declaredTypes)
         hoistNode(node)
@@ -1474,7 +1486,7 @@ export function compileScript(
   ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
-    s.prependRight(
+    s.prependLeft(
       startOffset,
       `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
     )
@@ -1774,9 +1786,17 @@ function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>
-) {
+): boolean {
+  let isAllLiteral = false
+
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
+    isAllLiteral =
+      isConst &&
+      node.declarations.every(
+        decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!)
+      )
+
     // export const foo = ...
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
@@ -1789,7 +1809,9 @@ function walkDeclaration(
       if (id.type === 'Identifier') {
         let bindingType
         const userReactiveBinding = userImportAliases['reactive']
-        if (isCallOf(init, userReactiveBinding)) {
+        if (isAllLiteral || (isConst && isStaticNode(init!))) {
+          bindingType = BindingTypes.LITERAL_CONST
+        } else if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
           bindingType = isConst
             ? BindingTypes.SETUP_REACTIVE_CONST
@@ -1824,8 +1846,14 @@ function walkDeclaration(
         }
       }
     }
+  } else if (node.type === 'TSEnumDeclaration') {
+    isAllLiteral = node.members.every(
+      member => !member.initializer || isStaticNode(member.initializer)
+    )
+    bindings[node.id!.name] = isAllLiteral
+      ? BindingTypes.LITERAL_CONST
+      : BindingTypes.SETUP_CONST
   } else if (
-    node.type === 'TSEnumDeclaration' ||
     node.type === 'FunctionDeclaration' ||
     node.type === 'ClassDeclaration'
   ) {
@@ -1833,6 +1861,8 @@ function walkDeclaration(
     // export declarations must be named.
     bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
+
+  return isAllLiteral
 }
 
 function walkObjectPattern(
@@ -2138,11 +2168,51 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
         userReactiveImport
       )
     default:
-      if (node.type.endsWith('Literal')) {
+      if (isLiteralNode(node)) {
         return true
       }
       return false
   }
+}
+
+function isStaticNode(node: Node): boolean {
+  switch (node.type) {
+    case 'UnaryExpression': // void 0, !true
+      return isStaticNode(node.argument)
+
+    case 'LogicalExpression': // 1 > 2
+    case 'BinaryExpression': // 1 + 2
+      return isStaticNode(node.left) && isStaticNode(node.right)
+
+    case 'ConditionalExpression': {
+      // 1 ? 2 : 3
+      return (
+        isStaticNode(node.test) &&
+        isStaticNode(node.consequent) &&
+        isStaticNode(node.alternate)
+      )
+    }
+
+    case 'SequenceExpression': // (1, 2)
+    case 'TemplateLiteral': // `foo${1}`
+      return node.expressions.every(expr => isStaticNode(expr))
+
+    case 'ParenthesizedExpression': // (1)
+    case 'TSNonNullExpression': // 1!
+    case 'TSAsExpression': // 1 as number
+    case 'TSTypeAssertion': // (<number>2)
+      return isStaticNode(node.expression)
+
+    default:
+      if (isLiteralNode(node)) {
+        return true
+      }
+      return false
+  }
+}
+
+function isLiteralNode(node: Node) {
+  return node.type.endsWith('Literal')
 }
 
 /**
