@@ -1,19 +1,10 @@
-const Vue = require('vue')
+const { h, Fragment } = require('vue')
 
 function jsx(type, { children, ...props }) {
-  return Vue.h(type, props, children)
-}
-
-function jsxs(type, { children, ...props }) {
-  return Vue.h(type, props, ...children)
-}
-
-function jsxDEV(type, props, key, isStatic) {
-  const fn = isStatic ? jsxs : jsx
-  return fn(type, props)
+  return h(type, props, children)
 }
 
 exports.jsx = jsx
-exports.jsxs = jsxs
-exports.jsxDEV = jsxDEV
-exports.Fragment = Vue.Fragment
+exports.jsxs = jsx
+exports.jsxDEV = jsx
+exports.Fragment = Fragment
