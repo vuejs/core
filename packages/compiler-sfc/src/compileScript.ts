@@ -1545,7 +1545,7 @@ export function compileScript(
   }
 
   const destructureElements =
-    hasDefineExposeCall || !options.inlineTemplate ? [`expose`] : []
+    hasDefineExposeCall || !options.inlineTemplate ? [`expose: __expose`] : []
   if (emitIdentifier) {
     destructureElements.push(
       emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
@@ -1723,7 +1723,7 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
   // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
