@@ -2001,9 +2001,21 @@ function inferRuntimeType(
       return ['Boolean']
     case 'TSObjectKeyword':
       return ['Object']
-    case 'TSTypeLiteral':
+    case 'TSTypeLiteral': {
       // TODO (nice to have) generate runtime property validation
-      return ['Object']
+      const types = new Set<string>()
+      for (const m of node.members) {
+        switch (m.type) {
+          case 'TSCallSignatureDeclaration':
+          case 'TSConstructSignatureDeclaration':
+            types.add('Function')
+            break
+          default:
+            types.add('Object')
+        }
+      }
+      return Array.from(types)
+    }
     case 'TSFunctionType':
       return ['Function']
     case 'TSArrayType':
