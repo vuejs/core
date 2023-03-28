@@ -169,7 +169,7 @@ export function defineOptions<
     Extends,
     E,
     EE
-  > & { emits?: undefined }
+  > & { emits?: undefined; expose?: undefined }
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
