@@ -53,7 +53,7 @@ import {
 } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
-import { rewriteDefault } from './rewriteDefault'
+import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
@@ -231,7 +231,9 @@ export function compileScript(
         }
       }
       if (cssVars.length) {
-        content = rewriteDefault(content, DEFAULT_VAR, plugins)
+        const s = new MagicString(content)
+        rewriteDefaultAST(scriptAst.body, s, DEFAULT_VAR)
+        content = s.toString()
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,
@@ -1759,6 +1761,7 @@ export function compileScript(
 
   return {
     ...scriptSetup,
+    s,
     bindings: bindingMetadata,
     imports: userImports,
     content: s.toString(),
