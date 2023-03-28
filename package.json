@@ -55,8 +55,8 @@
     "node": ">=16.11.0"
   },
   "devDependencies": {
-    "@babel/parser": "^7.20.15",
-    "@babel/types": "^7.20.7",
+    "@babel/parser": "^7.21.3",
+    "@babel/types": "^7.21.3",
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@rollup/plugin-alias": "^4.0.3",
     "@rollup/plugin-commonjs": "^24.0.1",
