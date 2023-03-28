@@ -141,7 +141,7 @@ export function defineCustomElement(
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, hydrate)
+      super(Comp, initialProps, hydrate, options.shadowRoot)
     }
   }
 
@@ -169,15 +169,19 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
+  private _root: ShadowRoot | HTMLElement
 
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction
+    hydrate?: RootHydrateFunction,
+    shadowRoot?: boolean
   ) {
     super()
+
     if (this.shadowRoot && hydrate) {
-      hydrate(this._createVNode(), this.shadowRoot)
+      this._root = this.shadowRoot!
+      hydrate(this._createVNode(), this._root)
     } else {
       if (__DEV__ && this.shadowRoot) {
         warn(
@@ -185,7 +189,13 @@ export class VueElement extends BaseClass {
             `defined as hydratable. Use \`defineSSRCustomElement\`.`
         )
       }
-      this.attachShadow({ mode: 'open' })
+      if (shadowRoot === false) {
+        this._root = this
+      } else {
+        this.attachShadow({ mode: 'open' })
+        this._root = this.shadowRoot!
+      }
+
       if (!(this._def as ComponentOptions).__asyncLoader) {
         // for sync component defs we can immediately resolve props
         this._resolveProps(this._def)
@@ -208,7 +218,7 @@ export class VueElement extends BaseClass {
     this._connected = false
     nextTick(() => {
       if (!this._connected) {
-        render(null, this.shadowRoot!)
+        render(null, this._root)
         this._instance = null
       }
     })
@@ -341,7 +351,7 @@ export class VueElement extends BaseClass {
   }
 
   private _update() {
-    render(this._createVNode(), this.shadowRoot!)
+    render(this._createVNode(), this._root)
   }
 
   private _createVNode(): VNode<any, any> {
@@ -355,7 +365,7 @@ export class VueElement extends BaseClass {
           instance.ceReload = newStyles => {
             // always reset styles
             if (this._styles) {
-              this._styles.forEach(s => this.shadowRoot!.removeChild(s))
+              this._styles.forEach(s => this._root.removeChild(s))
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
@@ -404,7 +414,7 @@ export class VueElement extends BaseClass {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        this.shadowRoot!.appendChild(s)
+        this._root.appendChild(s)
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
