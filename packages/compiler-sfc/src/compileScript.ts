@@ -676,6 +676,7 @@ export function compileScript(
 
     let propsOption = undefined
     let emitsOption = undefined
+    let exposeOption = undefined
     if (optionsRuntimeDecl.type === 'ObjectExpression') {
       for (const prop of optionsRuntimeDecl.properties) {
         if (
@@ -684,6 +685,7 @@ export function compileScript(
         ) {
           if (prop.key.name === 'props') propsOption = prop
           if (prop.key.name === 'emits') emitsOption = prop
+          if (prop.key.name === 'expose') exposeOption = prop
         }
       }
     }
@@ -698,6 +700,12 @@ export function compileScript(
       error(
         `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
         emitsOption
+      )
+    }
+    if (exposeOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
+        exposeOption
       )
     }
 
