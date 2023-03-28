@@ -1251,12 +1251,7 @@ export function compileScript(
     if (node.type === 'VariableDeclaration' && !node.declare) {
       const total = node.declarations.length
       let left = total
-      const removed = new Set()
-
-      function getLastIndex(i: number) {
-        while (removed.has(--i)) {}
-        return i
-      }
+      let lastNonRemoved: number | undefined
 
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
@@ -1280,8 +1275,10 @@ export function compileScript(
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
               if (i === total - 1) {
-                // last one, locate the end of the prev
-                start = node.declarations[getLastIndex(i)].end! + startOffset
+                // last one, locate the end of the last one that is not removed
+                // if we arrive at this branch, there must have been a
+                // non-removed decl before us, so lastNonRemoved is non-null.
+                start = node.declarations[lastNonRemoved!].end! + startOffset
               } else {
                 // not the last one, locate the start of the next
                 end = node.declarations[i + 1].start! + startOffset
@@ -1289,7 +1286,8 @@ export function compileScript(
               s.remove(start, end)
               left--
             }
-            removed.add(i)
+          } else {
+            lastNonRemoved = i
           }
         }
       }
