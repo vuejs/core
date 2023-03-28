@@ -32,7 +32,7 @@
     "@vue/compiler-core": "3.3.0-alpha.5",
     "@vue/shared": "3.3.0-alpha.5",
     "estree-walker": "^2.0.2",
-    "magic-string": "^0.27.0"
+    "magic-string": "^0.30.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.12",
