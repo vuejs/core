@@ -10,6 +10,7 @@ import {
   SimpleExpressionNode,
   isFunctionType,
   walkIdentifiers,
+  getImportedName,
   unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
@@ -380,7 +381,7 @@ export function compileScript(
   function registerUserImport(
     source: string,
     local: string,
-    imported: string | false,
+    imported: string,
     isType: boolean,
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
@@ -400,7 +401,7 @@ export function compileScript(
 
     userImports[local] = {
       isType,
-      imported: imported || 'default',
+      imported,
       local,
       source,
       isFromSetup,
@@ -1002,10 +1003,7 @@ export function compileScript(
       if (node.type === 'ImportDeclaration') {
         // record imports for dedupe
         for (const specifier of node.specifiers) {
-          const imported =
-            specifier.type === 'ImportSpecifier' &&
-            specifier.imported.type === 'Identifier' &&
-            specifier.imported.name
+          const imported = getImportedName(specifier)
           registerUserImport(
             node.source.value,
             specifier.local.name,
@@ -1047,13 +1045,7 @@ export function compileScript(
       for (let i = 0; i < node.specifiers.length; i++) {
         const specifier = node.specifiers[i]
         const local = specifier.local.name
-        let imported =
-          specifier.type === 'ImportSpecifier' &&
-          specifier.imported.type === 'Identifier' &&
-          specifier.imported.name
-        if (specifier.type === 'ImportNamespaceSpecifier') {
-          imported = '*'
-        }
+        const imported = getImportedName(specifier)
         const source = node.source.value
         const existing = userImports[local]
         if (

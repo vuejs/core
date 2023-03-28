@@ -515,6 +515,21 @@ defineExpose({ foo: 123 })
         })
       })
     })
+
+    test('should support module string names syntax', () => {
+      const { content, bindings } = compile(`
+      <script>
+        import { "😏" as foo } from './foo'
+      </script>
+      <script setup>
+        import { "😏" as foo } from './foo'
+      </script>
+    `)
+      assertCode(content)
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.SETUP_MAYBE_REF
+      })
+    })
   })
 
   // in dev mode, declared bindings are returned as an object from setup()
