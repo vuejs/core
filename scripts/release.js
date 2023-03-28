@@ -377,4 +377,5 @@ async function publishPackage(pkgName, version) {
 main().catch(err => {
   updateVersions(currentVersion)
   console.error(err)
+  process.exit(1)
 })
