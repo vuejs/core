@@ -1,4 +1,4 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+// Vitest Snapshot v1
 
 exports[`SFC analyze <script> bindings > auto name inference > basic 1`] = `
 "const a = 1
@@ -1551,6 +1551,22 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineProps w/ TS assertion 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: ['foo'],
+  setup(__props, { expose }) {
+  expose();
+
+        
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported extends interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }
@@ -1562,24 +1578,8 @@ export default /*#__PURE__*/_defineComponent({
   },
   setup(__props: any, { expose }) {
   expose();
-  
-  
-  
-return {  }
-}
 
-})"
-`;
-
-exports[`SFC compile <script setup> > with TypeScript > defineProps w/ TS assertion 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*#__PURE__*/_defineComponent({
-  props: ['foo'],
-  setup(__props, { expose }) {
-  expose();
-
-        
+      
       
 return {  }
 }
