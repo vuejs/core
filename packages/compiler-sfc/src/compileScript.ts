@@ -53,7 +53,7 @@ import {
 } from './cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
-import { rewriteDefault } from './rewriteDefault'
+import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 
@@ -62,6 +62,7 @@ const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
+const DEFINE_OPTIONS = 'defineOptions'
 
 // constants
 const DEFAULT_VAR = `__default__`
@@ -91,26 +92,11 @@ export interface SFCScriptCompileOptions {
   /**
    * (Experimental) Enable syntax transform for using refs without `.value` and
    * using destructured props with reactivity
+   * @deprecated the Reactivity Transform proposal has been dropped. This
+   * feature will be removed from Vue core in 3.4. If you intend to continue
+   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
    */
   reactivityTransform?: boolean
-  /**
-   * (Experimental) Enable syntax transform for using refs without `.value`
-   * https://github.com/vuejs/rfcs/discussions/369
-   * @deprecated now part of `reactivityTransform`
-   * @default false
-   */
-  refTransform?: boolean
-  /**
-   * (Experimental) Enable syntax transform for destructuring from defineProps()
-   * https://github.com/vuejs/rfcs/discussions/394
-   * @deprecated now part of `reactivityTransform`
-   * @default false
-   */
-  propsDestructureTransform?: boolean
-  /**
-   * @deprecated use `reactivityTransform` instead.
-   */
-  refSugar?: boolean
   /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
@@ -125,6 +111,13 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
+
+  /**
+   * Hoist <script setup> static constants.
+   * - Only enables when one `<script setup>` exists.
+   * @default true
+   */
+  hoistStatic?: boolean
 }
 
 export interface ImportBinding {
@@ -154,14 +147,11 @@ export function compileScript(
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
   // TODO remove support for deprecated options when out of experimental
-  const enableReactivityTransform =
-    !!options.reactivityTransform ||
-    !!options.refSugar ||
-    !!options.refTransform
-  const enablePropsTransform =
-    !!options.reactivityTransform || !!options.propsDestructureTransform
+  const enableReactivityTransform = !!options.reactivityTransform
+  const enablePropsTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
+  const hoistStatic = options.hoistStatic !== false && !script
   let refBindings: string[] | undefined
 
   if (!options.id) {
@@ -241,7 +231,9 @@ export function compileScript(
         }
       }
       if (cssVars.length) {
-        content = rewriteDefault(content, DEFAULT_VAR, plugins)
+        const s = new MagicString(content)
+        rewriteDefaultAST(scriptAst.body, s, DEFAULT_VAR)
+        content = s.toString()
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,
@@ -289,6 +281,7 @@ export function compileScript(
   let hasDefineExposeCall = false
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
+  let hasDefineOptionsCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -300,6 +293,7 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
+  let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types
@@ -666,6 +660,50 @@ export function compileScript(
     })
   }
 
+  function processDefineOptions(node: Node): boolean {
+    if (!isCallOf(node, DEFINE_OPTIONS)) {
+      return false
+    }
+    if (hasDefineOptionsCall) {
+      error(`duplicate ${DEFINE_OPTIONS}() call`, node)
+    }
+    if (node.typeParameters) {
+      error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
+    }
+
+    hasDefineOptionsCall = true
+    optionsRuntimeDecl = node.arguments[0]
+
+    let propsOption = undefined
+    let emitsOption = undefined
+    if (optionsRuntimeDecl.type === 'ObjectExpression') {
+      for (const prop of optionsRuntimeDecl.properties) {
+        if (
+          (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+          prop.key.type === 'Identifier'
+        ) {
+          if (prop.key.name === 'props') propsOption = prop
+          if (prop.key.name === 'emits') emitsOption = prop
+        }
+      }
+    }
+
+    if (propsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare props. Use ${DEFINE_PROPS}() instead.`,
+        propsOption
+      )
+    }
+    if (emitsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
+        emitsOption
+      )
+    }
+
+    return true
+  }
+
   function resolveQualifiedType(
     node: Node,
     qualifier: (node: Node) => boolean
@@ -715,7 +753,8 @@ export function compileScript(
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
     if (!node) return
     walkIdentifiers(node, id => {
-      if (setupBindings[id.name]) {
+      const binding = setupBindings[id.name]
+      if (binding && (binding !== BindingTypes.LITERAL_CONST || !hoistStatic)) {
         error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
@@ -877,7 +916,7 @@ export function compileScript(
         destructured.default.start!,
         destructured.default.end!
       )
-      const isLiteral = destructured.default.type.endsWith('Literal')
+      const isLiteral = isLiteralNode(destructured.default)
       return isLiteral ? value : `() => (${value})`
     }
   }
@@ -1194,6 +1233,7 @@ export function compileScript(
       if (
         processDefineProps(node.expression) ||
         processDefineEmits(node.expression) ||
+        processDefineOptions(node.expression) ||
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1214,6 +1254,13 @@ export function compileScript(
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
+          if (processDefineOptions(decl.init)) {
+            error(
+              `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
+              node
+            )
+          }
+
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(decl.init, decl.id, node.kind) ||
@@ -1240,14 +1287,21 @@ export function compileScript(
       }
     }
 
+    let isAllLiteral = false
     // walk declarations to record declared bindings
     if (
       (node.type === 'VariableDeclaration' ||
         node.type === 'FunctionDeclaration' ||
-        node.type === 'ClassDeclaration') &&
+        node.type === 'ClassDeclaration' ||
+        node.type === 'TSEnumDeclaration') &&
       !node.declare
     ) {
-      walkDeclaration(node, setupBindings, vueImportAliases)
+      isAllLiteral = walkDeclaration(node, setupBindings, vueImportAliases)
+    }
+
+    // hoist literal constants
+    if (hoistStatic && isAllLiteral) {
+      hoistNode(node)
     }
 
     // walk statements & named exports / variable declarations for top level
@@ -1306,17 +1360,13 @@ export function compileScript(
     }
 
     if (isTS) {
-      // runtime enum
-      if (node.type === 'TSEnumDeclaration') {
-        registerBinding(setupBindings, node.id, BindingTypes.SETUP_CONST)
-      }
-
       // move all Type declarations to outer scope
       if (
-        node.type.startsWith('TS') ||
-        (node.type === 'ExportNamedDeclaration' &&
-          node.exportKind === 'type') ||
-        (node.type === 'VariableDeclaration' && node.declare)
+        (node.type.startsWith('TS') ||
+          (node.type === 'ExportNamedDeclaration' &&
+            node.exportKind === 'type') ||
+          (node.type === 'VariableDeclaration' && node.declare)) &&
+        node.type !== 'TSEnumDeclaration'
       ) {
         recordType(node, declaredTypes)
         hoistNode(node)
@@ -1358,6 +1408,7 @@ export function compileScript(
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
+  checkInvalidScopeReference(optionsRuntimeDecl, DEFINE_OPTIONS)
 
   // 6. remove non-script content
   if (script) {
@@ -1437,7 +1488,7 @@ export function compileScript(
   ) {
     helperImports.add(CSS_VARS_HELPER)
     helperImports.add('unref')
-    s.prependRight(
+    s.prependLeft(
       startOffset,
       `\n${genCssVarsCode(cssVars, bindingMetadata, scopeId, isProd)}\n`
     )
@@ -1645,6 +1696,13 @@ export function compileScript(
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
 
+  let definedOptions = ''
+  if (optionsRuntimeDecl) {
+    definedOptions = scriptSetup.content
+      .slice(optionsRuntimeDecl.start!, optionsRuntimeDecl.end!)
+      .trim()
+  }
+
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
@@ -1656,7 +1714,9 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
-    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    const def =
+      (defaultExport ? `\n  ...${DEFAULT_VAR},` : ``) +
+      (definedOptions ? `\n  ...${definedOptions},` : '')
     s.prependLeft(
       startOffset,
       `\nexport default /*#__PURE__*/${helper(
@@ -1667,12 +1727,14 @@ export function compileScript(
     )
     s.appendRight(endOffset, `})`)
   } else {
-    if (defaultExport) {
+    if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+        `\nexport default /*#__PURE__*/Object.assign(${
+          defaultExport ? `${DEFAULT_VAR}, ` : ''
+        }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `})`)
@@ -1699,6 +1761,7 @@ export function compileScript(
 
   return {
     ...scriptSetup,
+    s,
     bindings: bindingMetadata,
     imports: userImports,
     content: s.toString(),
@@ -1726,9 +1789,17 @@ function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>
-) {
+): boolean {
+  let isAllLiteral = false
+
   if (node.type === 'VariableDeclaration') {
     const isConst = node.kind === 'const'
+    isAllLiteral =
+      isConst &&
+      node.declarations.every(
+        decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!)
+      )
+
     // export const foo = ...
     for (const { id, init } of node.declarations) {
       const isDefineCall = !!(
@@ -1741,7 +1812,9 @@ function walkDeclaration(
       if (id.type === 'Identifier') {
         let bindingType
         const userReactiveBinding = userImportAliases['reactive']
-        if (isCallOf(init, userReactiveBinding)) {
+        if (isAllLiteral || (isConst && isStaticNode(init!))) {
+          bindingType = BindingTypes.LITERAL_CONST
+        } else if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
           bindingType = isConst
             ? BindingTypes.SETUP_REACTIVE_CONST
@@ -1776,8 +1849,14 @@ function walkDeclaration(
         }
       }
     }
+  } else if (node.type === 'TSEnumDeclaration') {
+    isAllLiteral = node.members.every(
+      member => !member.initializer || isStaticNode(member.initializer)
+    )
+    bindings[node.id!.name] = isAllLiteral
+      ? BindingTypes.LITERAL_CONST
+      : BindingTypes.SETUP_CONST
   } else if (
-    node.type === 'TSEnumDeclaration' ||
     node.type === 'FunctionDeclaration' ||
     node.type === 'ClassDeclaration'
   ) {
@@ -1785,6 +1864,8 @@ function walkDeclaration(
     // export declarations must be named.
     bindings[node.id!.name] = BindingTypes.SETUP_CONST
   }
+
+  return isAllLiteral
 }
 
 function walkObjectPattern(
@@ -1920,9 +2001,21 @@ function inferRuntimeType(
       return ['Boolean']
     case 'TSObjectKeyword':
       return ['Object']
-    case 'TSTypeLiteral':
+    case 'TSTypeLiteral': {
       // TODO (nice to have) generate runtime property validation
-      return ['Object']
+      const types = new Set<string>()
+      for (const m of node.members) {
+        switch (m.type) {
+          case 'TSCallSignatureDeclaration':
+          case 'TSConstructSignatureDeclaration':
+            types.add('Function')
+            break
+          default:
+            types.add('Object')
+        }
+      }
+      return Array.from(types)
+    }
     case 'TSFunctionType':
       return ['Function']
     case 'TSArrayType':
@@ -2090,11 +2183,51 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
         userReactiveImport
       )
     default:
-      if (node.type.endsWith('Literal')) {
+      if (isLiteralNode(node)) {
         return true
       }
       return false
   }
+}
+
+function isStaticNode(node: Node): boolean {
+  switch (node.type) {
+    case 'UnaryExpression': // void 0, !true
+      return isStaticNode(node.argument)
+
+    case 'LogicalExpression': // 1 > 2
+    case 'BinaryExpression': // 1 + 2
+      return isStaticNode(node.left) && isStaticNode(node.right)
+
+    case 'ConditionalExpression': {
+      // 1 ? 2 : 3
+      return (
+        isStaticNode(node.test) &&
+        isStaticNode(node.consequent) &&
+        isStaticNode(node.alternate)
+      )
+    }
+
+    case 'SequenceExpression': // (1, 2)
+    case 'TemplateLiteral': // `foo${1}`
+      return node.expressions.every(expr => isStaticNode(expr))
+
+    case 'ParenthesizedExpression': // (1)
+    case 'TSNonNullExpression': // 1!
+    case 'TSAsExpression': // 1 as number
+    case 'TSTypeAssertion': // (<number>2)
+      return isStaticNode(node.expression)
+
+    default:
+      if (isLiteralNode(node)) {
+        return true
+      }
+      return false
+  }
+}
+
+function isLiteralNode(node: Node) {
+  return node.type.endsWith('Literal')
 }
 
 /**

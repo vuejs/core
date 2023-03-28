@@ -28,12 +28,12 @@ describe('SFC compile <script setup>', () => {
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
-      b: BindingTypes.SETUP_CONST,
+      b: BindingTypes.LITERAL_CONST,
       c: BindingTypes.SETUP_CONST,
       d: BindingTypes.SETUP_CONST,
       xx: BindingTypes.SETUP_MAYBE_REF,
       aa: BindingTypes.SETUP_LET,
-      bb: BindingTypes.SETUP_CONST,
+      bb: BindingTypes.LITERAL_CONST,
       cc: BindingTypes.SETUP_CONST,
       dd: BindingTypes.SETUP_CONST
     })
@@ -71,7 +71,7 @@ const bar = 1
     // should analyze bindings
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
-      bar: BindingTypes.SETUP_CONST,
+      bar: BindingTypes.LITERAL_CONST,
       props: BindingTypes.SETUP_REACTIVE_CONST
     })
 
@@ -170,6 +170,68 @@ const myEmit = defineEmits(['foo', 'bar'])
     assertCode(content)
     expect(content).toMatch(`props: ['item'],`)
     expect(content).toMatch(`emits: ['a'],`)
+  })
+
+  describe('defineOptions()', () => {
+    test('basic usage', () => {
+      const { content } = compile(`
+<script setup>
+defineOptions({ name: 'FooApp' })
+</script>
+  `)
+      assertCode(content)
+      // should remove defineOptions import and call
+      expect(content).not.toMatch('defineOptions')
+      // should include context options in default export
+      expect(content).toMatch(
+        `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `
+      )
+    })
+
+    it('should emit an error with two defineProps', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ name: 'FooApp' })
+        defineOptions({ name: 'BarApp' })
+        </script>
+        `)
+      ).toThrowError('[@vue/compiler-sfc] duplicate defineOptions() call')
+    })
+
+    it('should emit an error with props or emits property', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ props: { foo: String } })
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead.'
+      )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ emits: ['update'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare emits. Use defineEmits() instead.'
+      )
+    })
+
+    it('should emit an error with type generic', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        defineOptions<{ name: 'FooApp' }>()
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
+      )
+    })
   })
 
   test('defineExpose()', () => {
@@ -898,6 +960,10 @@ const emit = defineEmits(['a', 'b'])
         alias: Alias
         method(): void
         symbol: symbol
+        objectOrFn: {
+          (): void
+          foo: string
+        }
 
         union: string | number
         literalUnion: 'foo' | 'bar'
@@ -928,6 +994,9 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`alias: { type: Array, required: true }`)
       expect(content).toMatch(`method: { type: Function, required: true }`)
       expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
+      expect(content).toMatch(
+        `objectOrFn: { type: [Function, Object], required: true },`
+      )
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -961,6 +1030,7 @@ const emit = defineEmits(['a', 'b'])
         alias: BindingTypes.PROPS,
         method: BindingTypes.PROPS,
         symbol: BindingTypes.PROPS,
+        objectOrFn: BindingTypes.PROPS,
         union: BindingTypes.PROPS,
         literalUnion: BindingTypes.PROPS,
         literalUnionNumber: BindingTypes.PROPS,
@@ -1136,7 +1206,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-    
+
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1277,7 +1347,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
-    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">
@@ -1361,7 +1430,7 @@ const emit = defineEmits(['a', 'b'])
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
-        Foo: BindingTypes.SETUP_CONST
+        Foo: BindingTypes.LITERAL_CONST
       })
     })
 
@@ -1378,10 +1447,10 @@ const emit = defineEmits(['a', 'b'])
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
-        D: BindingTypes.SETUP_CONST,
-        C: BindingTypes.SETUP_CONST,
-        B: BindingTypes.SETUP_CONST,
-        Foo: BindingTypes.SETUP_CONST
+        D: BindingTypes.LITERAL_CONST,
+        C: BindingTypes.LITERAL_CONST,
+        B: BindingTypes.LITERAL_CONST,
+        Foo: BindingTypes.LITERAL_CONST
       })
     })
 
@@ -1389,11 +1458,12 @@ const emit = defineEmits(['a', 'b'])
       const { content, bindings } = compile(
         `<script setup lang="ts">
         const enum Foo { A = 123 }
-        </script>`
+        </script>`,
+        { hoistStatic: true }
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
-        Foo: BindingTypes.SETUP_CONST
+        Foo: BindingTypes.LITERAL_CONST
       })
     })
 
@@ -1572,7 +1642,7 @@ const emit = defineEmits(['a', 'b'])
     test('defineProps/Emit() referencing local var', () => {
       expect(() =>
         compile(`<script setup>
-        const bar = 1
+        let bar = 1
         defineProps({
           foo: {
             default: () => bar
@@ -1583,7 +1653,7 @@ const emit = defineEmits(['a', 'b'])
 
       expect(() =>
         compile(`<script setup>
-        const bar = 'hello'
+        let bar = 'hello'
         defineEmits([bar])
         </script>`)
       ).toThrow(`cannot reference locally declared variables`)
@@ -1724,7 +1794,7 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.SETUP_CONST
+      foo: BindingTypes.LITERAL_CONST
     })
   })
 
@@ -1890,7 +1960,7 @@ describe('SFC analyze <script> bindings', () => {
       r: BindingTypes.SETUP_CONST,
       a: BindingTypes.SETUP_REF,
       b: BindingTypes.SETUP_LET,
-      c: BindingTypes.SETUP_CONST,
+      c: BindingTypes.LITERAL_CONST,
       d: BindingTypes.SETUP_MAYBE_REF,
       e: BindingTypes.SETUP_LET,
       foo: BindingTypes.PROPS

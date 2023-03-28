@@ -39,21 +39,21 @@
     "@vue/reactivity-transform": "3.3.0-alpha.5",
     "@vue/shared": "3.3.0-alpha.5",
     "estree-walker": "^2.0.2",
-    "magic-string": "^0.27.0",
-    "source-map": "^0.6.1",
-    "postcss": "^8.1.10"
+    "magic-string": "^0.30.0",
+    "postcss": "^8.1.10",
+    "source-map": "^0.6.1"
   },
   "devDependencies": {
-    "@types/estree": "^0.0.48",
     "@babel/types": "^7.16.0",
+    "@types/estree": "^0.0.48",
     "@types/lru-cache": "^5.1.0",
-    "pug": "^3.0.1",
-    "sass": "^1.26.9",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
     "postcss-modules": "^4.0.0",
-    "postcss-selector-parser": "^6.0.4"
+    "postcss-selector-parser": "^6.0.4",
+    "pug": "^3.0.1",
+    "sass": "^1.26.9"
   }
 }

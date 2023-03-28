@@ -43,9 +43,12 @@
       "import": "./jsx-runtime/index.mjs",
       "require": "./jsx-runtime/index.js"
     },
-    "./jsx": {
-      "types": "./jsx.d.ts"
+    "./jsx-dev-runtime": {
+      "types": "./jsx-runtime/index.d.ts",
+      "import": "./jsx-runtime/index.mjs",
+      "require": "./jsx-runtime/index.js"
     },
+    "./jsx": "./jsx.d.ts",
     "./dist/*": "./dist/*",
     "./package.json": "./package.json",
     "./macros": "./macros.d.ts",
