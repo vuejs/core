@@ -387,7 +387,7 @@ export function compileScript(
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
   ) {
-    // template usage check is only needed in non-inline mode, so we can UNKNOWN
+    // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
     let isUsedInTemplate = needTemplateUsageCheck
     if (
@@ -1109,7 +1109,7 @@ export function compileScript(
 
         // check if user has manually specified `name` or 'render` option in
         // export default
-        // if has name, UNKNOWN name inference
+        // if has name, skip name inference
         // if has render and no template, generate return object instead of
         // empty render function (#4980)
         let optionProperties
@@ -1586,7 +1586,7 @@ export function compileScript(
         !userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
-        // UNKNOWN vue imports since we know they will never change
+        // skip vue imports since we know they will never change
         returned += `get ${key}() { return ${key} }, `
       } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
         // local let binding, also add setter
