@@ -269,7 +269,7 @@ describe('CSS vars injection', () => {
              </style>`
       )
       expect(content).toMatch(
-        `export default {\n  setup(__props, { expose }) {\n  expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
+        `export default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
       )
     })
   })
