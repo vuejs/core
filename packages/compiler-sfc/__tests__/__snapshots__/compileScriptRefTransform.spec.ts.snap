@@ -4,8 +4,8 @@ exports[`sfc ref transform > $ unwrapping 1`] = `
 "import { ref, shallowRef } from 'vue'
     
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     let foo = (ref())
     let a = (ref(1))
@@ -25,8 +25,8 @@ exports[`sfc ref transform > $ref & $shallowRef declarations 1`] = `
 "import { ref as _ref, shallowRef as _shallowRef } from 'vue'
 
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     let foo = _ref()
     let a = _ref(1)
@@ -46,8 +46,8 @@ exports[`sfc ref transform > usage /w typescript 1`] = `
 "import { ref as _ref, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
         let msg = _ref<string | number>('foo');
         let bar = _ref <string | number>('bar');
@@ -77,8 +77,8 @@ exports[`sfc ref transform > usage with normal <script> (has macro usage) + <scr
     let data = _ref()
     
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     console.log(data.value)
     
@@ -95,8 +95,8 @@ exports[`sfc ref transform > usage with normal <script> + <script setup> 1`] = `
     let c = _ref(0)
     
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
     let b = _ref(0)
     let c = 0

@@ -53,8 +53,8 @@ exports[`CSS vars injection > codegen > should ignore comments 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 const color = 'red';const width = 100
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-width\\": (width)
@@ -70,8 +70,8 @@ exports[`CSS vars injection > codegen > should work with w/ complex expression 1
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-foo\\": (_unref(foo)),
@@ -94,8 +94,8 @@ exports[`CSS vars injection > codegen > w/ <script setup> 1`] = `
 "import { useCssVars as _useCssVars, unref as _unref } from 'vue'
 const color = 'red'
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
@@ -112,8 +112,8 @@ exports[`CSS vars injection > codegen > w/ <script setup> using the same var mul
 const color = 'red'
         
 export default {
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color)
@@ -152,8 +152,8 @@ export default {
   props: {
           foo: String
         },
-  setup(__props, { expose }) {
-  expose();
+  setup(__props, { expose: __expose }) {
+  __expose();
 
 _useCssVars(_ctx => ({
   \\"xxxxxxxx-color\\": (color),
