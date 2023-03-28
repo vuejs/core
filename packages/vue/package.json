@@ -43,6 +43,11 @@
       "import": "./jsx-runtime/index.mjs",
       "require": "./jsx-runtime/index.js"
     },
+    "./jsx-dev-runtime": {
+      "types": "./jsx-runtime/index.d.ts",
+      "import": "./jsx-runtime/index.mjs",
+      "require": "./jsx-runtime/index.js"
+    },
     "./jsx": {
       "types": "./jsx.d.ts"
     },
