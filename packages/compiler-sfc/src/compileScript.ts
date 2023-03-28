@@ -386,7 +386,7 @@ export function compileScript(
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
   ) {
-    // template usage check is only needed in non-inline mode, so we can skip
+    // template usage check is only needed in non-inline mode, so we can UNKNOWN
     // the work if inlineTemplate is true.
     let isUsedInTemplate = needTemplateUsageCheck
     if (
@@ -1100,7 +1100,7 @@ export function compileScript(
 
         // check if user has manually specified `name` or 'render` option in
         // export default
-        // if has name, skip name inference
+        // if has name, UNKNOWN name inference
         // if has render and no template, generate return object instead of
         // empty render function (#4980)
         let optionProperties
@@ -1403,7 +1403,7 @@ export function compileScript(
 
   // 4. extract runtime props/emits code from setup context type
   if (propsTypeDecl) {
-    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes, isProd)
+    extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
   }
   if (emitsTypeDecl) {
     extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
@@ -1576,7 +1576,7 @@ export function compileScript(
         !userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
-        // skip vue imports since we know they will never change
+        // UNKNOWN vue imports since we know they will never change
         returned += `get ${key}() { return ${key} }, `
       } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
         // local let binding, also add setter
@@ -1972,8 +1972,7 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
 function extractRuntimeProps(
   node: TSTypeLiteral | TSInterfaceBody,
   props: Record<string, PropTypeData>,
-  declaredTypes: Record<string, string[]>,
-  isProd: boolean
+  declaredTypes: Record<string, string[]>
 ) {
   const members = node.type === 'TSTypeLiteral' ? node.members : node.body
   for (const m of members) {
@@ -1981,11 +1980,15 @@ function extractRuntimeProps(
       (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
       m.key.type === 'Identifier'
     ) {
-      let type
+      let type: string[] | undefined
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
+        // skip check for result containing unknown types
+        if (type.includes(UNKNOWN_TYPE)) {
+          type = [`null`]
+        }
       }
       props[m.key.name] = {
         key: m.key.name,
@@ -1995,6 +1998,8 @@ function extractRuntimeProps(
     }
   }
 }
+
+const UNKNOWN_TYPE = 'Unknown'
 
 function inferRuntimeType(
   node: TSType,
@@ -2009,6 +2014,8 @@ function inferRuntimeType(
       return ['Boolean']
     case 'TSObjectKeyword':
       return ['Object']
+    case 'TSNullKeyword':
+      return ['null']
     case 'TSTypeLiteral': {
       // TODO (nice to have) generate runtime property validation
       const types = new Set<string>()
@@ -2041,7 +2048,7 @@ function inferRuntimeType(
         case 'BigIntLiteral':
           return ['Number']
         default:
-          return [`null`]
+          return [`UNKNOWN`]
       }
 
     case 'TSTypeReference':
@@ -2104,29 +2111,41 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
-          // cannot infer, fallback to null: ThisParameterType
+          // cannot infer, fallback to UNKNOWN: ThisParameterType
         }
       }
-      return [`null`]
+      return [UNKNOWN_TYPE]
 
     case 'TSParenthesizedType':
       return inferRuntimeType(node.typeAnnotation, declaredTypes)
+
     case 'TSUnionType':
-    case 'TSIntersectionType':
-      return [
-        ...new Set(
-          [].concat(
-            ...(node.types.map(t => inferRuntimeType(t, declaredTypes)) as any)
-          )
-        )
-      ]
+      return flattenTypes(node.types, declaredTypes)
+    case 'TSIntersectionType': {
+      return flattenTypes(node.types, declaredTypes).filter(
+        t => t !== UNKNOWN_TYPE
+      )
+    }
 
     case 'TSSymbolKeyword':
       return ['Symbol']
 
     default:
-      return [`null`] // no runtime check
+      return [UNKNOWN_TYPE] // no runtime check
   }
+}
+
+function flattenTypes(
+  types: TSType[],
+  declaredTypes: Record<string, string[]>
+): string[] {
+  return [
+    ...new Set(
+      ([] as string[]).concat(
+        ...types.map(t => inferRuntimeType(t, declaredTypes))
+      )
+    )
+  ]
 }
 
 function toRuntimeTypeString(types: string[]) {
