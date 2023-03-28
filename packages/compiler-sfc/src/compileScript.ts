@@ -9,7 +9,8 @@ import {
   UNREF,
   SimpleExpressionNode,
   isFunctionType,
-  walkIdentifiers
+  walkIdentifiers,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import {
@@ -1229,17 +1230,18 @@ export function compileScript(
     }
 
     if (node.type === 'ExpressionStatement') {
+      const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
       if (
-        processDefineProps(node.expression) ||
-        processDefineEmits(node.expression) ||
-        processDefineOptions(node.expression) ||
-        processWithDefaults(node.expression)
+        processDefineProps(expr) ||
+        processDefineEmits(expr) ||
+        processDefineOptions(expr) ||
+        processWithDefaults(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
-      } else if (processDefineExpose(node.expression)) {
+      } else if (processDefineExpose(expr)) {
         // defineExpose({}) -> expose({})
-        const callee = (node.expression as CallExpression).callee
+        const callee = (expr as CallExpression).callee
         s.overwrite(
           callee.start! + startOffset,
           callee.end! + startOffset,
@@ -1253,8 +1255,9 @@ export function compileScript(
       let left = total
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
-        if (decl.init) {
-          if (processDefineOptions(decl.init)) {
+        const init = decl.init && unwrapTSNode(decl.init)
+        if (init) {
+          if (processDefineOptions(init)) {
             error(
               `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
               node
@@ -1263,9 +1266,9 @@ export function compileScript(
 
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(decl.init, decl.id, node.kind) ||
-            processWithDefaults(decl.init, decl.id, node.kind)
-          const isDefineEmits = processDefineEmits(decl.init, decl.id)
+            processDefineProps(init, decl.id, node.kind) ||
+            processWithDefaults(init, decl.id, node.kind)
+          const isDefineEmits = processDefineEmits(init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1801,7 +1804,8 @@ function walkDeclaration(
       )
 
     // export const foo = ...
-    for (const { id, init } of node.declarations) {
+    for (const { id, init: _init } of node.declarations) {
+      const init = _init && unwrapTSNode(_init)
       const isDefineCall = !!(
         isConst &&
         isCallOf(
