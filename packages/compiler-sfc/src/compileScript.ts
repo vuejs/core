@@ -167,6 +167,11 @@ export function compileScript(
   const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const isJS =
+    scriptLang === 'js' ||
+    scriptLang === 'jsx' ||
+    scriptSetupLang === 'js' ||
+    scriptSetupLang === 'jsx'
   const isTS =
     scriptLang === 'ts' ||
     scriptLang === 'tsx' ||
@@ -196,7 +201,7 @@ export function compileScript(
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && !isTS && scriptLang !== 'jsx') {
+    if (scriptLang && !isJS && !isTS) {
       // do not process non js/ts script blocks
       return script
     }
@@ -264,7 +269,7 @@ export function compileScript(
     )
   }
 
-  if (scriptSetupLang && !isTS && scriptSetupLang !== 'jsx') {
+  if (scriptSetupLang && !isJS && !isTS) {
     // do not process non js/ts script blocks
     return scriptSetup
   }
