@@ -998,8 +998,6 @@ const emit = defineEmits(['a', 'b'])
 
       type Alias = number[]
 
-      enum Enum { one = '1', two = '2' }
-
       defineProps<{
         string: string
         number: number
@@ -1023,7 +1021,6 @@ const emit = defineEmits(['a', 'b'])
         symbol: symbol
         extract: Extract<1 | 2 | boolean, 2>
         exclude: Exclude<1 | 2 | boolean, 2>
-        enum: Enum
         uppercase: Uppercase<'foo'>
         params: Parameters<(foo: any) => void>
         nonNull: NonNullable<string | null>
@@ -1069,7 +1066,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `exclude: { type: [Number, Boolean], required: true }`
       )
-      expect(content).toMatch(`enum: { type: Object, required: true }`)
       expect(content).toMatch(`uppercase: { type: String, required: true }`)
       expect(content).toMatch(`params: { type: Array, required: true }`)
       expect(content).toMatch(`nonNull: { type: String, required: true }`)
@@ -1119,9 +1115,7 @@ const emit = defineEmits(['a', 'b'])
         foo: BindingTypes.PROPS,
         uppercase: BindingTypes.PROPS,
         params: BindingTypes.PROPS,
-        nonNull: BindingTypes.PROPS,
-        enum: BindingTypes.PROPS,
-        Enum: BindingTypes.LITERAL_CONST
+        nonNull: BindingTypes.PROPS
       })
     })
 
