@@ -386,6 +386,22 @@ defineExpose({ foo: 123 })
         assertCode(content)
       })
     })
+
+    test('export call expression as default', () => {
+      const { content } = compile(`
+      <script>
+      function fn() {
+        return "hello, world";
+      }
+      export default fn();
+      </script>
+
+      <script setup>
+      console.log('foo')
+      </script>
+      `)
+      assertCode(content)
+    })
   })
 
   describe('imports', () => {

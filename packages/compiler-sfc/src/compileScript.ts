@@ -1116,6 +1116,7 @@ export function compileScript(
           optionProperties = defaultExport.declaration.properties
         } else if (
           defaultExport.declaration.type === 'CallExpression' &&
+          defaultExport.declaration.arguments[0] &&
           defaultExport.declaration.arguments[0].type === 'ObjectExpression'
         ) {
           optionProperties = defaultExport.declaration.arguments[0].properties
