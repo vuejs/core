@@ -2056,15 +2056,35 @@ function inferRuntimeType(
           case 'Date':
           case 'Promise':
             return [node.typeName.name]
-          case 'Record':
+
+          // TS built-in utility types
+          // https://www.typescriptlang.org/docs/handbook/utility-types.html
           case 'Partial':
+          case 'Required':
           case 'Readonly':
+          case 'Record':
           case 'Pick':
           case 'Omit':
-          case 'Required':
           case 'InstanceType':
             return ['Object']
 
+          case 'Uppercase':
+          case 'Lowercase':
+          case 'Capitalize':
+          case 'Uncapitalize':
+            return ['String']
+
+          case 'Parameters':
+          case 'ConstructorParameters':
+            return ['Array']
+
+          case 'NonNullable':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              ).filter(t => t !== 'null')
+            }
           case 'Extract':
             if (node.typeParameters && node.typeParameters.params[1]) {
               return inferRuntimeType(
@@ -2072,15 +2092,15 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
-            return ['null']
           case 'Exclude':
+          case 'OmitThisParameter':
             if (node.typeParameters && node.typeParameters.params[0]) {
               return inferRuntimeType(
                 node.typeParameters.params[0],
                 declaredTypes
               )
             }
-            return ['null']
+          // cannot infer, fallback to null: ThisParameterType
         }
       }
       return [`null`]
