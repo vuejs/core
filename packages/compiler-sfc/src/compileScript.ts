@@ -412,11 +412,7 @@ export function compileScript(
     }
   }
 
-  function processDefineProps(
-    node: Node,
-    declId?: LVal,
-    declKind?: VariableDeclaration['kind']
-  ): boolean {
+  function processDefineProps(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, DEFINE_PROPS)) {
       return false
     }
@@ -519,7 +515,7 @@ export function compileScript(
         `Props destructure is now reactive by default - ` +
         `use destructure with default values instead.`
     )
-    if (processDefineProps(node.arguments[0], declId, declKind)) {
+    if (processDefineProps(node.arguments[0], declId)) {
       if (propsRuntimeDecl) {
         error(
           `${WITH_DEFAULTS} can only be used with type-based ` +
@@ -1305,7 +1301,7 @@ export function compileScript(
 
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(init, decl.id, node.kind) ||
+            processDefineProps(init, decl.id) ||
             processWithDefaults(init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(init, decl.id)
           if (isDefineProps || isDefineEmits) {
