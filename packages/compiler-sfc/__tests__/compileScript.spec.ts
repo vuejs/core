@@ -171,6 +171,23 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  // #7422
+  test('defineProps/defineEmits in multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emits = defineEmits(['foo']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['foo'],`)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
+  })
+
   test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
     const { content } = compile(`
     <script setup>

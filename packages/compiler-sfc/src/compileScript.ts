@@ -1258,6 +1258,8 @@ export function compileScript(
     if (node.type === 'VariableDeclaration' && !node.declare) {
       const total = node.declarations.length
       let left = total
+      let lastNonRemoved: number | undefined
+
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         const init = decl.init && unwrapTSNode(decl.init)
@@ -1280,16 +1282,20 @@ export function compileScript(
             } else {
               let start = decl.start! + startOffset
               let end = decl.end! + startOffset
-              if (i === 0) {
-                // first one, locate the start of the next
-                end = node.declarations[i + 1].start! + startOffset
+              if (i === total - 1) {
+                // last one, locate the end of the last one that is not removed
+                // if we arrive at this branch, there must have been a
+                // non-removed decl before us, so lastNonRemoved is non-null.
+                start = node.declarations[lastNonRemoved!].end! + startOffset
               } else {
-                // not first one, locate the end of the prev
-                start = node.declarations[i - 1].end! + startOffset
+                // not the last one, locate the start of the next
+                end = node.declarations[i + 1].start! + startOffset
               }
               s.remove(start, end)
               left--
             }
+          } else {
+            lastNonRemoved = i
           }
         }
       }
