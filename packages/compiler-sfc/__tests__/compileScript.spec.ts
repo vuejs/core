@@ -962,6 +962,9 @@ const emit = defineEmits(['a', 'b'])
         symbol: symbol
         extract: Extract<1 | 2 | boolean, 2>
         exclude: Exclude<1 | 2 | boolean, 2>
+        uppercase: Uppercase<'foo'>
+        params: Parameters<(foo: any) => void>
+        nonNull: NonNullable<string | null>
         objectOrFn: {
           (): void
           foo: string
@@ -1004,6 +1007,9 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `exclude: { type: [Number, Boolean], required: true }`
       )
+      expect(content).toMatch(`uppercase: { type: String, required: true }`)
+      expect(content).toMatch(`params: { type: Array, required: true }`)
+      expect(content).toMatch(`nonNull: { type: String, required: true }`)
       expect(content).toMatch(
         `union: { type: [String, Number], required: true }`
       )
@@ -1047,7 +1053,10 @@ const emit = defineEmits(['a', 'b'])
         literalUnionMixed: BindingTypes.PROPS,
         intersection: BindingTypes.PROPS,
         intersection2: BindingTypes.PROPS,
-        foo: BindingTypes.PROPS
+        foo: BindingTypes.PROPS,
+        uppercase: BindingTypes.PROPS,
+        params: BindingTypes.PROPS,
+        nonNull: BindingTypes.PROPS
       })
     })
 
