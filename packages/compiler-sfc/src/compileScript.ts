@@ -683,16 +683,31 @@ export function compileScript(
     hasDefineOptionsCall = true
     optionsRuntimeDecl = node.arguments[0]
 
-    const hasPropOrEmits =
-      optionsRuntimeDecl.type === 'ObjectExpression' &&
-      optionsRuntimeDecl.properties.some(
-        prop =>
+    let propsOption = undefined
+    let emitsOption = undefined
+    if (optionsRuntimeDecl.type === 'ObjectExpression') {
+      for (const prop of optionsRuntimeDecl.properties) {
+        if (
           (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-          prop.key.type === 'Identifier' &&
-          (prop.key.name === 'props' || prop.key.name === 'emits')
+          prop.key.type === 'Identifier'
+        ) {
+          if (prop.key.name === 'props') propsOption = prop
+          if (prop.key.name === 'emits') emitsOption = prop
+        }
+      }
+    }
+
+    if (propsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare props. Use ${DEFINE_PROPS}() instead.`,
+        propsOption
       )
-    if (hasPropOrEmits) {
-      error(`${DEFINE_OPTIONS}() use defineProps or defineEmits instead.`, node)
+    }
+    if (emitsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
+        emitsOption
+      )
     }
 
     return true
