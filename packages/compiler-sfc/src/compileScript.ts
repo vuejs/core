@@ -62,6 +62,7 @@ const DEFINE_PROPS = 'defineProps'
 const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
+const DEFINE_OPTIONS = 'defineOptions'
 
 // constants
 const DEFAULT_VAR = `__default__`
@@ -270,6 +271,7 @@ export function compileScript(
   let hasDefineExposeCall = false
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
+  let hasDefineOptionsCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: ObjectExpression | undefined
   let propsDestructureDecl: Node | undefined
@@ -281,6 +283,7 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
+  let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types
@@ -645,6 +648,50 @@ export function compileScript(
         }
       })
     })
+  }
+
+  function processDefineOptions(node: Node): boolean {
+    if (!isCallOf(node, DEFINE_OPTIONS)) {
+      return false
+    }
+    if (hasDefineOptionsCall) {
+      error(`duplicate ${DEFINE_OPTIONS}() call`, node)
+    }
+    if (node.typeParameters) {
+      error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
+    }
+
+    hasDefineOptionsCall = true
+    optionsRuntimeDecl = node.arguments[0]
+
+    let propsOption = undefined
+    let emitsOption = undefined
+    if (optionsRuntimeDecl.type === 'ObjectExpression') {
+      for (const prop of optionsRuntimeDecl.properties) {
+        if (
+          (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
+          prop.key.type === 'Identifier'
+        ) {
+          if (prop.key.name === 'props') propsOption = prop
+          if (prop.key.name === 'emits') emitsOption = prop
+        }
+      }
+    }
+
+    if (propsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare props. Use ${DEFINE_PROPS}() instead.`,
+        propsOption
+      )
+    }
+    if (emitsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
+        emitsOption
+      )
+    }
+
+    return true
   }
 
   function resolveQualifiedType(
@@ -1175,6 +1222,7 @@ export function compileScript(
       if (
         processDefineProps(node.expression) ||
         processDefineEmits(node.expression) ||
+        processDefineOptions(node.expression) ||
         processWithDefaults(node.expression)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1195,6 +1243,13 @@ export function compileScript(
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
         if (decl.init) {
+          if (processDefineOptions(decl.init)) {
+            error(
+              `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
+              node
+            )
+          }
+
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(decl.init, decl.id, node.kind) ||
@@ -1339,6 +1394,7 @@ export function compileScript(
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
+  checkInvalidScopeReference(optionsRuntimeDecl, DEFINE_OPTIONS)
 
   // 6. remove non-script content
   if (script) {
@@ -1626,6 +1682,13 @@ export function compileScript(
     runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
   }
 
+  let definedOptions = ''
+  if (optionsRuntimeDecl) {
+    definedOptions = scriptSetup.content
+      .slice(optionsRuntimeDecl.start!, optionsRuntimeDecl.end!)
+      .trim()
+  }
+
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
@@ -1637,7 +1700,9 @@ export function compileScript(
     // we have to use object spread for types to be merged properly
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
-    const def = defaultExport ? `\n  ...${DEFAULT_VAR},` : ``
+    const def =
+      (defaultExport ? `\n  ...${DEFAULT_VAR},` : ``) +
+      (definedOptions ? `\n  ...${definedOptions},` : '')
     s.prependLeft(
       startOffset,
       `\nexport default /*#__PURE__*/${helper(
@@ -1648,12 +1713,14 @@ export function compileScript(
     )
     s.appendRight(endOffset, `})`)
   } else {
-    if (defaultExport) {
+    if (defaultExport || definedOptions) {
       // without TS, can't rely on rest spread, so we use Object.assign
       // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${DEFAULT_VAR}, {${runtimeOptions}\n  ` +
+        `\nexport default /*#__PURE__*/Object.assign(${
+          defaultExport ? `${DEFAULT_VAR}, ` : ''
+        }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `})`)
