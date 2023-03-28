@@ -58,6 +58,7 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
+  skipCheck?: boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
@@ -608,7 +609,7 @@ function validateProp(
   prop: PropOptions,
   isAbsent: boolean
 ) {
-  const { type, required, validator } = prop
+  const { type, required, validator, skipCheck } = prop
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')
@@ -619,7 +620,7 @@ function validateProp(
     return
   }
   // type check
-  if (type != null && type !== true) {
+  if (type != null && type !== true && !skipCheck) {
     let isValid = false
     const types = isArray(type) ? type : [type]
     const expectedTypes = []
