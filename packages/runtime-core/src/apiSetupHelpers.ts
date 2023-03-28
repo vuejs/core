@@ -8,6 +8,12 @@ import {
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
+  ComponentOptionsMixin,
+  ComponentOptionsWithoutProps,
+  ComputedOptions,
+  MethodOptions
+} from './componentOptions'
+import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes
@@ -140,6 +146,33 @@ export function defineExpose<
 >(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
+  }
+}
+
+export function defineOptions<
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = EmitsOptions,
+  EE extends string = string
+>(
+  options?: ComponentOptionsWithoutProps<
+    {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  > & { emits?: undefined }
+): void {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineOptions`)
   }
 }
 

@@ -172,6 +172,68 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).toMatch(`emits: ['a'],`)
   })
 
+  describe('defineOptions()', () => {
+    test('basic usage', () => {
+      const { content } = compile(`
+<script setup>
+defineOptions({ name: 'FooApp' })
+</script>
+  `)
+      assertCode(content)
+      // should remove defineOptions import and call
+      expect(content).not.toMatch('defineOptions')
+      // should include context options in default export
+      expect(content).toMatch(
+        `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `
+      )
+    })
+
+    it('should emit an error with two defineProps', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ name: 'FooApp' })
+        defineOptions({ name: 'BarApp' })
+        </script>
+        `)
+      ).toThrowError('[@vue/compiler-sfc] duplicate defineOptions() call')
+    })
+
+    it('should emit an error with props or emits property', () => {
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ props: { foo: String } })
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead.'
+      )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ emits: ['update'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare emits. Use defineEmits() instead.'
+      )
+    })
+
+    it('should emit an error with type generic', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        defineOptions<{ name: 'FooApp' }>()
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
+      )
+    })
+  })
+
   test('defineExpose()', () => {
     const { content } = compile(`
 <script setup>
@@ -1136,7 +1198,7 @@ const emit = defineEmits(['a', 'b'])
       `)
       assertCode(content)
     })
-    
+
     // #7111
     test('withDefaults (static) w/ production mode', () => {
       const { content } = compile(
@@ -1277,7 +1339,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
-    
     test('defineEmits w/ type from normal script', () => {
       const { content } = compile(`
       <script lang="ts">
