@@ -1369,15 +1369,14 @@ export function compileScript(
     if (isTS) {
       // move all Type declarations to outer scope
       if (
-        node.type.startsWith('TS') ||
-        (node.type === 'ExportNamedDeclaration' &&
-          node.exportKind === 'type') ||
-        (node.type === 'VariableDeclaration' && node.declare)
+        (node.type.startsWith('TS') ||
+          (node.type === 'ExportNamedDeclaration' &&
+            node.exportKind === 'type') ||
+          (node.type === 'VariableDeclaration' && node.declare)) &&
+        node.type !== 'TSEnumDeclaration'
       ) {
         recordType(node, declaredTypes)
-        if (node.type !== 'TSEnumDeclaration') {
-          hoistNode(node)
-        }
+        hoistNode(node)
       }
     }
   }
@@ -1958,10 +1957,7 @@ interface PropTypeData {
 }
 
 function recordType(node: Node, declaredTypes: Record<string, string[]>) {
-  if (
-    node.type === 'TSInterfaceDeclaration' ||
-    node.type === 'TSEnumDeclaration'
-  ) {
+  if (node.type === 'TSInterfaceDeclaration') {
     declaredTypes[node.id.name] = [`Object`]
   } else if (node.type === 'TSTypeAliasDeclaration') {
     declaredTypes[node.id.name] = inferRuntimeType(
