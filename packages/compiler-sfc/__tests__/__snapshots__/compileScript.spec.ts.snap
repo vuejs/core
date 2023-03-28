@@ -1486,6 +1486,22 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineProps w/ TS assertion 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: ['foo'],
+  setup(__props, { expose }) {
+  expose();
+
+        
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > defineProps w/ exported interface 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Props { x?: number }

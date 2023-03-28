@@ -1145,6 +1145,19 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
+    test('defineProps w/ TS assertion', () => {
+      const { content, bindings } = compile(`
+      <script setup lang="ts">
+        defineProps(['foo'])! as any
+      </script>
+    `)
+      expect(content).toMatch(`props: ['foo']`)
+      assertCode(content)
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.PROPS
+      })
+    })
+
     test('withDefaults (static)', () => {
       const { content, bindings } = compile(`
       <script setup lang="ts">
