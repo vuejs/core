@@ -645,7 +645,7 @@ exports[`SFC compile <script setup> > defineExpose() 1`] = `
 "export default {
   setup(__props, { expose: __expose }) {
 
-expose({ foo: 123 })
+__expose({ foo: 123 })
 
 return {  }
 }
@@ -1319,7 +1319,7 @@ exports[`SFC compile <script setup> > inlineTemplate mode > with defineExpose() 
   setup(__props, { expose: __expose }) {
 
         const count = ref(0)
-        expose({ count })
+        __expose({ count })
         
 return () => {}
 }

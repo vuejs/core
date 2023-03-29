@@ -276,7 +276,7 @@ defineExpose({ foo: 123 })
     // should generate correct setup signature
     expect(content).toMatch(`setup(__props, { expose: __expose }) {`)
     // should replace callee
-    expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
+    expect(content).toMatch(/\b__expose\(\{ foo: 123 \}\)/)
   })
 
   test('<script> after <script setup> the script content not end with `\\n`', () => {
