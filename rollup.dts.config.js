@@ -88,7 +88,21 @@ function patchTypes(pkg) {
         return false
       }
 
+      const isExported = new Set()
       const shouldRemoveExport = new Set()
+
+      // pass 0: check all exported types
+      for (const node of ast.program.body) {
+        if (node.type === 'ExportNamedDeclaration' && !node.source) {
+          for (let i = 0; i < node.specifiers.length; i++) {
+            const spec = node.specifiers[i]
+            if (spec.type === 'ExportSpecifier') {
+              isExported.add(spec.local.name)
+            }
+          }
+        }
+      }
+
       // pass 1: remove internals + add exports
       for (const node of ast.program.body) {
         if (
@@ -96,10 +110,13 @@ function patchTypes(pkg) {
             node.type === 'TSInterfaceDeclaration') &&
           !node.id.name.startsWith(`_`)
         ) {
-          shouldRemoveExport.add(node.id.name)
+          const name = node.id.name
+          shouldRemoveExport.add(name)
           if (!removeInternal(node)) {
-            // @ts-ignore
-            s.prependLeft(node.start, `export `)
+            if (isExported.has(name)) {
+              // @ts-ignore
+              s.prependLeft(node.start, `export `)
+            }
             // traverse further for internal properties
             if (node.type === 'TSInterfaceDeclaration') {
               node.body.body.forEach(removeInternal)
