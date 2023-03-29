@@ -2,7 +2,6 @@
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
 import type {
   VNode,
-  VNodeRef,
   IntrinsicElementAttributes,
   ReservedProps,
   NativeElements

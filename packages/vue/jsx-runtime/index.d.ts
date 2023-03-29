@@ -1,6 +1,5 @@
 import type {
   VNode,
-  VNodeRef,
   IntrinsicElementAttributes,
   ReservedProps,
   NativeElements
