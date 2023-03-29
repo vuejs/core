@@ -3,7 +3,7 @@ import type {
   IntrinsicElementAttributes,
   ReservedProps,
   NativeElements
-} from '@vue/runtime-dom/dist/runtime-dom'
+} from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive

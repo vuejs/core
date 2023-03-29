@@ -5,7 +5,7 @@ import type {
   IntrinsicElementAttributes,
   ReservedProps,
   NativeElements
-} from '@vue/runtime-dom/dist/runtime-dom'
+} from '@vue/runtime-dom'
 
 declare global {
   namespace JSX {
