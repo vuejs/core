@@ -89,7 +89,7 @@ const bar = 1
     // should remove defineOptions import and call
     expect(content).not.toMatch('defineProps')
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { expose }) {`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {`)
     // should assign user identifier to it
     expect(content).toMatch(`const props = __props`)
     // should include context options in default export
@@ -136,7 +136,9 @@ const myEmit = defineEmits(['foo', 'bar'])
     // should remove defineOptions import and call
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { expose, emit: myEmit }) {`)
+    expect(content).toMatch(
+      `setup(__props, { expose: __expose, emit: myEmit }) {`
+    )
     // should include context options in default export
     expect(content).toMatch(`export default {
   emits: ['foo', 'bar'],`)
@@ -272,7 +274,7 @@ defineExpose({ foo: 123 })
     // should remove defineOptions import and call
     expect(content).not.toMatch('defineExpose')
     // should generate correct setup signature
-    expect(content).toMatch(`setup(__props, { expose }) {`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {`)
     // should replace callee
     expect(content).toMatch(/\bexpose\(\{ foo: 123 \}\)/)
   })
@@ -710,7 +712,7 @@ defineExpose({ foo: 123 })
         { inlineTemplate: true }
       )
       assertCode(content)
-      expect(content).toMatch(`setup(__props, { expose })`)
+      expect(content).toMatch(`setup(__props, { expose: __expose })`)
       expect(content).toMatch(`expose({ count })`)
     })
 
@@ -988,7 +990,7 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
   props: { foo: String },
   emits: ['a', 'b'],
-  setup(__props, { expose, emit }) {`)
+  setup(__props, { expose: __expose, emit }) {`)
     })
 
     test('defineProps w/ type', () => {
@@ -1040,6 +1042,8 @@ const emit = defineEmits(['a', 'b'])
         unknown: UnknownType
         unknownUnion: UnknownType | string
         unknownIntersection: UnknownType & Object
+        unknownUnionWithBoolean: UnknownType | boolean
+        unknownUnionWithFunction: UnknownType | (() => any)
       }>()
       </script>`)
       assertCode(content)
@@ -1091,7 +1095,13 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`unknownUnion: { type: null, required: true }`)
       // intersection containing unknown type: narrow to the known types
       expect(content).toMatch(
-        `unknownIntersection: { type: Object, required: true }`
+        `unknownIntersection: { type: Object, required: true },`
+      )
+      expect(content).toMatch(
+        `unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },`
+      )
+      expect(content).toMatch(
+        `unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }`
       )
       expect(bindings).toStrictEqual({
         string: BindingTypes.PROPS,
@@ -1129,7 +1139,9 @@ const emit = defineEmits(['a', 'b'])
         nonNull: BindingTypes.PROPS,
         unknown: BindingTypes.PROPS,
         unknownUnion: BindingTypes.PROPS,
-        unknownIntersection: BindingTypes.PROPS
+        unknownIntersection: BindingTypes.PROPS,
+        unknownUnionWithBoolean: BindingTypes.PROPS,
+        unknownUnionWithFunction: BindingTypes.PROPS
       })
     })
 
@@ -1539,7 +1551,7 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`setup(__props, { expose, emit }) {`)
+      expect(content).toMatch(`setup(__props, { expose: __expose, emit }) {`)
       expect(content).toMatch(`emits: ['foo']`)
     })
 
@@ -1586,6 +1598,56 @@ const emit = defineEmits(['a', 'b'])
       expect(bindings).toStrictEqual({
         Foo: BindingTypes.LITERAL_CONST
       })
+    })
+
+    test('runtime inference for Enum in defineProps', () => {
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = 123 }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: Number`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = '123' }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: String`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A = '123', B = 123 }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: [String, Number]`)
+
+      expect(
+        compile(
+          `<script setup lang="ts">
+        const enum Foo { A, B }
+        defineProps<{
+          foo: Foo
+        }>()
+        </script>`,
+          { hoistStatic: true }
+        ).content
+      ).toMatch(`foo: { type: Number`)
     })
 
     test('import type', () => {

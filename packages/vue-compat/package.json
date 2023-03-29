@@ -38,7 +38,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
   "dependencies": {
-    "@babel/parser": "^7.16.4",
+    "@babel/parser": "^7.21.3",
     "estree-walker": "^2.0.2",
     "source-map": "^0.6.1"
   },

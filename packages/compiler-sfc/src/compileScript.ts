@@ -44,7 +44,8 @@ import {
   ObjectMethod,
   LVal,
   Expression,
-  VariableDeclaration
+  VariableDeclaration,
+  TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map'
@@ -386,7 +387,7 @@ export function compileScript(
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
   ) {
-    // template usage check is only needed in non-inline mode, so we can UNKNOWN
+    // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
     let isUsedInTemplate = needTemplateUsageCheck
     if (
@@ -685,6 +686,7 @@ export function compileScript(
 
     let propsOption = undefined
     let emitsOption = undefined
+    let exposeOption = undefined
     if (optionsRuntimeDecl.type === 'ObjectExpression') {
       for (const prop of optionsRuntimeDecl.properties) {
         if (
@@ -693,6 +695,7 @@ export function compileScript(
         ) {
           if (prop.key.name === 'props') propsOption = prop
           if (prop.key.name === 'emits') emitsOption = prop
+          if (prop.key.name === 'expose') exposeOption = prop
         }
       }
     }
@@ -707,6 +710,12 @@ export function compileScript(
       error(
         `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
         emitsOption
+      )
+    }
+    if (exposeOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
+        exposeOption
       )
     }
 
@@ -881,11 +890,11 @@ export function compileScript(
           }
         }
 
-        const { type, required } = props[key]
+        const { type, required, skipCheck } = props[key]
         if (!isProd) {
           return `${key}: { type: ${toRuntimeTypeString(
             type
-          )}, required: ${required}${
+          )}, required: ${required}${skipCheck ? ', skipCheck: true' : ''}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else if (
@@ -1102,7 +1111,7 @@ export function compileScript(
 
         // check if user has manually specified `name` or 'render` option in
         // export default
-        // if has name, UNKNOWN name inference
+        // if has name, skip name inference
         // if has render and no template, generate return object instead of
         // empty render function (#4980)
         let optionProperties
@@ -1371,14 +1380,15 @@ export function compileScript(
     if (isTS) {
       // move all Type declarations to outer scope
       if (
-        (node.type.startsWith('TS') ||
-          (node.type === 'ExportNamedDeclaration' &&
-            node.exportKind === 'type') ||
-          (node.type === 'VariableDeclaration' && node.declare)) &&
-        node.type !== 'TSEnumDeclaration'
+        node.type.startsWith('TS') ||
+        (node.type === 'ExportNamedDeclaration' &&
+          node.exportKind === 'type') ||
+        (node.type === 'VariableDeclaration' && node.declare)
       ) {
         recordType(node, declaredTypes)
-        hoistNode(node)
+        if (node.type !== 'TSEnumDeclaration') {
+          hoistNode(node)
+        }
       }
     }
   }
@@ -1537,7 +1547,7 @@ export function compileScript(
   }
 
   const destructureElements =
-    hasDefineExposeCall || !options.inlineTemplate ? [`expose`] : []
+    hasDefineExposeCall || !options.inlineTemplate ? [`expose: __expose`] : []
   if (emitIdentifier) {
     destructureElements.push(
       emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
@@ -1578,7 +1588,7 @@ export function compileScript(
         !userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
-        // UNKNOWN vue imports since we know they will never change
+        // skip vue imports since we know they will never change
         returned += `get ${key}() { return ${key} }, `
       } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
         // local let binding, also add setter
@@ -1715,7 +1725,7 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    hasDefineExposeCall || options.inlineTemplate ? `` : `  expose();\n`
+    hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
   // wrap setup code with function.
   if (isTS) {
     // for TS, make sure the exported type is still valid type with
@@ -1956,6 +1966,7 @@ interface PropTypeData {
   key: string
   type: string[]
   required: boolean
+  skipCheck: boolean
 }
 
 function recordType(node: Node, declaredTypes: Record<string, string[]>) {
@@ -1968,6 +1979,8 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
     )
   } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
     recordType(node.declaration, declaredTypes)
+  } else if (node.type === 'TSEnumDeclaration') {
+    declaredTypes[node.id.name] = inferEnumType(node)
   }
 }
 
@@ -1983,19 +1996,26 @@ function extractRuntimeProps(
       m.key.type === 'Identifier'
     ) {
       let type: string[] | undefined
+      let skipCheck = false
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
         // skip check for result containing unknown types
         if (type.includes(UNKNOWN_TYPE)) {
-          type = [`null`]
+          if (type.includes('Boolean') || type.includes('Function')) {
+            type = type.filter(t => t !== UNKNOWN_TYPE)
+            skipCheck = true
+          } else {
+            type = ['null']
+          }
         }
       }
       props[m.key.name] = {
         key: m.key.name,
         required: !m.optional,
-        type: type || [`null`]
+        type: type || [`null`],
+        skipCheck
       }
     }
   }
@@ -2152,6 +2172,23 @@ function flattenTypes(
 
 function toRuntimeTypeString(types: string[]) {
   return types.length > 1 ? `[${types.join(', ')}]` : types[0]
+}
+
+function inferEnumType(node: TSEnumDeclaration): string[] {
+  const types = new Set<string>()
+  for (const m of node.members) {
+    if (m.initializer) {
+      switch (m.initializer.type) {
+        case 'StringLiteral':
+          types.add('String')
+          break
+        case 'NumericLiteral':
+          types.add('Number')
+          break
+      }
+    }
+  }
+  return types.size ? [...types] : ['Number']
 }
 
 function extractRuntimeEmits(
