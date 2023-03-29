@@ -25,6 +25,7 @@ import {
   ExtractPropTypes
 } from './componentProps'
 import { warn } from './warning'
+import { VNode } from './vnode'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -189,6 +190,17 @@ export function defineOptions<
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
+  }
+}
+
+export function defineSlots<
+  T extends Record<string, any>
+>(): // @ts-expect-error
+{
+  [K in keyof T]: (scope: T[K]) => VNode[] | undefined
+} {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineSlots`)
   }
 }
 
