@@ -862,9 +862,11 @@ export function compileScript(
     ${keys
       .map(key => {
         let defaultString: string | undefined
-        const destructured = genDestructuredDefaultValue(key)
+        const destructured = genDestructuredDefaultValue(key, props[key].type)
         if (destructured) {
-          defaultString = `default: ${destructured}`
+          defaultString = `default: ${destructured.valueString}${
+            destructured.needSkipFactory ? `, skipFactory: true` : ``
+          }`
         } else if (hasStaticDefaults) {
           const prop = propsRuntimeDefaults!.properties.find(node => {
             if (node.type === 'SpreadElement') return false
@@ -925,15 +927,38 @@ export function compileScript(
     return `\n  props: ${propsDecls},`
   }
 
-  function genDestructuredDefaultValue(key: string): string | undefined {
+  function genDestructuredDefaultValue(
+    key: string,
+    inferredType?: string[]
+  ):
+    | {
+        valueString: string
+        needSkipFactory: boolean
+      }
+    | undefined {
     const destructured = propsDestructuredBindings[key]
-    if (destructured && destructured.default) {
+    const defaultVal = destructured && destructured.default
+    if (defaultVal) {
       const value = scriptSetup!.content.slice(
-        destructured.default.start!,
-        destructured.default.end!
+        defaultVal.start!,
+        defaultVal.end!
       )
-      const isLiteral = isLiteralNode(destructured.default)
-      return isLiteral ? value : `() => (${value})`
+      const unwrapped = unwrapTSNode(defaultVal)
+      // If the default value is a function or is an identifier referencing
+      // external value, skip factory wrap. This is needed when using
+      // destructure w/ runtime declaration since we cannot safely infer
+      // whether tje expected runtime prop type is `Function`.
+      const needSkipFactory =
+        !inferredType &&
+        (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
+      const needFactoryWrap =
+        !needSkipFactory &&
+        !isLiteralNode(unwrapped) &&
+        !inferredType?.includes('Function')
+      return {
+        valueString: needFactoryWrap ? `() => (${value})` : value,
+        needSkipFactory
+      }
     }
   }
 
@@ -1693,7 +1718,12 @@ export function compileScript(
       const defaults: string[] = []
       for (const key in propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(key)
-        if (d) defaults.push(`${key}: ${d}`)
+        if (d)
+          defaults.push(
+            `${key}: ${d.valueString}${
+              d.needSkipFactory ? `, __skip_${key}: true` : ``
+            }`
+          )
       }
       if (defaults.length) {
         declCode = `${helper(

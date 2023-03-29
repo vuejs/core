@@ -259,17 +259,21 @@ export function mergeDefaults(
       )
     : raw
   for (const key in defaults) {
-    const opt = props[key]
+    if (key.startsWith('__skip')) continue
+    let opt = props[key]
     if (opt) {
       if (isArray(opt) || isFunction(opt)) {
-        props[key] = { type: opt, default: defaults[key] }
+        opt = props[key] = { type: opt, default: defaults[key] }
       } else {
         opt.default = defaults[key]
       }
     } else if (opt === null) {
-      props[key] = { default: defaults[key] }
+      opt = props[key] = { default: defaults[key] }
     } else if (__DEV__) {
       warn(`props default key "${key}" has no corresponding declaration.`)
+    }
+    if (opt && defaults[`__skip_${key}`]) {
+      opt.skipFactory = true
     }
   }
   return props
