@@ -1319,3 +1319,15 @@ type EventHandlers<E> = {
     ? E[K]
     : (payload: E[K]) => void
 }
+
+export type ReservedProps = {
+  key?: string | number | symbol
+  ref?: VNodeRef
+  ref_for?: boolean
+  ref_key?: string
+}
+
+export type NativeElements = {
+  [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
+    ReservedProps
+}
