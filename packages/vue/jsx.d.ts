@@ -1,21 +1,11 @@
 // global JSX namespace registration
 // somehow we have to copy=pase the jsx-runtime types here to make TypeScript happy
-import { VNode, VNodeRef } from '@vue/runtime-dom'
-import { IntrinsicElementAttributes } from './jsx-runtime/dom'
-
-export * from './jsx-runtime/dom'
-
-export type ReservedProps = {
-  key?: string | number | symbol
-  ref?: VNodeRef
-  ref_for?: boolean
-  ref_key?: string
-}
-
-export type NativeElements = {
-  [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
-    ReservedProps
-}
+import type {
+  VNode,
+  IntrinsicElementAttributes,
+  ReservedProps,
+  NativeElements
+} from '@vue/runtime-dom'
 
 declare global {
   namespace JSX {
