@@ -775,6 +775,13 @@ function baseCreateRenderer(
       const child = (children[i] = optimized
         ? cloneIfMounted(children[i] as VNode)
         : normalizeVNode(children[i]))
+
+      // #7980
+      // This makes sure that all functional components' children can get `scopeId` from their parent
+      if (child.scopeId == null && parentComponent?.vnode.scopeId != null) {
+        child.scopeId = parentComponent.vnode.scopeId
+      }
+
       patch(
         null,
         child,
