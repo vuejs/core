@@ -2,3 +2,5 @@
 // imports the global JSX namespace registration for compat.
 // TODO: remove in 3.4
 import '../jsx'
+
+export * from '../jsx-runtime/dom'
