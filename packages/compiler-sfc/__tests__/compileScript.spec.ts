@@ -1042,6 +1042,8 @@ const emit = defineEmits(['a', 'b'])
         unknown: UnknownType
         unknownUnion: UnknownType | string
         unknownIntersection: UnknownType & Object
+        unknownUnionWithBoolean: UnknownType | boolean
+        unknownUnionWithFunction: UnknownType | (() => any)
       }>()
       </script>`)
       assertCode(content)
@@ -1093,7 +1095,13 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`unknownUnion: { type: null, required: true }`)
       // intersection containing unknown type: narrow to the known types
       expect(content).toMatch(
-        `unknownIntersection: { type: Object, required: true }`
+        `unknownIntersection: { type: Object, required: true },`
+      )
+      expect(content).toMatch(
+        `unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },`
+      )
+      expect(content).toMatch(
+        `unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }`
       )
       expect(bindings).toStrictEqual({
         string: BindingTypes.PROPS,
@@ -1131,7 +1139,9 @@ const emit = defineEmits(['a', 'b'])
         nonNull: BindingTypes.PROPS,
         unknown: BindingTypes.PROPS,
         unknownUnion: BindingTypes.PROPS,
-        unknownIntersection: BindingTypes.PROPS
+        unknownIntersection: BindingTypes.PROPS,
+        unknownUnionWithBoolean: BindingTypes.PROPS,
+        unknownUnionWithFunction: BindingTypes.PROPS
       })
     })
 

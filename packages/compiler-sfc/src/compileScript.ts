@@ -888,11 +888,11 @@ export function compileScript(
           }
         }
 
-        const { type, required } = props[key]
+        const { type, required, skipCheck } = props[key]
         if (!isProd) {
           return `${key}: { type: ${toRuntimeTypeString(
             type
-          )}, required: ${required}${
+          )}, required: ${required}${skipCheck ? ', skipCheck: true' : ''}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else if (
@@ -1964,6 +1964,7 @@ interface PropTypeData {
   key: string
   type: string[]
   required: boolean
+  skipCheck: boolean
 }
 
 function recordType(node: Node, declaredTypes: Record<string, string[]>) {
@@ -1993,19 +1994,26 @@ function extractRuntimeProps(
       m.key.type === 'Identifier'
     ) {
       let type: string[] | undefined
+      let skipCheck = false
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
       } else if (m.typeAnnotation) {
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
         // skip check for result containing unknown types
         if (type.includes(UNKNOWN_TYPE)) {
-          type = [`null`]
+          if (type.includes('Boolean') || type.includes('Function')) {
+            type = type.filter(t => t !== UNKNOWN_TYPE)
+            skipCheck = true
+          } else {
+            type = ['null']
+          }
         }
       }
       props[m.key.name] = {
         key: m.key.name,
         required: !m.optional,
-        type: type || [`null`]
+        type: type || [`null`],
+        skipCheck
       }
     }
   }
