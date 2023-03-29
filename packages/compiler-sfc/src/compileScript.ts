@@ -1252,7 +1252,7 @@ export function compileScript(
         s.overwrite(
           callee.start! + startOffset,
           callee.end! + startOffset,
-          'expose'
+          '__expose'
         )
       }
     }
