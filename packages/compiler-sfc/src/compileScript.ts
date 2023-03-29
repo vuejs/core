@@ -2040,16 +2040,16 @@ function inferRuntimeType(
       // TODO (nice to have) generate runtime property validation
       const types = new Set<string>()
       for (const m of node.members) {
-        switch (m.type) {
-          case 'TSCallSignatureDeclaration':
-          case 'TSConstructSignatureDeclaration':
-            types.add('Function')
-            break
-          default:
-            types.add('Object')
+        if (
+          m.type === 'TSCallSignatureDeclaration' ||
+          m.type === 'TSConstructSignatureDeclaration'
+        ) {
+          types.add('Function')
+        } else {
+          types.add('Object')
         }
       }
-      return Array.from(types)
+      return types.size ? Array.from(types) : ['Object']
     }
     case 'TSFunctionType':
       return ['Function']
