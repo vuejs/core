@@ -8,6 +8,7 @@
   "unpkg": "dist/runtime-dom.global.js",
   "files": [
     "index.js",
+    "jsx.d.ts",
     "dist"
   ],
   "sideEffects": false,
