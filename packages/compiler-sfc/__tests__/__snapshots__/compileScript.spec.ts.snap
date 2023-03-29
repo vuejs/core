@@ -1715,7 +1715,9 @@ export default /*#__PURE__*/_defineComponent({
     foo: { type: [Function, null], required: true },
     unknown: { type: null, required: true },
     unknownUnion: { type: null, required: true },
-    unknownIntersection: { type: Object, required: true }
+    unknownIntersection: { type: Object, required: true },
+    unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },
+    unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();

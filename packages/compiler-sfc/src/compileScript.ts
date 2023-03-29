@@ -387,7 +387,7 @@ export function compileScript(
     isFromSetup: boolean,
     needTemplateUsageCheck: boolean
   ) {
-    // template usage check is only needed in non-inline mode, so we can UNKNOWN
+    // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
     let isUsedInTemplate = needTemplateUsageCheck
     if (
@@ -888,12 +888,12 @@ export function compileScript(
           }
         }
 
-        const { type, required } = props[key]
+        const { type, required, skipCheck } = props[key]
         const finalKey = getEscapedKey(key)
         if (!isProd) {
           return `${finalKey}: { type: ${toRuntimeTypeString(
             type
-          )}, required: ${required}${
+          )}, required: ${required}${skipCheck ? ', skipCheck: true' : ''}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else if (
@@ -1112,7 +1112,7 @@ export function compileScript(
 
         // check if user has manually specified `name` or 'render` option in
         // export default
-        // if has name, UNKNOWN name inference
+        // if has name, skip name inference
         // if has render and no template, generate return object instead of
         // empty render function (#4980)
         let optionProperties
@@ -1589,7 +1589,7 @@ export function compileScript(
         !userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
-        // UNKNOWN vue imports since we know they will never change
+        // skip vue imports since we know they will never change
         returned += `get ${key}() { return ${key} }, `
       } else if (bindingMetadata[key] === BindingTypes.SETUP_LET) {
         // local let binding, also add setter
@@ -1967,6 +1967,7 @@ interface PropTypeData {
   key: string
   type: string[]
   required: boolean
+  skipCheck: boolean
 }
 
 function recordType(node: Node, declaredTypes: Record<string, string[]>) {
@@ -1996,6 +1997,7 @@ function extractRuntimeProps(
       (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
       let type: string[] | undefined
+      let skipCheck = false
       const keyName = m.key.type === 'StringLiteral' ? m.key.value : m.key.name
       if (m.type === 'TSMethodSignature') {
         type = ['Function']
@@ -2003,13 +2005,19 @@ function extractRuntimeProps(
         type = inferRuntimeType(m.typeAnnotation.typeAnnotation, declaredTypes)
         // skip check for result containing unknown types
         if (type.includes(UNKNOWN_TYPE)) {
-          type = [`null`]
+          if (type.includes('Boolean') || type.includes('Function')) {
+            type = type.filter(t => t !== UNKNOWN_TYPE)
+            skipCheck = true
+          } else {
+            type = ['null']
+          }
         }
       }
       props[keyName] = {
         key: keyName,
         required: !m.optional,
-        type: type || [`null`]
+        type: type || [`null`],
+        skipCheck
       }
     }
   }
