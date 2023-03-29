@@ -1,5 +1,8 @@
-import { VNode, VNodeRef } from '@vue/runtime-dom'
-import { IntrinsicElementAttributes } from './dom'
+import type {
+  VNode,
+  VNodeRef,
+  IntrinsicElementAttributes
+} from '@vue/runtime-dom/dist/runtime-dom'
 
 export type ReservedProps = {
   key?: string | number | symbol
