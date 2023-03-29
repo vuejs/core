@@ -69,17 +69,40 @@ describe('sfc props transform', () => {
     })
   })
 
-  test('default values w/ runtime declaration', () => {
+  test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
-      const { foo = 1, bar = {} } = defineProps(['foo', 'bar'])
+      const { foo = 1, bar = {}, func = () => {} } = defineProps(['foo', 'bar', 'baz'])
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
     // function
-    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
+    // functions need to be marked with a skip marker
+    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
-  bar: () => ({})
+  bar: () => ({}),
+  func: () => {}, __skip_func: true
+})`)
+    assertCode(content)
+  })
+
+  test('default values w/ object runtime declaration', () => {
+    const { content } = compile(`
+      <script setup>
+      const { foo = 1, bar = {}, func = () => {}, ext = x } = defineProps({ foo: Number, bar: Object, func: Function, ext: null })
+      </script>
+    `)
+    // literals can be used as-is, non-literals are always returned from a
+    // function
+    // functions need to be marked with a skip marker since we cannot always
+    // safely infer whether runtime type is Function (e.g. if the runtime decl
+    // is imported, or spreads another object)
+    expect(content)
+      .toMatch(`props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true,
+  ext: x, __skip_ext: true
 })`)
     assertCode(content)
   })
@@ -87,14 +110,15 @@ describe('sfc props transform', () => {
   test('default values w/ type declaration', () => {
     const { content } = compile(`
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object }>()
+      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, func?: () => any }>()
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => ({}) }
+    bar: { type: Object, required: false, default: () => ({}) },
+    func: { type: Function, required: false, default: () => {} }
   }`)
     assertCode(content)
   })
@@ -116,7 +140,7 @@ describe('sfc props transform', () => {
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => (() => {}) }
+    func: { type: Function, default: () => {} }
   }`)
     assertCode(content)
   })
