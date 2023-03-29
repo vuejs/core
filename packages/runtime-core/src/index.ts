@@ -69,6 +69,7 @@ export {
   defineEmits,
   defineExpose,
   defineOptions,
+  defineSlots,
   withDefaults,
   // internal
   mergeDefaults,

@@ -67,7 +67,7 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 const DEFINE_OPTIONS = 'defineOptions'
-const DEFINT_SLOTS = 'defineSlots'
+const DEFINE_SLOTS = 'defineSlots'
 
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -593,11 +593,11 @@ export function compileScript(
   }
 
   function processDefineSlots(node: Node, declId?: LVal): boolean {
-    if (!isCallOf(node, DEFINT_SLOTS)) {
+    if (!isCallOf(node, DEFINE_SLOTS)) {
       return false
     }
     if (hasDefineSlotsCall) {
-      error(`duplicate ${DEFINT_SLOTS}() call`, node)
+      error(`duplicate ${DEFINE_SLOTS}() call`, node)
     }
     hasDefineSlotsCall = true
 
