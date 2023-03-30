@@ -28,7 +28,6 @@ import {
   normalizePropsOptions
 } from './componentProps'
 import {
-  Slots,
   initSlots,
   InternalSlots,
   SlotsType,
@@ -126,12 +125,13 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions = {},
-  S extends SlotsType = {}
+  S extends Record<string, any[]> = {}
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: Omit<SetupContext<E, S>, 'expose'>): any
+  (props: P, ctx: Omit<SetupContext<E, SlotsType<S>>, 'expose'>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
+  slots?: SlotsType<S>
   inheritAttrs?: boolean
   displayName?: string
   compatConfig?: CompatConfig
@@ -156,7 +156,7 @@ export type ConcreteComponent<
   M extends MethodOptions = MethodOptions
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, any>
+  | FunctionalComponent<Props, any, any>
 
 /**
  * A type used in public APIs where a component type is expected.
@@ -183,7 +183,7 @@ export type SetupContext<
 > = E extends any
   ? {
       attrs: Data
-      slots: [keyof S] extends [never] ? Slots : TypedSlots<S>
+      slots: TypedSlots<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
     }

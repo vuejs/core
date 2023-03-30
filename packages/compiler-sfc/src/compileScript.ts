@@ -709,6 +709,7 @@ export function compileScript(
     let propsOption = undefined
     let emitsOption = undefined
     let exposeOption = undefined
+    let slotsOption = undefined
     if (optionsRuntimeDecl.type === 'ObjectExpression') {
       for (const prop of optionsRuntimeDecl.properties) {
         if (
@@ -718,6 +719,7 @@ export function compileScript(
           if (prop.key.name === 'props') propsOption = prop
           if (prop.key.name === 'emits') emitsOption = prop
           if (prop.key.name === 'expose') exposeOption = prop
+          if (prop.key.name === 'slots') slotsOption = prop
         }
       }
     }
@@ -738,6 +740,12 @@ export function compileScript(
       error(
         `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
         exposeOption
+      )
+    }
+    if (slotsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare slots. Use ${DEFINE_SLOTS}() instead.`,
+        slotsOption
       )
     }
 

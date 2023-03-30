@@ -40,7 +40,7 @@ import {
   ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
-import { Slots, SlotsType } from './componentSlots'
+import { SlotsType, TypedSlots } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -164,6 +164,7 @@ export type CreateComponentPublicInstance<
   PublicC,
   PublicM,
   E,
+  S,
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
@@ -180,6 +181,7 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
+  S extends SlotsType = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
@@ -195,7 +197,7 @@ export type ComponentPublicInstance<
   >
   $attrs: Data
   $refs: Data
-  $slots: Slots
+  $slots: TypedSlots<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
