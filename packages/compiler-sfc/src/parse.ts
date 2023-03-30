@@ -42,7 +42,7 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
-  s: MagicString
+  s?: MagicString
   setup?: string | boolean
   bindings?: BindingMetadata
   imports?: Record<string, ImportBinding>
