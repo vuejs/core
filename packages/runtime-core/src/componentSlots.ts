@@ -25,7 +25,7 @@ import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 
 export type Slot<T extends any = any> = (
-  ...args: IfAny<T, any[], [T]>
+  ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
 ) => VNode[]
 
 export type InternalSlots = {
@@ -44,7 +44,7 @@ export type TypedSlots<S extends SlotsType> = [keyof S] extends [never]
   : Readonly<
       Prettify<{
         [K in keyof NonNullable<S[typeof SlotSymbol]>]: Slot<
-          NonNullable<NonNullable<S[typeof SlotSymbol]>[K]>
+          NonNullable<S[typeof SlotSymbol]>[K]
         >
       }>
     >
