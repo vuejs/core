@@ -944,7 +944,23 @@ export function compileScript(
         defaultVal.start!,
         defaultVal.end!
       )
+
       const unwrapped = unwrapTSNode(defaultVal)
+
+      if (
+        inferredType &&
+        inferredType.length &&
+        !inferredType.includes(UNKNOWN_TYPE)
+      ) {
+        const valueType = inferValueType(unwrapped)
+        if (valueType && !inferredType.includes(valueType)) {
+          error(
+            `Default value of prop "${key}" does not match declared type.`,
+            unwrapped
+          )
+        }
+      }
+
       // If the default value is a function or is an identifier referencing
       // external value, skip factory wrap. This is needed when using
       // destructure w/ runtime declaration since we cannot safely infer
@@ -952,10 +968,12 @@ export function compileScript(
       const needSkipFactory =
         !inferredType &&
         (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
+
       const needFactoryWrap =
         !needSkipFactory &&
         !isLiteralNode(unwrapped) &&
         !inferredType?.includes('Function')
+
       return {
         valueString: needFactoryWrap ? `() => (${value})` : value,
         needSkipFactory
@@ -2230,6 +2248,27 @@ function inferEnumType(node: TSEnumDeclaration): string[] {
     }
   }
   return types.size ? [...types] : ['Number']
+}
+
+// non-comprehensive, best-effort type infernece for a runtime value
+// this is used to catch default value / type declaration mismatches
+// when using props destructure.
+function inferValueType(node: Node): string | undefined {
+  switch (node.type) {
+    case 'StringLiteral':
+      return 'String'
+    case 'NumericLiteral':
+      return 'Number'
+    case 'BooleanLiteral':
+      return 'Boolean'
+    case 'ObjectExpression':
+      return 'Object'
+    case 'ArrayExpression':
+      return 'Array'
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+      return 'Function'
+  }
 }
 
 function extractRuntimeEmits(

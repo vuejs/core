@@ -303,7 +303,7 @@ describe('sfc props transform', () => {
         watch(foo, () => {})
         </script>`
         )
-      ).toThrow(`foo is a destructured prop and cannot be directly watched.`)
+      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
 
       expect(() =>
         compile(
@@ -313,7 +313,18 @@ describe('sfc props transform', () => {
         w(foo, () => {})
         </script>`
         )
-      ).toThrow(`foo is a destructured prop and cannot be directly watched.`)
+      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
+    })
+
+    // not comprehensive, but should help for most common cases
+    test('should error if default value type does not match declared type', () => {
+      expect(() =>
+        compile(
+          `<script setup lang="ts">
+        const { foo = 'hello' } = defineProps<{ foo?: number }>()
+        </script>`
+        )
+      ).toThrow(`Default value of prop "foo" does not match declared type.`)
     })
   })
 })

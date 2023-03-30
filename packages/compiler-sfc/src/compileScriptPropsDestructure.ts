@@ -173,7 +173,7 @@ export function transformDestructuredProps(
         const arg = unwrapTSNode(node.arguments[0])
         if (arg.type === 'Identifier') {
           error(
-            `${arg.name} is a destructured prop and cannot be directly watched. ` +
+            `"${arg.name}" is a destructured prop and cannot be directly watched. ` +
               `Use a getter () => ${arg.name} instead.`,
             arg
           )
