@@ -322,7 +322,6 @@ export function compileScript(
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
   let emitsTypeDecl: EmitsDeclType | undefined
-  let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
   let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
@@ -582,7 +581,7 @@ export function compileScript(
         )
       }
 
-      emitsTypeDeclRaw = node.typeParameters.params[0]
+      const emitsTypeDeclRaw = node.typeParameters.params[0]
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
@@ -1623,15 +1622,6 @@ export function compileScript(
   }
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
-    if (emitsTypeDecl) {
-      const content = emitsTypeDecl.__fromNormalScript
-        ? script!.content
-        : scriptSetup.content
-      args += `: { emit: (${content.slice(
-        emitsTypeDecl.start!,
-        emitsTypeDecl.end!
-      )}), expose: any, slots: any, attrs: any }`
-    }
   }
 
   // 10. generate return statement
