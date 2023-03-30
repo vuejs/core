@@ -2129,7 +2129,7 @@ function inferRuntimeType(
         case 'BigIntLiteral':
           return ['Number']
         default:
-          return [`UNKNOWN`]
+          return [UNKNOWN_TYPE]
       }
 
     case 'TSTypeReference':
@@ -2177,6 +2177,7 @@ function inferRuntimeType(
                 declaredTypes
               ).filter(t => t !== 'null')
             }
+            break
           case 'Extract':
             if (node.typeParameters && node.typeParameters.params[1]) {
               return inferRuntimeType(
@@ -2184,6 +2185,7 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
+            break
           case 'Exclude':
           case 'OmitThisParameter':
             if (node.typeParameters && node.typeParameters.params[0]) {
@@ -2192,9 +2194,10 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
-          // cannot infer, fallback to UNKNOWN: ThisParameterType
+            break
         }
       }
+      // cannot infer, fallback to UNKNOWN: ThisParameterType
       return [UNKNOWN_TYPE]
 
     case 'TSParenthesizedType':
