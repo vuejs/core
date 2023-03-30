@@ -1,3 +1,55 @@
+# [3.3.0-alpha.6](https://github.com/vuejs/core/compare/v3.3.0-alpha.5...v3.3.0-alpha.6) (2023-03-30)
+
+
+### Bug Fixes
+
+* **compiler-core:** check if expression is constant ([#7974](https://github.com/vuejs/core/issues/7974)) ([77686cf](https://github.com/vuejs/core/commit/77686cf4765e7e345bef364c0b03739e3c2da91d)), closes [#7973](https://github.com/vuejs/core/issues/7973)
+* **compiler-core:** fix codegen for literal const in non-inline mode ([6bda4b6](https://github.com/vuejs/core/commit/6bda4b66886240b28993c88b7ecd4640a199be65))
+* **compiler-sfc:** allow `<script>` with lang='js' ([#7398](https://github.com/vuejs/core/issues/7398)) ([9f5e20c](https://github.com/vuejs/core/commit/9f5e20ccff235946159f0e50519f5be09bc89d5b))
+* **compiler-sfc:** avoid codegen conflict with user variable named `expose` ([#7949](https://github.com/vuejs/core/issues/7949)) ([c839129](https://github.com/vuejs/core/commit/c839129ab9d46f56a019b0ff234b35f27cac1e35)), closes [#7890](https://github.com/vuejs/core/issues/7890)
+* **compiler-sfc:** disallow `expose` property in `defineOptions` ([#7967](https://github.com/vuejs/core/issues/7967)) ([93f7729](https://github.com/vuejs/core/commit/93f77292c9f2c4dcc83aae6b5943a8b1d7443092))
+* **compiler-sfc:** fix defineExpose() codegen regression from [#7949](https://github.com/vuejs/core/issues/7949) ([a94072d](https://github.com/vuejs/core/commit/a94072dd2ca1aca4ce1fbe5da51ca2a9a07a4637))
+* **compiler-sfc:** fix edge case of default export call with no args ([#7536](https://github.com/vuejs/core/issues/7536)) ([d60e58c](https://github.com/vuejs/core/commit/d60e58c9f62ae7bd1f9c888cd2e55982a64d9e96)), closes [#7534](https://github.com/vuejs/core/issues/7534)
+* **compiler-sfc:** fix function default value handling w/ props destructure ([e10a89e](https://github.com/vuejs/core/commit/e10a89e608d3486c0c9a0457ee7c56d208e0aa91))
+* **compiler-sfc:** handle more TS built-in utilities in defineProps inference ([4355d24](https://github.com/vuejs/core/commit/4355d2492dccdb175b18d083e20f3ec39a52801f))
+* **compiler-sfc:** infer function prop type from type literal w/ callable signature ([#7119](https://github.com/vuejs/core/issues/7119)) ([3a7572c](https://github.com/vuejs/core/commit/3a7572cdb2074c5cac2231e4525296104141411c))
+* **compiler-sfc:** infer object type for empty type literal ([1a04fba](https://github.com/vuejs/core/commit/1a04fba10b6462303c65f1095da86ce05c14f1f4))
+* **compiler-sfc:** infer runtime type in defineProps ([#7972](https://github.com/vuejs/core/issues/7972)) ([ba4cec3](https://github.com/vuejs/core/commit/ba4cec31b91da60555892c381b00c2fa5b3e0e39))
+* **compiler-sfc:** infer TS Extract&Exclude runtime type ([#7339](https://github.com/vuejs/core/issues/7339)) ([6391daf](https://github.com/vuejs/core/commit/6391daf6586e49e165b3195863b602c3cbb92ace)), closes [#7337](https://github.com/vuejs/core/issues/7337) [#6252](https://github.com/vuejs/core/issues/6252)
+* **compiler-sfc:** infer TSIntersectionType in defineProps ([#7394](https://github.com/vuejs/core/issues/7394)) ([151a8ad](https://github.com/vuejs/core/commit/151a8ad6b9288784c3b2514820a112b93ecf2dca))
+* **compiler-sfc:** properly handle unknown types in runtime prop inference ([5fb406e](https://github.com/vuejs/core/commit/5fb406e3e1d585076779e9ce4a588a4f9a61ef23)), closes [#7511](https://github.com/vuejs/core/issues/7511)
+* **compiler-sfc:** properly remove comma of multiple macros in the same declaration ([#7423](https://github.com/vuejs/core/issues/7423)) ([336a3d7](https://github.com/vuejs/core/commit/336a3d7b9199aeda19672832ce173de298b1105a)), closes [#7422](https://github.com/vuejs/core/issues/7422) [#6778](https://github.com/vuejs/core/issues/6778)
+* **compiler-sfc:** rewrite default export with AST analysis instead of regex ([#7068](https://github.com/vuejs/core/issues/7068)) ([701b95f](https://github.com/vuejs/core/commit/701b95ff3d2bad0284c03865a0b052fc8324beec)), closes [#7038](https://github.com/vuejs/core/issues/7038) [#7041](https://github.com/vuejs/core/issues/7041) [#7078](https://github.com/vuejs/core/issues/7078)
+* **compiler-sfc:** unwrap TS node for defineProps ([#7340](https://github.com/vuejs/core/issues/7340)) ([1b69d5f](https://github.com/vuejs/core/commit/1b69d5f2f49ee60af4b10137c7833a76420dbba1))
+* **compiler-sfc:** use prependLeft to handle CSSVars ([#7760](https://github.com/vuejs/core/issues/7760)) ([139104b](https://github.com/vuejs/core/commit/139104ba2695eecae672db98f978de78e17ab7e1))
+* **jsx-runtime:** fix automatic runtime implementation ([#7959](https://github.com/vuejs/core/issues/7959)) ([5838950](https://github.com/vuejs/core/commit/5838950ecf7e4e17dd5a23acd621077390666b76))
+* **jsx-runtime:** handle keys ([#7976](https://github.com/vuejs/core/issues/7976)) ([ff60b93](https://github.com/vuejs/core/commit/ff60b933ae4e02422393664ee7818cffadf9b58b))
+* **types/jsx:** jsx-runtime types for global JSX namespace registration ([#7978](https://github.com/vuejs/core/issues/7978)) ([0f73f39](https://github.com/vuejs/core/commit/0f73f394dafd709298bd8c71107a323bf322a1d2))
+* **types/jsx:** move JSX DOM types back to `@vue/runtime-dom` ([#7979](https://github.com/vuejs/core/issues/7979)) ([ffe679c](https://github.com/vuejs/core/commit/ffe679c490986b69956daec7166f1ab6d9f23073))
+* **types/jsx:** remove $slots children override ([28e30c8](https://github.com/vuejs/core/commit/28e30c819df5e4fc301c98f7be938fa13e8be3bc))
+* **types:** revert jsx global removal (to be removed in 3.4) ([e224922](https://github.com/vuejs/core/commit/e224922e972e78b4fb6cbd129d685c2317018ad1))
+
+
+### Features
+
+* **compiler-core:** support parsing `const` modifier in type parameters ([#7912](https://github.com/vuejs/core/issues/7912)) ([b7bd50f](https://github.com/vuejs/core/commit/b7bd50f5059e8755c0204f01a8c55b1724688e7e))
+* **compiler-sfc:** add defineOptions macro ([#5738](https://github.com/vuejs/core/issues/5738)) ([bcf5841](https://github.com/vuejs/core/commit/bcf5841ddecc64d0bdbd56ce1463eb8ebf01bb9d))
+* **compiler-sfc:** enable reactive props destructure by default and deprecate withDefaults() ([#7986](https://github.com/vuejs/core/issues/7986)) ([ba9c2ae](https://github.com/vuejs/core/commit/ba9c2ae247fcc3960b238a04cb635158daa82004))
+* **compiler-sfc:** improve runtime props inference for enum ([eded947](https://github.com/vuejs/core/commit/eded94712e37856f258dc8c85f98a26fa41ae05f))
+* **compiler-sfc:** support generating variable instead of default export in compileScript ([71635be](https://github.com/vuejs/core/commit/71635be68d25887f91d624bb7f78281a851bc0cb))
+* **compiler-sfc:** support module string names syntax ([#7428](https://github.com/vuejs/core/issues/7428)) ([0002567](https://github.com/vuejs/core/commit/000256772816d54976e462330a7be342c49c7304))
+* **complier-sfc:** hoist literal constants for script ([#5752](https://github.com/vuejs/core/issues/5752)) ([7def8b1](https://github.com/vuejs/core/commit/7def8b15b89aa78accd9a00927db91e8091a12b7)), closes [#5750](https://github.com/vuejs/core/issues/5750)
+* **runtime-core:** add skipCheck for prop ([#7548](https://github.com/vuejs/core/issues/7548)) ([63ad77f](https://github.com/vuejs/core/commit/63ad77f6f65751780aa52f817387165b4773cfe4))
+* **sfc:** deprecate reactivity transform ([efb54e7](https://github.com/vuejs/core/commit/efb54e7315e93f4be7004d1c0a4de8c523dab334))
+* **types:** `defineComponent()` with generics support ([#7963](https://github.com/vuejs/core/issues/7963)) ([d77557c](https://github.com/vuejs/core/commit/d77557c4038f88a676903b379505b280a88cc774)), closes [#3102](https://github.com/vuejs/core/issues/3102)
+
+
+### BREAKING CHANGES
+
+* **types:** The type of `defineComponent()` when passing in a function has changed. This overload signature is rarely used in practice and the breakage will be minimal, so repurposing it to something more useful should be worth it.
+
+
+
 # [3.3.0-alpha.5](https://github.com/vuejs/core/compare/v3.3.0-alpha.4...v3.3.0-alpha.5) (2023-03-26)
 
 ### Bug Fixes
