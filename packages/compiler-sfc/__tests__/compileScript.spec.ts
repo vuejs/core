@@ -1540,6 +1540,16 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`emits: ['foo']`)
     })
 
+    test('defineEmits w/ type (tuple syntax)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const emit = defineEmits<{ foo: [], bar: [] }>()
+      </script>
+      `)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
+      assertCode(content)
+    })
+
     test('runtime Enum', () => {
       const { content, bindings } = compile(
         `<script setup lang="ts">
@@ -1869,6 +1879,19 @@ const emit = defineEmits(['a', 'b'])
           foo: () => bar > 1
         })
         </script>`).content
+      )
+    })
+
+    test('mixed usage of tuple / call signature in defineEmits', () => {
+      expect(() =>
+        compile(`<script setup lang="ts">
+        defineEmits<{
+          foo: []
+          (e: 'hi'): void
+        }>()
+        </script>`)
+      ).toThrow(
+        `defineEmits() type cannot mixed call signature and property syntax.`
       )
     })
   })
