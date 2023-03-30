@@ -1753,12 +1753,14 @@ export function compileScript(
       for (const key in propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(key)
 
-        if (d) const escapedKey = getEscapedKey(key)
-        defaults.push(
-          `${escapedKey}: ${d.valueString}${
-            d.needSkipFactory ? `, __skip_${escapedKey}: true` : ``
-          }`
-        )
+        if (d) {
+          const escapedKey = getEscapedKey(key)
+          defaults.push(
+            `${escapedKey}: ${d.valueString}${
+              d.needSkipFactory ? `, __skip_${escapedKey}: true` : ``
+            }`
+          )
+        }
       }
       if (defaults.length) {
         declCode = `${helper(
