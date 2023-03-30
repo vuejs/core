@@ -10,7 +10,6 @@ import {
   SetupContext,
   h,
   SlotsType,
-  useSlots,
   Slots
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'

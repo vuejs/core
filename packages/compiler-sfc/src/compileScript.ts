@@ -1347,8 +1347,9 @@ export function compileScript(
           const isDefineProps =
             processDefineProps(init, decl.id) ||
             processWithDefaults(init, decl.id)
-          const isDefineEmits = processDefineEmits(init, decl.id)
-          processDefineSlots(init, decl.id)
+          const isDefineEmits =
+            !isDefineProps && processDefineEmits(init, decl.id)
+          !isDefineEmits && processDefineSlots(init, decl.id)
 
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
