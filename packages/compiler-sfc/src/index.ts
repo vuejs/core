@@ -1,3 +1,5 @@
+export const version = __VERSION__
+
 // API
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
