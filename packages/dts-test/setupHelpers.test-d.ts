@@ -143,6 +143,25 @@ describe('defineEmits w/ type declaration', () => {
   emit2('baz')
 })
 
+describe('defineEmits w/ alt type declaration', () => {
+  const emit = defineEmits<{
+    foo: [id: string]
+    bar: any[]
+    baz: []
+  }>()
+
+  emit('foo', 'hi')
+  // @ts-expect-error
+  emit('foo')
+
+  emit('bar')
+  emit('bar', 1, 2, 3)
+
+  emit('baz')
+  // @ts-expect-error
+  emit('baz', 1)
+})
+
 describe('defineEmits w/ runtime declaration', () => {
   const emit = defineEmits({
     foo: () => {},
