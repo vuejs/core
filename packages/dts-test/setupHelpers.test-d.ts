@@ -183,15 +183,12 @@ describe('defineEmits w/ runtime declaration', () => {
 
 describe('defineSlots', () => {
   const slots = defineSlots<{
-    default: [foo: string, bar: number]
+    default: { foo: string; bar: number }
   }>()
-  expectType<(foo: string, bar: number) => VNode[]>(slots.default)
+  expectType<(scope: { foo: string; bar: number }) => VNode[]>(slots.default)
 
   const slotsUntype = defineSlots()
   expectType<Slots>(slotsUntype)
-
-  // @ts-expect-error `default` should be an array
-  defineSlots<{ default: string }>()
 })
 
 describe('useAttrs', () => {

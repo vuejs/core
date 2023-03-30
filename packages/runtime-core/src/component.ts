@@ -125,7 +125,7 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions = {},
-  S extends Record<string, any[]> = Record<string, any[]>
+  S extends Record<string, any> = Record<string, any>
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (props: P, ctx: Omit<SetupContext<E, SlotsType<S>>, 'expose'>): any

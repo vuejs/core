@@ -190,10 +190,10 @@ export function defineOptions<
 }
 
 export function defineSlots<
-  T extends Record<string, any[]> = Record<string, any[]>
+  T extends Record<string, any> = Record<string, any>
 >(): // @ts-expect-error
 Readonly<{
-  [K in keyof T]: Slot<T[K]>
+  [K in keyof T]: Slot<[T[K]]>
 }> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)

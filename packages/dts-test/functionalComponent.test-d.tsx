@@ -69,11 +69,13 @@ const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
 
 expectType<Component>(Qux)
 
-const Quux: FunctionalComponent<{}, {}, { default: [foo: number] }> = (
+const Quux: FunctionalComponent<{}, {}, { default: { foo: number } }> = (
   props,
   { emit, slots }
 ) => {
-  expectType<{ default: undefined | ((foo: number) => VNode[]) }>(slots)
+  expectType<{ default: undefined | ((scope: { foo: number }) => VNode[]) }>(
+    slots
+  )
 }
 expectType<Component>(Quux)
 ;<Quux />

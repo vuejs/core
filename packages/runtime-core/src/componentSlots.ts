@@ -23,7 +23,9 @@ import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 
-export type Slot<T extends any[] = any[]> = (...args: T) => VNode[]
+export type Slot<T extends any[] = any[]> = (
+  ...args: T extends [any] ? any[] : T
+) => VNode[]
 
 export type InternalSlots = {
   [name: string]: Slot | undefined
@@ -32,17 +34,16 @@ export type InternalSlots = {
 export type Slots = Readonly<InternalSlots>
 
 declare const SlotSymbol: unique symbol
-export type SlotsType<T extends Record<string, any[]> = Record<string, any[]>> =
-  {
-    [SlotSymbol]?: T
-  }
+export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
+  [SlotSymbol]?: T
+}
 
 export type TypedSlots<S extends SlotsType> = [keyof S] extends [never]
   ? Slots
   : Readonly<
       Prettify<{
         [K in keyof NonNullable<S[typeof SlotSymbol]>]:
-          | Slot<NonNullable<S[typeof SlotSymbol]>[K]>
+          | Slot<[NonNullable<S[typeof SlotSymbol]>[K]]>
           | undefined
       }>
     >

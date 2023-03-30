@@ -1411,18 +1411,15 @@ export default {
 describe('slots', () => {
   defineComponent({
     slots: Object as SlotsType<{
-      default: [foo: string, bar: number]
-      item: [number]
+      default: { foo: string; bar: number }
+      item: { data: number }
     }>,
     setup(props, { slots }) {
-      expectType<undefined | ((foo: string, bar: number) => any)>(slots.default)
-      expectType<undefined | ((scope: number) => any)>(slots.item)
+      expectType<undefined | ((scope: { foo: string; bar: number }) => any)>(
+        slots.default
+      )
+      expectType<undefined | ((scope: { data: number }) => any)>(slots.item)
     }
-  })
-
-  defineComponent({
-    // @ts-expect-error `default` should be an array
-    slots: Object as SlotsType<{ default: string }>
   })
 
   defineComponent({

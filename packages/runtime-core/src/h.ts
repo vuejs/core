@@ -123,7 +123,7 @@ export function h(
 export function h<
   P,
   E extends EmitsOptions = {},
-  S extends Record<string, any[]> = {}
+  S extends Record<string, any> = {}
 >(
   type: FunctionalComponent<P, E, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
