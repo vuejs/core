@@ -1585,6 +1585,40 @@ const emit = defineEmits(['a', 'b'])
       assertCode(content)
     })
 
+    test('defineSlots', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const slots = defineSlots<{
+        default: [msg: string]
+      }>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`const slots = _useSlots()`)
+    })
+
+    test('defineSlots w/o return value', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      defineSlots<{
+        default: [msg: string]
+      }>()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).not.toMatch(`_useSlots`)
+    })
+
+    test('defineSlots w/o generic params', () => {
+      const { content } = compile(`
+      <script setup>
+      const slots = defineSlots()
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`const slots = _useSlots()`)
+    })
+
     test('runtime Enum', () => {
       const { content, bindings } = compile(
         `<script setup lang="ts">

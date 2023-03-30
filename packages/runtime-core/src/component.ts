@@ -27,7 +27,13 @@ import {
   initProps,
   normalizePropsOptions
 } from './componentProps'
-import { Slots, initSlots, InternalSlots } from './componentSlots'
+import {
+  Slots,
+  initSlots,
+  InternalSlots,
+  SlotsType,
+  TypedSlots
+} from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
@@ -117,10 +123,13 @@ export interface ComponentInternalOptions {
   __name?: string
 }
 
-export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
-  extends ComponentInternalOptions {
+export interface FunctionalComponent<
+  P = {},
+  E extends EmitsOptions = {},
+  S extends SlotsType = {}
+> extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: Omit<SetupContext<E>, 'expose'>): any
+  (props: P, ctx: Omit<SetupContext<E, S>, 'expose'>): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
   inheritAttrs?: boolean
@@ -168,10 +177,13 @@ export type { ComponentOptions }
 type LifecycleHook<TFn = Function> = TFn[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
-export type SetupContext<E = EmitsOptions> = E extends any
+export type SetupContext<
+  E = EmitsOptions,
+  S extends SlotsType = {}
+> = E extends any
   ? {
       attrs: Data
-      slots: Slots
+      slots: [keyof S] extends [never] ? Slots : TypedSlots<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
     }

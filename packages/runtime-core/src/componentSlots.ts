@@ -13,7 +13,8 @@ import {
   ShapeFlags,
   extend,
   def,
-  SlotFlags
+  SlotFlags,
+  Prettify
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -22,13 +23,26 @@ import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 
-export type Slot = (...args: any[]) => VNode[]
+export type Slot<T extends any[] = any[]> = (...args: T) => VNode[]
 
 export type InternalSlots = {
   [name: string]: Slot | undefined
 }
 
 export type Slots = Readonly<InternalSlots>
+
+declare const SlotSymbol: unique symbol
+export type SlotsType<T extends Record<string, any[]> = Record<string, any[]>> =
+  {
+    [SlotSymbol]?: T
+  }
+export type TypedSlots<S extends SlotsType> = Readonly<
+  Prettify<{
+    [K in keyof NonNullable<S[typeof SlotSymbol]>]: Slot<
+      NonNullable<S[typeof SlotSymbol]>[K]
+    >
+  }>
+>
 
 export type RawSlots = {
   [name: string]: unknown

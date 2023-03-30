@@ -8,7 +8,10 @@ import {
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
-  h
+  h,
+  SlotsType,
+  useSlots,
+  Slots
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1406,6 +1409,32 @@ export default {
   })
 }
 
+describe('slots', () => {
+  defineComponent({
+    slots: Object as SlotsType<{
+      default: [foo: string, bar: number]
+      item: [number]
+    }>,
+    setup(props, { slots }) {
+      expectType<(foo: string, bar: number) => any>(slots.default)
+      expectType<(scope: number) => any>(slots.item)
+    }
+  })
+
+  defineComponent({
+    // @ts-expect-error `default` should be an array
+    slots: Object as SlotsType<{ default: string }>
+  })
+
+  defineComponent({
+    setup(props, { slots }) {
+      // unknown slots
+      expectType<Slots>(slots)
+      expectType<((...args: any[]) => any) | undefined>(slots.default)
+    }
+  })
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,
@@ -1428,6 +1457,7 @@ declare const MyButton: DefineComponent<
   ComponentOptionsMixin,
   EmitsOptions,
   string,
+  {},
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
   {}

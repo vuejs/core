@@ -4,7 +4,9 @@ import {
   useAttrs,
   useSlots,
   withDefaults,
-  Slots
+  Slots,
+  defineSlots,
+  VNode
 } from 'vue'
 import { describe, expectType } from './utils'
 
@@ -177,6 +179,19 @@ describe('defineEmits w/ runtime declaration', () => {
   emit2('bar', 123)
   // @ts-expect-error
   emit2('baz')
+})
+
+describe('defineSlots', () => {
+  const slots = defineSlots<{
+    default: [foo: string, bar: number]
+  }>()
+  expectType<(foo: string, bar: number) => VNode[]>(slots.default)
+
+  const slotsUntype = defineSlots()
+  expectType<Slots>(slotsUntype)
+
+  // @ts-expect-error `default` should be an array
+  defineSlots<{ default: string }>()
 })
 
 describe('useAttrs', () => {

@@ -601,7 +601,7 @@ export function compileScript(
     }
     hasDefineSlotsCall = true
 
-    if (node.arguments) {
+    if (node.arguments.length > 0) {
       error(`${DEFINE_SLOTS}() cannot accept arguments`, node)
     }
 

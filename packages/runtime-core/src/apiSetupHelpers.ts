@@ -25,7 +25,7 @@ import {
   ExtractPropTypes
 } from './componentProps'
 import { warn } from './warning'
-import { VNode } from './vnode'
+import { Slot } from './componentSlots'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -194,11 +194,11 @@ export function defineOptions<
 }
 
 export function defineSlots<
-  T extends Record<string, any>
+  T extends Record<string, any[]> = Record<string, any[]>
 >(): // @ts-expect-error
-{
-  [K in keyof T]: (scope: T[K]) => VNode[] | undefined
-} {
+Readonly<{
+  [K in keyof T]: Slot<T[K]>
+}> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
