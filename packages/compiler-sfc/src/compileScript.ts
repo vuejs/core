@@ -11,7 +11,8 @@ import {
   isFunctionType,
   walkIdentifiers,
   getImportedName,
-  unwrapTSNode
+  unwrapTSNode,
+  isCallOf
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import {
@@ -59,6 +60,7 @@ import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
+import { transformDestructuredProps } from './compileScriptPropsDestructure'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -132,6 +134,14 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+export type PropsDestructureBindings = Record<
+  string, // public prop key
+  {
+    local: string // local identifier, may be different
+    default?: Expression
+  }
+>
+
 type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
 type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 type EmitsDeclType = FromNormalScript<
@@ -151,7 +161,6 @@ export function compileScript(
   // feature flags
   // TODO remove support for deprecated options when out of experimental
   const enableReactivityTransform = !!options.reactivityTransform
-  const enablePropsTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   const hoistStatic = options.hoistStatic !== false && !script
@@ -310,14 +319,8 @@ export function compileScript(
   // record declared types for runtime props type generation
   const declaredTypes: Record<string, string[]> = {}
   // props destructure data
-  const propsDestructuredBindings: Record<
-    string, // public prop key
-    {
-      local: string // local identifier, may be different
-      default?: Expression
-      isConst: boolean
-    }
-  > = Object.create(null)
+  const propsDestructuredBindings: PropsDestructureBindings =
+    Object.create(null)
 
   // magic-string state
   const s = new MagicString(source)
@@ -410,11 +413,7 @@ export function compileScript(
     }
   }
 
-  function processDefineProps(
-    node: Node,
-    declId?: LVal,
-    declKind?: VariableDeclaration['kind']
-  ): boolean {
+  function processDefineProps(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, DEFINE_PROPS)) {
       return false
     }
@@ -452,10 +451,9 @@ export function compileScript(
     }
 
     if (declId) {
-      const isConst = declKind === 'const'
-      if (enablePropsTransform && declId.type === 'ObjectPattern') {
+      // handle props destructure
+      if (declId.type === 'ObjectPattern') {
         propsDestructureDecl = declId
-        // props destructure - handle compilation sugar
         for (const prop of declId.properties) {
           if (prop.type === 'ObjectProperty') {
             const propKey = resolveObjectKey(prop.key, prop.computed)
@@ -479,14 +477,12 @@ export function compileScript(
               // store default value
               propsDestructuredBindings[propKey] = {
                 local: left.name,
-                default: right,
-                isConst
+                default: right
               }
             } else if (prop.value.type === 'Identifier') {
               // simple destructure
               propsDestructuredBindings[propKey] = {
-                local: prop.value.name,
-                isConst
+                local: prop.value.name
               }
             } else {
               error(
@@ -515,7 +511,12 @@ export function compileScript(
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    if (processDefineProps(node.arguments[0], declId, declKind)) {
+    warnOnce(
+      `withDefaults() has been deprecated. ` +
+        `Props destructure is now reactive by default - ` +
+        `use destructure with default values instead.`
+    )
+    if (processDefineProps(node.arguments[0], declId)) {
       if (propsRuntimeDecl) {
         error(
           `${WITH_DEFAULTS} can only be used with type-based ` +
@@ -943,7 +944,23 @@ export function compileScript(
         defaultVal.start!,
         defaultVal.end!
       )
+
       const unwrapped = unwrapTSNode(defaultVal)
+
+      if (
+        inferredType &&
+        inferredType.length &&
+        !inferredType.includes(UNKNOWN_TYPE)
+      ) {
+        const valueType = inferValueType(unwrapped)
+        if (valueType && !inferredType.includes(valueType)) {
+          error(
+            `Default value of prop "${key}" does not match declared type.`,
+            unwrapped
+          )
+        }
+      }
+
       // If the default value is a function or is an identifier referencing
       // external value, skip factory wrap. This is needed when using
       // destructure w/ runtime declaration since we cannot safely infer
@@ -951,10 +968,12 @@ export function compileScript(
       const needSkipFactory =
         !inferredType &&
         (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
+
       const needFactoryWrap =
         !needSkipFactory &&
         !isLiteralNode(unwrapped) &&
         !inferredType?.includes('Function')
+
       return {
         valueString: needFactoryWrap ? `() => (${value})` : value,
         needSkipFactory
@@ -1220,6 +1239,7 @@ export function compileScript(
     }
 
     // apply reactivity transform
+    // TODO remove in 3.4
     if (enableReactivityTransform && shouldTransform(script.content)) {
       const { rootRefs, importedHelpers } = transformAST(
         scriptAst,
@@ -1300,7 +1320,7 @@ export function compileScript(
 
           // defineProps / defineEmits
           const isDefineProps =
-            processDefineProps(init, decl.id, node.kind) ||
+            processDefineProps(init, decl.id) ||
             processWithDefaults(init, decl.id, node.kind)
           const isDefineEmits = processDefineEmits(init, decl.id)
           if (isDefineProps || isDefineEmits) {
@@ -1416,19 +1436,30 @@ export function compileScript(
     }
   }
 
-  // 3. Apply reactivity transform
+  // 3.1 props destructure transform
+  if (propsDestructureDecl) {
+    transformDestructuredProps(
+      scriptSetupAst,
+      s,
+      startOffset,
+      propsDestructuredBindings,
+      error,
+      vueImportAliases.watch
+    )
+  }
+
+  // 3.2 Apply reactivity transform
+  // TODO remove in 3.4
   if (
-    (enableReactivityTransform &&
-      // normal <script> had ref bindings that maybe used in <script setup>
-      (refBindings || shouldTransform(scriptSetup.content))) ||
-    propsDestructureDecl
+    enableReactivityTransform &&
+    // normal <script> had ref bindings that maybe used in <script setup>
+    (refBindings || shouldTransform(scriptSetup.content))
   ) {
     const { rootRefs, importedHelpers } = transformAST(
       scriptSetupAst,
       s,
       startOffset,
-      refBindings,
-      propsDestructuredBindings
+      refBindings
     )
     refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
     for (const h of importedHelpers) {
@@ -1444,7 +1475,7 @@ export function compileScript(
     extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
   }
 
-  // 5. check useOptions args to make sure it doesn't reference setup scope
+  // 5. check macro args to make sure it doesn't reference setup scope
   // variables
   checkInvalidScopeReference(propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(propsRuntimeDefaults, DEFINE_PROPS)
@@ -2219,6 +2250,27 @@ function inferEnumType(node: TSEnumDeclaration): string[] {
   return types.size ? [...types] : ['Number']
 }
 
+// non-comprehensive, best-effort type infernece for a runtime value
+// this is used to catch default value / type declaration mismatches
+// when using props destructure.
+function inferValueType(node: Node): string | undefined {
+  switch (node.type) {
+    case 'StringLiteral':
+      return 'String'
+    case 'NumericLiteral':
+      return 'Number'
+    case 'BooleanLiteral':
+      return 'Boolean'
+    case 'ObjectExpression':
+      return 'Object'
+    case 'ArrayExpression':
+      return 'Array'
+    case 'FunctionExpression':
+    case 'ArrowFunctionExpression':
+      return 'Function'
+  }
+}
+
 function extractRuntimeEmits(
   node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
   emits: Set<string>
@@ -2273,21 +2325,6 @@ function genRuntimeEmits(emits: Set<string>) {
         .map(p => JSON.stringify(p))
         .join(', ')}],`
     : ``
-}
-
-function isCallOf(
-  node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
-): node is CallExpression {
-  return !!(
-    node &&
-    test &&
-    node.type === 'CallExpression' &&
-    node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
-  )
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {

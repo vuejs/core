@@ -216,6 +216,8 @@ type PropsWithDefaults<Base, Defaults> = Base & {
  *
  * This is only usable inside `<script setup>`, is compiled away in the output
  * and should **not** be actually called at runtime.
+ *
+ * @deprecated use reactive props destructure instead.
  */
 export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
   props: Props,

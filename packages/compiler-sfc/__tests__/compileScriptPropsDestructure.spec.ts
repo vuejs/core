@@ -6,7 +6,6 @@ describe('sfc props transform', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      reactivityTransform: true,
       ...options
     })
   }
@@ -211,23 +210,6 @@ describe('sfc props transform', () => {
     })
   })
 
-  test('$$() escape', () => {
-    const { content } = compile(`
-      <script setup>
-      const { foo, bar: baz } = defineProps(['foo'])
-      console.log($$(foo))
-      console.log($$(baz))
-      $$({ foo, baz })
-      </script>
-    `)
-    expect(content).toMatch(`const __props_foo = _toRef(__props, 'foo')`)
-    expect(content).toMatch(`const __props_bar = _toRef(__props, 'bar')`)
-    expect(content).toMatch(`console.log((__props_foo))`)
-    expect(content).toMatch(`console.log((__props_bar))`)
-    expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
-    assertCode(content)
-  })
-
   // #6960
   test('computed static key', () => {
     const { content, bindings } = compile(`
@@ -292,7 +274,7 @@ describe('sfc props transform', () => {
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('should error if assignment to constant variable', () => {
+    test('should error if assignment to destructured prop binding', () => {
       expect(() =>
         compile(
           `<script setup>
@@ -300,7 +282,49 @@ describe('sfc props transform', () => {
           foo = 'bar'
           </script>`
         )
-      ).toThrow(`Assignment to constant variable.`)
+      ).toThrow(`Cannot assign to destructured props`)
+
+      expect(() =>
+        compile(
+          `<script setup>
+          let { foo } = defineProps(['foo'])
+          foo = 'bar'
+          </script>`
+        )
+      ).toThrow(`Cannot assign to destructured props`)
+    })
+
+    test('should error when watching destructured prop', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch } from 'vue'
+        const { foo } = defineProps(['foo'])
+        watch(foo, () => {})
+        </script>`
+        )
+      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch as w } from 'vue'
+        const { foo } = defineProps(['foo'])
+        w(foo, () => {})
+        </script>`
+        )
+      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
+    })
+
+    // not comprehensive, but should help for most common cases
+    test('should error if default value type does not match declared type', () => {
+      expect(() =>
+        compile(
+          `<script setup lang="ts">
+        const { foo = 'hello' } = defineProps<{ foo?: number }>()
+        </script>`
+        )
+      ).toThrow(`Default value of prop "foo" does not match declared type.`)
     })
   })
 })
