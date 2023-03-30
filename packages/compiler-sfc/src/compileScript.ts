@@ -11,7 +11,8 @@ import {
   isFunctionType,
   walkIdentifiers,
   getImportedName,
-  unwrapTSNode
+  unwrapTSNode,
+  isCallOf
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import {
@@ -1423,7 +1424,9 @@ export function compileScript(
       scriptSetupAst,
       s,
       startOffset,
-      propsDestructuredBindings
+      propsDestructuredBindings,
+      error,
+      vueImportAliases.watch
     )
   }
 
@@ -2283,21 +2286,6 @@ function genRuntimeEmits(emits: Set<string>) {
         .map(p => JSON.stringify(p))
         .join(', ')}],`
     : ``
-}
-
-function isCallOf(
-  node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
-): node is CallExpression {
-  return !!(
-    node &&
-    test &&
-    node.type === 'CallExpression' &&
-    node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
-  )
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {

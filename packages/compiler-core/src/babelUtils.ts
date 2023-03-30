@@ -9,7 +9,8 @@ import type {
   Program,
   ImportDefaultSpecifier,
   ImportNamespaceSpecifier,
-  ImportSpecifier
+  ImportSpecifier,
+  CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -448,4 +449,19 @@ export function unwrapTSNode(node: Node): Node {
   } else {
     return node
   }
+}
+
+export function isCallOf(
+  node: Node | null | undefined,
+  test: string | ((id: string) => boolean) | null | undefined
+): node is CallExpression {
+  return !!(
+    node &&
+    test &&
+    node.type === 'CallExpression' &&
+    node.callee.type === 'Identifier' &&
+    (typeof test === 'string'
+      ? node.callee.name === test
+      : test(node.callee.name))
+  )
 }

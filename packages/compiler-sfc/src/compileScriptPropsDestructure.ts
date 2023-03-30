@@ -13,7 +13,9 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  walkFunctionParams,
+  isCallOf,
+  unwrapTSNode
 } from '@vue/compiler-core'
 import { hasOwn, genPropsAccessExp } from '@vue/shared'
 import { PropsDestructureBindings } from './compileScript'
@@ -28,7 +30,9 @@ export function transformDestructuredProps(
   ast: Program,
   s: MagicString,
   offset = 0,
-  knownProps: PropsDestructureBindings
+  knownProps: PropsDestructureBindings,
+  error: (msg: string, node: Node, end?: number) => never,
+  watchMethodName = 'watch'
 ) {
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
@@ -41,12 +45,6 @@ export function transformDestructuredProps(
     const { local } = knownProps[key]
     rootScope[local] = true
     propsLocalToPublicMap[local] = key
-  }
-
-  function error(msg: string, node: Node): never {
-    const e = new Error(msg)
-    ;(e as any).node = node
-    throw e
   }
 
   function registerLocalBinding(id: Identifier) {
@@ -96,12 +94,8 @@ export function transformDestructuredProps(
       return
     }
     for (const decl of stmt.declarations) {
-      const isCall =
-        decl.init &&
-        decl.init.type === 'CallExpression' &&
-        decl.init.callee.type === 'Identifier'
       const isDefineProps =
-        isRoot && isCall && (decl as any).init.callee.name === 'defineProps'
+        isRoot && decl.init && isCallOf(unwrapTSNode(decl.init), 'defineProps')
       for (const id of extractIdentifiers(decl.id)) {
         if (isDefineProps) {
           // for defineProps destructure, only exclude them since they
@@ -164,6 +158,28 @@ export function transformDestructuredProps(
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 
+      // skip type nodes
+      if (
+        parent &&
+        parent.type.startsWith('TS') &&
+        parent.type !== 'TSAsExpression' &&
+        parent.type !== 'TSNonNullExpression' &&
+        parent.type !== 'TSTypeAssertion'
+      ) {
+        return this.skip()
+      }
+
+      if (isCallOf(node, watchMethodName)) {
+        const arg = unwrapTSNode(node.arguments[0])
+        if (arg.type === 'Identifier') {
+          error(
+            `${arg.name} is a destructured prop and cannot be directly watched. ` +
+              `Use a getter () => ${arg.name} instead.`,
+            arg
+          )
+        }
+      }
+
       // function scopes
       if (isFunctionType(node)) {
         scopeStack.push((currentScope = {}))
@@ -189,17 +205,6 @@ export function transformDestructuredProps(
         scopeStack.push((currentScope = {}))
         walkScope(node)
         return
-      }
-
-      // skip type nodes
-      if (
-        parent &&
-        parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
-      ) {
-        return this.skip()
       }
 
       if (node.type === 'Identifier') {

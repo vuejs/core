@@ -293,5 +293,27 @@ describe('sfc props transform', () => {
         )
       ).toThrow(`Cannot assign to destructured props`)
     })
+
+    test('should error when watching destructured prop', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch } from 'vue'
+        const { foo } = defineProps(['foo'])
+        watch(foo, () => {})
+        </script>`
+        )
+      ).toThrow(`foo is a destructured prop and cannot be directly watched.`)
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch as w } from 'vue'
+        const { foo } = defineProps(['foo'])
+        w(foo, () => {})
+        </script>`
+        )
+      ).toThrow(`foo is a destructured prop and cannot be directly watched.`)
+    })
   })
 })
