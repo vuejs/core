@@ -1,4 +1,4 @@
-import { h, Text, FunctionalComponent, Component, SlotsType, VNode } from 'vue'
+import { h, Text, FunctionalComponent, Component, VNode } from 'vue'
 import { expectType } from './utils'
 
 // simple function signature
@@ -73,7 +73,7 @@ const Quux: FunctionalComponent<{}, {}, { default: [foo: number] }> = (
   props,
   { emit, slots }
 ) => {
-  expectType<{ default: (foo: number) => VNode[] }>(slots)
+  expectType<{ default: undefined | ((foo: number) => VNode[]) }>(slots)
 }
 expectType<Component>(Quux)
 ;<Quux />

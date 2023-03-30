@@ -1415,8 +1415,8 @@ describe('slots', () => {
       item: [number]
     }>,
     setup(props, { slots }) {
-      expectType<(foo: string, bar: number) => any>(slots.default)
-      expectType<(scope: number) => any>(slots.item)
+      expectType<undefined | ((foo: string, bar: number) => any)>(slots.default)
+      expectType<undefined | ((scope: number) => any)>(slots.item)
     }
   })
 

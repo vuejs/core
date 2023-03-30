@@ -41,9 +41,9 @@ export type TypedSlots<S extends SlotsType> = [keyof S] extends [never]
   ? Slots
   : Readonly<
       Prettify<{
-        [K in keyof NonNullable<S[typeof SlotSymbol]>]: Slot<
-          NonNullable<S[typeof SlotSymbol]>[K]
-        >
+        [K in keyof NonNullable<S[typeof SlotSymbol]>]:
+          | Slot<NonNullable<S[typeof SlotSymbol]>[K]>
+          | undefined
       }>
     >
 
