@@ -3,7 +3,7 @@ export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
-export { rewriteDefault } from './rewriteDefault'
+export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
@@ -27,7 +27,7 @@ export {
 } from '@vue/compiler-core'
 
 // Types
-export {
+export type {
   SFCParseOptions,
   SFCParseResult,
   SFCDescriptor,
@@ -36,19 +36,22 @@ export {
   SFCScriptBlock,
   SFCStyleBlock
 } from './parse'
-export {
+export type {
   TemplateCompiler,
   SFCTemplateCompileOptions,
   SFCTemplateCompileResults
 } from './compileTemplate'
-export {
+export type {
   SFCStyleCompileOptions,
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
-export { SFCScriptCompileOptions } from './compileScript'
-export { AssetURLOptions, AssetURLTagConfig } from './templateTransformAssetUrl'
-export {
+export type { SFCScriptCompileOptions } from './compileScript'
+export type {
+  AssetURLOptions,
+  AssetURLTagConfig
+} from './templateTransformAssetUrl'
+export type {
   CompilerOptions,
   CompilerError,
   BindingMetadata

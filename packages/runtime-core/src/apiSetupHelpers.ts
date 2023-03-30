@@ -1,5 +1,4 @@
-import { ComponentPropsOptions } from '@vue/runtime-core'
-import { isArray, isPromise, isFunction } from '@vue/shared'
+import { isArray, isPromise, isFunction, Prettify } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
@@ -8,7 +7,17 @@ import {
   unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
-import { ComponentObjectPropsOptions, ExtractPropTypes } from './componentProps'
+import {
+  ComponentOptionsMixin,
+  ComponentOptionsWithoutProps,
+  ComputedOptions,
+  MethodOptions
+} from './componentOptions'
+import {
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions,
+  ExtractPropTypes
+} from './componentProps'
 import { warn } from './warning'
 
 // dev only
@@ -52,13 +61,13 @@ const warnRuntimeUsage = (method: string) =>
 // overload 1: runtime props w/ array
 export function defineProps<PropNames extends string = string>(
   props: PropNames[]
-): Readonly<{ [key in PropNames]?: any }>
+): Prettify<Readonly<{ [key in PropNames]?: any }>>
 // overload 2: runtime props w/ object
 export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
->(props: PP): Readonly<ExtractPropTypes<PP>>
+>(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): Readonly<TypeProps>
+export function defineProps<TypeProps>(): ResolveProps<TypeProps>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -66,6 +75,20 @@ export function defineProps() {
   }
   return null as any
 }
+
+type ResolveProps<T, BooleanKeys extends keyof T = BooleanKey<T>> = Prettify<
+  Readonly<
+    T & {
+      [K in BooleanKeys]-?: boolean
+    }
+  >
+>
+
+type BooleanKey<T, K extends keyof T = keyof T> = K extends any
+  ? [T[K]] extends [boolean | undefined]
+    ? K
+    : never
+  : never
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's emitted
@@ -126,6 +149,33 @@ export function defineExpose<
   }
 }
 
+export function defineOptions<
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = EmitsOptions,
+  EE extends string = string
+>(
+  options?: ComponentOptionsWithoutProps<
+    {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE
+  > & { emits?: undefined; expose?: undefined }
+): void {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineOptions`)
+  }
+}
+
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
@@ -149,7 +199,6 @@ type PropsWithDefaults<Base, Defaults> = Base & {
       : NotUndefined<Base[K]>
     : never
 }
-
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
  * using type-based `defineProps` declaration.
@@ -210,17 +259,21 @@ export function mergeDefaults(
       )
     : raw
   for (const key in defaults) {
-    const opt = props[key]
+    if (key.startsWith('__skip')) continue
+    let opt = props[key]
     if (opt) {
       if (isArray(opt) || isFunction(opt)) {
-        props[key] = { type: opt, default: defaults[key] }
+        opt = props[key] = { type: opt, default: defaults[key] }
       } else {
         opt.default = defaults[key]
       }
     } else if (opt === null) {
-      props[key] = { default: defaults[key] }
+      opt = props[key] = { default: defaults[key] }
     } else if (__DEV__) {
       warn(`props default key "${key}" has no corresponding declaration.`)
+    }
+    if (opt && defaults[`__skip_${key}`]) {
+      opt.skipFactory = true
     }
   }
   return props

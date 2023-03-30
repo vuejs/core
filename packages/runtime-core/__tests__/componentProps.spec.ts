@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { vi } from 'vitest'
 import {
   ComponentInternalInstance,
   getCurrentInstance,
@@ -163,8 +167,8 @@ describe('component props', () => {
 
   test('default value', () => {
     let proxy: any
-    const defaultFn = jest.fn(() => ({ a: 1 }))
-    const defaultBaz = jest.fn(() => ({ b: 1 }))
+    const defaultFn = vi.fn(() => ({ a: 1 }))
+    const defaultBaz = vi.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -331,7 +335,8 @@ describe('component props', () => {
         arr: { type: Array },
         obj: { type: Object },
         cls: { type: MyClass },
-        fn: { type: Function }
+        fn: { type: Function },
+        skipCheck: { type: [Boolean, Function], skipCheck: true }
       },
       setup() {
         return () => null
@@ -345,7 +350,8 @@ describe('component props', () => {
         arr: {},
         obj: 'false',
         cls: {},
-        fn: true
+        fn: true,
+        skipCheck: 'foo'
       }),
       nodeOps.createElement('div')
     )
@@ -370,6 +376,9 @@ describe('component props', () => {
     expect(
       `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`
     ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`
+    ).not.toHaveBeenWarned()
   })
 
   // #3495
@@ -536,7 +545,7 @@ describe('component props', () => {
   // #3288
   test('declared prop key should be present even if not passed', async () => {
     let initialKeys: string[] = []
-    const changeSpy = jest.fn()
+    const changeSpy = vi.fn()
     const passFoo = ref(false)
 
     const Comp = {

@@ -1,4 +1,5 @@
-import { isArray, isString, isObject, hyphenate, extend } from './'
+import { isArray, isString, isObject, hyphenate, extend } from './general'
+
 
 export type NormalizedStyle = Record<string, string | number>
 

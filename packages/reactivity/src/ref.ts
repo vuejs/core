@@ -1,5 +1,6 @@
 import {
   activeEffect,
+  getDepFromReactive,
   shouldTrack,
   trackEffects,
   triggerEffects
@@ -53,16 +54,17 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
   ref = toRaw(ref)
-  if (ref.dep) {
+  const dep = ref.dep
+  if (dep) {
     if (__DEV__) {
-      triggerEffects(ref.dep, {
+      triggerEffects(dep, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(ref.dep)
+      triggerEffects(dep)
     }
   }
 }
@@ -228,6 +230,10 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   set value(newVal) {
     this._object[this._key] = newVal
   }
+
+  get dep(): Dep | undefined {
+    return getDepFromReactive(toRaw(this._object), this._key)
+  }
 }
 
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
@@ -271,10 +277,6 @@ type BaseTypes = string | number | boolean
  *   }
  * }
  * ```
- *
- * Note that api-extractor somehow refuses to include `declare module`
- * augmentations in its generated d.ts, so we have to manually append them
- * to the final generated d.ts in our build process.
  */
 export interface RefUnwrapBailTypes {}
 

@@ -129,7 +129,7 @@ export function processExpression(
         parent && isInDestructureAssignment(parent, parentStack)
 
       if (
-        type === BindingTypes.SETUP_CONST ||
+        isConst(type) ||
         type === BindingTypes.SETUP_REACTIVE_CONST ||
         localVars[raw]
       ) {
@@ -223,7 +223,7 @@ export function processExpression(
     if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
-      if (bindingMetadata[node.content] === BindingTypes.SETUP_CONST) {
+      if (isConst(bindingMetadata[node.content])) {
         node.constType = ConstantTypes.CAN_SKIP_PATCH
       }
       node.content = rewriteIdentifier(rawExp)
@@ -371,4 +371,10 @@ export function stringifyExpression(exp: ExpressionNode | string): string {
       .map(stringifyExpression)
       .join('')
   }
+}
+
+function isConst(type: unknown) {
+  return (
+    type === BindingTypes.SETUP_CONST || type === BindingTypes.LITERAL_CONST
+  )
 }

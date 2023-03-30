@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`sfc props transform $$() escape 1`] = `
+exports[`sfc props transform > $$() escape 1`] = `
 "import { toRef as _toRef } from 'vue'
 
 export default {
@@ -20,8 +20,8 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform aliasing 1`] = `
-"import { toDisplayString as _toDisplayString } from "vue"
+exports[`sfc props transform > aliasing 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
 export default {
@@ -40,8 +40,8 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform basic usage 1`] = `
-"import { toDisplayString as _toDisplayString } from "vue"
+exports[`sfc props transform > basic usage 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
 export default {
@@ -59,8 +59,8 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform computed static key 1`] = `
-"import { toDisplayString as _toDisplayString } from "vue"
+exports[`sfc props transform > computed static key 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
 export default {
@@ -78,13 +78,14 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform default values w/ runtime declaration 1`] = `
+exports[`sfc props transform > default values w/ array runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: _mergeDefaults(['foo', 'bar'], {
+  props: _mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
-  bar: () => ({})
+  bar: () => ({}),
+  func: () => {}, __skip_func: true
 }),
   setup(__props) {
 
@@ -96,13 +97,34 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform default values w/ type declaration 1`] = `
+exports[`sfc props transform > default values w/ object runtime declaration 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true,
+  ext: x, __skip_ext: true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc props transform > default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => ({}) }
+    bar: { type: Object, required: false, default: () => ({}) },
+    func: { type: Function, required: false, default: () => {} }
   },
   setup(__props: any) {
 
@@ -114,7 +136,7 @@ return () => {}
 })"
 `;
 
-exports[`sfc props transform default values w/ type declaration, prod mode 1`] = `
+exports[`sfc props transform > default values w/ type declaration, prod mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
@@ -124,7 +146,7 @@ export default /*#__PURE__*/_defineComponent({
     baz: null,
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => (() => {}) }
+    func: { type: Function, default: () => {} }
   },
   setup(__props: any) {
 
@@ -136,8 +158,8 @@ return () => {}
 })"
 `;
 
-exports[`sfc props transform multiple variable declarations 1`] = `
-"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+exports[`sfc props transform > multiple variable declarations 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 
 export default {
@@ -147,14 +169,14 @@ export default {
       const bar = 'fish', hello = 'world'
       
 return (_ctx, _cache) => {
-  return (_openBlock(), _createElementBlock("div", null, _toDisplayString(__props.foo) + " " + _toDisplayString(hello) + " " + _toDisplayString(bar), 1 /* TEXT */))
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _toDisplayString(__props.foo) + \\" \\" + _toDisplayString(hello) + \\" \\" + _toDisplayString(bar), 1 /* TEXT */))
 }
 }
 
 }"
 `;
 
-exports[`sfc props transform nested scope 1`] = `
+exports[`sfc props transform > nested scope 1`] = `
 "export default {
   props: ['foo', 'bar'],
   setup(__props) {
@@ -171,8 +193,8 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform non-identifier prop names 1`] = `
-"import { toDisplayString as _toDisplayString } from "vue"
+exports[`sfc props transform > non-identifier prop names 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
 export default {
@@ -180,24 +202,24 @@ export default {
   setup(__props) {
 
       
-      let x = __props["foo.bar"]
+      let x = __props[\\"foo.bar\\"]
       
 return (_ctx, _cache) => {
-  return _toDisplayString(__props["foo.bar"])
+  return _toDisplayString(__props[\\"foo.bar\\"])
 }
 }
 
 }"
 `;
 
-exports[`sfc props transform rest spread 1`] = `
+exports[`sfc props transform > rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
 export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, ["foo","bar"]);
+const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
 
       
       
