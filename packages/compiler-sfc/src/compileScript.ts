@@ -601,6 +601,10 @@ export function compileScript(
     }
     hasDefineSlotsCall = true
 
+    if (node.arguments) {
+      error(`${DEFINE_SLOTS}() cannot accept arguments`, node)
+    }
+
     if (declId) {
       s.overwrite(
         startOffset + node.start!,
