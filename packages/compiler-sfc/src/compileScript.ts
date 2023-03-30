@@ -69,9 +69,6 @@ const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 const DEFINE_OPTIONS = 'defineOptions'
 
-// constants
-const DEFAULT_VAR = `__default__`
-
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
@@ -110,6 +107,12 @@ export interface SFCScriptCompileOptions {
    * from being hot-reloaded separately from component state.
    */
   inlineTemplate?: boolean
+  /**
+   * Generate the final component as a variable instead of default export.
+   * This is useful in e.g. @vitejs/plugin-vue where the script needs to be
+   * placed inside the main module.
+   */
+  genDefaultAs?: string
   /**
    * Options for template compilation when inlining. Note these are options that
    * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
@@ -178,6 +181,10 @@ export function compileScript(
   const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const genDefaultAs = options.genDefaultAs
+    ? `const ${options.genDefaultAs} =`
+    : `export default`
+  const normalScriptDefaultVar = `__default__`
   const isJS =
     scriptLang === 'js' ||
     scriptLang === 'jsx' ||
@@ -216,6 +223,7 @@ export function compileScript(
       // do not process non js/ts script blocks
       return script
     }
+    // normal <script> only
     try {
       let content = script.content
       let map = script.map
@@ -247,17 +255,23 @@ export function compileScript(
           }) as unknown as RawSourceMap
         }
       }
-      if (cssVars.length) {
+      if (cssVars.length || options.genDefaultAs) {
+        const defaultVar = options.genDefaultAs || normalScriptDefaultVar
         const s = new MagicString(content)
-        rewriteDefaultAST(scriptAst.body, s, DEFAULT_VAR)
+        rewriteDefaultAST(scriptAst.body, s, defaultVar)
         content = s.toString()
-        content += genNormalScriptCssVarsCode(
-          cssVars,
-          bindings,
-          scopeId,
-          isProd
-        )
-        content += `\nexport default ${DEFAULT_VAR}`
+        if (cssVars.length) {
+          content += genNormalScriptCssVarsCode(
+            cssVars,
+            bindings,
+            scopeId,
+            isProd,
+            defaultVar
+          )
+        }
+        if (!options.genDefaultAs) {
+          content += `\nexport default ${defaultVar}`
+        }
       }
       return {
         ...script,
@@ -1189,7 +1203,7 @@ export function compileScript(
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
+        s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -1213,14 +1227,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
             s.appendLeft(
               scriptEndOffset!,
-              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
+              `\nconst ${normalScriptDefaultVar} = ${defaultSpecifier.local.name}\n`
             )
           }
         }
@@ -1793,11 +1807,11 @@ export function compileScript(
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
     const def =
-      (defaultExport ? `\n  ...${DEFAULT_VAR},` : ``) +
+      (defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``) +
       (definedOptions ? `\n  ...${definedOptions},` : '')
     s.prependLeft(
       startOffset,
-      `\nexport default /*#__PURE__*/${helper(
+      `\n${genDefaultAs} /*#__PURE__*/${helper(
         `defineComponent`
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
@@ -1810,8 +1824,8 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${
-          defaultExport ? `${DEFAULT_VAR}, ` : ''
+        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+          defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
@@ -1819,7 +1833,7 @@ export function compileScript(
     } else {
       s.prependLeft(
         startOffset,
-        `\nexport default {${runtimeOptions}\n  ` +
+        `\n${genDefaultAs} {${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `}`)
@@ -1839,7 +1853,6 @@ export function compileScript(
 
   return {
     ...scriptSetup,
-    s,
     bindings: bindingMetadata,
     imports: userImports,
     content: s.toString(),
