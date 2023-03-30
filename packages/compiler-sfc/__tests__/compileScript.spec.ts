@@ -1589,7 +1589,7 @@ const emit = defineEmits(['a', 'b'])
       const { content } = compile(`
       <script setup lang="ts">
       const slots = defineSlots<{
-        default: [msg: string]
+        default: { msg: string }
       }>()
       </script>
       `)
@@ -1601,7 +1601,7 @@ const emit = defineEmits(['a', 'b'])
       const { content } = compile(`
       <script setup lang="ts">
       defineSlots<{
-        default: [msg: string]
+        default: { msg: string }
       }>()
       </script>
       `)
