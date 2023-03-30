@@ -1486,7 +1486,7 @@ export function compileScript(
     extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
   }
   if (emitsTypeDecl) {
-    extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
+    extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits, error)
   }
 
   // 5. check macro args to make sure it doesn't reference setup scope
@@ -2289,14 +2289,31 @@ function inferValueType(node: Node): string | undefined {
 
 function extractRuntimeEmits(
   node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
-  emits: Set<string>
+  emits: Set<string>,
+  error: (msg: string, node: Node) => never
 ) {
   if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
     const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+    let hasCallSignature = false
+    let hasProperty = false
     for (let t of members) {
       if (t.type === 'TSCallSignatureDeclaration') {
         extractEventNames(t.parameters[0], emits)
+        hasCallSignature = true
       }
+      if (t.type === 'TSPropertySignature') {
+        if (t.key.type !== 'Identifier' || t.computed) {
+          error(`defineEmits() type cannot use computed keys.`, t.key)
+        }
+        emits.add(t.key.name)
+        hasProperty = true
+      }
+    }
+    if (hasCallSignature && hasProperty) {
+      error(
+        `defineEmits() type cannot mixed call signature and property syntax.`,
+        node
+      )
     }
     return
   } else {

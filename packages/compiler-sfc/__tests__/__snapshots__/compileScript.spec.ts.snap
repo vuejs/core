@@ -1484,6 +1484,22 @@ return { emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (tuple syntax) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"foo\\", \\"bar\\"],
+  setup(__props, { expose: __expose, emit }: { emit: ({ foo: [], bar: [] }), expose: any, slots: any, attrs: any }) {
+  __expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (type alias) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 type Emits = { (e: 'foo' | 'bar'): void }
