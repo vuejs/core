@@ -1388,7 +1388,7 @@ export interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1405,7 +1405,7 @@ export type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1439,7 +1439,23 @@ interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
+  __expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (property syntax) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"foo\\", \\"bar\\"],
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1456,7 +1472,7 @@ export type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1473,23 +1489,7 @@ type Emits = (e: 'foo' | 'bar') => void
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
-  __expose();
-
-      
-      
-return { emit }
-}
-
-})"
-`;
-
-exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (tuple syntax) 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*#__PURE__*/_defineComponent({
-  emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ foo: [], bar: [] }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1506,7 +1506,7 @@ type Emits = { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1522,7 +1522,7 @@ exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (typ
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({(e: 'foo' | 'bar'): void; (e: 'baz', id: number): void;}), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1538,7 +1538,7 @@ exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type 1`] 
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ((e: 'foo' | 'bar') => void), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       
@@ -1556,7 +1556,7 @@ exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type from
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }: { emit: ({ (e: 'foo' | 'bar'): void }), expose: any, slots: any, attrs: any }) {
+  setup(__props, { expose: __expose, emit }) {
   __expose();
 
       

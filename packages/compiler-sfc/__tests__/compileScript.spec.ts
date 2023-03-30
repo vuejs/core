@@ -1414,7 +1414,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1437,7 +1436,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: (${type}),`)
       expect(content).toMatch(`emits: ["foo", "bar", "baz"]`)
     })
 
@@ -1449,7 +1447,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1461,7 +1458,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1475,7 +1471,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1487,7 +1482,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1499,7 +1493,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1511,7 +1504,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1523,7 +1515,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1536,11 +1527,10 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`setup(__props, { expose: __expose, emit }) {`)
       expect(content).toMatch(`emits: ['foo']`)
     })
 
-    test('defineEmits w/ type (tuple syntax)', () => {
+    test('defineEmits w/ type (property syntax)', () => {
       const { content } = compile(`
       <script setup lang="ts">
       const emit = defineEmits<{ foo: [], bar: [] }>()
@@ -1882,7 +1872,7 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
-    test('mixed usage of tuple / call signature in defineEmits', () => {
+    test('mixed usage of property / call signature in defineEmits', () => {
       expect(() =>
         compile(`<script setup lang="ts">
         defineEmits<{
