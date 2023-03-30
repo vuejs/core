@@ -58,7 +58,14 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
+  /**
+   * @internal
+   */
   skipCheck?: boolean
+  /**
+   * @internal
+   */
+  skipFactory?: boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
@@ -425,7 +432,11 @@ function resolvePropValue(
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      if (opt.type !== Function && isFunction(defaultValue)) {
+      if (
+        opt.type !== Function &&
+        !opt.skipFactory &&
+        isFunction(defaultValue)
+      ) {
         const { propsDefaults } = instance
         if (key in propsDefaults) {
           value = propsDefaults[key]

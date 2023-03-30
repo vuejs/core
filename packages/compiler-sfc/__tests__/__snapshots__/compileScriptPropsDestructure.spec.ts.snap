@@ -1,25 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`sfc props transform > $$() escape 1`] = `
-"import { toRef as _toRef } from 'vue'
-
-export default {
-  props: ['foo'],
-  setup(__props) {
-const __props_bar = _toRef(__props, 'bar');
-const __props_foo = _toRef(__props, 'foo');
-
-      
-      console.log((__props_foo))
-      console.log((__props_bar))
-      ;({ foo: __props_foo, baz: __props_bar })
-      
-return () => {}
-}
-
-}"
-`;
-
 exports[`sfc props transform > aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
@@ -89,8 +69,8 @@ export default {
 }),
   setup(__props) {
 
-
-
+      
+      
 return () => {}
 }
 
@@ -115,26 +95,6 @@ return () => {}
 }
 
 }"
-`;
-
-exports[`sfc props transform > default values w/ type declaration & key is string 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*#__PURE__*/_defineComponent({
-  props: {
-    foo: { type: Number, required: true, default: 1 },
-    bar: { type: Number, required: true, default: 2 },
-    \\"foo:bar\\": { type: String, required: true, default: 'foo-bar' },
-    \\"onUpdate:modelValue\\": { type: Function, required: true }
-  },
-  setup(__props: any) {
-
-
-
-return () => {}
-}
-
-})"
 `;
 
 exports[`sfc props transform > default values w/ type declaration 1`] = `
