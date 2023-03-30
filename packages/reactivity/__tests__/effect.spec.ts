@@ -636,6 +636,35 @@ describe('reactivity/effect', () => {
     expect(childSpy).toHaveBeenCalledTimes(5)
   })
 
+  it('should allow nested effects with same key', () => {
+    const nums = reactive({ num: 1, is: false })
+    const dummy: any = {}
+    const parmentDump: any = {}
+
+    const childSpy = vi.fn(() => (dummy.num = nums.is ? nums.num : 0))
+    effect(childSpy)
+    expect(dummy).toEqual({ num: 0 })
+    childSpy.mockClear()
+
+    const parentSpy = vi.fn(() => {
+      parmentDump.num = nums.num
+      nums.is = true // this will Trigger childSpy run sync
+    })
+    effect(parentSpy)
+
+    expect(dummy).toEqual({ num: 1 })
+    expect(parmentDump).toEqual({ num: 1 })
+    expect(parentSpy).toHaveBeenCalledTimes(1)
+    expect(childSpy).toHaveBeenCalledTimes(1)
+
+    // this should call the childeffect
+    nums.num = 2
+    expect(dummy).toEqual({ num: 2 })
+    expect(parmentDump).toEqual({ num: 2 })
+    expect(parentSpy).toHaveBeenCalledTimes(2)
+    expect(childSpy).toHaveBeenCalledTimes(2)
+  })
+
   it('should observe json methods', () => {
     let dummy = <Record<string, number>>{}
     const obj = reactive<Record<string, number>>({})
