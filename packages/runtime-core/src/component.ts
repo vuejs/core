@@ -30,6 +30,7 @@ import {
 import {
   initSlots,
   InternalSlots,
+  Slots,
   SlotsType,
   TypedSlots
 } from './componentSlots'
@@ -62,7 +63,8 @@ import {
   isPromise,
   ShapeFlags,
   extend,
-  getGlobalThis
+  getGlobalThis,
+  IfAny
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -125,13 +127,16 @@ export interface ComponentInternalOptions {
 export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions = {},
-  S extends Record<string, any> = Record<string, any>
+  S extends Record<string, any> = any
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: Omit<SetupContext<E, SlotsType<S>>, 'expose'>): any
+  (
+    props: P,
+    ctx: Omit<SetupContext<E, IfAny<S, {}, SlotsType<S>>>, 'expose'>
+  ): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
-  slots?: SlotsType<S>
+  slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
   compatConfig?: CompatConfig

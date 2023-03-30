@@ -10,7 +10,8 @@ import {
   SetupContext,
   h,
   SlotsType,
-  Slots
+  Slots,
+  VNode
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1409,26 +1410,37 @@ export default {
 }
 
 describe('slots', () => {
-  defineComponent({
+  const comp1 = defineComponent({
     slots: Object as SlotsType<{
       default: { foo: string; bar: number }
-      item: { data: number }
+      optional?: { data: string }
     }>,
     setup(props, { slots }) {
-      expectType<undefined | ((scope: { foo: string; bar: number }) => any)>(
+      expectType<(scope: { foo: string; bar: number }) => VNode[]>(
         slots.default
       )
-      expectType<undefined | ((scope: { data: number }) => any)>(slots.item)
+      expectType<((scope: { data: string }) => VNode[]) | undefined>(
+        slots.optional
+      )
+
+      slots.default({ foo: 'foo', bar: 1 })
+
+      // @ts-expect-error it's optional
+      slots.optional({ data: 'foo' })
+      slots.optional?.({ data: 'foo' })
+
+      expectType<typeof slots | undefined>(new comp1().$slots)
     }
   })
 
-  defineComponent({
+  const comp2 = defineComponent({
     setup(props, { slots }) {
       // unknown slots
       expectType<Slots>(slots)
-      expectType<((...args: any[]) => any) | undefined>(slots.default)
+      expectType<((...args: any[]) => VNode[]) | undefined>(slots.default)
     }
   })
+  expectType<Slots | undefined>(new comp2().$slots)
 })
 
 import {

@@ -25,7 +25,7 @@ import {
   ExtractPropTypes
 } from './componentProps'
 import { warn } from './warning'
-import { Slot } from './componentSlots'
+import { SlotsType, TypedSlots } from './componentSlots'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -190,11 +190,9 @@ export function defineOptions<
 }
 
 export function defineSlots<
-  T extends Record<string, any> = Record<string, any>
+  S extends Record<string, any> = Record<string, any>
 >(): // @ts-expect-error
-Readonly<{
-  [K in keyof T]: Slot<[T[K]]>
-}> {
+TypedSlots<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }

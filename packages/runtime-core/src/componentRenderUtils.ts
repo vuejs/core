@@ -102,7 +102,7 @@ export function renderComponentRoot(
                       markAttrsAccessed()
                       return attrs
                     },
-                    slots,
+                    slots: slots,
                     emit
                   }
                 : { attrs, slots, emit }

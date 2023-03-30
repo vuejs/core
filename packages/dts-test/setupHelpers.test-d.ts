@@ -184,8 +184,10 @@ describe('defineEmits w/ runtime declaration', () => {
 describe('defineSlots', () => {
   const slots = defineSlots<{
     default: { foo: string; bar: number }
+    optional?: string
   }>()
   expectType<(scope: { foo: string; bar: number }) => VNode[]>(slots.default)
+  expectType<undefined | ((scope: string) => VNode[])>(slots.optional)
 
   const slotsUntype = defineSlots()
   expectType<Slots>(slotsUntype)

@@ -14,7 +14,8 @@ import {
   extend,
   def,
   SlotFlags,
-  Prettify
+  Prettify,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -23,8 +24,8 @@ import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 
-export type Slot<T extends any[] = any[]> = (
-  ...args: T extends [any] ? any[] : T
+export type Slot<T extends any = any> = (
+  ...args: IfAny<T, any[], [T]>
 ) => VNode[]
 
 export type InternalSlots = {
@@ -42,9 +43,9 @@ export type TypedSlots<S extends SlotsType> = [keyof S] extends [never]
   ? Slots
   : Readonly<
       Prettify<{
-        [K in keyof NonNullable<S[typeof SlotSymbol]>]:
-          | Slot<[NonNullable<S[typeof SlotSymbol]>[K]]>
-          | undefined
+        [K in keyof NonNullable<S[typeof SlotSymbol]>]: Slot<
+          NonNullable<NonNullable<S[typeof SlotSymbol]>[K]>
+        >
       }>
     >
 
