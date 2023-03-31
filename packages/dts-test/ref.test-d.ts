@@ -361,6 +361,11 @@ describe('toRef <-> toValue', () => {
     // @ts-expect-error ref created from computed ref shuld be readonly
     rd.value = 'foo'
 
+    expectType<string>(toValue(a))
+    expectType<string>(toValue(b))
+    expectType<string>(toValue(c))
+    expectType<string>(toValue(d))
+
     return {
       r: toValue(r),
       rb: toValue(rb),
