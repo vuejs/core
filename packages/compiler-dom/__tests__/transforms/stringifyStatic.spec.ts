@@ -478,7 +478,7 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
-  test('stringify v-text whit escape', () => {
+  test('stringify v-text with escape', () => {
     const { code } = compileWithStringify(`
       <pre  data-type="js"><code v-text="
                 \`text1\`"></code></pre>

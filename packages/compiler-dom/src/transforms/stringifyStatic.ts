@@ -29,8 +29,7 @@ import {
   stringifyStyle,
   makeMap,
   isKnownSvgAttr,
-  isBooleanAttr,
-  removeEscapes
+  isBooleanAttr
 } from '@vue/shared'
 import { DOMNamespaces } from '../parserOptions'
 
@@ -345,7 +344,6 @@ function stringifyElement(
   if (!isVoidTag(node.tag)) {
     res += `</${node.tag}>`
   }
-  console.log(res)
   return res
 }
 
@@ -377,3 +375,6 @@ function evaluateConstant(exp: ExpressionNode): string {
     return res
   }
 }
+
+const removeEscapes = (content: string) =>
+  content.replace(/^[ \n\r\f]+|[ \n\r\f]+$/g, '')
