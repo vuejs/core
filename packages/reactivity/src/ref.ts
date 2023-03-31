@@ -11,7 +11,8 @@ import {
   hasChanged,
   IfAny,
   isFunction,
-  isPlainObject
+  isString,
+  isObject
 } from '@vue/shared'
 import {
   isProxy,
@@ -316,7 +317,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
-    ret[key] = toRef(object, key)
+    ret[key] = propertyToRef(object, key)
   }
   return ret
 }
@@ -409,18 +410,22 @@ export function toRef(
     return source
   } else if (isFunction(source)) {
     return new GetterRefImpl(source as () => unknown) as any
-  } else if (isPlainObject(source) && key) {
-    const val = (source as Record<string, any>)[key]
-    return isRef(val)
-      ? val
-      : (new ObjectRefImpl(
-          source as Record<string, any>,
-          key,
-          defaultValue
-        ) as any)
+  } else if (isObject(source) && isString(key)) {
+    return propertyToRef(source, key, defaultValue)
   } else {
     return ref(source)
   }
+}
+
+function propertyToRef(source: object, key: string, defaultValue?: unknown) {
+  const val = (source as any)[key]
+  return isRef(val)
+    ? val
+    : (new ObjectRefImpl(
+        source as Record<string, any>,
+        key,
+        defaultValue
+      ) as any)
 }
 
 // corner case when use narrows type
