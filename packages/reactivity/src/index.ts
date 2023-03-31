@@ -11,7 +11,7 @@ export {
   triggerRef,
   type Ref,
   type MaybeRef,
-  type MaybeWritableRef,
+  type MaybeRefOrGetter,
   type ToRef,
   type ToRefs,
   type UnwrapRef,

@@ -93,6 +93,7 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
+export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -194,8 +195,8 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
-export type MaybeWritableRef<T = any> = T | Ref<T>
-export type MaybeRef<T = any> = MaybeWritableRef<T> | (() => T)
+export type MaybeRef<T = any> = T | Ref<T>
+export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
 
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
@@ -213,12 +214,12 @@ export type MaybeRef<T = any> = MaybeWritableRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeWritableRef<T>): T {
+export function unref<T>(ref: MaybeRef<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
-export function toValue<T>(ref: MaybeRef<T>): T {
-  return isFunction(ref) ? ref() : unref(ref)
+export function toValue<T>(source: MaybeRefOrGetter<T>): T {
+  return isFunction(source) ? source() : unref(source)
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {
@@ -385,7 +386,11 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 // ): T extends () => infer R ? Readonly<Ref<R>> : never
 export function toRef<T>(
   value: T
-): T extends () => infer R ? Readonly<Ref<R>> : Ref<UnwrapRef<T>>
+): T extends () => infer R
+  ? Readonly<Ref<R>>
+  : T extends Ref
+  ? T
+  : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K

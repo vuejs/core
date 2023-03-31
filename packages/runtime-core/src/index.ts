@@ -154,7 +154,7 @@ export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
   MaybeRef,
-  MaybeWritableRef,
+  MaybeRefOrGetter,
   ToRef,
   ToRefs,
   UnwrapRef,

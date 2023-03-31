@@ -13,7 +13,9 @@ import {
   shallowReactive,
   readonly,
   MaybeRef,
-  MaybeWritableRef
+  MaybeRefOrGetter,
+  ComputedRef,
+  computed
 } from 'vue'
 import { expectType, describe } from './utils'
 
@@ -334,9 +336,10 @@ describe('reactive in shallow ref', () => {
 
 describe('toRef <-> toValue', () => {
   function foo(
-    a: MaybeWritableRef<string>,
+    a: MaybeRef<string>,
     b: () => string,
-    c: MaybeRef<string>
+    c: MaybeRefOrGetter<string>,
+    d: ComputedRef<string>
   ) {
     const r = toRef(a)
     expectType<Ref<string>>(r)
@@ -353,10 +356,16 @@ describe('toRef <-> toValue', () => {
     // @ts-expect-error ref created from MaybeReadonlyRef shuld be readonly
     rc.value = 'foo'
 
+    const rd = toRef(d)
+    expectType<ComputedRef<string>>(rd)
+    // @ts-expect-error ref created from computed ref shuld be readonly
+    rd.value = 'foo'
+
     return {
       r: toValue(r),
       rb: toValue(rb),
-      rc: toValue(rc)
+      rc: toValue(rc),
+      rd: toValue(rd)
     }
   }
 
@@ -364,5 +373,13 @@ describe('toRef <-> toValue', () => {
     r: string
     rb: string
     rc: string
-  }>(foo('foo', () => 'bar', ref('baz')))
+    rd: string
+  }>(
+    foo(
+      'foo',
+      () => 'bar',
+      ref('baz'),
+      computed(() => 'hi')
+    )
+  )
 })
