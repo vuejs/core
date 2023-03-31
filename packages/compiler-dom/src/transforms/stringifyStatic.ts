@@ -377,4 +377,4 @@ function evaluateConstant(exp: ExpressionNode): string {
 }
 
 const removeEscapes = (content: string) =>
-  content.replace(/^[ \n\r\f]+|[ \n\r\f]+$/g, '')
+  content.replace(/^[\n\r\f]+|[\n\r\f]+$/g, '')
