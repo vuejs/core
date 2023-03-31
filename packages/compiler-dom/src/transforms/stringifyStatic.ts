@@ -356,7 +356,7 @@ function stringifyElement(
 // (see compiler-core/src/transforms/transformExpression)
 function evaluateConstant(exp: ExpressionNode): string {
   if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return ${removeEscapes(exp.content)}`)()
+    return new Function(`return (${exp.content})`)()
   } else {
     // compound
     let res = ``
@@ -375,6 +375,3 @@ function evaluateConstant(exp: ExpressionNode): string {
     return res
   }
 }
-
-const removeEscapes = (content: string) =>
-  content.replace(/^[\n\r\f]+|[\n\r\f]+$/g, '')
