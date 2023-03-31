@@ -442,6 +442,54 @@ describe('component props', () => {
     expect(renderProxy.$props).toMatchObject(props)
   })
 
+  test('merging props from global mixins and extend, and extended component should not have props cache', () => {
+    let renderProxy: any
+    let extendedRenderProxy: any
+
+    const defaultProp = ' from global '
+    const props = {
+      globalProp: {
+        type: String,
+        default: defaultProp
+      }
+    }
+    const globalMixin = {
+      props
+    }
+    const Comp = {
+      render(this: any) {
+        renderProxy = this
+        return h('div', ['Comp', this.globalProp])
+      }
+    }
+    const ExtendedComp = {
+      extends: Comp,
+      render(this: any) {
+        extendedRenderProxy = this
+        return h('div', ['ExtendedComp', this.globalProp])
+      }
+    }
+
+    const app = createApp(
+      {
+        render: () => [h(ExtendedComp), h(Comp)]
+      },
+      {}
+    )
+    app.mixin(globalMixin)
+
+    const root = nodeOps.createElement('div')
+    app.mount(root)
+
+    expect(serializeInner(root)).toMatch(
+      `<div>ExtendedComp from global </div><div>Comp from global </div>`
+    )
+    expect(renderProxy.$props).toMatchObject({ globalProp: defaultProp })
+    expect(extendedRenderProxy.$props).toMatchObject({
+      globalProp: defaultProp
+    })
+  })
+
   test('merging props from global mixins', () => {
     let setupProps: any
     let renderProxy: any
