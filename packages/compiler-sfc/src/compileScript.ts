@@ -162,7 +162,7 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  // TODO remove support for deprecated options when out of experimental
+  // TODO remove in 3.4
   const enableReactivityTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
@@ -524,11 +524,6 @@ export function compileScript(
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    warnOnce(
-      `withDefaults() has been deprecated. ` +
-        `Props destructure is now reactive by default - ` +
-        `use destructure with default values instead.`
-    )
     if (processDefineProps(node.arguments[0], declId)) {
       if (propsRuntimeDecl) {
         error(
