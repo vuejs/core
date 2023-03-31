@@ -34,7 +34,7 @@
 
 * **compiler-core:** support parsing `const` modifier in type parameters ([#7912](https://github.com/vuejs/core/issues/7912)) ([b7bd50f](https://github.com/vuejs/core/commit/b7bd50f5059e8755c0204f01a8c55b1724688e7e))
 * **compiler-sfc:** add defineOptions macro ([#5738](https://github.com/vuejs/core/issues/5738)) ([bcf5841](https://github.com/vuejs/core/commit/bcf5841ddecc64d0bdbd56ce1463eb8ebf01bb9d))
-* **compiler-sfc:** enable reactive props destructure by default and deprecate withDefaults() ([#7986](https://github.com/vuejs/core/issues/7986)) ([ba9c2ae](https://github.com/vuejs/core/commit/ba9c2ae247fcc3960b238a04cb635158daa82004))
+* **compiler-sfc:** enable reactive props destructure by default ([#7986](https://github.com/vuejs/core/issues/7986)) ([ba9c2ae](https://github.com/vuejs/core/commit/ba9c2ae247fcc3960b238a04cb635158daa82004))
 * **compiler-sfc:** improve runtime props inference for enum ([eded947](https://github.com/vuejs/core/commit/eded94712e37856f258dc8c85f98a26fa41ae05f))
 * **compiler-sfc:** support generating variable instead of default export in compileScript ([71635be](https://github.com/vuejs/core/commit/71635be68d25887f91d624bb7f78281a851bc0cb))
 * **compiler-sfc:** support module string names syntax ([#7428](https://github.com/vuejs/core/issues/7428)) ([0002567](https://github.com/vuejs/core/commit/000256772816d54976e462330a7be342c49c7304))
