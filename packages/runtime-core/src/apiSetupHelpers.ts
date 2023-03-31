@@ -26,6 +26,7 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
+import { WritableComputedRef } from '@vue/reactivity'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -200,11 +201,39 @@ export function defineOptions<
 
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>
->(): // @ts-expect-error
-TypedSlots<SlotsType<S>> {
+>(): TypedSlots<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
+  return null as any
+}
+
+export function defineModel<T>(
+  options: { required: true } & Record<string, unknown>
+): WritableComputedRef<T>
+export function defineModel<T>(
+  options: { default: any } & Record<string, unknown>
+): WritableComputedRef<T>
+export function defineModel<T>(
+  options?: Record<string, unknown>
+): WritableComputedRef<T | undefined>
+export function defineModel<T>(
+  name: string,
+  options: { required: true } & Record<string, unknown>
+): WritableComputedRef<T>
+export function defineModel<T>(
+  name: string,
+  options: { default: any } & Record<string, unknown>
+): WritableComputedRef<T>
+export function defineModel<T>(
+  name: string,
+  options?: Record<string, unknown>
+): WritableComputedRef<T | undefined>
+export function defineModel() {
+  if (__DEV__) {
+    warnRuntimeUsage('defineModel')
+  }
+  return null as any
 }
 
 type NotUndefined<T> = T extends undefined ? never : T

@@ -151,6 +151,11 @@ type EmitsDeclType = FromNormalScript<
   TSFunctionType | TSTypeLiteral | TSInterfaceBody
 >
 
+export interface ModelDecl {
+  type: TSType
+  option: Node
+}
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -325,6 +330,7 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitIdentifier: string | undefined
   let optionsRuntimeDecl: Node | undefined
+  // let modelDeclMap: Record<string, ModelDecl> = {}
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types

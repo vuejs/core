@@ -71,6 +71,7 @@ export {
   defineExpose,
   defineOptions,
   defineSlots,
+  defineModel,
   withDefaults,
   // internal
   mergeDefaults,
