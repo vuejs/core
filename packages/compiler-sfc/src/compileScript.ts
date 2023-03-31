@@ -45,7 +45,6 @@ import {
   ObjectMethod,
   LVal,
   Expression,
-  VariableDeclaration,
   TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -516,11 +515,7 @@ export function compileScript(
     return true
   }
 
-  function processWithDefaults(
-    node: Node,
-    declId?: LVal,
-    declKind?: VariableDeclaration['kind']
-  ): boolean {
+  function processWithDefaults(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
@@ -1329,7 +1324,7 @@ export function compileScript(
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(init, decl.id) ||
-            processWithDefaults(init, decl.id, node.kind)
+            processWithDefaults(init, decl.id)
           const isDefineEmits = processDefineEmits(init, decl.id)
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
