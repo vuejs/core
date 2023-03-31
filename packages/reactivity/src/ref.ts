@@ -191,6 +191,8 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
+export type MaybeRef<T = any> = T | Ref<T> | (() => T)
+
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
  * argument itself. This is a sugar function for
@@ -207,8 +209,8 @@ export function triggerRef(ref: Ref) {
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: T | Ref<T>): T {
-  return isRef(ref) ? (ref.value as any) : ref
+export function unref<T>(ref: MaybeRef<T>): T {
+  return isRef(ref) ? (ref.value as any) : isFunction(ref) ? ref() : ref
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {

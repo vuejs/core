@@ -26,6 +26,7 @@ function plainType(arg: number | Ref<number>) {
 
   // ref unwrapping
   expectType<number>(unref(arg))
+  expectType<number>(unref(() => 123))
 
   // ref inner type should be unwrapped
   const nestedRef = ref({

@@ -152,6 +152,7 @@ declare module '@vue/reactivity' {
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
+  MaybeRef,
   ToRef,
   ToRefs,
   UnwrapRef,

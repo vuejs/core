@@ -9,6 +9,7 @@ export {
   customRef,
   triggerRef,
   type Ref,
+  type MaybeRef,
   type ToRef,
   type ToRefs,
   type UnwrapRef,

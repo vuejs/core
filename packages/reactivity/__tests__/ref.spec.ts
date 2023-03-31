@@ -196,6 +196,7 @@ describe('reactivity/ref', () => {
   test('unref', () => {
     expect(unref(1)).toBe(1)
     expect(unref(ref(1))).toBe(1)
+    expect(unref(() => 1)).toBe(1)
   })
 
   test('shallowRef', () => {
