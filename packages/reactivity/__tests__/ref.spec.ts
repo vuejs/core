@@ -287,6 +287,15 @@ describe('reactivity/ref', () => {
     expect(x.value).toBe(1)
   })
 
+  test('toRef getter', () => {
+    const x = toRef(() => 1)
+    expect(x.value).toBe(1)
+    expect(isRef(x)).toBe(true)
+    expect(unref(x)).toBe(1)
+    //@ts-expect-error
+    expect(() => (x.value = 123)).toThrow()
+  })
+
   test('toRefs', () => {
     const a = reactive({
       x: 1,

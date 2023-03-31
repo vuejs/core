@@ -6,7 +6,7 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny } from '@vue/shared'
+import { isArray, hasChanged, IfAny, isFunction } from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -333,6 +333,14 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
+class GetterRefImpl<T> {
+  public readonly __v_isRef = true
+  constructor(private readonly _getter: () => T) {}
+  get value() {
+    return this._getter()
+  }
+}
+
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 /**
@@ -362,6 +370,9 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * @param key - Name of the property in the reactive object.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
+export function toRef<T extends () => any>(
+  getter: T
+): T extends () => infer R ? Readonly<ShallowRef<R>> : never
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -371,15 +382,19 @@ export function toRef<T extends object, K extends keyof T>(
   key: K,
   defaultValue: T[K]
 ): ToRef<Exclude<T[K], undefined>>
-export function toRef<T extends object, K extends keyof T>(
-  object: T,
-  key: K,
-  defaultValue?: T[K]
-): ToRef<T[K]> {
-  const val = object[key]
-  return isRef(val)
-    ? val
-    : (new ObjectRefImpl(object, key, defaultValue) as any)
+export function toRef(
+  objectOrGetter: Record<string, any> | (() => unknown),
+  key?: string,
+  defaultValue?: unknown
+): Ref {
+  if (isFunction(objectOrGetter)) {
+    return new GetterRefImpl(objectOrGetter as () => unknown) as any
+  } else {
+    const val = objectOrGetter[key!]
+    return isRef(val)
+      ? val
+      : (new ObjectRefImpl(objectOrGetter, key!, defaultValue) as any)
+  }
 }
 
 // corner case when use narrows type

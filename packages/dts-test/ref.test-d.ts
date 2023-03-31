@@ -203,6 +203,13 @@ expectType<Ref<string>>(p2.obj.k)
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
 
+  expectType<Ref<number>>(toRef(() => 123))
+  expectType<Ref<number | string>>(toRef(() => obj.c))
+
+  const r = toRef(() => 123)
+  // @ts-expect-error
+  r.value = 234
+
   // toRefs
   expectType<{
     a: Ref<number>
