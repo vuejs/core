@@ -1430,6 +1430,28 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    test('withDefaults w/ dynamic object method', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        foo?: () => 'string'
+      }>(), {
+        ['fo' + 'o']() { return 'foo' }
+      })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: Function, required: false }
+  }, {
+        ['fo' + 'o']() { return 'foo' }
+      })`.trim()
+      )
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">

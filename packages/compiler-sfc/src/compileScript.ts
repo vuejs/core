@@ -842,9 +842,8 @@ export function compileScript(
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
         node =>
-          (node.type === 'ObjectProperty' &&
-            (!node.computed || node.key.type.endsWith('Literal'))) ||
-          node.type === 'ObjectMethod'
+          node.type !== 'SpreadElement' &&
+          (!node.computed || node.key.type.endsWith('Literal'))
       )
     )
   }

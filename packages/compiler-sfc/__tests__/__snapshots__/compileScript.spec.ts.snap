@@ -2007,6 +2007,30 @@ return { props }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > withDefaults w/ dynamic object method 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: _mergeDefaults({
+    foo: { type: Function, required: false }
+  }, {
+        ['fo' + 'o']() { return 'foo' }
+      }),
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+const props = __props as {
+        foo?: () => 'string'
+      };
+
+      
+      
+return { props }
+}
+
+})"
+`;
+
 exports[`SFC genDefaultAs > <script setup> only 1`] = `
 "const a = 1
       
