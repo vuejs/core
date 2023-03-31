@@ -29,7 +29,8 @@ import {
   stringifyStyle,
   makeMap,
   isKnownSvgAttr,
-  isBooleanAttr
+  isBooleanAttr,
+  removeEscapes
 } from '@vue/shared'
 import { DOMNamespaces } from '../parserOptions'
 
@@ -344,6 +345,7 @@ function stringifyElement(
   if (!isVoidTag(node.tag)) {
     res += `</${node.tag}>`
   }
+  console.log(res)
   return res
 }
 
@@ -356,7 +358,7 @@ function stringifyElement(
 // (see compiler-core/src/transforms/transformExpression)
 function evaluateConstant(exp: ExpressionNode): string {
   if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return ${exp.content}`)()
+    return new Function(`return ${removeEscapes(exp.content)}`)()
   } else {
     // compound
     let res = ``
