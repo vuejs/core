@@ -7,12 +7,13 @@ import {
   reactive,
   proxyRefs,
   toRef,
+  toValue,
   toRefs,
   ToRefs,
   shallowReactive,
   readonly,
   MaybeRef,
-  MaybeReadonlyRef
+  MaybeWritableRef
 } from 'vue'
 import { expectType, describe } from './utils'
 
@@ -28,7 +29,8 @@ function plainType(arg: number | Ref<number>) {
 
   // ref unwrapping
   expectType<number>(unref(arg))
-  expectType<number>(unref(() => 123))
+  expectType<number>(toValue(arg))
+  expectType<number>(toValue(() => 123))
 
   // ref inner type should be unwrapped
   const nestedRef = ref({
@@ -330,11 +332,11 @@ describe('reactive in shallow ref', () => {
   expectType<number>(x.value.a.b)
 })
 
-describe('toRef <-> unref', () => {
+describe('toRef <-> toValue', () => {
   function foo(
-    a: MaybeRef<string>,
+    a: MaybeWritableRef<string>,
     b: () => string,
-    c: MaybeReadonlyRef<string>
+    c: MaybeRef<string>
   ) {
     const r = toRef(a)
     expectType<Ref<string>>(r)
@@ -352,9 +354,9 @@ describe('toRef <-> unref', () => {
     rc.value = 'foo'
 
     return {
-      r: unref(r),
-      rb: unref(rb),
-      rc: unref(rc)
+      r: toValue(r),
+      rb: toValue(rb),
+      rc: toValue(rc)
     }
   }
 

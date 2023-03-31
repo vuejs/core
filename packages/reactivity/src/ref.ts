@@ -194,8 +194,8 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
-export type MaybeRef<T = any> = T | Ref<T>
-export type MaybeReadonlyRef<T = any> = MaybeRef<T> | (() => T)
+export type MaybeWritableRef<T = any> = T | Ref<T>
+export type MaybeRef<T = any> = MaybeWritableRef<T> | (() => T)
 
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
@@ -213,8 +213,12 @@ export type MaybeReadonlyRef<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeReadonlyRef<T>): T {
-  return isRef(ref) ? (ref.value as any) : isFunction(ref) ? ref() : ref
+export function unref<T>(ref: MaybeWritableRef<T>): T {
+  return isRef(ref) ? (ref.value as any) : ref
+}
+
+export function toValue<T>(ref: MaybeRef<T>): T {
+  return isFunction(ref) ? ref() : unref(ref)
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {
