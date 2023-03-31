@@ -219,6 +219,22 @@ export function unref<T>(ref: MaybeRef<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
+/**
+ * Nromalizes values / refs / getters to values.
+ * This is similar to {@link unref()}, except that it also normalizes getters.
+ * If the argument is a getter, it will be invoked and its return value will
+ * be returned.
+ *
+ * @example
+ * ```js
+ * toValue(1) // 1
+ * toValue(ref(1)) // 1
+ * toValue(() => 1) // 1
+ * ```
+ *
+ * @param source - A getter, an existing ref, or a non-function value.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
+ */
 export function toValue<T>(source: MaybeRefOrGetter<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
@@ -356,9 +372,24 @@ class GetterRefImpl<T> {
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 /**
- * Can be used to create a ref for a property on a source reactive object. The
- * created ref is synced with its source property: mutating the source property
- * will update the ref, and vice-versa.
+ * Used to normalize values / refs / getters into refs.
+ *
+ * @example
+ * ```js
+ * // returns existing refs as-is
+ * toRef(existingRef)
+ *
+ * // creates a ref that calls the getter on .value access
+ * toRef(() => props.foo)
+ *
+ * // creates normal refs from non-function values
+ * // requivalent to ref(1)
+ * toRef(1)
+ * ```
+ *
+ * Can also be used to create a ref for a property on a source reactive object.
+ * The created ref is synced with its source property: mutating the source
+ * property will update the ref, and vice-versa.
  *
  * @example
  * ```js
@@ -378,13 +409,11 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * console.log(fooRef.value) // 3
  * ```
  *
- * @param object - The reactive object containing the desired property.
- * @param key - Name of the property in the reactive object.
+ * @param source - A getter, an existing ref, a non-function value, or a
+ *                 reactive object to create a property ref from.
+ * @param [key] - (optional) Name of the property in the reactive object.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
-// export function toRef<T extends () => any>(
-//   getter: T
-// ): T extends () => infer R ? Readonly<Ref<R>> : never
 export function toRef<T>(
   value: T
 ): T extends () => infer R
