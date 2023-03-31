@@ -6,7 +6,13 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny, isFunction } from '@vue/shared'
+import {
+  isArray,
+  hasChanged,
+  IfAny,
+  isFunction,
+  isPlainObject
+} from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -87,9 +93,6 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends object>(
-  value: T
-): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -191,7 +194,8 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
-export type MaybeRef<T = any> = T | Ref<T> | (() => T)
+export type MaybeRef<T = any> = T | Ref<T>
+export type MaybeReadonlyRef<T = any> = MaybeRef<T> | (() => T)
 
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
@@ -209,7 +213,7 @@ export type MaybeRef<T = any> = T | Ref<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T>): T {
+export function unref<T>(ref: MaybeReadonlyRef<T>): T {
   return isRef(ref) ? (ref.value as any) : isFunction(ref) ? ref() : ref
 }
 
@@ -372,9 +376,12 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * @param key - Name of the property in the reactive object.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
-export function toRef<T extends () => any>(
-  getter: T
-): T extends () => infer R ? Readonly<ShallowRef<R>> : never
+// export function toRef<T extends () => any>(
+//   getter: T
+// ): T extends () => infer R ? Readonly<Ref<R>> : never
+export function toRef<T>(
+  value: T
+): T extends () => infer R ? Readonly<Ref<R>> : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -385,17 +392,25 @@ export function toRef<T extends object, K extends keyof T>(
   defaultValue: T[K]
 ): ToRef<Exclude<T[K], undefined>>
 export function toRef(
-  objectOrGetter: Record<string, any> | (() => unknown),
+  source: Record<string, any> | MaybeRef,
   key?: string,
   defaultValue?: unknown
 ): Ref {
-  if (isFunction(objectOrGetter)) {
-    return new GetterRefImpl(objectOrGetter as () => unknown) as any
-  } else {
-    const val = objectOrGetter[key!]
+  if (isRef(source)) {
+    return source
+  } else if (isFunction(source)) {
+    return new GetterRefImpl(source as () => unknown) as any
+  } else if (isPlainObject(source) && key) {
+    const val = (source as Record<string, any>)[key]
     return isRef(val)
       ? val
-      : (new ObjectRefImpl(objectOrGetter, key!, defaultValue) as any)
+      : (new ObjectRefImpl(
+          source as Record<string, any>,
+          key,
+          defaultValue
+        ) as any)
+  } else {
+    return ref(source)
   }
 }
 

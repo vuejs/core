@@ -10,7 +10,9 @@ import {
   toRefs,
   ToRefs,
   shallowReactive,
-  readonly
+  readonly,
+  MaybeRef,
+  MaybeReadonlyRef
 } from 'vue'
 import { expectType, describe } from './utils'
 
@@ -326,4 +328,39 @@ describe('reactive in shallow ref', () => {
   })
 
   expectType<number>(x.value.a.b)
+})
+
+describe('toRef <-> unref', () => {
+  function foo(
+    a: MaybeRef<string>,
+    b: () => string,
+    c: MaybeReadonlyRef<string>
+  ) {
+    const r = toRef(a)
+    expectType<Ref<string>>(r)
+    // writable
+    r.value = 'foo'
+
+    const rb = toRef(b)
+    expectType<Readonly<Ref<string>>>(rb)
+    // @ts-expect-error ref created from getter shuld be readonly
+    rb.value = 'foo'
+
+    const rc = toRef(c)
+    expectType<Readonly<Ref<string> | Ref<string>>>(rc)
+    // @ts-expect-error ref created from MaybeReadonlyRef shuld be readonly
+    rc.value = 'foo'
+
+    return {
+      r: unref(r),
+      rb: unref(rb),
+      rc: unref(rc)
+    }
+  }
+
+  expectType<{
+    r: string
+    rb: string
+    rc: string
+  }>(foo('foo', () => 'bar', ref('baz')))
 })

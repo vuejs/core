@@ -10,6 +10,7 @@ export {
   triggerRef,
   type Ref,
   type MaybeRef,
+  type MaybeReadonlyRef,
   type ToRef,
   type ToRefs,
   type UnwrapRef,
