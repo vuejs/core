@@ -313,7 +313,7 @@ export function compileScript(
   let hasDefaultExportRender = false
   let hasDefineOptionsCall = false
   let propsRuntimeDecl: Node | undefined
-  let propsRuntimeDefaults: ObjectExpression | undefined
+  let propsRuntimeDefaults: Node | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
   let propsTypeDecl: PropsDeclType | undefined
@@ -534,15 +534,9 @@ export function compileScript(
           node.callee
         )
       }
-      propsRuntimeDefaults = node.arguments[1] as ObjectExpression
-      if (
-        !propsRuntimeDefaults ||
-        propsRuntimeDefaults.type !== 'ObjectExpression'
-      ) {
-        error(
-          `The 2nd argument of ${WITH_DEFAULTS} must be an object literal.`,
-          propsRuntimeDefaults || node
-        )
+      propsRuntimeDefaults = node.arguments[1]
+      if (!propsRuntimeDefaults) {
+        error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
       }
     } else {
       error(
@@ -872,7 +866,9 @@ export function compileScript(
             destructured.needSkipFactory ? `, skipFactory: true` : ``
           }`
         } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(node => {
+          const prop = (
+            propsRuntimeDefaults as ObjectExpression
+          ).properties.find(node => {
             if (node.type === 'SpreadElement') return false
             return resolveObjectKey(node.key, node.computed) === key
           }) as ObjectProperty | ObjectMethod
@@ -1001,7 +997,7 @@ export function compileScript(
           m.key.type === 'Identifier'
         ) {
           if (
-            propsRuntimeDefaults!.properties.some(p => {
+            (propsRuntimeDefaults as ObjectExpression).properties.some(p => {
               if (p.type === 'SpreadElement') return false
               return (
                 resolveObjectKey(p.key, p.computed) ===

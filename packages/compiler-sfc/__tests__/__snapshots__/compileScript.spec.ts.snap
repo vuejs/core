@@ -1907,6 +1907,33 @@ return { props, get defaults() { return defaults } }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > withDefaults (reference) 1`] = `
+"import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
+import { defaults } from './foo'
+      
+export default /*#__PURE__*/_defineComponent({
+  props: _mergeDefaults({
+    foo: { type: String, required: false },
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true }
+  }, defaults),
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+const props = __props as {
+        foo?: string
+        bar?: number
+        baz: boolean
+      };
+
+      
+      
+return { props, get defaults() { return defaults } }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > withDefaults (static) + normal script 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
