@@ -6,7 +6,7 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny } from '@vue/shared'
+import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -87,9 +87,7 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends object>(
-  value: T
-): [T] extends [Ref] ? T : Ref<UnwrapRef<T>>
+export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -191,6 +189,9 @@ export function triggerRef(ref: Ref) {
   triggerRefValue(ref, __DEV__ ? ref.value : void 0)
 }
 
+export type MaybeRef<T = any> = T | Ref<T>
+export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
+
 /**
  * Returns the inner value if the argument is a ref, otherwise return the
  * argument itself. This is a sugar function for
@@ -207,8 +208,28 @@ export function triggerRef(ref: Ref) {
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: T | Ref<T>): T {
+export function unref<T>(ref: MaybeRef<T>): T {
   return isRef(ref) ? (ref.value as any) : ref
+}
+
+/**
+ * Normalizes values / refs / getters to values.
+ * This is similar to {@link unref()}, except that it also normalizes getters.
+ * If the argument is a getter, it will be invoked and its return value will
+ * be returned.
+ *
+ * @example
+ * ```js
+ * toValue(1) // 1
+ * toValue(ref(1)) // 1
+ * toValue(() => 1) // 1
+ * ```
+ *
+ * @param source - A getter, an existing ref, or a non-function value.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
+ */
+export function toValue<T>(source: MaybeRefOrGetter<T>): T {
+  return isFunction(source) ? source() : unref(source)
 }
 
 const shallowUnwrapHandlers: ProxyHandler<any> = {
@@ -305,7 +326,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
-    ret[key] = toRef(object, key)
+    ret[key] = propertyToRef(object, key)
   }
   return ret
 }
@@ -333,12 +354,36 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 }
 
+class GetterRefImpl<T> {
+  public readonly __v_isRef = true
+  public readonly __v_isReadonly = true
+  constructor(private readonly _getter: () => T) {}
+  get value() {
+    return this._getter()
+  }
+}
+
 export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 
 /**
- * Can be used to create a ref for a property on a source reactive object. The
- * created ref is synced with its source property: mutating the source property
- * will update the ref, and vice-versa.
+ * Used to normalize values / refs / getters into refs.
+ *
+ * @example
+ * ```js
+ * // returns existing refs as-is
+ * toRef(existingRef)
+ *
+ * // creates a ref that calls the getter on .value access
+ * toRef(() => props.foo)
+ *
+ * // creates normal refs from non-function values
+ * // equivalent to ref(1)
+ * toRef(1)
+ * ```
+ *
+ * Can also be used to create a ref for a property on a source reactive object.
+ * The created ref is synced with its source property: mutating the source
+ * property will update the ref, and vice-versa.
  *
  * @example
  * ```js
@@ -358,10 +403,18 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * console.log(fooRef.value) // 3
  * ```
  *
- * @param object - The reactive object containing the desired property.
- * @param key - Name of the property in the reactive object.
+ * @param source - A getter, an existing ref, a non-function value, or a
+ *                 reactive object to create a property ref from.
+ * @param [key] - (optional) Name of the property in the reactive object.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
+export function toRef<T>(
+  value: T
+): T extends () => infer R
+  ? Readonly<Ref<R>>
+  : T extends Ref
+  ? T
+  : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -371,15 +424,31 @@ export function toRef<T extends object, K extends keyof T>(
   key: K,
   defaultValue: T[K]
 ): ToRef<Exclude<T[K], undefined>>
-export function toRef<T extends object, K extends keyof T>(
-  object: T,
-  key: K,
-  defaultValue?: T[K]
-): ToRef<T[K]> {
-  const val = object[key]
+export function toRef(
+  source: Record<string, any> | MaybeRef,
+  key?: string,
+  defaultValue?: unknown
+): Ref {
+  if (isRef(source)) {
+    return source
+  } else if (isFunction(source)) {
+    return new GetterRefImpl(source as () => unknown) as any
+  } else if (isObject(source) && arguments.length > 1) {
+    return propertyToRef(source, key!, defaultValue)
+  } else {
+    return ref(source)
+  }
+}
+
+function propertyToRef(source: object, key: string, defaultValue?: unknown) {
+  const val = (source as any)[key]
   return isRef(val)
     ? val
-    : (new ObjectRefImpl(object, key, defaultValue) as any)
+    : (new ObjectRefImpl(
+        source as Record<string, any>,
+        key,
+        defaultValue
+      ) as any)
 }
 
 // corner case when use narrows type

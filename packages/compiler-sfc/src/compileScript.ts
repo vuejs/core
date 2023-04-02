@@ -1442,7 +1442,7 @@ export function compileScript(
       startOffset,
       propsDestructuredBindings,
       error,
-      vueImportAliases.watch
+      vueImportAliases
     )
   }
 

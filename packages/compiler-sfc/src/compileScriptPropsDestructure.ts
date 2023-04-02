@@ -32,7 +32,7 @@ export function transformDestructuredProps(
   offset = 0,
   knownProps: PropsDestructureBindings,
   error: (msg: string, node: Node, end?: number) => never,
-  watchMethodName = 'watch'
+  vueImportAliases: Record<string, string>
 ) {
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
@@ -152,6 +152,19 @@ export function transformDestructuredProps(
     return false
   }
 
+  function checkUsage(node: Node, method: string, alias = method) {
+    if (isCallOf(node, alias)) {
+      const arg = unwrapTSNode(node.arguments[0])
+      if (arg.type === 'Identifier') {
+        error(
+          `"${arg.name}" is a destructured prop and should not be passed directly to ${method}(). ` +
+            `Pass a getter () => ${arg.name} instead.`,
+          arg
+        )
+      }
+    }
+  }
+
   // check root scope first
   walkScope(ast, true)
   ;(walk as any)(ast, {
@@ -169,16 +182,8 @@ export function transformDestructuredProps(
         return this.skip()
       }
 
-      if (isCallOf(node, watchMethodName)) {
-        const arg = unwrapTSNode(node.arguments[0])
-        if (arg.type === 'Identifier') {
-          error(
-            `"${arg.name}" is a destructured prop and cannot be directly watched. ` +
-              `Use a getter () => ${arg.name} instead.`,
-            arg
-          )
-        }
-      }
+      checkUsage(node, 'watch', vueImportAliases.watch)
+      checkUsage(node, 'toRef', vueImportAliases.toRef)
 
       // function scopes
       if (isFunctionType(node)) {

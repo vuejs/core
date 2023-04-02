@@ -11,6 +11,7 @@ export {
   proxyRefs,
   isRef,
   toRef,
+  toValue,
   toRefs,
   isProxy,
   isReactive,
@@ -152,6 +153,8 @@ declare module '@vue/reactivity' {
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
+  MaybeRef,
+  MaybeRefOrGetter,
   ToRef,
   ToRefs,
   UnwrapRef,
