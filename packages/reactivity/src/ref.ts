@@ -13,8 +13,7 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow,
-  ReactiveFlags
+  isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -357,7 +356,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
 class GetterRefImpl<T> {
   public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY] = true
+  public readonly __v_isReadonly = true
   constructor(private readonly _getter: () => T) {}
   get value() {
     return this._getter()
