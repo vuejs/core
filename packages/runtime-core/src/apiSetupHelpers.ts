@@ -59,6 +59,8 @@ const warnRuntimeUsage = (method: string) =>
  *   foo?: string
  *   bar: number
  * }>()
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineprops-defineemits}
  * ```
  *
  * This is only usable inside `<script setup>`, is compiled away in the
@@ -118,6 +120,8 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineprops-defineemits}
  */
 // overload 1: runtime emits w/ array
 export function defineEmits<EE extends string = string>(
@@ -156,6 +160,8 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineexpose}
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>
@@ -165,6 +171,13 @@ export function defineExpose<
   }
 }
 
+/**
+ * Vue `<script setup>` compiler macro for declaring a component's additional
+ * options. This should be used only for options that cannot be expressed via
+ * Composition API - e.g. `inhertiAttrs`.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
+ */
 export function defineOptions<
   RawBindings = {},
   D = {},
@@ -232,6 +245,8 @@ type PropsWithDefaults<Base, Defaults> = Base & {
  *
  * This is only usable inside `<script setup>`, is compiled away in the output
  * and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/guide/typescript/composition-api.html#typing-component-props}
  */
 export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
   props: Props,
