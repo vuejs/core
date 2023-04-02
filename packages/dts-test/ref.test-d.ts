@@ -348,17 +348,17 @@ describe('toRef <-> toValue', () => {
 
     const rb = toRef(b)
     expectType<Readonly<Ref<string>>>(rb)
-    // @ts-expect-error ref created from getter shuld be readonly
+    // @ts-expect-error ref created from getter should be readonly
     rb.value = 'foo'
 
     const rc = toRef(c)
     expectType<Readonly<Ref<string> | Ref<string>>>(rc)
-    // @ts-expect-error ref created from MaybeReadonlyRef shuld be readonly
+    // @ts-expect-error ref created from MaybeReadonlyRef should be readonly
     rc.value = 'foo'
 
     const rd = toRef(d)
     expectType<ComputedRef<string>>(rd)
-    // @ts-expect-error ref created from computed ref shuld be readonly
+    // @ts-expect-error ref created from computed ref should be readonly
     rd.value = 'foo'
 
     expectType<string>(toValue(a))

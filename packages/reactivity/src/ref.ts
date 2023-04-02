@@ -6,21 +6,15 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import {
-  isArray,
-  hasChanged,
-  IfAny,
-  isFunction,
-  isString,
-  isObject
-} from '@vue/shared'
+import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
 import {
   isProxy,
   toRaw,
   isReactive,
   toReactive,
   isReadonly,
-  isShallow
+  isShallow,
+  ReactiveFlags
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -220,7 +214,7 @@ export function unref<T>(ref: MaybeRef<T>): T {
 }
 
 /**
- * Nromalizes values / refs / getters to values.
+ * Normalizes values / refs / getters to values.
  * This is similar to {@link unref()}, except that it also normalizes getters.
  * If the argument is a getter, it will be invoked and its return value will
  * be returned.
@@ -363,6 +357,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
 class GetterRefImpl<T> {
   public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_READONLY] = true
   constructor(private readonly _getter: () => T) {}
   get value() {
     return this._getter()
@@ -383,7 +378,7 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * toRef(() => props.foo)
  *
  * // creates normal refs from non-function values
- * // requivalent to ref(1)
+ * // equivalent to ref(1)
  * toRef(1)
  * ```
  *
@@ -439,8 +434,8 @@ export function toRef(
     return source
   } else if (isFunction(source)) {
     return new GetterRefImpl(source as () => unknown) as any
-  } else if (isObject(source) && isString(key)) {
-    return propertyToRef(source, key, defaultValue)
+  } else if (isObject(source) && arguments.length > 1) {
+    return propertyToRef(source, key!, defaultValue)
   } else {
     return ref(source)
   }
