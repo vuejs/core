@@ -39,13 +39,16 @@ export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
   [SlotSymbol]?: T
 }
 
-export type TypedSlots<S extends SlotsType> = [keyof S] extends [never]
+export type TypedSlots<
+  S extends SlotsType,
+  T = NonNullable<S[typeof SlotSymbol]>
+> = [keyof S] extends [never]
   ? Slots
   : Readonly<
       Prettify<{
-        [K in keyof NonNullable<S[typeof SlotSymbol]>]: Slot<
-          NonNullable<S[typeof SlotSymbol]>[K]
-        >
+        [K in keyof T]: NonNullable<T[K]> extends (...args: any[]) => any
+          ? T[K]
+          : Slot<T[K]>
       }>
     >
 
