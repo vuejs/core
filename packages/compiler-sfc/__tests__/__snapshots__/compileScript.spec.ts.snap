@@ -1785,6 +1785,51 @@ return { props, emit }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > defineSlots() > basic usage 1`] = `
+"import { useSlots as _useSlots, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          const slots = _useSlots()
+          
+return { slots }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > with TypeScript > defineSlots() > w/o generic params 1`] = `
+"import { useSlots as _useSlots } from 'vue'
+
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          const slots = _useSlots()
+          
+return { slots }
+}
+
+}"
+`;
+
+exports[`SFC compile <script setup> > with TypeScript > defineSlots() > w/o return value 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          
+          
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > with TypeScript > hoist type declarations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Foo {}
