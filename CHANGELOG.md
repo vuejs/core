@@ -1,3 +1,23 @@
+# [3.3.0-alpha.7](https://github.com/vuejs/core/compare/v3.3.0-alpha.6...v3.3.0-alpha.7) (2023-04-03)
+
+
+### Bug Fixes
+
+* **compiler-dom:** handle newlines when evaluating constants during stringification ([#7995](https://github.com/vuejs/core/issues/7995)) ([5261085](https://github.com/vuejs/core/commit/52610851137b9c5f6f57d771fd604fba309b3c97)), closes [#7994](https://github.com/vuejs/core/issues/7994)
+* **compiler-sfc:** use dynamic defaults merging for methods with computed keys ([482f2e3](https://github.com/vuejs/core/commit/482f2e3434a1edc47a181890354838e206d08922)), closes [#7113](https://github.com/vuejs/core/issues/7113)
+
+
+### Features
+
+* **compiler-sfc:** codegen support for defineEmits() short syntax (followup of [#7992](https://github.com/vuejs/core/issues/7992)) ([ef73ea5](https://github.com/vuejs/core/commit/ef73ea53eaf853d43e70946d2d448ae8c0a83e4f))
+* **compiler-sfc:** support arbitrary expression as withDefaults argument ([fe61944](https://github.com/vuejs/core/commit/fe619443d2e99301975de120685dbae8d66c03a6)), closes [#6459](https://github.com/vuejs/core/issues/6459)
+* **reactivity:** improve support of getter usage in reactivity APIs ([#7997](https://github.com/vuejs/core/issues/7997)) ([59e8284](https://github.com/vuejs/core/commit/59e828448e7f37643cd0eaea924a764e9d314448))
+* **sfc:** revert withDefaults() deprecation ([4af5d1b](https://github.com/vuejs/core/commit/4af5d1b0754035058436f9e4e5c12aedef199177))
+* **sfc:** support more ergnomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
+* **types/slots:** support slot presence / props type checks via `defineSlots` macro and `slots` option ([#7982](https://github.com/vuejs/core/issues/7982)) ([5a2f5d5](https://github.com/vuejs/core/commit/5a2f5d59cffa36a99e6f2feab6b3ba7958b7362f))
+
+
+
 # [3.3.0-alpha.6](https://github.com/vuejs/core/compare/v3.3.0-alpha.5...v3.3.0-alpha.6) (2023-03-30)
 
 
