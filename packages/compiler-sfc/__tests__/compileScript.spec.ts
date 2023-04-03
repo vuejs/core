@@ -306,6 +306,48 @@ const myEmit = defineEmits(['foo', 'bar'])
         '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead.'
       )
     })
+
+    it('should emit an error with declaring props/emits/slots/expose', () => {
+      expect(() =>
+        compile(`
+          <script setup>
+          defineOptions({ props: ['foo'] })
+          </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead'
+      )
+
+      expect(() =>
+        compile(`
+          <script setup>
+          defineOptions({ emits: ['update'] })
+          </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare emits. Use defineEmits() instead'
+      )
+
+      expect(() =>
+        compile(`
+          <script setup>
+          defineOptions({ expose: ['foo'] })
+          </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare expose. Use defineExpose() instead'
+      )
+
+      expect(() =>
+        compile(`
+          <script setup lang="ts">
+          defineOptions({ slots: Object })
+          </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare slots. Use defineSlots() instead'
+      )
+    })
   })
 
   test('defineExpose()', () => {
