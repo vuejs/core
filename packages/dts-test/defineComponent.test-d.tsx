@@ -8,7 +8,10 @@ import {
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
-  h
+  h,
+  SlotsType,
+  Slots,
+  VNode
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1406,6 +1409,69 @@ export default {
   })
 }
 
+describe('slots', () => {
+  const comp1 = defineComponent({
+    slots: Object as SlotsType<{
+      default: { foo: string; bar: number }
+      optional?: { data: string }
+      undefinedScope: undefined | { data: string }
+      optionalUndefinedScope?: undefined | { data: string }
+    }>,
+    setup(props, { slots }) {
+      expectType<(scope: { foo: string; bar: number }) => VNode[]>(
+        slots.default
+      )
+      expectType<((scope: { data: string }) => VNode[]) | undefined>(
+        slots.optional
+      )
+
+      slots.default({ foo: 'foo', bar: 1 })
+
+      // @ts-expect-error it's optional
+      slots.optional({ data: 'foo' })
+      slots.optional?.({ data: 'foo' })
+
+      expectType<{
+        (): VNode[]
+        (scope: undefined | { data: string }): VNode[]
+      }>(slots.undefinedScope)
+
+      expectType<
+        | { (): VNode[]; (scope: undefined | { data: string }): VNode[] }
+        | undefined
+      >(slots.optionalUndefinedScope)
+
+      slots.default({ foo: 'foo', bar: 1 })
+      // @ts-expect-error it's optional
+      slots.optional({ data: 'foo' })
+      slots.optional?.({ data: 'foo' })
+      slots.undefinedScope()
+      slots.undefinedScope(undefined)
+      // @ts-expect-error
+      slots.undefinedScope('foo')
+
+      slots.optionalUndefinedScope?.()
+      slots.optionalUndefinedScope?.(undefined)
+      slots.optionalUndefinedScope?.({ data: 'foo' })
+      // @ts-expect-error
+      slots.optionalUndefinedScope()
+      // @ts-expect-error
+      slots.optionalUndefinedScope?.('foo')
+
+      expectType<typeof slots | undefined>(new comp1().$slots)
+    }
+  })
+
+  const comp2 = defineComponent({
+    setup(props, { slots }) {
+      // unknown slots
+      expectType<Slots>(slots)
+      expectType<((...args: any[]) => VNode[]) | undefined>(slots.default)
+    }
+  })
+  expectType<Slots | undefined>(new comp2().$slots)
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,
@@ -1428,6 +1494,7 @@ declare const MyButton: DefineComponent<
   ComponentOptionsMixin,
   EmitsOptions,
   string,
+  {},
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
   {}

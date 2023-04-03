@@ -4,6 +4,7 @@ type _defineProps = typeof defineProps
 type _defineEmits = typeof defineEmits
 type _defineExpose = typeof defineExpose
 type _defineOptions = typeof defineOptions
+type _defineSlots = typeof defineSlots
 type _withDefaults = typeof withDefaults
 
 declare global {
@@ -11,5 +12,6 @@ declare global {
   const defineEmits: _defineEmits
   const defineExpose: _defineExpose
   const defineOptions: _defineOptions
+  const defineSlots: _defineSlots
   const withDefaults: _withDefaults
 }

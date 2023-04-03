@@ -67,6 +67,7 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 const DEFINE_OPTIONS = 'defineOptions'
+const DEFINE_SLOTS = 'defineSlots'
 
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -312,6 +313,7 @@ export function compileScript(
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
   let hasDefineOptionsCall = false
+  let hasDefineSlotsCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: Node | undefined
   let propsDestructureDecl: Node | undefined
@@ -590,6 +592,30 @@ export function compileScript(
     return true
   }
 
+  function processDefineSlots(node: Node, declId?: LVal): boolean {
+    if (!isCallOf(node, DEFINE_SLOTS)) {
+      return false
+    }
+    if (hasDefineSlotsCall) {
+      error(`duplicate ${DEFINE_SLOTS}() call`, node)
+    }
+    hasDefineSlotsCall = true
+
+    if (node.arguments.length > 0) {
+      error(`${DEFINE_SLOTS}() cannot accept arguments`, node)
+    }
+
+    if (declId) {
+      s.overwrite(
+        startOffset + node.start!,
+        startOffset + node.end!,
+        `${helper('useSlots')}()`
+      )
+    }
+
+    return true
+  }
+
   function getAstBody(): Statement[] {
     return scriptAst
       ? [...scriptSetupAst.body, ...scriptAst.body]
@@ -683,6 +709,7 @@ export function compileScript(
     let propsOption = undefined
     let emitsOption = undefined
     let exposeOption = undefined
+    let slotsOption = undefined
     if (optionsRuntimeDecl.type === 'ObjectExpression') {
       for (const prop of optionsRuntimeDecl.properties) {
         if (
@@ -692,6 +719,7 @@ export function compileScript(
           if (prop.key.name === 'props') propsOption = prop
           if (prop.key.name === 'emits') emitsOption = prop
           if (prop.key.name === 'expose') exposeOption = prop
+          if (prop.key.name === 'slots') slotsOption = prop
         }
       }
     }
@@ -712,6 +740,12 @@ export function compileScript(
       error(
         `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
         exposeOption
+      )
+    }
+    if (slotsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare slots. Use ${DEFINE_SLOTS}() instead.`,
+        slotsOption
       )
     }
 
@@ -1286,7 +1320,8 @@ export function compileScript(
         processDefineProps(expr) ||
         processDefineEmits(expr) ||
         processDefineOptions(expr) ||
-        processWithDefaults(expr)
+        processWithDefaults(expr) ||
+        processDefineSlots(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(expr)) {
@@ -1320,7 +1355,10 @@ export function compileScript(
           const isDefineProps =
             processDefineProps(init, decl.id) ||
             processWithDefaults(init, decl.id)
-          const isDefineEmits = processDefineEmits(init, decl.id)
+          const isDefineEmits =
+            !isDefineProps && processDefineEmits(init, decl.id)
+          !isDefineEmits && processDefineSlots(init, decl.id)
+
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)

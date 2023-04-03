@@ -25,6 +25,7 @@ import {
   ExtractPropTypes
 } from './componentProps'
 import { warn } from './warning'
+import { SlotsType, TypedSlots } from './componentSlots'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -184,9 +185,7 @@ export function defineOptions<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin
 >(
   options?: ComponentOptionsWithoutProps<
     {},
@@ -195,13 +194,20 @@ export function defineOptions<
     C,
     M,
     Mixin,
-    Extends,
-    E,
-    EE
-  > & { emits?: undefined; expose?: undefined }
+    Extends
+  > & { emits?: undefined; expose?: undefined; slots?: undefined }
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
+  }
+}
+
+export function defineSlots<
+  S extends Record<string, any> = Record<string, any>
+>(): // @ts-expect-error
+TypedSlots<SlotsType<S>> {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineSlots`)
   }
 }
 

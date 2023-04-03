@@ -70,6 +70,7 @@ export {
   defineEmits,
   defineExpose,
   defineOptions,
+  defineSlots,
   withDefaults,
   // internal
   mergeDefaults,
@@ -243,7 +244,7 @@ export type {
   RootRenderFunction
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
-export type { Slot, Slots } from './componentSlots'
+export type { Slot, Slots, SlotsType } from './componentSlots'
 export type {
   Prop,
   PropType,
