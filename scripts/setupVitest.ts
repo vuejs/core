@@ -1,4 +1,4 @@
-import { vi, SpyInstance } from 'vitest'
+import { vi, type SpyInstance } from 'vitest'
 
 expect.extend({
   toHaveBeenWarned(received: string) {
