@@ -541,7 +541,14 @@ export type MergedComponentOptionsOverride = {
   errorCaptured?: MergedHook<ErrorCapturedHook>
 }
 
-export type OptionTypesKeys = 'P' | 'B' | 'D' | 'C' | 'M' | 'Defaults'
+export type OptionTypesKeys =
+  | 'P'
+  | 'B'
+  | 'D'
+  | 'C'
+  | 'M'
+  | 'Defaults'
+  | 'Inject'
 
 export type OptionTypesType<
   P = {},
@@ -549,7 +556,8 @@ export type OptionTypesType<
   D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  Defaults = {}
+  Defaults = {},
+  Inject extends ComponentInjectOptions = {}
 > = {
   P: P
   B: B
@@ -557,6 +565,7 @@ export type OptionTypesType<
   C: C
   M: M
   Defaults: Defaults
+  Inject: Inject
 }
 
 const enum OptionTypes {

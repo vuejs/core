@@ -33,6 +33,16 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+type PropsEmits<
+  PropsOrPropOptions = {},
+  Emits extends EmitsOptions = {}
+> = Readonly<
+  PropsOrPropOptions extends ComponentPropsOptions
+    ? ExtractPropTypes<PropsOrPropOptions>
+    : PropsOrPropOptions
+> &
+  ({} extends Emits ? {} : EmitsToProps<Emits>)
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -44,13 +54,10 @@ export type DefineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   PP = PublicProps,
-  Props = Readonly<
-    PropsOrPropOptions extends ComponentPropsOptions
-      ? ExtractPropTypes<PropsOrPropOptions>
-      : PropsOrPropOptions
-  > &
-    ({} extends E ? {} : EmitsToProps<E>),
-  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
+  Props = PropsEmits<PropsOrPropOptions, E>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
+  I extends ComponentInjectOptions = {},
+  II extends string = string
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -63,7 +70,8 @@ export type DefineComponent<
     E,
     PP & Props,
     Defaults,
-    true
+    true,
+    I
   > &
     Props
 > &
@@ -77,7 +85,9 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    Defaults
+    Defaults,
+    I,
+    II
   > &
   PP
 
@@ -146,7 +156,22 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  PropsEmits<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  I,
+  II
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -186,7 +211,12 @@ export function defineComponent<
   Mixin,
   Extends,
   E,
-  EE
+  EE,
+  PublicProps,
+  PropsEmits<Readonly<{ [key in PropNames]?: any }>, E>,
+  ExtractDefaultPropTypes<Readonly<{ [key in PropNames]?: any }>>,
+  I,
+  II
 >
 
 // overload 4: object format with object props declaration
@@ -219,7 +249,22 @@ export function defineComponent<
     I,
     II
   >
-): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE>
+): DefineComponent<
+  PropsOptions,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  PropsEmits<PropsOptions, E>,
+  ExtractDefaultPropTypes<PropsOptions>,
+  I,
+  II
+>
 
 // implementation, close to no-op
 export function defineComponent(

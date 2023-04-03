@@ -10,7 +10,7 @@ import {
   SetupContext,
   h
 } from 'vue'
-import { describe, expectType, IsUnion } from './utils'
+import { describe, expectType, IsUnion, test } from './utils'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -1027,64 +1027,208 @@ describe('emits', () => {
 })
 
 describe('inject', () => {
-  // with object inject
-  defineComponent({
-    props: {
-      a: String
-    },
-    inject: {
-      foo: 'foo',
-      bar: 'bar'
-    },
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
-  })
-
-  // with array inject
-  defineComponent({
-    props: ['a', 'b'],
-    inject: ['foo', 'bar'],
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
-  })
-
-  // with no props
-  defineComponent({
-    inject: {
-      foo: {
-        from: 'pfoo',
-        default: 'foo'
+  test('with object inject', () => {
+    defineComponent({
+      props: {
+        a: String
       },
-      bar: {
-        from: 'pbar',
-        default: 'bar'
+      inject: {
+        foo: 'foo',
+        bar: 'bar'
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
       }
-    },
-    created() {
-      expectType<unknown>(this.foo)
-      expectType<unknown>(this.bar)
-      //  @ts-expect-error
-      this.foobar = 1
-    }
+    })
   })
 
-  // without inject
-  defineComponent({
-    props: ['a', 'b'],
-    created() {
-      //  @ts-expect-error
-      this.foo = 1
-      //  @ts-expect-error
-      this.bar = 1
-    }
+  test('with array inject', () => {
+    defineComponent({
+      props: ['a', 'b'],
+      inject: ['foo', 'bar'],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
+      }
+    })
+  })
+
+  test('with no props', () => {
+    defineComponent({
+      inject: {
+        foo: {
+          from: 'pfoo',
+          default: 'foo'
+        },
+        bar: {
+          from: 'pbar',
+          default: 'bar'
+        }
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        //  @ts-expect-error
+        this.foobar = 1
+      }
+    })
+  })
+
+  test('without inject', () => {
+    defineComponent({
+      props: ['a', 'b'],
+      created() {
+        //  @ts-expect-error
+        this.foo = 1
+        //  @ts-expect-error
+        this.bar = 1
+      }
+    })
+  })
+
+  test('define mixins w/ no props', () => {
+    const MixinA = defineComponent({
+      inject: {
+        foo: 'foo'
+      }
+    })
+    const MixinB = defineComponent({
+      inject: ['bar']
+    })
+    // with no props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+      }
+    })
+    // with object props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: {
+        baz: {
+          type: Number,
+          required: true
+        }
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<number>(this.baz)
+      }
+    })
+    // with array props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: ['baz'],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<any>(this.baz)
+      }
+    })
+  })
+
+  test('define mixins w/ object props', () => {
+    const MixinA = defineComponent({
+      props: {
+        a: String
+      },
+      inject: {
+        foo: 'foo'
+      }
+    })
+    const MixinB = defineComponent({
+      props: {
+        b: String
+      },
+      inject: ['bar']
+    })
+    // with no props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+      }
+    })
+    // with object props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: {
+        baz: {
+          type: Number,
+          required: true
+        }
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<number>(this.baz)
+      }
+    })
+    // with array props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: ['baz'],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<any>(this.baz)
+      }
+    })
+  })
+
+  test('define mixins w/ array props', () => {
+    const MixinA = defineComponent({
+      props: ['a'],
+      inject: {
+        foo: 'foo'
+      }
+    })
+    const MixinB = defineComponent({
+      props: ['b'],
+      inject: ['bar']
+    })
+    // with no props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+      }
+    })
+    // with object props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: {
+        baz: {
+          type: Number,
+          required: true
+        }
+      },
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<number>(this.baz)
+      }
+    })
+    // with array props
+    defineComponent({
+      mixins: [MixinA, MixinB],
+      props: ['baz'],
+      created() {
+        expectType<unknown>(this.foo)
+        expectType<unknown>(this.bar)
+        expectType<any>(this.baz)
+      }
+    })
   })
 })
 
@@ -1430,6 +1574,8 @@ declare const MyButton: DefineComponent<
   string,
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
-  {}
+  {},
+  {},
+  string
 >
 ;<MyButton class="x" />
