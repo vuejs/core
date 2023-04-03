@@ -69,13 +69,28 @@ const Qux: FunctionalComponent<{}, ['foo', 'bar']> = (props, { emit }) => {
 
 expectType<Component>(Qux)
 
-const Quux: FunctionalComponent<{}, {}, { default: { foo: number } }> = (
-  props,
-  { emit, slots }
-) => {
-  expectType<{ default: undefined | ((scope: { foo: number }) => VNode[]) }>(
-    slots
-  )
+const Quux: FunctionalComponent<
+  {},
+  {},
+  {
+    default: { foo: number }
+    optional?: { foo: number }
+  }
+> = (props, { emit, slots }) => {
+  expectType<{
+    default: (scope: { foo: number }) => VNode[]
+    optional?: (scope: { foo: number }) => VNode[]
+  }>(slots)
+
+  slots.default({ foo: 123 })
+  // @ts-expect-error
+  slots.default({ foo: 'fesf' })
+
+  slots.optional?.({ foo: 123 })
+  // @ts-expect-error
+  slots.optional?.({ foo: 'fesf' })
+  // @ts-expect-error
+  slots.optional({ foo: 123 })
 }
 expectType<Component>(Quux)
 ;<Quux />
