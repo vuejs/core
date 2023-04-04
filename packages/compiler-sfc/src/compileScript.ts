@@ -803,7 +803,7 @@ export function compileScript(
     if (!node) return
     walkIdentifiers(node, id => {
       const binding = setupBindings[id.name]
-      if (binding && (binding !== BindingTypes.LITERAL_CONST || !hoistStatic)) {
+      if (binding && binding !== BindingTypes.LITERAL_CONST) {
         error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
@@ -1258,7 +1258,13 @@ export function compileScript(
           }
         }
         if (node.declaration) {
-          walkDeclaration(node.declaration, scriptBindings, vueImportAliases)
+          walkDeclaration(
+            'script',
+            node.declaration,
+            scriptBindings,
+            vueImportAliases,
+            hoistStatic
+          )
         }
       } else if (
         (node.type === 'VariableDeclaration' ||
@@ -1267,7 +1273,13 @@ export function compileScript(
           node.type === 'TSEnumDeclaration') &&
         !node.declare
       ) {
-        walkDeclaration(node, scriptBindings, vueImportAliases)
+        walkDeclaration(
+          'script',
+          node,
+          scriptBindings,
+          vueImportAliases,
+          hoistStatic
+        )
       }
     }
 
@@ -1394,7 +1406,13 @@ export function compileScript(
         node.type === 'TSEnumDeclaration') &&
       !node.declare
     ) {
-      isAllLiteral = walkDeclaration(node, setupBindings, vueImportAliases)
+      isAllLiteral = walkDeclaration(
+        'scriptSetup',
+        node,
+        setupBindings,
+        vueImportAliases,
+        hoistStatic
+      )
     }
 
     // hoist literal constants
@@ -1891,9 +1909,11 @@ function registerBinding(
 }
 
 function walkDeclaration(
+  from: 'script' | 'scriptSetup',
   node: Declaration,
   bindings: Record<string, BindingTypes>,
-  userImportAliases: Record<string, string>
+  userImportAliases: Record<string, string>,
+  hoistStatic: boolean
 ): boolean {
   let isAllLiteral = false
 
@@ -1918,7 +1938,10 @@ function walkDeclaration(
       if (id.type === 'Identifier') {
         let bindingType
         const userReactiveBinding = userImportAliases['reactive']
-        if (isAllLiteral || (isConst && isStaticNode(init!))) {
+        if (
+          (hoistStatic || from === 'script') &&
+          (isAllLiteral || (isConst && isStaticNode(init!)))
+        ) {
           bindingType = BindingTypes.LITERAL_CONST
         } else if (isCallOf(init, userReactiveBinding)) {
           // treat reactive() calls as let since it's meant to be mutable
