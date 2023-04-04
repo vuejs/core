@@ -365,10 +365,12 @@ describe('sfc props transform', () => {
                     function useRequest() {
                         return {
                           error: shallowRef(),
+                          info: shallowRef(),
                         }
                     }
-                    const { error } = useRequest();
-                    watch(error, () => {});
+                    const { error: e, info } = useRequest();
+                    watch(e, () => {});
+                    watch(info, () => {});
                 </script>`
         )
       ).not.toThrowError()
