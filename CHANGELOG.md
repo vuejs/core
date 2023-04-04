@@ -1,3 +1,12 @@
+# [3.3.0-alpha.8](https://github.com/vuejs/core/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2023-04-04)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** check binding is prop before erroring ([f3145a9](https://github.com/vuejs/core/commit/f3145a915aaec11c915f1df258c5209ae4782bcc)), closes [#8017](https://github.com/vuejs/core/issues/8017)
+
+
+
 # [3.3.0-alpha.7](https://github.com/vuejs/core/compare/v3.3.0-alpha.6...v3.3.0-alpha.7) (2023-04-03)
 
 
