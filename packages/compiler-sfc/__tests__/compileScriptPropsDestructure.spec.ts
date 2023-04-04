@@ -360,18 +360,18 @@ describe('sfc props transform', () => {
       expect(() =>
         compile(
           `<script setup lang='ts'>
-                    import { shallowRef, watch } from 'vue'
-                    const { userId } = defineProps({ userId: Number })
-                    function useRequest() {
-                        return {
-                          error: shallowRef(),
-                          info: shallowRef(),
-                        }
-                    }
-                    const { error: e, info } = useRequest();
-                    watch(e, () => {});
-                    watch(info, () => {});
-                </script>`
+        import { shallowRef, watch } from 'vue'
+        const { userId } = defineProps({ userId: Number })
+        function useRequest() {
+            return {
+                error: shallowRef(),
+                info: shallowRef(),
+                }
+        }
+        const { error: e, info } = useRequest();
+        watch(e, () => {});
+        watch(info, () => {});
+        </script>`
         )
       ).not.toThrowError()
     })
