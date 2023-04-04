@@ -658,12 +658,25 @@ exports[`SFC compile <script setup> > defineOptions() > basic usage 1`] = `
   setup(__props, { expose: __expose }) {
   __expose();
 
-
-
+        
+        
 return {  }
 }
 
 })"
+`;
+
+exports[`SFC compile <script setup> > defineOptions() > empty argument 1`] = `
+"export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+        
+return {  }
+}
+
+}"
 `;
 
 exports[`SFC compile <script setup> > defineProps w/ external definition 1`] = `
