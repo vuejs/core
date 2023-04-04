@@ -354,5 +354,20 @@ describe('sfc props transform', () => {
         )
       ).toThrow(`Default value of prop "foo" does not match declared type.`)
     })
+
+    // #8017
+    test('should not throw an error if the variable is not a props', () => {
+      expect(() =>
+        compile(
+          `<script setup lang='ts'>
+        import { watch } from 'vue'
+        const { userId } = defineProps({ userId: Number })
+        const { error: e, info } = useRequest();
+        watch(e, () => {});
+        watch(info, () => {});
+        </script>`
+        )
+      ).not.toThrowError()
+    })
   })
 })
