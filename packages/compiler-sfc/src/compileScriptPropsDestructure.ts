@@ -38,6 +38,7 @@ export function transformDestructuredProps(
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
+  const propsIds = new Set<string>()
   const parentStack: Node[] = []
   const propsLocalToPublicMap: Record<string, string> = Object.create(null)
 
@@ -100,6 +101,7 @@ export function transformDestructuredProps(
         if (isDefineProps) {
           // for defineProps destructure, only exclude them since they
           // are already passed in as knownProps
+          propsIds.add(id.name)
           excludedIds.add(id)
         } else {
           registerLocalBinding(id)
@@ -155,7 +157,7 @@ export function transformDestructuredProps(
   function checkUsage(node: Node, method: string, alias = method) {
     if (isCallOf(node, alias)) {
       const arg = unwrapTSNode(node.arguments[0])
-      if (arg.type === 'Identifier') {
+      if (arg.type === 'Identifier' && propsIds.has(arg.name)) {
         error(
           `"${arg.name}" is a destructured prop and should not be passed directly to ${method}(). ` +
             `Pass a getter () => ${arg.name} instead.`,
