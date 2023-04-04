@@ -12,7 +12,7 @@ import {
   createSetupContext,
   unsetCurrentInstance
 } from './component'
-import { EmitFn, EmitsOptions } from './componentEmits'
+import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
@@ -26,7 +26,8 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
-import { WritableComputedRef } from '@vue/reactivity'
+import { WritableComputedRef, computed, ref } from '@vue/reactivity'
+import { watch } from './apiWatch'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -229,11 +230,10 @@ export function defineModel<T>(
   name: string,
   options?: Record<string, unknown>
 ): WritableComputedRef<T | undefined>
-export function defineModel() {
+export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
   }
-  return null as any
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
@@ -297,12 +297,66 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
+export function useModel<T>(
+  name: string,
+  options: {
+    passive?: boolean
+    deep?: boolean
+  } = {}
+): WritableComputedRef<T> {
+  const { passive, deep } = options
+  const i = getCurrentInstance()!
+  if (__DEV__ && !i) {
+    warn(`useModel() called without active instance.`)
+    return null as any
+  }
+
+  if (passive) {
+    const proxy = ref<any>(i.props[name])
+
+    watch(
+      () => i.props[name],
+      v => (proxy.value = v)
+    )
+
+    watch(
+      proxy,
+      value => {
+        if (value !== i.props[name] || deep) {
+          i.emit(`update:${name}`, value)
+        }
+      },
+      { deep }
+    )
+
+    return proxy
+  } else {
+    return computed<any>({
+      get() {
+        return i.props[name]
+      },
+      set(value) {
+        i.emit(`update:${name}`, value)
+      }
+    })
+  }
+}
+
 function getContext(): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useContext() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
+}
+
+function normalizePropsOrEmits(props: ComponentPropsOptions | EmitsOptions) {
+  return isArray(props)
+    ? props.reduce(
+        (normalized, p) => ((normalized[p] = {}), normalized),
+        {} as ComponentObjectPropsOptions | ObjectEmitsOptions
+      )
+    : props
 }
 
 /**
@@ -314,12 +368,7 @@ export function mergeDefaults(
   raw: ComponentPropsOptions,
   defaults: Record<string, any>
 ): ComponentObjectPropsOptions {
-  const props = isArray(raw)
-    ? raw.reduce(
-        (normalized, p) => ((normalized[p] = {}), normalized),
-        {} as ComponentObjectPropsOptions
-      )
-    : raw
+  const props = normalizePropsOrEmits(raw)
   for (const key in defaults) {
     if (key.startsWith('__skip')) continue
     let opt = props[key]
@@ -339,6 +388,20 @@ export function mergeDefaults(
     }
   }
   return props
+}
+
+/**
+ * Runtime helper for merging model declarations. Imported by compiled code
+ * only.
+ * @internal
+ */
+export function mergeModelsOptions(
+  a: ComponentPropsOptions | EmitsOptions,
+  b: ComponentPropsOptions | EmitsOptions
+) {
+  if (!a || !b) return a || b
+  if (isArray(a) && isArray(b)) return a.concat(b)
+  return Object.assign({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
 }
 
 /**

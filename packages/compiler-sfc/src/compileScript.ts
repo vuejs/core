@@ -68,6 +68,7 @@ const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 const DEFINE_OPTIONS = 'defineOptions'
 const DEFINE_SLOTS = 'defineSlots'
+const DEFINE_MODEL = 'defineModel'
 
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -119,13 +120,16 @@ export interface SFCScriptCompileOptions {
    * options passed to `compiler-dom`.
    */
   templateOptions?: Partial<SFCTemplateCompileOptions>
-
   /**
    * Hoist <script setup> static constants.
    * - Only enables when one `<script setup>` exists.
    * @default true
    */
   hoistStatic?: boolean
+  /**
+   * (Experimental) Enable macro `defineModel`
+   */
+  defineModel?: boolean
 }
 
 export interface ImportBinding {
@@ -150,10 +154,10 @@ type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 type EmitsDeclType = FromNormalScript<
   TSFunctionType | TSTypeLiteral | TSInterfaceBody
 >
-
-export interface ModelDecl {
-  type: TSType
-  option: Node
+interface ModelDecl {
+  type: TSType | undefined
+  options: string | undefined
+  identifier: string | undefined
 }
 
 /**
@@ -169,6 +173,7 @@ export function compileScript(
   // feature flags
   // TODO remove in 3.4
   const enableReactivityTransform = !!options.reactivityTransform
+  const enableDefineModel = !!options.defineModel
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
   const hoistStatic = options.hoistStatic !== false && !script
@@ -319,6 +324,7 @@ export function compileScript(
   let hasDefaultExportRender = false
   let hasDefineOptionsCall = false
   let hasDefineSlotsCall = false
+  let hasDefineModelCall = false
   let propsRuntimeDecl: Node | undefined
   let propsRuntimeDefaults: Node | undefined
   let propsDestructureDecl: Node | undefined
@@ -330,7 +336,7 @@ export function compileScript(
   let emitsTypeDecl: EmitsDeclType | undefined
   let emitIdentifier: string | undefined
   let optionsRuntimeDecl: Node | undefined
-  // let modelDeclMap: Record<string, ModelDecl> = {}
+  let modelDecls: Record<string, ModelDecl> = {}
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
   // props/emits declared via types
@@ -622,6 +628,54 @@ export function compileScript(
     return true
   }
 
+  function processDefineModel(node: Node, declId?: LVal): boolean {
+    if (!enableDefineModel || !isCallOf(node, DEFINE_MODEL)) {
+      return false
+    }
+    hasDefineModelCall = true
+
+    const type =
+      (node.typeParameters && node.typeParameters.params[0]) || undefined
+    let modelName: string
+    let options: Node | undefined
+    const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])
+    if (arg0 && arg0.type === 'StringLiteral') {
+      modelName = arg0.value
+      options = node.arguments[1]
+    } else {
+      modelName = 'modelValue'
+      options = arg0
+    }
+
+    if (modelDecls[modelName]) {
+      error(`duplicate model name ${JSON.stringify(modelName)}`, node)
+    }
+
+    modelDecls[modelName] = {
+      type,
+      options: options
+        ? s.slice(startOffset + options.start!, startOffset + options.end!)
+        : undefined,
+      identifier:
+        declId && declId.type === 'Identifier' ? declId.name : undefined
+    }
+
+    s.overwrite(
+      startOffset + node.start!,
+      startOffset + node.end!,
+      `${helper('useModel')}(${JSON.stringify(modelName)}${
+        options
+          ? `, ${s.slice(
+              startOffset + options.start!,
+              startOffset + options.end!
+            )}`
+          : ''
+      })`
+    )
+
+    return true
+  }
+
   function getAstBody(): Statement[] {
     return scriptAst
       ? [...scriptSetupAst.body, ...scriptAst.body]
@@ -889,18 +943,22 @@ export function compileScript(
     )
   }
 
-  function genRuntimeProps(props: Record<string, PropTypeData>) {
-    const keys = Object.keys(props)
-    if (!keys.length) {
-      return ``
-    }
-    const hasStaticDefaults = hasStaticWithDefaults()
-    const scriptSetupSource = scriptSetup!.content
-    let propsDecls = `{
+  function genRuntimeProps() {
+    function genPropsFromTS() {
+      const keys = Object.keys(typeDeclaredProps)
+      if (!keys.length) {
+        return
+      }
+      const hasStaticDefaults = hasStaticWithDefaults()
+      const scriptSetupSource = scriptSetup!.content
+      let propsDecls = `{
     ${keys
       .map(key => {
         let defaultString: string | undefined
-        const destructured = genDestructuredDefaultValue(key, props[key].type)
+        const destructured = genDestructuredDefaultValue(
+          key,
+          typeDeclaredProps[key].type
+        )
         if (destructured) {
           defaultString = `default: ${destructured.valueString}${
             destructured.needSkipFactory ? `, skipFactory: true` : ``
@@ -930,7 +988,7 @@ export function compileScript(
           }
         }
 
-        const { type, required, skipCheck } = props[key]
+        const { type, required, skipCheck } = typeDeclaredProps[key]
         if (!isProd) {
           return `${key}: { type: ${toRuntimeTypeString(
             type
@@ -957,14 +1015,79 @@ export function compileScript(
       })
       .join(',\n    ')}\n  }`
 
-    if (propsRuntimeDefaults && !hasStaticDefaults) {
-      propsDecls = `${helper('mergeDefaults')}(${propsDecls}, ${source.slice(
-        propsRuntimeDefaults.start! + startOffset,
-        propsRuntimeDefaults.end! + startOffset
-      )})`
+      if (propsRuntimeDefaults && !hasStaticDefaults) {
+        propsDecls = `${helper('mergeDefaults')}(${propsDecls}, ${source.slice(
+          propsRuntimeDefaults.start! + startOffset,
+          propsRuntimeDefaults.end! + startOffset
+        )})`
+      }
+
+      return propsDecls
     }
 
-    return `\n  props: ${propsDecls},`
+    function genModels() {
+      if (!hasDefineModelCall) return
+
+      let modelPropsDecl = ''
+      for (const [name, { type, options }] of Object.entries(modelDecls)) {
+        let runtimeTypes = type && inferRuntimeType(type, declaredTypes)
+        if (runtimeTypes && isProd) {
+          runtimeTypes = runtimeTypes.filter(
+            el => el === 'Boolean' || el === 'Function'
+          )
+        }
+        const runtimeType =
+          (runtimeTypes &&
+            runtimeTypes.length > 0 &&
+            toRuntimeTypeString(runtimeTypes)) ||
+          undefined
+
+        let decl: string
+        if (runtimeType && options) {
+          decl = isTS
+            ? `{ type: ${runtimeType}, ...${options} }`
+            : `Object.assign({ type: ${runtimeType} }, ${options})`
+        } else {
+          decl = runtimeType || options || '{}'
+        }
+        modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
+      }
+      return `{${modelPropsDecl}\n  }`
+    }
+
+    let propsDecls: undefined | string
+    if (propsRuntimeDecl) {
+      propsDecls = scriptSetup!.content
+        .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
+        .trim()
+      if (propsDestructureDecl) {
+        const defaults: string[] = []
+        for (const key in propsDestructuredBindings) {
+          const d = genDestructuredDefaultValue(key)
+          if (d)
+            defaults.push(
+              `${key}: ${d.valueString}${
+                d.needSkipFactory ? `, __skip_${key}: true` : ``
+              }`
+            )
+        }
+        if (defaults.length) {
+          propsDecls = `${helper(
+            `mergeDefaults`
+          )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
+        }
+      }
+    } else if (propsTypeDecl) {
+      propsDecls = genPropsFromTS()
+    }
+
+    const modelsDecls = genModels()
+
+    if (propsDecls && modelsDecls) {
+      return `${helper('mergeModels')}(${propsDecls}, ${modelsDecls})`
+    } else {
+      return modelsDecls || propsDecls
+    }
   }
 
   function genDestructuredDefaultValue(
@@ -1328,7 +1451,8 @@ export function compileScript(
         processDefineEmits(expr) ||
         processDefineOptions(expr) ||
         processWithDefaults(expr) ||
-        processDefineSlots(expr)
+        processDefineSlots(expr) ||
+        processDefineModel(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(expr)) {
@@ -1364,7 +1488,9 @@ export function compileScript(
             processWithDefaults(init, decl.id)
           const isDefineEmits =
             !isDefineProps && processDefineEmits(init, decl.id)
-          !isDefineEmits && processDefineSlots(init, decl.id)
+          !isDefineEmits &&
+            (processDefineSlots(init, decl.id) ||
+              processDefineModel(init, decl.id))
 
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
@@ -1555,6 +1681,9 @@ export function compileScript(
     }
   }
   for (const key in typeDeclaredProps) {
+    bindingMetadata[key] = BindingTypes.PROPS
+  }
+  for (const key in modelDecls) {
     bindingMetadata[key] = BindingTypes.PROPS
   }
   // props aliases
@@ -1775,38 +1904,27 @@ export function compileScript(
   if (hasInlinedSsrRenderFn) {
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
-  if (propsRuntimeDecl) {
-    let declCode = scriptSetup.content
-      .slice(propsRuntimeDecl.start!, propsRuntimeDecl.end!)
-      .trim()
-    if (propsDestructureDecl) {
-      const defaults: string[] = []
-      for (const key in propsDestructuredBindings) {
-        const d = genDestructuredDefaultValue(key)
-        if (d)
-          defaults.push(
-            `${key}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${key}: true` : ``
-            }`
-          )
-      }
-      if (defaults.length) {
-        declCode = `${helper(
-          `mergeDefaults`
-        )}(${declCode}, {\n  ${defaults.join(',\n  ')}\n})`
-      }
-    }
-    runtimeOptions += `\n  props: ${declCode},`
-  } else if (propsTypeDecl) {
-    runtimeOptions += genRuntimeProps(typeDeclaredProps)
-  }
+
+  let propsDecl = genRuntimeProps()
+  if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
+
+  let emitsDecl = ''
   if (emitsRuntimeDecl) {
-    runtimeOptions += `\n  emits: ${scriptSetup.content
+    emitsDecl = scriptSetup.content
       .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
-      .trim()},`
+      .trim()
   } else if (emitsTypeDecl) {
-    runtimeOptions += genRuntimeEmits(typeDeclaredEmits)
+    emitsDecl = genRuntimeEmits(typeDeclaredEmits)
   }
+  if (hasDefineModelCall) {
+    let modelEmitsDecl = stringifyStringArray(
+      Object.keys(modelDecls).map(n => `update:${n}`)
+    )
+    emitsDecl = emitsDecl
+      ? `merge(${emitsDecl}, ${modelEmitsDecl})`
+      : modelEmitsDecl
+  }
+  if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
   if (optionsRuntimeDecl) {
@@ -1941,7 +2059,10 @@ function walkDeclaration(
             ? BindingTypes.SETUP_REACTIVE_CONST
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
-          if (isCallOf(init, userImportAliases['ref'])) {
+          if (
+            isCallOf(init, userImportAliases['ref']) ||
+            isCallOf(init, DEFINE_MODEL)
+          ) {
             bindingType = BindingTypes.SETUP_REF
           } else {
             bindingType = BindingTypes.SETUP_MAYBE_REF
@@ -2372,12 +2493,12 @@ function extractEventNames(
   }
 }
 
+function stringifyStringArray(strs: string[]) {
+  return `[${strs.map(s => JSON.stringify(s)).join(', ')}]`
+}
+
 function genRuntimeEmits(emits: Set<string>) {
-  return emits.size
-    ? `\n  emits: [${Array.from(emits)
-        .map(p => JSON.stringify(p))
-        .join(', ')}],`
-    : ``
+  return emits.size ? stringifyStringArray(Array.from(emits)) : ``
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {

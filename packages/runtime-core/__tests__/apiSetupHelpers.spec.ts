@@ -24,7 +24,8 @@ import {
   useSlots,
   mergeDefaults,
   withAsyncContext,
-  createPropsRestProxy
+  createPropsRestProxy,
+  mergeModelsOptions
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -130,6 +131,47 @@ describe('SFC <script setup> helpers', () => {
       expect(
         `props default key "foo" has no corresponding declaration`
       ).toHaveBeenWarned()
+    })
+  })
+
+  describe('mergeModelsOptions', () => {
+    test('array syntax', () => {
+      expect(mergeModelsOptions(['foo', 'bar'], ['baz'])).toMatchObject([
+        'foo',
+        'bar',
+        'baz'
+      ])
+    })
+
+    test('object syntax', () => {
+      expect(
+        mergeModelsOptions({ foo: null, bar: { required: true } }, ['baz'])
+      ).toMatchObject({
+        foo: null,
+        bar: { required: true },
+        baz: {}
+      })
+
+      expect(
+        mergeModelsOptions(['baz'], { foo: null, bar: { required: true } })
+      ).toMatchObject({
+        foo: null,
+        bar: { required: true },
+        baz: {}
+      })
+    })
+
+    test('overwrite', () => {
+      expect(
+        mergeModelsOptions(
+          { foo: null, bar: { required: true } },
+          { bar: {}, baz: {} }
+        )
+      ).toMatchObject({
+        foo: null,
+        bar: {},
+        baz: {}
+      })
     })
   })
 
