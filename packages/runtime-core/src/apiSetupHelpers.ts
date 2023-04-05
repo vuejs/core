@@ -369,3 +369,11 @@ export function withAsyncContext(getAwaitable: () => any) {
   }
   return [awaitable, () => setCurrentInstance(ctx)]
 }
+
+;<T extends string>() => {
+  interface Props {
+    foo: T
+  }
+  const props = defineProps<Props>()
+  props.foo
+}
