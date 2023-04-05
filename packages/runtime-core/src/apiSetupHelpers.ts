@@ -3,7 +3,8 @@ import {
   isPromise,
   isFunction,
   Prettify,
-  UnionToIntersection
+  UnionToIntersection,
+  isObject
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -22,7 +23,8 @@ import {
 import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
-  ExtractPropTypes
+  ExtractPropTypes,
+  NormalizedProps
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
@@ -210,26 +212,19 @@ export function defineSlots<
 }
 
 export function defineModel<T>(
-  options: { required: true } & Record<string, unknown>
-): WritableComputedRef<T>
-export function defineModel<T>(
-  options: { default: any } & Record<string, unknown>
-): WritableComputedRef<T>
+  options: { required: false } & Record<string, unknown>
+): WritableComputedRef<T | undefined>
 export function defineModel<T>(
   options?: Record<string, unknown>
+): WritableComputedRef<T>
+export function defineModel<T>(
+  name: string,
+  options: { required: false } & Record<string, unknown>
 ): WritableComputedRef<T | undefined>
 export function defineModel<T>(
   name: string,
-  options: { required: true } & Record<string, unknown>
-): WritableComputedRef<T>
-export function defineModel<T>(
-  name: string,
-  options: { default: any } & Record<string, unknown>
-): WritableComputedRef<T>
-export function defineModel<T>(
-  name: string,
   options?: Record<string, unknown>
-): WritableComputedRef<T | undefined>
+): WritableComputedRef<T>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -297,21 +292,18 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T>(
-  name: string,
-  options: {
-    passive?: boolean
-    deep?: boolean
-  } = {}
-): WritableComputedRef<T> {
-  const { passive, deep } = options
+export function useModel<T>(name: string): WritableComputedRef<T> {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
     return null as any
   }
 
-  if (passive) {
+  const options = (i.propsOptions[0] as NormalizedProps)[name]
+  if (
+    isObject(options) &&
+    (options.required === false || 'default' in options)
+  ) {
     const proxy = ref<any>(i.props[name])
 
     watch(
@@ -319,15 +311,11 @@ export function useModel<T>(
       v => (proxy.value = v)
     )
 
-    watch(
-      proxy,
-      value => {
-        if (value !== i.props[name] || deep) {
-          i.emit(`update:${name}`, value)
-        }
-      },
-      { deep }
-    )
+    watch(proxy, value => {
+      if (value !== i.props[name]) {
+        i.emit(`update:${name}`, value)
+      }
+    })
 
     return proxy
   } else {

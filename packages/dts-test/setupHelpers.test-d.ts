@@ -205,21 +205,25 @@ describe('defineSlots', () => {
 })
 
 describe('defineModel', () => {
-  const modelValue = defineModel<string>()
-  expectType<WritableComputedRef<string | undefined>>(modelValue)
-  modelValue.value = 'new value'
+  // overload 1
+  const modelValueRequired = defineModel<boolean>({ required: false })
+  expectType<WritableComputedRef<boolean | undefined>>(modelValueRequired)
 
-  const modelValueRequired = defineModel<boolean>({ required: true })
-  expectType<WritableComputedRef<boolean>>(modelValueRequired)
+  // overload 2
+  const modelValue = defineModel<string>()
+  expectType<WritableComputedRef<string>>(modelValue)
+  modelValue.value = 'new value'
 
   const modelValueDefault = defineModel<boolean>({ default: true })
   expectType<WritableComputedRef<boolean>>(modelValueDefault)
 
-  const count = defineModel<number>('count')
-  expectType<WritableComputedRef<number | undefined>>(count)
+  // overload 3
+  const countRequired = defineModel<number>('count', { required: false })
+  expectType<WritableComputedRef<number | undefined>>(countRequired)
 
-  const countRequired = defineModel<number>('count', { required: true })
-  expectType<WritableComputedRef<number>>(countRequired)
+  // overload 4
+  const count = defineModel<number>('count')
+  expectType<WritableComputedRef<number>>(count)
 
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<WritableComputedRef<number>>(countDefault)

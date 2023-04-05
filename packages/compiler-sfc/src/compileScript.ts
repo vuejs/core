@@ -663,14 +663,7 @@ export function compileScript(
     s.overwrite(
       startOffset + node.start!,
       startOffset + node.end!,
-      `${helper('useModel')}(${JSON.stringify(modelName)}${
-        options
-          ? `, ${s.slice(
-              startOffset + options.start!,
-              startOffset + options.end!
-            )}`
-          : ''
-      })`
+      `${helper('useModel')}(${JSON.stringify(modelName)})`
     )
 
     return true
@@ -946,9 +939,8 @@ export function compileScript(
   function genRuntimeProps() {
     function genPropsFromTS() {
       const keys = Object.keys(typeDeclaredProps)
-      if (!keys.length) {
-        return
-      }
+      if (!keys.length) return
+
       const hasStaticDefaults = hasStaticWithDefaults()
       const scriptSetupSource = scriptSetup!.content
       let propsDecls = `{
@@ -1043,13 +1035,24 @@ export function compileScript(
           undefined
 
         let decl: string
-        if (runtimeType && options) {
-          decl = isTS
-            ? `{ type: ${runtimeType}, ...${options} }`
-            : `Object.assign({ type: ${runtimeType} }, ${options})`
+
+        if (runtimeType && isProd && !options) {
+          decl = runtimeType
         } else {
-          decl = runtimeType || options || '{}'
+          const defaultOptions: string[] = []
+          if (runtimeType) defaultOptions.push(`type: ${runtimeType}`)
+          if (!isProd) defaultOptions.push('required: true')
+          decl = defaultOptions.join(', ')
+
+          if (decl && options) {
+            decl = isTS
+              ? `{ ${decl}, ...${options} }`
+              : `Object.assign({ ${decl} }, ${options})`
+          } else {
+            decl = options || `{ ${decl} }`
+          }
         }
+
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }
       return `{${modelPropsDecl}\n  }`
@@ -1451,8 +1454,7 @@ export function compileScript(
         processDefineEmits(expr) ||
         processDefineOptions(expr) ||
         processWithDefaults(expr) ||
-        processDefineSlots(expr) ||
-        processDefineModel(expr)
+        processDefineSlots(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(expr)) {
@@ -1463,6 +1465,8 @@ export function compileScript(
           callee.end! + startOffset,
           '__expose'
         )
+      } else {
+        processDefineModel(expr)
       }
     }
 
@@ -1917,11 +1921,11 @@ export function compileScript(
     emitsDecl = genRuntimeEmits(typeDeclaredEmits)
   }
   if (hasDefineModelCall) {
-    let modelEmitsDecl = stringifyStringArray(
-      Object.keys(modelDecls).map(n => `update:${n}`)
-    )
+    let modelEmitsDecl = `[${Object.keys(modelDecls)
+      .map(n => JSON.stringify(`update:${n}`))
+      .join(', ')}]`
     emitsDecl = emitsDecl
-      ? `merge(${emitsDecl}, ${modelEmitsDecl})`
+      ? `${helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
       : modelEmitsDecl
   }
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
@@ -2493,12 +2497,12 @@ function extractEventNames(
   }
 }
 
-function stringifyStringArray(strs: string[]) {
-  return `[${strs.map(s => JSON.stringify(s)).join(', ')}]`
-}
-
 function genRuntimeEmits(emits: Set<string>) {
-  return emits.size ? stringifyStringArray(Array.from(emits)) : ``
+  return emits.size
+    ? `[${Array.from(emits)
+        .map(k => JSON.stringify(k))
+        .join(', ')}]`
+    : ``
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {

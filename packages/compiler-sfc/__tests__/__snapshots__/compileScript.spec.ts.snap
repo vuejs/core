@@ -658,14 +658,14 @@ exports[`SFC compile <script setup> > defineModel() > basic usage 1`] = `
 
 export default {
   props: {
-    \\"modelValue\\": { required: true },
-    \\"count\\": {},
+    \\"modelValue\\": Object.assign({ required: true }, { required: true }),
+    \\"count\\": { required: true },
   },
   emits: [\\"update:modelValue\\", \\"update:count\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
-        const modelValue = _useModel(\\"modelValue\\", { required: true })
+        const modelValue = _useModel(\\"modelValue\\")
         const c = _useModel(\\"count\\")
         
 return { modelValue, c }
@@ -679,15 +679,15 @@ exports[`SFC compile <script setup> > defineModel() > w/ defineProps and defineE
 
 export default {
   props: _mergeModels({ foo: String }, {
-    \\"modelValue\\": { default: 0 },
+    \\"modelValue\\": Object.assign({ required: true }, { default: 0 }),
   }),
-  emits: merge(['change'], [\\"update:modelValue\\"]),
+  emits: _mergeModels(['change'], [\\"update:modelValue\\"]),
   setup(__props, { expose: __expose }) {
   __expose();
 
         
         
-        const count = _useModel(\\"modelValue\\", { default: 0 })
+        const count = _useModel(\\"modelValue\\")
         
 return { count }
 }
@@ -1627,17 +1627,19 @@ exports[`SFC compile <script setup> > with TypeScript > defineModel > basic usag
 
 export default /*#__PURE__*/_defineComponent({
   props: {
-    \\"modelValue\\": [Boolean, String],
-    \\"count\\": Number,
+    \\"modelValue\\": { type: [Boolean, String], required: true },
+    \\"count\\": { type: Number, required: true },
+    \\"disabled\\": { type: Number, required: true, ...{ required: false } },
   },
-  emits: [\\"update:modelValue\\", \\"update:count\\"],
+  emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:disabled\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
           const modelValue = _useModel(\\"modelValue\\")
           const count = _useModel(\\"count\\")
+          const disabled = _useModel(\\"disabled\\")
           
-return { modelValue, count }
+return { modelValue, count, disabled }
 }
 
 })"
@@ -1650,17 +1652,19 @@ export default /*#__PURE__*/_defineComponent({
   props: {
     \\"modelValue\\": Boolean,
     \\"fn\\": Function,
-    \\"str\\": {},
+    \\"str\\": {  },
+    \\"optional\\": { required: false },
   },
-  emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:str\\"],
+  emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:str\\", \\"update:optional\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
           const modelValue = _useModel(\\"modelValue\\")
           const fn = _useModel(\\"fn\\")
           const str = _useModel(\\"str\\")
+          const optional = _useModel(\\"optional\\")
           
-return { modelValue, fn, str }
+return { modelValue, fn, str, optional }
 }
 
 })"

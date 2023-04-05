@@ -73,6 +73,7 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
+  useModel,
   // internal
   mergeDefaults,
   mergeModelsOptions,

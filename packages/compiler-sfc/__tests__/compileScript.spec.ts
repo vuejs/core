@@ -377,12 +377,12 @@ defineExpose({ foo: 123 })
         { defineModel: true }
       )
       assertCode(content)
-      expect(content).toMatch('props: {\n    "modelValue": { required: true }')
-      expect(content).toMatch('"count": {},')
-      expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
       expect(content).toMatch(
-        `const modelValue = _useModel("modelValue", { required: true })`
+        '"modelValue": Object.assign({ required: true }, { required: true }),'
       )
+      expect(content).toMatch('"count": { required: true },')
+      expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
+      expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
       expect(content).toMatch(`const c = _useModel("count")`)
       expect(content).toMatch(`return { modelValue, c }`)
       expect(content).not.toMatch('defineModel')
@@ -407,10 +407,10 @@ defineExpose({ foo: 123 })
       )
       assertCode(content)
       expect(content).toMatch(`props: _mergeModels({ foo: String }`)
-      expect(content).toMatch(`"modelValue": { default: 0 }`)
       expect(content).toMatch(
-        `const count = _useModel("modelValue", { default: 0 })`
+        `"modelValue": Object.assign({ required: true }, { default: 0 })`
       )
+      expect(content).toMatch(`const count = _useModel("modelValue")`)
       expect(content).not.toMatch('defineModel')
       expect(bindings).toStrictEqual({
         count: BindingTypes.SETUP_REF,
@@ -1772,19 +1772,32 @@ const emit = defineEmits(['a', 'b'])
           <script setup lang="ts">
           const modelValue = defineModel<boolean | string>()
           const count = defineModel<number>('count')
+          const disabled = defineModel<number>('disabled', { required: false })
           </script>
           `,
           { defineModel: true }
         )
         assertCode(content)
-        expect(content).toMatch('"modelValue": [Boolean, String]')
-        expect(content).toMatch('"count": Number')
-        expect(content).toMatch('emits: ["update:modelValue", "update:count"]')
+        expect(content).toMatch(
+          '"modelValue": { type: [Boolean, String], required: true }'
+        )
+        expect(content).toMatch('"count": { type: Number, required: true }')
+        expect(content).toMatch(
+          '"disabled": { type: Number, required: true, ...{ required: false } },'
+        )
+        expect(content).toMatch(
+          'emits: ["update:modelValue", "update:count", "update:disabled"]'
+        )
+
         expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
+        expect(content).toMatch(`const count = _useModel("count")`)
+        expect(content).toMatch(`const disabled = _useModel("disabled")`)
+
         expect(content).toMatch(`const count = _useModel("count")`)
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
-          count: BindingTypes.SETUP_REF
+          count: BindingTypes.SETUP_REF,
+          disabled: BindingTypes.SETUP_REF
         })
       })
 
@@ -1795,6 +1808,7 @@ const emit = defineEmits(['a', 'b'])
           const modelValue = defineModel<boolean>()
           const fn = defineModel<() => void>('fn')
           const str = defineModel<string>('str')
+          const optional = defineModel<string>('optional', { required: false })
           </script>
           `,
           { defineModel: true, isProd: true }
@@ -1802,9 +1816,10 @@ const emit = defineEmits(['a', 'b'])
         assertCode(content)
         expect(content).toMatch('"modelValue": Boolean')
         expect(content).toMatch('"fn": Function')
-        expect(content).toMatch('"str": {}')
+        expect(content).toMatch('"str": {  }')
+        expect(content).toMatch('"optional": { required: false }')
         expect(content).toMatch(
-          'emits: ["update:modelValue", "update:fn", "update:str"]'
+          'emits: ["update:modelValue", "update:fn", "update:str", "update:optional"]'
         )
         expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
         expect(content).toMatch(`const fn = _useModel("fn")`)
@@ -1812,7 +1827,8 @@ const emit = defineEmits(['a', 'b'])
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
           fn: BindingTypes.SETUP_REF,
-          str: BindingTypes.SETUP_REF
+          str: BindingTypes.SETUP_REF,
+          optional: BindingTypes.SETUP_REF
         })
       })
     })
