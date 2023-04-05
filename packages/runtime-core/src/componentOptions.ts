@@ -74,6 +74,7 @@ import {
 } from './compat/compatConfig'
 import { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
+import { SlotsType } from './componentSlots'
 
 /**
  * Interface for declaring custom options.
@@ -105,6 +106,7 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
+  S extends SlotsType = {},
   Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
@@ -122,7 +124,7 @@ export interface ComponentOptionsBase<
           >
         >
     >,
-    ctx: SetupContext<E>
+    ctx: SetupContext<E, S>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
@@ -136,6 +138,7 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
+  slots?: S
   // TODO infer public instance type based on exposed keys
   expose?: string[]
   serverPrefetch?(): void | Promise<any>
@@ -216,6 +219,7 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   PE = Props & EmitsToProps<E>
@@ -229,6 +233,7 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
+  S,
   {},
   I,
   II
@@ -244,6 +249,7 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
+      S,
       PE,
       {},
       false,
@@ -261,6 +267,7 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
@@ -274,6 +281,7 @@ export type ComponentOptionsWithArrayProps<
   Extends,
   E,
   EE,
+  S,
   {},
   I,
   II
@@ -289,6 +297,7 @@ export type ComponentOptionsWithArrayProps<
       Mixin,
       Extends,
       E,
+      S,
       Props,
       {},
       false,
@@ -306,6 +315,7 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
@@ -320,6 +330,7 @@ export type ComponentOptionsWithObjectProps<
   Extends,
   E,
   EE,
+  S,
   Defaults,
   I,
   II
@@ -335,6 +346,7 @@ export type ComponentOptionsWithObjectProps<
       Mixin,
       Extends,
       E,
+      S,
       Props,
       Defaults,
       false,
@@ -350,8 +362,20 @@ export type ComponentOptions<
   M extends MethodOptions = any,
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
-  E extends EmitsOptions = any
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  E extends EmitsOptions = any,
+  S extends SlotsType = any
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  string,
+  S
+> &
   ThisType<
     CreateComponentPublicInstance<
       {},
@@ -367,6 +391,7 @@ export type ComponentOptions<
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
   any,
   any,
   any,

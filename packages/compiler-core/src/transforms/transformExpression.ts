@@ -202,6 +202,8 @@ export function processExpression(
         return `$setup.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         return `$props['${bindingMetadata.__propsAliases![raw]}']`
+      } else if (type === BindingTypes.LITERAL_CONST) {
+        return raw
       } else if (type) {
         return `$${type}.${raw}`
       }

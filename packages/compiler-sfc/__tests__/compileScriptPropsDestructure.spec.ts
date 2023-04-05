@@ -347,7 +347,7 @@ describe('sfc props transform', () => {
       ).toThrow(`Cannot assign to destructured props`)
     })
 
-    test('should error when watching destructured prop', () => {
+    test('should error when passing destructured prop into certain methods', () => {
       expect(() =>
         compile(
           `<script setup>
@@ -356,7 +356,9 @@ describe('sfc props transform', () => {
         watch(foo, () => {})
         </script>`
         )
-      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to watch().`
+      )
 
       expect(() =>
         compile(
@@ -366,7 +368,33 @@ describe('sfc props transform', () => {
         w(foo, () => {})
         </script>`
         )
-      ).toThrow(`"foo" is a destructured prop and cannot be directly watched.`)
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to watch().`
+      )
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { toRef } from 'vue'
+        const { foo } = defineProps(['foo'])
+        toRef(foo)
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to toRef().`
+      )
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { toRef as r } from 'vue'
+        const { foo } = defineProps(['foo'])
+        r(foo)
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to toRef().`
+      )
     })
 
     // not comprehensive, but should help for most common cases
@@ -378,6 +406,21 @@ describe('sfc props transform', () => {
         </script>`
         )
       ).toThrow(`Default value of prop "foo" does not match declared type.`)
+    })
+
+    // #8017
+    test('should not throw an error if the variable is not a props', () => {
+      expect(() =>
+        compile(
+          `<script setup lang='ts'>
+        import { watch } from 'vue'
+        const { userId } = defineProps({ userId: Number })
+        const { error: e, info } = useRequest();
+        watch(e, () => {});
+        watch(info, () => {});
+        </script>`
+        )
+      ).not.toThrowError()
     })
   })
 })

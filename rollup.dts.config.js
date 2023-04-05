@@ -46,12 +46,49 @@ export default readdirSync('temp/packages').map(pkg => {
 function patchTypes(pkg) {
   return {
     name: 'patch-types',
-    renderChunk(code) {
+    renderChunk(code, chunk) {
       const s = new MagicString(code)
       const ast = parse(code, {
         plugins: ['typescript'],
         sourceType: 'module'
       })
+
+      /**
+       * @param {import('@babel/types').VariableDeclarator | import('@babel/types').TSTypeAliasDeclaration | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSDeclareFunction | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSEnumDeclaration | import('@babel/types').ClassDeclaration} node
+       * @param {import('@babel/types').VariableDeclaration} [parentDecl]
+       */
+      function processDeclaration(node, parentDecl) {
+        if (!node.id) {
+          return
+        }
+        // @ts-ignore
+        const name = node.id.name
+        if (name.startsWith('_')) {
+          return
+        }
+        shouldRemoveExport.add(name)
+        if (!removeInternal(parentDecl || node)) {
+          if (isExported.has(name)) {
+            // @ts-ignore
+            s.prependLeft((parentDecl || node).start, `export `)
+          }
+          // traverse further for internal properties
+          if (
+            node.type === 'TSInterfaceDeclaration' ||
+            node.type === 'ClassDeclaration'
+          ) {
+            node.body.body.forEach(removeInternal)
+          } else if (node.type === 'TSTypeAliasDeclaration') {
+            // @ts-ignore
+            walk(node.typeAnnotation, {
+              enter(node) {
+                // @ts-ignore
+                if (removeInternal(node)) this.skip()
+              }
+            })
+          }
+        }
+      }
 
       /**
        * @param {import('@babel/types').Node} node
@@ -105,55 +142,36 @@ function patchTypes(pkg) {
 
       // pass 1: remove internals + add exports
       for (const node of ast.program.body) {
-        if (
-          (node.type === 'TSTypeAliasDeclaration' ||
-            node.type === 'TSInterfaceDeclaration') &&
-          !node.id.name.startsWith(`_`)
-        ) {
-          const name = node.id.name
-          shouldRemoveExport.add(name)
-          if (!removeInternal(node)) {
-            if (isExported.has(name)) {
-              // @ts-ignore
-              s.prependLeft(node.start, `export `)
-            }
-            // traverse further for internal properties
-            if (node.type === 'TSInterfaceDeclaration') {
-              node.body.body.forEach(removeInternal)
-            } else if (node.type === 'TSTypeAliasDeclaration') {
-              // @ts-ignore
-              walk(node.typeAnnotation, {
-                enter(node) {
-                  // @ts-ignore
-                  if (removeInternal(node)) this.skip()
-                }
-              })
-            }
-          }
-        } else if (removeInternal(node)) {
-          if (node.type === 'VariableDeclaration') {
-            // declare const x
-            for (const decl of node.declarations) {
-              // @ts-ignore
-              shouldRemoveExport.add(decl.id.name)
-            }
-          } else if (
-            node.type === 'TSDeclareFunction' ||
-            node.type === 'TSEnumDeclaration'
-          ) {
-            // declare function
-            // @ts-ignore
-            shouldRemoveExport.add(node.id.name)
-          } else {
+        if (node.type === 'VariableDeclaration') {
+          processDeclaration(node.declarations[0], node)
+          if (node.declarations.length > 1) {
             throw new Error(
-              `unhandled export type marked as @internal: ${node.type}`
+              `unhandled declare const with more than one declarators:\n${code.slice(
+                // @ts-ignore
+                node.start,
+                node.end
+              )}`
             )
           }
+        } else if (
+          node.type === 'TSTypeAliasDeclaration' ||
+          node.type === 'TSInterfaceDeclaration' ||
+          node.type === 'TSDeclareFunction' ||
+          node.type === 'TSEnumDeclaration' ||
+          node.type === 'ClassDeclaration'
+        ) {
+          processDeclaration(node)
+        } else if (removeInternal(node)) {
+          throw new Error(
+            `unhandled export type marked as @internal: ${node.type}`
+          )
         }
       }
+
       // pass 2: remove exports
       for (const node of ast.program.body) {
         if (node.type === 'ExportNamedDeclaration' && !node.source) {
+          let removed = 0
           for (let i = 0; i < node.specifiers.length; i++) {
             const spec = node.specifiers[i]
             if (
@@ -166,10 +184,7 @@ function patchTypes(pkg) {
                 // this only happens if we have something like
                 //   type Foo
                 //   export { Foo as Bar }
-                // there are no such cases atm, so it is unhandled for now.
-                throw new Error(
-                  `removed export ${exported} has different local name: ${spec.local.name}`
-                )
+                continue
               }
               const next = node.specifiers[i + 1]
               if (next) {
@@ -181,11 +196,22 @@ function patchTypes(pkg) {
                 // @ts-ignore
                 s.remove(prev ? prev.end : spec.start, spec.end)
               }
+              removed++
             }
+          }
+          if (removed === node.specifiers.length) {
+            // @ts-ignore
+            s.remove(node.start, node.end)
           }
         }
       }
       code = s.toString()
+
+      if (/@internal/.test(code)) {
+        throw new Error(
+          `unhandled @internal declarations detected in ${chunk.fileName}.`
+        )
+      }
 
       // append pkg specific types
       const additionalTypeDir = `packages/${pkg}/types`

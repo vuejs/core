@@ -133,7 +133,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(bindings).toStrictEqual({
       myEmit: BindingTypes.SETUP_CONST
     })
-    // should remove defineOptions import and call
+    // should remove defineEmits import and call
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
     expect(content).toMatch(
@@ -205,10 +205,10 @@ const myEmit = defineEmits(['foo', 'bar'])
   describe('defineOptions()', () => {
     test('basic usage', () => {
       const { content } = compile(`
-<script setup>
-defineOptions({ name: 'FooApp' })
-</script>
-  `)
+        <script setup>
+        defineOptions({ name: 'FooApp' })
+        </script>
+      `)
       assertCode(content)
       // should remove defineOptions import and call
       expect(content).not.toMatch('defineOptions')
@@ -216,6 +216,18 @@ defineOptions({ name: 'FooApp' })
       expect(content).toMatch(
         `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `
       )
+    })
+
+    test('empty argument', () => {
+      const { content } = compile(`
+        <script setup>
+        defineOptions()
+        </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`export default {`)
+      // should remove defineOptions import and call
+      expect(content).not.toMatch('defineOptions')
     })
 
     it('should emit an error with two defineProps', () => {
@@ -249,6 +261,26 @@ defineOptions({ name: 'FooApp' })
       ).toThrowError(
         '[@vue/compiler-sfc] defineOptions() cannot be used to declare emits. Use defineEmits() instead.'
       )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ expose: ['foo'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare expose. Use defineExpose() instead.'
+      )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ slots: ['foo'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare slots. Use defineSlots() instead.'
+      )
     })
 
     it('should emit an error with type generic', () => {
@@ -260,6 +292,18 @@ defineOptions({ name: 'FooApp' })
         `)
       ).toThrowError(
         '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
+      )
+    })
+
+    it('should emit an error with type assertion', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        defineOptions({ props: [] } as any)
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead.'
       )
     })
   })
@@ -1378,6 +1422,29 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    test('withDefaults (reference)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      import { defaults } from './foo'
+      const props = withDefaults(defineProps<{
+        foo?: string
+        bar?: number
+        baz: boolean
+      }>(), defaults)
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: String, required: false },
+    bar: { type: Number, required: false },
+    baz: { type: Boolean, required: true }
+  }, defaults)`.trim()
+      )
+    })
+
     // #7111
     test('withDefaults (dynamic) w/ production mode', () => {
       const { content } = compile(
@@ -1407,6 +1474,28 @@ const emit = defineEmits(['a', 'b'])
       )
     })
 
+    test('withDefaults w/ dynamic object method', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const props = withDefaults(defineProps<{
+        foo?: () => 'string'
+      }>(), {
+        ['fo' + 'o']() { return 'foo' }
+      })
+      </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+      expect(content).toMatch(
+        `
+  _mergeDefaults({
+    foo: { type: Function, required: false }
+  }, {
+        ['fo' + 'o']() { return 'foo' }
+      })`.trim()
+      )
+    })
+
     test('defineEmits w/ type', () => {
       const { content } = compile(`
       <script setup lang="ts">
@@ -1414,7 +1503,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1437,7 +1525,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: (${type}),`)
       expect(content).toMatch(`emits: ["foo", "bar", "baz"]`)
     })
 
@@ -1449,7 +1536,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1461,7 +1547,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1475,7 +1560,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1487,7 +1571,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1499,7 +1582,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ({ (e: 'foo' | 'bar'): void }),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1511,7 +1593,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1523,7 +1604,6 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`emit: ((e: 'foo' | 'bar') => void),`)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
     })
 
@@ -1536,8 +1616,56 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       assertCode(content)
-      expect(content).toMatch(`setup(__props, { expose: __expose, emit }) {`)
       expect(content).toMatch(`emits: ['foo']`)
+    })
+
+    test('defineEmits w/ type (property syntax)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const emit = defineEmits<{ foo: [], bar: [] }>()
+      </script>
+      `)
+      expect(content).toMatch(`emits: ["foo", "bar"]`)
+      assertCode(content)
+    })
+
+    describe('defineSlots()', () => {
+      test('basic usage', () => {
+        const { content } = compile(`
+          <script setup lang="ts">
+          const slots = defineSlots<{
+            default: { msg: string }
+          }>()
+          </script>
+        `)
+        assertCode(content)
+        expect(content).toMatch(`const slots = _useSlots()`)
+        expect(content).not.toMatch('defineSlots')
+      })
+
+      test('w/o return value', () => {
+        const { content } = compile(`
+          <script setup lang="ts">
+          defineSlots<{
+            default: { msg: string }
+          }>()
+          </script>
+        `)
+        assertCode(content)
+        expect(content).not.toMatch('defineSlots')
+        expect(content).not.toMatch(`_useSlots`)
+      })
+
+      test('w/o generic params', () => {
+        const { content } = compile(`
+          <script setup>
+          const slots = defineSlots()
+          </script>
+        `)
+        assertCode(content)
+        expect(content).toMatch(`const slots = _useSlots()`)
+        expect(content).not.toMatch('defineSlots')
+      })
     })
 
     test('runtime Enum', () => {
@@ -1871,6 +1999,19 @@ const emit = defineEmits(['a', 'b'])
         </script>`).content
       )
     })
+
+    test('mixed usage of property / call signature in defineEmits', () => {
+      expect(() =>
+        compile(`<script setup lang="ts">
+        defineEmits<{
+          foo: []
+          (e: 'hi'): void
+        }>()
+        </script>`)
+      ).toThrow(
+        `defineEmits() type cannot mixed call signature and property syntax.`
+      )
+    })
   })
 })
 
@@ -2188,5 +2329,124 @@ describe('SFC analyze <script> bindings', () => {
       expect(content).toMatch(`name: 'Baz'`)
       assertCode(content)
     })
+  })
+})
+
+describe('SFC genDefaultAs', () => {
+  test('normal <script> only', () => {
+    const { content } = compile(
+      `<script>
+      export default {}
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(`const _sfc_ = {}`)
+    assertCode(content)
+  })
+
+  test('normal <script> w/ cssVars', () => {
+    const { content } = compile(
+      `<script>
+      export default {}
+      </script>
+      <style>
+      .foo { color: v-bind(x) }
+      </style>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).not.toMatch('__default__')
+    expect(content).toMatch(`const _sfc_ = {}`)
+    assertCode(content)
+  })
+
+  test('<script> + <script setup>', () => {
+    const { content } = compile(
+      `<script>
+      export default {}
+      </script>
+      <script setup>
+      const a = 1
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(
+      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`
+    )
+    assertCode(content)
+  })
+
+  test('<script> + <script setup>', () => {
+    const { content } = compile(
+      `<script>
+      export default {}
+      </script>
+      <script setup>
+      const a = 1
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(
+      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`
+    )
+    assertCode(content)
+  })
+
+  test('<script setup> only', () => {
+    const { content } = compile(
+      `<script setup>
+      const a = 1
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(`const _sfc_ = {\n  setup`)
+    assertCode(content)
+  })
+
+  test('<script setup> only w/ ts', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const a = 1
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(`const _sfc_ = /*#__PURE__*/_defineComponent(`)
+    assertCode(content)
+  })
+
+  test('<script> + <script setup> w/ ts', () => {
+    const { content } = compile(
+      `<script lang="ts">
+      export default {}
+      </script>
+      <script setup lang="ts">
+      const a = 1
+      </script>`,
+      {
+        genDefaultAs: '_sfc_'
+      }
+    )
+    expect(content).not.toMatch('export default')
+    expect(content).toMatch(
+      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`
+    )
+    assertCode(content)
   })
 })

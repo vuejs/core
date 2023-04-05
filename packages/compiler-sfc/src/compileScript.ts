@@ -45,7 +45,6 @@ import {
   ObjectMethod,
   LVal,
   Expression,
-  VariableDeclaration,
   TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -54,13 +53,13 @@ import {
   CSS_VARS_HELPER,
   genCssVarsCode,
   genNormalScriptCssVarsCode
-} from './cssVars'
+} from './style/cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
-import { transformDestructuredProps } from './compileScriptPropsDestructure'
+import { transformDestructuredProps } from './script/propsDestructure'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -68,9 +67,7 @@ const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const WITH_DEFAULTS = 'withDefaults'
 const DEFINE_OPTIONS = 'defineOptions'
-
-// constants
-const DEFAULT_VAR = `__default__`
+const DEFINE_SLOTS = 'defineSlots'
 
 const isBuiltInDir = makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
@@ -110,6 +107,12 @@ export interface SFCScriptCompileOptions {
    * from being hot-reloaded separately from component state.
    */
   inlineTemplate?: boolean
+  /**
+   * Generate the final component as a variable instead of default export.
+   * This is useful in e.g. @vitejs/plugin-vue where the script needs to be
+   * placed inside the main module.
+   */
+  genDefaultAs?: string
   /**
    * Options for template compilation when inlining. Note these are options that
    * would normally be passed to `compiler-sfc`'s own `compileTemplate()`, not
@@ -159,7 +162,7 @@ export function compileScript(
 ): SFCScriptBlock {
   let { script, scriptSetup, source, filename } = sfc
   // feature flags
-  // TODO remove support for deprecated options when out of experimental
+  // TODO remove in 3.4
   const enableReactivityTransform = !!options.reactivityTransform
   const isProd = !!options.isProd
   const genSourceMap = options.sourceMap !== false
@@ -178,6 +181,10 @@ export function compileScript(
   const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const genDefaultAs = options.genDefaultAs
+    ? `const ${options.genDefaultAs} =`
+    : `export default`
+  const normalScriptDefaultVar = `__default__`
   const isJS =
     scriptLang === 'js' ||
     scriptLang === 'jsx' ||
@@ -216,6 +223,7 @@ export function compileScript(
       // do not process non js/ts script blocks
       return script
     }
+    // normal <script> only
     try {
       let content = script.content
       let map = script.map
@@ -247,17 +255,23 @@ export function compileScript(
           }) as unknown as RawSourceMap
         }
       }
-      if (cssVars.length) {
+      if (cssVars.length || options.genDefaultAs) {
+        const defaultVar = options.genDefaultAs || normalScriptDefaultVar
         const s = new MagicString(content)
-        rewriteDefaultAST(scriptAst.body, s, DEFAULT_VAR)
+        rewriteDefaultAST(scriptAst.body, s, defaultVar)
         content = s.toString()
-        content += genNormalScriptCssVarsCode(
-          cssVars,
-          bindings,
-          scopeId,
-          isProd
-        )
-        content += `\nexport default ${DEFAULT_VAR}`
+        if (cssVars.length) {
+          content += genNormalScriptCssVarsCode(
+            cssVars,
+            bindings,
+            scopeId,
+            isProd,
+            defaultVar
+          )
+        }
+        if (!options.genDefaultAs) {
+          content += `\nexport default ${defaultVar}`
+        }
       }
       return {
         ...script,
@@ -299,8 +313,9 @@ export function compileScript(
   let hasDefaultExportName = false
   let hasDefaultExportRender = false
   let hasDefineOptionsCall = false
+  let hasDefineSlotsCall = false
   let propsRuntimeDecl: Node | undefined
-  let propsRuntimeDefaults: ObjectExpression | undefined
+  let propsRuntimeDefaults: Node | undefined
   let propsDestructureDecl: Node | undefined
   let propsDestructureRestId: string | undefined
   let propsTypeDecl: PropsDeclType | undefined
@@ -308,7 +323,6 @@ export function compileScript(
   let propsIdentifier: string | undefined
   let emitsRuntimeDecl: Node | undefined
   let emitsTypeDecl: EmitsDeclType | undefined
-  let emitsTypeDeclRaw: Node | undefined
   let emitIdentifier: string | undefined
   let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
@@ -503,19 +517,10 @@ export function compileScript(
     return true
   }
 
-  function processWithDefaults(
-    node: Node,
-    declId?: LVal,
-    declKind?: VariableDeclaration['kind']
-  ): boolean {
+  function processWithDefaults(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, WITH_DEFAULTS)) {
       return false
     }
-    warnOnce(
-      `withDefaults() has been deprecated. ` +
-        `Props destructure is now reactive by default - ` +
-        `use destructure with default values instead.`
-    )
     if (processDefineProps(node.arguments[0], declId)) {
       if (propsRuntimeDecl) {
         error(
@@ -531,15 +536,9 @@ export function compileScript(
           node.callee
         )
       }
-      propsRuntimeDefaults = node.arguments[1] as ObjectExpression
-      if (
-        !propsRuntimeDefaults ||
-        propsRuntimeDefaults.type !== 'ObjectExpression'
-      ) {
-        error(
-          `The 2nd argument of ${WITH_DEFAULTS} must be an object literal.`,
-          propsRuntimeDefaults || node
-        )
+      propsRuntimeDefaults = node.arguments[1]
+      if (!propsRuntimeDefaults) {
+        error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
       }
     } else {
       error(
@@ -568,7 +567,7 @@ export function compileScript(
         )
       }
 
-      emitsTypeDeclRaw = node.typeParameters.params[0]
+      const emitsTypeDeclRaw = node.typeParameters.params[0]
       emitsTypeDecl = resolveQualifiedType(
         emitsTypeDeclRaw,
         node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
@@ -588,6 +587,30 @@ export function compileScript(
         declId.type === 'Identifier'
           ? declId.name
           : scriptSetup!.content.slice(declId.start!, declId.end!)
+    }
+
+    return true
+  }
+
+  function processDefineSlots(node: Node, declId?: LVal): boolean {
+    if (!isCallOf(node, DEFINE_SLOTS)) {
+      return false
+    }
+    if (hasDefineSlotsCall) {
+      error(`duplicate ${DEFINE_SLOTS}() call`, node)
+    }
+    hasDefineSlotsCall = true
+
+    if (node.arguments.length > 0) {
+      error(`${DEFINE_SLOTS}() cannot accept arguments`, node)
+    }
+
+    if (declId) {
+      s.overwrite(
+        startOffset + node.start!,
+        startOffset + node.end!,
+        `${helper('useSlots')}()`
+      )
     }
 
     return true
@@ -679,13 +702,15 @@ export function compileScript(
     if (node.typeParameters) {
       error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
     }
+    if (!node.arguments[0]) return true
 
     hasDefineOptionsCall = true
-    optionsRuntimeDecl = node.arguments[0]
+    optionsRuntimeDecl = unwrapTSNode(node.arguments[0])
 
     let propsOption = undefined
     let emitsOption = undefined
     let exposeOption = undefined
+    let slotsOption = undefined
     if (optionsRuntimeDecl.type === 'ObjectExpression') {
       for (const prop of optionsRuntimeDecl.properties) {
         if (
@@ -695,6 +720,7 @@ export function compileScript(
           if (prop.key.name === 'props') propsOption = prop
           if (prop.key.name === 'emits') emitsOption = prop
           if (prop.key.name === 'expose') exposeOption = prop
+          if (prop.key.name === 'slots') slotsOption = prop
         }
       }
     }
@@ -715,6 +741,12 @@ export function compileScript(
       error(
         `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
         exposeOption
+      )
+    }
+    if (slotsOption) {
+      error(
+        `${DEFINE_OPTIONS}() cannot be used to declare slots. Use ${DEFINE_SLOTS}() instead.`,
+        slotsOption
       )
     }
 
@@ -845,9 +877,8 @@ export function compileScript(
       propsRuntimeDefaults.type === 'ObjectExpression' &&
       propsRuntimeDefaults.properties.every(
         node =>
-          (node.type === 'ObjectProperty' &&
-            (!node.computed || node.key.type.endsWith('Literal'))) ||
-          node.type === 'ObjectMethod'
+          node.type !== 'SpreadElement' &&
+          (!node.computed || node.key.type.endsWith('Literal'))
       )
     )
   }
@@ -869,7 +900,9 @@ export function compileScript(
             destructured.needSkipFactory ? `, skipFactory: true` : ``
           }`
         } else if (hasStaticDefaults) {
-          const prop = propsRuntimeDefaults!.properties.find(node => {
+          const prop = (
+            propsRuntimeDefaults as ObjectExpression
+          ).properties.find(node => {
             if (node.type === 'SpreadElement') return false
             return resolveObjectKey(node.key, node.computed) === key
           }) as ObjectProperty | ObjectMethod
@@ -1001,7 +1034,7 @@ export function compileScript(
           m.key.type === 'Identifier'
         ) {
           if (
-            propsRuntimeDefaults!.properties.some(p => {
+            (propsRuntimeDefaults as ObjectExpression).properties.some(p => {
               if (p.type === 'SpreadElement') return false
               return (
                 resolveObjectKey(p.key, p.computed) ===
@@ -1192,7 +1225,7 @@ export function compileScript(
         // export default { ... } --> const __default__ = { ... }
         const start = node.start! + scriptStartOffset!
         const end = node.declaration.start! + scriptStartOffset!
-        s.overwrite(start, end, `const ${DEFAULT_VAR} = `)
+        s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
           s => s.exported.type === 'Identifier' && s.exported.name === 'default'
@@ -1216,14 +1249,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${DEFAULT_VAR} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
             s.appendLeft(
               scriptEndOffset!,
-              `\nconst ${DEFAULT_VAR} = ${defaultSpecifier.local.name}\n`
+              `\nconst ${normalScriptDefaultVar} = ${defaultSpecifier.local.name}\n`
             )
           }
         }
@@ -1291,7 +1324,8 @@ export function compileScript(
         processDefineProps(expr) ||
         processDefineEmits(expr) ||
         processDefineOptions(expr) ||
-        processWithDefaults(expr)
+        processWithDefaults(expr) ||
+        processDefineSlots(expr)
       ) {
         s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(expr)) {
@@ -1324,8 +1358,11 @@ export function compileScript(
           // defineProps / defineEmits
           const isDefineProps =
             processDefineProps(init, decl.id) ||
-            processWithDefaults(init, decl.id, node.kind)
-          const isDefineEmits = processDefineEmits(init, decl.id)
+            processWithDefaults(init, decl.id)
+          const isDefineEmits =
+            !isDefineProps && processDefineEmits(init, decl.id)
+          !isDefineEmits && processDefineSlots(init, decl.id)
+
           if (isDefineProps || isDefineEmits) {
             if (left === 1) {
               s.remove(node.start! + startOffset, node.end! + startOffset)
@@ -1447,7 +1484,7 @@ export function compileScript(
       startOffset,
       propsDestructuredBindings,
       error,
-      vueImportAliases.watch
+      vueImportAliases
     )
   }
 
@@ -1475,7 +1512,7 @@ export function compileScript(
     extractRuntimeProps(propsTypeDecl, typeDeclaredProps, declaredTypes)
   }
   if (emitsTypeDecl) {
-    extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits)
+    extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits, error)
   }
 
   // 5. check macro args to make sure it doesn't reference setup scope
@@ -1612,15 +1649,6 @@ export function compileScript(
   }
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
-    if (emitsTypeDecl) {
-      const content = emitsTypeDecl.__fromNormalScript
-        ? script!.content
-        : scriptSetup.content
-      args += `: { emit: (${content.slice(
-        emitsTypeDecl.start!,
-        emitsTypeDecl.end!
-      )}), expose: any, slots: any, attrs: any }`
-    }
   }
 
   // 10. generate return statement
@@ -1799,11 +1827,11 @@ export function compileScript(
     // user's TS setting should compile it down to proper targets
     // export default defineComponent({ ...__default__, ... })
     const def =
-      (defaultExport ? `\n  ...${DEFAULT_VAR},` : ``) +
+      (defaultExport ? `\n  ...${normalScriptDefaultVar},` : ``) +
       (definedOptions ? `\n  ...${definedOptions},` : '')
     s.prependLeft(
       startOffset,
-      `\nexport default /*#__PURE__*/${helper(
+      `\n${genDefaultAs} /*#__PURE__*/${helper(
         `defineComponent`
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
@@ -1816,8 +1844,8 @@ export function compileScript(
       // export default Object.assign(__default__, { ... })
       s.prependLeft(
         startOffset,
-        `\nexport default /*#__PURE__*/Object.assign(${
-          defaultExport ? `${DEFAULT_VAR}, ` : ''
+        `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
+          defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
@@ -1825,7 +1853,7 @@ export function compileScript(
     } else {
       s.prependLeft(
         startOffset,
-        `\nexport default {${runtimeOptions}\n  ` +
+        `\n${genDefaultAs} {${runtimeOptions}\n  ` +
           `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
       )
       s.appendRight(endOffset, `}`)
@@ -1845,7 +1873,6 @@ export function compileScript(
 
   return {
     ...scriptSetup,
-    s,
     bindings: bindingMetadata,
     imports: userImports,
     content: s.toString(),
@@ -2136,7 +2163,7 @@ function inferRuntimeType(
         case 'BigIntLiteral':
           return ['Number']
         default:
-          return [`UNKNOWN`]
+          return [UNKNOWN_TYPE]
       }
 
     case 'TSTypeReference':
@@ -2184,6 +2211,7 @@ function inferRuntimeType(
                 declaredTypes
               ).filter(t => t !== 'null')
             }
+            break
           case 'Extract':
             if (node.typeParameters && node.typeParameters.params[1]) {
               return inferRuntimeType(
@@ -2191,6 +2219,7 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
+            break
           case 'Exclude':
           case 'OmitThisParameter':
             if (node.typeParameters && node.typeParameters.params[0]) {
@@ -2199,9 +2228,10 @@ function inferRuntimeType(
                 declaredTypes
               )
             }
-          // cannot infer, fallback to UNKNOWN: ThisParameterType
+            break
         }
       }
+      // cannot infer, fallback to UNKNOWN: ThisParameterType
       return [UNKNOWN_TYPE]
 
     case 'TSParenthesizedType':
@@ -2280,14 +2310,31 @@ function inferValueType(node: Node): string | undefined {
 
 function extractRuntimeEmits(
   node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
-  emits: Set<string>
+  emits: Set<string>,
+  error: (msg: string, node: Node) => never
 ) {
   if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
     const members = node.type === 'TSTypeLiteral' ? node.members : node.body
+    let hasCallSignature = false
+    let hasProperty = false
     for (let t of members) {
       if (t.type === 'TSCallSignatureDeclaration') {
         extractEventNames(t.parameters[0], emits)
+        hasCallSignature = true
       }
+      if (t.type === 'TSPropertySignature') {
+        if (t.key.type !== 'Identifier' || t.computed) {
+          error(`defineEmits() type cannot use computed keys.`, t.key)
+        }
+        emits.add(t.key.name)
+        hasProperty = true
+      }
+    }
+    if (hasCallSignature && hasProperty) {
+      error(
+        `defineEmits() type cannot mixed call signature and property syntax.`,
+        node
+      )
     }
     return
   } else {
