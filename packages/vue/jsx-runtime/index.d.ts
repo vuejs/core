@@ -1,17 +1,9 @@
-import { VNode, VNodeRef } from '@vue/runtime-dom'
-import { IntrinsicElementAttributes } from './dom'
-
-export type ReservedProps = {
-  key?: string | number | symbol
-  ref?: VNodeRef
-  ref_for?: boolean
-  ref_key?: string
-}
-
-export type NativeElements = {
-  [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
-    ReservedProps
-}
+import type {
+  VNode,
+  IntrinsicElementAttributes,
+  ReservedProps,
+  NativeElements
+} from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive

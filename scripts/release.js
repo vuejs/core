@@ -213,14 +213,16 @@ async function main() {
   await run(`pnpm`, ['run', 'changelog'])
 
   // @ts-ignore
-  const { yes: changelogOk } = await prompt({
-    type: 'confirm',
-    name: 'yes',
-    message: `Changelog generated. Does it look good?`
-  })
+  if (!skipPrompts) {
+    const { yes: changelogOk } = await prompt({
+      type: 'confirm',
+      name: 'yes',
+      message: `Changelog generated. Does it look good?`
+    })
 
-  if (!changelogOk) {
-    return
+    if (!changelogOk) {
+      return
+    }
   }
 
   // update pnpm-lock.yaml
@@ -377,4 +379,5 @@ async function publishPackage(pkgName, version) {
 main().catch(err => {
   updateVersions(currentVersion)
   console.error(err)
+  process.exit(1)
 })
