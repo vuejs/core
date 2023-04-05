@@ -1039,10 +1039,10 @@ export function compileScript(
         if (runtimeType && isProd && !options) {
           decl = runtimeType
         } else {
-          const defaultOptions: string[] = []
-          if (runtimeType) defaultOptions.push(`type: ${runtimeType}`)
-          if (!isProd) defaultOptions.push('required: true')
-          decl = defaultOptions.join(', ')
+          const pairs: string[] = []
+          if (runtimeType) pairs.push(`type: ${runtimeType}`)
+          if (!isProd) pairs.push('required: true')
+          decl = pairs.join(', ')
 
           if (decl && options) {
             decl = isTS
