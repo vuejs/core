@@ -77,6 +77,7 @@ export {
   // internal
   mergeDefaults,
   mergeModelsOptions,
+  addRequiredToModels,
   createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'

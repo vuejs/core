@@ -401,8 +401,8 @@ export function mergeDefaults(
 }
 
 /**
- * Runtime helper for merging model declarations. Imported by compiled code
- * only.
+ * Runtime helper for merging model declarations.
+ * Imported by compiled code only.
  * @internal
  */
 export function mergeModelsOptions(
@@ -412,6 +412,21 @@ export function mergeModelsOptions(
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
   return Object.assign({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
+}
+
+/**
+ * Runtime helper for adding required to model declarations.
+ * Imported by compiled code only.
+ * @internal
+ */
+export function addRequiredToModels(options: ComponentObjectPropsOptions) {
+  for (const key in options) {
+    if (!('required' in options[key]!) && !('default' in options[key]!)) {
+      ;(options[key] as any).required = true
+    }
+  }
+
+  return options
 }
 
 /**

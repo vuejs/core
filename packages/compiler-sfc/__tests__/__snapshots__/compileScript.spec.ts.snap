@@ -654,13 +654,13 @@ return {  }
 `;
 
 exports[`SFC compile <script setup> > defineModel() > basic usage 1`] = `
-"import { useModel as _useModel } from 'vue'
+"import { useModel as _useModel, addRequiredToModels as _addRequiredToModels } from 'vue'
 
 export default {
-  props: {
-    \\"modelValue\\": Object.assign({ required: true }, { required: true }),
-    \\"count\\": { required: true },
-  },
+  props: _addRequiredToModels({
+    \\"modelValue\\": { required: true },
+    \\"count\\": {},
+  }),
   emits: [\\"update:modelValue\\", \\"update:count\\"],
   setup(__props, { expose: __expose }) {
   __expose();
@@ -675,12 +675,12 @@ return { modelValue, c }
 `;
 
 exports[`SFC compile <script setup> > defineModel() > w/ array props 1`] = `
-"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+"import { useModel as _useModel, addRequiredToModels as _addRequiredToModels, mergeModels as _mergeModels } from 'vue'
 
 export default {
-  props: _mergeModels(['foo', 'bar'], {
-    \\"count\\": { required: true },
-  }),
+  props: _mergeModels(['foo', 'bar'], _addRequiredToModels({
+    \\"count\\": {},
+  })),
   emits: [\\"update:count\\"],
   setup(__props, { expose: __expose }) {
   __expose();
@@ -695,12 +695,12 @@ return { count }
 `;
 
 exports[`SFC compile <script setup> > defineModel() > w/ defineProps and defineEmits 1`] = `
-"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+"import { useModel as _useModel, addRequiredToModels as _addRequiredToModels, mergeModels as _mergeModels } from 'vue'
 
 export default {
-  props: _mergeModels({ foo: String }, {
-    \\"modelValue\\": Object.assign({ required: true }, { default: 0 }),
-  }),
+  props: _mergeModels({ foo: String }, _addRequiredToModels({
+    \\"modelValue\\": { default: 0 },
+  })),
   emits: _mergeModels(['change'], [\\"update:modelValue\\"]),
   setup(__props, { expose: __expose }) {
   __expose();
@@ -1643,14 +1643,14 @@ return { emit }
 `;
 
 exports[`SFC compile <script setup> > with TypeScript > defineModel() > basic usage 1`] = `
-"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+"import { useModel as _useModel, addRequiredToModels as _addRequiredToModels, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  props: {
-    \\"modelValue\\": { type: [Boolean, String], required: true },
-    \\"count\\": { type: Number, required: true },
-    \\"disabled\\": { type: Number, required: true, ...{ required: false } },
-  },
+  props: _addRequiredToModels({
+    \\"modelValue\\": { type: [Boolean, String] },
+    \\"count\\": { type: Number },
+    \\"disabled\\": { type: Number, ...{ required: false } },
+  }),
   emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:disabled\\"],
   setup(__props, { expose: __expose }) {
   __expose();
@@ -1666,16 +1666,16 @@ return { modelValue, count, disabled }
 `;
 
 exports[`SFC compile <script setup> > with TypeScript > defineModel() > w/ production mode 1`] = `
-"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+"import { useModel as _useModel, addRequiredToModels as _addRequiredToModels, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  props: {
+  props: _addRequiredToModels({
     \\"modelValue\\": Boolean,
-    \\"fn\\": {  },
+    \\"fn\\": {},
     \\"fnWithDefault\\": { type: Function, ...{ default: () => null } },
-    \\"str\\": {  },
+    \\"str\\": {},
     \\"optional\\": { required: false },
-  },
+  }),
   emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:fnWithDefault\\", \\"update:str\\", \\"update:optional\\"],
   setup(__props, { expose: __expose }) {
   __expose();

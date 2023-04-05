@@ -377,10 +377,9 @@ defineExpose({ foo: 123 })
         { defineModel: true }
       )
       assertCode(content)
-      expect(content).toMatch(
-        '"modelValue": Object.assign({ required: true }, { required: true }),'
-      )
-      expect(content).toMatch('"count": { required: true },')
+      expect(content).toMatch('props: _addRequiredToModels({')
+      expect(content).toMatch('"modelValue": { required: true },')
+      expect(content).toMatch('"count": {},')
       expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
       expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
       expect(content).toMatch(`const c = _useModel("count")`)
@@ -407,9 +406,7 @@ defineExpose({ foo: 123 })
       )
       assertCode(content)
       expect(content).toMatch(`props: _mergeModels({ foo: String }`)
-      expect(content).toMatch(
-        `"modelValue": Object.assign({ required: true }, { default: 0 })`
-      )
+      expect(content).toMatch(`"modelValue": { default: 0 }`)
       expect(content).toMatch(`const count = _useModel("modelValue")`)
       expect(content).not.toMatch('defineModel')
       expect(bindings).toStrictEqual({
@@ -430,8 +427,10 @@ defineExpose({ foo: 123 })
         { defineModel: true }
       )
       assertCode(content)
-      expect(content).toMatch(`_mergeModels(['foo', 'bar'], {`)
-      expect(content).toMatch(`"count": { required: true }`)
+      expect(content)
+        .toMatch(`props: _mergeModels(['foo', 'bar'], _addRequiredToModels({
+    "count": {},
+  }))`)
       expect(content).toMatch(`const count = _useModel("count")`)
       expect(content).not.toMatch('defineModel')
       expect(bindings).toStrictEqual({
@@ -1800,12 +1799,10 @@ const emit = defineEmits(['a', 'b'])
           { defineModel: true }
         )
         assertCode(content)
+        expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
+        expect(content).toMatch('"count": { type: Number }')
         expect(content).toMatch(
-          '"modelValue": { type: [Boolean, String], required: true }'
-        )
-        expect(content).toMatch('"count": { type: Number, required: true }')
-        expect(content).toMatch(
-          '"disabled": { type: Number, required: true, ...{ required: false } },'
+          '"disabled": { type: Number, ...{ required: false } },'
         )
         expect(content).toMatch(
           'emits: ["update:modelValue", "update:count", "update:disabled"]'
@@ -1838,11 +1835,11 @@ const emit = defineEmits(['a', 'b'])
         )
         assertCode(content)
         expect(content).toMatch('"modelValue": Boolean')
-        expect(content).toMatch('"fn": {  }')
+        expect(content).toMatch('"fn": {}')
         expect(content).toMatch(
           '"fnWithDefault": { type: Function, ...{ default: () => null } },'
         )
-        expect(content).toMatch('"str": {  }')
+        expect(content).toMatch('"str": {}')
         expect(content).toMatch('"optional": { required: false }')
         expect(content).toMatch(
           'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]'

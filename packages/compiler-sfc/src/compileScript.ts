@@ -127,7 +127,7 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (Experimental) Enable macro `defineModel`
+   * (**Experimental**) Enable macro `defineModel`
    */
   defineModel?: boolean
 }
@@ -1032,34 +1032,28 @@ export function compileScript(
             el => el === 'Boolean' || (el === 'Function' && options)
           )
         }
-        const runtimeType =
+        let runtimeType =
           (runtimeTypes &&
             runtimeTypes.length > 0 &&
             toRuntimeTypeString(runtimeTypes)) ||
           undefined
 
         let decl: string
-
         if (runtimeType && isProd && !options) {
           decl = runtimeType
         } else {
-          const pairs: string[] = []
-          if (runtimeType) pairs.push(`type: ${runtimeType}`)
-          if (!isProd) pairs.push('required: true')
-          decl = pairs.join(', ')
-
-          if (decl && options) {
+          if (runtimeType) runtimeType = `type: ${runtimeType}`
+          if (runtimeType && options) {
             decl = isTS
-              ? `{ ${decl}, ...${options} }`
-              : `Object.assign({ ${decl} }, ${options})`
+              ? `{ ${runtimeType}, ...${options} }`
+              : `Object.assign({ ${runtimeType} }, ${options})`
           } else {
-            decl = options || `{ ${decl} }`
+            decl = options || (runtimeType ? `{ ${runtimeType} }` : '{}')
           }
         }
-
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }
-      return `{${modelPropsDecl}\n  }`
+      return `${helper('addRequiredToModels')}({${modelPropsDecl}\n  })`
     }
 
     let propsDecls: undefined | string

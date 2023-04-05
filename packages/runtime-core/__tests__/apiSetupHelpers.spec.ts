@@ -28,7 +28,8 @@ import {
   withAsyncContext,
   createPropsRestProxy,
   mergeModelsOptions,
-  useModel
+  useModel,
+  addRequiredToModels
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -178,24 +179,40 @@ describe('SFC <script setup> helpers', () => {
     })
   })
 
+  test('addRequiredToModels', () => {
+    expect(
+      addRequiredToModels({
+        foo: {},
+        bar: { required: false },
+        baz: { default: 1 },
+        qux: { required: false, default: 1 },
+        quux: { type: String }
+      })
+    ).toStrictEqual({
+      foo: { required: true },
+      bar: { required: false },
+      baz: { default: 1 },
+      qux: { required: false, default: 1 },
+      quux: { type: String, required: true }
+    })
+  })
+
   describe('useModel', () => {
     test('basic', async () => {
-      let proxy: any
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
       const Comp = defineComponent({
         props: {
           modelValue: { required: true }
         },
         emits: ['update:modelValue'],
         setup() {
-          const foo = useModel<string>('modelValue')
-          const update = () => {
-            foo.value = 'bar'
-          }
-          return { foo, update }
+          foo = useModel<string>('modelValue')
         },
-        render() {
-          proxy = this
-        }
+        render() {}
       })
 
       const msg = ref('')
@@ -208,16 +225,19 @@ describe('SFC <script setup> helpers', () => {
         })
       ).mount(root)
 
-      expect(proxy.foo).toBe('')
+      // it's a ComputedRef, so not passive
+      expect(foo.effect).not.toBeUndefined()
+
+      expect(foo.value).toBe('')
       expect(msg.value).toBe('')
       expect(setValue).not.toBeCalled()
 
       // update from child
-      proxy.update()
+      update()
 
       await nextTick()
       expect(msg.value).toBe('bar')
-      expect(proxy.foo).toBe('bar')
+      expect(foo.value).toBe('bar')
       expect(setValue).toBeCalledTimes(1)
 
       // update from parent
@@ -225,65 +245,66 @@ describe('SFC <script setup> helpers', () => {
 
       await nextTick()
       expect(msg.value).toBe('qux')
-      expect(proxy.foo).toBe('qux')
+      expect(foo.value).toBe('qux')
       expect(setValue).toBeCalledTimes(1)
     })
 
     test('optional', async () => {
-      let proxy: any
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
       const Comp = defineComponent({
         props: ['foo'],
         emits: ['update:foo'],
         setup() {
-          const foo = useModel<string>('foo')
-          const update = () => {
-            foo.value = 'bar'
-          }
-          return { foo, update }
+          foo = useModel<string>('foo')
         },
-        render() {
-          proxy = this
-        }
+        render() {}
       })
 
       const root = nodeOps.createElement('div')
       const updateFoo = vi.fn()
       render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
 
-      expect(proxy.foo).toBeUndefined()
-      proxy.update()
+      // it's a ComputedRef, so it's passive
+      expect(foo.effect).toBeUndefined()
 
-      expect(proxy.foo).toBe('bar')
+      expect(foo.value).toBeUndefined()
+      update()
+
+      expect(foo.value).toBe('bar')
 
       await nextTick()
       expect(updateFoo).toBeCalledTimes(1)
     })
 
     test('default value', async () => {
-      let proxy: any
+      let count: any
+      const inc = () => {
+        count.value++
+      }
       const Comp = defineComponent({
         props: { count: { default: 0 } },
         emits: ['update:count'],
         setup() {
-          const count = useModel<number>('count')
-          const inc = () => {
-            count.value++
-          }
-          return { count, inc }
+          count = useModel<number>('count')
         },
-        render() {
-          proxy = this
-        }
+        render() {}
       })
 
       const root = nodeOps.createElement('div')
       const updateCount = vi.fn()
       render(h(Comp, { 'onUpdate:count': updateCount }), root)
 
-      expect(proxy.count).toBe(0)
+      // it's a ComputedRef, so it's passive
+      expect(count.effect).toBeUndefined()
 
-      proxy.inc()
-      expect(proxy.count).toBe(1)
+      expect(count.value).toBe(0)
+
+      inc()
+      expect(count.value).toBe(1)
       await nextTick()
       expect(updateCount).toBeCalledTimes(1)
     })
