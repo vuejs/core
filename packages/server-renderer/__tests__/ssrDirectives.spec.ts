@@ -10,7 +10,8 @@ import {
   vModelDynamic,
   resolveDirective,
   mergeProps,
-  ref
+  ref,
+  unref
 } from 'vue'
 import { ssrGetDirectiveProps, ssrRenderAttrs } from '../src'
 
@@ -548,13 +549,10 @@ describe('ssr: directives', () => {
           })
           return __returned__
         },
-        ssrRender(_ctx, _push, _parent, _attrs, $props, $setup) {
+        ssrRender(_ctx, _push, _parent, _attrs) {
           _push(
             `<div${ssrRenderAttrs(
-              mergeProps(
-                _attrs!,
-                ssrGetDirectiveProps(_ctx, $setup['vTest'] as any)
-              )
+              mergeProps(_attrs!, ssrGetDirectiveProps(_ctx, unref(vTest)))
             )}></div>`
           )
         }
