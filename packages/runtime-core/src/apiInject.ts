@@ -3,7 +3,6 @@ import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
-import { ComponentPublicInstance } from './componentPublicInstance'
 
 export interface InjectionKey<T> extends Symbol {}
 
@@ -46,28 +45,26 @@ export function inject(
   treatDefaultAsFactory = false
 ) {
   // fallback to `currentRenderingInstance` so that this can be called in
-  // a functional component and to currentApp so it can be called within `app.runWithContext()`
-  const instance = currentInstance || currentRenderingInstance || currentApp
+  // a functional component
+  const instance = currentInstance || currentRenderingInstance
 
-  if (instance) {
+  // also support looking up from app-level provides w/ `app.runWithContext()`
+  if (instance || currentApp) {
     // #2400
     // to support `app.use` plugins,
     // fallback to appContext's `provides` if the instance is at root
-    const provides =
-      'mount' in instance // checks if instance is an App
-        ? instance._context.provides
-        : instance.parent == null
+    const provides = instance
+      ? instance.parent == null
         ? instance.vnode.appContext && instance.vnode.appContext.provides
         : instance.parent.provides
+      : currentApp!._context.provides
 
     if (provides && (key as string | symbol) in provides) {
       // TS doesn't allow symbol as index type
       return provides[key as string]
     } else if (arguments.length > 1) {
       return treatDefaultAsFactory && isFunction(defaultValue)
-        ? defaultValue.call(
-            (instance as { proxy?: ComponentPublicInstance | null }).proxy
-          )
+        ? defaultValue.call(instance && instance.proxy)
         : defaultValue
     } else if (__DEV__) {
       warn(`injection "${String(key)}" not found.`)

@@ -381,7 +381,7 @@ export function createAppAPI<HostElement>(
       },
 
       runWithContext(fn) {
-        currentApp = this
+        currentApp = app
         try {
           return fn()
         } finally {
@@ -399,6 +399,7 @@ export function createAppAPI<HostElement>(
 }
 
 /**
- * @internal Used to identify the current app when using `inject()` within `app.runWithContext()`.
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
  */
 export let currentApp: App<unknown> | null = null
