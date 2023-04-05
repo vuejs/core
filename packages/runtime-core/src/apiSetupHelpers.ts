@@ -211,6 +211,32 @@ export function defineSlots<
   return null as any
 }
 
+/**
+ * (**Experimental**) Vue `<script setup>` compiler macro for declaring a two-way
+ * binding prop. This will declare a prop with the same name and a corresponding
+ * `update:propName` event.
+ *
+ * The prop will be automatically marked as `required` by default. Use the
+ * `required: false` option or set a default value to make it optional.
+ *
+ * Example: required model
+ * ```ts
+ * const modelValue = defineModel<string>()
+ * modelValue.value = "hello"
+ * ```
+ *
+ * Example: specified a name
+ * ```ts
+ * const count = defineModel<number>('count')
+ * count.value++
+ * ```
+ *
+ * Example: specified a name and default value
+ * ```ts
+ * const count = defineModel<number>('count', { default: 0 })
+ * ```
+ *
+ */
 export function defineModel<T>(
   options: { required: false } & Record<string, unknown>
 ): WritableComputedRef<T | undefined>
