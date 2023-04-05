@@ -20,7 +20,8 @@ import {
   warn,
   ConcreteComponent,
   ComponentOptions,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  SlotsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -51,6 +52,7 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -64,6 +66,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
+    S,
     I,
     II
   > & { styles?: string[] }
@@ -80,6 +83,7 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -93,6 +97,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
+    S,
     I,
     II
   > & { styles?: string[] }
@@ -109,6 +114,7 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
+  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -122,6 +128,7 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
+    S,
     I,
     II
   > & { styles?: string[] }
