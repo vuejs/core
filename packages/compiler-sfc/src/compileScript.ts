@@ -53,13 +53,13 @@ import {
   CSS_VARS_HELPER,
   genCssVarsCode,
   genNormalScriptCssVarsCode
-} from './cssVars'
+} from './style/cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
-import { transformDestructuredProps } from './compileScriptPropsDestructure'
+import { transformDestructuredProps } from './script/propsDestructure'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
