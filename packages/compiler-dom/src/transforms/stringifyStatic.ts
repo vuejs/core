@@ -362,7 +362,7 @@ function stringifyElement(
 // (see compiler-core/src/transforms/transformExpression)
 function evaluateConstant(exp: ExpressionNode): string {
   if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return ${exp.content}`)()
+    return new Function(`return (${exp.content})`)()
   } else {
     // compound
     let res = ``

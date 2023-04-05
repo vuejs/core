@@ -478,6 +478,17 @@ describe('stringify static html', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('stringify v-text with escape', () => {
+    const { code } = compileWithStringify(`
+      <pre  data-type="js"><code v-text="
+                \`text1\`"></code></pre>
+      <div class>
+        <span class>1</span><span class>2</span>
+      </div>`)
+    expect(code).toMatch(`<code>text1</code>`)
+    expect(code).toMatchSnapshot()
+  })
+
   // #6568
   test('Select elements can preserve data types when stringified', () => {
     const { code } = compileWithStringify(`

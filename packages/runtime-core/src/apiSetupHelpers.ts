@@ -1,4 +1,10 @@
-import { isArray, isPromise, isFunction, Prettify } from '@vue/shared'
+import {
+  isArray,
+  isPromise,
+  isFunction,
+  Prettify,
+  UnionToIntersection
+} from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
@@ -8,11 +14,18 @@ import {
 } from './component'
 import { EmitFn, EmitsOptions } from './componentEmits'
 import {
+  ComponentOptionsMixin,
+  ComponentOptionsWithoutProps,
+  ComputedOptions,
+  MethodOptions
+} from './componentOptions'
+import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes
 } from './componentProps'
 import { warn } from './warning'
+import { SlotsType, TypedSlots } from './componentSlots'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -47,6 +60,8 @@ const warnRuntimeUsage = (method: string) =>
  *   foo?: string
  *   bar: number
  * }>()
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineprops-defineemits}
  * ```
  *
  * This is only usable inside `<script setup>`, is compiled away in the
@@ -106,6 +121,8 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineprops-defineemits}
  */
 // overload 1: runtime emits w/ array
 export function defineEmits<EE extends string = string>(
@@ -114,7 +131,9 @@ export function defineEmits<EE extends string = string>(
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
   emitOptions: E
 ): EmitFn<E>
-export function defineEmits<TypeEmit>(): TypeEmit
+export function defineEmits<
+  T extends ((...args: any[]) => any) | Record<string, any[]>
+>(): T extends (...args: any[]) => any ? T : ShortEmits<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -122,6 +141,14 @@ export function defineEmits() {
   }
   return null as any
 }
+
+type RecordToUnion<T extends Record<string, any>> = T[keyof T]
+
+type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
+  RecordToUnion<{
+    [K in keyof T]: (evt: K, ...args: T[K]) => void
+  }>
+>
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's exposed
@@ -134,12 +161,53 @@ export function defineEmits() {
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineexpose}
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>
 >(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
+  }
+}
+
+/**
+ * Vue `<script setup>` compiler macro for declaring a component's additional
+ * options. This should be used only for options that cannot be expressed via
+ * Composition API - e.g. `inhertiAttrs`.
+ *
+ * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
+ */
+export function defineOptions<
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin
+>(
+  options?: ComponentOptionsWithoutProps<
+    {},
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends
+  > & { emits?: undefined; expose?: undefined; slots?: undefined }
+): void {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineOptions`)
+  }
+}
+
+export function defineSlots<
+  S extends Record<string, any> = Record<string, any>
+>(): // @ts-expect-error
+TypedSlots<SlotsType<S>> {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineSlots`)
   }
 }
 
@@ -183,6 +251,8 @@ type PropsWithDefaults<Base, Defaults> = Base & {
  *
  * This is only usable inside `<script setup>`, is compiled away in the output
  * and should **not** be actually called at runtime.
+ *
+ * @see {@link https://vuejs.org/guide/typescript/composition-api.html#typing-component-props}
  */
 export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
   props: Props,
@@ -226,17 +296,21 @@ export function mergeDefaults(
       )
     : raw
   for (const key in defaults) {
-    const opt = props[key]
+    if (key.startsWith('__skip')) continue
+    let opt = props[key]
     if (opt) {
       if (isArray(opt) || isFunction(opt)) {
-        props[key] = { type: opt, default: defaults[key] }
+        opt = props[key] = { type: opt, default: defaults[key] }
       } else {
         opt.default = defaults[key]
       }
     } else if (opt === null) {
-      props[key] = { default: defaults[key] }
+      opt = props[key] = { default: defaults[key] }
     } else if (__DEV__) {
       warn(`props default key "${key}" has no corresponding declaration.`)
+    }
+    if (opt && defaults[`__skip_${key}`]) {
+      opt.skipFactory = true
     }
   }
   return props
