@@ -164,12 +164,12 @@ export type CreateComponentPublicInstance<
   PublicC,
   PublicM,
   E,
-  S,
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
   ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, S, Defaults>,
-  I
+  I,
+  S
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -181,12 +181,12 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  S extends SlotsType = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  I extends ComponentInjectOptions = {}
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
 > = {
   $: ComponentInternalInstance
   $data: D
