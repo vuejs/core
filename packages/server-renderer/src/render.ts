@@ -186,12 +186,7 @@ function renderComponentSubTree(
           getExposeProxy(instance) || instance.proxy,
           push,
           instance,
-          attrs,
-          // compiler-optimized bindings
-          instance.props,
-          instance.setupState,
-          instance.data,
-          instance.ctx
+          attrs
         )
       } finally {
         setCurrentRenderingInstance(prev)
