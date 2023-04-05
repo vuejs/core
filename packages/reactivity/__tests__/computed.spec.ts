@@ -341,4 +341,31 @@ describe('reactivity/computed', () => {
     expect(c1Spy).toHaveBeenCalledTimes(104)
     expect(c2Spy).toHaveBeenCalledTimes(2)
   })
+
+  it('chained computed value urgent assessment edge case', () => {
+    const cSpy = vi.fn()
+
+    const a = ref<null | { v: number }>({
+      v: 1
+    })
+    const b = computed(() => {
+      return a.value
+    })
+    const c = computed(() => {
+      cSpy()
+      return b.value?.v
+    })
+    const d = computed(() => {
+      if (b.value) {
+        return c.value
+      }
+      return 0
+    })
+
+    d.value
+    a.value!.v = 2
+    a.value = null
+    d.value
+    expect(cSpy).toHaveBeenCalledTimes(1)
+  })
 })

@@ -72,6 +72,13 @@ export class ComputedRefImpl<T> {
     const self = toRaw(this)
     if (!self._dirty && self._computedsToAskDirty.length) {
       pauseTracking()
+      if (self._computedsToAskDirty.length >= 2) {
+        self._computedsToAskDirty = self._computedsToAskDirty.sort((a, b) => {
+          const aIndex = self.effect.deps.indexOf(a.dep!)
+          const bIndex = self.effect.deps.indexOf(b.dep!)
+          return aIndex - bIndex
+        })
+      }
       for (const computedToAskDirty of self._computedsToAskDirty) {
         computedToAskDirty.value
         if (self._dirty) {
