@@ -418,6 +418,28 @@ defineExpose({ foo: 123 })
         modelValue: BindingTypes.PROPS
       })
     })
+
+    test('w/ array props', () => {
+      const { content, bindings } = compile(
+        `
+        <script setup>
+        defineProps(['foo', 'bar'])
+        const count = defineModel('count')
+        </script>
+      `,
+        { defineModel: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(`_mergeModels(['foo', 'bar'], {`)
+      expect(content).toMatch(`"count": { required: true }`)
+      expect(content).toMatch(`const count = _useModel("count")`)
+      expect(content).not.toMatch('defineModel')
+      expect(bindings).toStrictEqual({
+        foo: BindingTypes.PROPS,
+        bar: BindingTypes.PROPS,
+        count: BindingTypes.SETUP_REF
+      })
+    })
   })
 
   test('<script> after <script setup> the script content not end with `\\n`', () => {
@@ -1765,7 +1787,7 @@ const emit = defineEmits(['a', 'b'])
       })
     })
 
-    describe('defineModel', () => {
+    describe('defineModel()', () => {
       test('basic usage', () => {
         const { content, bindings } = compile(
           `

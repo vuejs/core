@@ -674,6 +674,26 @@ return { modelValue, c }
 }"
 `;
 
+exports[`SFC compile <script setup> > defineModel() > w/ array props 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+
+export default {
+  props: _mergeModels(['foo', 'bar'], {
+    \\"count\\": { required: true },
+  }),
+  emits: [\\"update:count\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+        const count = _useModel(\\"count\\")
+        
+return { count }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > defineModel() > w/ defineProps and defineEmits 1`] = `
 "import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
 
@@ -1622,7 +1642,7 @@ return { emit }
 })"
 `;
 
-exports[`SFC compile <script setup> > with TypeScript > defineModel > basic usage 1`] = `
+exports[`SFC compile <script setup> > with TypeScript > defineModel() > basic usage 1`] = `
 "import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
@@ -1645,7 +1665,7 @@ return { modelValue, count, disabled }
 })"
 `;
 
-exports[`SFC compile <script setup> > with TypeScript > defineModel > w/ production mode 1`] = `
+exports[`SFC compile <script setup> > with TypeScript > defineModel() > w/ production mode 1`] = `
 "import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
