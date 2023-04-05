@@ -13,7 +13,9 @@ import {
   Suspense,
   computed,
   ComputedRef,
-  shallowReactive
+  shallowReactive,
+  nextTick,
+  ref
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -25,7 +27,8 @@ import {
   mergeDefaults,
   withAsyncContext,
   createPropsRestProxy,
-  mergeModelsOptions
+  mergeModelsOptions,
+  useModel
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -172,6 +175,117 @@ describe('SFC <script setup> helpers', () => {
         bar: {},
         baz: {}
       })
+    })
+  })
+
+  describe('useModel', () => {
+    test('basic', async () => {
+      let proxy: any
+      const Comp = defineComponent({
+        props: {
+          modelValue: { required: true }
+        },
+        emits: ['update:modelValue'],
+        setup() {
+          const foo = useModel<string>('modelValue')
+          const update = () => {
+            foo.value = 'bar'
+          }
+          return { foo, update }
+        },
+        render() {
+          proxy = this
+        }
+      })
+
+      const msg = ref('')
+      const setValue = vi.fn(v => (msg.value = v))
+      const root = nodeOps.createElement('div')
+      createApp(() =>
+        h(Comp, {
+          modelValue: msg.value,
+          'onUpdate:modelValue': setValue
+        })
+      ).mount(root)
+
+      expect(proxy.foo).toBe('')
+      expect(msg.value).toBe('')
+      expect(setValue).not.toBeCalled()
+
+      // update from child
+      proxy.update()
+
+      await nextTick()
+      expect(msg.value).toBe('bar')
+      expect(proxy.foo).toBe('bar')
+      expect(setValue).toBeCalledTimes(1)
+
+      // update from parent
+      msg.value = 'qux'
+
+      await nextTick()
+      expect(msg.value).toBe('qux')
+      expect(proxy.foo).toBe('qux')
+      expect(setValue).toBeCalledTimes(1)
+    })
+
+    test('optional', async () => {
+      let proxy: any
+      const Comp = defineComponent({
+        props: ['foo'],
+        emits: ['update:foo'],
+        setup() {
+          const foo = useModel<string>('foo')
+          const update = () => {
+            foo.value = 'bar'
+          }
+          return { foo, update }
+        },
+        render() {
+          proxy = this
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      const updateFoo = vi.fn()
+      render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
+
+      expect(proxy.foo).toBeUndefined()
+      proxy.update()
+
+      expect(proxy.foo).toBe('bar')
+
+      await nextTick()
+      expect(updateFoo).toBeCalledTimes(1)
+    })
+
+    test('default value', async () => {
+      let proxy: any
+      const Comp = defineComponent({
+        props: { count: { default: 0 } },
+        emits: ['update:count'],
+        setup() {
+          const count = useModel<number>('count')
+          const inc = () => {
+            count.value++
+          }
+          return { count, inc }
+        },
+        render() {
+          proxy = this
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      const updateCount = vi.fn()
+      render(h(Comp, { 'onUpdate:count': updateCount }), root)
+
+      expect(proxy.count).toBe(0)
+
+      proxy.inc()
+      expect(proxy.count).toBe(1)
+      await nextTick()
+      expect(updateCount).toBeCalledTimes(1)
     })
   })
 

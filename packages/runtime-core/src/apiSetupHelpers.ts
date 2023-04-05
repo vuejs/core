@@ -300,10 +300,7 @@ export function useModel<T>(name: string): WritableComputedRef<T> {
   }
 
   const options = (i.propsOptions[0] as NormalizedProps)[name]
-  if (
-    isObject(options) &&
-    (options.required === false || 'default' in options)
-  ) {
+  if (isObject(options) && (!options.required || 'default' in options)) {
     const proxy = ref<any>(i.props[name])
 
     watch(
