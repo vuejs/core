@@ -1671,20 +1671,22 @@ exports[`SFC compile <script setup> > with TypeScript > defineModel() > w/ produ
 export default /*#__PURE__*/_defineComponent({
   props: {
     \\"modelValue\\": Boolean,
-    \\"fn\\": Function,
+    \\"fn\\": {  },
+    \\"fnWithDefault\\": { type: Function, ...{ default: () => null } },
     \\"str\\": {  },
     \\"optional\\": { required: false },
   },
-  emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:str\\", \\"update:optional\\"],
+  emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:fnWithDefault\\", \\"update:str\\", \\"update:optional\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
           const modelValue = _useModel(\\"modelValue\\")
           const fn = _useModel(\\"fn\\")
+          const fnWithDefault = _useModel(\\"fnWithDefault\\")
           const str = _useModel(\\"str\\")
           const optional = _useModel(\\"optional\\")
           
-return { modelValue, fn, str, optional }
+return { modelValue, fn, fnWithDefault, str, optional }
 }
 
 })"

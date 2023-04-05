@@ -1829,6 +1829,7 @@ const emit = defineEmits(['a', 'b'])
           <script setup lang="ts">
           const modelValue = defineModel<boolean>()
           const fn = defineModel<() => void>('fn')
+          const fnWithDefault = defineModel<() => void>('fnWithDefault', { default: () => null })
           const str = defineModel<string>('str')
           const optional = defineModel<string>('optional', { required: false })
           </script>
@@ -1837,11 +1838,14 @@ const emit = defineEmits(['a', 'b'])
         )
         assertCode(content)
         expect(content).toMatch('"modelValue": Boolean')
-        expect(content).toMatch('"fn": Function')
+        expect(content).toMatch('"fn": {  }')
+        expect(content).toMatch(
+          '"fnWithDefault": { type: Function, ...{ default: () => null } },'
+        )
         expect(content).toMatch('"str": {  }')
         expect(content).toMatch('"optional": { required: false }')
         expect(content).toMatch(
-          'emits: ["update:modelValue", "update:fn", "update:str", "update:optional"]'
+          'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]'
         )
         expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
         expect(content).toMatch(`const fn = _useModel("fn")`)
@@ -1849,6 +1853,7 @@ const emit = defineEmits(['a', 'b'])
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
           fn: BindingTypes.SETUP_REF,
+          fnWithDefault: BindingTypes.SETUP_REF,
           str: BindingTypes.SETUP_REF,
           optional: BindingTypes.SETUP_REF
         })

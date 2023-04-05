@@ -1025,7 +1025,7 @@ export function compileScript(
         let runtimeTypes = type && inferRuntimeType(type, declaredTypes)
         if (runtimeTypes && isProd) {
           runtimeTypes = runtimeTypes.filter(
-            el => el === 'Boolean' || el === 'Function'
+            el => el === 'Boolean' || (el === 'Function' && options)
           )
         }
         const runtimeType =
