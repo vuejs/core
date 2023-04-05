@@ -76,7 +76,7 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): ResolveProps<TypeProps>
+export function defineProps<TypeProps>(): DefineProps<TypeProps>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -85,13 +85,9 @@ export function defineProps() {
   return null as any
 }
 
-type ResolveProps<T, BooleanKeys extends keyof T = BooleanKey<T>> = Prettify<
-  Readonly<
-    T & {
-      [K in BooleanKeys]-?: boolean
-    }
-  >
->
+type DefineProps<T> = Readonly<T> & {
+  readonly [K in BooleanKey<T>]-?: boolean
+}
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
   ? [T[K]] extends [boolean | undefined]
