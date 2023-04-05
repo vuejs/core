@@ -183,7 +183,7 @@ describe('sfc hoist static', () => {
     </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.LITERAL_CONST
+      foo: BindingTypes.SETUP_CONST
     })
     assertCode(content)
   })
