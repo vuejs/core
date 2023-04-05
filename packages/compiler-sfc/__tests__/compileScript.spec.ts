@@ -133,7 +133,7 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(bindings).toStrictEqual({
       myEmit: BindingTypes.SETUP_CONST
     })
-    // should remove defineOptions import and call
+    // should remove defineEmits import and call
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
     expect(content).toMatch(
@@ -205,10 +205,10 @@ const myEmit = defineEmits(['foo', 'bar'])
   describe('defineOptions()', () => {
     test('basic usage', () => {
       const { content } = compile(`
-<script setup>
-defineOptions({ name: 'FooApp' })
-</script>
-  `)
+        <script setup>
+        defineOptions({ name: 'FooApp' })
+        </script>
+      `)
       assertCode(content)
       // should remove defineOptions import and call
       expect(content).not.toMatch('defineOptions')
@@ -216,6 +216,18 @@ defineOptions({ name: 'FooApp' })
       expect(content).toMatch(
         `export default /*#__PURE__*/Object.assign({ name: 'FooApp' }, `
       )
+    })
+
+    test('empty argument', () => {
+      const { content } = compile(`
+        <script setup>
+        defineOptions()
+        </script>
+      `)
+      assertCode(content)
+      expect(content).toMatch(`export default {`)
+      // should remove defineOptions import and call
+      expect(content).not.toMatch('defineOptions')
     })
 
     it('should emit an error with two defineProps', () => {
@@ -249,6 +261,26 @@ defineOptions({ name: 'FooApp' })
       ).toThrowError(
         '[@vue/compiler-sfc] defineOptions() cannot be used to declare emits. Use defineEmits() instead.'
       )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ expose: ['foo'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare expose. Use defineExpose() instead.'
+      )
+
+      expect(() =>
+        compile(`
+        <script setup>
+        defineOptions({ slots: ['foo'] })
+        </script>
+      `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare slots. Use defineSlots() instead.'
+      )
     })
 
     it('should emit an error with type generic', () => {
@@ -260,6 +292,18 @@ defineOptions({ name: 'FooApp' })
         `)
       ).toThrowError(
         '[@vue/compiler-sfc] defineOptions() cannot accept type arguments'
+      )
+    })
+
+    it('should emit an error with type assertion', () => {
+      expect(() =>
+        compile(`
+        <script setup lang="ts">
+        defineOptions({ props: [] } as any)
+        </script>
+        `)
+      ).toThrowError(
+        '[@vue/compiler-sfc] defineOptions() cannot be used to declare props. Use defineProps() instead.'
       )
     })
   })
