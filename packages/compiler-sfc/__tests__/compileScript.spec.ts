@@ -1834,7 +1834,7 @@ const emit = defineEmits(['a', 'b'])
           { defineModel: true, isProd: true }
         )
         assertCode(content)
-        expect(content).toMatch('"modelValue": Boolean')
+        expect(content).toMatch('"modelValue": { type: Boolean }')
         expect(content).toMatch('"fn": {}')
         expect(content).toMatch(
           '"fnWithDefault": { type: Function, ...{ default: () => null } },'

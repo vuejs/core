@@ -1670,7 +1670,7 @@ exports[`SFC compile <script setup> > with TypeScript > defineModel() > w/ produ
 
 export default /*#__PURE__*/_defineComponent({
   props: _addRequiredToModels({
-    \\"modelValue\\": Boolean,
+    \\"modelValue\\": { type: Boolean },
     \\"fn\\": {},
     \\"fnWithDefault\\": { type: Function, ...{ default: () => null } },
     \\"str\\": {},

@@ -1037,19 +1037,15 @@ export function compileScript(
             runtimeTypes.length > 0 &&
             toRuntimeTypeString(runtimeTypes)) ||
           undefined
+        if (runtimeType) runtimeType = `type: ${runtimeType}`
 
         let decl: string
-        if (runtimeType && isProd && !options) {
-          decl = runtimeType
+        if (runtimeType && options) {
+          decl = isTS
+            ? `{ ${runtimeType}, ...${options} }`
+            : `Object.assign({ ${runtimeType} }, ${options})`
         } else {
-          if (runtimeType) runtimeType = `type: ${runtimeType}`
-          if (runtimeType && options) {
-            decl = isTS
-              ? `{ ${runtimeType}, ...${options} }`
-              : `Object.assign({ ${runtimeType} }, ${options})`
-          } else {
-            decl = options || (runtimeType ? `{ ${runtimeType} }` : '{}')
-          }
+          decl = options || (runtimeType ? `{ ${runtimeType} }` : '{}')
         }
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }
