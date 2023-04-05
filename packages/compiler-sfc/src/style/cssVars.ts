@@ -10,7 +10,7 @@ import {
 import { SFCDescriptor } from '../parse'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
-import { escapeSymbolsRE } from './compileScript'
+import { escapeSymbolsRE } from '../compileScript'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
