@@ -3,8 +3,7 @@ import {
   isPromise,
   isFunction,
   Prettify,
-  UnionToIntersection,
-  isObject
+  UnionToIntersection
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -326,7 +325,7 @@ export function useModel<T>(name: string): WritableComputedRef<T> {
   }
 
   const options = (i.propsOptions[0] as NormalizedProps)[name]
-  if (isObject(options) && !options.required) {
+  if (options && !options.required) {
     const proxy = ref<any>(i.props[name])
 
     watch(
