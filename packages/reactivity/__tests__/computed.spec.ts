@@ -292,54 +292,25 @@ describe('reactivity/computed', () => {
   })
 
   it('chained computed value on-demand trigger', () => {
-    const c1Spy = vi.fn()
-    const c2Spy = vi.fn()
+    const minSpy = vi.fn()
+    const hourSpy = vi.fn()
 
-    const src = ref(0)
-    const c1 = computed(() => {
-      c1Spy()
-      return src.value < 5
+    const sec = ref(0)
+    const min = computed(() => {
+      minSpy()
+      return Math.floor(sec.value / 60)
     })
-    const c2 = computed(() => {
-      c2Spy()
-      return c1.value ? '< 5' : '>= 5'
+    const hour = computed(() => {
+      hourSpy()
+      return Math.floor(min.value / 60)
     })
 
-    expect(c1Spy).toHaveBeenCalledTimes(0)
-    expect(c2Spy).toHaveBeenCalledTimes(0)
-
-    expect(src.value).toBe(0)
-    expect(c2.value).toBe('< 5')
-    expect(c1Spy).toHaveBeenCalledTimes(1)
-    expect(c2Spy).toHaveBeenCalledTimes(1)
-
-    src.value++
-    expect(c2.value).toBe('< 5')
-    expect(c1Spy).toHaveBeenCalledTimes(2)
-    expect(c2Spy).toHaveBeenCalledTimes(1)
-
-    for (let i = 0; i < 10; i++) {
-      src.value++
+    for (sec.value = 0; sec.value < 1000; sec.value++) {
+      hour.value
     }
-    expect(src.value).toBe(11)
-    expect(c2.value).toBe('>= 5')
-    expect(c1Spy).toHaveBeenCalledTimes(3)
-    expect(c2Spy).toHaveBeenCalledTimes(2)
 
-    src.value++
-    expect(src.value).toBe(12)
-    expect(c2.value).toBe('>= 5')
-    expect(c1Spy).toHaveBeenCalledTimes(4)
-    expect(c2Spy).toHaveBeenCalledTimes(2)
-
-    for (let i = 0; i < 100; i++) {
-      src.value++
-      c2.value
-    }
-    expect(src.value).toBe(112)
-    expect(c2.value).toBe('>= 5')
-    expect(c1Spy).toHaveBeenCalledTimes(104)
-    expect(c2Spy).toHaveBeenCalledTimes(2)
+    expect(minSpy).toHaveBeenCalledTimes(1000)
+    expect(hourSpy).toHaveBeenCalledTimes(17)
   })
 
   it('chained computed value urgent assessment edge case', () => {
