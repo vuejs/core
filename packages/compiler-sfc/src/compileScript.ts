@@ -1912,22 +1912,7 @@ export function compileScript(
   let propsDecl = genRuntimeProps()
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
-  let emitsDecl = ''
-  if (emitsRuntimeDecl) {
-    emitsDecl = scriptSetup.content
-      .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
-      .trim()
-  } else if (emitsTypeDecl) {
-    emitsDecl = genRuntimeEmits(typeDeclaredEmits)
-  }
-  if (hasDefineModelCall) {
-    let modelEmitsDecl = `[${Object.keys(modelDecls)
-      .map(n => JSON.stringify(`update:${n}`))
-      .join(', ')}]`
-    emitsDecl = emitsDecl
-      ? `${helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
-      : modelEmitsDecl
-  }
+  let emitsDecl = genRuntimeEmits()
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
@@ -2007,6 +1992,34 @@ export function compileScript(
       : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body
+  }
+
+  function genRuntimeEmits() {
+    function genEmitsFromTS() {
+      return typeDeclaredEmits.size
+        ? `[${Array.from(typeDeclaredEmits)
+            .map(k => JSON.stringify(k))
+            .join(', ')}]`
+        : ``
+    }
+
+    let emitsDecl = ''
+    if (emitsRuntimeDecl) {
+      emitsDecl = scriptSetup!.content
+        .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
+        .trim()
+    } else if (emitsTypeDecl) {
+      emitsDecl = genEmitsFromTS()
+    }
+    if (hasDefineModelCall) {
+      let modelEmitsDecl = `[${Object.keys(modelDecls)
+        .map(n => JSON.stringify(`update:${n}`))
+        .join(', ')}]`
+      emitsDecl = emitsDecl
+        ? `${helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
+        : modelEmitsDecl
+    }
+    return emitsDecl
   }
 }
 
@@ -2495,14 +2508,6 @@ function extractEventNames(
       }
     }
   }
-}
-
-function genRuntimeEmits(emits: Set<string>) {
-  return emits.size
-    ? `[${Array.from(emits)
-        .map(k => JSON.stringify(k))
-        .join(', ')}]`
-    : ``
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
