@@ -1794,6 +1794,7 @@ const emit = defineEmits(['a', 'b'])
           const modelValue = defineModel<boolean | string>()
           const count = defineModel<number>('count')
           const disabled = defineModel<number>('disabled', { required: false })
+          const any = defineModel<any | boolean>('any')
           </script>
           `,
           { defineModel: true }
@@ -1802,21 +1803,23 @@ const emit = defineEmits(['a', 'b'])
         expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
         expect(content).toMatch('"count": { type: Number }')
         expect(content).toMatch(
-          '"disabled": { type: Number, ...{ required: false } },'
+          '"disabled": { type: Number, ...{ required: false } }'
         )
+        expect(content).toMatch('"any": { type: Boolean, skipCheck: true }')
         expect(content).toMatch(
-          'emits: ["update:modelValue", "update:count", "update:disabled"]'
+          'emits: ["update:modelValue", "update:count", "update:disabled", "update:any"]'
         )
 
         expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
         expect(content).toMatch(`const count = _useModel("count")`)
         expect(content).toMatch(`const disabled = _useModel("disabled")`)
+        expect(content).toMatch(`const any = _useModel("any")`)
 
-        expect(content).toMatch(`const count = _useModel("count")`)
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
           count: BindingTypes.SETUP_REF,
-          disabled: BindingTypes.SETUP_REF
+          disabled: BindingTypes.SETUP_REF,
+          any: BindingTypes.SETUP_REF
         })
       })
 

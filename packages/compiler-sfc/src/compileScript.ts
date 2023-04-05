@@ -1026,26 +1026,39 @@ export function compileScript(
 
       let modelPropsDecl = ''
       for (const [name, { type, options }] of Object.entries(modelDecls)) {
+        let skipCheck = false
+
         let runtimeTypes = type && inferRuntimeType(type, declaredTypes)
-        if (runtimeTypes && isProd) {
-          runtimeTypes = runtimeTypes.filter(
-            el => el === 'Boolean' || (el === 'Function' && options)
-          )
+        if (runtimeTypes) {
+          const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
+
+          runtimeTypes = runtimeTypes.filter(el => {
+            if (el === UNKNOWN_TYPE) return false
+            return isProd
+              ? el === 'Boolean' || (el === 'Function' && options)
+              : true
+          })
+          skipCheck = !isProd && hasUnknownType && runtimeTypes.length > 0
         }
+
         let runtimeType =
           (runtimeTypes &&
             runtimeTypes.length > 0 &&
             toRuntimeTypeString(runtimeTypes)) ||
           undefined
+        const skipCheckString = skipCheck ? ', skipCheck: true' : ''
+
         if (runtimeType) runtimeType = `type: ${runtimeType}`
 
         let decl: string
         if (runtimeType && options) {
           decl = isTS
-            ? `{ ${runtimeType}, ...${options} }`
-            : `Object.assign({ ${runtimeType} }, ${options})`
+            ? `{ ${runtimeType}${skipCheckString}, ...${options} }`
+            : `Object.assign({ ${runtimeType}${skipCheckString} }, ${options})`
         } else {
-          decl = options || (runtimeType ? `{ ${runtimeType} }` : '{}')
+          decl =
+            options ||
+            (runtimeType ? `{ ${runtimeType}${skipCheckString} }` : '{}')
         }
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }

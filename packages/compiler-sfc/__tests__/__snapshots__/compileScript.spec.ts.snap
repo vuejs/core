@@ -1650,16 +1650,18 @@ export default /*#__PURE__*/_defineComponent({
     \\"modelValue\\": { type: [Boolean, String] },
     \\"count\\": { type: Number },
     \\"disabled\\": { type: Number, ...{ required: false } },
+    \\"any\\": { type: Boolean, skipCheck: true },
   }),
-  emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:disabled\\"],
+  emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:disabled\\", \\"update:any\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
           const modelValue = _useModel(\\"modelValue\\")
           const count = _useModel(\\"count\\")
           const disabled = _useModel(\\"disabled\\")
+          const any = _useModel(\\"any\\")
           
-return { modelValue, count, disabled }
+return { modelValue, count, disabled, any }
 }
 
 })"
