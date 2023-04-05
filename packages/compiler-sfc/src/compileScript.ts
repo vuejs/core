@@ -997,12 +997,16 @@ export function compileScript(
           // #4783 for boolean, should keep the type
           // #7111 for function, if default value exists or it's not static, should keep it
           // in production
-          return `${key}: { type: ${toRuntimeTypeString(type)}${
+          return `${key}: { type: ${toRuntimeTypeString(
+            type
+          )}, required: ${required}${
             defaultString ? `, ${defaultString}` : ``
           } }`
         } else {
           // production: checks are useless
-          return `${key}: ${defaultString ? `{ ${defaultString} }` : 'null'}`
+          return `${key}: ${`{ required: ${required}${
+            defaultString ? `, ${defaultString}` : ``
+          } }`}`
         }
       })
       .join(',\n    ')}\n  }`

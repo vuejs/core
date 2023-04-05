@@ -2054,10 +2054,10 @@ import { defaults } from './foo'
       
 export default /*#__PURE__*/_defineComponent({
   props: _mergeDefaults({
-    foo: { type: Function },
-    bar: { type: Boolean },
-    baz: { type: [Boolean, Function] },
-    qux: null
+    foo: { type: Function, required: true },
+    bar: { type: Boolean, required: true },
+    baz: { type: [Boolean, Function], required: true },
+    qux: { required: true }
   }, { ...defaults }),
   setup(__props: any, { expose: __expose }) {
   __expose();
@@ -2159,10 +2159,10 @@ exports[`SFC compile <script setup> > with TypeScript > withDefaults (static) w/
 
 export default /*#__PURE__*/_defineComponent({
   props: {
-    foo: null,
-    bar: { type: Boolean },
-    baz: { type: [Boolean, Function], default: true },
-    qux: { default: 'hi' }
+    foo: { required: true },
+    bar: { type: Boolean, required: true },
+    baz: { type: [Boolean, Function], required: true, default: true },
+    qux: { required: true, default: 'hi' }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();

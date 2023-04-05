@@ -1510,12 +1510,12 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`const props = __props`)
 
       // foo has no default value, the Function can be dropped
-      expect(content).toMatch(`foo: null`)
-      expect(content).toMatch(`bar: { type: Boolean }`)
+      expect(content).toMatch(`foo: { required: true }`)
+      expect(content).toMatch(`bar: { type: Boolean, required: true }`)
       expect(content).toMatch(
-        `baz: { type: [Boolean, Function], default: true }`
+        `baz: { type: [Boolean, Function], required: true, default: true }`
       )
-      expect(content).toMatch(`qux: { default: 'hi' }`)
+      expect(content).toMatch(`qux: { required: true, default: 'hi' }`)
     })
 
     test('withDefaults (dynamic)', () => {
@@ -1585,10 +1585,10 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `
   _mergeDefaults({
-    foo: { type: Function },
-    bar: { type: Boolean },
-    baz: { type: [Boolean, Function] },
-    qux: null
+    foo: { type: Function, required: true },
+    bar: { type: Boolean, required: true },
+    baz: { type: [Boolean, Function], required: true },
+    qux: { required: true }
   }, { ...defaults })`.trim()
       )
     })
