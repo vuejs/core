@@ -702,9 +702,10 @@ export function compileScript(
     if (node.typeParameters) {
       error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
     }
+    if (!node.arguments[0]) return true
 
     hasDefineOptionsCall = true
-    optionsRuntimeDecl = node.arguments[0]
+    optionsRuntimeDecl = unwrapTSNode(node.arguments[0])
 
     let propsOption = undefined
     let emitsOption = undefined
