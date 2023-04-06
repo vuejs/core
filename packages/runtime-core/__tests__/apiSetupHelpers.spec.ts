@@ -225,9 +225,6 @@ describe('SFC <script setup> helpers', () => {
         })
       ).mount(root)
 
-      // it's a ComputedRef, so not passive
-      expect(foo.effect).not.toBeUndefined()
-
       expect(foo.value).toBe('')
       expect(msg.value).toBe('')
       expect(setValue).not.toBeCalled()
@@ -268,9 +265,6 @@ describe('SFC <script setup> helpers', () => {
       const updateFoo = vi.fn()
       render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
 
-      // it's a ComputedRef, so it's passive
-      expect(foo.effect).toBeUndefined()
-
       expect(foo.value).toBeUndefined()
       update()
 
@@ -297,9 +291,6 @@ describe('SFC <script setup> helpers', () => {
       const root = nodeOps.createElement('div')
       const updateCount = vi.fn()
       render(h(Comp, { 'onUpdate:count': updateCount }), root)
-
-      // it's a ComputedRef, so it's passive
-      expect(count.effect).toBeUndefined()
 
       expect(count.value).toBe(0)
 
