@@ -183,7 +183,22 @@ describe('sfc hoist static', () => {
     </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.LITERAL_CONST
+      foo: BindingTypes.SETUP_CONST
+    })
+    assertCode(content)
+  })
+
+  test('should not hoist when disabled', () => {
+    const { content, bindings } = compile(
+      `
+    <script setup>
+    const foo = 'bar'
+    </script>
+    `,
+      { hoistStatic: false }
+    )
+    expect(bindings).toStrictEqual({
+      foo: BindingTypes.SETUP_CONST
     })
     assertCode(content)
   })

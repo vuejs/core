@@ -34,6 +34,13 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
+type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
+  PropsOrPropOptions extends ComponentPropsOptions
+    ? ExtractPropTypes<PropsOrPropOptions>
+    : PropsOrPropOptions
+> &
+  ({} extends E ? {} : EmitsToProps<E>)
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -44,15 +51,10 @@ export type DefineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
   PP = PublicProps,
-  Props = Readonly<
-    PropsOrPropOptions extends ComponentPropsOptions
-      ? ExtractPropTypes<PropsOrPropOptions>
-      : PropsOrPropOptions
-  > &
-    ({} extends E ? {} : EmitsToProps<E>),
-  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>
+  Props = ResolveProps<PropsOrPropOptions, E>,
+  Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
+  S extends SlotsType = {}
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -63,10 +65,11 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    S,
     PP & Props,
     Defaults,
-    true
+    true,
+    {},
+    S
   > &
     Props
 > &
@@ -80,8 +83,10 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    S,
-    Defaults
+    Defaults,
+    {},
+    string,
+    S
   > &
   PP
 
@@ -152,11 +157,25 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   >
-): DefineComponent<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, S>
+): DefineComponent<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  S
+>
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
@@ -173,7 +192,8 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  Props = Readonly<{ [key in PropNames]?: any }>
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -185,12 +205,12 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   >
 ): DefineComponent<
-  Readonly<{ [key in PropNames]?: any }>,
+  Props,
   RawBindings,
   D,
   C,
@@ -199,6 +219,9 @@ export function defineComponent<
   Extends,
   E,
   EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
   S
 >
 
@@ -230,11 +253,25 @@ export function defineComponent<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   >
-): DefineComponent<PropsOptions, RawBindings, D, C, M, Mixin, Extends, E, EE, S>
+): DefineComponent<
+  PropsOptions,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<PropsOptions, E>,
+  ExtractDefaultPropTypes<PropsOptions>,
+  S
+>
 
 // implementation, close to no-op
 export function defineComponent(
