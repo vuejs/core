@@ -30,7 +30,7 @@ export function parseUrl(url: string): UrlWithStringQuery {
 
 /**
  * vuejs/component-compiler-utils#22 Support uri fragment in transformed require
- * @param urlString an url as a string
+ * @param urlString - an url as a string
  */
 function parseUriParts(urlString: string): UrlWithStringQuery {
   // A TypeError is thrown if urlString is not a string

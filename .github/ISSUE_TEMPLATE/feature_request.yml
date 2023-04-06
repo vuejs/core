@@ -34,6 +34,6 @@ body:
       label: What does the proposed API look like?
       description: |
         Describe how you propose to solve the problem and provide code samples of how the API would work once implemented. Note that you can use [Markdown](https://guides.github.com/features/mastering-markdown/) to format your code blocks.
-      placeholder: Steps to reproduce
+      placeholder: Assumed API
     validations:
       required: true
