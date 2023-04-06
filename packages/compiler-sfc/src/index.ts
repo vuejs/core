@@ -52,7 +52,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type {
   AssetURLOptions,
   AssetURLTagConfig
-} from './templateTransformAssetUrl'
+} from './template/transformAssetUrl'
 export type {
   CompilerOptions,
   CompilerError,

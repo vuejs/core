@@ -7,7 +7,7 @@ import {
   SimpleExpressionNode,
   BindingMetadata
 } from '@vue/compiler-dom'
-import { SFCDescriptor } from './parse'
+import { SFCDescriptor } from '../parse'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
