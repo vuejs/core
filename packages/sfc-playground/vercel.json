@@ -1,8 +1,13 @@
 {
   "headers": [
     {
-      "source": "/(.*).js",
-      "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }]
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
