@@ -252,3 +252,5 @@ export const initDirectivesForSSR = __SSR__
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'
+
+export * from './jsx'

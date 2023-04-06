@@ -1,6 +1,6 @@
 import merge from 'merge-source-map'
 import { RawSourceMap } from 'source-map'
-import { SFCStyleCompileOptions } from './compileStyle'
+import { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
 
 export type StylePreprocessor = (
