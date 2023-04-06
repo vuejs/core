@@ -9,7 +9,7 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
-import { parseCssVars } from './cssVars'
+import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import { hmrShouldReload, ImportBinding } from './compileScript'
 
