@@ -28,7 +28,7 @@ body:
     attributes:
       label: Link to minimal reproduction
       description: |
-        The easiest way to provide a reproduction is by showing the bug in [The SFC Playground](https://sfc.vuejs.org/).
+        The easiest way to provide a reproduction is by showing the bug in [The SFC Playground](https://play.vuejs.org/).
         If it cannot be reproduced in the playground and requires a proper build setup, try [StackBlitz](https://vite.new/vue).
         If neither of these are suitable, you can always provide a GitHub repository.
 

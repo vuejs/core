@@ -11,6 +11,7 @@ export {
   proxyRefs,
   isRef,
   toRef,
+  toValue,
   toRefs,
   isProxy,
   isReactive,
@@ -69,6 +70,7 @@ export {
   defineEmits,
   defineExpose,
   defineOptions,
+  defineSlots,
   withDefaults,
   // internal
   mergeDefaults,
@@ -152,6 +154,8 @@ declare module '@vue/reactivity' {
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
+  MaybeRef,
+  MaybeRefOrGetter,
   ToRef,
   ToRefs,
   UnwrapRef,
@@ -240,7 +244,7 @@ export type {
   RootRenderFunction
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
-export type { Slot, Slots } from './componentSlots'
+export type { Slot, Slots, SlotsType } from './componentSlots'
 export type {
   Prop,
   PropType,

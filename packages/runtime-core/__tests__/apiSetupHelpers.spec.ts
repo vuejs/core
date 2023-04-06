@@ -114,6 +114,17 @@ describe('SFC <script setup> helpers', () => {
       })
     })
 
+    test('merging with skipFactory', () => {
+      const fn = () => {}
+      const merged = mergeDefaults(['foo', 'bar', 'baz'], {
+        foo: fn,
+        __skip_foo: true
+      })
+      expect(merged).toMatchObject({
+        foo: { default: fn, skipFactory: true }
+      })
+    })
+
     test('should warn missing', () => {
       mergeDefaults({}, { foo: 1 })
       expect(
