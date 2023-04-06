@@ -51,6 +51,14 @@ export interface App<HostElement = any> {
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
+  /**
+   * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
+   * to variables provided via `app.provide()`.
+   *
+   * @param fn - function to run with the app as active instance
+   */
+  runWithContext<T>(fn: () => T): T
+
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
   _component: ConcreteComponent
@@ -370,6 +378,15 @@ export function createAppAPI<HostElement>(
         context.provides[key as string | symbol] = value
 
         return app
+      },
+
+      runWithContext(fn) {
+        currentApp = app
+        try {
+          return fn()
+        } finally {
+          currentApp = null
+        }
       }
     })
 
@@ -380,3 +397,9 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+/**
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
+ */
+export let currentApp: App<unknown> | null = null
