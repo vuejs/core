@@ -13,17 +13,17 @@ import {
   createAssetUrlTransformWithOptions,
   AssetURLTagConfig,
   normalizeOptions
-} from './templateTransformAssetUrl'
+} from './template/transformAssetUrl'
 import {
   transformSrcset,
   createSrcsetTransformWithOptions
-} from './templateTransformSrcset'
+} from './template/transformSrcset'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
 import * as CompilerSSR from '@vue/compiler-ssr'
 import consolidate from '@vue/consolidate'
 import { warnOnce } from './warn'
-import { genCssVarsFromList } from './cssVars'
+import { genCssVarsFromList } from './style/cssVars'
 
 export interface TemplateCompiler {
   compile(template: string, options: CompilerOptions): CodegenResult

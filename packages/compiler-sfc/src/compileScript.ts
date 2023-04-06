@@ -53,13 +53,13 @@ import {
   CSS_VARS_HELPER,
   genCssVarsCode,
   genNormalScriptCssVarsCode
-} from './cssVars'
+} from './style/cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
 import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
-import { transformDestructuredProps } from './compileScriptPropsDestructure'
+import { transformDestructuredProps } from './script/propsDestructure'
 
 // Special compiler macros
 const DEFINE_PROPS = 'defineProps'
@@ -702,9 +702,10 @@ export function compileScript(
     if (node.typeParameters) {
       error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
     }
+    if (!node.arguments[0]) return true
 
     hasDefineOptionsCall = true
-    optionsRuntimeDecl = node.arguments[0]
+    optionsRuntimeDecl = unwrapTSNode(node.arguments[0])
 
     let propsOption = undefined
     let emitsOption = undefined

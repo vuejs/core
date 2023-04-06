@@ -53,9 +53,9 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -67,9 +67,9 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
@@ -84,9 +84,9 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -98,9 +98,9 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
@@ -115,9 +115,9 @@ export function defineCustomElement<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -129,9 +129,9 @@ export function defineCustomElement<
     Extends,
     E,
     EE,
-    S,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
