@@ -18,7 +18,7 @@ import {
   unwrapTSNode
 } from '@vue/compiler-core'
 import { genPropsAccessExp } from '@vue/shared'
-import { PropsDestructureBindings } from './compileScript'
+import { PropsDestructureBindings } from '../compileScript'
 
 /**
  * true -> prop binding

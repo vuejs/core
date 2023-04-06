@@ -658,12 +658,25 @@ exports[`SFC compile <script setup> > defineOptions() > basic usage 1`] = `
   setup(__props, { expose: __expose }) {
   __expose();
 
-
-
+        
+        
 return {  }
 }
 
 })"
+`;
+
+exports[`SFC compile <script setup> > defineOptions() > empty argument 1`] = `
+"export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+        
+return {  }
+}
+
+}"
 `;
 
 exports[`SFC compile <script setup> > defineProps w/ external definition 1`] = `
@@ -1439,6 +1452,22 @@ interface Emits { (e: 'foo' | 'bar'): void }
       
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
+  setup(__props, { expose: __expose, emit }) {
+  __expose();
+
+      
+      
+return { emit }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (property syntax string literal) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"foo:bar\\"],
   setup(__props, { expose: __expose, emit }) {
   __expose();
 

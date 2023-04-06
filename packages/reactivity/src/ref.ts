@@ -209,7 +209,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
 export function unref<T>(ref: MaybeRef<T>): T {
-  return isRef(ref) ? (ref.value as any) : ref
+  return isRef(ref) ? ref.value : ref
 }
 
 /**

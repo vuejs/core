@@ -89,8 +89,10 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
+  infer Defaults,
   any,
-  infer Defaults
+  any,
+  any
 >
   ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
       IntersectionMixin<Mixin> &
@@ -142,11 +144,11 @@ export type CreateComponentPublicInstance<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
-  S extends SlotsType = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -164,12 +166,26 @@ export type CreateComponentPublicInstance<
   PublicC,
   PublicM,
   E,
-  S,
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, S, Defaults>,
-  I
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
+  I,
+  S
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -181,12 +197,12 @@ export type ComponentPublicInstance<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   E extends EmitsOptions = {},
-  S extends SlotsType = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  I extends ComponentInjectOptions = {}
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
 > = {
   $: ComponentInternalInstance
   $data: D
