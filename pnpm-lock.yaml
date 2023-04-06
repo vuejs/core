@@ -244,13 +244,13 @@ importers:
   packages/sfc-playground:
     specifiers:
       '@vitejs/plugin-vue': ^4.1.0
-      '@vue/repl': ^1.3.0
+      '@vue/repl': ^1.3.4
       file-saver: ^2.0.5
       jszip: ^3.6.0
       vite: ^4.2.0
       vue: workspace:*
     dependencies:
-      '@vue/repl': 1.3.2_vue@packages+vue
+      '@vue/repl': 1.3.4_vue@packages+vue
       file-saver: 2.0.5
       jszip: 3.10.1
       vue: link:../vue
@@ -1195,8 +1195,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl/1.3.2_vue@packages+vue:
-    resolution: {integrity: sha512-5joGOuTFmjaugG3E1h/oP1EXSMcVXRUwLIoo8xvYQnqDrCT6g1SfsH1pfei5PpC5DUxMX1584CekZu6REgGYkQ==}
+  /@vue/repl/1.3.4_vue@packages+vue:
+    resolution: {integrity: sha512-jGjizCBG0onn3Xl3lKqKTvVE/RMza/QGLuCumDEx4kNZ7BEpWJNpXN9qaj4d/2/vr/+U0TaNl/YUwJuCDpLB6Q==}
     peerDependencies:
       vue: ^3.2.13
     dependencies:
