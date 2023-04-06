@@ -4,7 +4,9 @@ import {
   useAttrs,
   useSlots,
   withDefaults,
-  Slots
+  Slots,
+  defineSlots,
+  VNode
 } from 'vue'
 import { describe, expectType } from './utils'
 
@@ -143,6 +145,25 @@ describe('defineEmits w/ type declaration', () => {
   emit2('baz')
 })
 
+describe('defineEmits w/ alt type declaration', () => {
+  const emit = defineEmits<{
+    foo: [id: string]
+    bar: any[]
+    baz: []
+  }>()
+
+  emit('foo', 'hi')
+  // @ts-expect-error
+  emit('foo')
+
+  emit('bar')
+  emit('bar', 1, 2, 3)
+
+  emit('baz')
+  // @ts-expect-error
+  emit('baz', 1)
+})
+
 describe('defineEmits w/ runtime declaration', () => {
   const emit = defineEmits({
     foo: () => {},
@@ -158,6 +179,27 @@ describe('defineEmits w/ runtime declaration', () => {
   emit2('bar', 123)
   // @ts-expect-error
   emit2('baz')
+})
+
+describe('defineSlots', () => {
+  // short syntax
+  const slots = defineSlots<{
+    default: { foo: string; bar: number }
+    optional?: string
+  }>()
+  expectType<(scope: { foo: string; bar: number }) => VNode[]>(slots.default)
+  expectType<undefined | ((scope: string) => VNode[])>(slots.optional)
+
+  // literal fn syntax (allow for specifying return type)
+  const fnSlots = defineSlots<{
+    default(props: { foo: string; bar: number }): any
+    optional?(props: string): any
+  }>()
+  expectType<(scope: { foo: string; bar: number }) => VNode[]>(fnSlots.default)
+  expectType<undefined | ((scope: string) => VNode[])>(fnSlots.optional)
+
+  const slotsUntype = defineSlots()
+  expectType<Slots>(slotsUntype)
 })
 
 describe('useAttrs', () => {

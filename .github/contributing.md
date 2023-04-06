@@ -244,7 +244,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
   - `dts-test`: Contains type-only tests against generated dts files.
 
-  - `sfc-playground`: The playground continuously deployed at https://sfc.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
+  - `sfc-playground`: The playground continuously deployed at https://play.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
 
   - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
 
