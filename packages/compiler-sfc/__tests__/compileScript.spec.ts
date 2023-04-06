@@ -39,7 +39,7 @@ describe('SFC compile <script setup>', () => {
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
       a: BindingTypes.SETUP_LET,
-      b: BindingTypes.LITERAL_CONST,
+      b: BindingTypes.SETUP_CONST,
       c: BindingTypes.SETUP_CONST,
       d: BindingTypes.SETUP_CONST,
       xx: BindingTypes.SETUP_MAYBE_REF,
@@ -1626,6 +1626,17 @@ const emit = defineEmits(['a', 'b'])
       </script>
       `)
       expect(content).toMatch(`emits: ["foo", "bar"]`)
+      assertCode(content)
+    })
+
+    // #8040
+    test('defineEmits w/ type (property syntax string literal)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const emit = defineEmits<{ 'foo:bar': [] }>()
+      </script>
+      `)
+      expect(content).toMatch(`emits: ["foo:bar"]`)
       assertCode(content)
     })
 
