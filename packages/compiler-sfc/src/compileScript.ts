@@ -936,6 +936,10 @@ export function compileScript(
     )
   }
 
+  function concatStrings(strs: Array<string | null | undefined | false>) {
+    return strs.filter((s): s is string => !!s).join(', ')
+  }
+
   function genRuntimeProps() {
     function genPropsFromTS() {
       const keys = Object.keys(typeDeclaredProps)
@@ -982,11 +986,12 @@ export function compileScript(
 
         const { type, required, skipCheck } = typeDeclaredProps[key]
         if (!isProd) {
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}, required: ${required}${skipCheck ? ', skipCheck: true' : ''}${
-            defaultString ? `, ${defaultString}` : ``
-          } }`
+          return `${key}: { ${concatStrings([
+            `type: ${toRuntimeTypeString(type)}`,
+            `required: ${required}`,
+            skipCheck && 'skipCheck: true',
+            defaultString
+          ])} }`
         } else if (
           type.some(
             el =>
@@ -997,16 +1002,17 @@ export function compileScript(
           // #4783 for boolean, should keep the type
           // #7111 for function, if default value exists or it's not static, should keep it
           // in production
-          return `${key}: { type: ${toRuntimeTypeString(
-            type
-          )}, required: ${required}${
-            defaultString ? `, ${defaultString}` : ``
-          } }`
+          return `${key}: { ${concatStrings([
+            `type: ${toRuntimeTypeString(type)}`,
+            required && `required: ${required}`,
+            defaultString
+          ])} }`
         } else {
           // production: checks are useless
-          return `${key}: ${`{ required: ${required}${
-            defaultString ? `, ${defaultString}` : ``
-          } }`}`
+          return `${key}: ${`{ ${concatStrings([
+            required && `required: ${required}`,
+            defaultString
+          ])} }`}`
         }
       })
       .join(',\n    ')}\n  }`
@@ -1046,19 +1052,19 @@ export function compileScript(
             runtimeTypes.length > 0 &&
             toRuntimeTypeString(runtimeTypes)) ||
           undefined
-        const skipCheckString = skipCheck ? ', skipCheck: true' : ''
 
-        if (runtimeType) runtimeType = `type: ${runtimeType}`
+        const codegenOptions = concatStrings([
+          runtimeType && `type: ${runtimeType}`,
+          skipCheck && 'skipCheck: true'
+        ])
 
         let decl: string
         if (runtimeType && options) {
           decl = isTS
-            ? `{ ${runtimeType}${skipCheckString}, ...${options} }`
-            : `Object.assign({ ${runtimeType}${skipCheckString} }, ${options})`
+            ? `{ ${codegenOptions}, ...${options} }`
+            : `Object.assign({ ${codegenOptions} }, ${options})`
         } else {
-          decl =
-            options ||
-            (runtimeType ? `{ ${runtimeType}${skipCheckString} }` : '{}')
+          decl = options || (runtimeType ? `{ ${codegenOptions} }` : '{}')
         }
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }

@@ -135,12 +135,12 @@ describe('sfc props transform', () => {
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
-    foo: { required: false, default: 1 },
-    bar: { required: false, default: () => ({}) },
-    baz: { required: false },
-    boola: { type: Boolean, required: false },
-    boolb: { type: [Boolean, Number], required: false },
-    func: { type: Function, required: false, default: () => {} }
+    foo: { default: 1 },
+    bar: { default: () => ({}) },
+    baz: {  },
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => {} }
   }`)
   })
 
