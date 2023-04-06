@@ -1,0 +1,144 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`sfc hoist static > should enable when only script setup 1`] = `
+"const foo = 'bar'
+    
+export default {
+  setup(__props) {
+
+    const foo = 'bar'
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should hoist expressions 1`] = `
+"const unary = !false
+    const binary = 1 + 2
+    const conditional = 1 ? 2 : 3
+    const sequence = (1, true, 'foo', 1)
+    
+export default {
+  setup(__props) {
+
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should hoist literal value 1`] = `
+"const string = 'default value'
+    const number = 123
+    const boolean = false
+    const nil = null
+    const bigint = 100n
+    const template = \`str\`
+    const regex = /.*/g
+    
+export default {
+  setup(__props) {
+
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should hoist w/ defineProps/Emits 1`] = `
+"const defaultValue = 'default value'
+    
+export default {
+  props: {
+      foo: {
+        default: defaultValue
+      }
+    },
+  setup(__props) {
+
+    
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should not hoist a constant initialized to a reference value 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props) {
+
+    const KEY1 = Boolean
+    const KEY2 = [Boolean]
+    const KEY3 = [getCurrentInstance()]
+    let i = 0;
+    const KEY4 = (i++, 'foo')
+    enum KEY5 {
+      FOO = 1,
+      BAR = getCurrentInstance(),
+    }
+    const KEY6 = \`template\${i}\`
+    
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc hoist static > should not hoist a function or class 1`] = `
+"export default {
+  setup(__props) {
+
+    const fn = () => {}
+    function fn2() {}
+    class Foo {}
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should not hoist a object or array 1`] = `
+"export default {
+  setup(__props) {
+
+    const obj = { foo: 'bar' }
+    const arr = [1, 2, 3]
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should not hoist a variable 1`] = `
+"export default {
+  setup(__props) {
+
+    let KEY1 = 'default value'
+    var KEY2 = 123
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc hoist static > should not hoist when disabled 1`] = `
+"export default {
+  setup(__props) {
+
+    const foo = 'bar'
+    
+return () => {}
+}
+
+}"
+`;

@@ -1,9 +1,11 @@
+export const version = __VERSION__
+
 // API
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
-export { rewriteDefault } from './rewriteDefault'
+export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
@@ -50,7 +52,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type {
   AssetURLOptions,
   AssetURLTagConfig
-} from './templateTransformAssetUrl'
+} from './template/transformAssetUrl'
 export type {
   CompilerOptions,
   CompilerError,
