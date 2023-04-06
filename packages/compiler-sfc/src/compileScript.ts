@@ -2316,11 +2316,15 @@ function extractRuntimeEmits(
         hasCallSignature = true
       }
       if (t.type === 'TSPropertySignature') {
-        if (t.key.type !== 'Identifier' || t.computed) {
+        if (t.key.type === 'Identifier' && !t.computed) {
+          emits.add(t.key.name)
+          hasProperty = true
+        } else if (t.key.type === 'StringLiteral' && !t.computed) {
+          emits.add(t.key.value)
+          hasProperty = true
+        } else {
           error(`defineEmits() type cannot use computed keys.`, t.key)
         }
-        emits.add(t.key.name)
-        hasProperty = true
       }
     }
     if (hasCallSignature && hasProperty) {

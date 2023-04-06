@@ -1629,6 +1629,17 @@ const emit = defineEmits(['a', 'b'])
       assertCode(content)
     })
 
+    // #8040
+    test('defineEmits w/ type (property syntax string literal)', () => {
+      const { content } = compile(`
+      <script setup lang="ts">
+      const emit = defineEmits<{ 'foo:bar': [] }>()
+      </script>
+      `)
+      expect(content).toMatch(`emits: ["foo:bar"]`)
+      assertCode(content)
+    })
+
     describe('defineSlots()', () => {
       test('basic usage', () => {
         const { content } = compile(`
