@@ -171,10 +171,11 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 }
 
 function doWatch(
-  source: WatchSource | WatchSource[] | WatchEffect | object,
-  cb: WatchCallback | null,
+  source: WatchSource | WatchSource[] | WatchEffect | object, // 被监听的目标，可以是getter、ref、reactive对象、数组或effect函数
+  cb: WatchCallback | null, // 回调函数，在目标变化时被触发，可以为空
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  // 返回一个停止监听的句柄，调用该句柄可以停止监听
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -199,12 +200,13 @@ function doWatch(
     )
   }
 
+  // 获取当前组件实例
   const instance =
     getCurrentScope() === currentInstance?.scope ? currentInstance : null
   // const instance = currentInstance
-  let getter: () => any
-  let forceTrigger = false
-  let isMultiSource = false
+  let getter: () => any // 获取当前目标值的方法
+  let forceTrigger = false // 是否强制触发回调函数
+  let isMultiSource = false //
 
   if (isRef(source)) {
     getter = () => source.value
