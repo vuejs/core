@@ -89,8 +89,10 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
+  infer Defaults,
   any,
-  infer Defaults
+  any,
+  any
 >
   ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
       IntersectionMixin<Mixin> &
@@ -142,11 +144,11 @@ export type CreateComponentPublicInstance<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
-  S extends SlotsType = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -167,7 +169,21 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, S, Defaults>,
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
   I,
   S
 >
