@@ -65,10 +65,11 @@ export type DefineComponent<
     Mixin,
     Extends,
     E,
-    S,
     PP & Props,
     Defaults,
-    true
+    true,
+    {},
+    S
   > &
     Props
 > &
@@ -82,8 +83,10 @@ export type DefineComponent<
     Extends,
     E,
     EE,
-    S,
-    Defaults
+    Defaults,
+    {},
+    string,
+    S
   > &
   PP
 
