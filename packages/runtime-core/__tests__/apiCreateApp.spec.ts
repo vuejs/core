@@ -110,6 +110,22 @@ describe('api: createApp', () => {
     expect(`App already provides property with key "bar".`).toHaveBeenWarned()
   })
 
+  test('runWithContext', () => {
+    const app = createApp({
+      setup() {
+        provide('foo', 'should not be seen')
+        return () => h('div')
+      }
+    })
+    app.provide('foo', 1)
+
+    expect(app.runWithContext(() => inject('foo'))).toBe(1)
+
+    // ensure the context is restored
+    inject('foo')
+    expect('inject() can only be used inside setup').toHaveBeenWarned()
+  })
+
   test('component', () => {
     const Root = {
       // local override

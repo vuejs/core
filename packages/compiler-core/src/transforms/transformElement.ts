@@ -361,7 +361,8 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const fromConst =
     checkType(BindingTypes.SETUP_CONST) ||
-    checkType(BindingTypes.SETUP_REACTIVE_CONST)
+    checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
+    checkType(BindingTypes.LITERAL_CONST)
   if (fromConst) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is
