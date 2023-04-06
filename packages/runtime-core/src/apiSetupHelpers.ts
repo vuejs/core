@@ -27,7 +27,7 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
-import { WritableComputedRef, computed, ref } from '@vue/reactivity'
+import { Ref, ref } from '@vue/reactivity'
 import { watch } from './apiWatch'
 
 // dev only
@@ -238,18 +238,16 @@ export function defineSlots<
  */
 export function defineModel<T>(
   options: { required: false } & Record<string, unknown>
-): WritableComputedRef<T | undefined>
-export function defineModel<T>(
-  options?: Record<string, unknown>
-): WritableComputedRef<T>
+): Ref<T | undefined>
+export function defineModel<T>(options?: Record<string, unknown>): Ref<T>
 export function defineModel<T>(
   name: string,
   options: { required: false } & Record<string, unknown>
-): WritableComputedRef<T | undefined>
+): Ref<T | undefined>
 export function defineModel<T>(
   name: string,
   options?: Record<string, unknown>
-): WritableComputedRef<T>
+): Ref<T>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -317,7 +315,7 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T>(name: string): WritableComputedRef<T> {
+export function useModel<T>(name: string): Ref<T> {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
@@ -341,14 +339,17 @@ export function useModel<T>(name: string): WritableComputedRef<T> {
 
     return proxy
   } else {
-    return computed<any>({
-      get() {
+    return {
+      __v_isRef: true,
+      get value() {
         return i.props[name]
       },
-      set(value) {
-        i.emit(`update:${name}`, value)
+      set value(value) {
+        if (value !== i.props[name]) {
+          i.emit(`update:${name}`, value)
+        }
       }
-    })
+    } as any
   }
 }
 

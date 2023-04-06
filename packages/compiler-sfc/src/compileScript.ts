@@ -1197,6 +1197,34 @@ export function compileScript(
     }
   }
 
+  function genRuntimeEmits() {
+    function genEmitsFromTS() {
+      return typeDeclaredEmits.size
+        ? `[${Array.from(typeDeclaredEmits)
+            .map(k => JSON.stringify(k))
+            .join(', ')}]`
+        : ``
+    }
+
+    let emitsDecl = ''
+    if (emitsRuntimeDecl) {
+      emitsDecl = scriptSetup!.content
+        .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
+        .trim()
+    } else if (emitsTypeDecl) {
+      emitsDecl = genEmitsFromTS()
+    }
+    if (hasDefineModelCall) {
+      let modelEmitsDecl = `[${Object.keys(modelDecls)
+        .map(n => JSON.stringify(`update:${n}`))
+        .join(', ')}]`
+      emitsDecl = emitsDecl
+        ? `${helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
+        : modelEmitsDecl
+    }
+    return emitsDecl
+  }
+
   // 0. parse both <script> and <script setup> blocks
   const scriptAst =
     script &&
@@ -1916,10 +1944,10 @@ export function compileScript(
     runtimeOptions += `\n  __ssrInlineRender: true,`
   }
 
-  let propsDecl = genRuntimeProps()
+  const propsDecl = genRuntimeProps()
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
-  let emitsDecl = genRuntimeEmits()
+  const emitsDecl = genRuntimeEmits()
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
@@ -1999,34 +2027,6 @@ export function compileScript(
       : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body
-  }
-
-  function genRuntimeEmits() {
-    function genEmitsFromTS() {
-      return typeDeclaredEmits.size
-        ? `[${Array.from(typeDeclaredEmits)
-            .map(k => JSON.stringify(k))
-            .join(', ')}]`
-        : ``
-    }
-
-    let emitsDecl = ''
-    if (emitsRuntimeDecl) {
-      emitsDecl = scriptSetup!.content
-        .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
-        .trim()
-    } else if (emitsTypeDecl) {
-      emitsDecl = genEmitsFromTS()
-    }
-    if (hasDefineModelCall) {
-      let modelEmitsDecl = `[${Object.keys(modelDecls)
-        .map(n => JSON.stringify(`update:${n}`))
-        .join(', ')}]`
-      emitsDecl = emitsDecl
-        ? `${helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
-        : modelEmitsDecl
-    }
-    return emitsDecl
   }
 }
 

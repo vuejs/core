@@ -7,7 +7,7 @@ import {
   Slots,
   defineSlots,
   VNode,
-  WritableComputedRef,
+  Ref,
   defineModel
 } from 'vue'
 import { describe, expectType } from './utils'
@@ -207,26 +207,26 @@ describe('defineSlots', () => {
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: false })
-  expectType<WritableComputedRef<boolean | undefined>>(modelValueRequired)
+  expectType<Ref<boolean | undefined>>(modelValueRequired)
 
   // overload 2
   const modelValue = defineModel<string>()
-  expectType<WritableComputedRef<string>>(modelValue)
+  expectType<Ref<string>>(modelValue)
   modelValue.value = 'new value'
 
   const modelValueDefault = defineModel<boolean>({ default: true })
-  expectType<WritableComputedRef<boolean>>(modelValueDefault)
+  expectType<Ref<boolean>>(modelValueDefault)
 
   // overload 3
   const countRequired = defineModel<number>('count', { required: false })
-  expectType<WritableComputedRef<number | undefined>>(countRequired)
+  expectType<Ref<number | undefined>>(countRequired)
 
   // overload 4
   const count = defineModel<number>('count')
-  expectType<WritableComputedRef<number>>(count)
+  expectType<Ref<number>>(count)
 
   const countDefault = defineModel<number>('count', { default: 1 })
-  expectType<WritableComputedRef<number>>(countDefault)
+  expectType<Ref<number>>(countDefault)
 })
 
 describe('useAttrs', () => {
