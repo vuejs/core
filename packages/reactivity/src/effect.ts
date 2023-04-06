@@ -30,7 +30,10 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export type EffectScheduler = (computedToAskDirty: ComputedRefImpl<any> | undefined, ...args: any[]) => any
+export type EffectScheduler = (
+  computedToAskDirty: ComputedRefImpl<any> | undefined,
+  ...args: any[]
+) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -185,7 +188,26 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const _effect = new ReactiveEffect(fn)
+  let _dirty = false
+  let _triggeredAfterLastEffect = false
+  let _computedsToAskDirty: ComputedRefImpl<any>[] = []
+
+  const _effect = new ReactiveEffect(fn, _c => {
+    if (!_dirty) {
+      if (!_c) {
+        _dirty = true
+      }
+      if (state === EffectState.TRACKING) {
+        if (_c) {
+          _computedsToAskDirty.push(_c)
+        }
+        if (!_triggeredAfterLastEffect) {
+          _triggeredAfterLastEffect = true
+          schedulerCallbacks.push(cb)
+        }
+      }
+    }
+  })
   if (options) {
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
@@ -196,6 +218,32 @@ export function effect<T = any>(
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
   runner.effect = _effect
   return runner
+
+  function cb() {
+    if (!_dirty && _computedsToAskDirty.length) {
+      pauseTracking()
+      if (_computedsToAskDirty.length >= 2) {
+        _computedsToAskDirty = _computedsToAskDirty.sort((a, b) => {
+          const aIndex = _effect.deps.indexOf(a.dep!)
+          const bIndex = _effect.deps.indexOf(b.dep!)
+          return aIndex - bIndex
+        })
+      }
+      for (const computedToAskDirty of _computedsToAskDirty) {
+        computedToAskDirty.value
+        if (_dirty) {
+          break
+        }
+      }
+      resetTracking()
+    }
+    if (_dirty) {
+      _dirty = false
+      _effect.run()
+    }
+    _computedsToAskDirty.length = 0
+    _triggeredAfterLastEffect = false
+  }
 }
 
 /**
@@ -409,11 +457,26 @@ export function triggerEffects(
   }
 }
 
+const schedulerCallbacks: (() => void)[] = []
+
+const enum EffectState {
+  NOT_TRACKING = 0,
+  TRACKING = 1,
+  POST_SCHEDULER = 2
+}
+
+let state = EffectState.NOT_TRACKING
+
 function triggerEffect(
   effect: ReactiveEffect,
   computedToAskDirty: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  let isRootEffect = false
+  if (state === EffectState.NOT_TRACKING) {
+    state = EffectState.TRACKING
+    isRootEffect = true
+  }
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
@@ -423,6 +486,12 @@ function triggerEffect(
     } else {
       effect.run()
     }
+  }
+  if (isRootEffect) {
+    state = EffectState.POST_SCHEDULER
+    schedulerCallbacks.forEach(cb => cb())
+    schedulerCallbacks.length = 0
+    state = EffectState.NOT_TRACKING
   }
 }
 
