@@ -106,10 +106,10 @@ export interface ComponentOptionsBase<
   Extends extends ComponentOptionsMixin,
   E extends EmitsOptions,
   EE extends string = string,
-  S extends SlotsType = {},
   Defaults = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
@@ -233,10 +233,10 @@ export type ComponentOptionsWithoutProps<
   Extends,
   E,
   EE,
-  S,
   {},
   I,
-  II
+  II,
+  S
 > & {
   props?: undefined
 } & ThisType<
@@ -249,11 +249,11 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      S,
       PE,
       {},
       false,
-      I
+      I,
+      S
     >
   >
 
@@ -281,10 +281,10 @@ export type ComponentOptionsWithArrayProps<
   Extends,
   E,
   EE,
-  S,
   {},
   I,
-  II
+  II,
+  S
 > & {
   props: PropNames[]
 } & ThisType<
@@ -297,11 +297,11 @@ export type ComponentOptionsWithArrayProps<
       Mixin,
       Extends,
       E,
-      S,
       Props,
       {},
       false,
-      I
+      I,
+      S
     >
   >
 
@@ -330,10 +330,10 @@ export type ComponentOptionsWithObjectProps<
   Extends,
   E,
   EE,
-  S,
   Defaults,
   I,
-  II
+  II,
+  S
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -346,11 +346,11 @@ export type ComponentOptionsWithObjectProps<
       Mixin,
       Extends,
       E,
-      S,
       Props,
       Defaults,
       false,
-      I
+      I,
+      S
     >
   >
 

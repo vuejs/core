@@ -130,3 +130,15 @@ return () => {}
 
 }"
 `;
+
+exports[`sfc hoist static > should not hoist when disabled 1`] = `
+"export default {
+  setup(__props) {
+
+    const foo = 'bar'
+    
+return () => {}
+}
+
+}"
+`;
