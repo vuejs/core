@@ -1494,9 +1494,9 @@ declare const MyButton: DefineComponent<
   ComponentOptionsMixin,
   EmitsOptions,
   string,
-  {},
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
+  {},
   {}
 >
 ;<MyButton class="x" />

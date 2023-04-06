@@ -219,9 +219,9 @@ export type ComponentOptionsWithoutProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -267,9 +267,9 @@ export type ComponentOptionsWithArrayProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
@@ -315,9 +315,9 @@ export type ComponentOptionsWithObjectProps<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
