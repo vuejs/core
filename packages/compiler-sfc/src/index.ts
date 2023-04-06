@@ -1,3 +1,5 @@
+export const version = __VERSION__
+
 // API
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
@@ -50,7 +52,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type {
   AssetURLOptions,
   AssetURLTagConfig
-} from './templateTransformAssetUrl'
+} from './template/transformAssetUrl'
 export type {
   CompilerOptions,
   CompilerError,

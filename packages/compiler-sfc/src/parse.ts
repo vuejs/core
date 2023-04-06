@@ -9,10 +9,9 @@ import {
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map'
 import { TemplateCompiler } from './compileTemplate'
-import { parseCssVars } from './cssVars'
+import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
 import { hmrShouldReload, ImportBinding } from './compileScript'
-import MagicString from 'magic-string'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -42,7 +41,6 @@ export interface SFCTemplateBlock extends SFCBlock {
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
-  s: MagicString
   setup?: string | boolean
   bindings?: BindingMetadata
   imports?: Record<string, ImportBinding>

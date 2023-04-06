@@ -128,7 +128,11 @@ export function processExpression(
       const isDestructureAssignment =
         parent && isInDestructureAssignment(parent, parentStack)
 
-      if (isConst(type) || localVars[raw]) {
+      if (
+        isConst(type) ||
+        type === BindingTypes.SETUP_REACTIVE_CONST ||
+        localVars[raw]
+      ) {
         return raw
       } else if (type === BindingTypes.SETUP_REF) {
         return `${raw}.value`
@@ -198,6 +202,8 @@ export function processExpression(
         return `$setup.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         return `$props['${bindingMetadata.__propsAliases![raw]}']`
+      } else if (type === BindingTypes.LITERAL_CONST) {
+        return raw
       } else if (type) {
         return `$${type}.${raw}`
       }
@@ -371,8 +377,6 @@ export function stringifyExpression(exp: ExpressionNode | string): string {
 
 function isConst(type: unknown) {
   return (
-    type === BindingTypes.SETUP_CONST ||
-    type === BindingTypes.LITERAL_CONST ||
-    type === BindingTypes.SETUP_REACTIVE_CONST
+    type === BindingTypes.SETUP_CONST || type === BindingTypes.LITERAL_CONST
   )
 }
