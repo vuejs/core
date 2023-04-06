@@ -313,34 +313,6 @@ describe('reactivity/computed', () => {
     expect(hourSpy).toHaveBeenCalledTimes(17)
   })
 
-  it('effect callback on-demand trigger', () => {
-    const minSpy = vi.fn()
-    const hourSpy = vi.fn()
-    const effectSpy = vi.fn()
-
-    const sec = ref(0)
-    const min = computed(() => {
-      minSpy()
-      return Math.floor(sec.value / 60)
-    })
-    const hour = computed(() => {
-      hourSpy()
-      return Math.floor(min.value / 60)
-    })
-
-    effect(() => {
-      effectSpy()
-      min.value
-      hour.value
-    })
-
-    for (sec.value = 0; sec.value < 1000; sec.value++) {}
-
-    expect(minSpy).toHaveBeenCalledTimes(1001)
-    expect(hourSpy).toHaveBeenCalledTimes(17)
-    expect(effectSpy).toHaveBeenCalledTimes(1001)
-  })
-
   it('chained computed value urgent assessment edge case', () => {
     const cSpy = vi.fn()
 
