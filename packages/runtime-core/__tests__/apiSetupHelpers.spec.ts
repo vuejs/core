@@ -27,7 +27,7 @@ import {
   mergeDefaults,
   withAsyncContext,
   createPropsRestProxy,
-  mergeModelsOptions,
+  mergeModels,
   useModel,
   addRequiredToModels
 } from '../src/apiSetupHelpers'
@@ -138,9 +138,9 @@ describe('SFC <script setup> helpers', () => {
     })
   })
 
-  describe('mergeModelsOptions', () => {
+  describe('mergeModels', () => {
     test('array syntax', () => {
-      expect(mergeModelsOptions(['foo', 'bar'], ['baz'])).toMatchObject([
+      expect(mergeModels(['foo', 'bar'], ['baz'])).toMatchObject([
         'foo',
         'bar',
         'baz'
@@ -149,7 +149,7 @@ describe('SFC <script setup> helpers', () => {
 
     test('object syntax', () => {
       expect(
-        mergeModelsOptions({ foo: null, bar: { required: true } }, ['baz'])
+        mergeModels({ foo: null, bar: { required: true } }, ['baz'])
       ).toMatchObject({
         foo: null,
         bar: { required: true },
@@ -157,7 +157,7 @@ describe('SFC <script setup> helpers', () => {
       })
 
       expect(
-        mergeModelsOptions(['baz'], { foo: null, bar: { required: true } })
+        mergeModels(['baz'], { foo: null, bar: { required: true } })
       ).toMatchObject({
         foo: null,
         bar: { required: true },
@@ -167,7 +167,7 @@ describe('SFC <script setup> helpers', () => {
 
     test('overwrite', () => {
       expect(
-        mergeModelsOptions(
+        mergeModels(
           { foo: null, bar: { required: true } },
           { bar: {}, baz: {} }
         )

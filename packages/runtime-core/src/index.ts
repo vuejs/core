@@ -76,7 +76,7 @@ export {
   useModel,
   // internal
   mergeDefaults,
-  mergeModelsOptions,
+  mergeModels,
   addRequiredToModels,
   createPropsRestProxy,
   withAsyncContext

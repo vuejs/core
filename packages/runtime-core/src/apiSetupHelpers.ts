@@ -406,7 +406,7 @@ export function mergeDefaults(
  * Imported by compiled code only.
  * @internal
  */
-export function mergeModelsOptions(
+export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
   b: ComponentPropsOptions | EmitsOptions
 ) {
