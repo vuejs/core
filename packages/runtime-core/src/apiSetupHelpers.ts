@@ -316,14 +316,19 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T>(name: string): Ref<T> {
+export function useModel<T>(name = 'modelValue'): Ref<T> {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
-    return null as any
+    return ref() as any
   }
 
   const options = (i.propsOptions[0] as NormalizedProps)[name]
+  if (__DEV__ && !options) {
+    warn(`useModel() called with prop "${name}" which is not declared.`)
+    return ref() as any
+  }
+
   if (options && !options.required) {
     const proxy = ref<any>(i.props[name])
 
