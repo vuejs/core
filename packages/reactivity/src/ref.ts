@@ -53,7 +53,11 @@ export function trackRefValue(ref: RefBase<any>) {
   }
 }
 
-export function triggerRefValue(ref: RefBase<any>, computedToAskDirty: ComputedRefImpl<any> | undefined, newVal?: any) {
+export function triggerRefValue(
+  ref: RefBase<any>,
+  computedToAskDirty: ComputedRefImpl<any> | undefined,
+  newVal?: any
+) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
@@ -187,7 +191,7 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, __DEV__ ? ref.value : void 0)
+  triggerRefValue(ref, undefined, __DEV__ ? ref.value : void 0)
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
