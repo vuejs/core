@@ -28,8 +28,7 @@ import {
   withAsyncContext,
   createPropsRestProxy,
   mergeModels,
-  useModel,
-  addRequiredToModels
+  useModel
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -179,24 +178,6 @@ describe('SFC <script setup> helpers', () => {
     })
   })
 
-  test('addRequiredToModels', () => {
-    expect(
-      addRequiredToModels({
-        foo: {},
-        bar: { required: false },
-        baz: { default: 1 },
-        qux: { required: false, default: 1 },
-        quux: { type: String }
-      })
-    ).toStrictEqual({
-      foo: { required: true },
-      bar: { required: false },
-      baz: { default: 1 },
-      qux: { required: false, default: 1 },
-      quux: { type: String, required: true }
-    })
-  })
-
   describe('useModel', () => {
     test('basic', async () => {
       let foo: any
@@ -205,12 +186,10 @@ describe('SFC <script setup> helpers', () => {
       }
 
       const Comp = defineComponent({
-        props: {
-          modelValue: { required: true }
-        },
+        props: ['modelValue'],
         emits: ['update:modelValue'],
-        setup() {
-          foo = useModel<string>('modelValue')
+        setup(props) {
+          foo = useModel(props, 'modelValue')
         },
         render() {}
       })
@@ -246,7 +225,7 @@ describe('SFC <script setup> helpers', () => {
       expect(setValue).toBeCalledTimes(1)
     })
 
-    test('optional', async () => {
+    test('local', async () => {
       let foo: any
       const update = () => {
         foo.value = 'bar'
@@ -255,8 +234,8 @@ describe('SFC <script setup> helpers', () => {
       const Comp = defineComponent({
         props: ['foo'],
         emits: ['update:foo'],
-        setup() {
-          foo = useModel<string>('foo')
+        setup(props) {
+          foo = useModel(props, 'foo', { local: true })
         },
         render() {}
       })
@@ -282,8 +261,8 @@ describe('SFC <script setup> helpers', () => {
       const Comp = defineComponent({
         props: { count: { default: 0 } },
         emits: ['update:count'],
-        setup() {
-          count = useModel<number>('count')
+        setup(props) {
+          count = useModel(props, 'count', { local: true })
         },
         render() {}
       })

@@ -137,7 +137,7 @@ describe('sfc props transform', () => {
     expect(content).toMatch(`props: {
     foo: { default: 1 },
     bar: { default: () => ({}) },
-    baz: {  },
+    baz: {},
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
     func: { type: Function, default: () => {} }

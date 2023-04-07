@@ -651,19 +651,51 @@ export function compileScript(
       error(`duplicate model name ${JSON.stringify(modelName)}`, node)
     }
 
+    const optionsString = options
+      ? s.slice(startOffset + options.start!, startOffset + options.end!)
+      : undefined
+
     modelDecls[modelName] = {
       type,
-      options: options
-        ? s.slice(startOffset + options.start!, startOffset + options.end!)
-        : undefined,
+      options: optionsString,
       identifier:
         declId && declId.type === 'Identifier' ? declId.name : undefined
+    }
+
+    let runtimeOptions = ''
+    if (options) {
+      if (options.type === 'ObjectExpression') {
+        const local = options.properties.find(
+          p =>
+            p.type === 'ObjectProperty' &&
+            ((p.key.type === 'Identifier' && p.key.name === 'local') ||
+              (p.key.type === 'StringLiteral' && p.key.value === 'local'))
+        ) as ObjectProperty
+
+        if (local) {
+          runtimeOptions = `{ ${s.slice(
+            startOffset + local.start!,
+            startOffset + local.end!
+          )} }`
+        } else {
+          for (const p of options.properties) {
+            if (p.type === 'SpreadElement' || p.computed) {
+              runtimeOptions = optionsString!
+              break
+            }
+          }
+        }
+      } else {
+        runtimeOptions = optionsString!
+      }
     }
 
     s.overwrite(
       startOffset + node.start!,
       startOffset + node.end!,
-      `${helper('useModel')}(${JSON.stringify(modelName)})`
+      `${helper('useModel')}(__props, ${JSON.stringify(modelName)}${
+        runtimeOptions ? `, ${runtimeOptions}` : ``
+      })`
     )
 
     return true
@@ -1004,15 +1036,11 @@ export function compileScript(
           // in production
           return `${key}: { ${concatStrings([
             `type: ${toRuntimeTypeString(type)}`,
-            required && `required: ${required}`,
             defaultString
           ])} }`
         } else {
           // production: checks are useless
-          return `${key}: ${`{ ${concatStrings([
-            required && `required: ${required}`,
-            defaultString
-          ])} }`}`
+          return `${key}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
         }
       })
       .join(',\n    ')}\n  }`
@@ -1068,7 +1096,7 @@ export function compileScript(
         }
         modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
       }
-      return `${helper('addRequiredToModels')}({${modelPropsDecl}\n  })`
+      return `{${modelPropsDecl}\n  }`
     }
 
     let propsDecls: undefined | string

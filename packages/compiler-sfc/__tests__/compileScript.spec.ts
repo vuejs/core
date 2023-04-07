@@ -377,12 +377,14 @@ defineExpose({ foo: 123 })
         { defineModel: true }
       )
       assertCode(content)
-      expect(content).toMatch('props: _addRequiredToModels({')
+      expect(content).toMatch('props: {')
       expect(content).toMatch('"modelValue": { required: true },')
       expect(content).toMatch('"count": {},')
       expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
-      expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
-      expect(content).toMatch(`const c = _useModel("count")`)
+      expect(content).toMatch(
+        `const modelValue = _useModel(__props, "modelValue")`
+      )
+      expect(content).toMatch(`const c = _useModel(__props, "count")`)
       expect(content).toMatch(`return { modelValue, c }`)
       expect(content).not.toMatch('defineModel')
 
@@ -407,7 +409,7 @@ defineExpose({ foo: 123 })
       assertCode(content)
       expect(content).toMatch(`props: _mergeModels({ foo: String }`)
       expect(content).toMatch(`"modelValue": { default: 0 }`)
-      expect(content).toMatch(`const count = _useModel("modelValue")`)
+      expect(content).toMatch(`const count = _useModel(__props, "modelValue")`)
       expect(content).not.toMatch('defineModel')
       expect(bindings).toStrictEqual({
         count: BindingTypes.SETUP_REF,
@@ -427,17 +429,42 @@ defineExpose({ foo: 123 })
         { defineModel: true }
       )
       assertCode(content)
-      expect(content)
-        .toMatch(`props: _mergeModels(['foo', 'bar'], _addRequiredToModels({
+      expect(content).toMatch(`props: _mergeModels(['foo', 'bar'], {
     "count": {},
-  }))`)
-      expect(content).toMatch(`const count = _useModel("count")`)
+  })`)
+      expect(content).toMatch(`const count = _useModel(__props, "count")`)
       expect(content).not.toMatch('defineModel')
       expect(bindings).toStrictEqual({
         foo: BindingTypes.PROPS,
         bar: BindingTypes.PROPS,
         count: BindingTypes.SETUP_REF
       })
+    })
+
+    test('w/ local flag', () => {
+      const { content } = compile(
+        `<script setup>
+        const foo = defineModel({ local: true, default: 1 })
+        const bar = defineModel('bar', { [key]: true })
+        const baz = defineModel('baz', { ...x })
+        const qux = defineModel('qux', x)
+
+        const foo2 = defineModel('foo2', { local: true, ...x })
+
+        const local = true
+        const hoist = defineModel('hoist', { local })
+        </script>`,
+        { defineModel: true }
+      )
+      assertCode(content)
+      expect(content).toMatch(
+        `_useModel(__props, "modelValue", { local: true })`
+      )
+      expect(content).toMatch(`_useModel(__props, "bar", { [key]: true })`)
+      expect(content).toMatch(`_useModel(__props, "baz", { ...x })`)
+      expect(content).toMatch(`_useModel(__props, "qux", x)`)
+      expect(content).toMatch(`_useModel(__props, "foo2", { local: true })`)
+      expect(content).toMatch(`_useModel(__props, "hoist", { local })`)
     })
   })
 
@@ -1509,12 +1536,12 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(`const props = __props`)
 
       // foo has no default value, the Function can be dropped
-      expect(content).toMatch(`foo: { required: true }`)
-      expect(content).toMatch(`bar: { type: Boolean, required: true }`)
+      expect(content).toMatch(`foo: {}`)
+      expect(content).toMatch(`bar: { type: Boolean }`)
       expect(content).toMatch(
-        `baz: { type: [Boolean, Function], required: true, default: true }`
+        `baz: { type: [Boolean, Function], default: true }`
       )
-      expect(content).toMatch(`qux: { required: true, default: 'hi' }`)
+      expect(content).toMatch(`qux: { default: 'hi' }`)
     })
 
     test('withDefaults (dynamic)', () => {
@@ -1584,10 +1611,10 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `
   _mergeDefaults({
-    foo: { type: Function, required: true },
-    bar: { type: Boolean, required: true },
-    baz: { type: [Boolean, Function], required: true },
-    qux: { required: true }
+    foo: { type: Function },
+    bar: { type: Boolean },
+    baz: { type: [Boolean, Function] },
+    qux: {}
   }, { ...defaults })`.trim()
       )
     })
@@ -1810,10 +1837,14 @@ const emit = defineEmits(['a', 'b'])
           'emits: ["update:modelValue", "update:count", "update:disabled", "update:any"]'
         )
 
-        expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
-        expect(content).toMatch(`const count = _useModel("count")`)
-        expect(content).toMatch(`const disabled = _useModel("disabled")`)
-        expect(content).toMatch(`const any = _useModel("any")`)
+        expect(content).toMatch(
+          `const modelValue = _useModel(__props, "modelValue")`
+        )
+        expect(content).toMatch(`const count = _useModel(__props, "count")`)
+        expect(content).toMatch(
+          `const disabled = _useModel(__props, "disabled")`
+        )
+        expect(content).toMatch(`const any = _useModel(__props, "any")`)
 
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
@@ -1847,9 +1878,11 @@ const emit = defineEmits(['a', 'b'])
         expect(content).toMatch(
           'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]'
         )
-        expect(content).toMatch(`const modelValue = _useModel("modelValue")`)
-        expect(content).toMatch(`const fn = _useModel("fn")`)
-        expect(content).toMatch(`const str = _useModel("str")`)
+        expect(content).toMatch(
+          `const modelValue = _useModel(__props, "modelValue")`
+        )
+        expect(content).toMatch(`const fn = _useModel(__props, "fn")`)
+        expect(content).toMatch(`const str = _useModel(__props, "str")`)
         expect(bindings).toStrictEqual({
           modelValue: BindingTypes.SETUP_REF,
           fn: BindingTypes.SETUP_REF,
