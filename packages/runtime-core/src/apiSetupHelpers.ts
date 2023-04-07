@@ -316,7 +316,7 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T>(name = 'modelValue'): Ref<T> {
+export function useModel<T>(name: string): Ref<T> {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
