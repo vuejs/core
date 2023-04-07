@@ -227,6 +227,17 @@ describe('defineModel', () => {
 
   const countDefault = defineModel<number>('count', { default: 1 })
   expectType<Ref<number>>(countDefault)
+
+  // infer type from default
+  const inferred = defineModel({ default: 123 })
+  expectType<Ref<number>>(inferred)
+  const inferredOptional = defineModel({ default: 123, required: false })
+  expectType<Ref<number | undefined>>(inferredOptional)
+
+  // @ts-expect-error type / default mismatch
+  defineModel<string>({ default: 123 })
+  // @ts-expect-error unknown props option
+  defineModel({ foo: 123 })
 })
 
 describe('useAttrs', () => {

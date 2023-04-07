@@ -24,7 +24,8 @@ import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  NormalizedProps
+  NormalizedProps,
+  PropOptions
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
@@ -238,17 +239,14 @@ export function defineSlots<
  *
  */
 export function defineModel<T>(
-  options: { required: false } & Record<string, unknown>
+  options: { required: false } & PropOptions<T>
 ): Ref<T | undefined>
-export function defineModel<T>(options?: Record<string, unknown>): Ref<T>
+export function defineModel<T>(options?: PropOptions<T>): Ref<T>
 export function defineModel<T>(
   name: string,
-  options: { required: false } & Record<string, unknown>
+  options: { required: false } & PropOptions<T>
 ): Ref<T | undefined>
-export function defineModel<T>(
-  name: string,
-  options?: Record<string, unknown>
-): Ref<T>
+export function defineModel<T>(name: string, options?: PropOptions<T>): Ref<T>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
