@@ -201,10 +201,13 @@ export function effect<T = any>(
         if (_c) {
           _computedsToAskDirty.push(_c)
         }
-        if (!_triggeredAfterLastEffect) {
-          _triggeredAfterLastEffect = true
-          schedulerCallbacks.push(cb)
-        }
+      }
+      if (
+        (_dirty || _computedsToAskDirty.length) &&
+        !_triggeredAfterLastEffect
+      ) {
+        _triggeredAfterLastEffect = true
+        schedulerCallbacks.push(cb)
       }
     }
   })
@@ -489,8 +492,9 @@ function triggerEffect(
   }
   if (isRootEffect) {
     state = EffectState.POST_SCHEDULER
-    schedulerCallbacks.forEach(cb => cb())
-    schedulerCallbacks.length = 0
+    while (schedulerCallbacks.length) {
+      schedulerCallbacks.shift()!()
+    }
     state = EffectState.NOT_TRACKING
   }
 }
