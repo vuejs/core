@@ -1,3 +1,41 @@
+# [3.3.0-alpha.9](https://github.com/vuejs/core/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2023-04-07)
+
+
+### Bug Fixes
+
+* avoid track unrelated effects ([7768d43](https://github.com/vuejs/core/commit/7768d43175ca58dd7bb8eec00a3db3f13f12ef45))
+* **compiler-sfc:** skip empty `defineOptions` and support TypeScript type assertions ([#8028](https://github.com/vuejs/core/issues/8028)) ([9557529](https://github.com/vuejs/core/commit/955752951e1d31b90d817bd20830fe3f89018771))
+* **compiler-ssr:** disable v-once transform in ssr vdom fallback branch ([05f94cf](https://github.com/vuejs/core/commit/05f94cf7b01dd05ed7d3170916a38b175d5df292)), closes [#7644](https://github.com/vuejs/core/issues/7644)
+* computed effect dons't transfer ([208e59c](https://github.com/vuejs/core/commit/208e59c9d9e44765b2bd6eccbf7f6f395ae18979))
+* jest -> vitest ([014dcd5](https://github.com/vuejs/core/commit/014dcd5aa45a62927a96424d522d36255b741575))
+* ref newVal arg incorrect ([62dc5ee](https://github.com/vuejs/core/commit/62dc5ee1d132fdbb711a1ae9736293c75593f82a))
+* revert effects trigger order ([4a3e554](https://github.com/vuejs/core/commit/4a3e554d56a0e35c709801a087aadaaf956cd380))
+* **types:** improve defineProps return type with generic arguments ([91a931a](https://github.com/vuejs/core/commit/91a931ae8707b8d43f10216e1ce8e18b12158f99))
+* **types:** more public type argument order fix ([af563bf](https://github.com/vuejs/core/commit/af563bf428200367b6f5bb7944f690c85d810202))
+* **types:** retain type parameters order for public types ([bdf557f](https://github.com/vuejs/core/commit/bdf557f6f233c039fff8007b1b16aec00c4e68aa))
+* urgent assessment edge case ([eb0f8fa](https://github.com/vuejs/core/commit/eb0f8fae3891dbd841f3c59adbae51fc88a34e8f))
+
+
+### Features
+
+* **app:** app.runWithContext() ([#7451](https://github.com/vuejs/core/issues/7451)) ([869f3fb](https://github.com/vuejs/core/commit/869f3fb93e61400be4fd925e0850c2b1564749e2))
+* more purposeful test ([f3a0071](https://github.com/vuejs/core/commit/f3a007124d93b9a369692e545c5b9378e08736dd))
+
+
+### Performance Improvements
+
+* avoid duplicate trigger effect to deps ([0e0c44e](https://github.com/vuejs/core/commit/0e0c44e74f51037253c02c7186adbffb49cc3a40))
+* calculate embedded `computed()` on-demand ([f485ea0](https://github.com/vuejs/core/commit/f485ea01a9d1d7aca3bdc61b12f768de91c8d583))
+* reduce `triggerRefValue()` triggered ([399f155](https://github.com/vuejs/core/commit/399f1553c889a8b7486191ee56ce961814f26b9d))
+
+
+### Reverts
+
+* Revert "chore: add test for effect() on-demand trigger" ([b5527a1](https://github.com/vuejs/core/commit/b5527a17fa0374de2e2f39175788af30db1f594f))
+* Revert "chore: remove unused args passed to ssrRender" ([b117b88](https://github.com/vuejs/core/commit/b117b8844881a732a021432066230ff2215049ea))
+
+
+
 # [3.3.0-alpha.8](https://github.com/vuejs/core/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2023-04-04)
 
 
