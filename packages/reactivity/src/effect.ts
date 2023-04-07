@@ -194,18 +194,12 @@ export function effect<T = any>(
 
   const _effect = new ReactiveEffect(fn, _c => {
     if (!_dirty) {
-      if (!_c) {
+      if (_c) {
+        _computedsToAskDirty.push(_c)
+      } else {
         _dirty = true
       }
-      if (state === EffectState.TRACKING) {
-        if (_c) {
-          _computedsToAskDirty.push(_c)
-        }
-      }
-      if (
-        (_dirty || _computedsToAskDirty.length) &&
-        !_triggeredAfterLastEffect
-      ) {
+      if (!_triggeredAfterLastEffect) {
         _triggeredAfterLastEffect = true
         schedulerCallbacks.push(cb)
       }
@@ -462,24 +456,15 @@ export function triggerEffects(
 
 const schedulerCallbacks: (() => void)[] = []
 
-const enum EffectState {
-  NOT_TRACKING = 0,
-  TRACKING = 1,
-  POST_SCHEDULER = 2
-}
-
-let state = EffectState.NOT_TRACKING
+let tracking = false
 
 function triggerEffect(
   effect: ReactiveEffect,
   computedToAskDirty: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  let isRootEffect = false
-  if (state === EffectState.NOT_TRACKING) {
-    state = EffectState.TRACKING
-    isRootEffect = true
-  }
+  let isRootEffect = !tracking
+  tracking = true
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
@@ -491,11 +476,10 @@ function triggerEffect(
     }
   }
   if (isRootEffect) {
-    state = EffectState.POST_SCHEDULER
     while (schedulerCallbacks.length) {
       schedulerCallbacks.shift()!()
     }
-    state = EffectState.NOT_TRACKING
+    tracking = false
   }
 }
 
