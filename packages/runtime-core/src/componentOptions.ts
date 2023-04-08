@@ -1172,7 +1172,7 @@ function mergeEmitsOrPropsOptions(
     }
     return extend(
       normalizePropsOrEmits(to),
-      normalizePropsOrEmits(from ?? {}, null)
+      normalizePropsOrEmits(from ?? {}, () => null)
     )
   } else {
     return from

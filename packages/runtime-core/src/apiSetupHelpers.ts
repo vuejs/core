@@ -401,11 +401,13 @@ function getContext(): SetupContext {
  */
 export function normalizePropsOrEmits(
   props: ComponentPropsOptions | EmitsOptions,
-  defaultValue: any = {}
+  defaultValueCreator = () => ({} as any)
 ) {
   return isArray(props)
     ? props.reduce(
-        (normalized, p) => ((normalized[p] = defaultValue), normalized),
+        (normalized, p) => (
+          (normalized[p] = defaultValueCreator()), normalized
+        ),
         {} as ComponentObjectPropsOptions | ObjectEmitsOptions
       )
     : props
