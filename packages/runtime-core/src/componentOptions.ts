@@ -51,7 +51,8 @@ import {
 import {
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  ExtractDefaultPropTypes
+  ExtractDefaultPropTypes,
+  ComponentPropsOptions
 } from './componentProps'
 import {
   EmitsOptions,
@@ -1073,8 +1074,8 @@ export function mergeOptions(
 
 export const internalOptionMergeStrats: Record<string, Function> = {
   data: mergeDataFn,
-  props: mergeObjectOptions, // TODO
-  emits: mergeEmitsOptions,
+  props: mergeEmitsOrPropsOptions,
+  emits: mergeEmitsOrPropsOptions,
   // objects
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
@@ -1154,9 +1155,17 @@ function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
   return to ? extend(extend(Object.create(null), to), from) : from
 }
 
-function mergeEmitsOptions(
+function mergeEmitsOrPropsOptions(
   to: EmitsOptions | undefined,
   from: EmitsOptions | undefined
+): EmitsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: ComponentPropsOptions | undefined,
+  from: ComponentPropsOptions | undefined
+): ComponentPropsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: Record<string, unknown> | string[] | undefined,
+  from: Record<string, unknown> | string[] | undefined
 ) {
   const result: ObjectEmitsOptions = {}
   if (to) {
