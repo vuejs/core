@@ -213,30 +213,39 @@ export function defineSlots<
 }
 
 /**
- * (**Experimental**) Vue `<script setup>` compiler macro for declaring a two-way
- * binding prop. This will declare a prop with the same name and a corresponding
+ * (**Experimental**) Vue `<script setup>` compiler macro for declaring a
+ * two-way binding prop that can be consumed via `v-model` from the parent
+ * component. This will declare a prop with the same name and a corresponding
  * `update:propName` event.
  *
- * The prop will be automatically marked as `required` by default. Use the
- * `required: false` option or set a default value to make it optional.
+ * If the first argument is a string, it will be used as the prop name;
+ * Otherwise the prop name will default to "modelValue". In both cases, you
+ * can also pass an additional object which will be used as the prop's options.
  *
- * Example: required model
+ * The options object can also specify an additional option, `local`. When set
+ * to `true`, the ref can be locally mutated even if the parent did not pass
+ * the matching `v-model`.
+ *
+ * @example
  * ```ts
+ * // default model (consumed via `v-model`)
  * const modelValue = defineModel<string>()
  * modelValue.value = "hello"
- * ```
  *
- * Example: specified a name
- * ```ts
+ * // default model with options
+ * const modelValue = defineModel<stirng>({ required: true })
+ *
+ * // with specified name (consumed via `v-model:count`)
  * const count = defineModel<number>('count')
  * count.value++
- * ```
  *
- * Example: specified a name and default value
- * ```ts
+ * // with specified name and default value
  * const count = defineModel<number>('count', { default: 0 })
- * ```
  *
+ * // local mutable model, can be mutated locally
+ * // even if the parent did not pass the matching `v-model`.
+ * const count = defineModel<number>('count', { local: true, default: 0 })
+ * ```
  */
 export function defineModel<T>(
   options: { required: true } & PropOptions<T> & DefineModelOptions
