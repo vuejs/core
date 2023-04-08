@@ -131,17 +131,17 @@ describe('sfc props transform', () => {
     `,
       { isProd: true }
     )
+    assertCode(content)
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
     foo: { default: 1 },
     bar: { default: () => ({}) },
-    baz: null,
+    baz: {},
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
     func: { type: Function, default: () => {} }
   }`)
-    assertCode(content)
   })
 
   test('aliasing', () => {
