@@ -129,6 +129,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     } else if (node.tag === 'textarea') {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
+    } else if (node.tag === 'dialog' || node.tag === 'details') {
+      res.props = [createObjectProperty(`open`, model)]
     } else if (node.tag === 'select') {
       node.children.forEach(option => {
         if (option.type === NodeTypes.ELEMENT) {

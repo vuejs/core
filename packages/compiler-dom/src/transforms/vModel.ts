@@ -12,7 +12,9 @@ import {
   V_MODEL_RADIO,
   V_MODEL_SELECT,
   V_MODEL_TEXT,
-  V_MODEL_DYNAMIC
+  V_MODEL_DYNAMIC,
+  V_MODEL_DETAILS,
+  V_MODEL_DIALOG
 } from '../runtimeHelpers'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
@@ -49,6 +51,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     tag === 'input' ||
     tag === 'textarea' ||
     tag === 'select' ||
+    tag === 'details' ||
+    tag === 'dialog' ||
     isCustomElement
   ) {
     let directiveToUse = V_MODEL_TEXT
@@ -92,6 +96,10 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       }
     } else if (tag === 'select') {
       directiveToUse = V_MODEL_SELECT
+    } else if (tag === 'dialog') {
+      directiveToUse = V_MODEL_DIALOG
+    } else if (tag === 'details') {
+      directiveToUse = V_MODEL_DETAILS
     } else {
       // textarea
       __DEV__ && checkDuplicatedValue()

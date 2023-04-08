@@ -340,4 +340,24 @@ describe('ssr: element', () => {
       `)
     })
   })
+
+  describe('v-model', () => {
+    test('with details', () => {
+      expect(getCompiledString(`<details v-model="x">Foo</details>`))
+        .toMatchInlineSnapshot(`
+          "\`<details\${
+              (_ssrIncludeBooleanAttr(_ctx.x)) ? \\" open\\" : \\"\\"
+            }>Foo</details>\`"
+        `)
+    })
+
+    test('with dialog', () => {
+      expect(getCompiledString(`<dialog v-model="x">Foo</dialog>`))
+        .toMatchInlineSnapshot(`
+          "\`<dialog\${
+              (_ssrIncludeBooleanAttr(_ctx.x)) ? \\" open\\" : \\"\\"
+            }>Foo</dialog>\`"
+        `)
+    })
+  })
 })

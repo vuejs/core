@@ -210,6 +210,42 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   }
 }
 
+export const vModelDetails: ModelDirective<HTMLDetailsElement> = {
+  created(el, _, vnode) {
+    addEventListener(el, 'toggle', () => {
+      el._assign(el.open)
+    })
+    el._assign = getModelAssigner(vnode)
+  },
+  mounted(el, { value }) {
+    el.open = value
+  },
+  beforeUpdate(el, _binding, vnode) {
+    el._assign = getModelAssigner(vnode)
+  },
+  updated(el, { value }) {
+    el.open = value
+  }
+}
+
+export const vModelDialog: ModelDirective<HTMLDialogElement> = {
+  created(el, _, vnode) {
+    addEventListener(el, 'close', () => {
+      el._assign(false)
+    })
+    el._assign = getModelAssigner(vnode)
+  },
+  mounted(el, { value }) {
+    el.open = value
+  },
+  beforeUpdate(el, _binding, vnode) {
+    el._assign = getModelAssigner(vnode)
+  },
+  updated(el, { value }) {
+    el.open = value
+  }
+}
+
 function setSelected(el: HTMLSelectElement, value: any) {
   const isMultiple = el.multiple
   if (isMultiple && !isArray(value) && !isSet(value)) {
