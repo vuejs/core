@@ -54,11 +54,7 @@ import {
   ExtractDefaultPropTypes,
   ComponentPropsOptions
 } from './componentProps'
-import {
-  EmitsOptions,
-  EmitsToProps,
-  ObjectEmitsOptions
-} from './componentEmits'
+import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
@@ -80,6 +76,7 @@ import {
 import { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import { SlotsType } from './componentSlots'
+import { normalizePropsOrEmits } from './apiSetupHelpers'
 
 /**
  * Interface for declaring custom options.
@@ -1164,35 +1161,19 @@ function mergeEmitsOrPropsOptions(
   from: ComponentPropsOptions | undefined
 ): ComponentPropsOptions | undefined
 function mergeEmitsOrPropsOptions(
-  to: Record<string, unknown> | string[] | undefined,
-  from: Record<string, unknown> | string[] | undefined
+  to: ComponentPropsOptions | EmitsOptions | undefined,
+  from: ComponentPropsOptions | EmitsOptions | undefined
 ) {
-  const result: ObjectEmitsOptions = {}
   if (to) {
     if (isArray(to) && isArray(from)) {
       const set = new Set(to)
       from.forEach(key => set.add(key))
       return [...set]
     }
-    if (isArray(from)) {
-      from.reduce((result, key) => {
-        result[key] = null
-        return result
-      }, result)
-    }
-    if (isArray(to)) {
-      to.reduce((result, key) => {
-        result[key] = null
-        return result
-      }, result)
-    } else {
-      return extend(result, to)
-    }
-    if (!isArray(from)) {
-      return extend(result, from)
-    } else {
-      return result
-    }
+    return extend(
+      normalizePropsOrEmits(to),
+      normalizePropsOrEmits(from ?? {}, null)
+    )
   } else {
     return from
   }

@@ -396,10 +396,16 @@ function getContext(): SetupContext {
   return i.setupContext || (i.setupContext = createSetupContext(i))
 }
 
-function normalizePropsOrEmits(props: ComponentPropsOptions | EmitsOptions) {
+/**
+ * @internal
+ */
+export function normalizePropsOrEmits(
+  props: ComponentPropsOptions | EmitsOptions,
+  defaultValue: any = {}
+) {
   return isArray(props)
     ? props.reduce(
-        (normalized, p) => ((normalized[p] = {}), normalized),
+        (normalized, p) => ((normalized[p] = defaultValue), normalized),
         {} as ComponentObjectPropsOptions | ObjectEmitsOptions
       )
     : props
