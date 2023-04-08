@@ -1188,7 +1188,7 @@ function mergeEmitsOrPropsOptions(
     } else {
       return extend(result, to)
     }
-    return result
+    return extend(result, from)
   } else {
     return from
   }
