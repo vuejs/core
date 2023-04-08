@@ -1,4 +1,7 @@
 {
+  "github": {
+    "silent": true
+  },
   "headers": [
     {
       "source": "/assets/(.*)",
