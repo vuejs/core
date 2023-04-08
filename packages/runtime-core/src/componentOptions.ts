@@ -1188,7 +1188,11 @@ function mergeEmitsOrPropsOptions(
     } else {
       return extend(result, to)
     }
-    return extend(result, from)
+    if (!isArray(from)) {
+      return extend(result, from)
+    } else {
+      return result
+    }
   } else {
     return from
   }
