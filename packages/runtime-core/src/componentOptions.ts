@@ -53,7 +53,11 @@ import {
   ExtractPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
+import {
+  EmitsOptions,
+  EmitsToProps,
+  ObjectEmitsOptions
+} from './componentEmits'
 import { Directive } from './directives'
 import {
   CreateComponentPublicInstance,
@@ -1070,7 +1074,7 @@ export function mergeOptions(
 export const internalOptionMergeStrats: Record<string, Function> = {
   data: mergeDataFn,
   props: mergeObjectOptions, // TODO
-  emits: mergeObjectOptions, // TODO
+  emits: mergeEmitsOptions,
   // objects
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
@@ -1148,6 +1152,37 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
   return to ? extend(extend(Object.create(null), to), from) : from
+}
+
+function mergeEmitsOptions(
+  to: EmitsOptions | undefined,
+  from: EmitsOptions | undefined
+) {
+  const result: ObjectEmitsOptions = {}
+  if (to) {
+    if (isArray(to) && isArray(from)) {
+      const set = new Set(to)
+      from.forEach(key => set.add(key))
+      return [...set]
+    }
+    if (isArray(from)) {
+      from.reduce((result, key) => {
+        result[key] = null
+        return result
+      }, result)
+    }
+    if (isArray(to)) {
+      to.reduce((result, key) => {
+        result[key] = null
+        return result
+      }, result)
+    } else {
+      return extend(result, to)
+    }
+    return result
+  } else {
+    return from
+  }
 }
 
 function mergeWatchOptions(
