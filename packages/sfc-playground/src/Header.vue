@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { downloadProject } from './download/download'
-import { ref, onMounted, defineProps } from 'vue'
+import { ref, onMounted } from 'vue'
 import Sun from './icons/Sun.vue'
 import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
