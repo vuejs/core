@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore } from '@vue/repl'
+import { Repl, ReplStore, SFCOptions } from '@vue/repl'
 import { ref, watchEffect } from 'vue'
-
-const setVH = () => {
-  document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
-}
-window.addEventListener('resize', setVH)
-setVH()
+import { SFCAsyncStyleCompileOptions, SFCTemplateCompileOptions } from '@vue/compiler-sfc'
 
 const useDevMode = ref(false)
 const useSSRMode = ref(false)
@@ -42,11 +37,11 @@ const sfcOptions = {
   },
   style: {
     isProd: !useDevMode.value
-  },
+  } as SFCAsyncStyleCompileOptions,
   template: {
     isProd: !useDevMode.value
-  }
-}
+  } as SFCTemplateCompileOptions
+} satisfies SFCOptions
 
 // persist state
 watchEffect(() => {
@@ -108,7 +103,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height));
+  height: calc(100vh - var(--nav-height));
 }
 
 button {
