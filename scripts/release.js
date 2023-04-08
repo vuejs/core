@@ -210,8 +210,8 @@ async function main() {
   step('\nGenerating changelog...')
   await run(`pnpm`, ['run', 'changelog'])
 
-  // @ts-ignore
   if (!skipPrompts) {
+    // @ts-ignore
     const { yes: changelogOk } = await prompt({
       type: 'confirm',
       name: 'yes',
