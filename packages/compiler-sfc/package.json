@@ -41,7 +41,7 @@
     "estree-walker": "^2.0.2",
     "magic-string": "^0.30.0",
     "postcss": "^8.1.10",
-    "source-map": "^0.6.1"
+    "source-map-js": "^1.0.2"
   },
   "devDependencies": {
     "@babel/types": "^7.21.3",

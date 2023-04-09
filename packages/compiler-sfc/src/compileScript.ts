@@ -48,7 +48,7 @@ import {
   TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { RawSourceMap } from 'source-map'
+import { RawSourceMap } from 'source-map-js'
 import {
   CSS_VARS_HELPER,
   genCssVarsCode,

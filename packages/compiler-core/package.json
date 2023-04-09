@@ -35,7 +35,7 @@
     "@babel/parser": "^7.21.3",
     "@vue/shared": "3.3.0-alpha.9",
     "estree-walker": "^2.0.2",
-    "source-map": "^0.6.1"
+    "source-map-js": "^1.0.2"
   },
   "devDependencies": {
     "@babel/types": "^7.21.3"

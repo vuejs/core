@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "monaco-editor": "^0.20.0",
-    "source-map": "^0.6.1"
+    "source-map-js": "^1.0.2"
   }
 }

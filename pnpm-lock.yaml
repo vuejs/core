@@ -104,12 +104,12 @@ importers:
       '@babel/types': ^7.21.3
       '@vue/shared': 3.3.0-alpha.9
       estree-walker: ^2.0.2
-      source-map: ^0.6.1
+      source-map-js: ^1.0.2
     dependencies:
       '@babel/parser': 7.21.3
       '@vue/shared': link:../shared
       estree-walker: 2.0.2
-      source-map: 0.6.1
+      source-map-js: 1.0.2
     devDependencies:
       '@babel/types': 7.21.3
 
@@ -143,7 +143,7 @@ importers:
       postcss-selector-parser: ^6.0.4
       pug: ^3.0.1
       sass: ^1.26.9
-      source-map: ^0.6.1
+      source-map-js: ^1.0.2
     dependencies:
       '@babel/parser': 7.21.3
       '@vue/compiler-core': link:../compiler-core
@@ -154,7 +154,7 @@ importers:
       estree-walker: 2.0.2
       magic-string: 0.30.0
       postcss: 8.4.21
-      source-map: 0.6.1
+      source-map-js: 1.0.2
     devDependencies:
       '@babel/types': 7.21.3
       '@types/estree': 0.0.48
@@ -270,10 +270,10 @@ importers:
   packages/template-explorer:
     specifiers:
       monaco-editor: ^0.20.0
-      source-map: ^0.6.1
+      source-map-js: ^1.0.2
     dependencies:
       monaco-editor: 0.20.0
-      source-map: 0.6.1
+      source-map-js: 1.0.2
 
   packages/vue:
     specifiers:
@@ -293,11 +293,11 @@ importers:
     specifiers:
       '@babel/parser': ^7.21.3
       estree-walker: ^2.0.2
-      source-map: ^0.6.1
+      source-map-js: ^1.0.2
     dependencies:
       '@babel/parser': 7.21.3
       estree-walker: 2.0.2
-      source-map: 0.6.1
+      source-map-js: 1.0.2
 
 packages:
 
@@ -4910,6 +4910,7 @@ packages:
   /source-map/0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
+    dev: true
 
   /sourcemap-codec/1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
