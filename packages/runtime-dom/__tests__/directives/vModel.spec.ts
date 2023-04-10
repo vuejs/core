@@ -9,8 +9,8 @@ import {
   ref
 } from '@vue/runtime-dom'
 
-const triggerEvent = (type: string, el: Element) => {
-  const event = new Event(type)
+const triggerEvent = (type: string, el: Element, arg?: any) => {
+  const event = new Event(type, arg)
   el.dispatchEvent(event)
 }
 
@@ -1171,5 +1171,83 @@ describe('vModel', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  it('should work with details', async () => {
+    const manualListener = vi.fn()
+    const component = defineComponent({
+      data() {
+        return { value: false }
+      },
+      render() {
+        return [
+          withVModel(
+            h('details', {
+              'onUpdate:modelValue': setValue.bind(this),
+              onToggle: () => {
+                manualListener(data.value)
+              }
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const details = root.querySelector('details')! as HTMLDetailsElement
+    const data = root._vnode.component.data
+    expect(details.open).toEqual(false)
+
+    details.open = true
+    triggerEvent('toggle', details, { target: details })
+    await nextTick()
+    expect(data.value).toEqual(true)
+    expect(manualListener).toHaveBeenCalledWith(true)
+
+    data.value = false
+    await nextTick()
+    expect(details.open).toEqual(false)
+
+    data.value = true
+    await nextTick()
+    expect(details.open).toEqual(true)
+  })
+
+  it('should work with dialog', async () => {
+    const manualListener = vi.fn()
+    const component = defineComponent({
+      data() {
+        return { value: false }
+      },
+      render() {
+        return [
+          withVModel(
+            h('dialog', {
+              'onUpdate:modelValue': setValue.bind(this),
+              onClose: () => {
+                manualListener(data.value)
+              }
+            }),
+            this.value
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const dialog = root.querySelector('dialog')! as HTMLDialogElement
+    const data = root._vnode.component.data
+    expect(dialog.open).toEqual(false)
+
+    data.value = true
+    await nextTick()
+    expect(dialog.open).toEqual(true)
+
+    dialog.open = false
+    triggerEvent('close', dialog)
+    await nextTick()
+    expect(data.value).toEqual(false)
+    expect(manualListener).toHaveBeenCalledWith(false)
   })
 })

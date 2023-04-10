@@ -212,15 +212,15 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
 
 export const vModelDetails: ModelDirective<HTMLDetailsElement> = {
   created(el, _, vnode) {
+    el._assign = getModelAssigner(vnode)
     addEventListener(el, 'toggle', () => {
       el._assign(el.open)
     })
-    el._assign = getModelAssigner(vnode)
   },
   mounted(el, { value }) {
     el.open = value
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
   },
   updated(el, { value }) {
@@ -238,7 +238,7 @@ export const vModelDialog: ModelDirective<HTMLDialogElement> = {
   mounted(el, { value }) {
     el.open = value
   },
-  beforeUpdate(el, _binding, vnode) {
+  beforeUpdate(el, _, vnode) {
     el._assign = getModelAssigner(vnode)
   },
   updated(el, { value }) {
@@ -314,6 +314,10 @@ function resolveDynamicModel(tagName: string, type: string | undefined) {
       return vModelSelect
     case 'TEXTAREA':
       return vModelText
+    case 'DETAILS':
+      return vModelDetails
+    case 'DIALOG':
+      return vModelDialog
     default:
       switch (type) {
         case 'checkbox':
