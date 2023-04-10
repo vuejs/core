@@ -432,7 +432,7 @@ export function toRef(
   if (isRef(source)) {
     return source
   } else if (isFunction(source)) {
-    return new GetterRefImpl(source as () => unknown) as any
+    return new GetterRefImpl(source) as any
   } else if (isObject(source) && arguments.length > 1) {
     return propertyToRef(source, key!, defaultValue)
   } else {
