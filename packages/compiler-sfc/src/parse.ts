@@ -7,7 +7,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map'
+import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
 import { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
