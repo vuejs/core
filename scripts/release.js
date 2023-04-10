@@ -210,8 +210,8 @@ async function main() {
   step('\nGenerating changelog...')
   await run(`pnpm`, ['run', 'changelog'])
 
-  // @ts-ignore
   if (!skipPrompts) {
+    // @ts-ignore
     const { yes: changelogOk } = await prompt({
       type: 'confirm',
       name: 'yes',
@@ -346,18 +346,16 @@ async function publishPackage(pkgName, version) {
 
   step(`Publishing ${pkgName}...`)
   try {
-    await runIfNotDry(
+    await run(
       // note: use of yarn is intentional here as we rely on its publishing
       // behavior.
-      'yarn',
+      'npm',
       [
         'publish',
-        '--new-version',
-        version,
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
-        ...(skipGit ? ['--no-commit-hooks', '--no-git-tag-version'] : [])
+        ...(isDryRun ? ['--dry-run'] : [])
       ],
       {
         cwd: pkgRoot,
