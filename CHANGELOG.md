@@ -1,3 +1,29 @@
+# [3.3.0-alpha.9](https://github.com/vuejs/core/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2023-04-08)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** accept `StringLiteral` node in `defineEmit` tuple syntax ([#8041](https://github.com/vuejs/core/issues/8041)) ([3ccbea0](https://github.com/vuejs/core/commit/3ccbea08e09217b50a410d7b49ebb138e0c4c1e7)), closes [#8040](https://github.com/vuejs/core/issues/8040)
+* **compiler-sfc:** fix binding type for constants when hoistStatic is disabled ([#8029](https://github.com/vuejs/core/issues/8029)) ([f7f4624](https://github.com/vuejs/core/commit/f7f4624191bbdc09600dbb0eb048b947c3a4f761))
+* **compiler-sfc:** skip empty `defineOptions` and support TypeScript type assertions ([#8028](https://github.com/vuejs/core/issues/8028)) ([9557529](https://github.com/vuejs/core/commit/955752951e1d31b90d817bd20830fe3f89018771))
+* **compiler-ssr:** disable v-once transform in ssr vdom fallback branch ([05f94cf](https://github.com/vuejs/core/commit/05f94cf7b01dd05ed7d3170916a38b175d5df292)), closes [#7644](https://github.com/vuejs/core/issues/7644)
+* **types:** improve defineProps return type with generic arguments ([91a931a](https://github.com/vuejs/core/commit/91a931ae8707b8d43f10216e1ce8e18b12158f99))
+* **types:** more public type argument order fix ([af563bf](https://github.com/vuejs/core/commit/af563bf428200367b6f5bb7944f690c85d810202))
+* **types:** retain type parameters order for public types ([bdf557f](https://github.com/vuejs/core/commit/bdf557f6f233c039fff8007b1b16aec00c4e68aa))
+
+
+### Features
+
+* **app:** app.runWithContext() ([#7451](https://github.com/vuejs/core/issues/7451)) ([869f3fb](https://github.com/vuejs/core/commit/869f3fb93e61400be4fd925e0850c2b1564749e2))
+* **sfc:** introduce `defineModel` macro and `useModel` helper ([#8018](https://github.com/vuejs/core/issues/8018)) ([14f3d74](https://github.com/vuejs/core/commit/14f3d747a34d45415b0036b274517d70a27ec0d3))
+
+
+### Reverts
+
+* Revert "chore: remove unused args passed to ssrRender" ([b117b88](https://github.com/vuejs/core/commit/b117b8844881a732a021432066230ff2215049ea))
+
+
+
 # [3.3.0-alpha.8](https://github.com/vuejs/core/compare/v3.3.0-alpha.7...v3.3.0-alpha.8) (2023-04-04)
 
 

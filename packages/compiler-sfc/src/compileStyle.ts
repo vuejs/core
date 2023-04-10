@@ -13,7 +13,7 @@ import {
   StylePreprocessorResults,
   PreprocessLang
 } from './style/preprocessors'
-import { RawSourceMap } from 'source-map'
+import { RawSourceMap } from 'source-map-js'
 import { cssVarsPlugin } from './style/cssVars'
 import postcssModules from 'postcss-modules'
 
