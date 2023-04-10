@@ -1052,7 +1052,6 @@ export function compileScript(
           propsRuntimeDefaults.end! + startOffset
         )})`
       }
-
       return propsDecls
     }
 
@@ -1109,10 +1108,11 @@ export function compileScript(
         const defaults: string[] = []
         for (const key in propsDestructuredBindings) {
           const d = genDestructuredDefaultValue(key)
+          const finalKey = getEscapedKey(key)
           if (d)
             defaults.push(
-              `${key}: ${d.valueString}${
-                d.needSkipFactory ? `, __skip_${key}: true` : ``
+              `${finalKey}: ${d.valueString}${
+                d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
               }`
             )
         }
