@@ -8,7 +8,13 @@ import {
   isSet,
   isSymbol,
   isString,
-  isPromise
+  isPromise,
+  hasOwn,
+  isOn,
+  isPlainObject,
+  isIntegerKey,
+  looseToNumber,
+  remove
 } from '../src'
 describe('utils/general', () => {
   test('isFunction', () => {
@@ -119,5 +125,84 @@ describe('utils/general', () => {
     expect(isPromise('')).toBe(false)
     expect(isPromise({})).toBe(false)
     expect(isPromise([])).toBe(false)
+  })
+
+  test('hasOwn', () => {
+    const obj = {
+      a: 1
+    }
+    expect(hasOwn(obj, 'a')).toBe(true)
+    expect(hasOwn(obj, 'b')).toBe(false)
+  })
+
+  test('isPlainObject', () => {
+    expect(isPlainObject({})).toBe(true)
+    expect(isPlainObject(Object.create(null))).toBe(true)
+    expect(isPlainObject(new Object())).toBe(true)
+    expect(isPlainObject(Object.create({}))).toBe(true)
+    expect(isPlainObject(null)).toBe(false)
+    expect(isPlainObject(undefined)).toBe(false)
+    expect(isPlainObject(1)).toBe(false)
+    expect(isPlainObject('')).toBe(false)
+    expect(isPlainObject([])).toBe(false)
+  })
+
+  test('isIntegerKey', () => {
+    expect(isIntegerKey('0')).toBe(true)
+    expect(isIntegerKey('1')).toBe(true)
+    expect(isIntegerKey('42')).toBe(true)
+    expect(isIntegerKey('100')).toBe(true)
+    expect(isIntegerKey('123456789')).toBe(true)
+    expect(isIntegerKey('')).toBe(false)
+    expect(isIntegerKey('NaN')).toBe(false)
+    expect(isIntegerKey('-1')).toBe(false)
+    expect(isIntegerKey('-42')).toBe(false)
+    expect(isIntegerKey('3.14')).toBe(false)
+    expect(isIntegerKey('1.23e-4')).toBe(false)
+    expect(isIntegerKey('123a')).toBe(false)
+    expect(isIntegerKey('abc')).toBe(false)
+    expect(isIntegerKey(null)).toBe(false)
+    expect(isIntegerKey(undefined)).toBe(false)
+    expect(isIntegerKey({ key: 'value' })).toBe(false)
+    expect(isIntegerKey([1, 2, 3])).toBe(false)
+    expect(isIntegerKey(true)).toBe(false)
+    expect(isIntegerKey(false)).toBe(false)
+  })
+
+  test('looseToNumber', () => {
+    expect(looseToNumber('0')).toBe(0)
+    expect(looseToNumber('1')).toBe(1)
+    expect(looseToNumber('42')).toBe(42)
+    expect(looseToNumber('100')).toBe(100)
+    expect(looseToNumber('123456789')).toBe(123456789)
+    expect(looseToNumber('-1')).toBe(-1)
+    expect(looseToNumber('-42')).toBe(-42)
+    expect(looseToNumber('3.14')).toBe(3.14)
+    expect(looseToNumber('1.23e-4')).toBe(1.23e-4)
+    expect(looseToNumber('123a')).toBe(123)
+    expect(looseToNumber('abc')).toBe('abc')
+    expect(looseToNumber(null)).toBe(null)
+    expect(looseToNumber(undefined)).toBe(undefined)
+    expect(looseToNumber({ key: 'value' })).toEqual({ key: 'value' })
+    expect(looseToNumber([1, 2, 3])).toEqual(1)
+    expect(looseToNumber(true)).toBe(true)
+    expect(looseToNumber(false)).toBe(false)
+  })
+
+  test('isOn', () => {
+    expect(isOn('onClick')).toBe(true)
+    expect(isOn('onclick')).toBe(false)
+    expect(isOn('on')).toBe(false)
+    expect(isOn('click')).toBe(false)
+  })
+
+  test('remove', () => {
+    const arr = [1, 2, 3]
+    remove(arr, 2)
+    expect(arr).toEqual([1, 3])
+
+    const arr2 = [1, 2, 3]
+    remove(arr2, 0)
+    expect(arr2).toEqual([1, 2, 3])
   })
 })
