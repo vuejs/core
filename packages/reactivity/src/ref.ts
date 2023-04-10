@@ -342,7 +342,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? (this._defaultValue as T[K]) : val
+    return val === undefined ? this._defaultValue! : val
   }
 
   set value(newVal) {
@@ -440,15 +440,23 @@ export function toRef(
   }
 }
 
-function propertyToRef(source: object, key: string, defaultValue?: unknown) {
-  const val = (source as any)[key]
+/**
+ * Converts an object's property into a reactive reference (ref).
+ *
+ * @param source - An object that contains the property to be converted into a reactive reference.
+ * @param key - The key name of the property to be converted into a reference.
+ * @param [defaultValue] - The default value for the property.
+ * @returns Returns a reactive reference object.
+ */
+function propertyToRef(
+  source: Record<string, any>,
+  key: string,
+  defaultValue?: unknown
+) {
+  const val = source[key]
   return isRef(val)
     ? val
-    : (new ObjectRefImpl(
-        source as Record<string, any>,
-        key,
-        defaultValue
-      ) as any)
+    : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
 // corner case when use narrows type
