@@ -1166,9 +1166,7 @@ function mergeEmitsOrPropsOptions(
 ) {
   if (to) {
     if (isArray(to) && isArray(from)) {
-      const set = new Set(to)
-      from.forEach(key => set.add(key))
-      return [...set]
+      return [...new Set([...to, ...from])]
     }
     return extend(
       Object.create(null),
