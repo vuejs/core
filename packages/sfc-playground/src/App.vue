@@ -37,7 +37,8 @@ const sfcOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
-    reactivityTransform: true
+    reactivityTransform: true,
+    defineModel: true
   },
   style: {
     isProd: !useDevMode.value
