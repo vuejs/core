@@ -6,7 +6,11 @@ import {
   ParserOptions,
   RootNode
 } from '@vue/compiler-core'
-import { SourceMapConsumer, SourceMapGenerator, RawSourceMap } from 'source-map'
+import {
+  SourceMapConsumer,
+  SourceMapGenerator,
+  RawSourceMap
+} from 'source-map-js'
 import {
   transformAssetUrl,
   AssetURLOptions,
