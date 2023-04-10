@@ -51,7 +51,8 @@ import {
 import {
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  ExtractDefaultPropTypes
+  ExtractDefaultPropTypes,
+  ComponentPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
@@ -75,6 +76,7 @@ import {
 import { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import { SlotsType } from './componentSlots'
+import { normalizePropsOrEmits } from './apiSetupHelpers'
 
 /**
  * Interface for declaring custom options.
@@ -1069,8 +1071,8 @@ export function mergeOptions(
 
 export const internalOptionMergeStrats: Record<string, Function> = {
   data: mergeDataFn,
-  props: mergeObjectOptions, // TODO
-  emits: mergeObjectOptions, // TODO
+  props: mergeEmitsOrPropsOptions,
+  emits: mergeEmitsOrPropsOptions,
   // objects
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
@@ -1147,7 +1149,33 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(extend(Object.create(null), to), from) : from
+  return to ? extend(Object.create(null), to, from) : from
+}
+
+function mergeEmitsOrPropsOptions(
+  to: EmitsOptions | undefined,
+  from: EmitsOptions | undefined
+): EmitsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: ComponentPropsOptions | undefined,
+  from: ComponentPropsOptions | undefined
+): ComponentPropsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: ComponentPropsOptions | EmitsOptions | undefined,
+  from: ComponentPropsOptions | EmitsOptions | undefined
+) {
+  if (to) {
+    if (isArray(to) && isArray(from)) {
+      return [...new Set([...to, ...from])]
+    }
+    return extend(
+      Object.create(null),
+      normalizePropsOrEmits(to),
+      normalizePropsOrEmits(from ?? {})
+    )
+  } else {
+    return from
+  }
 }
 
 function mergeWatchOptions(
