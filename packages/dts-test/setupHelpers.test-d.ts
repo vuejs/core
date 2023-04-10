@@ -6,9 +6,13 @@ import {
   withDefaults,
   Slots,
   defineSlots,
-  VNode
+  VNode,
+  Ref,
+  defineModel
 } from 'vue'
 import { describe, expectType } from './utils'
+import { defineComponent } from 'vue'
+import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -200,6 +204,72 @@ describe('defineSlots', () => {
 
   const slotsUntype = defineSlots()
   expectType<Slots>(slotsUntype)
+})
+
+describe('defineModel', () => {
+  // overload 1
+  const modelValueRequired = defineModel<boolean>({ required: true })
+  expectType<Ref<boolean>>(modelValueRequired)
+
+  // overload 2
+  const modelValue = defineModel<string>()
+  expectType<Ref<string | undefined>>(modelValue)
+  modelValue.value = 'new value'
+
+  const modelValueDefault = defineModel<boolean>({ default: true })
+  expectType<Ref<boolean>>(modelValueDefault)
+
+  // overload 3
+  const countRequired = defineModel<number>('count', { required: false })
+  expectType<Ref<number | undefined>>(countRequired)
+
+  // overload 4
+  const count = defineModel<number>('count')
+  expectType<Ref<number | undefined>>(count)
+
+  const countDefault = defineModel<number>('count', { default: 1 })
+  expectType<Ref<number>>(countDefault)
+
+  // infer type from default
+  const inferred = defineModel({ default: 123 })
+  expectType<Ref<number | undefined>>(inferred)
+  const inferredRequired = defineModel({ default: 123, required: true })
+  expectType<Ref<number>>(inferredRequired)
+
+  // @ts-expect-error type / default mismatch
+  defineModel<string>({ default: 123 })
+  // @ts-expect-error unknown props option
+  defineModel({ foo: 123 })
+
+  // accept defineModel-only options
+  defineModel({ local: true })
+  defineModel('foo', { local: true })
+})
+
+describe('useModel', () => {
+  defineComponent({
+    props: ['foo'],
+    setup(props) {
+      const r = useModel(props, 'foo')
+      expectType<Ref<any>>(r)
+
+      // @ts-expect-error
+      useModel(props, 'bar')
+    }
+  })
+
+  defineComponent({
+    props: {
+      foo: String,
+      bar: { type: Number, required: true },
+      baz: { type: Boolean }
+    },
+    setup(props) {
+      expectType<Ref<string | undefined>>(useModel(props, 'foo'))
+      expectType<Ref<number>>(useModel(props, 'bar'))
+      expectType<Ref<boolean>>(useModel(props, 'baz'))
+    }
+  })
 })
 
 describe('useAttrs', () => {
