@@ -20,8 +20,7 @@ import fs from 'node:fs/promises'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
-import { gzipSync } from 'node:zlib'
-import { compress } from 'brotli'
+import { gzipSync, brotliCompressSync } from 'node:zlib'
 import chalk from 'chalk'
 import execa from 'execa'
 import { cpus } from 'node:os'
@@ -143,7 +142,7 @@ function checkFileSize(filePath) {
   const minSize = (file.length / 1024).toFixed(2) + 'kb'
   const gzipped = gzipSync(file)
   const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = compress(file)
+  const compressed = brotliCompressSync(file)
   // @ts-ignore
   const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
   console.log(

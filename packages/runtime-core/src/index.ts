@@ -71,9 +71,12 @@ export {
   defineExpose,
   defineOptions,
   defineSlots,
+  defineModel,
   withDefaults,
+  useModel,
   // internal
   mergeDefaults,
+  mergeModels,
   createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'
