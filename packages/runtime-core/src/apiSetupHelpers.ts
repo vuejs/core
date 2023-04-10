@@ -400,14 +400,11 @@ function getContext(): SetupContext {
  * @internal
  */
 export function normalizePropsOrEmits(
-  props: ComponentPropsOptions | EmitsOptions,
-  defaultValueCreator = () => ({} as any)
+  props: ComponentPropsOptions | EmitsOptions
 ) {
   return isArray(props)
     ? props.reduce(
-        (normalized, p) => (
-          (normalized[p] = defaultValueCreator()), normalized
-        ),
+        (normalized, p) => ((normalized[p] = null), normalized),
         {} as ComponentObjectPropsOptions | ObjectEmitsOptions
       )
     : props

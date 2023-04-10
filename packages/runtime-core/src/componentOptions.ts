@@ -1149,7 +1149,7 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(extend(Object.create(null), to), from) : from
+  return to ? extend(Object.create(null), to, from) : from
 }
 
 function mergeEmitsOrPropsOptions(
@@ -1171,8 +1171,9 @@ function mergeEmitsOrPropsOptions(
       return [...set]
     }
     return extend(
+      Object.create(null),
       normalizePropsOrEmits(to),
-      normalizePropsOrEmits(from ?? {}, () => null)
+      normalizePropsOrEmits(from ?? {})
     )
   } else {
     return from
