@@ -627,7 +627,7 @@ function validateProp(
     return
   }
   // missing but optional
-  if (value == null && !prop.required) {
+  if (value == null && !required) {
     return
   }
   // type check
