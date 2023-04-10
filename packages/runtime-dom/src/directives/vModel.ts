@@ -230,10 +230,10 @@ export const vModelDetails: ModelDirective<HTMLDetailsElement> = {
 
 export const vModelDialog: ModelDirective<HTMLDialogElement> = {
   created(el, _, vnode) {
+    el._assign = getModelAssigner(vnode)
     addEventListener(el, 'close', () => {
       el._assign(false)
     })
-    el._assign = getModelAssigner(vnode)
   },
   mounted(el, { value }) {
     el.open = value
