@@ -8,6 +8,7 @@ import {
   toRuntimeTypeString,
   unwrapTSNode
 } from './utils'
+import { BindingTypes } from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -51,6 +52,8 @@ export function processDefineModel(
     options: optionsString,
     identifier: declId && declId.type === 'Identifier' ? declId.name : undefined
   }
+  // register binding type
+  ctx.bindingMetadata[modelName] = BindingTypes.PROPS
 
   let runtimeOptions = ''
   if (options) {

@@ -1,7 +1,6 @@
 import {
   Node,
   LVal,
-  Identifier,
   TSTypeLiteral,
   TSInterfaceBody,
   ObjectProperty,
@@ -23,6 +22,8 @@ import {
   toRuntimeTypeString
 } from './utils'
 import { genModelProps } from './defineModel'
+import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
+import { processPropsDestructure } from './definePropsDestructure'
 
 export const DEFINE_PROPS = 'defineProps'
 export const WITH_DEFAULTS = 'withDefaults'
@@ -57,8 +58,14 @@ export function processDefineProps(
     ctx.error(`duplicate ${DEFINE_PROPS}() call`, node)
   }
   ctx.hasDefinePropsCall = true
-
   ctx.propsRuntimeDecl = node.arguments[0]
+
+  // register bindings
+  if (ctx.propsRuntimeDecl) {
+    for (const key of getObjectOrArrayExpressionKeys(ctx.propsRuntimeDecl)) {
+      ctx.bindingMetadata[key] = BindingTypes.PROPS
+    }
+  }
 
   // call has type parameters - infer runtime types from it
   if (node.typeParameters) {
@@ -88,48 +95,7 @@ export function processDefineProps(
   if (declId) {
     // handle props destructure
     if (declId.type === 'ObjectPattern') {
-      ctx.propsDestructureDecl = declId
-      for (const prop of declId.properties) {
-        if (prop.type === 'ObjectProperty') {
-          const propKey = resolveObjectKey(prop.key, prop.computed)
-
-          if (!propKey) {
-            ctx.error(
-              `${DEFINE_PROPS}() destructure cannot use computed key.`,
-              prop.key
-            )
-          }
-
-          if (prop.value.type === 'AssignmentPattern') {
-            // default value { foo = 123 }
-            const { left, right } = prop.value
-            if (left.type !== 'Identifier') {
-              ctx.error(
-                `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-                left
-              )
-            }
-            // store default value
-            ctx.propsDestructuredBindings[propKey] = {
-              local: left.name,
-              default: right
-            }
-          } else if (prop.value.type === 'Identifier') {
-            // simple destructure
-            ctx.propsDestructuredBindings[propKey] = {
-              local: prop.value.name
-            }
-          } else {
-            ctx.error(
-              `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-              prop.value
-            )
-          }
-        } else {
-          // rest spread
-          ctx.propsDestructureRestId = (prop.argument as Identifier).name
-        }
-      }
+      processPropsDestructure(ctx, declId)
     } else {
       ctx.propsIdentifier = ctx.getString(declId)
     }
@@ -176,6 +142,7 @@ function processWithDefaults(
 
 export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   let propsDecls: undefined | string
+
   if (ctx.propsRuntimeDecl) {
     propsDecls = ctx.getString(ctx.propsRuntimeDecl).trim()
     if (ctx.propsDestructureDecl) {

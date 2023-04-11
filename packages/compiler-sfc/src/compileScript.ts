@@ -1,30 +1,21 @@
 import MagicString from 'magic-string'
 import {
-  BindingMetadata,
   BindingTypes,
-  createRoot,
-  NodeTypes,
-  transform,
-  parserOptions,
   UNREF,
-  SimpleExpressionNode,
   isFunctionType,
   walkIdentifiers,
   getImportedName
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, parseExpression, ParserPlugin } from '@babel/parser'
-import { camelize, capitalize, generateCodeFrame, makeMap } from '@vue/shared'
+import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
   Declaration,
   ObjectPattern,
-  ObjectExpression,
   ArrayPattern,
   Identifier,
   ExportSpecifier,
-  TSType,
-  ArrayExpression,
   Statement,
   CallExpression,
   AwaitExpression,
@@ -41,7 +32,6 @@ import {
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
 import { rewriteDefaultAST } from './rewriteDefault'
-import { createCache } from './cache'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { transformDestructuredProps } from './script/definePropsDestructure'
 import { ScriptCompileContext } from './script/context'
@@ -57,22 +47,15 @@ import {
   DEFINE_EMITS
 } from './script/defineEmits'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import {
-  resolveObjectKey,
-  UNKNOWN_TYPE,
-  isLiteralNode,
-  unwrapTSNode,
-  isCallOf
-} from './script/utils'
+import { isLiteralNode, unwrapTSNode, isCallOf } from './script/utils'
+import { inferRuntimeType } from './script/resolveType'
+import { analyzeScriptBindings } from './script/analyzeScriptBindings'
+import { isImportUsed } from './script/importUsageCheck'
 
 // Special compiler macros
 const DEFINE_EXPOSE = 'defineExpose'
 const DEFINE_OPTIONS = 'defineOptions'
 const DEFINE_SLOTS = 'defineSlots'
-
-const isBuiltInDir = makeMap(
-  `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
-)
 
 export interface SFCScriptCompileOptions {
   /**
@@ -968,31 +951,9 @@ export function compileScript(
   }
 
   // 7. analyze binding metadata
+  // `defineProps` & `defineModel` also register props bindings
   if (scriptAst) {
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
-  }
-  if (ctx.propsRuntimeDecl) {
-    for (const key of getObjectOrArrayExpressionKeys(ctx.propsRuntimeDecl)) {
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
-    }
-  }
-  for (const key in ctx.modelDecls) {
-    ctx.bindingMetadata[key] = BindingTypes.PROPS
-  }
-  // props aliases
-  if (ctx.propsDestructureDecl) {
-    if (ctx.propsDestructureRestId) {
-      ctx.bindingMetadata[ctx.propsDestructureRestId] =
-        BindingTypes.SETUP_REACTIVE_CONST
-    }
-    for (const key in ctx.propsDestructuredBindings) {
-      const { local } = ctx.propsDestructuredBindings[key]
-      if (local !== key) {
-        ctx.bindingMetadata[local] = BindingTypes.PROPS_ALIASED
-        ;(ctx.bindingMetadata.__propsAliases ||
-          (ctx.bindingMetadata.__propsAliases = {}))[local] = key
-      }
-    }
   }
   for (const [key, { isType, imported, source }] of Object.entries(
     userImports
@@ -1478,156 +1439,6 @@ function recordType(node: Node, declaredTypes: Record<string, string[]>) {
   }
 }
 
-function inferRuntimeType(
-  node: TSType,
-  declaredTypes: Record<string, string[]>
-): string[] {
-  switch (node.type) {
-    case 'TSStringKeyword':
-      return ['String']
-    case 'TSNumberKeyword':
-      return ['Number']
-    case 'TSBooleanKeyword':
-      return ['Boolean']
-    case 'TSObjectKeyword':
-      return ['Object']
-    case 'TSNullKeyword':
-      return ['null']
-    case 'TSTypeLiteral': {
-      // TODO (nice to have) generate runtime property validation
-      const types = new Set<string>()
-      for (const m of node.members) {
-        if (
-          m.type === 'TSCallSignatureDeclaration' ||
-          m.type === 'TSConstructSignatureDeclaration'
-        ) {
-          types.add('Function')
-        } else {
-          types.add('Object')
-        }
-      }
-      return types.size ? Array.from(types) : ['Object']
-    }
-    case 'TSFunctionType':
-      return ['Function']
-    case 'TSArrayType':
-    case 'TSTupleType':
-      // TODO (nice to have) generate runtime element type/length checks
-      return ['Array']
-
-    case 'TSLiteralType':
-      switch (node.literal.type) {
-        case 'StringLiteral':
-          return ['String']
-        case 'BooleanLiteral':
-          return ['Boolean']
-        case 'NumericLiteral':
-        case 'BigIntLiteral':
-          return ['Number']
-        default:
-          return [UNKNOWN_TYPE]
-      }
-
-    case 'TSTypeReference':
-      if (node.typeName.type === 'Identifier') {
-        if (declaredTypes[node.typeName.name]) {
-          return declaredTypes[node.typeName.name]
-        }
-        switch (node.typeName.name) {
-          case 'Array':
-          case 'Function':
-          case 'Object':
-          case 'Set':
-          case 'Map':
-          case 'WeakSet':
-          case 'WeakMap':
-          case 'Date':
-          case 'Promise':
-            return [node.typeName.name]
-
-          // TS built-in utility types
-          // https://www.typescriptlang.org/docs/handbook/utility-types.html
-          case 'Partial':
-          case 'Required':
-          case 'Readonly':
-          case 'Record':
-          case 'Pick':
-          case 'Omit':
-          case 'InstanceType':
-            return ['Object']
-
-          case 'Uppercase':
-          case 'Lowercase':
-          case 'Capitalize':
-          case 'Uncapitalize':
-            return ['String']
-
-          case 'Parameters':
-          case 'ConstructorParameters':
-            return ['Array']
-
-          case 'NonNullable':
-            if (node.typeParameters && node.typeParameters.params[0]) {
-              return inferRuntimeType(
-                node.typeParameters.params[0],
-                declaredTypes
-              ).filter(t => t !== 'null')
-            }
-            break
-          case 'Extract':
-            if (node.typeParameters && node.typeParameters.params[1]) {
-              return inferRuntimeType(
-                node.typeParameters.params[1],
-                declaredTypes
-              )
-            }
-            break
-          case 'Exclude':
-          case 'OmitThisParameter':
-            if (node.typeParameters && node.typeParameters.params[0]) {
-              return inferRuntimeType(
-                node.typeParameters.params[0],
-                declaredTypes
-              )
-            }
-            break
-        }
-      }
-      // cannot infer, fallback to UNKNOWN: ThisParameterType
-      return [UNKNOWN_TYPE]
-
-    case 'TSParenthesizedType':
-      return inferRuntimeType(node.typeAnnotation, declaredTypes)
-
-    case 'TSUnionType':
-      return flattenTypes(node.types, declaredTypes)
-    case 'TSIntersectionType': {
-      return flattenTypes(node.types, declaredTypes).filter(
-        t => t !== UNKNOWN_TYPE
-      )
-    }
-
-    case 'TSSymbolKeyword':
-      return ['Symbol']
-
-    default:
-      return [UNKNOWN_TYPE] // no runtime check
-  }
-}
-
-function flattenTypes(
-  types: TSType[],
-  declaredTypes: Record<string, string[]>
-): string[] {
-  return [
-    ...new Set(
-      ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(t, declaredTypes))
-      )
-    )
-  ]
-}
-
 function inferEnumType(node: TSEnumDeclaration): string[] {
   const types = new Set<string>()
   for (const m of node.members) {
@@ -1707,252 +1518,4 @@ function isStaticNode(node: Node): boolean {
       }
       return false
   }
-}
-
-/**
- * Analyze bindings in normal `<script>`
- * Note that `compileScriptSetup` already analyzes bindings as part of its
- * compilation process so this should only be used on single `<script>` SFCs.
- */
-function analyzeScriptBindings(ast: Statement[]): BindingMetadata {
-  for (const node of ast) {
-    if (
-      node.type === 'ExportDefaultDeclaration' &&
-      node.declaration.type === 'ObjectExpression'
-    ) {
-      return analyzeBindingsFromOptions(node.declaration)
-    }
-  }
-  return {}
-}
-
-function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
-  const bindings: BindingMetadata = {}
-  // #3270, #3275
-  // mark non-script-setup so we don't resolve components/directives from these
-  Object.defineProperty(bindings, '__isScriptSetup', {
-    enumerable: false,
-    value: false
-  })
-  for (const property of node.properties) {
-    if (
-      property.type === 'ObjectProperty' &&
-      !property.computed &&
-      property.key.type === 'Identifier'
-    ) {
-      // props
-      if (property.key.name === 'props') {
-        // props: ['foo']
-        // props: { foo: ... }
-        for (const key of getObjectOrArrayExpressionKeys(property.value)) {
-          bindings[key] = BindingTypes.PROPS
-        }
-      }
-
-      // inject
-      else if (property.key.name === 'inject') {
-        // inject: ['foo']
-        // inject: { foo: {} }
-        for (const key of getObjectOrArrayExpressionKeys(property.value)) {
-          bindings[key] = BindingTypes.OPTIONS
-        }
-      }
-
-      // computed & methods
-      else if (
-        property.value.type === 'ObjectExpression' &&
-        (property.key.name === 'computed' || property.key.name === 'methods')
-      ) {
-        // methods: { foo() {} }
-        // computed: { foo() {} }
-        for (const key of getObjectExpressionKeys(property.value)) {
-          bindings[key] = BindingTypes.OPTIONS
-        }
-      }
-    }
-
-    // setup & data
-    else if (
-      property.type === 'ObjectMethod' &&
-      property.key.type === 'Identifier' &&
-      (property.key.name === 'setup' || property.key.name === 'data')
-    ) {
-      for (const bodyItem of property.body.body) {
-        // setup() {
-        //   return {
-        //     foo: null
-        //   }
-        // }
-        if (
-          bodyItem.type === 'ReturnStatement' &&
-          bodyItem.argument &&
-          bodyItem.argument.type === 'ObjectExpression'
-        ) {
-          for (const key of getObjectExpressionKeys(bodyItem.argument)) {
-            bindings[key] =
-              property.key.name === 'setup'
-                ? BindingTypes.SETUP_MAYBE_REF
-                : BindingTypes.DATA
-          }
-        }
-      }
-    }
-  }
-
-  return bindings
-}
-
-function getObjectExpressionKeys(node: ObjectExpression): string[] {
-  const keys = []
-  for (const prop of node.properties) {
-    if (prop.type === 'SpreadElement') continue
-    const key = resolveObjectKey(prop.key, prop.computed)
-    if (key) keys.push(String(key))
-  }
-  return keys
-}
-
-function getArrayExpressionKeys(node: ArrayExpression): string[] {
-  const keys = []
-  for (const element of node.elements) {
-    if (element && element.type === 'StringLiteral') {
-      keys.push(element.value)
-    }
-  }
-  return keys
-}
-
-function getObjectOrArrayExpressionKeys(value: Node): string[] {
-  if (value.type === 'ArrayExpression') {
-    return getArrayExpressionKeys(value)
-  }
-  if (value.type === 'ObjectExpression') {
-    return getObjectExpressionKeys(value)
-  }
-  return []
-}
-
-const templateUsageCheckCache = createCache<string>()
-
-function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
-  const { content, ast } = sfc.template!
-  const cached = templateUsageCheckCache.get(content)
-  if (cached) {
-    return cached
-  }
-
-  let code = ''
-  transform(createRoot([ast]), {
-    nodeTransforms: [
-      node => {
-        if (node.type === NodeTypes.ELEMENT) {
-          if (
-            !parserOptions.isNativeTag!(node.tag) &&
-            !parserOptions.isBuiltInComponent!(node.tag)
-          ) {
-            code += `,${camelize(node.tag)},${capitalize(camelize(node.tag))}`
-          }
-          for (let i = 0; i < node.props.length; i++) {
-            const prop = node.props[i]
-            if (prop.type === NodeTypes.DIRECTIVE) {
-              if (!isBuiltInDir(prop.name)) {
-                code += `,v${capitalize(camelize(prop.name))}`
-              }
-              if (prop.exp) {
-                code += `,${processExp(
-                  (prop.exp as SimpleExpressionNode).content,
-                  prop.name
-                )}`
-              }
-            }
-          }
-        } else if (node.type === NodeTypes.INTERPOLATION) {
-          code += `,${processExp(
-            (node.content as SimpleExpressionNode).content
-          )}`
-        }
-      }
-    ]
-  })
-
-  code += ';'
-  templateUsageCheckCache.set(content, code)
-  return code
-}
-
-const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
-
-function processExp(exp: string, dir?: string): string {
-  if (/ as\s+\w|<.*>|:/.test(exp)) {
-    if (dir === 'slot') {
-      exp = `(${exp})=>{}`
-    } else if (dir === 'on') {
-      exp = `()=>{return ${exp}}`
-    } else if (dir === 'for') {
-      const inMatch = exp.match(forAliasRE)
-      if (inMatch) {
-        const [, LHS, RHS] = inMatch
-        return processExp(`(${LHS})=>{}`) + processExp(RHS)
-      }
-    }
-    let ret = ''
-    // has potential type cast or generic arguments that uses types
-    const ast = parseExpression(exp, { plugins: ['typescript'] })
-    walkIdentifiers(ast, node => {
-      ret += `,` + node.name
-    })
-    return ret
-  }
-  return stripStrings(exp)
-}
-
-function stripStrings(exp: string) {
-  return exp
-    .replace(/'[^']*'|"[^"]*"/g, '')
-    .replace(/`[^`]+`/g, stripTemplateString)
-}
-
-function stripTemplateString(str: string): string {
-  const interpMatch = str.match(/\${[^}]+}/g)
-  if (interpMatch) {
-    return interpMatch.map(m => m.slice(2, -1)).join(',')
-  }
-  return ''
-}
-
-function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return new RegExp(
-    // #4274 escape $ since it's a special char in regex
-    // (and is the only regex special char that is valid in identifiers)
-    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
-  ).test(resolveTemplateUsageCheckString(sfc))
-}
-
-/**
- * Note: this comparison assumes the prev/next script are already identical,
- * and only checks the special case where <script setup lang="ts"> unused import
- * pruning result changes due to template changes.
- */
-export function hmrShouldReload(
-  prevImports: Record<string, ImportBinding>,
-  next: SFCDescriptor
-): boolean {
-  if (
-    !next.scriptSetup ||
-    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
-  ) {
-    return false
-  }
-
-  // for each previous import, check if its used status remain the same based on
-  // the next descriptor's template
-  for (const key in prevImports) {
-    // if an import was previous unused, but now is used, we need to force
-    // reload so that the script now includes that import.
-    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
-      return true
-    }
-  }
-
-  return false
 }
