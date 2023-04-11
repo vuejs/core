@@ -16,7 +16,7 @@ import {
   walkFunctionParams
 } from '@vue/compiler-core'
 import { genPropsAccessExp } from '@vue/shared'
-import { PropsDestructureBindings } from '../compileScript'
+import { PropsDestructureBindings } from './defineProps'
 import { isCallOf, unwrapTSNode } from './utils'
 
 /**
