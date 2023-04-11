@@ -918,14 +918,7 @@ export function compileScript(
 
   // 3 props destructure transform
   if (ctx.propsDestructureDecl) {
-    transformDestructuredProps(
-      scriptSetupAst,
-      ctx.s,
-      startOffset,
-      ctx.propsDestructuredBindings,
-      error,
-      vueImportAliases
-    )
+    transformDestructuredProps(ctx, vueImportAliases)
   }
 
   // 4. Apply reactivity transform
