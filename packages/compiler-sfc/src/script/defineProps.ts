@@ -186,9 +186,9 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
   for (const m of members) {
     if (
       (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
-      m.key.type === 'Identifier'
+        (m.key.type === 'Identifier' || m.key.type === 'StringLiteral')
     ) {
-      const key = m.key.name
+      const keyName = m.key.type === 'StringLiteral' ? m.key.value : m.key.name
       let type: string[] | undefined
       let skipCheck = false
       if (m.type === 'TSMethodSignature') {
@@ -212,7 +212,7 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
       propStrings.push(
         genRuntimePropFromType(
           ctx,
-          key,
+          keyName,
           !m.optional,
           type || [`null`],
           skipCheck,
@@ -221,7 +221,7 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
       )
 
       // register bindings
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
+      ctx.bindingMetadata[keyName] = BindingTypes.PROPS
     }
   }
 
