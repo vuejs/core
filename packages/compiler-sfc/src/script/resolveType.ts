@@ -1,122 +1,227 @@
 import {
   Node,
   Statement,
-  TSInterfaceBody,
+  TSCallSignatureDeclaration,
+  TSEnumDeclaration,
+  TSExpressionWithTypeArguments,
+  TSFunctionType,
+  TSMethodSignature,
+  TSPropertySignature,
   TSType,
-  TSTypeElement
+  TSTypeAnnotation,
+  TSTypeElement,
+  TSTypeReference
 } from '@babel/types'
-import { FromNormalScript, UNKNOWN_TYPE } from './utils'
+import { UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
+import { ImportBinding } from '../compileScript'
+import { TSInterfaceDeclaration } from '@babel/types'
+import { hasOwn } from '@vue/shared'
 
-export function resolveQualifiedType(
+export interface TypeScope {
+  filename: string
+  body: Statement[]
+  imports: Record<string, ImportBinding>
+  types: Record<string, Node>
+}
+
+type ResolvedElements = Record<
+  string,
+  TSPropertySignature | TSMethodSignature
+> & {
+  __callSignatures?: (TSCallSignatureDeclaration | TSFunctionType)[]
+}
+
+/**
+ * Resolve arbitrary type node to a list of type elements that can be then
+ * mapped to runtime props or emits.
+ */
+export function resolveTypeElements(
   ctx: ScriptCompileContext,
-  node: Node,
-  qualifier: (node: Node) => boolean
-): Node | undefined {
-  if (qualifier(node)) {
-    return node
+  node: Node & { _resolvedElements?: ResolvedElements }
+): ResolvedElements {
+  if (node._resolvedElements) {
+    return node._resolvedElements
   }
-  if (node.type === 'TSTypeReference' && node.typeName.type === 'Identifier') {
-    const refName = node.typeName.name
-    const { scriptAst, scriptSetupAst } = ctx
-    const body = scriptAst
-      ? [...scriptSetupAst!.body, ...scriptAst.body]
-      : scriptSetupAst!.body
-    for (let i = 0; i < body.length; i++) {
-      const node = body[i]
-      let qualified = isQualifiedType(
-        node,
-        qualifier,
-        refName
-      ) as TSInterfaceBody
-      if (qualified) {
-        const extendsTypes = resolveExtendsType(body, node, qualifier)
-        if (extendsTypes.length) {
-          const bodies: TSTypeElement[] = [...qualified.body]
-          filterExtendsType(extendsTypes, bodies)
-          qualified.body = bodies
-        }
-        ;(qualified as FromNormalScript<Node>).__fromNormalScript =
-          scriptAst && i >= scriptSetupAst!.body.length
-        return qualified
+  return (node._resolvedElements = innerResolveTypeElements(ctx, node))
+}
+
+function innerResolveTypeElements(
+  ctx: ScriptCompileContext,
+  node: Node
+): ResolvedElements {
+  switch (node.type) {
+    case 'TSTypeLiteral':
+      return typeElementsToMap(ctx, node.members)
+    case 'TSInterfaceDeclaration':
+      return resolveInterfaceMembers(ctx, node)
+    case 'TSTypeAliasDeclaration':
+    case 'TSParenthesizedType':
+      return resolveTypeElements(ctx, node.typeAnnotation)
+    case 'TSFunctionType': {
+      const ret: ResolvedElements = {}
+      addCallSignature(ret, node)
+      return ret
+    }
+    case 'TSExpressionWithTypeArguments':
+    case 'TSTypeReference':
+      return resolveTypeElements(ctx, resolveTypeReference(ctx, node))
+  }
+  ctx.error(`Unsupported type in SFC macro: ${node.type}`, node)
+}
+
+function addCallSignature(
+  elements: ResolvedElements,
+  node: TSCallSignatureDeclaration | TSFunctionType
+) {
+  if (!elements.__callSignatures) {
+    Object.defineProperty(elements, '__callSignatures', {
+      enumerable: false,
+      value: [node]
+    })
+  } else {
+    elements.__callSignatures.push(node)
+  }
+}
+
+function typeElementsToMap(
+  ctx: ScriptCompileContext,
+  elements: TSTypeElement[]
+): ResolvedElements {
+  const ret: ResolvedElements = {}
+  for (const e of elements) {
+    if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
+      const name =
+        e.key.type === 'Identifier'
+          ? e.key.name
+          : e.key.type === 'StringLiteral'
+          ? e.key.value
+          : null
+      if (name && !e.computed) {
+        ret[name] = e
+      } else {
+        ctx.error(
+          `computed keys are not supported in types referenced by SFC macros.`,
+          e
+        )
       }
+    } else if (e.type === 'TSCallSignatureDeclaration') {
+      addCallSignature(ret, e)
+    }
+  }
+  return ret
+}
+
+function resolveInterfaceMembers(
+  ctx: ScriptCompileContext,
+  node: TSInterfaceDeclaration
+): ResolvedElements {
+  const base = typeElementsToMap(ctx, node.body.body)
+  if (node.extends) {
+    for (const ext of node.extends) {
+      const resolvedExt = resolveTypeElements(ctx, ext)
+      for (const key in resolvedExt) {
+        if (!hasOwn(base, key)) {
+          base[key] = resolvedExt[key]
+        }
+      }
+    }
+  }
+  return base
+}
+
+function resolveTypeReference(
+  ctx: ScriptCompileContext,
+  node: TSTypeReference | TSExpressionWithTypeArguments,
+  scope?: TypeScope
+): Node
+function resolveTypeReference(
+  ctx: ScriptCompileContext,
+  node: TSTypeReference | TSExpressionWithTypeArguments,
+  scope: TypeScope,
+  bail: false
+): Node | undefined
+function resolveTypeReference(
+  ctx: ScriptCompileContext,
+  node: TSTypeReference | TSExpressionWithTypeArguments,
+  scope = getRootScope(ctx),
+  bail = true
+): Node | undefined {
+  const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
+  if (ref.type === 'Identifier') {
+    if (scope.imports[ref.name]) {
+      // TODO external import
+    } else if (scope.types[ref.name]) {
+      return scope.types[ref.name]
+    }
+  } else {
+    // TODO qualified name, e.g. Foo.Bar
+    // return resolveTypeReference()
+  }
+  if (bail) {
+    ctx.error('Failed to resolve type reference.', node)
+  }
+}
+
+function getRootScope(ctx: ScriptCompileContext): TypeScope {
+  if (ctx.scope) {
+    return ctx.scope
+  }
+
+  const body = ctx.scriptAst
+    ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+    : ctx.scriptSetupAst!.body
+
+  return (ctx.scope = {
+    filename: ctx.descriptor.filename,
+    imports: ctx.userImports,
+    types: recordTypes(body),
+    body
+  })
+}
+
+function recordTypes(body: Statement[]) {
+  const types: Record<string, Node> = Object.create(null)
+  for (const s of body) {
+    recordType(s, types)
+  }
+  return types
+}
+
+function recordType(node: Node, types: Record<string, Node>) {
+  switch (node.type) {
+    case 'TSInterfaceDeclaration':
+    case 'TSEnumDeclaration':
+      types[node.id.name] = node
+      break
+    case 'TSTypeAliasDeclaration':
+      types[node.id.name] = node.typeAnnotation
+      break
+    case 'ExportNamedDeclaration': {
+      if (node.exportKind === 'type') {
+        recordType(node.declaration!, types)
+      }
+      break
+    }
+    case 'VariableDeclaration': {
+      if (node.declare) {
+        for (const decl of node.declarations) {
+          if (decl.id.type === 'Identifier' && decl.id.typeAnnotation) {
+            types[decl.id.name] = (
+              decl.id.typeAnnotation as TSTypeAnnotation
+            ).typeAnnotation
+          }
+        }
+      }
+      break
     }
   }
 }
 
-function isQualifiedType(
-  node: Node,
-  qualifier: (node: Node) => boolean,
-  refName: String
-): Node | undefined {
-  if (node.type === 'TSInterfaceDeclaration' && node.id.name === refName) {
-    return node.body
-  } else if (
-    node.type === 'TSTypeAliasDeclaration' &&
-    node.id.name === refName &&
-    qualifier(node.typeAnnotation)
-  ) {
-    return node.typeAnnotation
-  } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
-    return isQualifiedType(node.declaration, qualifier, refName)
-  }
-}
-
-function resolveExtendsType(
-  body: Statement[],
-  node: Node,
-  qualifier: (node: Node) => boolean,
-  cache: Array<Node> = []
-): Array<Node> {
-  if (node.type === 'TSInterfaceDeclaration' && node.extends) {
-    node.extends.forEach(extend => {
-      if (
-        extend.type === 'TSExpressionWithTypeArguments' &&
-        extend.expression.type === 'Identifier'
-      ) {
-        for (const node of body) {
-          const qualified = isQualifiedType(
-            node,
-            qualifier,
-            extend.expression.name
-          )
-          if (qualified) {
-            cache.push(qualified)
-            resolveExtendsType(body, node, qualifier, cache)
-            return cache
-          }
-        }
-      }
-    })
-  }
-  return cache
-}
-
-// filter all extends types to keep the override declaration
-function filterExtendsType(extendsTypes: Node[], bodies: TSTypeElement[]) {
-  extendsTypes.forEach(extend => {
-    const body = (extend as TSInterfaceBody).body
-    body.forEach(newBody => {
-      if (
-        newBody.type === 'TSPropertySignature' &&
-        newBody.key.type === 'Identifier'
-      ) {
-        const name = newBody.key.name
-        const hasOverride = bodies.some(
-          seenBody =>
-            seenBody.type === 'TSPropertySignature' &&
-            seenBody.key.type === 'Identifier' &&
-            seenBody.key.name === name
-        )
-        if (!hasOverride) bodies.push(newBody)
-      }
-    })
-  })
-}
-
 export function inferRuntimeType(
-  node: TSType,
-  declaredTypes: Record<string, string[]>
+  ctx: ScriptCompileContext,
+  node: Node,
+  scope = getRootScope(ctx)
 ): string[] {
   switch (node.type) {
     case 'TSStringKeyword':
@@ -129,10 +234,13 @@ export function inferRuntimeType(
       return ['Object']
     case 'TSNullKeyword':
       return ['null']
-    case 'TSTypeLiteral': {
+    case 'TSTypeLiteral':
+    case 'TSInterfaceDeclaration': {
       // TODO (nice to have) generate runtime property validation
       const types = new Set<string>()
-      for (const m of node.members) {
+      const members =
+        node.type === 'TSTypeLiteral' ? node.members : node.body.body
+      for (const m of members) {
         if (
           m.type === 'TSCallSignatureDeclaration' ||
           m.type === 'TSConstructSignatureDeclaration'
@@ -166,8 +274,9 @@ export function inferRuntimeType(
 
     case 'TSTypeReference':
       if (node.typeName.type === 'Identifier') {
-        if (declaredTypes[node.typeName.name]) {
-          return declaredTypes[node.typeName.name]
+        const resolved = resolveTypeReference(ctx, node, scope, false)
+        if (resolved) {
+          return inferRuntimeType(ctx, resolved, scope)
         }
         switch (node.typeName.name) {
           case 'Array':
@@ -205,26 +314,21 @@ export function inferRuntimeType(
           case 'NonNullable':
             if (node.typeParameters && node.typeParameters.params[0]) {
               return inferRuntimeType(
+                ctx,
                 node.typeParameters.params[0],
-                declaredTypes
+                scope
               ).filter(t => t !== 'null')
             }
             break
           case 'Extract':
             if (node.typeParameters && node.typeParameters.params[1]) {
-              return inferRuntimeType(
-                node.typeParameters.params[1],
-                declaredTypes
-              )
+              return inferRuntimeType(ctx, node.typeParameters.params[1], scope)
             }
             break
           case 'Exclude':
           case 'OmitThisParameter':
             if (node.typeParameters && node.typeParameters.params[0]) {
-              return inferRuntimeType(
-                node.typeParameters.params[0],
-                declaredTypes
-              )
+              return inferRuntimeType(ctx, node.typeParameters.params[0], scope)
             }
             break
         }
@@ -233,15 +337,18 @@ export function inferRuntimeType(
       return [UNKNOWN_TYPE]
 
     case 'TSParenthesizedType':
-      return inferRuntimeType(node.typeAnnotation, declaredTypes)
+      return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
     case 'TSUnionType':
-      return flattenTypes(node.types, declaredTypes)
+      return flattenTypes(ctx, node.types, scope)
     case 'TSIntersectionType': {
-      return flattenTypes(node.types, declaredTypes).filter(
+      return flattenTypes(ctx, node.types, scope).filter(
         t => t !== UNKNOWN_TYPE
       )
     }
+
+    case 'TSEnumDeclaration':
+      return inferEnumType(node)
 
     case 'TSSymbolKeyword':
       return ['Symbol']
@@ -252,14 +359,32 @@ export function inferRuntimeType(
 }
 
 function flattenTypes(
+  ctx: ScriptCompileContext,
   types: TSType[],
-  declaredTypes: Record<string, string[]>
+  scope: TypeScope
 ): string[] {
   return [
     ...new Set(
       ([] as string[]).concat(
-        ...types.map(t => inferRuntimeType(t, declaredTypes))
+        ...types.map(t => inferRuntimeType(ctx, t, scope))
       )
     )
   ]
+}
+
+function inferEnumType(node: TSEnumDeclaration): string[] {
+  const types = new Set<string>()
+  for (const m of node.members) {
+    if (m.initializer) {
+      switch (m.initializer.type) {
+        case 'StringLiteral':
+          types.add('String')
+          break
+        case 'NumericLiteral':
+          types.add('Number')
+          break
+      }
+    }
+  }
+  return types.size ? [...types] : ['Number']
 }

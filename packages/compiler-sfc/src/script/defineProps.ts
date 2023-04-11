@@ -1,8 +1,6 @@
 import {
   Node,
   LVal,
-  TSTypeLiteral,
-  TSInterfaceBody,
   ObjectProperty,
   ObjectMethod,
   ObjectExpression,
@@ -10,9 +8,8 @@ import {
 } from '@babel/types'
 import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
-import { inferRuntimeType, resolveQualifiedType } from './resolveType'
+import { inferRuntimeType, resolveTypeElements } from './resolveType'
 import {
-  FromNormalScript,
   resolveObjectKey,
   UNKNOWN_TYPE,
   concatStrings,
@@ -27,8 +24,6 @@ import { processPropsDestructure } from './definePropsDestructure'
 
 export const DEFINE_PROPS = 'defineProps'
 export const WITH_DEFAULTS = 'withDefaults'
-
-export type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 
 export interface PropTypeData {
   key: string
@@ -76,20 +71,7 @@ export function processDefineProps(
         node
       )
     }
-
-    const rawDecl = node.typeParameters.params[0]
-    ctx.propsTypeDecl = resolveQualifiedType(
-      ctx,
-      rawDecl,
-      node => node.type === 'TSTypeLiteral'
-    ) as PropsDeclType | undefined
-    if (!ctx.propsTypeDecl) {
-      ctx.error(
-        `type argument passed to ${DEFINE_PROPS}() must be a literal type, ` +
-          `or a reference to an interface or literal type.`,
-        rawDecl
-      )
-    }
+    ctx.propsTypeDecl = node.typeParameters.params[0]
   }
 
   if (declId) {
@@ -176,56 +158,19 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
 }
 
 function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
+  // this is only called if propsTypeDecl exists
+  const props = resolveRuntimePropsFromType(ctx, ctx.propsTypeDecl!)
+  if (!props.length) {
+    return
+  }
+
   const propStrings: string[] = []
   const hasStaticDefaults = hasStaticWithDefaults(ctx)
 
-  // this is only called if propsTypeDecl exists
-  const node = ctx.propsTypeDecl!
-  const members = node.type === 'TSTypeLiteral' ? node.members : node.body
-  for (const m of members) {
-    if (
-      (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
-      m.key.type === 'Identifier'
-    ) {
-      const key = m.key.name
-      let type: string[] | undefined
-      let skipCheck = false
-      if (m.type === 'TSMethodSignature') {
-        type = ['Function']
-      } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          ctx.declaredTypes
-        )
-        // skip check for result containing unknown types
-        if (type.includes(UNKNOWN_TYPE)) {
-          if (type.includes('Boolean') || type.includes('Function')) {
-            type = type.filter(t => t !== UNKNOWN_TYPE)
-            skipCheck = true
-          } else {
-            type = ['null']
-          }
-        }
-      }
-
-      propStrings.push(
-        genRuntimePropFromType(
-          ctx,
-          key,
-          !m.optional,
-          type || [`null`],
-          skipCheck,
-          hasStaticDefaults
-        )
-      )
-
-      // register bindings
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
-    }
-  }
-
-  if (!propStrings.length) {
-    return
+  for (const prop of props) {
+    propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
+    // register bindings
+    ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
   }
 
   let propsDecls = `{
@@ -240,12 +185,43 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
   return propsDecls
 }
 
+function resolveRuntimePropsFromType(
+  ctx: ScriptCompileContext,
+  node: Node
+): PropTypeData[] {
+  const props: PropTypeData[] = []
+  const elements = resolveTypeElements(ctx, node)
+  for (const key in elements) {
+    const e = elements[key]
+    let type: string[] | undefined
+    let skipCheck = false
+    if (e.type === 'TSMethodSignature') {
+      type = ['Function']
+    } else if (e.typeAnnotation) {
+      type = inferRuntimeType(ctx, e.typeAnnotation.typeAnnotation)
+      // skip check for result containing unknown types
+      if (type.includes(UNKNOWN_TYPE)) {
+        if (type.includes('Boolean') || type.includes('Function')) {
+          type = type.filter(t => t !== UNKNOWN_TYPE)
+          skipCheck = true
+        } else {
+          type = ['null']
+        }
+      }
+    }
+    props.push({
+      key,
+      required: !e.optional,
+      type: type || [`null`],
+      skipCheck
+    })
+  }
+  return props
+}
+
 function genRuntimePropFromType(
   ctx: ScriptCompileContext,
-  key: string,
-  required: boolean,
-  type: string[],
-  skipCheck: boolean,
+  { key, required, type, skipCheck }: PropTypeData,
   hasStaticDefaults: boolean
 ): string {
   let defaultString: string | undefined
