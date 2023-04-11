@@ -6,6 +6,7 @@ import { SFCScriptCompileOptions } from '../compileScript'
 import { PropsDeclType, PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
 import { BindingMetadata } from '../../../compiler-core/src'
+import MagicString from 'magic-string'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -14,7 +15,7 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  // s = new MagicString(this.descriptor.source)
+  s = new MagicString(this.descriptor.source)
   startOffset = this.descriptor.scriptSetup?.loc.start.offset
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
   scriptStartOffset = this.descriptor.script?.loc.start.offset
