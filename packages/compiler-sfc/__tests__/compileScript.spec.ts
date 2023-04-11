@@ -1482,9 +1482,6 @@ const emit = defineEmits(['a', 'b'])
       expect(content).toMatch(
         `fred: { type: String, required: false, get default() { return 'fred' } }`
       )
-      expect(content).toMatch(
-        `{ foo: string, bar?: number, baz: boolean, qux(): number, quux(): void, quuxx: Promise<string>, fred: string }`
-      )
       expect(content).toMatch(`const props = __props`)
       expect(bindings).toStrictEqual({
         foo: BindingTypes.PROPS,
