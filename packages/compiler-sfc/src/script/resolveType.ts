@@ -8,11 +8,6 @@ import {
 import { FromNormalScript, UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
 
-/**
- * Resolve a type Node into
- */
-export function resolveType() {}
-
 export function resolveQualifiedType(
   ctx: ScriptCompileContext,
   node: Node,

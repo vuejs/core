@@ -18,8 +18,6 @@ import {
   ExportSpecifier,
   Statement,
   CallExpression,
-  AwaitExpression,
-  LVal,
   TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -46,16 +44,15 @@ import {
   genRuntimeEmits,
   DEFINE_EMITS
 } from './script/defineEmits'
+import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
+import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
+import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import { isLiteralNode, unwrapTSNode, isCallOf } from './script/utils'
 import { inferRuntimeType } from './script/resolveType'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
-
-// Special compiler macros
-const DEFINE_EXPOSE = 'defineExpose'
-const DEFINE_OPTIONS = 'defineOptions'
-const DEFINE_SLOTS = 'defineSlots'
+import { processAwait } from './script/topLevelAwait'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -250,29 +247,14 @@ export function compileScript(
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
   let defaultExport: Node | undefined
-  let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
 
-  // magic-string state
-  const startOffset = scriptSetup.loc.start.offset
-  const endOffset = scriptSetup.loc.end.offset
+  // string offsets
+  const startOffset = ctx.startOffset!
+  const endOffset = ctx.endOffset!
   const scriptStartOffset = script && script.loc.start.offset
   const scriptEndOffset = script && script.loc.end.offset
-
-  function error(
-    msg: string,
-    node: Node,
-    end: number = node.end! + startOffset
-  ): never {
-    throw new Error(
-      `[@vue/compiler-sfc] ${msg}\n\n${sfc.filename}\n${generateCodeFrame(
-        source,
-        node.start! + startOffset,
-        end
-      )}`
-    )
-  }
 
   function hoistNode(node: Statement) {
     const start = node.start! + startOffset
@@ -324,108 +306,12 @@ export function compileScript(
     }
   }
 
-  function processDefineSlots(node: Node, declId?: LVal): boolean {
-    if (!isCallOf(node, DEFINE_SLOTS)) {
-      return false
-    }
-    if (ctx.hasDefineSlotsCall) {
-      error(`duplicate ${DEFINE_SLOTS}() call`, node)
-    }
-    ctx.hasDefineSlotsCall = true
-
-    if (node.arguments.length > 0) {
-      error(`${DEFINE_SLOTS}() cannot accept arguments`, node)
-    }
-
-    if (declId) {
-      ctx.s.overwrite(
-        startOffset + node.start!,
-        startOffset + node.end!,
-        `${ctx.helper('useSlots')}()`
-      )
-    }
-
-    return true
-  }
-
-  function processDefineOptions(node: Node): boolean {
-    if (!isCallOf(node, DEFINE_OPTIONS)) {
-      return false
-    }
-    if (ctx.hasDefineOptionsCall) {
-      error(`duplicate ${DEFINE_OPTIONS}() call`, node)
-    }
-    if (node.typeParameters) {
-      error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
-    }
-    if (!node.arguments[0]) return true
-
-    ctx.hasDefineOptionsCall = true
-    optionsRuntimeDecl = unwrapTSNode(node.arguments[0])
-
-    let propsOption = undefined
-    let emitsOption = undefined
-    let exposeOption = undefined
-    let slotsOption = undefined
-    if (optionsRuntimeDecl.type === 'ObjectExpression') {
-      for (const prop of optionsRuntimeDecl.properties) {
-        if (
-          (prop.type === 'ObjectProperty' || prop.type === 'ObjectMethod') &&
-          prop.key.type === 'Identifier'
-        ) {
-          if (prop.key.name === 'props') propsOption = prop
-          if (prop.key.name === 'emits') emitsOption = prop
-          if (prop.key.name === 'expose') exposeOption = prop
-          if (prop.key.name === 'slots') slotsOption = prop
-        }
-      }
-    }
-
-    if (propsOption) {
-      error(
-        `${DEFINE_OPTIONS}() cannot be used to declare props. Use ${DEFINE_PROPS}() instead.`,
-        propsOption
-      )
-    }
-    if (emitsOption) {
-      error(
-        `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
-        emitsOption
-      )
-    }
-    if (exposeOption) {
-      error(
-        `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
-        exposeOption
-      )
-    }
-    if (slotsOption) {
-      error(
-        `${DEFINE_OPTIONS}() cannot be used to declare slots. Use ${DEFINE_SLOTS}() instead.`,
-        slotsOption
-      )
-    }
-
-    return true
-  }
-
-  function processDefineExpose(node: Node): boolean {
-    if (isCallOf(node, DEFINE_EXPOSE)) {
-      if (ctx.hasDefineExposeCall) {
-        error(`duplicate ${DEFINE_EXPOSE}() call`, node)
-      }
-      ctx.hasDefineExposeCall = true
-      return true
-    }
-    return false
-  }
-
   function checkInvalidScopeReference(node: Node | undefined, method: string) {
     if (!node) return
     walkIdentifiers(node, id => {
       const binding = setupBindings[id.name]
       if (binding && binding !== BindingTypes.LITERAL_CONST) {
-        error(
+        ctx.error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
             `setup() function. If your component options require initialization ` +
@@ -435,56 +321,6 @@ export function compileScript(
         )
       }
     })
-  }
-
-  /**
-   * await foo()
-   * -->
-   * ;(
-   *   ([__temp,__restore] = withAsyncContext(() => foo())),
-   *   await __temp,
-   *   __restore()
-   * )
-   *
-   * const a = await foo()
-   * -->
-   * const a = (
-   *   ([__temp, __restore] = withAsyncContext(() => foo())),
-   *   __temp = await __temp,
-   *   __restore(),
-   *   __temp
-   * )
-   */
-  function processAwait(
-    node: AwaitExpression,
-    needSemi: boolean,
-    isStatement: boolean
-  ) {
-    const argumentStart =
-      node.argument.extra && node.argument.extra.parenthesized
-        ? (node.argument.extra.parenStart as number)
-        : node.argument.start!
-
-    const argumentStr = source.slice(
-      argumentStart + startOffset,
-      node.argument.end! + startOffset
-    )
-
-    const containsNestedAwait = /\bawait\b/.test(argumentStr)
-
-    ctx.s.overwrite(
-      node.start! + startOffset,
-      argumentStart + startOffset,
-      `${needSemi ? `;` : ``}(\n  ([__temp,__restore] = ${ctx.helper(
-        `withAsyncContext`
-      )}(${containsNestedAwait ? `async ` : ``}() => `
-    )
-    ctx.s.appendLeft(
-      node.end! + startOffset,
-      `)),\n  ${isStatement ? `` : `__temp = `}await __temp,\n  __restore()${
-        isStatement ? `` : `,\n  __temp`
-      }\n)`
-    )
   }
 
   const scriptAst = ctx.scriptAst
@@ -556,7 +392,10 @@ export function compileScript(
             // already imported in <script setup>, dedupe
             removeSpecifier(i)
           } else {
-            error(`different imports aliased to same local name.`, specifier)
+            ctx.error(
+              `different imports aliased to same local name.`,
+              specifier
+            )
           }
         } else {
           registerUserImport(
@@ -725,7 +564,7 @@ export function compileScript(
       node.label.name === 'ref' &&
       node.body.type === 'ExpressionStatement'
     ) {
-      error(
+      ctx.error(
         `ref sugar using the label syntax was an experimental proposal and ` +
           `has been dropped based on community feedback. Please check out ` +
           `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
@@ -739,11 +578,11 @@ export function compileScript(
       if (
         processDefineProps(ctx, expr) ||
         processDefineEmits(ctx, expr) ||
-        processDefineOptions(expr) ||
-        processDefineSlots(expr)
+        processDefineOptions(ctx, expr) ||
+        processDefineSlots(ctx, expr)
       ) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
-      } else if (processDefineExpose(expr)) {
+      } else if (processDefineExpose(ctx, expr)) {
         // defineExpose({}) -> expose({})
         const callee = (expr as CallExpression).callee
         ctx.s.overwrite(
@@ -765,8 +604,8 @@ export function compileScript(
         const decl = node.declarations[i]
         const init = decl.init && unwrapTSNode(decl.init)
         if (init) {
-          if (processDefineOptions(init)) {
-            error(
+          if (processDefineOptions(ctx, init)) {
+            ctx.error(
               `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
               node
             )
@@ -777,7 +616,7 @@ export function compileScript(
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
-            (processDefineSlots(init, decl.id) ||
+            (processDefineSlots(ctx, init, decl.id) ||
               processDefineModel(ctx, init, decl.id))
 
           if (isDefineProps || isDefineEmits) {
@@ -858,6 +697,7 @@ export function compileScript(
               )
             })
             processAwait(
+              ctx,
               child,
               needsSemi,
               parent.type === 'ExpressionStatement'
@@ -875,7 +715,7 @@ export function compileScript(
       node.type === 'ExportAllDeclaration' ||
       node.type === 'ExportDefaultDeclaration'
     ) {
-      error(
+      ctx.error(
         `<script setup> cannot contain ES module exports. ` +
           `If you are using a previous version of <script setup>, please ` +
           `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
@@ -929,7 +769,7 @@ export function compileScript(
   checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
-  checkInvalidScopeReference(optionsRuntimeDecl, DEFINE_OPTIONS)
+  checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
 
   // 6. remove non-script content
   if (script) {
@@ -1171,9 +1011,9 @@ export function compileScript(
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
-  if (optionsRuntimeDecl) {
+  if (ctx.optionsRuntimeDecl) {
     definedOptions = scriptSetup.content
-      .slice(optionsRuntimeDecl.start!, optionsRuntimeDecl.end!)
+      .slice(ctx.optionsRuntimeDecl.start!, ctx.optionsRuntimeDecl.end!)
       .trim()
   }
 
