@@ -3,12 +3,9 @@ import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { SFCScriptCompileOptions } from '../compileScript'
-import {
-  PropsDeclType,
-  PropTypeData,
-  PropsDestructureBindings
-} from './defineProps'
+import { PropsDeclType, PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
+import { BindingMetadata } from '../../../compiler-core/src'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -22,12 +19,6 @@ export class ScriptCompileContext {
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
   scriptStartOffset = this.descriptor.script?.loc.start.offset
   scriptEndOffset = this.descriptor.script?.loc.end.offset
-
-  helperImports: Set<string> = new Set()
-  helper(key: string): string {
-    this.helperImports.add(key)
-    return `_${key}`
-  }
 
   declaredTypes: Record<string, string[]> = Object.create(null)
 
@@ -49,10 +40,18 @@ export class ScriptCompileContext {
   propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
-  typeDeclaredProps: Record<string, PropTypeData> = {}
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}
+
+  // codegen
+  bindingMetadata: BindingMetadata = {}
+
+  helperImports: Set<string> = new Set()
+  helper(key: string): string {
+    this.helperImports.add(key)
+    return `_${key}`
+  }
 
   constructor(
     public descriptor: SFCDescriptor,
