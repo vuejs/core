@@ -1,5 +1,11 @@
-import { Node, Statement, TSInterfaceBody, TSTypeElement } from '@babel/types'
-import { FromNormalScript } from './utils'
+import {
+  Node,
+  Statement,
+  TSInterfaceBody,
+  TSType,
+  TSTypeElement
+} from '@babel/types'
+import { FromNormalScript, UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
 
 /**
@@ -111,4 +117,154 @@ function filterExtendsType(extendsTypes: Node[], bodies: TSTypeElement[]) {
       }
     })
   })
+}
+
+export function inferRuntimeType(
+  node: TSType,
+  declaredTypes: Record<string, string[]>
+): string[] {
+  switch (node.type) {
+    case 'TSStringKeyword':
+      return ['String']
+    case 'TSNumberKeyword':
+      return ['Number']
+    case 'TSBooleanKeyword':
+      return ['Boolean']
+    case 'TSObjectKeyword':
+      return ['Object']
+    case 'TSNullKeyword':
+      return ['null']
+    case 'TSTypeLiteral': {
+      // TODO (nice to have) generate runtime property validation
+      const types = new Set<string>()
+      for (const m of node.members) {
+        if (
+          m.type === 'TSCallSignatureDeclaration' ||
+          m.type === 'TSConstructSignatureDeclaration'
+        ) {
+          types.add('Function')
+        } else {
+          types.add('Object')
+        }
+      }
+      return types.size ? Array.from(types) : ['Object']
+    }
+    case 'TSFunctionType':
+      return ['Function']
+    case 'TSArrayType':
+    case 'TSTupleType':
+      // TODO (nice to have) generate runtime element type/length checks
+      return ['Array']
+
+    case 'TSLiteralType':
+      switch (node.literal.type) {
+        case 'StringLiteral':
+          return ['String']
+        case 'BooleanLiteral':
+          return ['Boolean']
+        case 'NumericLiteral':
+        case 'BigIntLiteral':
+          return ['Number']
+        default:
+          return [UNKNOWN_TYPE]
+      }
+
+    case 'TSTypeReference':
+      if (node.typeName.type === 'Identifier') {
+        if (declaredTypes[node.typeName.name]) {
+          return declaredTypes[node.typeName.name]
+        }
+        switch (node.typeName.name) {
+          case 'Array':
+          case 'Function':
+          case 'Object':
+          case 'Set':
+          case 'Map':
+          case 'WeakSet':
+          case 'WeakMap':
+          case 'Date':
+          case 'Promise':
+            return [node.typeName.name]
+
+          // TS built-in utility types
+          // https://www.typescriptlang.org/docs/handbook/utility-types.html
+          case 'Partial':
+          case 'Required':
+          case 'Readonly':
+          case 'Record':
+          case 'Pick':
+          case 'Omit':
+          case 'InstanceType':
+            return ['Object']
+
+          case 'Uppercase':
+          case 'Lowercase':
+          case 'Capitalize':
+          case 'Uncapitalize':
+            return ['String']
+
+          case 'Parameters':
+          case 'ConstructorParameters':
+            return ['Array']
+
+          case 'NonNullable':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              ).filter(t => t !== 'null')
+            }
+            break
+          case 'Extract':
+            if (node.typeParameters && node.typeParameters.params[1]) {
+              return inferRuntimeType(
+                node.typeParameters.params[1],
+                declaredTypes
+              )
+            }
+            break
+          case 'Exclude':
+          case 'OmitThisParameter':
+            if (node.typeParameters && node.typeParameters.params[0]) {
+              return inferRuntimeType(
+                node.typeParameters.params[0],
+                declaredTypes
+              )
+            }
+            break
+        }
+      }
+      // cannot infer, fallback to UNKNOWN: ThisParameterType
+      return [UNKNOWN_TYPE]
+
+    case 'TSParenthesizedType':
+      return inferRuntimeType(node.typeAnnotation, declaredTypes)
+
+    case 'TSUnionType':
+      return flattenTypes(node.types, declaredTypes)
+    case 'TSIntersectionType': {
+      return flattenTypes(node.types, declaredTypes).filter(
+        t => t !== UNKNOWN_TYPE
+      )
+    }
+
+    case 'TSSymbolKeyword':
+      return ['Symbol']
+
+    default:
+      return [UNKNOWN_TYPE] // no runtime check
+  }
+}
+
+function flattenTypes(
+  types: TSType[],
+  declaredTypes: Record<string, string[]>
+): string[] {
+  return [
+    ...new Set(
+      ([] as string[]).concat(
+        ...types.map(t => inferRuntimeType(t, declaredTypes))
+      )
+    )
+  ]
 }

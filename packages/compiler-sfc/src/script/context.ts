@@ -1,18 +1,14 @@
-import { Expression, Node, ObjectPattern, Program } from '@babel/types'
+import { Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
-import { PropsDeclType } from './defineProps'
 import { parse as babelParse, ParserOptions, ParserPlugin } from '@babel/parser'
 import { SFCScriptCompileOptions } from '../compileScript'
-import MagicString from 'magic-string'
-
-export type PropsDestructureBindings = Record<
-  string, // public prop key
-  {
-    local: string // local identifier, may be different
-    default?: Expression
-  }
->
+import {
+  PropsDeclType,
+  PropTypeData,
+  PropsDestructureBindings
+} from './defineProps'
+import { ModelDecl } from './defineModel'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -21,13 +17,19 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  s = new MagicString(this.descriptor.source)
-
+  // s = new MagicString(this.descriptor.source)
   startOffset = this.descriptor.scriptSetup?.loc.start.offset
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
-
   scriptStartOffset = this.descriptor.script?.loc.start.offset
   scriptEndOffset = this.descriptor.script?.loc.end.offset
+
+  helperImports: Set<string> = new Set()
+  helper(key: string): string {
+    this.helperImports.add(key)
+    return `_${key}`
+  }
+
+  declaredTypes: Record<string, string[]> = Object.create(null)
 
   // macros presence check
   hasDefinePropsCall = false
@@ -47,6 +49,10 @@ export class ScriptCompileContext {
   propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
+  typeDeclaredProps: Record<string, PropTypeData> = {}
+
+  // defineModel
+  modelDecls: Record<string, ModelDecl> = {}
 
   constructor(
     public descriptor: SFCDescriptor,

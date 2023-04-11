@@ -13,12 +13,11 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams,
-  isCallOf,
-  unwrapTSNode
+  walkFunctionParams
 } from '@vue/compiler-core'
 import { genPropsAccessExp } from '@vue/shared'
 import { PropsDestructureBindings } from '../compileScript'
+import { isCallOf, unwrapTSNode } from './utils'
 
 /**
  * true -> prop binding
