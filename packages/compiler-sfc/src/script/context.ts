@@ -19,8 +19,6 @@ export class ScriptCompileContext {
   s = new MagicString(this.descriptor.source)
   startOffset = this.descriptor.scriptSetup?.loc.start.offset
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
-  scriptStartOffset = this.descriptor.script?.loc.start.offset
-  scriptEndOffset = this.descriptor.script?.loc.end.offset
 
   declaredTypes: Record<string, string[]> = Object.create(null)
 
@@ -50,6 +48,9 @@ export class ScriptCompileContext {
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}
+
+  // defineOptions
+  optionsRuntimeDecl: Node | undefined
 
   // codegen
   bindingMetadata: BindingMetadata = {}
@@ -125,7 +126,7 @@ export class ScriptCompileContext {
           plugins,
           sourceType: 'module'
         },
-        this.scriptStartOffset!
+        this.descriptor.script.loc.start.offset
       )
 
     this.scriptSetupAst =
