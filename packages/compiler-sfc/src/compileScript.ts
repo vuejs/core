@@ -1,4 +1,3 @@
-import MagicString from 'magic-string'
 import {
   BindingTypes,
   UNREF,
@@ -23,13 +22,12 @@ import {
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map-js'
 import {
-  CSS_VARS_HELPER,
-  genCssVarsCode,
-  genNormalScriptCssVarsCode
-} from './style/cssVars'
+  processNormalScript,
+  normalScriptDefaultVar
+} from './script/normalScript'
+import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
-import { rewriteDefaultAST } from './rewriteDefault'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { transformDestructuredProps } from './script/definePropsDestructure'
 import { ScriptCompileContext } from './script/context'
@@ -130,15 +128,6 @@ export function compileScript(
   sfc: SFCDescriptor,
   options: SFCScriptCompileOptions
 ): SFCScriptBlock {
-  let { script, scriptSetup, source, filename } = sfc
-  // feature flags
-  // TODO remove in 3.4
-  const enableReactivityTransform = !!options.reactivityTransform
-  const isProd = !!options.isProd
-  const genSourceMap = options.sourceMap !== false
-  const hoistStatic = options.hoistStatic !== false && !script
-  let refBindings: string[] | undefined
-
   if (!options.id) {
     warnOnce(
       `compileScript now requires passing the \`id\` option.\n` +
@@ -147,85 +136,23 @@ export function compileScript(
     )
   }
 
+  const ctx = new ScriptCompileContext(sfc, options)
+  const { script, scriptSetup, source, filename } = sfc
+  const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
-  const cssVars = sfc.cssVars
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
-  const genDefaultAs = options.genDefaultAs
-    ? `const ${options.genDefaultAs} =`
-    : `export default`
-  const normalScriptDefaultVar = `__default__`
 
-  const ctx = new ScriptCompileContext(sfc, options)
-  const { isTS } = ctx
+  // TODO remove in 3.4
+  const enableReactivityTransform = !!options.reactivityTransform
+  let refBindings: string[] | undefined
 
   if (!scriptSetup) {
     if (!script) {
       throw new Error(`[@vue/compiler-sfc] SFC contains no <script> tags.`)
     }
-    if (scriptLang && !ctx.isJS && !ctx.isTS) {
-      // do not process non js/ts script blocks
-      return script
-    }
     // normal <script> only
-    try {
-      let content = script.content
-      let map = script.map
-      const scriptAst = ctx.scriptAst!
-      const bindings = analyzeScriptBindings(scriptAst.body)
-      if (enableReactivityTransform && shouldTransform(content)) {
-        const s = new MagicString(source)
-        const startOffset = script.loc.start.offset
-        const endOffset = script.loc.end.offset
-        const { importedHelpers } = transformAST(scriptAst, s, startOffset)
-        if (importedHelpers.length) {
-          s.prepend(
-            `import { ${importedHelpers
-              .map(h => `${h} as _${h}`)
-              .join(', ')} } from 'vue'\n`
-          )
-        }
-        s.remove(0, startOffset)
-        s.remove(endOffset, source.length)
-        content = s.toString()
-        if (genSourceMap) {
-          map = s.generateMap({
-            source: filename,
-            hires: true,
-            includeContent: true
-          }) as unknown as RawSourceMap
-        }
-      }
-      if (cssVars.length || options.genDefaultAs) {
-        const defaultVar = options.genDefaultAs || normalScriptDefaultVar
-        const s = new MagicString(content)
-        rewriteDefaultAST(ctx.scriptAst!.body, s, defaultVar)
-        content = s.toString()
-        if (cssVars.length) {
-          content += genNormalScriptCssVarsCode(
-            cssVars,
-            bindings,
-            scopeId,
-            isProd,
-            defaultVar
-          )
-        }
-        if (!options.genDefaultAs) {
-          content += `\nexport default ${defaultVar}`
-        }
-      }
-      return {
-        ...script,
-        content,
-        map,
-        bindings,
-        scriptAst: scriptAst.body
-      }
-    } catch (e: any) {
-      // silently fallback if parse fails since user may be using custom
-      // babel syntax
-      return script
-    }
+    return processNormalScript(ctx, scopeId)
   }
 
   if (script && scriptLang !== scriptSetupLang) {
@@ -288,7 +215,7 @@ export function compileScript(
     let isUsedInTemplate = needTemplateUsageCheck
     if (
       needTemplateUsageCheck &&
-      isTS &&
+      ctx.isTS &&
       sfc.template &&
       !sfc.template.src &&
       !sfc.template.lang
@@ -723,7 +650,7 @@ export function compileScript(
       )
     }
 
-    if (isTS) {
+    if (ctx.isTS) {
       // move all Type declarations to outer scope
       if (
         node.type.startsWith('TS') ||
@@ -821,7 +748,7 @@ export function compileScript(
 
   // 8. inject `useCssVars` calls
   if (
-    cssVars.length &&
+    sfc.cssVars.length &&
     // no need to do this when targeting SSR
     !(options.inlineTemplate && options.templateOptions?.ssr)
   ) {
@@ -829,7 +756,12 @@ export function compileScript(
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genCssVarsCode(cssVars, ctx.bindingMetadata, scopeId, isProd)}\n`
+      `\n${genCssVarsCode(
+        sfc.cssVars,
+        ctx.bindingMetadata,
+        scopeId,
+        !!options.isProd
+      )}\n`
     )
   }
 
@@ -862,7 +794,7 @@ export function compileScript(
   }
   // inject temp variables for async context preservation
   if (hasAwait) {
-    const any = isTS ? `: any` : ``
+    const any = ctx.isTS ? `: any` : ``
     ctx.s.prependLeft(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
@@ -938,7 +870,7 @@ export function compileScript(
           ...(options.templateOptions &&
             options.templateOptions.compilerOptions),
           inline: true,
-          isTS,
+          isTS: ctx.isTS,
           bindingMetadata: ctx.bindingMetadata
         }
       })
@@ -993,6 +925,10 @@ export function compileScript(
   }
 
   // 11. finalize default export
+  const genDefaultAs = options.genDefaultAs
+    ? `const ${options.genDefaultAs} =`
+    : `export default`
+
   let runtimeOptions = ``
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
@@ -1022,7 +958,7 @@ export function compileScript(
   const exposeCall =
     ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
   // wrap setup code with function.
-  if (isTS) {
+  if (ctx.isTS) {
     // for TS, make sure the exported type is still valid type with
     // correct props information
     // we have to use object spread for types to be merged properly
@@ -1078,13 +1014,14 @@ export function compileScript(
     bindings: ctx.bindingMetadata,
     imports: userImports,
     content: ctx.s.toString(),
-    map: genSourceMap
-      ? (ctx.s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true
-        }) as unknown as RawSourceMap)
-      : undefined,
+    map:
+      options.sourceMap !== false
+        ? (ctx.s.generateMap({
+            source: filename,
+            hires: true,
+            includeContent: true
+          }) as unknown as RawSourceMap)
+        : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body
   }
