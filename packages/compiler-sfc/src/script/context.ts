@@ -7,6 +7,7 @@ import { PropsDeclType, PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
 import { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
+import { EmitsDeclType } from './defineEmits'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -41,6 +42,11 @@ export class ScriptCompileContext {
   propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
+
+  // defineEmits
+  emitsRuntimeDecl: Node | undefined
+  emitsTypeDecl: EmitsDeclType | undefined
+  emitIdentifier: string | undefined
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}

@@ -24,17 +24,11 @@ import {
   Identifier,
   ExportSpecifier,
   TSType,
-  TSTypeLiteral,
-  TSFunctionType,
   ArrayExpression,
   Statement,
   CallExpression,
-  RestElement,
-  TSInterfaceBody,
-  TSTypeElement,
   AwaitExpression,
   LVal,
-  Expression,
   TSEnumDeclaration
 } from '@babel/types'
 import { walk } from 'estree-walker'
@@ -57,10 +51,14 @@ import {
   DEFINE_PROPS,
   WITH_DEFAULTS
 } from './script/defineProps'
+import {
+  processDefineEmits,
+  genRuntimeEmits,
+  DEFINE_EMITS
+} from './script/defineEmits'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
 import {
   resolveObjectKey,
-  FromNormalScript,
   UNKNOWN_TYPE,
   isLiteralNode,
   unwrapTSNode,
@@ -68,7 +66,6 @@ import {
 } from './script/utils'
 
 // Special compiler macros
-const DEFINE_EMITS = 'defineEmits'
 const DEFINE_EXPOSE = 'defineExpose'
 const DEFINE_OPTIONS = 'defineOptions'
 const DEFINE_SLOTS = 'defineSlots'
@@ -143,18 +140,6 @@ export interface ImportBinding {
   isFromSetup: boolean
   isUsedInTemplate: boolean
 }
-
-export type PropsDestructureBindings = Record<
-  string, // public prop key
-  {
-    local: string // local identifier, may be different
-    default?: Expression
-  }
->
-
-type EmitsDeclType = FromNormalScript<
-  TSFunctionType | TSTypeLiteral | TSInterfaceBody
->
 
 /**
  * Compile `<script setup>`
@@ -282,21 +267,11 @@ export function compileScript(
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
   let defaultExport: Node | undefined
-  // let propsRuntimeDefaults: Node | undefined
-  let emitsRuntimeDecl: Node | undefined
-  let emitsTypeDecl: EmitsDeclType | undefined
-  let emitIdentifier: string | undefined
   let optionsRuntimeDecl: Node | undefined
   let hasAwait = false
   let hasInlinedSsrRenderFn = false
-  // props/emits declared via types
-  // const typeDeclaredProps: Record<string, PropTypeData> = {}
-  const typeDeclaredEmits: Set<string> = new Set()
-  // record declared types for runtime props type generation
-  // const declaredTypes: Record<string, string[]> = {}
 
   // magic-string state
-  // const s = new MagicString(source)
   const startOffset = scriptSetup.loc.start.offset
   const endOffset = scriptSetup.loc.end.offset
   const scriptStartOffset = script && script.loc.start.offset
@@ -366,49 +341,6 @@ export function compileScript(
     }
   }
 
-  function processDefineEmits(node: Node, declId?: LVal): boolean {
-    if (!isCallOf(node, DEFINE_EMITS)) {
-      return false
-    }
-    if (ctx.hasDefineEmitCall) {
-      error(`duplicate ${DEFINE_EMITS}() call`, node)
-    }
-    ctx.hasDefineEmitCall = true
-    emitsRuntimeDecl = node.arguments[0]
-    if (node.typeParameters) {
-      if (emitsRuntimeDecl) {
-        error(
-          `${DEFINE_EMITS}() cannot accept both type and non-type arguments ` +
-            `at the same time. Use one or the other.`,
-          node
-        )
-      }
-
-      const emitsTypeDeclRaw = node.typeParameters.params[0]
-      emitsTypeDecl = resolveQualifiedType(
-        emitsTypeDeclRaw,
-        node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-      ) as EmitsDeclType | undefined
-
-      if (!emitsTypeDecl) {
-        error(
-          `type argument passed to ${DEFINE_EMITS}() must be a function type, ` +
-            `a literal type with call signatures, or a reference to the above types.`,
-          emitsTypeDeclRaw
-        )
-      }
-    }
-
-    if (declId) {
-      emitIdentifier =
-        declId.type === 'Identifier'
-          ? declId.name
-          : scriptSetup!.content.slice(declId.start!, declId.end!)
-    }
-
-    return true
-  }
-
   function processDefineSlots(node: Node, declId?: LVal): boolean {
     if (!isCallOf(node, DEFINE_SLOTS)) {
       return false
@@ -431,82 +363,6 @@ export function compileScript(
     }
 
     return true
-  }
-
-  function getAstBody(): Statement[] {
-    return scriptAst
-      ? [...scriptSetupAst.body, ...scriptAst.body]
-      : scriptSetupAst.body
-  }
-
-  function resolveExtendsType(
-    node: Node,
-    qualifier: (node: Node) => boolean,
-    cache: Array<Node> = []
-  ): Array<Node> {
-    if (node.type === 'TSInterfaceDeclaration' && node.extends) {
-      node.extends.forEach(extend => {
-        if (
-          extend.type === 'TSExpressionWithTypeArguments' &&
-          extend.expression.type === 'Identifier'
-        ) {
-          const body = getAstBody()
-          for (const node of body) {
-            const qualified = isQualifiedType(
-              node,
-              qualifier,
-              extend.expression.name
-            )
-            if (qualified) {
-              cache.push(qualified)
-              resolveExtendsType(node, qualifier, cache)
-              return cache
-            }
-          }
-        }
-      })
-    }
-    return cache
-  }
-
-  function isQualifiedType(
-    node: Node,
-    qualifier: (node: Node) => boolean,
-    refName: String
-  ): Node | undefined {
-    if (node.type === 'TSInterfaceDeclaration' && node.id.name === refName) {
-      return node.body
-    } else if (
-      node.type === 'TSTypeAliasDeclaration' &&
-      node.id.name === refName &&
-      qualifier(node.typeAnnotation)
-    ) {
-      return node.typeAnnotation
-    } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
-      return isQualifiedType(node.declaration, qualifier, refName)
-    }
-  }
-
-  // filter all extends types to keep the override declaration
-  function filterExtendsType(extendsTypes: Node[], bodies: TSTypeElement[]) {
-    extendsTypes.forEach(extend => {
-      const body = (extend as TSInterfaceBody).body
-      body.forEach(newBody => {
-        if (
-          newBody.type === 'TSPropertySignature' &&
-          newBody.key.type === 'Identifier'
-        ) {
-          const name = newBody.key.name
-          const hasOverride = bodies.some(
-            seenBody =>
-              seenBody.type === 'TSPropertySignature' &&
-              seenBody.key.type === 'Identifier' &&
-              seenBody.key.name === name
-          )
-          if (!hasOverride) bodies.push(newBody)
-        }
-      })
-    })
   }
 
   function processDefineOptions(node: Node): boolean {
@@ -568,41 +424,6 @@ export function compileScript(
     }
 
     return true
-  }
-
-  function resolveQualifiedType(
-    node: Node,
-    qualifier: (node: Node) => boolean
-  ): Node | undefined {
-    if (qualifier(node)) {
-      return node
-    }
-    if (
-      node.type === 'TSTypeReference' &&
-      node.typeName.type === 'Identifier'
-    ) {
-      const refName = node.typeName.name
-      const body = getAstBody()
-      for (let i = 0; i < body.length; i++) {
-        const node = body[i]
-        let qualified = isQualifiedType(
-          node,
-          qualifier,
-          refName
-        ) as TSInterfaceBody
-        if (qualified) {
-          const extendsTypes = resolveExtendsType(node, qualifier)
-          if (extendsTypes.length) {
-            const bodies: TSTypeElement[] = [...qualified.body]
-            filterExtendsType(extendsTypes, bodies)
-            qualified.body = bodies
-          }
-          ;(qualified as FromNormalScript<Node>).__fromNormalScript =
-            scriptAst && i >= scriptSetupAst.body.length
-          return qualified
-        }
-      }
-    }
   }
 
   function processDefineExpose(node: Node): boolean {
@@ -681,34 +502,6 @@ export function compileScript(
         isStatement ? `` : `,\n  __temp`
       }\n)`
     )
-  }
-
-  function genRuntimeEmits() {
-    function genEmitsFromTS() {
-      return typeDeclaredEmits.size
-        ? `[${Array.from(typeDeclaredEmits)
-            .map(k => JSON.stringify(k))
-            .join(', ')}]`
-        : ``
-    }
-
-    let emitsDecl = ''
-    if (emitsRuntimeDecl) {
-      emitsDecl = scriptSetup!.content
-        .slice(emitsRuntimeDecl.start!, emitsRuntimeDecl.end!)
-        .trim()
-    } else if (emitsTypeDecl) {
-      emitsDecl = genEmitsFromTS()
-    }
-    if (ctx.hasDefineModelCall) {
-      let modelEmitsDecl = `[${Object.keys(ctx.modelDecls)
-        .map(n => JSON.stringify(`update:${n}`))
-        .join(', ')}]`
-      emitsDecl = emitsDecl
-        ? `${ctx.helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
-        : modelEmitsDecl
-    }
-    return emitsDecl
   }
 
   const scriptAst = ctx.scriptAst
@@ -962,7 +755,7 @@ export function compileScript(
       // process `defineProps` and `defineEmit(s)` calls
       if (
         processDefineProps(ctx, expr) ||
-        processDefineEmits(expr) ||
+        processDefineEmits(ctx, expr) ||
         processDefineOptions(expr) ||
         processDefineSlots(expr)
       ) {
@@ -999,7 +792,7 @@ export function compileScript(
           // defineProps / defineEmits
           const isDefineProps = processDefineProps(ctx, init, decl.id)
           const isDefineEmits =
-            !isDefineProps && processDefineEmits(init, decl.id)
+            !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
             (processDefineSlots(init, decl.id) ||
               processDefineModel(ctx, init, decl.id))
@@ -1123,7 +916,7 @@ export function compileScript(
     }
   }
 
-  // 3.1 props destructure transform
+  // 3 props destructure transform
   if (ctx.propsDestructureDecl) {
     transformDestructuredProps(
       scriptSetupAst,
@@ -1135,7 +928,7 @@ export function compileScript(
     )
   }
 
-  // 3.2 Apply reactivity transform
+  // 4. Apply reactivity transform
   // TODO remove in 3.4
   if (
     enableReactivityTransform &&
@@ -1154,17 +947,12 @@ export function compileScript(
     }
   }
 
-  // 4. extract runtime props/emits code from setup context type
-  if (emitsTypeDecl) {
-    extractRuntimeEmits(emitsTypeDecl, typeDeclaredEmits, error)
-  }
-
   // 5. check macro args to make sure it doesn't reference setup scope
   // variables
   checkInvalidScopeReference(ctx.propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsDestructureDecl, DEFINE_PROPS)
-  checkInvalidScopeReference(emitsRuntimeDecl, DEFINE_EMITS)
+  checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(optionsRuntimeDecl, DEFINE_OPTIONS)
 
   // 6. remove non-script content
@@ -1288,9 +1076,9 @@ export function compileScript(
     ctx.hasDefineExposeCall || !options.inlineTemplate
       ? [`expose: __expose`]
       : []
-  if (emitIdentifier) {
+  if (ctx.emitIdentifier) {
     destructureElements.push(
-      emitIdentifier === `emit` ? `emit` : `emit: ${emitIdentifier}`
+      ctx.emitIdentifier === `emit` ? `emit` : `emit: ${ctx.emitIdentifier}`
     )
   }
   if (destructureElements.length) {
@@ -1425,7 +1213,7 @@ export function compileScript(
   const propsDecl = genRuntimeProps(ctx)
   if (propsDecl) runtimeOptions += `\n  props: ${propsDecl},`
 
-  const emitsDecl = genRuntimeEmits()
+  const emitsDecl = genRuntimeEmits(ctx)
   if (emitsDecl) runtimeOptions += `\n  emits: ${emitsDecl},`
 
   let definedOptions = ''
@@ -1862,75 +1650,6 @@ function inferEnumType(node: TSEnumDeclaration): string[] {
     }
   }
   return types.size ? [...types] : ['Number']
-}
-
-function extractRuntimeEmits(
-  node: TSFunctionType | TSTypeLiteral | TSInterfaceBody,
-  emits: Set<string>,
-  error: (msg: string, node: Node) => never
-) {
-  if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
-    const members = node.type === 'TSTypeLiteral' ? node.members : node.body
-    let hasCallSignature = false
-    let hasProperty = false
-    for (let t of members) {
-      if (t.type === 'TSCallSignatureDeclaration') {
-        extractEventNames(t.parameters[0], emits)
-        hasCallSignature = true
-      }
-      if (t.type === 'TSPropertySignature') {
-        if (t.key.type === 'Identifier' && !t.computed) {
-          emits.add(t.key.name)
-          hasProperty = true
-        } else if (t.key.type === 'StringLiteral' && !t.computed) {
-          emits.add(t.key.value)
-          hasProperty = true
-        } else {
-          error(`defineEmits() type cannot use computed keys.`, t.key)
-        }
-      }
-    }
-    if (hasCallSignature && hasProperty) {
-      error(
-        `defineEmits() type cannot mixed call signature and property syntax.`,
-        node
-      )
-    }
-    return
-  } else {
-    extractEventNames(node.parameters[0], emits)
-  }
-}
-
-function extractEventNames(
-  eventName: Identifier | RestElement,
-  emits: Set<string>
-) {
-  if (
-    eventName.type === 'Identifier' &&
-    eventName.typeAnnotation &&
-    eventName.typeAnnotation.type === 'TSTypeAnnotation'
-  ) {
-    const typeNode = eventName.typeAnnotation.typeAnnotation
-    if (typeNode.type === 'TSLiteralType') {
-      if (
-        typeNode.literal.type !== 'UnaryExpression' &&
-        typeNode.literal.type !== 'TemplateLiteral'
-      ) {
-        emits.add(String(typeNode.literal.value))
-      }
-    } else if (typeNode.type === 'TSUnionType') {
-      for (const t of typeNode.types) {
-        if (
-          t.type === 'TSLiteralType' &&
-          t.literal.type !== 'UnaryExpression' &&
-          t.literal.type !== 'TemplateLiteral'
-        ) {
-          emits.add(String(t.literal.value))
-        }
-      }
-    }
-  }
 }
 
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
