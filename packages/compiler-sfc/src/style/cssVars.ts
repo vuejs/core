@@ -10,7 +10,6 @@ import {
 import { SFCDescriptor } from '../parse'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
-import { escapeSymbolsRE } from '../compileScript'
 
 export const CSS_VARS_HELPER = `useCssVars`
 
@@ -32,7 +31,10 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
+    return `${id}-${raw.replace(
+      /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g,
+      s => `\\${s}`
+    )}`
   }
 }
 

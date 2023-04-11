@@ -1296,12 +1296,3 @@ function isStaticNode(node: Node): boolean {
       return false
   }
 }
-
-/**
- * key may contain symbols such
- * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
- */
-export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-function getEscapedKey(key: string) {
-  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
-}
