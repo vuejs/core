@@ -193,20 +193,15 @@ function resolveRuntimePropsFromType(
   const elements = resolveTypeElements(ctx, node)
   for (const key in elements) {
     const e = elements[key]
-    let type: string[] | undefined
+    let type = inferRuntimeType(ctx, e)
     let skipCheck = false
-    if (e.type === 'TSMethodSignature') {
-      type = ['Function']
-    } else if (e.typeAnnotation) {
-      type = inferRuntimeType(ctx, e.typeAnnotation.typeAnnotation)
-      // skip check for result containing unknown types
-      if (type.includes(UNKNOWN_TYPE)) {
-        if (type.includes('Boolean') || type.includes('Function')) {
-          type = type.filter(t => t !== UNKNOWN_TYPE)
-          skipCheck = true
-        } else {
-          type = ['null']
-        }
+    // skip check for result containing unknown types
+    if (type.includes(UNKNOWN_TYPE)) {
+      if (type.includes('Boolean') || type.includes('Function')) {
+        type = type.filter(t => t !== UNKNOWN_TYPE)
+        skipCheck = true
+      } else {
+        type = ['null']
       }
     }
     props.push({

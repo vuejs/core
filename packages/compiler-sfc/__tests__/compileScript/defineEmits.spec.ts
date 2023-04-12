@@ -47,13 +47,13 @@ const emit = defineEmits(['a', 'b'])
 
   test('w/ type (union)', () => {
     const type = `((e: 'foo' | 'bar') => void) | ((e: 'baz', id: number) => void)`
-    expect(() =>
-      compile(`
+    const { content } = compile(`
     <script setup lang="ts">
     const emit = defineEmits<${type}>()
     </script>
     `)
-    ).toThrow()
+    assertCode(content)
+    expect(content).toMatch(`emits: ["foo", "bar", "baz"]`)
   })
 
   test('w/ type (type literal w/ call signatures)', () => {

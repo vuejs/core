@@ -16,7 +16,8 @@ import { UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
 import { ImportBinding } from '../compileScript'
 import { TSInterfaceDeclaration } from '@babel/types'
-import { hasOwn } from '@vue/shared'
+import { hasOwn, isArray } from '@vue/shared'
+import { Expression } from '@babel/types'
 
 export interface TypeScope {
   filename: string
@@ -63,24 +64,37 @@ function innerResolveTypeElements(
       addCallSignature(ret, node)
       return ret
     }
-    case 'TSExpressionWithTypeArguments':
+    case 'TSExpressionWithTypeArguments': // referenced by interface extends
     case 'TSTypeReference':
       return resolveTypeElements(ctx, resolveTypeReference(ctx, node))
+    case 'TSUnionType':
+    case 'TSIntersectionType':
+      return mergeElements(
+        node.types.map(t => resolveTypeElements(ctx, t)),
+        node.type
+      )
   }
   ctx.error(`Unsupported type in SFC macro: ${node.type}`, node)
 }
 
 function addCallSignature(
   elements: ResolvedElements,
-  node: TSCallSignatureDeclaration | TSFunctionType
+  node:
+    | TSCallSignatureDeclaration
+    | TSFunctionType
+    | (TSCallSignatureDeclaration | TSFunctionType)[]
 ) {
   if (!elements.__callSignatures) {
     Object.defineProperty(elements, '__callSignatures', {
       enumerable: false,
-      value: [node]
+      value: isArray(node) ? node : [node]
     })
   } else {
-    elements.__callSignatures.push(node)
+    if (isArray(node)) {
+      elements.__callSignatures.push(...node)
+    } else {
+      elements.__callSignatures.push(node)
+    }
   }
 }
 
@@ -110,6 +124,45 @@ function typeElementsToMap(
     }
   }
   return ret
+}
+
+function mergeElements(
+  maps: ResolvedElements[],
+  type: 'TSUnionType' | 'TSIntersectionType'
+): ResolvedElements {
+  const res: ResolvedElements = Object.create(null)
+  for (const m of maps) {
+    for (const key in m) {
+      if (!(key in res)) {
+        res[key] = m[key]
+      } else {
+        res[key] = createProperty(res[key].key, type, [res[key], m[key]])
+      }
+    }
+    if (m.__callSignatures) {
+      addCallSignature(res, m.__callSignatures)
+    }
+  }
+  return res
+}
+
+function createProperty(
+  key: Expression,
+  type: 'TSUnionType' | 'TSIntersectionType',
+  types: Node[]
+): TSPropertySignature {
+  return {
+    type: 'TSPropertySignature',
+    key,
+    kind: 'get',
+    typeAnnotation: {
+      type: 'TSTypeAnnotation',
+      typeAnnotation: {
+        type,
+        types: types as TSType[]
+      }
+    }
+  }
 }
 
 function resolveInterfaceMembers(
@@ -252,6 +305,11 @@ export function inferRuntimeType(
       }
       return types.size ? Array.from(types) : ['Object']
     }
+    case 'TSPropertySignature':
+      if (node.typeAnnotation) {
+        return inferRuntimeType(ctx, node.typeAnnotation.typeAnnotation)
+      }
+    case 'TSMethodSignature':
     case 'TSFunctionType':
       return ['Function']
     case 'TSArrayType':

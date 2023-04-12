@@ -197,6 +197,22 @@ return { emit }
 })"
 `;
 
+exports[`defineEmits > w/ type (union) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
+  setup(__props, { expose: __expose, emit }) {
+  __expose();
+
+    
+    
+return { emit }
+}
+
+})"
+`;
+
 exports[`defineEmits > w/ type 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
