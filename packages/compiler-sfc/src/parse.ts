@@ -7,11 +7,12 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map'
+import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
 import { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
-import { hmrShouldReload, ImportBinding } from './compileScript'
+import { ImportBinding } from './compileScript'
+import { isImportUsed } from './script/importUsageCheck'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -428,4 +429,33 @@ function isEmpty(node: ElementNode) {
     }
   }
   return true
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }
