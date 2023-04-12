@@ -442,10 +442,3 @@ export const TS_NODE_TYPES = [
   'TSInstantiationExpression', // foo<string>
   'TSSatisfiesExpression' // foo satisfies T
 ]
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
-}
