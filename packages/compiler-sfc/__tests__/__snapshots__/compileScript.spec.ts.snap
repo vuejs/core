@@ -2084,11 +2084,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as {
-        foo?: string
-        bar?: number
-        baz: boolean
-      };
+const props = __props;
 
       
       
@@ -2112,12 +2108,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as {
-        foo: () => void
-        bar: boolean
-        baz: boolean | (() => void)
-        qux: string | number
-      };
+const props = __props;
 
       
       
@@ -2140,11 +2131,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as {
-        foo?: string
-        bar?: number
-        baz: boolean
-      };
+const props = __props;
 
       
       
@@ -2168,7 +2155,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as { a: string };
+const props = __props;
 
         
       
@@ -2194,7 +2181,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as { foo: string, bar?: number, baz: boolean, qux(): number, quux(): void, quuxx: Promise<string>, fred: string };
+const props = __props;
 
       
       
@@ -2217,7 +2204,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as { foo: () => void, bar: boolean, baz: boolean | (() => void), qux: string | number };
+const props = __props;
 
       
       
@@ -2239,9 +2226,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props as {
-        foo?: () => 'string'
-      };
+const props = __props;
 
       
       
