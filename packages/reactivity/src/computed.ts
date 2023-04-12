@@ -24,15 +24,15 @@ export interface WritableComputedOptions<T> {
 }
 
 export class ComputedRefImpl<T> {
-  public dep?: Dep = undefined
-
   private _value!: T
+  private _dirty = true
+
+  public dep?: Dep = undefined
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _dirty = true
   public _cacheable: boolean
 
   constructor(
