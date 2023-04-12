@@ -451,6 +451,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sizes?: string
   src?: string
