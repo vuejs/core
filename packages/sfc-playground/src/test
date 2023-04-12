@@ -1,0 +1,101 @@
+<script setup>
+import { ref, computed } from 'vue'
+const toDoItems=ref(0)
+const header = ref('Lista de tareas')
+const editing = ref(false)
+const items = ref([])
+const reversedItems = computed(()=>[...items.value].reverse())
+const newItem = ref("")
+const newItemHighPriority = ref(false)
+const saveItem = ()=>{
+	items.value.push(
+    {
+      id: items.value.length + 1,
+      label: newItem.value,
+      highPriority: newItemHighPriority.value
+    })
+  newItem.value = ""
+  newItemHighPriority.value = ""
+}
+const doEdit = (e)=>{
+  editing.value = e
+  newItem.value = ""
+  newItemHighPriority.value = ""
+}
+
+const togglePurchased = (item) =>{
+  item.purchased = !item.purchased
+  toDoItems.value=0
+  for (let i = 0; i < items.value.length; i++){
+    if(!items.value[i].purchased){
+      toDoItems.value++
+      console.log(items.value[i])
+      console.log(toDoItems.value)
+    }
+  }
+}
+const toggleDeleted = (item) =>{
+	console.log("delete "+item.id)
+  delete[items[item.id]]
+  console.log(items.value)
+}
+</script>
+
+<template>
+  <div class="header">
+  	<h1>{{ header }}</h1>
+    <p v-if="items.length">
+      Tiene {{items.length}} tarea{{items.length==1 ? "" : "s"}}, ya ha resuelto {{toDoItems}}
+    </p>
+    <button v-if="editing" class="btn" @click="doEdit(false)">
+      Cancelar
+    </button>
+    <button v-else class="btn btn-primary" @click="doEdit(true)">
+      Agregar tarea
+    </button>
+  </div>
+  <form 
+		class="add-item-form"
+    v-if="editing"
+  	@submit.prevent="saveItem"       
+	>
+    <input 
+    	v-model.trim="newItem"
+ 			type="text" 
+      placeholder="Agrega una tarea"
+    >
+    <label>
+      <input type="checkbox" v-model="newItemHighPriority"> 
+      Prioridad alta
+    </label>
+    <button 
+      :disabled="newItem.length < 5"
+      class="btn btn-primary"
+    >
+      Guardar tarea
+    </button>
+   </form>
+  <ul>
+    <div
+      v-for="(item, index) in reversedItems" 
+      @click="togglePurchased(item)"
+      :key="item.id"
+      class="static-class"
+      :class="{
+        strikeout: item.purchased, 
+        priority: item.highPriority, 
+      }">
+      <li>
+        <button @click="toggleDeleted(item)">
+        	Eliminar
+        </button>
+      </li>
+      <li>
+        {{item.label}}
+      </li>
+    </div>
+  </ul>
+  <p v-if="!items.length">
+    No hay tareas pendientes
+  </p>
+</template>
