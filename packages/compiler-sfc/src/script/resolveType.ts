@@ -33,6 +33,7 @@ type Import = Pick<ImportBinding, 'source' | 'imported'>
 export interface TypeScope {
   filename: string
   source: string
+  offset: number
   imports: Record<string, Import>
   types: Record<
     string,
@@ -128,7 +129,8 @@ function innerResolveTypeElements(
       } else {
         ctx.error(
           `Unsupported index type: ${node.indexType.type}`,
-          node.indexType
+          node.indexType,
+          scope
         )
       }
     }
@@ -144,16 +146,17 @@ function innerResolveTypeElements(
           // @ts-ignore
           SupportedBuiltinsSet.has(typeName)
         ) {
-          return resolveBuiltin(ctx, node, typeName as any)
+          return resolveBuiltin(ctx, node, typeName as any, scope)
         }
         ctx.error(
-          `Failed to resolve type reference, or unsupported built-in utlility type.`,
-          node
+          `Unresolvable type reference or unsupported built-in utlility type`,
+          node,
+          scope
         )
       }
     }
   }
-  ctx.error(`Unresolvable type in SFC macro: ${node.type}`, node)
+  ctx.error(`Unresolvable type: ${node.type}`, node, scope)
 }
 
 function typeElementsToMap(
@@ -169,13 +172,14 @@ function typeElementsToMap(
       if (name && !e.computed) {
         res.props[name] = e as ResolvedElements['props'][string]
       } else if (e.key.type === 'TemplateLiteral') {
-        for (const key of resolveTemplateKeys(ctx, e.key)) {
+        for (const key of resolveTemplateKeys(ctx, e.key, scope)) {
           res.props[key] = e as ResolvedElements['props'][string]
         }
       } else {
         ctx.error(
-          `computed keys are not supported in types referenced by SFC macros.`,
-          e
+          `Unsupported computed key in type referenced by a macro`,
+          e.key,
+          scope
         )
       }
     } else if (e.type === 'TSCallSignatureDeclaration') {
@@ -256,10 +260,7 @@ function resolveMappedType(
   scope: TypeScope
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
-  if (!node.typeParameter.constraint) {
-    ctx.error(`mapped type used in macros must have a finite constraint.`, node)
-  }
-  const keys = resolveStringType(ctx, node.typeParameter.constraint)
+  const keys = resolveStringType(ctx, node.typeParameter.constraint!, scope)
   for (const key of keys) {
     res.props[key] = createProperty(
       {
@@ -273,25 +274,29 @@ function resolveMappedType(
   return res
 }
 
-function resolveStringType(ctx: ScriptCompileContext, node: Node): string[] {
+function resolveStringType(
+  ctx: ScriptCompileContext,
+  node: Node,
+  scope: TypeScope
+): string[] {
   switch (node.type) {
     case 'StringLiteral':
       return [node.value]
     case 'TSLiteralType':
-      return resolveStringType(ctx, node.literal)
+      return resolveStringType(ctx, node.literal, scope)
     case 'TSUnionType':
-      return node.types.map(t => resolveStringType(ctx, t)).flat()
+      return node.types.map(t => resolveStringType(ctx, t, scope)).flat()
     case 'TemplateLiteral': {
-      return resolveTemplateKeys(ctx, node)
+      return resolveTemplateKeys(ctx, node, scope)
     }
     case 'TSTypeReference': {
-      const resolved = resolveTypeReference(ctx, node)
+      const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveStringType(ctx, resolved)
+        return resolveStringType(ctx, resolved, scope)
       }
       if (node.typeName.type === 'Identifier') {
         const getParam = (index = 0) =>
-          resolveStringType(ctx, node.typeParameters!.params[index])
+          resolveStringType(ctx, node.typeParameters!.params[index], scope)
         switch (node.typeName.name) {
           case 'Extract':
             return getParam(1)
@@ -308,17 +313,18 @@ function resolveStringType(ctx: ScriptCompileContext, node: Node): string[] {
           case 'Uncapitalize':
             return getParam().map(s => s[0].toLowerCase() + s.slice(1))
           default:
-            ctx.error('Failed to resolve type reference', node)
+            ctx.error('Failed to resolve type reference', node, scope)
         }
       }
     }
   }
-  ctx.error('Failed to resolve string type into finite keys', node)
+  ctx.error('Failed to resolve string type into finite keys', node, scope)
 }
 
 function resolveTemplateKeys(
   ctx: ScriptCompileContext,
-  node: TemplateLiteral
+  node: TemplateLiteral,
+  scope: TypeScope
 ): string[] {
   if (!node.expressions.length) {
     return [node.quasis[0].value.raw]
@@ -328,12 +334,16 @@ function resolveTemplateKeys(
   const e = node.expressions[0]
   const q = node.quasis[0]
   const leading = q ? q.value.raw : ``
-  const resolved = resolveStringType(ctx, e)
-  const restResolved = resolveTemplateKeys(ctx, {
-    ...node,
-    expressions: node.expressions.slice(1),
-    quasis: q ? node.quasis.slice(1) : node.quasis
-  })
+  const resolved = resolveStringType(ctx, e, scope)
+  const restResolved = resolveTemplateKeys(
+    ctx,
+    {
+      ...node,
+      expressions: node.expressions.slice(1),
+      quasis: q ? node.quasis.slice(1) : node.quasis
+    },
+    scope
+  )
 
   for (const r of resolved) {
     for (const rr of restResolved) {
@@ -357,7 +367,8 @@ type GetSetType<T> = T extends Set<infer V> ? V : never
 function resolveBuiltin(
   ctx: ScriptCompileContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
-  name: GetSetType<typeof SupportedBuiltinsSet>
+  name: GetSetType<typeof SupportedBuiltinsSet>,
+  scope: TypeScope
 ): ResolvedElements {
   const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
   switch (name) {
@@ -366,7 +377,11 @@ function resolveBuiltin(
     case 'Readonly':
       return t
     case 'Pick': {
-      const picked = resolveStringType(ctx, node.typeParameters!.params[1])
+      const picked = resolveStringType(
+        ctx,
+        node.typeParameters!.params[1],
+        scope
+      )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
         res.props[key] = t.props[key]
@@ -374,7 +389,11 @@ function resolveBuiltin(
       return res
     }
     case 'Omit':
-      const omitted = resolveStringType(ctx, node.typeParameters!.params[1])
+      const omitted = resolveStringType(
+        ctx,
+        node.typeParameters!.params[1],
+        scope
+      )
       const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key in t.props) {
         if (!omitted.includes(key)) {
@@ -415,7 +434,7 @@ function innerResolveTypeReference(
 ): Node | undefined {
   if (typeof name === 'string') {
     if (scope.imports[name]) {
-      return resolveTypeFromImport(ctx, scope, scope.imports[name], node)
+      return resolveTypeFromImport(ctx, node, name, scope)
     } else {
       const types = onlyExported ? scope.exportedTypes : scope.types
       return types[name]
@@ -462,19 +481,21 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
 
 function resolveTypeFromImport(
   ctx: ScriptCompileContext,
-  scope: TypeScope,
-  { source, imported }: Import,
-  node: TSTypeReference | TSExpressionWithTypeArguments
+  node: TSTypeReference | TSExpressionWithTypeArguments,
+  name: string,
+  scope: TypeScope
 ): Node | undefined {
   const fs = ctx.options.fs
   if (!fs) {
     ctx.error(
       `fs options for compileScript are required for resolving imported types`,
-      node
+      node,
+      scope
     )
   }
   // TODO (hmr) register dependency file on ctx
   const containingFile = scope.filename
+  const { source, imported } = scope.imports[name]
   if (source.startsWith('.')) {
     // relative import - fast path
     const filename = path.join(containingFile, '..', source)
@@ -488,7 +509,13 @@ function resolveTypeFromImport(
         true
       )
     } else {
-      ctx.error(`Failed to resolve import source for type`, node)
+      ctx.error(
+        `Failed to resolve import source ${JSON.stringify(
+          source
+        )} for type ${name}`,
+        node,
+        scope
+      )
     }
   } else {
     // TODO module or aliased import - use full TS resolution
@@ -519,10 +546,11 @@ function fileToScope(
 ): TypeScope {
   // TODO cache
   const source = fs.readFile(filename)
-  const body = parseFile(ctx, filename, source)
+  const [body, offset] = parseFile(ctx, filename, source)
   const scope: TypeScope = {
     filename,
     source,
+    offset,
     types: Object.create(null),
     exportedTypes: Object.create(null),
     imports: recordImports(body)
@@ -535,10 +563,12 @@ function parseFile(
   ctx: ScriptCompileContext,
   filename: string,
   content: string
-): Statement[] {
+): [Statement[], number] {
+  let body: Statement[] = []
+  let offset = 0
   const ext = path.extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
-    return babelParse(content, {
+    body = babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         ctx.options.babelParserPlugins
@@ -551,12 +581,13 @@ function parseFile(
     } = parse(content)
     const scriptContent = (script?.content || '') + (scriptSetup?.content || '')
     const lang = script?.lang || scriptSetup?.lang
-    return babelParse(scriptContent, {
+    body = babelParse(scriptContent, {
       plugins: resolveParserPlugins(lang!, ctx.options.babelParserPlugins),
       sourceType: 'module'
     }).program.body
+    offset = scriptSetup ? scriptSetup.loc.start.offset : 0
   }
-  return []
+  return [body, offset]
 }
 
 function ctxToScope(ctx: ScriptCompileContext): TypeScope {
@@ -567,6 +598,7 @@ function ctxToScope(ctx: ScriptCompileContext): TypeScope {
   const scope: TypeScope = {
     filename: ctx.descriptor.filename,
     source: ctx.descriptor.source,
+    offset: ctx.startOffset!,
     imports: Object.create(ctx.userImports),
     types: Object.create(null),
     exportedTypes: Object.create(null)
