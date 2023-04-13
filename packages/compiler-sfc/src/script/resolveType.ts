@@ -1,4 +1,5 @@
 import {
+  Identifier,
   Node,
   Statement,
   TSCallSignatureDeclaration,
@@ -8,6 +9,7 @@ import {
   TSMappedType,
   TSMethodSignature,
   TSPropertySignature,
+  TSQualifiedName,
   TSType,
   TSTypeAnnotation,
   TSTypeElement,
@@ -62,6 +64,34 @@ function innerResolveTypeElements(
     case 'TSFunctionType': {
       return { props: {}, calls: [node] }
     }
+    case 'TSUnionType':
+    case 'TSIntersectionType':
+      return mergeElements(
+        node.types.map(t => resolveTypeElements(ctx, t)),
+        node.type
+      )
+    case 'TSMappedType':
+      return resolveMappedType(ctx, node)
+    case 'TSIndexedAccessType': {
+      if (
+        node.indexType.type === 'TSLiteralType' &&
+        node.indexType.literal.type === 'StringLiteral'
+      ) {
+        const resolved = resolveTypeElements(ctx, node.objectType)
+        const key = node.indexType.literal.value
+        const targetType = resolved.props[key].typeAnnotation
+        if (targetType) {
+          return resolveTypeElements(ctx, targetType.typeAnnotation)
+        } else {
+          break
+        }
+      } else {
+        ctx.error(
+          `Unsupported index type: ${node.indexType.type}`,
+          node.indexType
+        )
+      }
+    }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
     case 'TSTypeReference': {
       const resolved = resolveTypeReference(ctx, node)
@@ -82,16 +112,8 @@ function innerResolveTypeElements(
         )
       }
     }
-    case 'TSUnionType':
-    case 'TSIntersectionType':
-      return mergeElements(
-        node.types.map(t => resolveTypeElements(ctx, t)),
-        node.type
-      )
-    case 'TSMappedType':
-      return resolveMappedType(ctx, node)
   }
-  ctx.error(`Unsupported type in SFC macro: ${node.type}`, node)
+  ctx.error(`Unresolvable type in SFC macro: ${node.type}`, node)
 }
 
 function typeElementsToMap(
@@ -342,8 +364,15 @@ function getReferenceName(
   if (ref.type === 'Identifier') {
     return ref.name
   } else {
-    // TODO qualified name, e.g. Foo.Bar
-    return []
+    return qualifiedNameToPath(ref)
+  }
+}
+
+function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
+  if (node.type === 'Identifier') {
+    return [node.name]
+  } else {
+    return [...qualifiedNameToPath(node.left), node.right.name]
   }
 }
 
@@ -376,8 +405,11 @@ function recordType(node: Node, types: Record<string, Node>) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
-      types[node.id.name] = node
+    case 'TSModuleDeclaration': {
+      const id = node.id.type === 'Identifier' ? node.id.name : node.id.value
+      types[id] = node
       break
+    }
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
       break
@@ -541,6 +573,17 @@ export function inferRuntimeType(
 
     case 'TSSymbolKeyword':
       return ['Symbol']
+
+    case 'TSIndexedAccessType': {
+      if (
+        node.indexType.type === 'TSLiteralType' &&
+        node.indexType.literal.type === 'StringLiteral'
+      ) {
+        const resolved = resolveTypeElements(ctx, node.objectType)
+        const key = node.indexType.literal.value
+        return inferRuntimeType(ctx, resolved.props[key])
+      }
+    }
 
     default:
       return [UNKNOWN_TYPE] // no runtime check

@@ -215,6 +215,30 @@ describe('resolveType', () => {
     })
   })
 
+  test('indexed access type', () => {
+    expect(
+      resolve(`
+    type T = { bar: number }
+    type S = { nested: { foo: T['bar'] }}
+    type Target = S['nested']
+    `).props
+    ).toStrictEqual({
+      foo: ['Number']
+    })
+  })
+
+  // test('namespace', () => {
+  //   expect(
+  //     resolve(`
+  //   type T = { foo: number, bar: string, baz: boolean }
+  //   type K = 'foo' | 'bar'
+  //   type Target = Omit<T, K>
+  //   `).props
+  //   ).toStrictEqual({
+  //     baz: ['Boolean']
+  //   })
+  // })
+
   describe('errors', () => {
     test('error on computed keys', () => {
       expect(() => resolve(`type Target = { [Foo]: string }`)).toThrow(
