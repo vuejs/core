@@ -15,7 +15,8 @@ import {
   ComputedRef,
   shallowReactive,
   nextTick,
-  ref
+  ref,
+  reactive
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -277,6 +278,52 @@ describe('SFC <script setup> helpers', () => {
       expect(count.value).toBe(1)
       await nextTick()
       expect(updateCount).toBeCalledTimes(1)
+    })
+
+    test('reactive value', async () => {
+      let foo: any
+      const update = () => {
+        foo.value.baz = 1
+      }
+
+      const Comp = defineComponent({
+        props: ['modelValue'],
+        emits: ['update:modelValue'],
+        setup(props) {
+          foo = useModel(props, 'modelValue')
+        },
+        render() {}
+      })
+
+      const msg = reactive({ baz: 0 })
+      const setValue = vi.fn(v => (msg.baz = v))
+      const root = nodeOps.createElement('div')
+      createApp(() =>
+        h(Comp, {
+          modelValue: msg,
+          'onUpdate:modelValue': setValue
+        })
+      ).mount(root)
+
+      expect(foo.value.baz).toBe(0)
+      expect(msg.baz).toBe(0)
+      expect(setValue).not.toBeCalled()
+
+      // update from child
+      update()
+
+      await nextTick()
+      expect(msg.baz).toBe(1)
+      expect(foo.value.baz).toBe(1)
+      expect(setValue).toBeCalledTimes(0)
+
+      // update from parent
+      msg.baz = 2
+
+      await nextTick()
+      expect(msg.baz).toBe(2)
+      expect(foo.value.baz).toBe(2)
+      expect(setValue).toBeCalledTimes(0)
     })
   })
 
