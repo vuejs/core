@@ -126,13 +126,14 @@ export class ScriptCompileContext {
   }
 
   error(msg: string, node: Node & WithScope, scope?: TypeScope): never {
+    const offset = scope ? scope.offset || 0 : this.startOffset!
     throw new Error(
       `[@vue/compiler-sfc] ${msg}\n\n${
-        this.descriptor.filename
+        (scope || this.descriptor).filename
       }\n${generateCodeFrame(
-        this.descriptor.source,
-        node.start! + this.startOffset!,
-        node.end! + this.startOffset!
+        (scope || this.descriptor).source,
+        node.start! + offset,
+        node.end! + offset
       )}`
     )
   }

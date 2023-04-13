@@ -327,16 +327,34 @@ describe('resolveType', () => {
   })
 
   describe('errors', () => {
-    test('error on computed keys', () => {
-      expect(() => resolve(`type Target = { [Foo]: string }`)).toThrow(
-        `computed keys are not supported in types referenced by SFC macros`
+    test('failed type reference', () => {
+      expect(() => resolve(`type Target = X`)).toThrow(
+        `Unresolvable type reference`
       )
+    })
+
+    test('unsupported computed keys', () => {
+      expect(() => resolve(`type Target = { [Foo]: string }`)).toThrow(
+        `Unsupported computed key in type referenced by a macro`
+      )
+    })
+
+    test('unsupported index type', () => {
+      expect(() => resolve(`type Target = X[K]`)).toThrow(
+        `Unsupported index type`
+      )
+    })
+
+    test('failed improt source resolve', () => {
+      expect(() =>
+        resolve(`import { X } from './foo'; type Target = X`)
+      ).toThrow(`Failed to resolve import source "./foo" for type X`)
     })
   })
 })
 
 function resolve(code: string, files: Record<string, string> = {}) {
-  const { descriptor } = parse(`<script setup lang="ts">${code}</script>`, {
+  const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
     filename: 'Test.vue'
   })
   const ctx = new ScriptCompileContext(descriptor, {
