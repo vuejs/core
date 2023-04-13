@@ -72,8 +72,18 @@ function innerResolveTypeElements(
       if (resolved) {
         return resolveTypeElements(ctx, resolved)
       } else {
-        // TODO Pick / Omit
-        ctx.error(`Failed to resolved type reference`, node)
+        const typeName = getReferenceName(node)
+        if (
+          typeof typeName === 'string' &&
+          // @ts-ignore
+          SupportedBuiltinsSet.has(typeName)
+        ) {
+          return resolveBuiltin(ctx, node, typeName as any)
+        }
+        ctx.error(
+          `Failed to resolved type reference, or unsupported built-in utlility type.`,
+          node
+        )
       }
     }
     case 'TSUnionType':
@@ -290,21 +300,76 @@ function resolveTemplateKeys(
   return res
 }
 
+const SupportedBuiltinsSet = new Set([
+  'Partial',
+  'Required',
+  'Readonly',
+  'Pick',
+  'Omit'
+] as const)
+
+type GetSetType<T> = T extends Set<infer V> ? V : never
+
+function resolveBuiltin(
+  ctx: ScriptCompileContext,
+  node: TSTypeReference | TSExpressionWithTypeArguments,
+  name: GetSetType<typeof SupportedBuiltinsSet>
+): ResolvedElements {
+  const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
+  switch (name) {
+    case 'Partial':
+    case 'Required':
+    case 'Readonly':
+      return t
+    case 'Pick': {
+      const picked = resolveStringType(ctx, node.typeParameters!.params[1])
+      const res: ResolvedElements = {}
+      if (t.__callSignatures) addCallSignature(res, t.__callSignatures)
+      for (const key of picked) {
+        res[key] = t[key]
+      }
+      return res
+    }
+    case 'Omit':
+      const omitted = resolveStringType(ctx, node.typeParameters!.params[1])
+      const res: ResolvedElements = {}
+      if (t.__callSignatures) addCallSignature(res, t.__callSignatures)
+      for (const key in t) {
+        if (!omitted.includes(key)) {
+          res[key] = t[key]
+        }
+      }
+      return res
+  }
+}
+
 function resolveTypeReference(
   ctx: ScriptCompileContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   scope = getRootScope(ctx)
 ): Node | undefined {
-  const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
-  if (ref.type === 'Identifier') {
-    if (scope.imports[ref.name]) {
+  const name = getReferenceName(node)
+  if (typeof name === 'string') {
+    if (scope.imports[name]) {
       // TODO external import
-    } else if (scope.types[ref.name]) {
-      return scope.types[ref.name]
+    } else if (scope.types[name]) {
+      return scope.types[name]
     }
   } else {
     // TODO qualified name, e.g. Foo.Bar
     // return resolveTypeReference()
+  }
+}
+
+function getReferenceName(
+  node: TSTypeReference | TSExpressionWithTypeArguments
+): string | string[] {
+  const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
+  if (ref.type === 'Identifier') {
+    return ref.name
+  } else {
+    // TODO qualified name, e.g. Foo.Bar
+    return []
   }
 }
 
