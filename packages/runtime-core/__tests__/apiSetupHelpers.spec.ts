@@ -315,7 +315,7 @@ describe('SFC <script setup> helpers', () => {
       await nextTick()
       expect(msg.baz).toBe(1)
       expect(foo.value.baz).toBe(1)
-      expect(setValue).toBeCalledTimes(0)
+      expect(setValue).not.toBeCalled()
 
       // update from parent
       msg.baz = 2
@@ -323,7 +323,7 @@ describe('SFC <script setup> helpers', () => {
       await nextTick()
       expect(msg.baz).toBe(2)
       expect(foo.value.baz).toBe(2)
-      expect(setValue).toBeCalledTimes(0)
+      expect(setValue).not.toBeCalled()
     })
   })
 
