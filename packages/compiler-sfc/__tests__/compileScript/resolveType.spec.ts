@@ -227,17 +227,24 @@ describe('resolveType', () => {
     })
   })
 
-  // test('namespace', () => {
-  //   expect(
-  //     resolve(`
-  //   type T = { foo: number, bar: string, baz: boolean }
-  //   type K = 'foo' | 'bar'
-  //   type Target = Omit<T, K>
-  //   `).props
-  //   ).toStrictEqual({
-  //     baz: ['Boolean']
-  //   })
-  // })
+  test('namespace', () => {
+    expect(
+      resolve(`
+      type X = string
+      namespace Foo {
+        type X = number
+        export namespace Bar {
+          export type A = {
+            foo: X
+          }
+        }
+      }
+      type Target = Foo.Bar.A
+    `).props
+    ).toStrictEqual({
+      foo: ['Number']
+    })
+  })
 
   describe('errors', () => {
     test('error on computed keys', () => {

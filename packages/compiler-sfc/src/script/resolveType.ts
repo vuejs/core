@@ -1,6 +1,6 @@
 import {
   Identifier,
-  Node,
+  Node as _Node,
   Statement,
   TSCallSignatureDeclaration,
   TSEnumDeclaration,
@@ -8,6 +8,8 @@ import {
   TSFunctionType,
   TSMappedType,
   TSMethodSignature,
+  TSModuleBlock,
+  TSModuleDeclaration,
   TSPropertySignature,
   TSQualifiedName,
   TSType,
@@ -25,15 +27,24 @@ import { Expression } from '@babel/types'
 
 export interface TypeScope {
   filename: string
-  body: Statement[]
   imports: Record<string, ImportBinding>
   types: Record<string, Node>
+  parent?: TypeScope
+}
+
+interface WithScope {
+  _ownerScope?: TypeScope
 }
 
 interface ResolvedElements {
-  props: Record<string, TSPropertySignature | TSMethodSignature>
+  props: Record<string, (TSPropertySignature | TSMethodSignature) & WithScope>
   calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
+
+type Node = _Node &
+  WithScope & {
+    _resolvedElements?: ResolvedElements
+  }
 
 /**
  * Resolve arbitrary type node to a list of type elements that can be then
@@ -41,7 +52,7 @@ interface ResolvedElements {
  */
 export function resolveTypeElements(
   ctx: ScriptCompileContext,
-  node: Node & { _resolvedElements?: ResolvedElements }
+  node: Node
 ): ResolvedElements {
   if (node._resolvedElements) {
     return node._resolvedElements
@@ -55,7 +66,7 @@ function innerResolveTypeElements(
 ): ResolvedElements {
   switch (node.type) {
     case 'TSTypeLiteral':
-      return typeElementsToMap(ctx, node.members)
+      return typeElementsToMap(ctx, node.members, node._ownerScope)
     case 'TSInterfaceDeclaration':
       return resolveInterfaceMembers(ctx, node)
     case 'TSTypeAliasDeclaration':
@@ -118,11 +129,13 @@ function innerResolveTypeElements(
 
 function typeElementsToMap(
   ctx: ScriptCompileContext,
-  elements: TSTypeElement[]
+  elements: TSTypeElement[],
+  scope = ctxToScope(ctx)
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
+      ;(e as Node)._ownerScope = scope
       const name =
         e.key.type === 'Identifier'
           ? e.key.name
@@ -190,9 +203,9 @@ function createProperty(
 
 function resolveInterfaceMembers(
   ctx: ScriptCompileContext,
-  node: TSInterfaceDeclaration
+  node: TSInterfaceDeclaration & WithScope
 ): ResolvedElements {
-  const base = typeElementsToMap(ctx, node.body.body)
+  const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
   if (node.extends) {
     for (const ext of node.extends) {
       const { props } = resolveTypeElements(ctx, ext)
@@ -341,10 +354,22 @@ function resolveBuiltin(
 
 function resolveTypeReference(
   ctx: ScriptCompileContext,
-  node: TSTypeReference | TSExpressionWithTypeArguments,
-  scope = getRootScope(ctx)
+  node: (TSTypeReference | TSExpressionWithTypeArguments) & {
+    _resolvedReference?: Node
+  },
+  scope = ctxToScope(ctx)
 ): Node | undefined {
+  if (node._resolvedReference) {
+    return node._resolvedReference
+  }
   const name = getReferenceName(node)
+  return (node._resolvedReference = innerResolveTypeReference(scope, name))
+}
+
+function innerResolveTypeReference(
+  scope: TypeScope,
+  name: string | string[]
+): Node | undefined {
   if (typeof name === 'string') {
     if (scope.imports[name]) {
       // TODO external import
@@ -352,8 +377,14 @@ function resolveTypeReference(
       return scope.types[name]
     }
   } else {
-    // TODO qualified name, e.g. Foo.Bar
-    // return resolveTypeReference()
+    const ns = innerResolveTypeReference(scope, name[0])
+    if (ns && ns.type === 'TSModuleDeclaration') {
+      const childScope = moduleDeclToScope(ns, scope)
+      return innerResolveTypeReference(
+        childScope,
+        name.length > 2 ? name.slice(1) : name[name.length - 1]
+      )
+    }
   }
 }
 
@@ -376,7 +407,7 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
   }
 }
 
-function getRootScope(ctx: ScriptCompileContext): TypeScope {
+function ctxToScope(ctx: ScriptCompileContext): TypeScope {
   if (ctx.scope) {
     return ctx.scope
   }
@@ -388,13 +419,34 @@ function getRootScope(ctx: ScriptCompileContext): TypeScope {
   return (ctx.scope = {
     filename: ctx.descriptor.filename,
     imports: ctx.userImports,
-    types: recordTypes(body),
-    body
+    types: recordTypes(body)
   })
 }
 
-function recordTypes(body: Statement[]) {
-  const types: Record<string, Node> = Object.create(null)
+function moduleDeclToScope(
+  node: TSModuleDeclaration & { _resolvedChildScope?: TypeScope },
+  parent: TypeScope
+): TypeScope {
+  if (node._resolvedChildScope) {
+    return node._resolvedChildScope
+  }
+  const types: TypeScope['types'] = Object.create(parent.types)
+  const scope: TypeScope = {
+    filename: parent.filename,
+    imports: Object.create(parent.imports),
+    types: recordTypes((node.body as TSModuleBlock).body, types),
+    parent
+  }
+  for (const key of Object.keys(types)) {
+    types[key]._ownerScope = scope
+  }
+  return (node._resolvedChildScope = scope)
+}
+
+function recordTypes(
+  body: Statement[],
+  types: Record<string, Node> = Object.create(null)
+) {
   for (const s of body) {
     recordType(s, types)
   }
@@ -414,8 +466,8 @@ function recordType(node: Node, types: Record<string, Node>) {
       types[node.id.name] = node.typeAnnotation
       break
     case 'ExportNamedDeclaration': {
-      if (node.exportKind === 'type') {
-        recordType(node.declaration!, types)
+      if (node.declaration) {
+        recordType(node.declaration, types)
       }
       break
     }
@@ -437,7 +489,7 @@ function recordType(node: Node, types: Record<string, Node>) {
 export function inferRuntimeType(
   ctx: ScriptCompileContext,
   node: Node,
-  scope = getRootScope(ctx)
+  scope = node._ownerScope || ctxToScope(ctx)
 ): string[] {
   switch (node.type) {
     case 'TSStringKeyword':
@@ -470,7 +522,7 @@ export function inferRuntimeType(
     }
     case 'TSPropertySignature':
       if (node.typeAnnotation) {
-        return inferRuntimeType(ctx, node.typeAnnotation.typeAnnotation)
+        return inferRuntimeType(ctx, node.typeAnnotation.typeAnnotation, scope)
       }
     case 'TSMethodSignature':
     case 'TSFunctionType':
