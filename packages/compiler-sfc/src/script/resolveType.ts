@@ -5,18 +5,20 @@ import {
   TSEnumDeclaration,
   TSExpressionWithTypeArguments,
   TSFunctionType,
+  TSMappedType,
   TSMethodSignature,
   TSPropertySignature,
   TSType,
   TSTypeAnnotation,
   TSTypeElement,
-  TSTypeReference
+  TSTypeReference,
+  TemplateLiteral
 } from '@babel/types'
 import { UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
 import { ImportBinding } from '../compileScript'
 import { TSInterfaceDeclaration } from '@babel/types'
-import { hasOwn, isArray } from '@vue/shared'
+import { capitalize, hasOwn, isArray } from '@vue/shared'
 import { Expression } from '@babel/types'
 
 export interface TypeScope {
@@ -65,14 +67,23 @@ function innerResolveTypeElements(
       return ret
     }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
-    case 'TSTypeReference':
-      return resolveTypeElements(ctx, resolveTypeReference(ctx, node))
+    case 'TSTypeReference': {
+      const resolved = resolveTypeReference(ctx, node)
+      if (resolved) {
+        return resolveTypeElements(ctx, resolved)
+      } else {
+        // TODO Pick / Omit
+        ctx.error(`Failed to resolved type reference`, node)
+      }
+    }
     case 'TSUnionType':
     case 'TSIntersectionType':
       return mergeElements(
         node.types.map(t => resolveTypeElements(ctx, t)),
         node.type
       )
+    case 'TSMappedType':
+      return resolveMappedType(ctx, node)
   }
   ctx.error(`Unsupported type in SFC macro: ${node.type}`, node)
 }
@@ -113,6 +124,10 @@ function typeElementsToMap(
           : null
       if (name && !e.computed) {
         ret[name] = e
+      } else if (e.key.type === 'TemplateLiteral') {
+        for (const key of resolveTemplateKeys(ctx, e.key)) {
+          ret[key] = e
+        }
       } else {
         ctx.error(
           `computed keys are not supported in types referenced by SFC macros.`,
@@ -136,7 +151,11 @@ function mergeElements(
       if (!(key in res)) {
         res[key] = m[key]
       } else {
-        res[key] = createProperty(res[key].key, type, [res[key], m[key]])
+        res[key] = createProperty(res[key].key, {
+          type,
+          // @ts-ignore
+          types: [res[key], m[key]]
+        })
       }
     }
     if (m.__callSignatures) {
@@ -148,8 +167,7 @@ function mergeElements(
 
 function createProperty(
   key: Expression,
-  type: 'TSUnionType' | 'TSIntersectionType',
-  types: Node[]
+  typeAnnotation: TSType
 ): TSPropertySignature {
   return {
     type: 'TSPropertySignature',
@@ -157,10 +175,7 @@ function createProperty(
     kind: 'get',
     typeAnnotation: {
       type: 'TSTypeAnnotation',
-      typeAnnotation: {
-        type,
-        types: types as TSType[]
-      }
+      typeAnnotation
     }
   }
 }
@@ -183,22 +198,102 @@ function resolveInterfaceMembers(
   return base
 }
 
+function resolveMappedType(
+  ctx: ScriptCompileContext,
+  node: TSMappedType
+): ResolvedElements {
+  const res: ResolvedElements = {}
+  if (!node.typeParameter.constraint) {
+    ctx.error(`mapped type used in macros must have a finite constraint.`, node)
+  }
+  const keys = resolveStringType(ctx, node.typeParameter.constraint)
+  for (const key of keys) {
+    res[key] = createProperty(
+      {
+        type: 'Identifier',
+        name: key
+      },
+      node.typeAnnotation!
+    )
+  }
+  return res
+}
+
+function resolveStringType(ctx: ScriptCompileContext, node: Node): string[] {
+  switch (node.type) {
+    case 'StringLiteral':
+      return [node.value]
+    case 'TSLiteralType':
+      return resolveStringType(ctx, node.literal)
+    case 'TSUnionType':
+      return node.types.map(t => resolveStringType(ctx, t)).flat()
+    case 'TemplateLiteral': {
+      return resolveTemplateKeys(ctx, node)
+    }
+    case 'TSTypeReference': {
+      const resolved = resolveTypeReference(ctx, node)
+      if (resolved) {
+        return resolveStringType(ctx, resolved)
+      }
+      if (node.typeName.type === 'Identifier') {
+        const getParam = (index = 0) =>
+          resolveStringType(ctx, node.typeParameters!.params[index])
+        switch (node.typeName.name) {
+          case 'Extract':
+            return getParam(1)
+          case 'Exclude': {
+            const excluded = getParam(1)
+            return getParam().filter(s => !excluded.includes(s))
+          }
+          case 'Uppercase':
+            return getParam().map(s => s.toUpperCase())
+          case 'Lowercase':
+            return getParam().map(s => s.toLowerCase())
+          case 'Capitalize':
+            return getParam().map(capitalize)
+          case 'Uncapitalize':
+            return getParam().map(s => s[0].toLowerCase() + s.slice(1))
+          default:
+            ctx.error('Failed to resolve type reference', node)
+        }
+      }
+    }
+  }
+  ctx.error('Failed to resolve string type into finite keys', node)
+}
+
+function resolveTemplateKeys(
+  ctx: ScriptCompileContext,
+  node: TemplateLiteral
+): string[] {
+  if (!node.expressions.length) {
+    return [node.quasis[0].value.raw]
+  }
+
+  const res: string[] = []
+  const e = node.expressions[0]
+  const q = node.quasis[0]
+  const leading = q ? q.value.raw : ``
+  const resolved = resolveStringType(ctx, e)
+  const restResolved = resolveTemplateKeys(ctx, {
+    ...node,
+    expressions: node.expressions.slice(1),
+    quasis: q ? node.quasis.slice(1) : node.quasis
+  })
+
+  for (const r of resolved) {
+    for (const rr of restResolved) {
+      res.push(leading + r + rr)
+    }
+  }
+
+  return res
+}
+
 function resolveTypeReference(
   ctx: ScriptCompileContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
-  scope?: TypeScope
-): Node
-function resolveTypeReference(
-  ctx: ScriptCompileContext,
-  node: TSTypeReference | TSExpressionWithTypeArguments,
-  scope: TypeScope,
-  bail: false
-): Node | undefined
-function resolveTypeReference(
-  ctx: ScriptCompileContext,
-  node: TSTypeReference | TSExpressionWithTypeArguments,
-  scope = getRootScope(ctx),
-  bail = true
+  scope = getRootScope(ctx)
 ): Node | undefined {
   const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
   if (ref.type === 'Identifier') {
@@ -210,9 +305,6 @@ function resolveTypeReference(
   } else {
     // TODO qualified name, e.g. Foo.Bar
     // return resolveTypeReference()
-  }
-  if (bail) {
-    ctx.error('Failed to resolve type reference.', node)
   }
 }
 
@@ -332,7 +424,7 @@ export function inferRuntimeType(
 
     case 'TSTypeReference':
       if (node.typeName.type === 'Identifier') {
-        const resolved = resolveTypeReference(ctx, node, scope, false)
+        const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
           return inferRuntimeType(ctx, resolved, scope)
         }

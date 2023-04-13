@@ -147,9 +147,48 @@ describe('resolveType', () => {
     })
   })
 
-  // describe('built-in utility types', () => {
+  test('template string type', () => {
+    expect(
+      resolve(`
+    type T = 'foo' | 'bar'
+    type S = 'x' | 'y'
+    type Target = {
+      [\`_\${T}_\${S}_\`]: string
+    }
+    `).elements
+    ).toStrictEqual({
+      _foo_x_: ['String'],
+      _foo_y_: ['String'],
+      _bar_x_: ['String'],
+      _bar_y_: ['String']
+    })
+  })
 
-  // })
+  test('mapped types w/ string manipulation', () => {
+    expect(
+      resolve(`
+    type T = 'foo' | 'bar'
+    type Target = { [K in T]: string | number } & {
+      [K in 'optional']?: boolean
+    } & {
+      [K in Capitalize<T>]: string
+    } & {
+      [K in Uppercase<Extract<T, 'foo'>>]: string
+    } & {
+      [K in \`x\${T}\`]: string
+    }
+    `).elements
+    ).toStrictEqual({
+      foo: ['String', 'Number'],
+      bar: ['String', 'Number'],
+      Foo: ['String'],
+      Bar: ['String'],
+      FOO: ['String'],
+      xfoo: ['String'],
+      xbar: ['String'],
+      optional: ['Boolean']
+    })
+  })
 
   describe('errors', () => {
     test('error on computed keys', () => {
