@@ -126,7 +126,7 @@ export class ScriptCompileContext {
   }
 
   error(msg: string, node: Node & WithScope, scope?: TypeScope): never {
-    const offset = scope ? scope.offset || 0 : this.startOffset!
+    const offset = scope ? scope.offset : this.startOffset!
     throw new Error(
       `[@vue/compiler-sfc] ${msg}\n\n${
         (scope || this.descriptor).filename

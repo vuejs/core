@@ -27,6 +27,7 @@ import { capitalize, hasOwn } from '@vue/shared'
 import path from 'path'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
+import { createCache } from '../cache'
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
@@ -539,23 +540,35 @@ function resolveExt(
   )
 }
 
+const fileToScopeCache = createCache<TypeScope>()
+
+export function invalidateTypeCache(filename: string) {
+  fileToScopeCache.delete(filename)
+}
+
 function fileToScope(
   ctx: ScriptCompileContext,
   filename: string,
   fs: NonNullable<SFCScriptCompileOptions['fs']>
 ): TypeScope {
-  // TODO cache
+  const cached = fileToScopeCache.get(filename)
+  if (cached) {
+    return cached
+  }
+
   const source = fs.readFile(filename)
-  const [body, offset] = parseFile(ctx, filename, source)
+  const body = parseFile(ctx, filename, source)
   const scope: TypeScope = {
     filename,
     source,
-    offset,
+    offset: 0,
     types: Object.create(null),
     exportedTypes: Object.create(null),
     imports: recordImports(body)
   }
   recordTypes(body, scope)
+
+  fileToScopeCache.set(filename, scope)
   return scope
 }
 
@@ -563,12 +576,10 @@ function parseFile(
   ctx: ScriptCompileContext,
   filename: string,
   content: string
-): [Statement[], number] {
-  let body: Statement[] = []
-  let offset = 0
+): Statement[] {
   const ext = path.extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
-    body = babelParse(content, {
+    return babelParse(content, {
       plugins: resolveParserPlugins(
         ext.slice(1),
         ctx.options.babelParserPlugins
@@ -579,15 +590,33 @@ function parseFile(
     const {
       descriptor: { script, scriptSetup }
     } = parse(content)
-    const scriptContent = (script?.content || '') + (scriptSetup?.content || '')
+    if (!script && !scriptSetup) {
+      return []
+    }
+
+    // ensure the correct offset with original source
+    const scriptOffset = script ? script.loc.start.offset : Infinity
+    const scriptSetupOffset = scriptSetup
+      ? scriptSetup.loc.start.offset
+      : Infinity
+    const firstBlock = scriptOffset < scriptSetupOffset ? script : scriptSetup
+    const secondBlock = scriptOffset < scriptSetupOffset ? scriptSetup : script
+
+    let scriptContent =
+      ' '.repeat(Math.min(scriptOffset, scriptSetupOffset)) +
+      firstBlock!.content
+    if (secondBlock) {
+      scriptContent +=
+        ' '.repeat(secondBlock.loc.start.offset - script!.loc.end.offset) +
+        secondBlock.content
+    }
     const lang = script?.lang || scriptSetup?.lang
-    body = babelParse(scriptContent, {
+    return babelParse(scriptContent, {
       plugins: resolveParserPlugins(lang!, ctx.options.babelParserPlugins),
       sourceType: 'module'
     }).program.body
-    offset = scriptSetup ? scriptSetup.loc.start.offset : 0
   }
-  return [body, offset]
+  return []
 }
 
 function ctxToScope(ctx: ScriptCompileContext): TypeScope {

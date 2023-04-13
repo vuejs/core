@@ -3,6 +3,7 @@ import { parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
 import {
   inferRuntimeType,
+  invalidateTypeCache,
   recordImports,
   resolveTypeElements
 } from '../../src/script/resolveType'
@@ -368,6 +369,10 @@ function resolve(code: string, files: Record<string, string> = {}) {
       }
     }
   })
+
+  for (const file in files) {
+    invalidateTypeCache(file)
+  }
 
   // ctx.userImports is collected when calling compileScript(), but we are
   // skipping that here, so need to manually register imports
