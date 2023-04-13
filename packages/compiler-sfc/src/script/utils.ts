@@ -1,4 +1,13 @@
-import { CallExpression, Node } from '@babel/types'
+import {
+  CallExpression,
+  Expression,
+  Identifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  ImportSpecifier,
+  Node,
+  StringLiteral
+} from '@babel/types'
 import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
@@ -47,4 +56,25 @@ export function isCallOf(
 
 export function toRuntimeTypeString(types: string[]) {
   return types.length > 1 ? `[${types.join(', ')}]` : types[0]
+}
+
+export function getImportedName(
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+) {
+  if (specifier.type === 'ImportSpecifier')
+    return specifier.imported.type === 'Identifier'
+      ? specifier.imported.name
+      : specifier.imported.value
+  else if (specifier.type === 'ImportNamespaceSpecifier') return '*'
+  return 'default'
+}
+
+export function getId(node: Identifier | StringLiteral): string
+export function getId(node: Expression): string | null
+export function getId(node: Expression) {
+  return node.type === 'Identifier'
+    ? node.name
+    : node.type === 'StringLiteral'
+    ? node.value
+    : null
 }
