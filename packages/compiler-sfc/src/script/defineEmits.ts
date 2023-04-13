@@ -69,22 +69,22 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
     return emits
   }
 
-  const elements = resolveTypeElements(ctx, node)
+  const { props, calls } = resolveTypeElements(ctx, node)
 
   let hasProperty = false
-  for (const key in elements) {
+  for (const key in props) {
     emits.add(key)
     hasProperty = true
   }
 
-  if (elements.__callSignatures) {
+  if (calls) {
     if (hasProperty) {
       ctx.error(
         `defineEmits() type cannot mixed call signature and property syntax.`,
         node
       )
     }
-    for (const call of elements.__callSignatures) {
+    for (const call of calls) {
       extractEventNames(call.parameters[0], emits)
     }
   }

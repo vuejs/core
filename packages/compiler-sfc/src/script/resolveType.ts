@@ -18,7 +18,7 @@ import { UNKNOWN_TYPE } from './utils'
 import { ScriptCompileContext } from './context'
 import { ImportBinding } from '../compileScript'
 import { TSInterfaceDeclaration } from '@babel/types'
-import { capitalize, hasOwn, isArray } from '@vue/shared'
+import { capitalize, hasOwn } from '@vue/shared'
 import { Expression } from '@babel/types'
 
 export interface TypeScope {
@@ -28,11 +28,9 @@ export interface TypeScope {
   types: Record<string, Node>
 }
 
-type ResolvedElements = Record<
-  string,
-  TSPropertySignature | TSMethodSignature
-> & {
-  __callSignatures?: (TSCallSignatureDeclaration | TSFunctionType)[]
+interface ResolvedElements {
+  props: Record<string, TSPropertySignature | TSMethodSignature>
+  calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
 
 /**
@@ -62,9 +60,7 @@ function innerResolveTypeElements(
     case 'TSParenthesizedType':
       return resolveTypeElements(ctx, node.typeAnnotation)
     case 'TSFunctionType': {
-      const ret: ResolvedElements = {}
-      addCallSignature(ret, node)
-      return ret
+      return { props: {}, calls: [node] }
     }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
     case 'TSTypeReference': {
@@ -98,32 +94,11 @@ function innerResolveTypeElements(
   ctx.error(`Unsupported type in SFC macro: ${node.type}`, node)
 }
 
-function addCallSignature(
-  elements: ResolvedElements,
-  node:
-    | TSCallSignatureDeclaration
-    | TSFunctionType
-    | (TSCallSignatureDeclaration | TSFunctionType)[]
-) {
-  if (!elements.__callSignatures) {
-    Object.defineProperty(elements, '__callSignatures', {
-      enumerable: false,
-      value: isArray(node) ? node : [node]
-    })
-  } else {
-    if (isArray(node)) {
-      elements.__callSignatures.push(...node)
-    } else {
-      elements.__callSignatures.push(node)
-    }
-  }
-}
-
 function typeElementsToMap(
   ctx: ScriptCompileContext,
   elements: TSTypeElement[]
 ): ResolvedElements {
-  const ret: ResolvedElements = {}
+  const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
       const name =
@@ -133,10 +108,10 @@ function typeElementsToMap(
           ? e.key.value
           : null
       if (name && !e.computed) {
-        ret[name] = e
+        res.props[name] = e
       } else if (e.key.type === 'TemplateLiteral') {
         for (const key of resolveTemplateKeys(ctx, e.key)) {
-          ret[key] = e
+          res.props[key] = e
         }
       } else {
         ctx.error(
@@ -145,31 +120,32 @@ function typeElementsToMap(
         )
       }
     } else if (e.type === 'TSCallSignatureDeclaration') {
-      addCallSignature(ret, e)
+      ;(res.calls || (res.calls = [])).push(e)
     }
   }
-  return ret
+  return res
 }
 
 function mergeElements(
   maps: ResolvedElements[],
   type: 'TSUnionType' | 'TSIntersectionType'
 ): ResolvedElements {
-  const res: ResolvedElements = Object.create(null)
-  for (const m of maps) {
-    for (const key in m) {
-      if (!(key in res)) {
-        res[key] = m[key]
+  const res: ResolvedElements = { props: {} }
+  const { props: baseProps } = res
+  for (const { props, calls } of maps) {
+    for (const key in props) {
+      if (!hasOwn(baseProps, key)) {
+        baseProps[key] = props[key]
       } else {
-        res[key] = createProperty(res[key].key, {
+        baseProps[key] = createProperty(baseProps[key].key, {
           type,
           // @ts-ignore
-          types: [res[key], m[key]]
+          types: [baseProps[key], props[key]]
         })
       }
     }
-    if (m.__callSignatures) {
-      addCallSignature(res, m.__callSignatures)
+    if (calls) {
+      ;(res.calls || (res.calls = [])).push(...calls)
     }
   }
   return res
@@ -197,10 +173,10 @@ function resolveInterfaceMembers(
   const base = typeElementsToMap(ctx, node.body.body)
   if (node.extends) {
     for (const ext of node.extends) {
-      const resolvedExt = resolveTypeElements(ctx, ext)
-      for (const key in resolvedExt) {
-        if (!hasOwn(base, key)) {
-          base[key] = resolvedExt[key]
+      const { props } = resolveTypeElements(ctx, ext)
+      for (const key in props) {
+        if (!hasOwn(base.props, key)) {
+          base.props[key] = props[key]
         }
       }
     }
@@ -212,13 +188,13 @@ function resolveMappedType(
   ctx: ScriptCompileContext,
   node: TSMappedType
 ): ResolvedElements {
-  const res: ResolvedElements = {}
+  const res: ResolvedElements = { props: {} }
   if (!node.typeParameter.constraint) {
     ctx.error(`mapped type used in macros must have a finite constraint.`, node)
   }
   const keys = resolveStringType(ctx, node.typeParameter.constraint)
   for (const key of keys) {
-    res[key] = createProperty(
+    res.props[key] = createProperty(
       {
         type: 'Identifier',
         name: key
@@ -323,20 +299,18 @@ function resolveBuiltin(
       return t
     case 'Pick': {
       const picked = resolveStringType(ctx, node.typeParameters!.params[1])
-      const res: ResolvedElements = {}
-      if (t.__callSignatures) addCallSignature(res, t.__callSignatures)
+      const res: ResolvedElements = { props: {}, calls: t.calls }
       for (const key of picked) {
-        res[key] = t[key]
+        res.props[key] = t.props[key]
       }
       return res
     }
     case 'Omit':
       const omitted = resolveStringType(ctx, node.typeParameters!.params[1])
-      const res: ResolvedElements = {}
-      if (t.__callSignatures) addCallSignature(res, t.__callSignatures)
-      for (const key in t) {
+      const res: ResolvedElements = { props: {}, calls: t.calls }
+      for (const key in t.props) {
         if (!omitted.includes(key)) {
-          res[key] = t[key]
+          res.props[key] = t.props[key]
         }
       }
       return res

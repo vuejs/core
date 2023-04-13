@@ -191,8 +191,8 @@ function resolveRuntimePropsFromType(
 ): PropTypeData[] {
   const props: PropTypeData[] = []
   const elements = resolveTypeElements(ctx, node)
-  for (const key in elements) {
-    const e = elements[key]
+  for (const key in elements.props) {
+    const e = elements.props[key]
     let type = inferRuntimeType(ctx, e)
     let skipCheck = false
     // skip check for result containing unknown types

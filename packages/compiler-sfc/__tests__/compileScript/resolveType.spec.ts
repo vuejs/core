@@ -8,19 +8,19 @@ import {
 
 describe('resolveType', () => {
   test('type literal', () => {
-    const { elements, callSignatures } = resolve(`type Target = {
+    const { props, calls } = resolve(`type Target = {
       foo: number // property
       bar(): void // method
       'baz': string // string literal key
       (e: 'foo'): void // call signature
       (e: 'bar'): void
     }`)
-    expect(elements).toStrictEqual({
+    expect(props).toStrictEqual({
       foo: ['Number'],
       bar: ['Function'],
       baz: ['String']
     })
-    expect(callSignatures?.length).toBe(2)
+    expect(calls?.length).toBe(2)
   })
 
   test('reference type', () => {
@@ -28,7 +28,7 @@ describe('resolveType', () => {
       resolve(`
     type Aliased = { foo: number }
     type Target = Aliased
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['Number']
     })
@@ -39,7 +39,7 @@ describe('resolveType', () => {
       resolve(`
     export type Aliased = { foo: number }
     type Target = Aliased
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['Number']
     })
@@ -50,7 +50,7 @@ describe('resolveType', () => {
       resolve(`
     interface Aliased { foo: number }
     type Target = Aliased
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['Number']
     })
@@ -61,7 +61,7 @@ describe('resolveType', () => {
       resolve(`
     export interface Aliased { foo: number }
     type Target = Aliased
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['Number']
     })
@@ -75,7 +75,7 @@ describe('resolveType', () => {
     interface C { c: string }
     interface Aliased extends B, C { foo: number }
     type Target = Aliased
-    `).elements
+    `).props
     ).toStrictEqual({
       a: ['Function'],
       b: ['Boolean'],
@@ -88,7 +88,7 @@ describe('resolveType', () => {
     expect(
       resolve(`
     type Target = (e: 'foo') => void
-    `).callSignatures?.length
+    `).calls?.length
     ).toBe(1)
   })
 
@@ -97,7 +97,7 @@ describe('resolveType', () => {
       resolve(`
     type Fn = (e: 'foo') => void
     type Target = Fn
-    `).callSignatures?.length
+    `).calls?.length
     ).toBe(1)
   })
 
@@ -108,7 +108,7 @@ describe('resolveType', () => {
     type Bar = { bar: string }
     type Baz = { bar: string | boolean }
     type Target = { self: any } & Foo & Bar & Baz
-    `).elements
+    `).props
     ).toStrictEqual({
       self: ['Unknown'],
       foo: ['Number'],
@@ -138,7 +138,7 @@ describe('resolveType', () => {
         }
 
     type Target = CommonProps & ConditionalProps
-    `).elements
+    `).props
     ).toStrictEqual({
       size: ['String'],
       color: ['String', 'Number'],
@@ -155,7 +155,7 @@ describe('resolveType', () => {
     type Target = {
       [\`_\${T}_\${S}_\`]: string
     }
-    `).elements
+    `).props
     ).toStrictEqual({
       _foo_x_: ['String'],
       _foo_y_: ['String'],
@@ -177,7 +177,7 @@ describe('resolveType', () => {
     } & {
       [K in \`x\${T}\`]: string
     }
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['String', 'Number'],
       bar: ['String', 'Number'],
@@ -196,7 +196,7 @@ describe('resolveType', () => {
     type T = { foo: number, bar: string, baz: boolean }
     type K = 'foo' | 'bar'
     type Target = Pick<T, K>
-    `).elements
+    `).props
     ).toStrictEqual({
       foo: ['Number'],
       bar: ['String']
@@ -209,7 +209,7 @@ describe('resolveType', () => {
     type T = { foo: number, bar: string, baz: boolean }
     type K = 'foo' | 'bar'
     type Target = Omit<T, K>
-    `).elements
+    `).props
     ).toStrictEqual({
       baz: ['Boolean']
     })
@@ -231,13 +231,13 @@ function resolve(code: string) {
     s => s.type === 'TSTypeAliasDeclaration' && s.id.name === 'Target'
   ) as TSTypeAliasDeclaration
   const raw = resolveTypeElements(ctx, targetDecl.typeAnnotation)
-  const elements: Record<string, string[]> = {}
-  for (const key in raw) {
-    elements[key] = inferRuntimeType(ctx, raw[key])
+  const props: Record<string, string[]> = {}
+  for (const key in raw.props) {
+    props[key] = inferRuntimeType(ctx, raw.props[key])
   }
   return {
-    elements,
-    callSignatures: raw.__callSignatures,
+    props,
+    calls: raw.calls,
     raw
   }
 }
