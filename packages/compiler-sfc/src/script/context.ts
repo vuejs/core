@@ -1,13 +1,13 @@
 import { Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
-import { parse as babelParse, ParserOptions, ParserPlugin } from '@babel/parser'
+import { parse as babelParse, ParserPlugin } from '@babel/parser'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
 import { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { TypeScope } from './resolveType'
+import { TypeScope, WithScope } from './resolveType'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -83,31 +83,17 @@ export class ScriptCompileContext {
       scriptSetupLang === 'tsx'
 
     // resolve parser plugins
-    const plugins: ParserPlugin[] = []
-    if (!this.isTS || scriptLang === 'tsx' || scriptSetupLang === 'tsx') {
-      plugins.push('jsx')
-    } else {
-      // If don't match the case of adding jsx, should remove the jsx from the babelParserPlugins
-      if (options.babelParserPlugins)
-        options.babelParserPlugins = options.babelParserPlugins.filter(
-          n => n !== 'jsx'
-        )
-    }
-    if (options.babelParserPlugins) plugins.push(...options.babelParserPlugins)
-    if (this.isTS) {
-      plugins.push('typescript')
-      if (!plugins.includes('decorators')) {
-        plugins.push('decorators-legacy')
-      }
-    }
+    const plugins: ParserPlugin[] = resolveParserPlugins(
+      (scriptLang || scriptSetupLang)!,
+      options.babelParserPlugins
+    )
 
-    function parse(
-      input: string,
-      options: ParserOptions,
-      offset: number
-    ): Program {
+    function parse(input: string, offset: number): Program {
       try {
-        return babelParse(input, options).program
+        return babelParse(input, {
+          plugins,
+          sourceType: 'module'
+        }).program
       } catch (e: any) {
         e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
           descriptor.filename
@@ -124,23 +110,12 @@ export class ScriptCompileContext {
       this.descriptor.script &&
       parse(
         this.descriptor.script.content,
-        {
-          plugins,
-          sourceType: 'module'
-        },
         this.descriptor.script.loc.start.offset
       )
 
     this.scriptSetupAst =
       this.descriptor.scriptSetup &&
-      parse(
-        this.descriptor.scriptSetup!.content,
-        {
-          plugins: [...plugins, 'topLevelAwait'],
-          sourceType: 'module'
-        },
-        this.startOffset!
-      )
+      parse(this.descriptor.scriptSetup!.content, this.startOffset!)
   }
 
   getString(node: Node, scriptSetup = true): string {
@@ -150,19 +125,39 @@ export class ScriptCompileContext {
     return block.content.slice(node.start!, node.end!)
   }
 
-  error(
-    msg: string,
-    node: Node,
-    end: number = node.end! + this.startOffset!
-  ): never {
+  error(msg: string, node: Node & WithScope, scope?: TypeScope): never {
     throw new Error(
       `[@vue/compiler-sfc] ${msg}\n\n${
         this.descriptor.filename
       }\n${generateCodeFrame(
         this.descriptor.source,
         node.start! + this.startOffset!,
-        end
+        node.end! + this.startOffset!
       )}`
     )
   }
+}
+
+export function resolveParserPlugins(
+  lang: string,
+  userPlugins?: ParserPlugin[]
+) {
+  const plugins: ParserPlugin[] = []
+  if (lang === 'jsx' || lang === 'tsx') {
+    plugins.push('jsx')
+  } else if (userPlugins) {
+    // If don't match the case of adding jsx
+    // should remove the jsx from user options
+    userPlugins = userPlugins.filter(p => p !== 'jsx')
+  }
+  if (lang === 'ts' || lang === 'tsx') {
+    plugins.push('typescript')
+    if (!plugins.includes('decorators')) {
+      plugins.push('decorators-legacy')
+    }
+  }
+  if (userPlugins) {
+    plugins.push(...userPlugins)
+  }
+  return plugins
 }

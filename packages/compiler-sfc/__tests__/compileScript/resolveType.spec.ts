@@ -3,6 +3,7 @@ import { parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
 import {
   inferRuntimeType,
+  recordImports,
   resolveTypeElements
 } from '../../src/script/resolveType'
 
@@ -246,6 +247,85 @@ describe('resolveType', () => {
     })
   })
 
+  describe('external type imports', () => {
+    test('relative ts', () => {
+      expect(
+        resolve(
+          `
+        import { P } from './foo'
+        import { Y as PP } from './bar'
+        type Target = P & PP
+        `,
+          {
+            'foo.ts': 'export type P = { foo: number }',
+            'bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+          }
+        ).props
+      ).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String']
+      })
+    })
+
+    test('relative vue', () => {
+      expect(
+        resolve(
+          `
+        import { P } from './foo.vue'
+        import { P as PP } from './bar.vue'
+        type Target = P & PP
+        `,
+          {
+            'foo.vue':
+              '<script lang="ts">export type P = { foo: number }</script>',
+            'bar.vue':
+              '<script setup lang="tsx">export type P = { bar: string }</script>'
+          }
+        ).props
+      ).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String']
+      })
+    })
+
+    test('relative (chained)', () => {
+      expect(
+        resolve(
+          `
+        import { P } from './foo'
+        type Target = P
+        `,
+          {
+            'foo.ts': `import type { P as PP } from './nested/bar.vue'
+              export type P = { foo: number } & PP`,
+            'nested/bar.vue':
+              '<script setup lang="ts">export type P = { bar: string }</script>'
+          }
+        ).props
+      ).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String']
+      })
+    })
+
+    test('relative (chained, re-export)', () => {
+      expect(
+        resolve(
+          `
+        import { PP as P } from './foo'
+        type Target = P
+        `,
+          {
+            'foo.ts': `export { P as PP } from './bar'`,
+            'bar.ts': 'export type P = { bar: string }'
+          }
+        ).props
+      ).toStrictEqual({
+        bar: ['String']
+      })
+    })
+  })
+
   describe('errors', () => {
     test('error on computed keys', () => {
       expect(() => resolve(`type Target = { [Foo]: string }`)).toThrow(
@@ -255,9 +335,26 @@ describe('resolveType', () => {
   })
 })
 
-function resolve(code: string) {
-  const { descriptor } = parse(`<script setup lang="ts">${code}</script>`)
-  const ctx = new ScriptCompileContext(descriptor, { id: 'test' })
+function resolve(code: string, files: Record<string, string> = {}) {
+  const { descriptor } = parse(`<script setup lang="ts">${code}</script>`, {
+    filename: 'Test.vue'
+  })
+  const ctx = new ScriptCompileContext(descriptor, {
+    id: 'test',
+    fs: {
+      fileExists(file) {
+        return !!files[file]
+      },
+      readFile(file) {
+        return files[file]
+      }
+    }
+  })
+
+  // ctx.userImports is collected when calling compileScript(), but we are
+  // skipping that here, so need to manually register imports
+  ctx.userImports = recordImports(ctx.scriptSetupAst!.body) as any
+
   const targetDecl = ctx.scriptSetupAst!.body.find(
     s => s.type === 'TSTypeAliasDeclaration' && s.id.name === 'Target'
   ) as TSTypeAliasDeclaration

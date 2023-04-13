@@ -2,8 +2,7 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers,
-  getImportedName
+  walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserPlugin } from '@babel/parser'
@@ -45,7 +44,12 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { isLiteralNode, unwrapTSNode, isCallOf } from './script/utils'
+import {
+  isLiteralNode,
+  unwrapTSNode,
+  isCallOf,
+  getImportedName
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -106,6 +110,13 @@ export interface SFCScriptCompileOptions {
    * (**Experimental**) Enable macro `defineModel`
    */
   defineModel?: boolean
+  /**
+   *
+   */
+  fs?: {
+    fileExists(file: string): boolean
+    readFile(file: string): string
+  }
 }
 
 export interface ImportBinding {
