@@ -3,8 +3,6 @@ import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
 
-export type FromNormalScript<T> = T & { __fromNormalScript?: boolean | null }
-
 export function resolveObjectKey(node: Node, computed: boolean) {
   switch (node.type) {
     case 'StringLiteral':
