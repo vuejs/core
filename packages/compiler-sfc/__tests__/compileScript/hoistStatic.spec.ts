@@ -1,6 +1,6 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { SFCScriptCompileOptions } from '../../src'
+import { compileSFCScript, assertCode } from '../utils'
 
 describe('sfc hoist static', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {

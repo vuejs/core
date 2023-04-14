@@ -99,7 +99,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
   for (const [name, { type, options }] of Object.entries(ctx.modelDecls)) {
     let skipCheck = false
 
-    let runtimeTypes = type && inferRuntimeType(type, ctx.declaredTypes)
+    let runtimeTypes = type && inferRuntimeType(ctx, type)
     if (runtimeTypes) {
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
