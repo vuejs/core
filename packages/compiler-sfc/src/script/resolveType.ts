@@ -20,14 +20,20 @@ import {
   TSTypeReference,
   TemplateLiteral
 } from '@babel/types'
-import { UNKNOWN_TYPE, getId, getImportedName } from './utils'
+import {
+  UNKNOWN_TYPE,
+  createGetCanonicalFileName,
+  getId,
+  getImportedName
+} from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { capitalize, hasOwn } from '@vue/shared'
-import path from 'path'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
+import type TS from 'typescript'
+import { join, extname, dirname } from 'path'
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
@@ -480,54 +486,82 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
   }
 }
 
+let ts: typeof TS
+
+export function registerTS(_ts: any) {
+  ts = _ts
+}
+
+type FS = NonNullable<SFCScriptCompileOptions['fs']>
+
 function resolveTypeFromImport(
   ctx: ScriptCompileContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: string,
   scope: TypeScope
 ): Node | undefined {
-  const fs = ctx.options.fs
+  const fs: FS = ctx.options.fs || ts?.sys
   if (!fs) {
     ctx.error(
-      `fs options for compileScript are required for resolving imported types`,
-      node,
-      scope
+      `No fs option provided to \`compileScript\` in non-Node environment. ` +
+        `File system access is required for resolving imported types.`,
+      node
     )
   }
-  // TODO (hmr) register dependency file on ctx
+
   const containingFile = scope.filename
   const { source, imported } = scope.imports[name]
+
+  let resolved: string | undefined
+
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = path.join(containingFile, '..', source)
-    const resolved = resolveExt(filename, fs)
-    if (resolved) {
-      return resolveTypeReference(
-        ctx,
-        node,
-        fileToScope(ctx, resolved, fs),
-        imported,
-        true
-      )
-    } else {
+    const filename = join(containingFile, '..', source)
+    resolved = resolveExt(filename, fs)
+  } else {
+    // module or aliased import - use full TS resolution, only supported in Node
+    if (!__NODE_JS__) {
       ctx.error(
-        `Failed to resolve import source ${JSON.stringify(
-          source
-        )} for type ${name}`,
+        `Type import from non-relative sources is not supported in the browser build.`,
         node,
         scope
       )
     }
+    if (!ts) {
+      ctx.error(
+        `Failed to resolve type ${imported} from module ${JSON.stringify(
+          source
+        )}. ` +
+          `typescript is required as a peer dep for vue in order ` +
+          `to support resolving types from module imports.`,
+        node,
+        scope
+      )
+    }
+    resolved = resolveWithTS(containingFile, source, fs)
+  }
+
+  if (resolved) {
+    // TODO (hmr) register dependency file on ctx
+    return resolveTypeReference(
+      ctx,
+      node,
+      fileToScope(ctx, resolved, fs),
+      imported,
+      true
+    )
   } else {
-    // TODO module or aliased import - use full TS resolution
-    return
+    ctx.error(
+      `Failed to resolve import source ${JSON.stringify(
+        source
+      )} for type ${name}`,
+      node,
+      scope
+    )
   }
 }
 
-function resolveExt(
-  filename: string,
-  fs: NonNullable<SFCScriptCompileOptions['fs']>
-) {
+function resolveExt(filename: string, fs: FS) {
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
@@ -540,23 +574,83 @@ function resolveExt(
   )
 }
 
+const tsConfigCache = createCache<{
+  options: TS.CompilerOptions
+  cache: TS.ModuleResolutionCache
+}>()
+
+function resolveWithTS(
+  containingFile: string,
+  source: string,
+  fs: FS
+): string | undefined {
+  if (!__NODE_JS__) return
+
+  // 1. resolve tsconfig.json
+  const configPath = ts.findConfigFile(containingFile, fs.fileExists)
+  // 2. load tsconfig.json
+  let options: TS.CompilerOptions
+  let cache: TS.ModuleResolutionCache | undefined
+  if (configPath) {
+    const cached = tsConfigCache.get(configPath)
+    if (!cached) {
+      // The only case where `fs` is NOT `ts.sys` is during tests.
+      // parse config host requires an extra `readDirectory` method
+      // during tests, which is stubbed.
+      const parseConfigHost = __TEST__
+        ? {
+            ...fs,
+            useCaseSensitiveFileNames: true,
+            readDirectory: () => []
+          }
+        : ts.sys
+      const parsed = ts.parseJsonConfigFileContent(
+        ts.readConfigFile(configPath, fs.readFile).config,
+        parseConfigHost,
+        dirname(configPath),
+        undefined,
+        configPath
+      )
+      options = parsed.options
+      cache = ts.createModuleResolutionCache(
+        process.cwd(),
+        createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames),
+        options
+      )
+      tsConfigCache.set(configPath, { options, cache })
+    } else {
+      ;({ options, cache } = cached)
+    }
+  } else {
+    options = {}
+  }
+
+  // 3. resolve
+  const res = ts.resolveModuleName(source, containingFile, options, fs, cache)
+
+  if (res.resolvedModule) {
+    return res.resolvedModule.resolvedFileName
+  }
+}
+
 const fileToScopeCache = createCache<TypeScope>()
 
 export function invalidateTypeCache(filename: string) {
   fileToScopeCache.delete(filename)
+  tsConfigCache.delete(filename)
 }
 
 function fileToScope(
   ctx: ScriptCompileContext,
   filename: string,
-  fs: NonNullable<SFCScriptCompileOptions['fs']>
+  fs: FS
 ): TypeScope {
   const cached = fileToScopeCache.get(filename)
   if (cached) {
     return cached
   }
 
-  const source = fs.readFile(filename)
+  const source = fs.readFile(filename) || ''
   const body = parseFile(ctx, filename, source)
   const scope: TypeScope = {
     filename,
@@ -577,7 +671,7 @@ function parseFile(
   filename: string,
   content: string
 ): Statement[] {
-  const ext = path.extname(filename)
+  const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(
@@ -705,7 +799,8 @@ function recordType(node: Node, types: Record<string, Node>) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
-    case 'TSModuleDeclaration': {
+    case 'TSModuleDeclaration':
+    case 'ClassDeclaration': {
       const id = node.id.type === 'Identifier' ? node.id.name : node.id.value
       types[id] = node
       break
@@ -898,6 +993,9 @@ export function inferRuntimeType(
         return inferRuntimeType(ctx, resolved.props[key])
       }
     }
+
+    case 'ClassDeclaration':
+      return ['Object']
 
     default:
       return [UNKNOWN_TYPE] // no runtime check

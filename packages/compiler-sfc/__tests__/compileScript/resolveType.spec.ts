@@ -5,8 +5,12 @@ import {
   inferRuntimeType,
   invalidateTypeCache,
   recordImports,
-  resolveTypeElements
+  resolveTypeElements,
+  registerTS
 } from '../../src/script/resolveType'
+
+import ts from 'typescript'
+registerTS(ts)
 
 describe('resolveType', () => {
   test('type literal', () => {
@@ -83,6 +87,19 @@ describe('resolveType', () => {
       b: ['Boolean'],
       c: ['String'],
       foo: ['Number']
+    })
+  })
+
+  test('reference class', () => {
+    expect(
+      resolve(`
+    class Foo {}
+    type Target = {
+      foo: Foo
+    }
+    `).props
+    ).toStrictEqual({
+      foo: ['Object']
     })
   })
 
@@ -258,8 +275,8 @@ describe('resolveType', () => {
         type Target = P & PP
         `,
           {
-            'foo.ts': 'export type P = { foo: number }',
-            'bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+            '/foo.ts': 'export type P = { foo: number }',
+            '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
           }
         ).props
       ).toStrictEqual({
@@ -277,9 +294,9 @@ describe('resolveType', () => {
         type Target = P & PP
         `,
           {
-            'foo.vue':
+            '/foo.vue':
               '<script lang="ts">export type P = { foo: number }</script>',
-            'bar.vue':
+            '/bar.vue':
               '<script setup lang="tsx">export type P = { bar: string }</script>'
           }
         ).props
@@ -297,9 +314,9 @@ describe('resolveType', () => {
         type Target = P
         `,
           {
-            'foo.ts': `import type { P as PP } from './nested/bar.vue'
+            '/foo.ts': `import type { P as PP } from './nested/bar.vue'
               export type P = { foo: number } & PP`,
-            'nested/bar.vue':
+            '/nested/bar.vue':
               '<script setup lang="ts">export type P = { bar: string }</script>'
           }
         ).props
@@ -317,11 +334,42 @@ describe('resolveType', () => {
         type Target = P
         `,
           {
-            'foo.ts': `export { P as PP } from './bar'`,
-            'bar.ts': 'export type P = { bar: string }'
+            '/foo.ts': `export { P as PP } from './bar'`,
+            '/bar.ts': 'export type P = { bar: string }'
           }
         ).props
       ).toStrictEqual({
+        bar: ['String']
+      })
+    })
+
+    test('ts module resolve', () => {
+      expect(
+        resolve(
+          `
+        import { P } from 'foo'
+        import { PP } from 'bar'
+        type Target = P & PP
+        `,
+          {
+            '/node_modules/foo/package.json': JSON.stringify({
+              name: 'foo',
+              version: '1.0.0',
+              types: 'index.d.ts'
+            }),
+            '/node_modules/foo/index.d.ts': 'export type P = { foo: number }',
+            '/tsconfig.json': JSON.stringify({
+              compilerOptions: {
+                paths: {
+                  bar: ['./other/bar.ts']
+                }
+              }
+            }),
+            '/other/bar.ts': 'export type PP = { bar: string }'
+          }
+        ).props
+      ).toStrictEqual({
+        foo: ['Number'],
         bar: ['String']
       })
     })
@@ -356,7 +404,7 @@ describe('resolveType', () => {
 
 function resolve(code: string, files: Record<string, string> = {}) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
-    filename: 'Test.vue'
+    filename: '/Test.vue'
   })
   const ctx = new ScriptCompileContext(descriptor, {
     id: 'test',

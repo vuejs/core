@@ -115,7 +115,7 @@ export interface SFCScriptCompileOptions {
    */
   fs?: {
     fileExists(file: string): boolean
-    readFile(file: string): string
+    readFile(file: string): string | undefined
   }
 }
 
