@@ -58,6 +58,14 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
+  /**
+   * @internal
+   */
+  skipCheck?: boolean
+  /**
+   * @internal
+   */
+  skipFactory?: boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
@@ -424,7 +432,11 @@ function resolvePropValue(
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      if (opt.type !== Function && isFunction(defaultValue)) {
+      if (
+        opt.type !== Function &&
+        !opt.skipFactory &&
+        isFunction(defaultValue)
+      ) {
         const { propsDefaults } = instance
         if (key in propsDefaults) {
           value = propsDefaults[key]
@@ -608,18 +620,18 @@ function validateProp(
   prop: PropOptions,
   isAbsent: boolean
 ) {
-  const { type, required, validator } = prop
+  const { type, required, validator, skipCheck } = prop
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')
     return
   }
   // missing but optional
-  if (value == null && !prop.required) {
+  if (value == null && !required) {
     return
   }
   // type check
-  if (type != null && type !== true) {
+  if (type != null && type !== true && !skipCheck) {
     let isValid = false
     const types = isArray(type) ? type : [type]
     const expectedTypes = []

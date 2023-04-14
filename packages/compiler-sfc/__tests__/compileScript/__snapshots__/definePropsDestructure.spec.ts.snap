@@ -1,24 +1,4 @@
-// Vitest Snapshot v1
-
-exports[`sfc props transform > $$() escape 1`] = `
-"import { toRef as _toRef } from 'vue'
-
-export default {
-  props: ['foo'],
-  setup(__props) {
-const __props_bar = _toRef(__props, 'bar');
-const __props_foo = _toRef(__props, 'foo');
-
-      
-      console.log((__props_foo))
-      console.log((__props_bar))
-      ;({ foo: __props_foo, baz: __props_bar })
-      
-return () => {}
-}
-
-}"
-`;
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`sfc props transform > aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
@@ -78,13 +58,34 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > default values w/ runtime declaration 1`] = `
+exports[`sfc props transform > default values w/ array runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: _mergeDefaults(['foo', 'bar'], {
+  props: _mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
-  bar: () => ({})
+  bar: () => ({}),
+  func: () => {}, __skip_func: true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc props transform > default values w/ object runtime declaration 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true,
+  ext: x, __skip_ext: true
 }),
   setup(__props) {
 
@@ -102,7 +103,8 @@ exports[`sfc props transform > default values w/ type declaration 1`] = `
 export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => ({}) }
+    bar: { type: Object, required: false, default: () => ({}) },
+    func: { type: Function, required: false, default: () => {} }
   },
   setup(__props: any) {
 
@@ -121,10 +123,10 @@ export default /*#__PURE__*/_defineComponent({
   props: {
     foo: { default: 1 },
     bar: { default: () => ({}) },
-    baz: null,
+    baz: {},
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => (() => {}) }
+    func: { type: Function, default: () => {} }
   },
   setup(__props: any) {
 
