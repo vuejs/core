@@ -111,7 +111,9 @@ export interface SFCScriptCompileOptions {
    */
   defineModel?: boolean
   /**
-   *
+   * File system access methods to be used when resolving types
+   * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
+   * to use a virtual file system for use in browsers (e.g. in REPLs)
    */
   fs?: {
     fileExists(file: string): boolean
