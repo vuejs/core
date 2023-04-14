@@ -6,7 +6,6 @@ export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
-export { invalidateTypeCache } from './script/resolveType'
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
@@ -28,6 +27,9 @@ export {
   isInDestructureAssignment,
   isStaticProperty
 } from '@vue/compiler-core'
+
+// Internals for type resolution
+export { invalidateTypeCache, registerTS } from './script/resolveType'
 
 // Types
 export type {
