@@ -1,21 +1,9 @@
-import {
-  Identifier,
-  LVal,
-  Node,
-  RestElement,
-  TSFunctionType,
-  TSInterfaceBody,
-  TSTypeLiteral
-} from '@babel/types'
-import { FromNormalScript, isCallOf } from './utils'
+import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
-import { resolveQualifiedType } from './resolveType'
+import { resolveTypeElements } from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
-
-export type EmitsDeclType = FromNormalScript<
-  TSFunctionType | TSTypeLiteral | TSInterfaceBody
->
 
 export function processDefineEmits(
   ctx: ScriptCompileContext,
@@ -38,21 +26,7 @@ export function processDefineEmits(
         node
       )
     }
-
-    const emitsTypeDeclRaw = node.typeParameters.params[0]
-    ctx.emitsTypeDecl = resolveQualifiedType(
-      ctx,
-      emitsTypeDeclRaw,
-      node => node.type === 'TSFunctionType' || node.type === 'TSTypeLiteral'
-    ) as EmitsDeclType | undefined
-
-    if (!ctx.emitsTypeDecl) {
-      ctx.error(
-        `type argument passed to ${DEFINE_EMITS}() must be a function type, ` +
-          `a literal type with call signatures, or a reference to the above types.`,
-        emitsTypeDeclRaw
-      )
-    }
+    ctx.emitsTypeDecl = node.typeParameters.params[0]
   }
 
   if (declId) {
@@ -89,36 +63,32 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
 function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
   const emits = new Set<string>()
   const node = ctx.emitsTypeDecl!
-  if (node.type === 'TSTypeLiteral' || node.type === 'TSInterfaceBody') {
-    const members = node.type === 'TSTypeLiteral' ? node.members : node.body
-    let hasCallSignature = false
-    let hasProperty = false
-    for (let t of members) {
-      if (t.type === 'TSCallSignatureDeclaration') {
-        extractEventNames(t.parameters[0], emits)
-        hasCallSignature = true
-      }
-      if (t.type === 'TSPropertySignature') {
-        if (t.key.type === 'Identifier' && !t.computed) {
-          emits.add(t.key.name)
-          hasProperty = true
-        } else if (t.key.type === 'StringLiteral' && !t.computed) {
-          emits.add(t.key.value)
-          hasProperty = true
-        } else {
-          ctx.error(`defineEmits() type cannot use computed keys.`, t.key)
-        }
-      }
-    }
-    if (hasCallSignature && hasProperty) {
+
+  if (node.type === 'TSFunctionType') {
+    extractEventNames(node.parameters[0], emits)
+    return emits
+  }
+
+  const { props, calls } = resolveTypeElements(ctx, node)
+
+  let hasProperty = false
+  for (const key in props) {
+    emits.add(key)
+    hasProperty = true
+  }
+
+  if (calls) {
+    if (hasProperty) {
       ctx.error(
         `defineEmits() type cannot mixed call signature and property syntax.`,
         node
       )
     }
-  } else {
-    extractEventNames(node.parameters[0], emits)
+    for (const call of calls) {
+      extractEventNames(call.parameters[0], emits)
+    }
   }
+
   return emits
 }
 
