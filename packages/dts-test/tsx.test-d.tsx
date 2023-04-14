@@ -28,6 +28,30 @@ expectType<JSX.Element>(<div class={{}} />)
 expectType<JSX.Element>(
   <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />
 )
+expectType<JSX.Element>(
+  <div
+    class={[
+      { foo: false },
+      { bar: 0 },
+      { baz: -0 },
+      { qux: '' },
+      { quux: null },
+      { corge: undefined },
+      { grault: NaN }
+    ]}
+  />
+)
+expectType<JSX.Element>(
+  <div
+    class={[
+      { foo: true },
+      { bar: 'not-empty' },
+      { baz: 1 },
+      { qux: {} },
+      { quux: [] }
+    ]}
+  />
+)
 
 // @ts-expect-error unknown prop
 ;<div foo="bar" />
