@@ -2,12 +2,12 @@ import { Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, ParserOptions, ParserPlugin } from '@babel/parser'
-import { SFCScriptCompileOptions } from '../compileScript'
-import { PropsDeclType, PropsDestructureBindings } from './defineProps'
+import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
+import { PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
 import { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { EmitsDeclType } from './defineEmits'
+import { TypeScope } from './resolveType'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -20,7 +20,9 @@ export class ScriptCompileContext {
   startOffset = this.descriptor.scriptSetup?.loc.start.offset
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
 
-  declaredTypes: Record<string, string[]> = Object.create(null)
+  // import / type analysis
+  scope: TypeScope | undefined
+  userImports: Record<string, ImportBinding> = Object.create(null)
 
   // macros presence check
   hasDefinePropsCall = false
@@ -35,7 +37,7 @@ export class ScriptCompileContext {
   // defineProps
   propsIdentifier: string | undefined
   propsRuntimeDecl: Node | undefined
-  propsTypeDecl: PropsDeclType | undefined
+  propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
   propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
   propsDestructureRestId: string | undefined
@@ -43,7 +45,7 @@ export class ScriptCompileContext {
 
   // defineEmits
   emitsRuntimeDecl: Node | undefined
-  emitsTypeDecl: EmitsDeclType | undefined
+  emitsTypeDecl: Node | undefined
   emitIdentifier: string | undefined
 
   // defineModel
