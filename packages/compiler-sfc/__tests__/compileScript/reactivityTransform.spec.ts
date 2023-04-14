@@ -1,5 +1,6 @@
+// TODO remove in 3.4
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from './utils'
+import { compileSFCScript as compile, assertCode } from '../utils'
 
 // this file only tests integration with SFC - main test case for the ref
 // transform can be found in <root>/packages/reactivity-transform/__tests__

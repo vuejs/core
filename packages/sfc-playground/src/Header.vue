@@ -6,9 +6,14 @@ import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
+import { ReplStore } from '@vue/repl'
 
-// @ts-ignore
-const props = defineProps(['store', 'dev', 'ssr'])
+const props = defineProps<{
+  store: ReplStore
+  dev: boolean
+  ssr: boolean
+}>()
+
 const { store } = props
 
 const currentCommit = __COMMIT__
