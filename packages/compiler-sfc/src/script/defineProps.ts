@@ -365,8 +365,9 @@ function inferValueType(node: Node): string | undefined {
  * key may contain symbols
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
+export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 function getEscapedKey(key: string) {
-  return /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g.test(key)
+  return escapeSymbolsRE.test(key)
     ? JSON.stringify(key)
     : key
 }
