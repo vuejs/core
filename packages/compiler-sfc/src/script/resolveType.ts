@@ -7,6 +7,7 @@ import {
   TSEnumDeclaration,
   TSExpressionWithTypeArguments,
   TSFunctionType,
+  TSIndexedAccessType,
   TSInterfaceDeclaration,
   TSMappedType,
   TSMethodSignature,
@@ -117,30 +118,11 @@ function innerResolveTypeElements(
     case 'TSMappedType':
       return resolveMappedType(ctx, node, scope)
     case 'TSIndexedAccessType': {
-      if (
-        node.indexType.type === 'TSLiteralType' &&
-        node.indexType.literal.type === 'StringLiteral'
-      ) {
-        const resolved = resolveTypeElements(ctx, node.objectType, scope)
-        const key = node.indexType.literal.value
-        const targetType = resolved.props[key].typeAnnotation
-        if (targetType) {
-          return resolveTypeElements(
-            ctx,
-            targetType.typeAnnotation,
-            resolved.props[key]._ownerScope
-          )
-        } else {
-          break
-        }
-      } else {
-        // TODO support `number` and `string` index type when possible
-        ctx.error(
-          `Unsupported index type: ${node.indexType.type}`,
-          node.indexType,
-          scope
-        )
-      }
+      const types = resolveIndexType(ctx, node, scope)
+      return mergeElements(
+        types.map(t => resolveTypeElements(ctx, t, t._ownerScope)),
+        'TSUnionType'
+      )
     }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
     case 'TSTypeReference': {
@@ -201,6 +183,7 @@ function mergeElements(
   maps: ResolvedElements[],
   type: 'TSUnionType' | 'TSIntersectionType'
 ): ResolvedElements {
+  if (maps.length === 1) return maps[0]
   const res: ResolvedElements = { props: {} }
   const { props: baseProps } = res
   for (const { props, calls } of maps) {
@@ -282,6 +265,66 @@ function resolveMappedType(
   return res
 }
 
+function resolveIndexType(
+  ctx: ScriptCompileContext,
+  node: TSIndexedAccessType,
+  scope: TypeScope
+): (TSType & WithScope)[] {
+  if (node.indexType.type === 'TSNumberKeyword') {
+    return resolveArrayElementType(ctx, node.objectType, scope)
+  }
+
+  const { indexType, objectType } = node
+  const types: TSType[] = []
+  let keys: string[]
+  let resolved: ResolvedElements
+  if (indexType.type === 'TSStringKeyword') {
+    resolved = resolveTypeElements(ctx, objectType, scope)
+    keys = Object.keys(resolved.props)
+  } else {
+    keys = resolveStringType(ctx, indexType, scope)
+    resolved = resolveTypeElements(ctx, objectType, scope)
+  }
+  for (const key of keys) {
+    const targetType = resolved.props[key]?.typeAnnotation?.typeAnnotation
+    if (targetType) {
+      ;(targetType as TSType & WithScope)._ownerScope =
+        resolved.props[key]._ownerScope
+      types.push(targetType)
+    }
+  }
+  return types
+}
+
+function resolveArrayElementType(
+  ctx: ScriptCompileContext,
+  node: Node,
+  scope: TypeScope
+): TSType[] {
+  // type[]
+  if (node.type === 'TSArrayType') {
+    return [node.elementType]
+  }
+  // tuple
+  if (node.type === 'TSTupleType') {
+    return node.elementTypes.map(t =>
+      t.type === 'TSNamedTupleMember' ? t.elementType : t
+    )
+  }
+  if (node.type === 'TSTypeReference') {
+    // Array<type>
+    if (getReferenceName(node) === 'Array' && node.typeParameters) {
+      return node.typeParameters.params
+    } else {
+      const resolved = resolveTypeReference(ctx, node, scope)
+      if (resolved) {
+        return resolveArrayElementType(ctx, resolved, scope)
+      }
+    }
+  }
+  ctx.error('Failed to resolve element type from target type', node)
+}
+
 function resolveStringType(
   ctx: ScriptCompileContext,
   node: Node,
@@ -322,7 +365,7 @@ function resolveStringType(
             return getParam().map(s => s[0].toLowerCase() + s.slice(1))
           default:
             ctx.error(
-              'Unsupported type when resolving string type',
+              'Unsupported type when resolving index type',
               node.typeName,
               scope
             )
@@ -330,7 +373,7 @@ function resolveStringType(
       }
     }
   }
-  ctx.error('Failed to resolve string type into finite keys', node, scope)
+  ctx.error('Failed to resolve index type into finite keys', node, scope)
 }
 
 function resolveTemplateKeys(
@@ -991,19 +1034,12 @@ export function inferRuntimeType(
       return ['Symbol']
 
     case 'TSIndexedAccessType': {
-      if (
-        node.indexType.type === 'TSLiteralType' &&
-        node.indexType.literal.type === 'StringLiteral'
-      ) {
-        try {
-          const resolved = resolveTypeElements(ctx, node.objectType, scope)
-          const key = node.indexType.literal.value
-          const prop = resolved.props[key]
-          return inferRuntimeType(ctx, prop, prop._ownerScope)
-        } catch (e) {
-          // avoid hard error, fallback to unknown
-          return [UNKNOWN_TYPE]
-        }
+      try {
+        const types = resolveIndexType(ctx, node, scope)
+        return flattenTypes(ctx, types, scope)
+      } catch (e) {
+        // avoid hard error, fallback to unknown
+        return [UNKNOWN_TYPE]
       }
     }
 
@@ -1020,6 +1056,9 @@ function flattenTypes(
   types: TSType[],
   scope: TypeScope
 ): string[] {
+  if (types.length === 1) {
+    return inferRuntimeType(ctx, types[0], scope)
+  }
   return [
     ...new Set(
       ([] as string[]).concat(
