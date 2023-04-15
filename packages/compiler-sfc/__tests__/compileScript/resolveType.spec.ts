@@ -232,7 +232,7 @@ describe('resolveType', () => {
     })
   })
 
-  test('indexed access type', () => {
+  test('indexed access type (literal)', () => {
     expect(
       resolve(`
     type T = { bar: number }
@@ -241,6 +241,37 @@ describe('resolveType', () => {
     `).props
     ).toStrictEqual({
       foo: ['Number']
+    })
+  })
+
+  test('indexed access type (advanced)', () => {
+    expect(
+      resolve(`
+    type K = 'foo' | 'bar'
+    type T = { foo: string, bar: number }
+    type S = { foo: { foo: T[string] }, bar: { bar: string } }
+    defineProps<S[K]>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String', 'Number'],
+      bar: ['String']
+    })
+  })
+
+  test('indexed access type (number)', () => {
+    expect(
+      resolve(`
+    type A = (string | number)[]
+    type AA = Array<string>
+    type T = [1, 'foo']
+    type TT = [foo: 1, bar: 'foo']
+    defineProps<{ foo: A[number], bar: AA[number], tuple: T[number], namedTuple: TT[number] }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String', 'Number'],
+      bar: ['String'],
+      tuple: ['Number', 'String'],
+      namedTuple: ['Number', 'String']
     })
   })
 
@@ -396,7 +427,7 @@ describe('resolveType', () => {
 
     test('unsupported index type', () => {
       expect(() => resolve(`defineProps<X[K]>()`)).toThrow(
-        `Unsupported index type`
+        `Unsupported type when resolving index type`
       )
     })
 
