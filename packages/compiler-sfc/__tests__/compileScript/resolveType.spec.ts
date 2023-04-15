@@ -397,6 +397,11 @@ describe('resolveType', () => {
         resolve(`import { X } from './foo'; defineProps<X>()`)
       ).toThrow(`Failed to resolve import source "./foo" for type X`)
     })
+
+    test('should not error on unresolved type when inferring runtime type', () => {
+      expect(() => resolve(`defineProps<{ foo: T }>()`)).not.toThrow()
+      expect(() => resolve(`defineProps<{ foo: T['bar'] }>()`)).not.toThrow()
+    })
   })
 })
 

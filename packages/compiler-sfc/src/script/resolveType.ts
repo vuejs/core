@@ -134,6 +134,7 @@ function innerResolveTypeElements(
           break
         }
       } else {
+        // TODO support `number` and `string` index type when possible
         ctx.error(
           `Unsupported index type: ${node.indexType.type}`,
           node.indexType,
@@ -320,7 +321,11 @@ function resolveStringType(
           case 'Uncapitalize':
             return getParam().map(s => s[0].toLowerCase() + s.slice(1))
           default:
-            ctx.error('Failed to resolve type reference', node, scope)
+            ctx.error(
+              'Unsupported type when resolving string type',
+              node.typeName,
+              scope
+            )
         }
       }
     }
@@ -906,7 +911,7 @@ export function inferRuntimeType(
       if (node.typeName.type === 'Identifier') {
         const resolved = resolveTypeReference(ctx, node, scope)
         if (resolved) {
-          return inferRuntimeType(ctx, resolved, scope)
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
         }
         switch (node.typeName.name) {
           case 'Array':
@@ -988,9 +993,15 @@ export function inferRuntimeType(
         node.indexType.type === 'TSLiteralType' &&
         node.indexType.literal.type === 'StringLiteral'
       ) {
-        const resolved = resolveTypeElements(ctx, node.objectType)
-        const key = node.indexType.literal.value
-        return inferRuntimeType(ctx, resolved.props[key])
+        try {
+          const resolved = resolveTypeElements(ctx, node.objectType, scope)
+          const key = node.indexType.literal.value
+          const prop = resolved.props[key]
+          return inferRuntimeType(ctx, prop, prop._ownerScope)
+        } catch (e) {
+          // avoid hard error, fallback to unknown
+          return [UNKNOWN_TYPE]
+        }
       }
     }
 

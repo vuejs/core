@@ -7,7 +7,7 @@ import { PropsDestructureBindings } from './defineProps'
 import { ModelDecl } from './defineModel'
 import { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { TypeScope, WithScope } from './resolveType'
+import { TypeScope } from './resolveType'
 
 export class ScriptCompileContext {
   isJS: boolean
@@ -56,12 +56,16 @@ export class ScriptCompileContext {
 
   // codegen
   bindingMetadata: BindingMetadata = {}
-
   helperImports: Set<string> = new Set()
   helper(key: string): string {
     this.helperImports.add(key)
     return `_${key}`
   }
+
+  /**
+   * to be exposed on compiled script block for HMR cache busting
+   */
+  deps?: string[]
 
   constructor(
     public descriptor: SFCDescriptor,
@@ -125,7 +129,7 @@ export class ScriptCompileContext {
     return block.content.slice(node.start!, node.end!)
   }
 
-  error(msg: string, node: Node & WithScope, scope?: TypeScope): never {
+  error(msg: string, node: Node, scope?: TypeScope): never {
     const offset = scope ? scope.offset : this.startOffset!
     throw new Error(
       `[@vue/compiler-sfc] ${msg}\n\n${
