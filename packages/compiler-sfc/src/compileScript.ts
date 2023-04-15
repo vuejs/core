@@ -1035,7 +1035,8 @@ export function compileScript(
           }) as unknown as RawSourceMap)
         : undefined,
     scriptAst: scriptAst?.body,
-    scriptSetupAst: scriptSetupAst?.body
+    scriptSetupAst: scriptSetupAst?.body,
+    deps: ctx.deps ? [...ctx.deps] : undefined
   }
 }
 

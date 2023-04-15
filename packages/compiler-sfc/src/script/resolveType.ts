@@ -547,7 +547,9 @@ function resolveTypeFromImport(
   }
 
   if (resolved) {
-    // TODO (hmr) register dependency file on ctx
+    // (hmr) register dependency file on ctx
+    ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
+
     return resolveTypeReference(
       ctx,
       node,
