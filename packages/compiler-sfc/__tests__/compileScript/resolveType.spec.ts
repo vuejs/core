@@ -264,81 +264,85 @@ describe('resolveType', () => {
   })
 
   describe('external type imports', () => {
+    const files = {
+      '/foo.ts': 'export type P = { foo: number }',
+      '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+    }
     test('relative ts', () => {
-      expect(
-        resolve(
-          `
+      const { props, deps } = resolve(
+        `
         import { P } from './foo'
         import { Y as PP } from './bar'
         defineProps<P & PP>()
-        `,
-          {
-            '/foo.ts': 'export type P = { foo: number }',
-            '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
-          }
-        ).props
-      ).toStrictEqual({
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
         foo: ['Number'],
         bar: ['String']
       })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
     test('relative vue', () => {
-      expect(
-        resolve(
-          `
+      const files = {
+        '/foo.vue':
+          '<script lang="ts">export type P = { foo: number }</script>',
+        '/bar.vue':
+          '<script setup lang="tsx">export type P = { bar: string }</script>'
+      }
+      const { props, deps } = resolve(
+        `
         import { P } from './foo.vue'
         import { P as PP } from './bar.vue'
         defineProps<P & PP>()
-        `,
-          {
-            '/foo.vue':
-              '<script lang="ts">export type P = { foo: number }</script>',
-            '/bar.vue':
-              '<script setup lang="tsx">export type P = { bar: string }</script>'
-          }
-        ).props
-      ).toStrictEqual({
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
         foo: ['Number'],
         bar: ['String']
       })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
     test('relative (chained)', () => {
-      expect(
-        resolve(
-          `
+      const files = {
+        '/foo.ts': `import type { P as PP } from './nested/bar.vue'
+          export type P = { foo: number } & PP`,
+        '/nested/bar.vue':
+          '<script setup lang="ts">export type P = { bar: string }</script>'
+      }
+      const { props, deps } = resolve(
+        `
         import { P } from './foo'
         defineProps<P>()
-        `,
-          {
-            '/foo.ts': `import type { P as PP } from './nested/bar.vue'
-              export type P = { foo: number } & PP`,
-            '/nested/bar.vue':
-              '<script setup lang="ts">export type P = { bar: string }</script>'
-          }
-        ).props
-      ).toStrictEqual({
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
         foo: ['Number'],
         bar: ['String']
       })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
     test('relative (chained, re-export)', () => {
-      expect(
-        resolve(
-          `
+      const files = {
+        '/foo.ts': `export { P as PP } from './bar'`,
+        '/bar.ts': 'export type P = { bar: string }'
+      }
+      const { props, deps } = resolve(
+        `
         import { PP as P } from './foo'
         defineProps<P>()
-        `,
-          {
-            '/foo.ts': `export { P as PP } from './bar'`,
-            '/bar.ts': 'export type P = { bar: string }'
-          }
-        ).props
-      ).toStrictEqual({
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
         bar: ['String']
       })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
     test('ts module resolve', () => {
@@ -357,7 +361,7 @@ describe('resolveType', () => {
         '/pp.ts': 'export type PP = { bar: string }'
       }
 
-      const { props } = resolve(
+      const { props, deps } = resolve(
         `
         import { P } from 'foo'
         import { PP } from 'bar'
@@ -370,6 +374,10 @@ describe('resolveType', () => {
         foo: ['Number'],
         bar: ['String']
       })
+      expect(deps && [...deps]).toStrictEqual([
+        '/node_modules/foo/index.d.ts',
+        '/pp.ts'
+      ])
     })
   })
 
@@ -447,6 +455,6 @@ function resolve(code: string, files: Record<string, string> = {}) {
   return {
     props,
     calls: raw.calls,
-    raw
+    deps: ctx.deps
   }
 }

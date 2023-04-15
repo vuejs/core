@@ -65,7 +65,7 @@ export class ScriptCompileContext {
   /**
    * to be exposed on compiled script block for HMR cache busting
    */
-  deps?: string[]
+  deps?: Set<string>
 
   constructor(
     public descriptor: SFCDescriptor,
