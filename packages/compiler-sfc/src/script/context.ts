@@ -16,12 +16,14 @@ export class ScriptCompileContext {
   scriptAst: Program | null
   scriptSetupAst: Program | null
 
-  s = new MagicString(this.descriptor.source)
+  source = this.descriptor.source
+  filename = this.descriptor.filename
+  s = new MagicString(this.source)
   startOffset = this.descriptor.scriptSetup?.loc.start.offset
   endOffset = this.descriptor.scriptSetup?.loc.end.offset
 
   // import / type analysis
-  scope: TypeScope | undefined
+  scope?: TypeScope
   userImports: Record<string, ImportBinding> = Object.create(null)
 
   // macros presence check
@@ -69,7 +71,7 @@ export class ScriptCompileContext {
 
   constructor(
     public descriptor: SFCDescriptor,
-    public options: SFCScriptCompileOptions
+    public options: Partial<SFCScriptCompileOptions>
   ) {
     const { script, scriptSetup } = descriptor
     const scriptLang = script && script.lang

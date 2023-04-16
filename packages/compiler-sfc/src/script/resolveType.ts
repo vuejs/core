@@ -36,6 +36,32 @@ import { createCache } from '../cache'
 import type TS from 'typescript'
 import { join, extname, dirname } from 'path'
 
+/**
+ * TypeResolveContext is compatible with ScriptCompileContext
+ * but also allows a simpler version of it with minimal required properties
+ * when resolveType needs to be used in a non-SFC context, e.g. in a babel
+ * plugin. The simplest context can be just:
+ * ```ts
+ * const ctx: SimpleTypeResolveContext = {
+ *   filename: '...',
+ *   source: '...',
+ *   options: {},
+ *   error() {},
+ *   ast: []
+ * }
+ * ```
+ */
+export type SimpleTypeResolveContext = Pick<
+  ScriptCompileContext,
+  // required
+  'source' | 'filename' | 'error' | 'options'
+> &
+  Partial<Pick<ScriptCompileContext, 'scope' | 'deps'>> & {
+    ast: Statement[]
+  }
+
+export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
+
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
 export interface TypeScope {
@@ -79,7 +105,7 @@ interface ResolvedElements {
  * mapped to runtime props or emits.
  */
 export function resolveTypeElements(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node & WithScope & { _resolvedElements?: ResolvedElements },
   scope?: TypeScope
 ): ResolvedElements {
@@ -94,7 +120,7 @@ export function resolveTypeElements(
 }
 
 function innerResolveTypeElements(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope
 ): ResolvedElements {
@@ -138,7 +164,7 @@ function innerResolveTypeElements(
         ) {
           return resolveBuiltin(ctx, node, typeName as any, scope)
         }
-        ctx.error(
+        return ctx.error(
           `Unresolvable type reference or unsupported built-in utlility type`,
           node,
           scope
@@ -146,11 +172,11 @@ function innerResolveTypeElements(
       }
     }
   }
-  ctx.error(`Unresolvable type: ${node.type}`, node, scope)
+  return ctx.error(`Unresolvable type: ${node.type}`, node, scope)
 }
 
 function typeElementsToMap(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   elements: TSTypeElement[],
   scope = ctxToScope(ctx)
 ): ResolvedElements {
@@ -227,7 +253,7 @@ function createProperty(
 }
 
 function resolveInterfaceMembers(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TSInterfaceDeclaration & WithScope,
   scope: TypeScope
 ): ResolvedElements {
@@ -246,7 +272,7 @@ function resolveInterfaceMembers(
 }
 
 function resolveMappedType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TSMappedType,
   scope: TypeScope
 ): ResolvedElements {
@@ -266,7 +292,7 @@ function resolveMappedType(
 }
 
 function resolveIndexType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TSIndexedAccessType,
   scope: TypeScope
 ): (TSType & WithScope)[] {
@@ -297,7 +323,7 @@ function resolveIndexType(
 }
 
 function resolveArrayElementType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope
 ): TSType[] {
@@ -322,11 +348,15 @@ function resolveArrayElementType(
       }
     }
   }
-  ctx.error('Failed to resolve element type from target type', node)
+  return ctx.error(
+    'Failed to resolve element type from target type',
+    node,
+    scope
+  )
 }
 
 function resolveStringType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope
 ): string[] {
@@ -373,11 +403,11 @@ function resolveStringType(
       }
     }
   }
-  ctx.error('Failed to resolve index type into finite keys', node, scope)
+  return ctx.error('Failed to resolve index type into finite keys', node, scope)
 }
 
 function resolveTemplateKeys(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TemplateLiteral,
   scope: TypeScope
 ): string[] {
@@ -420,7 +450,7 @@ const SupportedBuiltinsSet = new Set([
 type GetSetType<T> = T extends Set<infer V> ? V : never
 
 function resolveBuiltin(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: GetSetType<typeof SupportedBuiltinsSet>,
   scope: TypeScope
@@ -460,7 +490,7 @@ function resolveBuiltin(
 }
 
 function resolveTypeReference(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: (TSTypeReference | TSExpressionWithTypeArguments) & {
     _resolvedReference?: Node
   },
@@ -481,7 +511,7 @@ function resolveTypeReference(
 }
 
 function innerResolveTypeReference(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   scope: TypeScope,
   name: string | string[],
   node: TSTypeReference | TSExpressionWithTypeArguments,
@@ -536,6 +566,9 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
 
 let ts: typeof TS
 
+/**
+ * @private
+ */
 export function registerTS(_ts: any) {
   ts = _ts
 }
@@ -543,7 +576,7 @@ export function registerTS(_ts: any) {
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
 
 function resolveTypeFromImport(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: string,
   scope: TypeScope
@@ -685,13 +718,16 @@ function resolveWithTS(
 
 const fileToScopeCache = createCache<TypeScope>()
 
+/**
+ * @private
+ */
 export function invalidateTypeCache(filename: string) {
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
 }
 
 function fileToScope(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   filename: string,
   fs: FS
 ): TypeScope {
@@ -717,7 +753,7 @@ function fileToScope(
 }
 
 function parseFile(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   filename: string,
   content: string
 ): Statement[] {
@@ -763,23 +799,29 @@ function parseFile(
   return []
 }
 
-function ctxToScope(ctx: ScriptCompileContext): TypeScope {
+function ctxToScope(ctx: TypeResolveContext): TypeScope {
   if (ctx.scope) {
     return ctx.scope
   }
 
+  const body =
+    'ast' in ctx
+      ? ctx.ast
+      : ctx.scriptAst
+      ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+      : ctx.scriptSetupAst!.body
+
   const scope: TypeScope = {
-    filename: ctx.descriptor.filename,
-    source: ctx.descriptor.source,
-    offset: ctx.startOffset!,
-    imports: Object.create(ctx.userImports),
+    filename: ctx.filename,
+    source: ctx.source,
+    offset: 'startOffset' in ctx ? ctx.startOffset! : 0,
+    imports:
+      'userImports' in ctx
+        ? Object.create(ctx.userImports)
+        : recordImports(body),
     types: Object.create(null),
     exportedTypes: Object.create(null)
   }
-
-  const body = ctx.scriptAst
-    ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
-    : ctx.scriptSetupAst!.body
 
   recordTypes(body, scope)
 
@@ -894,7 +936,7 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 }
 
 export function inferRuntimeType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node & WithScope,
   scope = node._ownerScope || ctxToScope(ctx)
 ): string[] {
@@ -1052,7 +1094,7 @@ export function inferRuntimeType(
 }
 
 function flattenTypes(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   types: TSType[],
   scope: TypeScope
 ): string[] {
