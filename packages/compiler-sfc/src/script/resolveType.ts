@@ -56,7 +56,7 @@ export type SimpleTypeResolveContext = Pick<
   // required
   'source' | 'filename' | 'error' | 'options'
 > &
-  Partial<Pick<ScriptCompileContext, 'scope' | 'deps'>> & {
+  Partial<Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps'>> & {
     ast: Statement[]
   }
 
@@ -64,25 +64,18 @@ export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
+type ScopeTypeNode = Node & {
+  // scope types always has ownerScope attached
+  _ownerScope: TypeScope
+}
+
 export interface TypeScope {
   filename: string
   source: string
   offset: number
   imports: Record<string, Import>
-  types: Record<
-    string,
-    Node & {
-      // scope types always has ownerScope attached
-      _ownerScope: TypeScope
-    }
-  >
-  exportedTypes: Record<
-    string,
-    Node & {
-      // scope types always has ownerScope attached
-      _ownerScope: TypeScope
-    }
-  >
+  types: Record<string, ScopeTypeNode>
+  exportedTypes: Record<string, ScopeTypeNode>
 }
 
 export interface WithScope {
@@ -492,12 +485,12 @@ function resolveBuiltin(
 function resolveTypeReference(
   ctx: TypeResolveContext,
   node: (TSTypeReference | TSExpressionWithTypeArguments) & {
-    _resolvedReference?: Node
+    _resolvedReference?: ScopeTypeNode
   },
   scope?: TypeScope,
   name?: string,
   onlyExported = false
-): (Node & WithScope) | undefined {
+): ScopeTypeNode | undefined {
   if (node._resolvedReference) {
     return node._resolvedReference
   }
@@ -516,13 +509,26 @@ function innerResolveTypeReference(
   name: string | string[],
   node: TSTypeReference | TSExpressionWithTypeArguments,
   onlyExported: boolean
-): Node | undefined {
+): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
     if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
       const types = onlyExported ? scope.exportedTypes : scope.types
-      return types[name]
+      if (types[name]) {
+        return types[name]
+      } else {
+        // fallback to global
+        const globalScopes = resolveGlobalScope(ctx)
+        if (globalScopes) {
+          for (const s of globalScopes) {
+            if (s.types[name]) {
+              ;(ctx.deps || (ctx.deps = new Set())).add(s.filename)
+              return s.types[name]
+            }
+          }
+        }
+      }
     }
   } else {
     const ns = innerResolveTypeReference(
@@ -539,7 +545,7 @@ function innerResolveTypeReference(
         childScope,
         name.length > 2 ? name.slice(1) : name[name.length - 1],
         node,
-        true
+        !ns.declare
       )
     }
   }
@@ -564,6 +570,19 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
   }
 }
 
+function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
+  if (ctx.options.globalTypeFiles) {
+    const fs: FS = ctx.options.fs || ts?.sys
+    if (!fs) {
+      throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
+    }
+    return ctx.options.globalTypeFiles.map(file =>
+      // TODO: differentiate ambient vs non-ambient module
+      fileToScope(file, fs, ctx.options.babelParserPlugins, true)
+    )
+  }
+}
+
 let ts: typeof TS
 
 /**
@@ -580,7 +599,7 @@ function resolveTypeFromImport(
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: string,
   scope: TypeScope
-): Node | undefined {
+): ScopeTypeNode | undefined {
   const fs: FS = ctx.options.fs || ts?.sys
   if (!fs) {
     ctx.error(
@@ -629,7 +648,7 @@ function resolveTypeFromImport(
     return resolveTypeReference(
       ctx,
       node,
-      fileToScope(ctx, resolved, fs),
+      fileToScope(resolved, fs, ctx.options.babelParserPlugins),
       imported,
       true
     )
@@ -726,10 +745,11 @@ export function invalidateTypeCache(filename: string) {
   tsConfigCache.delete(filename)
 }
 
-function fileToScope(
-  ctx: TypeResolveContext,
+export function fileToScope(
   filename: string,
-  fs: FS
+  fs: FS,
+  parserPlugins: SFCScriptCompileOptions['babelParserPlugins'],
+  asGlobal = false
 ): TypeScope {
   const cached = fileToScopeCache.get(filename)
   if (cached) {
@@ -737,33 +757,30 @@ function fileToScope(
   }
 
   const source = fs.readFile(filename) || ''
-  const body = parseFile(ctx, filename, source)
+  const body = parseFile(filename, source, parserPlugins)
   const scope: TypeScope = {
     filename,
     source,
     offset: 0,
+    imports: recordImports(body),
     types: Object.create(null),
-    exportedTypes: Object.create(null),
-    imports: recordImports(body)
+    exportedTypes: Object.create(null)
   }
-  recordTypes(body, scope)
+  recordTypes(body, scope, asGlobal)
 
   fileToScopeCache.set(filename, scope)
   return scope
 }
 
 function parseFile(
-  ctx: TypeResolveContext,
   filename: string,
-  content: string
+  content: string,
+  parserPlugins?: SFCScriptCompileOptions['babelParserPlugins']
 ): Statement[] {
   const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
-      plugins: resolveParserPlugins(
-        ext.slice(1),
-        ctx.options.babelParserPlugins
-      ),
+      plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
       sourceType: 'module'
     }).program.body
   } else if (ext === '.vue') {
@@ -792,7 +809,7 @@ function parseFile(
     }
     const lang = script?.lang || scriptSetup?.lang
     return babelParse(scriptContent, {
-      plugins: resolveParserPlugins(lang!, ctx.options.babelParserPlugins),
+      plugins: resolveParserPlugins(lang!, parserPlugins),
       sourceType: 'module'
     }).program.body
   }
@@ -830,52 +847,71 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
 
 function moduleDeclToScope(
   node: TSModuleDeclaration & { _resolvedChildScope?: TypeScope },
-  parent: TypeScope
+  parentScope: TypeScope
 ): TypeScope {
   if (node._resolvedChildScope) {
     return node._resolvedChildScope
   }
   const scope: TypeScope = {
-    ...parent,
-    types: Object.create(parent.types),
-    imports: Object.create(parent.imports)
+    ...parentScope,
+    types: Object.create(parentScope.types),
+    imports: Object.create(parentScope.imports)
   }
   recordTypes((node.body as TSModuleBlock).body, scope)
   return (node._resolvedChildScope = scope)
 }
 
-function recordTypes(body: Statement[], scope: TypeScope) {
+const importExportRE = /^Import|^Export/
+
+function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
   const { types, exportedTypes, imports } = scope
+  const isAmbient = asGlobal
+    ? !body.some(s => importExportRE.test(s.type))
+    : false
   for (const stmt of body) {
-    recordType(stmt, types)
+    if (asGlobal) {
+      if (isAmbient) {
+        if ((stmt as any).declare) {
+          recordType(stmt, types)
+        }
+      } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
+        for (const s of (stmt.body as TSModuleBlock).body) {
+          recordType(s, types)
+        }
+      }
+    } else {
+      recordType(stmt, types)
+    }
   }
-  for (const stmt of body) {
-    if (stmt.type === 'ExportNamedDeclaration') {
-      if (stmt.declaration) {
-        recordType(stmt.declaration, types)
-        recordType(stmt.declaration, exportedTypes)
-      } else {
-        for (const spec of stmt.specifiers) {
-          if (spec.type === 'ExportSpecifier') {
-            const local = spec.local.name
-            const exported = getId(spec.exported)
-            if (stmt.source) {
-              // re-export, register an import + export as a type reference
-              imports[local] = {
-                source: stmt.source.value,
-                imported: local
+  if (!asGlobal) {
+    for (const stmt of body) {
+      if (stmt.type === 'ExportNamedDeclaration') {
+        if (stmt.declaration) {
+          recordType(stmt.declaration, types)
+          recordType(stmt.declaration, exportedTypes)
+        } else {
+          for (const spec of stmt.specifiers) {
+            if (spec.type === 'ExportSpecifier') {
+              const local = spec.local.name
+              const exported = getId(spec.exported)
+              if (stmt.source) {
+                // re-export, register an import + export as a type reference
+                imports[local] = {
+                  source: stmt.source.value,
+                  imported: local
+                }
+                exportedTypes[exported] = {
+                  type: 'TSTypeReference',
+                  typeName: {
+                    type: 'Identifier',
+                    name: local
+                  },
+                  _ownerScope: scope
+                }
+              } else if (types[local]) {
+                // exporting local defined type
+                exportedTypes[exported] = types[local]
               }
-              exportedTypes[exported] = {
-                type: 'TSTypeReference',
-                typeName: {
-                  type: 'Identifier',
-                  name: local
-                },
-                _ownerScope: scope
-              }
-            } else if (types[local]) {
-              // exporting local defined type
-              exportedTypes[exported] = types[local]
             }
           }
         }

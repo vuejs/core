@@ -73,6 +73,11 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
+   * A list of files to parse for global types to be made available for type
+   * resolving in SFC macros. The list must be fully resolved file system paths.
+   */
+  globalTypeFiles?: string[]
+  /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
    * - Only affects `<script setup>`

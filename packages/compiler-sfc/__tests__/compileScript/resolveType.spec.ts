@@ -1,5 +1,5 @@
 import { Identifier } from '@babel/types'
-import { parse } from '../../src'
+import { SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
 import {
   inferRuntimeType,
@@ -410,6 +410,32 @@ describe('resolveType', () => {
         '/pp.ts'
       ])
     })
+
+    test('global types', () => {
+      const files = {
+        // ambient
+        '/app.d.ts':
+          'declare namespace App { interface User { name: string } }',
+        // module - should only respect the declare global block
+        '/global.d.ts': `
+          declare type PP = { bar: number }
+          declare global {
+            type PP = { bar: string }
+          }
+          export {}
+        `
+      }
+
+      const { props, deps } = resolve(`defineProps<App.User & PP>()`, files, {
+        globalTypeFiles: Object.keys(files)
+      })
+
+      expect(props).toStrictEqual({
+        name: ['String'],
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
   })
 
   describe('errors', () => {
@@ -444,7 +470,11 @@ describe('resolveType', () => {
   })
 })
 
-function resolve(code: string, files: Record<string, string> = {}) {
+function resolve(
+  code: string,
+  files: Record<string, string> = {},
+  options?: Partial<SFCScriptCompileOptions>
+) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
     filename: '/Test.vue'
   })
@@ -457,7 +487,8 @@ function resolve(code: string, files: Record<string, string> = {}) {
       readFile(file) {
         return files[file]
       }
-    }
+    },
+    ...options
   })
 
   for (const file in files) {

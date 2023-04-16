@@ -24,6 +24,7 @@ export class ScriptCompileContext {
 
   // import / type analysis
   scope?: TypeScope
+  globalScopes?: TypeScope[]
   userImports: Record<string, ImportBinding> = Object.create(null)
 
   // macros presence check
@@ -101,7 +102,7 @@ export class ScriptCompileContext {
           sourceType: 'module'
         }).program
       } catch (e: any) {
-        e.message = `[@vue/compiler-sfc] ${e.message}\n\n${
+        e.message = `[vue/compiler-sfc] ${e.message}\n\n${
           descriptor.filename
         }\n${generateCodeFrame(
           descriptor.source,
@@ -113,15 +114,12 @@ export class ScriptCompileContext {
     }
 
     this.scriptAst =
-      this.descriptor.script &&
-      parse(
-        this.descriptor.script.content,
-        this.descriptor.script.loc.start.offset
-      )
+      descriptor.script &&
+      parse(descriptor.script.content, descriptor.script.loc.start.offset)
 
     this.scriptSetupAst =
-      this.descriptor.scriptSetup &&
-      parse(this.descriptor.scriptSetup!.content, this.startOffset!)
+      descriptor.scriptSetup &&
+      parse(descriptor.scriptSetup!.content, this.startOffset!)
   }
 
   getString(node: Node, scriptSetup = true): string {
