@@ -18,32 +18,20 @@ export interface ModelDecl {
   identifier: string | undefined
 }
 
-export function processDefineModel(
+function doDefineModel(
   ctx: ScriptCompileContext,
   node: Node,
+  type: TSType | undefined,
+  modelName: string,
+  options: Node | undefined,
+  runtimeOptionsArray: string[],
   declId?: LVal
-): boolean {
+) {
   if (!ctx.options.defineModel || !isCallOf(node, DEFINE_MODEL)) {
     return false
   }
-  ctx.hasDefineModelCall = true
-
-  const type =
-    (node.typeParameters && node.typeParameters.params[0]) || undefined
-  let modelName: string
-  let options: Node | undefined
-  const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])
-  if (arg0 && arg0.type === 'StringLiteral') {
-    modelName = arg0.value
-    options = node.arguments[1]
-  } else {
-    modelName = 'modelValue'
-    options = arg0
-  }
-
-  if (ctx.modelDecls[modelName]) {
+  if (ctx.modelDecls[modelName])
     ctx.error(`duplicate model name ${JSON.stringify(modelName)}`, node)
-  }
 
   const optionsString = options && ctx.getString(options)
 
@@ -80,11 +68,73 @@ export function processDefineModel(
     }
   }
 
+  if (runtimeOptions.length > 0) runtimeOptionsArray.push(runtimeOptions)
+}
+
+export function processDefineModel(
+  ctx: ScriptCompileContext,
+  node: Node,
+  declId?: LVal
+): boolean {
+  if (!ctx.options.defineModel || !isCallOf(node, DEFINE_MODEL)) {
+    return false
+  }
+  ctx.hasDefineModelCall = true
+  const type =
+    (node.typeParameters && node.typeParameters.params[0]) || undefined
+  let modelName: string[] = []
+  let options: Node[] = []
+  const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])
+  let isArray = false
+
+  if (arg0 && arg0.type === 'StringLiteral') {
+    modelName.push(arg0.value)
+    options.push(node.arguments[1])
+  } else if (arg0 && arg0.type === 'ArrayExpression') {
+    for (const e of arg0.elements) {
+      if (e && e.type === 'StringLiteral') {
+        modelName.push(e.value)
+      }
+    }
+    options =
+      node.arguments[1] && node.arguments[1].type === 'ArrayExpression'
+        ? (node.arguments[1].elements as Node[])
+        : options
+    isArray = true
+  } else {
+    modelName.push('modelValue')
+    options.push(arg0)
+  }
+
+  const runtimeOptionsArray: string[] = []
+
+  for (let i = 0; i < modelName.length; i++) {
+    if (ctx.modelDecls[modelName[i]])
+      ctx.error(`duplicate model name ${JSON.stringify(modelName)}`, node)
+    doDefineModel(
+      ctx,
+      node,
+      type,
+      modelName[i],
+      options[i],
+      runtimeOptionsArray,
+      declId
+    )
+  }
+
+  const optionStr = runtimeOptionsArray.join(',')
+
   ctx.s.overwrite(
     ctx.startOffset! + node.start!,
     ctx.startOffset! + node.end!,
-    `${ctx.helper('useModel')}(__props, ${JSON.stringify(modelName)}${
-      runtimeOptions ? `, ${runtimeOptions}` : ``
+    `${ctx.helper('useModel')}(__props, ${
+      isArray ? JSON.stringify(modelName) : JSON.stringify(modelName[0])
+    }${
+      optionStr.length > 0
+        ? isArray
+          ? `[${optionStr}]`
+          : `, ${optionStr}`
+        : ''
     })`
   )
 

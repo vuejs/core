@@ -278,6 +278,78 @@ describe('SFC <script setup> helpers', () => {
       await nextTick()
       expect(updateCount).toBeCalledTimes(1)
     })
+
+    test('array', async () => {
+      let foo: any
+      const update = () => {
+        foo.modelValue = 'bar'
+        foo.titleValue = 'foo'
+      }
+
+      const Comp = defineComponent({
+        props: ['modelValue', 'titleValue'],
+        emits: ['update:modelValue', 'update:titleValue'],
+        setup(props) {
+          foo = useModel(props, ['modelValue', 'titleValue'] as [
+            'modelValue',
+            'titleValue'
+          ])
+        },
+        render() {}
+      })
+
+      const msg = ref('')
+      const title = ref('')
+      const setMsgValue = vi.fn(v => (msg.value = v))
+      const setTitleValue = vi.fn(v => (title.value = v))
+      const root = nodeOps.createElement('div')
+      createApp(() =>
+        h(Comp, {
+          modelValue: msg.value,
+          titleValue: title.value,
+          'onUpdate:modelValue': setMsgValue,
+          'onUpdate:titleValue': setTitleValue
+        })
+      ).mount(root)
+
+      expect(foo.modelValue).toBe('')
+      expect(foo.titleValue).toBe('')
+      expect(msg.value).toBe('')
+      expect(title.value).toBe('')
+      expect(setMsgValue).not.toBeCalled()
+      expect(setTitleValue).not.toBeCalled()
+
+      // update from child
+      update()
+
+      await nextTick()
+      expect(msg.value).toBe('bar')
+      expect(foo.modelValue).toBe('bar')
+      expect(setMsgValue).toBeCalledTimes(1)
+
+      await nextTick()
+      expect(title.value).toBe('foo')
+      expect(foo.titleValue).toBe('foo')
+      expect(setTitleValue).toBeCalledTimes(1)
+
+      expect(setMsgValue).toBeCalledTimes(1)
+      // update from parent
+      msg.value = 'qux'
+
+      await nextTick()
+      expect(msg.value).toBe('qux')
+      expect(foo.modelValue).toBe('qux')
+      expect(setMsgValue).toBeCalledTimes(1)
+
+      await nextTick()
+
+      title.value = 'xuq'
+
+      await nextTick()
+      expect(title.value).toBe('xuq')
+      expect(foo.titleValue).toBe('xuq')
+      expect(setTitleValue).toBeCalledTimes(1)
+    })
   })
 
   test('createPropsRestProxy', () => {
