@@ -26,7 +26,7 @@ export const isBooleanAttr = /*#__PURE__*/ makeMap(
 
 /**
  * Boolean attributes should be included if the value is truthy or ''.
- * e.g. <select multiple> compiles to { multiple: '' }
+ * e.g. `<select multiple>` compiles to `{ multiple: '' }`
  */
 export function includeBooleanAttr(value: unknown): boolean {
   return !!value || value === ''
@@ -52,21 +52,6 @@ export const propsToAttrMap: Record<string, string | undefined> = {
   htmlFor: 'for',
   httpEquiv: 'http-equiv'
 }
-
-/**
- * CSS properties that accept plain numbers
- */
-export const isNoUnitNumericStyleProp = /*#__PURE__*/ makeMap(
-  `animation-iteration-count,border-image-outset,border-image-slice,` +
-    `border-image-width,box-flex,box-flex-group,box-ordinal-group,column-count,` +
-    `columns,flex,flex-grow,flex-positive,flex-shrink,flex-negative,flex-order,` +
-    `grid-row,grid-row-end,grid-row-span,grid-row-start,grid-column,` +
-    `grid-column-end,grid-column-span,grid-column-start,font-weight,line-clamp,` +
-    `line-height,opacity,order,orphans,tab-size,widows,z-index,zoom,` +
-    // SVG
-    `fill-opacity,flood-opacity,stop-opacity,stroke-dasharray,stroke-dashoffset,` +
-    `stroke-miterlimit,stroke-opacity,stroke-width`
-)
 
 /**
  * Known attributes, this is used for stringification of runtime static nodes

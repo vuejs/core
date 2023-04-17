@@ -22,7 +22,8 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn
+  isOn,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -58,6 +59,14 @@ export interface PropOptions<T = any, D = T> {
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown, props: Data): boolean
+  /**
+   * @internal
+   */
+  skipCheck?: boolean
+  /**
+   * @internal
+   */
+  skipFactory?: boolean
 }
 
 export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
@@ -116,15 +125,17 @@ type InferPropType<T> = [T] extends [null]
     : InferPropType<U>
   : [T] extends [Prop<infer V, infer D>]
   ? unknown extends V
-    ? D
+    ? IfAny<V, V, D>
     : V
   : T
 
-export type ExtractPropTypes<O> = O extends object
-  ? { [K in keyof O]?: unknown } & // This is needed to keep the relation between the option prop and the props, allowing to use ctrl+click to navigate to the prop options. see: #3656
-      { [K in RequiredKeys<O>]: InferPropType<O[K]> } &
-      { [K in OptionalKeys<O>]?: InferPropType<O[K]> }
-  : { [K in string]: any }
+export type ExtractPropTypes<O> = {
+  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to support IDE features
+  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
+} & {
+  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to support IDE features
+  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+}
 
 const enum BooleanFlags {
   shouldCast,
@@ -133,7 +144,8 @@ const enum BooleanFlags {
 
 // extract props which defined with default from prop options
 export type ExtractDefaultPropTypes<O> = O extends object
-  ? { [K in DefaultKeys<O>]: InferPropType<O[K]> }
+  ? // use `keyof Pick<O, DefaultKeys<O>>` instead of `DefaultKeys<O>` to support IDE features
+    { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}
 
 type NormalizedProp =
@@ -189,6 +201,13 @@ export function initProps(
   instance.attrs = attrs
 }
 
+function isInHmrContext(instance: ComponentInternalInstance | null) {
+  while (instance) {
+    if (instance.type.__hmrId) return true
+    instance = instance.parent
+  }
+}
+
 export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -208,11 +227,7 @@ export function updateProps(
     // always force full diff in dev
     // - #1942 if hmr is enabled with sfc component
     // - vite#872 non-sfc component used by sfc component
-    !(
-      __DEV__ &&
-      (instance.type.__hmrId ||
-        (instance.parent && instance.parent.type.__hmrId))
-    ) &&
+    !(__DEV__ && isInHmrContext(instance)) &&
     (optimized || patchFlag > 0) &&
     !(patchFlag & PatchFlags.FULL_PROPS)
   ) {
@@ -222,6 +237,10 @@ export function updateProps(
       const propsToUpdate = instance.vnode.dynamicProps!
       for (let i = 0; i < propsToUpdate.length; i++) {
         let key = propsToUpdate[i]
+        // skip if the prop key is a declared emit event listener
+        if (isEmitListener(instance.emitsOptions, key)) {
+          continue
+        }
         // PROPS flag guarantees rawProps to be non-null
         const value = rawProps![key]
         if (options) {
@@ -301,7 +320,11 @@ export function updateProps(
     // attrs point to the same object so it should already have been updated.
     if (attrs !== rawCurrentProps) {
       for (const key in attrs) {
-        if (!rawProps || !hasOwn(rawProps, key)) {
+        if (
+          !rawProps ||
+          (!hasOwn(rawProps, key) &&
+            (!__COMPAT__ || !hasOwn(rawProps, key + 'Native')))
+        ) {
           delete attrs[key]
           hasAttrsChanged = true
         }
@@ -369,7 +392,7 @@ function setFullProps(
             continue
           }
         }
-        if (value !== attrs[key]) {
+        if (!(key in attrs) || value !== attrs[key]) {
           attrs[key] = value
           hasAttrsChanged = true
         }
@@ -410,7 +433,11 @@ function resolvePropValue(
     // default values
     if (hasDefault && value === undefined) {
       const defaultValue = opt.default
-      if (opt.type !== Function && isFunction(defaultValue)) {
+      if (
+        opt.type !== Function &&
+        !opt.skipFactory &&
+        isFunction(defaultValue)
+      ) {
         const { propsDefaults } = instance
         if (key in propsDefaults) {
           value = propsDefaults[key]
@@ -483,7 +510,9 @@ export function normalizePropsOptions(
   }
 
   if (!raw && !hasExtends) {
-    cache.set(comp, EMPTY_ARR as any)
+    if (isObject(comp)) {
+      cache.set(comp, EMPTY_ARR as any)
+    }
     return EMPTY_ARR as any
   }
 
@@ -506,7 +535,7 @@ export function normalizePropsOptions(
       if (validatePropName(normalizedKey)) {
         const opt = raw[key]
         const prop: NormalizedProp = (normalized[normalizedKey] =
-          isArray(opt) || isFunction(opt) ? { type: opt } : opt)
+          isArray(opt) || isFunction(opt) ? { type: opt } : extend({}, opt))
         if (prop) {
           const booleanIndex = getTypeIndex(Boolean, prop.type)
           const stringIndex = getTypeIndex(String, prop.type)
@@ -523,7 +552,9 @@ export function normalizePropsOptions(
   }
 
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  cache.set(comp, res)
+  if (isObject(comp)) {
+    cache.set(comp, res)
+  }
   return res
 }
 
@@ -539,8 +570,8 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*function (\w+)/)
-  return match ? match[1] : ctor === null ? 'null' : ''
+  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
+  return match ? match[2] : ctor === null ? 'null' : ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
@@ -592,18 +623,18 @@ function validateProp(
   props: Data,
   isAbsent: boolean
 ) {
-  const { type, required, validator } = prop
+  const { type, required, validator, skipCheck } = prop
   // required!
   if (required && isAbsent) {
     warn('Missing required prop: "' + name + '"')
     return
   }
   // missing but optional
-  if (value == null && !prop.required) {
+  if (value == null && !required) {
     return
   }
   // type check
-  if (type != null && type !== true) {
+  if (type != null && type !== true && !skipCheck) {
     let isValid = false
     const types = isArray(type) ? type : [type]
     const expectedTypes = []

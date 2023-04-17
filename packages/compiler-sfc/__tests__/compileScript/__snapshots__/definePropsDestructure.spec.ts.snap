@@ -1,0 +1,210 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`sfc reactive props destructure > aliasing 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+      
+      let x = foo
+      let y = __props.foo
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props.foo + __props.foo)
+}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > basic usage 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+      
+      console.log(__props.foo)
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props.foo)
+}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > computed static key 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+    
+    console.log(__props.foo)
+    
+return (_ctx, _cache) => {
+  return _toDisplayString(__props.foo)
+}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > default values w/ array runtime declaration 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults(['foo', 'bar', 'baz'], {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > default values w/ object runtime declaration 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true,
+  ext: x, __skip_ext: true
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > default values w/ type declaration 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: Number, required: false, default: 1 },
+    bar: { type: Object, required: false, default: () => ({}) },
+    func: { type: Function, required: false, default: () => {} }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > default values w/ type declaration, prod mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { default: 1 },
+    bar: { default: () => ({}) },
+    baz: {},
+    boola: { type: Boolean },
+    boolb: { type: [Boolean, Number] },
+    func: { type: Function, default: () => {} }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
+`;
+
+exports[`sfc reactive props destructure > multiple variable declarations 1`] = `
+"import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+
+export default {
+  props: ['foo'],
+  setup(__props) {
+
+      const bar = 'fish', hello = 'world'
+      
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(\\"div\\", null, _toDisplayString(__props.foo) + \\" \\" + _toDisplayString(hello) + \\" \\" + _toDisplayString(bar), 1 /* TEXT */))
+}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > nested scope 1`] = `
+"export default {
+  props: ['foo', 'bar'],
+  setup(__props) {
+
+      
+      function test(foo) {
+        console.log(foo)
+        console.log(__props.bar)
+      }
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > non-identifier prop names 1`] = `
+"import { toDisplayString as _toDisplayString } from \\"vue\\"
+
+
+export default {
+  props: { 'foo.bar': Function },
+  setup(__props) {
+
+      
+      let x = __props[\\"foo.bar\\"]
+      
+return (_ctx, _cache) => {
+  return _toDisplayString(__props[\\"foo.bar\\"])
+}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > rest spread 1`] = `
+"import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
+
+export default {
+  props: ['foo', 'bar', 'baz'],
+  setup(__props) {
+
+const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
+
+      
+      
+return () => {}
+}
+
+}"
+`;

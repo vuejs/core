@@ -1,8 +1,7 @@
 export default {
-  resolve: {
-    alias: {
-      vue: '@vue/runtime-dom/dist/runtime-dom.esm-bundler.js'
-    }
+  define: {
+    __VUE_PROD_DEVTOOLS__: false,
+    __VUE_OPTIONS_API__: true
   },
   build: {
     rollupOptions: {
@@ -10,6 +9,7 @@ export default {
       output: {
         entryFileNames: `[name].js`
       }
-    }
+    },
+    minify: 'terser'
   }
 }

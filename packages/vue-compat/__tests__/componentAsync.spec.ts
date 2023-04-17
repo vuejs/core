@@ -30,6 +30,8 @@ describe('COMPONENT_ASYNC', () => {
       template: `<div><comp/></div>`,
       components: { comp }
     }).$mount()
+
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
 
     resolve({ template: 'foo' })
@@ -49,6 +51,7 @@ describe('COMPONENT_ASYNC', () => {
       template: `<div><comp/></div>`,
       components: { comp }
     }).$mount()
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
     await timeout(0)
     expect(vm.$el.innerHTML).toBe(`foo`)
@@ -69,6 +72,8 @@ describe('COMPONENT_ASYNC', () => {
       template: `<div><comp/></div>`,
       components: { comp }
     }).$mount()
+
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe(`<!---->`)
     await timeout(0)
     expect(vm.$el.innerHTML).toBe(`foo`)

@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: transform v-model compound expression (with prefixIdentifiers) 1`] = `
+exports[`compiler: transform v-model > compound expression (with prefixIdentifiers) 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -11,7 +11,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model compound expression 1`] = `
+exports[`compiler: transform v-model > compound expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -26,7 +26,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression (with multilines) 1`] = `
+exports[`compiler: transform v-model > simple expression (with multilines) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -49,7 +49,7 @@ foo
 }"
 `;
 
-exports[`compiler: transform v-model simple expression (with prefixIdentifiers) 1`] = `
+exports[`compiler: transform v-model > simple expression (with prefixIdentifiers) 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -60,7 +60,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model simple expression 1`] = `
+exports[`compiler: transform v-model > simple expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -75,7 +75,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model with argument 1`] = `
+exports[`compiler: transform v-model > with argument 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -83,14 +83,14 @@ return function render(_ctx, _cache) {
     const { openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(), _createElementBlock(\\"input\\", {
-      value: model,
-      \\"onUpdate:value\\": $event => ((model) = $event)
-    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"value\\", \\"onUpdate:value\\"]))
+      \\"foo-value\\": model,
+      \\"onUpdate:fooValue\\": $event => ((model) = $event)
+    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"foo-value\\", \\"onUpdate:fooValue\\"]))
   }
 }"
 `;
 
-exports[`compiler: transform v-model with dynamic argument (with prefixIdentifiers) 1`] = `
+exports[`compiler: transform v-model > with dynamic argument (with prefixIdentifiers) 1`] = `
 "import { normalizeProps as _normalizeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -101,7 +101,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform v-model with dynamic argument 1`] = `
+exports[`compiler: transform v-model > with dynamic argument 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

@@ -11,7 +11,10 @@ import {
   MergedComponentOptions,
   RuntimeCompilerOptions
 } from './componentOptions'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import {
+  ComponentCustomProperties,
+  ComponentPublicInstance
+} from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
@@ -19,7 +22,7 @@ import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { isFunction, NO, isObject } from '@vue/shared'
+import { isFunction, NO, isObject, extend } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'
@@ -28,7 +31,13 @@ import { ObjectEmitsOptions } from './componentEmits'
 export interface App<HostElement = any> {
   version: string
   config: AppConfig
-  use(plugin: Plugin, ...options: any[]): this
+
+  use<Options extends unknown[]>(
+    plugin: Plugin<Options>,
+    ...options: Options
+  ): this
+  use<Options>(plugin: Plugin<Options>, options: Options): this
+
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
@@ -41,6 +50,14 @@ export interface App<HostElement = any> {
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
+
+  /**
+   * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
+   * to variables provided via `app.provide()`.
+   *
+   * @param fn - function to run with the app as active instance
+   */
+  runWithContext<T>(fn: () => T): T
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
@@ -70,7 +87,7 @@ export interface AppConfig {
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
-  globalProperties: Record<string, any>
+  globalProperties: ComponentCustomProperties & Record<string, any>
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
@@ -83,7 +100,7 @@ export interface AppConfig {
   ) => void
 
   /**
-   * Options to pass to @vue/compiler-dom.
+   * Options to pass to `@vue/compiler-dom`.
    * Only supported in runtime compiler build.
    */
   compilerOptions: RuntimeCompilerOptions
@@ -137,12 +154,16 @@ export interface AppContext {
   filters?: Record<string, Function>
 }
 
-type PluginInstallFunction = (app: App, ...options: any[]) => any
+type PluginInstallFunction<Options> = Options extends unknown[]
+  ? (app: App, ...options: Options) => any
+  : (app: App, options: Options) => any
 
-export type Plugin =
-  | (PluginInstallFunction & { install?: PluginInstallFunction })
+export type Plugin<Options = any[]> =
+  | (PluginInstallFunction<Options> & {
+      install?: PluginInstallFunction<Options>
+    })
   | {
-      install: PluginInstallFunction
+      install: PluginInstallFunction<Options>
     }
 
 export function createAppContext(): AppContext {
@@ -175,10 +196,14 @@ export type CreateAppFunction<HostElement> = (
 let uid = 0
 
 export function createAppAPI<HostElement>(
-  render: RootRenderFunction,
+  render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
+    if (!isFunction(rootComponent)) {
+      rootComponent = extend({}, rootComponent)
+    }
+
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
       rootProps = null
@@ -280,6 +305,14 @@ export function createAppAPI<HostElement>(
         isSVG?: boolean
       ): any {
         if (!isMounted) {
+          // #5571
+          if (__DEV__ && (rootContainer as any).__vue_app__) {
+            warn(
+              `There is already an app instance mounted on the host container.\n` +
+                ` If you want to mount another app on the same host container,` +
+                ` you need to unmount the previous app by calling \`app.unmount()\` first.`
+            )
+          }
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -341,11 +374,19 @@ export function createAppAPI<HostElement>(
               `It will be overwritten with the new value.`
           )
         }
-        // TypeScript doesn't allow symbols as index type
-        // https://github.com/Microsoft/TypeScript/issues/24587
-        context.provides[key as string] = value
+
+        context.provides[key as string | symbol] = value
 
         return app
+      },
+
+      runWithContext(fn) {
+        currentApp = app
+        try {
+          return fn()
+        } finally {
+          currentApp = null
+        }
       }
     })
 
@@ -356,3 +397,9 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+/**
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
+ */
+export let currentApp: App<unknown> | null = null

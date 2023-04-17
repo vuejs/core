@@ -1,14 +1,17 @@
+export const version = __VERSION__
+
 // API
 export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
-export { rewriteDefault } from './rewriteDefault'
+export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
+export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
   transformAST as transformRefAST
-} from '@vue/ref-transform'
+} from '@vue/reactivity-transform'
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
@@ -26,27 +29,40 @@ export {
   isStaticProperty
 } from '@vue/compiler-core'
 
+// Internals for type resolution
+export { invalidateTypeCache, registerTS } from './script/resolveType'
+
 // Types
-export {
+export type {
   SFCParseOptions,
+  SFCParseResult,
   SFCDescriptor,
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
   SFCStyleBlock
 } from './parse'
-export {
+export type {
   TemplateCompiler,
   SFCTemplateCompileOptions,
   SFCTemplateCompileResults
 } from './compileTemplate'
-export {
+export type {
   SFCStyleCompileOptions,
   SFCAsyncStyleCompileOptions,
   SFCStyleCompileResults
 } from './compileStyle'
-export { SFCScriptCompileOptions } from './compileScript'
-export {
+export type { SFCScriptCompileOptions } from './compileScript'
+export type { ScriptCompileContext } from './script/context'
+export type {
+  TypeResolveContext,
+  SimpleTypeResolveContext
+} from './script/resolveType'
+export type {
+  AssetURLOptions,
+  AssetURLTagConfig
+} from './template/transformAssetUrl'
+export type {
   CompilerOptions,
   CompilerError,
   BindingMetadata

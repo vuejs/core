@@ -11,14 +11,16 @@ import {
   looseEqual,
   looseIndexOf,
   invokeArrayFns,
-  toNumber,
+  looseToNumber,
   isSet
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue']
+  const fn =
+    vnode.props!['onUpdate:modelValue'] ||
+    (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -30,14 +32,8 @@ function onCompositionEnd(e: Event) {
   const target = e.target as any
   if (target.composing) {
     target.composing = false
-    trigger(target, 'input')
+    target.dispatchEvent(new Event('input'))
   }
-}
-
-function trigger(el: HTMLElement, type: string) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(type, true, true)
-  el.dispatchEvent(e)
 }
 
 type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
@@ -56,8 +52,9 @@ export const vModelText: ModelDirective<
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
-      } else if (castToNumber) {
-        domValue = toNumber(domValue)
+      }
+      if (castToNumber) {
+        domValue = looseToNumber(domValue)
       }
       el._assign(domValue)
     })
@@ -84,14 +81,17 @@ export const vModelText: ModelDirective<
     el._assign = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-    if (document.activeElement === el) {
+    if (document.activeElement === el && el.type !== 'range') {
       if (lazy) {
         return
       }
       if (trim && el.value.trim() === value) {
         return
       }
-      if ((number || el.type === 'number') && toNumber(el.value) === value) {
+      if (
+        (number || el.type === 'number') &&
+        looseToNumber(el.value) === value
+      ) {
         return
       }
     }
@@ -185,7 +185,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
-          number ? toNumber(getValue(o)) : getValue(o)
+          number ? looseToNumber(getValue(o)) : getValue(o)
         )
       el._assign(
         el.multiple
@@ -272,6 +272,24 @@ export const vModelDynamic: ObjectDirective<
   }
 }
 
+function resolveDynamicModel(tagName: string, type: string | undefined) {
+  switch (tagName) {
+    case 'SELECT':
+      return vModelSelect
+    case 'TEXTAREA':
+      return vModelText
+    default:
+      switch (type) {
+        case 'checkbox':
+          return vModelCheckbox
+        case 'radio':
+          return vModelRadio
+        default:
+          return vModelText
+      }
+  }
+}
+
 function callModelHook(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   binding: DirectiveBinding,
@@ -279,26 +297,10 @@ function callModelHook(
   prevVNode: VNode | null,
   hook: keyof ObjectDirective
 ) {
-  let modelToUse: ObjectDirective
-  switch (el.tagName) {
-    case 'SELECT':
-      modelToUse = vModelSelect
-      break
-    case 'TEXTAREA':
-      modelToUse = vModelText
-      break
-    default:
-      switch (vnode.props && vnode.props.type) {
-        case 'checkbox':
-          modelToUse = vModelCheckbox
-          break
-        case 'radio':
-          modelToUse = vModelRadio
-          break
-        default:
-          modelToUse = vModelText
-      }
-  }
+  const modelToUse = resolveDynamicModel(
+    el.tagName,
+    vnode.props && vnode.props.type
+  )
   const fn = modelToUse[hook] as DirectiveHook
   fn && fn(el, binding, vnode, prevVNode)
 }
@@ -325,6 +327,20 @@ export function initVModelForSSR() {
       }
     } else if (value) {
       return { checked: true }
+    }
+  }
+
+  vModelDynamic.getSSRProps = (binding, vnode) => {
+    if (typeof vnode.type !== 'string') {
+      return
+    }
+    const modelToUse = resolveDynamicModel(
+      // resolveDynamicModel expects an uppercase tag name, but vnode.type is lowercase
+      vnode.type.toUpperCase(),
+      vnode.props && vnode.props.type
+    )
+    if (modelToUse.getSSRProps) {
+      return modelToUse.getSSRProps(binding, vnode)
     }
   }
 }
