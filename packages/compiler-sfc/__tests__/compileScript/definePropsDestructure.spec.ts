@@ -2,10 +2,11 @@ import { BindingTypes } from '@vue/compiler-core'
 import { SFCScriptCompileOptions } from '../../src'
 import { compileSFCScript, assertCode } from '../utils'
 
-describe('sfc props transform', () => {
+describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
+      propsDestructure: true,
       ...options
     })
   }
