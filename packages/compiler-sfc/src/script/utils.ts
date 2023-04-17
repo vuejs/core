@@ -1,4 +1,13 @@
-import { CallExpression, Node } from '@babel/types'
+import {
+  CallExpression,
+  Expression,
+  Identifier,
+  ImportDefaultSpecifier,
+  ImportNamespaceSpecifier,
+  ImportSpecifier,
+  Node,
+  StringLiteral
+} from '@babel/types'
 import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
@@ -47,4 +56,44 @@ export function isCallOf(
 
 export function toRuntimeTypeString(types: string[]) {
   return types.length > 1 ? `[${types.join(', ')}]` : types[0]
+}
+
+export function getImportedName(
+  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+) {
+  if (specifier.type === 'ImportSpecifier')
+    return specifier.imported.type === 'Identifier'
+      ? specifier.imported.name
+      : specifier.imported.value
+  else if (specifier.type === 'ImportNamespaceSpecifier') return '*'
+  return 'default'
+}
+
+export function getId(node: Identifier | StringLiteral): string
+export function getId(node: Expression): string | null
+export function getId(node: Expression) {
+  return node.type === 'Identifier'
+    ? node.name
+    : node.type === 'StringLiteral'
+    ? node.value
+    : null
+}
+
+const identity = (str: string) => str
+const fileNameLowerCaseRegExp = /[^\u0130\u0131\u00DFa-z0-9\\/:\-_\. ]+/g
+const toLowerCase = (str: string) => str.toLowerCase()
+
+function toFileNameLowerCase(x: string) {
+  return fileNameLowerCaseRegExp.test(x)
+    ? x.replace(fileNameLowerCaseRegExp, toLowerCase)
+    : x
+}
+
+/**
+ * We need `getCanonicalFileName` when creating ts module resolution cache,
+ * but TS does not expose it directly. This implementation is repllicated from
+ * the TS source code.
+ */
+export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
+  return useCaseSensitiveFileNames ? identity : toFileNameLowerCase
 }
