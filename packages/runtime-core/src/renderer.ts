@@ -24,6 +24,7 @@ import {
   filterSingleRoot,
   renderComponentRoot,
   shouldUpdateComponent,
+  traverseParentHmrId,
   updateHOCHostEl
 } from './componentRenderUtils'
 import {
@@ -1110,7 +1111,15 @@ function baseCreateRenderer(
           isSVG,
           slotScopeIds
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        // #7921 The parentComponent may come from a js file in node_modules,
+        // and such components do not have __hmrId.
+        // In this case, their hmr status depends on their ancestor components.
+        // Therefore, we need to traverse and check whether their ancestor components have __hmrId.
+        if (
+          __DEV__ &&
+          parentComponent &&
+          traverseParentHmrId(parentComponent)
+        ) {
           traverseStaticChildren(n1, n2)
         } else if (
           // #2080 if the stable fragment has a key, it's a <template v-for> that may

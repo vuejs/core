@@ -418,3 +418,15 @@ export function updateHOCHostEl(
     parent = parent.parent
   }
 }
+
+export function traverseParentHmrId(
+  component: ComponentInternalInstance | null
+) {
+  while (component) {
+    if (component.type.__hmrId) {
+      return true
+    }
+    component = component.parent
+  }
+  return false
+}
