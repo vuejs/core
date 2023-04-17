@@ -2,8 +2,7 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers,
-  getImportedName
+  walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { parse as _parse, ParserPlugin } from '@babel/parser'
@@ -45,7 +44,12 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { isLiteralNode, unwrapTSNode, isCallOf } from './script/utils'
+import {
+  isLiteralNode,
+  unwrapTSNode,
+  isCallOf,
+  getImportedName
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -69,13 +73,10 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * (Experimental) Enable syntax transform for using refs without `.value` and
-   * using destructured props with reactivity
-   * @deprecated the Reactivity Transform proposal has been dropped. This
-   * feature will be removed from Vue core in 3.4. If you intend to continue
-   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
+   * A list of files to parse for global types to be made available for type
+   * resolving in SFC macros. The list must be fully resolved file system paths.
    */
-  reactivityTransform?: boolean
+  globalTypeFiles?: string[]
   /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
@@ -104,8 +105,31 @@ export interface SFCScriptCompileOptions {
   hoistStatic?: boolean
   /**
    * (**Experimental**) Enable macro `defineModel`
+   * @default false
    */
   defineModel?: boolean
+  /**
+   * (**Experimental**) Enable reactive destructure for `defineProps`
+   * @default false
+   */
+  propsDestructure?: boolean
+  /**
+   * File system access methods to be used when resolving types
+   * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
+   * to use a virtual file system for use in browsers (e.g. in REPLs)
+   */
+  fs?: {
+    fileExists(file: string): boolean
+    readFile(file: string): string | undefined
+  }
+  /**
+   * (Experimental) Enable syntax transform for using refs without `.value` and
+   * using destructured props with reactivity
+   * @deprecated the Reactivity Transform proposal has been dropped. This
+   * feature will be removed from Vue core in 3.4. If you intend to continue
+   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
+   */
+  reactivityTransform?: boolean
 }
 
 export interface ImportBinding {
@@ -1022,7 +1046,8 @@ export function compileScript(
           }) as unknown as RawSourceMap)
         : undefined,
     scriptAst: scriptAst?.body,
-    scriptSetupAst: scriptSetupAst?.body
+    scriptSetupAst: scriptSetupAst?.body,
+    deps: ctx.deps ? [...ctx.deps] : undefined
   }
 }
 
