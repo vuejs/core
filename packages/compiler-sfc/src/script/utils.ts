@@ -8,6 +8,7 @@ import {
   Node,
   StringLiteral
 } from '@babel/types'
+import path from 'path'
 import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
@@ -96,4 +97,11 @@ function toFileNameLowerCase(x: string) {
  */
 export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
   return useCaseSensitiveFileNames ? identity : toFileNameLowerCase
+}
+
+const windowsSlashRE = /\\/g
+export function normalizePath(p: string) {
+  // in the browser build, the polyfill doesn't expose posix, but defualts to
+  // posix behavior.
+  return (path.posix || path).normalize(p.replace(windowsSlashRE, '/'))
 }
