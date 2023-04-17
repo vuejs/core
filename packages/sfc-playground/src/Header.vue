@@ -6,7 +6,7 @@ import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
-import { ReplStore } from '@vue/repl'
+import type { ReplStore } from '@vue/repl'
 
 const props = defineProps<{
   store: ReplStore
