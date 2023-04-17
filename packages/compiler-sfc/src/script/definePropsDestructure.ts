@@ -26,6 +26,10 @@ export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern
 ) {
+  if (!ctx.options.propsDestructure) {
+    return
+  }
+
   ctx.propsDestructureDecl = declId
 
   const registerBinding = (
@@ -91,6 +95,10 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
+  if (!ctx.options.propsDestructure) {
+    return
+  }
+
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
