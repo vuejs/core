@@ -6,10 +6,7 @@ import type {
   Function,
   ObjectProperty,
   BlockStatement,
-  Program,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier,
-  ImportSpecifier
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -245,17 +242,6 @@ export const isStaticProperty = (node: Node): node is ObjectProperty =>
 
 export const isStaticPropertyKey = (node: Node, parent: Node) =>
   isStaticProperty(parent) && parent.key === node
-
-export function getImportedName(
-  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
-) {
-  if (specifier.type === 'ImportSpecifier')
-    return specifier.imported.type === 'Identifier'
-      ? specifier.imported.name
-      : specifier.imported.value
-  else if (specifier.type === 'ImportNamespaceSpecifier') return '*'
-  return 'default'
-}
 
 /**
  * Copied from https://github.com/babel/babel/blob/main/packages/babel-types/src/validators/isReferenced.ts
