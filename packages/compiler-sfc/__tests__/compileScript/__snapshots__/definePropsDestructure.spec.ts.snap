@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`sfc props transform > aliasing 1`] = `
+exports[`sfc reactive props destructure > aliasing 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
@@ -20,7 +20,7 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > basic usage 1`] = `
+exports[`sfc reactive props destructure > basic usage 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
@@ -39,7 +39,7 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > computed static key 1`] = `
+exports[`sfc reactive props destructure > computed static key 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
@@ -58,7 +58,7 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > default values w/ array runtime declaration 1`] = `
+exports[`sfc reactive props destructure > default values w/ array runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
@@ -77,7 +77,7 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform > default values w/ object runtime declaration 1`] = `
+exports[`sfc reactive props destructure > default values w/ object runtime declaration 1`] = `
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
@@ -97,7 +97,7 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform > default values w/ type declaration 1`] = `
+exports[`sfc reactive props destructure > default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
@@ -116,7 +116,7 @@ return () => {}
 })"
 `;
 
-exports[`sfc props transform > default values w/ type declaration, prod mode 1`] = `
+exports[`sfc reactive props destructure > default values w/ type declaration, prod mode 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
@@ -138,7 +138,7 @@ return () => {}
 })"
 `;
 
-exports[`sfc props transform > multiple variable declarations 1`] = `
+exports[`sfc reactive props destructure > multiple variable declarations 1`] = `
 "import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 
@@ -156,7 +156,7 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > nested scope 1`] = `
+exports[`sfc reactive props destructure > nested scope 1`] = `
 "export default {
   props: ['foo', 'bar'],
   setup(__props) {
@@ -173,7 +173,7 @@ return () => {}
 }"
 `;
 
-exports[`sfc props transform > non-identifier prop names 1`] = `
+exports[`sfc reactive props destructure > non-identifier prop names 1`] = `
 "import { toDisplayString as _toDisplayString } from \\"vue\\"
 
 
@@ -192,7 +192,7 @@ return (_ctx, _cache) => {
 }"
 `;
 
-exports[`sfc props transform > rest spread 1`] = `
+exports[`sfc reactive props destructure > rest spread 1`] = `
 "import { createPropsRestProxy as _createPropsRestProxy } from 'vue'
 
 export default {
