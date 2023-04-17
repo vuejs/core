@@ -694,6 +694,26 @@ return { count }
 }"
 `;
 
+exports[`SFC compile <script setup> > defineModel() > w/ arry model 1`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    \\"count\\": {default:1},
+    \\"title\\": {default:0},
+  },
+  emits: [\\"update:count\\", \\"update:title\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        const c = _useModel(__props, [\\"count\\",\\"title\\"])
+        
+return { c }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > defineModel() > w/ defineProps and defineEmits 1`] = `
 "import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
 

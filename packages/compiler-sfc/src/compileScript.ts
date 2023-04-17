@@ -138,6 +138,7 @@ export function compileScript(
 
   const ctx = new ScriptCompileContext(sfc, options)
   const { script, scriptSetup, source, filename } = sfc
+
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
@@ -529,6 +530,7 @@ export function compileScript(
 
       for (let i = 0; i < total; i++) {
         const decl = node.declarations[i]
+
         const init = decl.init && unwrapTSNode(decl.init)
         if (init) {
           if (processDefineOptions(ctx, init)) {

@@ -14,6 +14,7 @@ export function compileSFCScript(
   parseOptions?: SFCParseOptions
 ) {
   const { descriptor } = parse(src, parseOptions)
+
   return compileScript(descriptor, {
     ...options,
     id: mockId

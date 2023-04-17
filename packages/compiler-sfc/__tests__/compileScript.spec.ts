@@ -395,6 +395,30 @@ defineExpose({ foo: 123 })
       })
     })
 
+    test('w/ arry model', () => {
+      const { content, bindings } = compile(
+        `
+        <script setup>
+        const c = defineModel(['count','title'],[{default:1},{default:0}])
+        </script>
+        `,
+        { defineModel: true }
+      )
+      assertCode(content)
+      expect(content).toMatch('props: {')
+      expect(content).toMatch('"count": {default:1},')
+      expect(content).toMatch('"title": {default:0},')
+      expect(content).toMatch('emits: ["update:count", "update:title"],')
+      expect(content).toMatch(`const c = _useModel(__props, ["count","title"])`)
+      expect(content).toMatch(`return { c }`)
+      expect(content).not.toMatch('defineModel')
+      expect(bindings).toStrictEqual({
+        count: BindingTypes.PROPS,
+        title: BindingTypes.PROPS,
+        c: BindingTypes.SETUP_REF
+      })
+    })
+
     test('w/ defineProps and defineEmits', () => {
       const { content, bindings } = compile(
         `

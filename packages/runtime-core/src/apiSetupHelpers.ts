@@ -29,7 +29,7 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, TypedSlots } from './componentSlots'
-import { Ref, ref } from '@vue/reactivity'
+import { Ref, UnwrapNestedRefs, reactive, ref } from '@vue/reactivity'
 import { watch } from './apiWatch'
 
 // dev only
@@ -246,7 +246,12 @@ export function defineSlots<
  * // even if the parent did not pass the matching `v-model`.
  * const count = defineModel<number>('count', { local: true, default: 0 })
  * ```
+ *
+ * const count = defineModel<[number,string]]>('count','title', [{ default: 0 },{ default: 'str' }])
  */
+type ModelOptions<T> = {
+  [K in keyof T]: PropOptions<T[K]> & DefineModelOptions
+}
 export function defineModel<T>(
   options: { required: true } & PropOptions<T> & DefineModelOptions
 ): Ref<T>
@@ -268,6 +273,10 @@ export function defineModel<T>(
   name: string,
   options?: PropOptions<T> & DefineModelOptions
 ): Ref<T | undefined>
+export function defineModel<T>(
+  name: string[],
+  options?: ModelOptions<T>
+): UnwrapNestedRefs<T | undefined>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -277,7 +286,6 @@ export function defineModel(): any {
 interface DefineModelOptions {
   local?: boolean
 }
-
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
@@ -339,6 +347,18 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
+type ModelArray<T, K extends string[]> = K[number] extends keyof T
+  ? string[]
+  : never
+export function useModel<
+  T extends Record<string, any>,
+  K extends ModelArray<T, K>
+>(
+  props: T,
+  name: K
+): UnwrapNestedRefs<{
+  [k in keyof T as k extends K[number] ? k : never]: T[k]
+}>
 export function useModel<T extends Record<string, any>, K extends keyof T>(
   props: T,
   name: K,
@@ -346,7 +366,7 @@ export function useModel<T extends Record<string, any>, K extends keyof T>(
 ): Ref<T[K]>
 export function useModel(
   props: Record<string, any>,
-  name: string,
+  name: string | string[],
   options?: { local?: boolean }
 ): Ref {
   const i = getCurrentInstance()!
@@ -354,37 +374,60 @@ export function useModel(
     warn(`useModel() called without active instance.`)
     return ref() as any
   }
-
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
-    warn(`useModel() called with prop "${name}" which is not declared.`)
-    return ref() as any
+  const isAry = isArray(name)
+  if (__DEV__) {
+    if (!isAry && !(i.propsOptions[0] as NormalizedProps)[name]) {
+      warn(`useModel() called with prop "${name}" which is not declared.`)
+      return ref() as any
+    } else if (isAry) {
+      if (name.length === 0) {
+        warn(`useModel() called with prop name length can not be zero(0).`)
+        return reactive({}) as any
+      }
+      for (const key of name) {
+        if (!(i.propsOptions[0] as NormalizedProps)[key]) {
+          warn(`useModel() called with prop "${name}" which is not declared.`)
+          return reactive({}) as any
+        }
+      }
+    }
   }
 
-  if (options && options.local) {
-    const proxy = ref<any>(props[name])
+  if (!isArray(name)) {
+    if (options && options.local) {
+      const proxy = ref<any>(props[name])
+      watch(
+        () => props[name],
+        v => (proxy.value = v)
+      )
+      watch(proxy, value => {
+        if (value !== props[name]) {
+          i.emit(`update:${name}`, value)
+        }
+      })
 
-    watch(
-      () => props[name],
-      v => (proxy.value = v)
-    )
-
-    watch(proxy, value => {
-      if (value !== props[name]) {
-        i.emit(`update:${name}`, value)
-      }
-    })
-
-    return proxy
+      return proxy
+    } else {
+      return {
+        __v_isRef: true,
+        get value() {
+          return props[name]
+        },
+        set value(value) {
+          i.emit(`update:${name}`, value)
+        }
+      } as any
+    }
   } else {
-    return {
-      __v_isRef: true,
-      get value() {
-        return props[name]
+    return new Proxy(props, {
+      get(target, key) {
+        return target[key as string]
       },
-      set value(value) {
-        i.emit(`update:${name}`, value)
+      set(_, key, value) {
+        i.emit(`update:${key as string}`, value)
+        return true
       }
-    } as any
+    }) as any
   }
 }
 
