@@ -1,3 +1,12 @@
+# [3.3.0-alpha.11](https://github.com/vuejs/core/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2023-04-17)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** normalize windows paths when resolving types ([271df09](https://github.com/vuejs/core/commit/271df09470c61d073185ba6cf3cf50358713c500))
+
+
+
 # [3.3.0-alpha.10](https://github.com/vuejs/core/compare/v3.3.0-alpha.9...v3.3.0-alpha.10) (2023-04-17)
 
 
