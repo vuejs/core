@@ -436,6 +436,35 @@ describe('resolveType', () => {
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
+
+    test('global types with ambient references', () => {
+      const files = {
+        // with references
+        '/backend.d.ts': `
+          declare namespace App.Data {
+            export type AircraftData = {
+              id: string
+              manufacturer: App.Data.Listings.ManufacturerData
+            }
+          }
+          declare namespace App.Data.Listings {
+            export type ManufacturerData = {
+              id: string
+            }
+          }
+        `
+      }
+
+      const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
+        globalTypeFiles: Object.keys(files)
+      })
+
+      expect(props).toStrictEqual({
+        id: ['String']
+        // manufacturer: ['String'] // TODO
+      })
+      // expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
   })
 
   describe('errors', () => {
