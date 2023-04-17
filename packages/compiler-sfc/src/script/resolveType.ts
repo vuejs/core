@@ -34,7 +34,7 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { join, extname, dirname } from 'path'
+import { join, posix, extname, dirname } from 'path'
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -616,7 +616,7 @@ function resolveTypeFromImport(
 
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = join(containingFile, '..', source)
+    const filename = (posix.join || join)(containingFile, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
