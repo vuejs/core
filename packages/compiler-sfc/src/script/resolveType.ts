@@ -744,6 +744,7 @@ const fileToScopeCache = createCache<TypeScope>()
  * @private
  */
 export function invalidateTypeCache(filename: string) {
+  filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
 }
