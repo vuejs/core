@@ -1,3 +1,12 @@
+# [3.3.0-alpha.12](https://github.com/vuejs/core/compare/v3.3.0-alpha.11...v3.3.0-alpha.12) (2023-04-18)
+
+
+### Bug Fixes
+
+* **compiler:** fix expression codegen for literal const bindings in non-inline mode ([0f77a2b](https://github.com/vuejs/core/commit/0f77a2b1d1047d66ccdfda70382d1a223886130c))
+
+
+
 # [3.3.0-alpha.11](https://github.com/vuejs/core/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2023-04-17)
 
 
