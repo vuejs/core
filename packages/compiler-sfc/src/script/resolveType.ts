@@ -159,7 +159,7 @@ function innerResolveTypeElements(
           return resolveBuiltin(ctx, node, typeName as any, scope)
         }
         return ctx.error(
-          `Unresolvable type reference or unsupported built-in utlility type`,
+          `Unresolvable type reference or unsupported built-in utility type`,
           node,
           scope
         )
