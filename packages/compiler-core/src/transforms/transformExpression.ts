@@ -197,13 +197,14 @@ export function processExpression(
         return genPropsAccessExp(bindingMetadata.__propsAliases![raw])
       }
     } else {
-      if (type && type.startsWith('setup')) {
+      if (
+        (type && type.startsWith('setup')) ||
+        type === BindingTypes.LITERAL_CONST
+      ) {
         // setup bindings in non-inline mode
         return `$setup.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         return `$props['${bindingMetadata.__propsAliases![raw]}']`
-      } else if (type === BindingTypes.LITERAL_CONST) {
-        return raw
       } else if (type) {
         return `$${type}.${raw}`
       }
