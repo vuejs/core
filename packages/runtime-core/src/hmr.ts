@@ -123,6 +123,8 @@ function reload(id: string, newComp: HMRComponent) {
     }
 
     // 3. invalidate options resolution cache
+    instance.appContext.propsCache.delete(instance.type as any)
+    instance.appContext.emitsCache.delete(instance.type as any)
     instance.appContext.optionsCache.delete(instance.type as any)
 
     // 4. actually update
