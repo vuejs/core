@@ -202,4 +202,16 @@ describe('sfc hoist static', () => {
     })
     assertCode(content)
   })
+
+  test('template binding access in inline mode', () => {
+    const { content } = compile(
+      `
+    <script setup>
+    const foo = 'bar'
+    </script>
+    <template>{{ foo }}</template>
+    `
+    )
+    expect(content).toMatch('_toDisplayString(foo)')
+  })
 })
