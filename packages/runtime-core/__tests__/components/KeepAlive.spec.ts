@@ -838,6 +838,15 @@ describe('KeepAlive', () => {
 
   test('should work with async component', async () => {
     let resolve: (comp: Component) => void
+    let resolve2: (comp: Component) => void
+
+    const AsyncComp2 = defineAsyncComponent(
+      () =>
+        new Promise(r => {
+          resolve2 = r as any
+        })
+    )
+
     const AsyncComp = defineAsyncComponent(
       () =>
         new Promise(r => {
@@ -850,7 +859,7 @@ describe('KeepAlive', () => {
     const App = {
       render: () => {
         return h(KeepAlive, { include: 'Foo' }, () =>
-          toggle.value ? h(AsyncComp, { ref: instanceRef }) : null
+          toggle.value ? h(AsyncComp, { ref: instanceRef }) : h(AsyncComp2)
         )
       }
     }
@@ -875,7 +884,15 @@ describe('KeepAlive', () => {
     instanceRef.value.count++
     toggle.value = false
     await nextTick()
-    expect(serializeInner(root)).toBe('<!---->')
+    resolve2!({
+      name: 'Bar',
+      data: () => ({ count: 10 }),
+      render() {
+        return h('div', this.count)
+      }
+    })
+    await timeout()
+    expect(serializeInner(root)).toBe('<div>10</div>')
 
     // toggle in, state should be maintained
     toggle.value = true
