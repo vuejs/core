@@ -25,7 +25,8 @@ import {
   UNKNOWN_TYPE,
   createGetCanonicalFileName,
   getId,
-  getImportedName
+  getImportedName,
+  normalizePath
 } from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
@@ -34,7 +35,7 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { join, extname, dirname } from 'path'
+import path from 'path'
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -577,8 +578,7 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
     return ctx.options.globalTypeFiles.map(file =>
-      // TODO: differentiate ambient vs non-ambient module
-      fileToScope(file, fs, ctx.options.babelParserPlugins, true)
+      fileToScope(normalizePath(file), fs, ctx.options.babelParserPlugins, true)
     )
   }
 }
@@ -616,7 +616,7 @@ function resolveTypeFromImport(
 
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = join(containingFile, '..', source)
+    const filename = path.join(containingFile, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
@@ -642,6 +642,8 @@ function resolveTypeFromImport(
   }
 
   if (resolved) {
+    resolved = normalizePath(resolved)
+
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
 
@@ -694,7 +696,8 @@ function resolveWithTS(
   let options: TS.CompilerOptions
   let cache: TS.ModuleResolutionCache | undefined
   if (configPath) {
-    const cached = tsConfigCache.get(configPath)
+    const normalizedConfigPath = normalizePath(configPath)
+    const cached = tsConfigCache.get(normalizedConfigPath)
     if (!cached) {
       // The only case where `fs` is NOT `ts.sys` is during tests.
       // parse config host requires an extra `readDirectory` method
@@ -709,7 +712,7 @@ function resolveWithTS(
       const parsed = ts.parseJsonConfigFileContent(
         ts.readConfigFile(configPath, fs.readFile).config,
         parseConfigHost,
-        dirname(configPath),
+        path.dirname(configPath),
         undefined,
         configPath
       )
@@ -719,7 +722,7 @@ function resolveWithTS(
         createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames),
         options
       )
-      tsConfigCache.set(configPath, { options, cache })
+      tsConfigCache.set(normalizedConfigPath, { options, cache })
     } else {
       ;({ options, cache } = cached)
     }
@@ -741,6 +744,7 @@ const fileToScopeCache = createCache<TypeScope>()
  * @private
  */
 export function invalidateTypeCache(filename: string) {
+  filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
 }
@@ -777,7 +781,7 @@ function parseFile(
   content: string,
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins']
 ): Statement[] {
-  const ext = extname(filename)
+  const ext = path.extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
