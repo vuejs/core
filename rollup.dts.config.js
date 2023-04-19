@@ -12,7 +12,13 @@ if (!existsSync('temp/packages')) {
   process.exit(1)
 }
 
-export default readdirSync('temp/packages').map(pkg => {
+const packages = readdirSync('temp/packages')
+const targets = process.env.TARGETS ? process.env.TARGETS.split(',') : null
+const targetPackages = targets
+  ? packages.filter(pkg => targets.includes(pkg))
+  : packages
+
+export default targetPackages.map(pkg => {
   return {
     input: `./temp/packages/${pkg}/src/index.d.ts`,
     output: {
