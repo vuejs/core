@@ -1,3 +1,52 @@
+# [3.3.0-alpha.12](https://github.com/vuejs/core/compare/v3.3.0-alpha.11...v3.3.0-alpha.12) (2023-04-18)
+
+
+### Bug Fixes
+
+* **compiler:** fix expression codegen for literal const bindings in non-inline mode ([0f77a2b](https://github.com/vuejs/core/commit/0f77a2b1d1047d66ccdfda70382d1a223886130c))
+
+
+
+# [3.3.0-alpha.11](https://github.com/vuejs/core/compare/v3.3.0-alpha.10...v3.3.0-alpha.11) (2023-04-17)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** normalize windows paths when resolving types ([271df09](https://github.com/vuejs/core/commit/271df09470c61d073185ba6cf3cf50358713c500))
+
+
+
+# [3.3.0-alpha.10](https://github.com/vuejs/core/compare/v3.3.0-alpha.9...v3.3.0-alpha.10) (2023-04-17)
+
+
+### Bug Fixes
+
+* **hmr:** invalidate cached props/emits options on hmr ([4b5b384](https://github.com/vuejs/core/commit/4b5b384485cf8f6124f6738b89e3d047358f3a11))
+* **runtime-core:** properly merge props and emits options from mixins ([#8052](https://github.com/vuejs/core/issues/8052)) ([c94ef02](https://github.com/vuejs/core/commit/c94ef02421d7422bc59d10cf2eee9f4e7dcea6c8)), closes [#7989](https://github.com/vuejs/core/issues/7989)
+
+
+### Features
+
+* **compiler-sfc:** expose type import deps on compiled script block ([8d8ddd6](https://github.com/vuejs/core/commit/8d8ddd686c832b2ea29b87ef47666b13c4ad5d4c))
+* **compiler-sfc:** expose type resolve APIs ([f22e32e](https://github.com/vuejs/core/commit/f22e32e365bf6292cb606cb7289609e82da8b790))
+* **compiler-sfc:** mark props destructure as experimental and require explicit opt-in ([6b13e04](https://github.com/vuejs/core/commit/6b13e04b4c83fcdbb180dc1d59f536a1309c2960))
+* **compiler-sfc:** support intersection and union types in macros ([d1f973b](https://github.com/vuejs/core/commit/d1f973bff82581fb335d6fc05623d1ad3d84fb7c)), closes [#7553](https://github.com/vuejs/core/issues/7553)
+* **compiler-sfc:** support limited built-in utility types in macros ([1cfab4c](https://github.com/vuejs/core/commit/1cfab4c695b0c28f549f8c97faee5099581792a7))
+* **compiler-sfc:** support mapped types, string types & template type in macros ([fb8ecc8](https://github.com/vuejs/core/commit/fb8ecc803e58bfef0971346c63fefc529812daa7))
+* **compiler-sfc:** support namespace members type in macros ([5ff40bb](https://github.com/vuejs/core/commit/5ff40bb0dc2918b7db15fe9f49db2a135a925572))
+* **compiler-sfc:** support relative imported types in macros ([8aa4ea8](https://github.com/vuejs/core/commit/8aa4ea81d6e4d3110aa1619cca594543da4c9b63))
+* **compiler-sfc:** support resolving type imports from modules ([3982bef](https://github.com/vuejs/core/commit/3982bef533b451d1b59fa243560184a13fe8c18c))
+* **compiler-sfc:** support specifying global types for sfc macros ([4e028b9](https://github.com/vuejs/core/commit/4e028b966991937c83fb2529973fd3d41080bb61)), closes [/github.com/vuejs/core/pull/8083#issuecomment-1508468713](https://github.com//github.com/vuejs/core/pull/8083/issues/issuecomment-1508468713)
+* **compiler-sfc:** support string indexed type in macros ([3f779dd](https://github.com/vuejs/core/commit/3f779ddbf85054c8915fa4537f8a79baab392d5c))
+* **compiler-sfc:** support string/number indexed types in macros ([760755f](https://github.com/vuejs/core/commit/760755f4f83680bee13ad546cdab2e48ade38dff))
+
+
+### Performance Improvements
+
+* **compiler:** use source-map-js ([19e17a9](https://github.com/vuejs/core/commit/19e17a951c3387cbd6a1597e6cd9048a4aad4528))
+
+
+
 # [3.3.0-alpha.9](https://github.com/vuejs/core/compare/v3.3.0-alpha.8...v3.3.0-alpha.9) (2023-04-08)
 
 
