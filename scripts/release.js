@@ -199,9 +199,9 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build'])
-    step('\nBuilding and testing types...')
-    await run('pnpm', ['test-dts'])
+    await run('pnpm', ['run', 'build', '--withTypes'])
+    step('\nTesting built types...')
+    await run('pnpm', ['test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
