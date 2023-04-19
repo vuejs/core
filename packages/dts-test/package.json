@@ -4,5 +4,5 @@
   "dependencies": {
     "vue": "workspace:*"
   },
-  "version": "3.3.0-alpha.9"
+  "version": "3.3.0-alpha.12"
 }
