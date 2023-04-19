@@ -100,7 +100,7 @@ importers:
     specifiers:
       '@babel/parser': ^7.21.3
       '@babel/types': ^7.21.3
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/shared': 3.3.0-alpha.12
       estree-walker: ^2.0.2
       source-map-js: ^1.0.2
     dependencies:
@@ -113,8 +113,8 @@ importers:
 
   packages/compiler-dom:
     specifiers:
-      '@vue/compiler-core': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/compiler-core': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/compiler-core': link:../compiler-core
       '@vue/shared': link:../shared
@@ -125,12 +125,12 @@ importers:
       '@babel/types': ^7.21.3
       '@types/estree': ^0.0.48
       '@types/lru-cache': ^5.1.0
-      '@vue/compiler-core': 3.3.0-alpha.9
-      '@vue/compiler-dom': 3.3.0-alpha.9
-      '@vue/compiler-ssr': 3.3.0-alpha.9
+      '@vue/compiler-core': 3.3.0-alpha.12
+      '@vue/compiler-dom': 3.3.0-alpha.12
+      '@vue/compiler-ssr': 3.3.0-alpha.12
       '@vue/consolidate': ^0.17.3
-      '@vue/reactivity-transform': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/reactivity-transform': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
       estree-walker: ^2.0.2
       hash-sum: ^2.0.0
       lru-cache: ^5.1.1
@@ -168,8 +168,8 @@ importers:
 
   packages/compiler-ssr:
     specifiers:
-      '@vue/compiler-dom': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/compiler-dom': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/shared': link:../shared
@@ -182,7 +182,7 @@ importers:
 
   packages/reactivity:
     specifiers:
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/shared': link:../shared
 
@@ -191,8 +191,8 @@ importers:
       '@babel/core': ^7.21.3
       '@babel/parser': ^7.20.15
       '@babel/types': ^7.21.3
-      '@vue/compiler-core': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/compiler-core': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
       estree-walker: ^2.0.2
       magic-string: ^0.30.0
     dependencies:
@@ -207,16 +207,16 @@ importers:
 
   packages/runtime-core:
     specifiers:
-      '@vue/reactivity': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/reactivity': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/reactivity': link:../reactivity
       '@vue/shared': link:../shared
 
   packages/runtime-dom:
     specifiers:
-      '@vue/runtime-core': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/runtime-core': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
       csstype: ^3.1.1
     dependencies:
       '@vue/runtime-core': link:../runtime-core
@@ -225,16 +225,16 @@ importers:
 
   packages/runtime-test:
     specifiers:
-      '@vue/runtime-core': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/runtime-core': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/runtime-core': link:../runtime-core
       '@vue/shared': link:../shared
 
   packages/server-renderer:
     specifiers:
-      '@vue/compiler-ssr': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/compiler-ssr': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/compiler-ssr': link:../compiler-ssr
       '@vue/shared': link:../shared
@@ -275,11 +275,11 @@ importers:
 
   packages/vue:
     specifiers:
-      '@vue/compiler-dom': 3.3.0-alpha.9
-      '@vue/compiler-sfc': 3.3.0-alpha.9
-      '@vue/runtime-dom': 3.3.0-alpha.9
-      '@vue/server-renderer': 3.3.0-alpha.9
-      '@vue/shared': 3.3.0-alpha.9
+      '@vue/compiler-dom': 3.3.0-alpha.12
+      '@vue/compiler-sfc': 3.3.0-alpha.12
+      '@vue/runtime-dom': 3.3.0-alpha.12
+      '@vue/server-renderer': 3.3.0-alpha.12
+      '@vue/shared': 3.3.0-alpha.12
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/compiler-sfc': link:../compiler-sfc
