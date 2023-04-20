@@ -1,3 +1,23 @@
+# [3.3.0-alpha.13](https://github.com/vuejs/core/compare/v3.3.0-alpha.12...v3.3.0-alpha.13) (2023-04-20)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** handle type merging + fix namespace access when inferring type ([d53e157](https://github.com/vuejs/core/commit/d53e157805678db7a3b9ca2fccc74530e1dfbc48)), closes [#8102](https://github.com/vuejs/core/issues/8102)
+* **compiler-sfc:** normalize filename when invalidating cache ([9b5a34b](https://github.com/vuejs/core/commit/9b5a34bf8c0d1b4c6ec3cf1434076b7e25065f84))
+* **hmr:** always traverse static children in dev ([f17a82c](https://github.com/vuejs/core/commit/f17a82c769cfb60ee6785ef5d34d91191d153542)), closes [#7921](https://github.com/vuejs/core/issues/7921) [#8100](https://github.com/vuejs/core/issues/8100)
+* **hmr:** force update cached slots during HMR ([94fa67a](https://github.com/vuejs/core/commit/94fa67a4f73b3646c8c1e29512a71b17bd56efc3)), closes [#7155](https://github.com/vuejs/core/issues/7155) [#7158](https://github.com/vuejs/core/issues/7158)
+
+
+### Features
+
+* **compiler-sfc:** support dynamic imports when resolving types ([4496456](https://github.com/vuejs/core/commit/4496456d7d9947560ef1e35ccb176b97a27bd8f4))
+* **compiler-sfc:** support export * when resolving types ([7c3ca3c](https://github.com/vuejs/core/commit/7c3ca3cc3e122fe273e80a950c57d492a7f0bf4a))
+* **compiler-sfc:** support ExtractPropTypes when resolving types ([50c0bbe](https://github.com/vuejs/core/commit/50c0bbe5221dbc1dc353d4960e69ec7c8ba12905)), closes [#8104](https://github.com/vuejs/core/issues/8104)
+* hasInjectionContext() for libraries ([#8111](https://github.com/vuejs/core/issues/8111)) ([5510ce3](https://github.com/vuejs/core/commit/5510ce385abfa151c07a5253cccf4abccabdd01d))
+
+
+
 # [3.3.0-alpha.12](https://github.com/vuejs/core/compare/v3.3.0-alpha.11...v3.3.0-alpha.12) (2023-04-18)
 
 

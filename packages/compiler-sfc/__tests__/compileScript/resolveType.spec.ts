@@ -207,6 +207,38 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: Partial', () => {
+    expect(
+      resolve(`
+    type T = { foo: number, bar: string }
+    defineProps<Partial<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: true
+      },
+      bar: {
+        optional: true
+      }
+    })
+  })
+
+  test('utility type: Required', () => {
+    expect(
+      resolve(`
+    type T = { foo?: number, bar?: string }
+    defineProps<Required<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: false
+      },
+      bar: {
+        optional: false
+      }
+    })
+  })
+
   test('utility type: Pick', () => {
     expect(
       resolve(`
@@ -369,6 +401,56 @@ describe('resolveType', () => {
     `).props
     ).toStrictEqual({
       foo: ['Number', 'String']
+    })
+  })
+
+  test('typeof', () => {
+    expect(
+      resolve(`
+      declare const a: string
+      defineProps<{ foo: typeof a }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
+  test('ExtractPropTypes (element-plus)', () => {
+    const { props, raw } = resolve(
+      `
+      import { ExtractPropTypes } from 'vue'
+      declare const props: {
+        foo: StringConstructor,
+        bar: {
+          type: import('foo').EpPropFinalized<BooleanConstructor>,
+          required: true
+        }
+      }
+      type Props = ExtractPropTypes<typeof props>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+    expect(raw.props.bar.optional).toBe(false)
+  })
+
+  test('ExtractPropTypes (antd)', () => {
+    const { props } = resolve(
+      `
+      declare const props: () => {
+        foo: StringConstructor,
+        bar: { type: PropType<boolean> }
+      }
+      type Props = Partial<import('vue').ExtractPropTypes<ReturnType<typeof props>>>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
     })
   })
 
@@ -659,6 +741,7 @@ function resolve(
   return {
     props,
     calls: raw.calls,
-    deps: ctx.deps
+    deps: ctx.deps,
+    raw
   }
 }
