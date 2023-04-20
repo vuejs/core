@@ -848,7 +848,8 @@ function baseCreateRenderer(
         areChildrenSVG,
         slotScopeIds
       )
-      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+      if (__DEV__) {
+        // necessary for HMR
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
@@ -1125,7 +1126,8 @@ function baseCreateRenderer(
           isSVG,
           slotScopeIds
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        if (__DEV__) {
+          // necessary for HMR
           traverseStaticChildren(n1, n2)
         } else if (
           // #2080 if the stable fragment has a key, it's a <template v-for> that may

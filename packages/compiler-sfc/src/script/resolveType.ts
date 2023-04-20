@@ -7,6 +7,7 @@ import {
   TSEnumDeclaration,
   TSExpressionWithTypeArguments,
   TSFunctionType,
+  TSImportType,
   TSIndexedAccessType,
   TSInterfaceDeclaration,
   TSMappedType,
@@ -18,6 +19,8 @@ import {
   TSType,
   TSTypeAnnotation,
   TSTypeElement,
+  TSTypeLiteral,
+  TSTypeQuery,
   TSTypeReference,
   TemplateLiteral
 } from '@babel/types'
@@ -65,10 +68,13 @@ export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
-type ScopeTypeNode = Node & {
-  // scope types always has ownerScope attached
+interface WithScope {
   _ownerScope: TypeScope
 }
+
+// scope types always has ownerScope attached
+type ScopeTypeNode = Node &
+  WithScope & { _ns?: TSModuleDeclaration & WithScope }
 
 export interface TypeScope {
   filename: string
@@ -77,9 +83,11 @@ export interface TypeScope {
   imports: Record<string, Import>
   types: Record<string, ScopeTypeNode>
   exportedTypes: Record<string, ScopeTypeNode>
+  declares: Record<string, ScopeTypeNode>
+  exportedDeclares: Record<string, ScopeTypeNode>
 }
 
-export interface WithScope {
+export interface MaybeWithScope {
   _ownerScope?: TypeScope
 }
 
@@ -100,7 +108,7 @@ interface ResolvedElements {
  */
 export function resolveTypeElements(
   ctx: TypeResolveContext,
-  node: Node & WithScope & { _resolvedElements?: ResolvedElements },
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
   scope?: TypeScope
 ): ResolvedElements {
   if (node._resolvedElements) {
@@ -146,23 +154,73 @@ function innerResolveTypeElements(
     }
     case 'TSExpressionWithTypeArguments': // referenced by interface extends
     case 'TSTypeReference': {
+      const typeName = getReferenceName(node)
+      if (
+        typeName === 'ExtractPropTypes' &&
+        node.typeParameters &&
+        scope.imports[typeName]?.source === 'vue'
+      ) {
+        return resolveExtractPropTypes(
+          resolveTypeElements(ctx, node.typeParameters.params[0], scope),
+          scope
+        )
+      }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
         return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       } else {
-        const typeName = getReferenceName(node)
-        if (
-          typeof typeName === 'string' &&
-          // @ts-ignore
-          SupportedBuiltinsSet.has(typeName)
-        ) {
-          return resolveBuiltin(ctx, node, typeName as any, scope)
+        if (typeof typeName === 'string') {
+          if (
+            // @ts-ignore
+            SupportedBuiltinsSet.has(typeName)
+          ) {
+            return resolveBuiltin(ctx, node, typeName as any, scope)
+          } else if (typeName === 'ReturnType' && node.typeParameters) {
+            // limited support, only reference types
+            const ret = resolveReturnType(
+              ctx,
+              node.typeParameters.params[0],
+              scope
+            )
+            if (ret) {
+              return resolveTypeElements(ctx, ret, scope)
+            }
+          }
         }
         return ctx.error(
-          `Unresolvable type reference or unsupported built-in utlility type`,
+          `Unresolvable type reference or unsupported built-in utility type`,
           node,
           scope
         )
+      }
+    }
+    case 'TSImportType': {
+      if (
+        getId(node.argument) === 'vue' &&
+        node.qualifier?.type === 'Identifier' &&
+        node.qualifier.name === 'ExtractPropTypes' &&
+        node.typeParameters
+      ) {
+        return resolveExtractPropTypes(
+          resolveTypeElements(ctx, node.typeParameters.params[0], scope),
+          scope
+        )
+      }
+      const sourceScope = importSourceToScope(
+        ctx,
+        node.argument,
+        scope,
+        node.argument.value
+      )
+      const resolved = resolveTypeReference(ctx, node, sourceScope)
+      if (resolved) {
+        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+      }
+    }
+    case 'TSTypeQuery': {
+      const resolved = resolveTypeReference(ctx, node, scope)
+      if (resolved) {
+        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       }
     }
   }
@@ -177,7 +235,7 @@ function typeElementsToMap(
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
-      ;(e as WithScope)._ownerScope = scope
+      ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
       if (name && !e.computed) {
         res.props[name] = e as ResolvedElements['props'][string]
@@ -218,7 +276,8 @@ function mergeElements(
             // @ts-ignore
             types: [baseProps[key], props[key]]
           },
-          baseProps[key]._ownerScope
+          baseProps[key]._ownerScope,
+          baseProps[key].optional || props[key].optional
         )
       }
     }
@@ -232,12 +291,14 @@ function mergeElements(
 function createProperty(
   key: Expression,
   typeAnnotation: TSType,
-  scope: TypeScope
-): TSPropertySignature & { _ownerScope: TypeScope } {
+  scope: TypeScope,
+  optional: boolean
+): TSPropertySignature & WithScope {
   return {
     type: 'TSPropertySignature',
     key,
     kind: 'get',
+    optional,
     typeAnnotation: {
       type: 'TSTypeAnnotation',
       typeAnnotation
@@ -248,7 +309,7 @@ function createProperty(
 
 function resolveInterfaceMembers(
   ctx: TypeResolveContext,
-  node: TSInterfaceDeclaration & WithScope,
+  node: TSInterfaceDeclaration & MaybeWithScope,
   scope: TypeScope
 ): ResolvedElements {
   const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
@@ -279,7 +340,8 @@ function resolveMappedType(
         name: key
       },
       node.typeAnnotation!,
-      scope
+      scope,
+      !!node.optional
     )
   }
   return res
@@ -289,7 +351,7 @@ function resolveIndexType(
   ctx: TypeResolveContext,
   node: TSIndexedAccessType,
   scope: TypeScope
-): (TSType & WithScope)[] {
+): (TSType & MaybeWithScope)[] {
   if (node.indexType.type === 'TSNumberKeyword') {
     return resolveArrayElementType(ctx, node.objectType, scope)
   }
@@ -308,7 +370,7 @@ function resolveIndexType(
   for (const key of keys) {
     const targetType = resolved.props[key]?.typeAnnotation?.typeAnnotation
     if (targetType) {
-      ;(targetType as TSType & WithScope)._ownerScope =
+      ;(targetType as TSType & MaybeWithScope)._ownerScope =
         resolved.props[key]._ownerScope
       types.push(targetType)
     }
@@ -451,8 +513,20 @@ function resolveBuiltin(
 ): ResolvedElements {
   const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
   switch (name) {
-    case 'Partial':
-    case 'Required':
+    case 'Partial': {
+      const res: ResolvedElements = { props: {}, calls: t.calls }
+      Object.keys(t.props).forEach(key => {
+        res.props[key] = { ...t.props[key], optional: true }
+      })
+      return res
+    }
+    case 'Required': {
+      const res: ResolvedElements = { props: {}, calls: t.calls }
+      Object.keys(t.props).forEach(key => {
+        res.props[key] = { ...t.props[key], optional: false }
+      })
+      return res
+    }
     case 'Readonly':
       return t
     case 'Pick': {
@@ -483,9 +557,15 @@ function resolveBuiltin(
   }
 }
 
+type ReferenceTypes =
+  | TSTypeReference
+  | TSExpressionWithTypeArguments
+  | TSImportType
+  | TSTypeQuery
+
 function resolveTypeReference(
   ctx: TypeResolveContext,
-  node: (TSTypeReference | TSExpressionWithTypeArguments) & {
+  node: ReferenceTypes & {
     _resolvedReference?: ScopeTypeNode
   },
   scope?: TypeScope,
@@ -508,58 +588,73 @@ function innerResolveTypeReference(
   ctx: TypeResolveContext,
   scope: TypeScope,
   name: string | string[],
-  node: TSTypeReference | TSExpressionWithTypeArguments,
+  node: ReferenceTypes,
   onlyExported: boolean
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
     if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
-      const types = onlyExported ? scope.exportedTypes : scope.types
-      if (types[name]) {
-        return types[name]
+      const lookupSource =
+        node.type === 'TSTypeQuery'
+          ? onlyExported
+            ? scope.exportedDeclares
+            : scope.declares
+          : onlyExported
+          ? scope.exportedTypes
+          : scope.types
+      if (lookupSource[name]) {
+        return lookupSource[name]
       } else {
         // fallback to global
         const globalScopes = resolveGlobalScope(ctx)
         if (globalScopes) {
           for (const s of globalScopes) {
-            if (s.types[name]) {
+            const src = node.type === 'TSTypeQuery' ? s.declares : s.types
+            if (src[name]) {
               ;(ctx.deps || (ctx.deps = new Set())).add(s.filename)
-              return s.types[name]
+              return src[name]
             }
           }
         }
       }
     }
   } else {
-    const ns = innerResolveTypeReference(
-      ctx,
-      scope,
-      name[0],
-      node,
-      onlyExported
-    )
-    if (ns && ns.type === 'TSModuleDeclaration') {
-      const childScope = moduleDeclToScope(ns, scope)
-      return innerResolveTypeReference(
-        ctx,
-        childScope,
-        name.length > 2 ? name.slice(1) : name[name.length - 1],
-        node,
-        !ns.declare
-      )
+    let ns = innerResolveTypeReference(ctx, scope, name[0], node, onlyExported)
+    if (ns) {
+      if (ns.type !== 'TSModuleDeclaration') {
+        // namespace merged with other types, attached as _ns
+        ns = ns._ns
+      }
+      if (ns) {
+        const childScope = moduleDeclToScope(ctx, ns, ns._ownerScope || scope)
+        return innerResolveTypeReference(
+          ctx,
+          childScope,
+          name.length > 2 ? name.slice(1) : name[name.length - 1],
+          node,
+          !ns.declare
+        )
+      }
     }
   }
 }
 
-function getReferenceName(
-  node: TSTypeReference | TSExpressionWithTypeArguments
-): string | string[] {
-  const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
-  if (ref.type === 'Identifier') {
+function getReferenceName(node: ReferenceTypes): string | string[] {
+  const ref =
+    node.type === 'TSTypeReference'
+      ? node.typeName
+      : node.type === 'TSExpressionWithTypeArguments'
+      ? node.expression
+      : node.type === 'TSImportType'
+      ? node.qualifier
+      : node.exprName
+  if (ref?.type === 'Identifier') {
     return ref.name
-  } else {
+  } else if (ref?.type === 'TSQualifiedName') {
     return qualifiedNameToPath(ref)
+  } else {
+    return 'default'
   }
 }
 
@@ -578,7 +673,7 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
     return ctx.options.globalTypeFiles.map(file =>
-      fileToScope(normalizePath(file), fs, ctx.options.babelParserPlugins, true)
+      fileToScope(ctx, normalizePath(file), true)
     )
   }
 }
@@ -596,27 +691,34 @@ type FS = NonNullable<SFCScriptCompileOptions['fs']>
 
 function resolveTypeFromImport(
   ctx: TypeResolveContext,
-  node: TSTypeReference | TSExpressionWithTypeArguments,
+  node: ReferenceTypes,
   name: string,
   scope: TypeScope
 ): ScopeTypeNode | undefined {
+  const { source, imported } = scope.imports[name]
+  const sourceScope = importSourceToScope(ctx, node, scope, source)
+  return resolveTypeReference(ctx, node, sourceScope, imported, true)
+}
+
+function importSourceToScope(
+  ctx: TypeResolveContext,
+  node: Node,
+  scope: TypeScope,
+  source: string
+): TypeScope {
   const fs: FS = ctx.options.fs || ts?.sys
   if (!fs) {
     ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
-      node
+      node,
+      scope
     )
   }
-
-  const containingFile = scope.filename
-  const { source, imported } = scope.imports[name]
-
-  let resolved: string | undefined
-
+  let resolved
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = path.join(containingFile, '..', source)
+    const filename = path.join(scope.filename, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
@@ -629,36 +731,22 @@ function resolveTypeFromImport(
     }
     if (!ts) {
       ctx.error(
-        `Failed to resolve type ${imported} from module ${JSON.stringify(
-          source
-        )}. ` +
+        `Failed to resolve import source ${JSON.stringify(source)}. ` +
           `typescript is required as a peer dep for vue in order ` +
           `to support resolving types from module imports.`,
         node,
         scope
       )
     }
-    resolved = resolveWithTS(containingFile, source, fs)
+    resolved = resolveWithTS(scope.filename, source, fs)
   }
-
   if (resolved) {
-    resolved = normalizePath(resolved)
-
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
-
-    return resolveTypeReference(
-      ctx,
-      node,
-      fileToScope(resolved, fs, ctx.options.babelParserPlugins),
-      imported,
-      true
-    )
+    return fileToScope(ctx, normalizePath(resolved))
   } else {
-    ctx.error(
-      `Failed to resolve import source ${JSON.stringify(
-        source
-      )} for type ${name}`,
+    return ctx.error(
+      `Failed to resolve import source ${JSON.stringify(source)}.`,
       node,
       scope
     )
@@ -750,28 +838,29 @@ export function invalidateTypeCache(filename: string) {
 }
 
 export function fileToScope(
+  ctx: TypeResolveContext,
   filename: string,
-  fs: FS,
-  parserPlugins: SFCScriptCompileOptions['babelParserPlugins'],
   asGlobal = false
 ): TypeScope {
   const cached = fileToScopeCache.get(filename)
   if (cached) {
     return cached
   }
-
+  // fs should be guaranteed to exist here
+  const fs = ctx.options.fs || ts?.sys
   const source = fs.readFile(filename) || ''
-  const body = parseFile(filename, source, parserPlugins)
+  const body = parseFile(filename, source, ctx.options.babelParserPlugins)
   const scope: TypeScope = {
     filename,
     source,
     offset: 0,
     imports: recordImports(body),
     types: Object.create(null),
-    exportedTypes: Object.create(null)
+    exportedTypes: Object.create(null),
+    declares: Object.create(null),
+    exportedDeclares: Object.create(null)
   }
-  recordTypes(body, scope, asGlobal)
-
+  recordTypes(ctx, body, scope, asGlobal)
   fileToScopeCache.set(filename, scope)
   return scope
 }
@@ -841,15 +930,18 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
         ? Object.create(ctx.userImports)
         : recordImports(body),
     types: Object.create(null),
-    exportedTypes: Object.create(null)
+    exportedTypes: Object.create(null),
+    declares: Object.create(null),
+    exportedDeclares: Object.create(null)
   }
 
-  recordTypes(body, scope)
+  recordTypes(ctx, body, scope)
 
   return (ctx.scope = scope)
 }
 
 function moduleDeclToScope(
+  ctx: TypeResolveContext,
   node: TSModuleDeclaration & { _resolvedChildScope?: TypeScope },
   parentScope: TypeScope
 ): TypeScope {
@@ -858,17 +950,34 @@ function moduleDeclToScope(
   }
   const scope: TypeScope = {
     ...parentScope,
+    imports: Object.create(parentScope.imports),
     types: Object.create(parentScope.types),
-    imports: Object.create(parentScope.imports)
+    declares: Object.create(parentScope.declares),
+    exportedTypes: Object.create(null),
+    exportedDeclares: Object.create(null)
   }
-  recordTypes((node.body as TSModuleBlock).body, scope)
+
+  if (node.body.type === 'TSModuleDeclaration') {
+    const decl = node.body as TSModuleDeclaration & WithScope
+    decl._ownerScope = scope
+    const id = getId(decl.id)
+    scope.types[id] = scope.exportedTypes[id] = decl
+  } else {
+    recordTypes(ctx, node.body.body, scope)
+  }
+
   return (node._resolvedChildScope = scope)
 }
 
 const importExportRE = /^Import|^Export/
 
-function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
-  const { types, exportedTypes, imports } = scope
+function recordTypes(
+  ctx: TypeResolveContext,
+  body: Statement[],
+  scope: TypeScope,
+  asGlobal = false
+) {
+  const { types, declares, exportedTypes, exportedDeclares, imports } = scope
   const isAmbient = asGlobal
     ? !body.some(s => importExportRE.test(s.type))
     : false
@@ -876,23 +985,23 @@ function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
     if (asGlobal) {
       if (isAmbient) {
         if ((stmt as any).declare) {
-          recordType(stmt, types)
+          recordType(stmt, types, declares)
         }
       } else if (stmt.type === 'TSModuleDeclaration' && stmt.global) {
         for (const s of (stmt.body as TSModuleBlock).body) {
-          recordType(s, types)
+          recordType(s, types, declares)
         }
       }
     } else {
-      recordType(stmt, types)
+      recordType(stmt, types, declares)
     }
   }
   if (!asGlobal) {
     for (const stmt of body) {
       if (stmt.type === 'ExportNamedDeclaration') {
         if (stmt.declaration) {
-          recordType(stmt.declaration, types)
-          recordType(stmt.declaration, exportedTypes)
+          recordType(stmt.declaration, types, declares)
+          recordType(stmt.declaration, exportedTypes, exportedDeclares)
         } else {
           for (const spec of stmt.specifiers) {
             if (spec.type === 'ExportSpecifier') {
@@ -919,32 +1028,82 @@ function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
             }
           }
         }
+      } else if (stmt.type === 'ExportAllDeclaration') {
+        const sourceScope = importSourceToScope(
+          ctx,
+          stmt.source,
+          scope,
+          stmt.source.value
+        )
+        Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
       }
     }
   }
   for (const key of Object.keys(types)) {
-    types[key]._ownerScope = scope
+    const node = types[key]
+    node._ownerScope = scope
+    if (node._ns) node._ns._ownerScope = scope
+  }
+  for (const key of Object.keys(declares)) {
+    declares[key]._ownerScope = scope
   }
 }
 
-function recordType(node: Node, types: Record<string, Node>) {
+function recordType(
+  node: Node,
+  types: Record<string, Node>,
+  declares: Record<string, Node>
+) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
-    case 'TSModuleDeclaration':
-    case 'ClassDeclaration': {
-      const id = node.id.type === 'Identifier' ? node.id.name : node.id.value
-      types[id] = node
+    case 'TSModuleDeclaration': {
+      const id = getId(node.id)
+      let existing = types[id]
+      if (existing) {
+        if (node.type === 'TSModuleDeclaration') {
+          if (existing.type === 'TSModuleDeclaration') {
+            mergeNamespaces(existing as typeof node, node)
+          } else {
+            attachNamespace(existing, node)
+          }
+          break
+        }
+        if (existing.type === 'TSModuleDeclaration') {
+          // replace and attach namespace
+          types[id] = node
+          attachNamespace(node, existing)
+          break
+        }
+
+        if (existing.type !== node.type) {
+          // type-level error
+          break
+        }
+        if (node.type === 'TSInterfaceDeclaration') {
+          ;(existing as typeof node).body.body.push(...node.body.body)
+        } else {
+          ;(existing as typeof node).members.push(...node.members)
+        }
+      } else {
+        types[id] = node
+      }
       break
     }
+    case 'ClassDeclaration':
+      types[getId(node.id)] = node
+      break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
+      break
+    case 'TSDeclareFunction':
+      if (node.id) declares[node.id.name] = node
       break
     case 'VariableDeclaration': {
       if (node.declare) {
         for (const decl of node.declarations) {
           if (decl.id.type === 'Identifier' && decl.id.typeAnnotation) {
-            types[decl.id.name] = (
+            declares[decl.id.name] = (
               decl.id.typeAnnotation as TSTypeAnnotation
             ).typeAnnotation
           }
@@ -952,6 +1111,47 @@ function recordType(node: Node, types: Record<string, Node>) {
       }
       break
     }
+  }
+}
+
+function mergeNamespaces(to: TSModuleDeclaration, from: TSModuleDeclaration) {
+  const toBody = to.body
+  const fromBody = from.body
+  if (toBody.type === 'TSModuleDeclaration') {
+    if (fromBody.type === 'TSModuleDeclaration') {
+      // both decl
+      mergeNamespaces(toBody, fromBody)
+    } else {
+      // to: decl -> from: block
+      fromBody.body.push({
+        type: 'ExportNamedDeclaration',
+        declaration: toBody,
+        exportKind: 'type',
+        specifiers: []
+      })
+    }
+  } else if (fromBody.type === 'TSModuleDeclaration') {
+    // to: block <- from: decl
+    toBody.body.push({
+      type: 'ExportNamedDeclaration',
+      declaration: fromBody,
+      exportKind: 'type',
+      specifiers: []
+    })
+  } else {
+    // both block
+    toBody.body.push(...fromBody.body)
+  }
+}
+
+function attachNamespace(
+  to: Node & { _ns?: TSModuleDeclaration },
+  ns: TSModuleDeclaration
+) {
+  if (!to._ns) {
+    to._ns = ns
+  } else {
+    mergeNamespaces(to._ns, ns)
   }
 }
 
@@ -977,7 +1177,7 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 
 export function inferRuntimeType(
   ctx: TypeResolveContext,
-  node: Node & WithScope,
+  node: Node & MaybeWithScope,
   scope = node._ownerScope || ctxToScope(ctx)
 ): string[] {
   switch (node.type) {
@@ -1034,12 +1234,12 @@ export function inferRuntimeType(
           return [UNKNOWN_TYPE]
       }
 
-    case 'TSTypeReference':
+    case 'TSTypeReference': {
+      const resolved = resolveTypeReference(ctx, node, scope)
+      if (resolved) {
+        return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+      }
       if (node.typeName.type === 'Identifier') {
-        const resolved = resolveTypeReference(ctx, node, scope)
-        if (resolved) {
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
-        }
         switch (node.typeName.name) {
           case 'Array':
           case 'Function':
@@ -1096,7 +1296,8 @@ export function inferRuntimeType(
         }
       }
       // cannot infer, fallback to UNKNOWN: ThisParameterType
-      return [UNKNOWN_TYPE]
+      break
+    }
 
     case 'TSParenthesizedType':
       return inferRuntimeType(ctx, node.typeAnnotation, scope)
@@ -1120,17 +1321,42 @@ export function inferRuntimeType(
         const types = resolveIndexType(ctx, node, scope)
         return flattenTypes(ctx, types, scope)
       } catch (e) {
-        // avoid hard error, fallback to unknown
-        return [UNKNOWN_TYPE]
+        break
       }
     }
 
     case 'ClassDeclaration':
       return ['Object']
 
-    default:
-      return [UNKNOWN_TYPE] // no runtime check
+    case 'TSImportType': {
+      try {
+        const sourceScope = importSourceToScope(
+          ctx,
+          node.argument,
+          scope,
+          node.argument.value
+        )
+        const resolved = resolveTypeReference(ctx, node, sourceScope)
+        if (resolved) {
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+        }
+      } catch (e) {}
+      break
+    }
+
+    case 'TSTypeQuery': {
+      const id = node.exprName
+      if (id.type === 'Identifier') {
+        // typeof only support identifier in local scope
+        const matched = scope.declares[id.name]
+        if (matched) {
+          return inferRuntimeType(ctx, matched, matched._ownerScope)
+        }
+      }
+      break
+    }
   }
+  return [UNKNOWN_TYPE] // no runtime check
 }
 
 function flattenTypes(
@@ -1165,4 +1391,131 @@ function inferEnumType(node: TSEnumDeclaration): string[] {
     }
   }
   return types.size ? [...types] : ['Number']
+}
+
+/**
+ * support for the `ExtractPropTypes` helper - it's non-exhaustive, mostly
+ * tailored towards popular component libs like element-plus and antd-vue.
+ */
+function resolveExtractPropTypes(
+  { props }: ResolvedElements,
+  scope: TypeScope
+): ResolvedElements {
+  const res: ResolvedElements = { props: {} }
+  for (const key in props) {
+    const raw = props[key]
+    res.props[key] = reverseInferType(
+      raw.key,
+      raw.typeAnnotation!.typeAnnotation,
+      scope
+    )
+  }
+  return res
+}
+
+function reverseInferType(
+  key: Expression,
+  node: TSType,
+  scope: TypeScope,
+  optional = true,
+  checkObjectSyntax = true
+): TSPropertySignature & WithScope {
+  if (checkObjectSyntax && node.type === 'TSTypeLiteral') {
+    // check { type: xxx }
+    const typeType = findStaticPropertyType(node, 'type')
+    if (typeType) {
+      const requiredType = findStaticPropertyType(node, 'required')
+      const optional =
+        requiredType &&
+        requiredType.type === 'TSLiteralType' &&
+        requiredType.literal.type === 'BooleanLiteral'
+          ? !requiredType.literal.value
+          : true
+      return reverseInferType(key, typeType, scope, optional, false)
+    }
+  } else if (
+    node.type === 'TSTypeReference' &&
+    node.typeName.type === 'Identifier'
+  ) {
+    if (node.typeName.name.endsWith('Constructor')) {
+      return createProperty(
+        key,
+        ctorToType(node.typeName.name),
+        scope,
+        optional
+      )
+    } else if (node.typeName.name === 'PropType' && node.typeParameters) {
+      // PropType<{}>
+      return createProperty(key, node.typeParameters.params[0], scope, optional)
+    }
+  }
+  if (
+    (node.type === 'TSTypeReference' || node.type === 'TSImportType') &&
+    node.typeParameters
+  ) {
+    // try if we can catch Foo.Bar<XXXConstructor>
+    for (const t of node.typeParameters.params) {
+      const inferred = reverseInferType(key, t, scope, optional)
+      if (inferred) return inferred
+    }
+  }
+  return createProperty(key, { type: `TSNullKeyword` }, scope, optional)
+}
+
+function ctorToType(ctorType: string): TSType {
+  const ctor = ctorType.slice(0, -11)
+  switch (ctor) {
+    case 'String':
+    case 'Number':
+    case 'Boolean':
+      return { type: `TS${ctor}Keyword` }
+    case 'Array':
+    case 'Function':
+    case 'Object':
+    case 'Set':
+    case 'Map':
+    case 'WeakSet':
+    case 'WeakMap':
+    case 'Date':
+    case 'Promise':
+      return {
+        type: 'TSTypeReference',
+        typeName: { type: 'Identifier', name: ctor }
+      }
+  }
+  // fallback to null
+  return { type: `TSNullKeyword` }
+}
+
+function findStaticPropertyType(node: TSTypeLiteral, key: string) {
+  const prop = node.members.find(
+    m =>
+      m.type === 'TSPropertySignature' &&
+      !m.computed &&
+      getId(m.key) === key &&
+      m.typeAnnotation
+  )
+  return prop && prop.typeAnnotation!.typeAnnotation
+}
+
+function resolveReturnType(
+  ctx: TypeResolveContext,
+  arg: Node,
+  scope: TypeScope
+) {
+  let resolved: Node | undefined = arg
+  if (
+    arg.type === 'TSTypeReference' ||
+    arg.type === 'TSTypeQuery' ||
+    arg.type === 'TSImportType'
+  ) {
+    resolved = resolveTypeReference(ctx, arg, scope)
+  }
+  if (!resolved) return
+  if (resolved.type === 'TSFunctionType') {
+    return resolved.typeAnnotation?.typeAnnotation
+  }
+  if (resolved.type === 'TSDeclareFunction') {
+    return resolved.returnType
+  }
 }
