@@ -233,34 +233,6 @@ const props = defineProps({ foo: String })
     })
   })
 
-  test('w/ Required<interface>', () => {
-    const { content, bindings } = compile(`
-    <script setup lang="ts">
-    interface Props { x?: number }
-    defineProps<Required<Props>>()
-    </script>
-    `)
-    assertCode(content)
-    expect(content).toMatch(`x: { type: Number, required: true }`)
-    expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
-    })
-  })
-
-  test('w/ Partial<interface>', () => {
-    const { content, bindings } = compile(`
-    <script setup lang="ts">
-    interface Props { x: number }
-    defineProps<Partial<Props>>()
-    </script>
-    `)
-    assertCode(content)
-    expect(content).toMatch(`x: { type: Number, required: false }`)
-    expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
-    })
-  })
-
   test('w/ extends interface', () => {
     const { content, bindings } = compile(`
     <script lang="ts">

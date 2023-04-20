@@ -207,6 +207,38 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: Partial', () => {
+    expect(
+      resolve(`
+    type T = { foo: number, bar: string }
+    defineProps<Partial<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: true
+      },
+      bar: {
+        optional: true
+      }
+    })
+  })
+
+  test('utility type: Required', () => {
+    expect(
+      resolve(`
+    type T = { foo?: number, bar?: string }
+    defineProps<Required<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: false
+      },
+      bar: {
+        optional: false
+      }
+    })
+  })
+
   test('utility type: Pick', () => {
     expect(
       resolve(`

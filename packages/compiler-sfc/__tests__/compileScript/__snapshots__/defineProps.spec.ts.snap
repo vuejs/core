@@ -38,44 +38,6 @@ return { props }
 })"
 `;
 
-exports[`defineProps > w/ Partial<interface> 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-interface Props { x: number }
-    
-export default /*#__PURE__*/_defineComponent({
-  props: {
-    x: { type: Number, required: false }
-  },
-  setup(__props: any, { expose: __expose }) {
-  __expose();
-
-    
-    
-return {  }
-}
-
-})"
-`;
-
-exports[`defineProps > w/ Required<interface> 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-interface Props { x?: number }
-    
-export default /*#__PURE__*/_defineComponent({
-  props: {
-    x: { type: Number, required: true }
-  },
-  setup(__props: any, { expose: __expose }) {
-  __expose();
-
-    
-    
-return {  }
-}
-
-})"
-`;
-
 exports[`defineProps > w/ TS assertion 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
