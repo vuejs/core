@@ -101,7 +101,7 @@ export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
 
 const windowsSlashRE = /\\/g
 export function normalizePath(p: string) {
-  // in the browser build, the polyfill doesn't expose posix, but defualts to
+  // in the browser build, the polyfill doesn't expose posix, but defaults to
   // posix behavior.
   return (path.posix || path).normalize(p.replace(windowsSlashRE, '/'))
 }
