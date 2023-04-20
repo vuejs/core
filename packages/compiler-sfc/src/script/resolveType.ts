@@ -516,16 +516,14 @@ function resolveBuiltin(
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
       Object.keys(t.props).forEach(key => {
-        res.props[key] = t.props[key]
-        res.props[key].optional = true
+        res.props[key] = { ...t.props[key], optional: true }
       })
       return res
     }
     case 'Required': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
       Object.keys(t.props).forEach(key => {
-        res.props[key] = t.props[key]
-        res.props[key].optional = false
+        res.props[key] = { ...t.props[key], optional: false }
       })
       return res
     }
