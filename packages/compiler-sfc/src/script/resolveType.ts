@@ -65,10 +65,13 @@ export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
 
 type Import = Pick<ImportBinding, 'source' | 'imported'>
 
-type ScopeTypeNode = Node & {
-  // scope types always has ownerScope attached
+interface WithScope {
   _ownerScope: TypeScope
 }
+
+// scope types always has ownerScope attached
+type ScopeTypeNode = Node &
+  WithScope & { _ns?: TSModuleDeclaration & WithScope }
 
 export interface TypeScope {
   filename: string
@@ -79,7 +82,7 @@ export interface TypeScope {
   exportedTypes: Record<string, ScopeTypeNode>
 }
 
-export interface WithScope {
+export interface MaybeWithScope {
   _ownerScope?: TypeScope
 }
 
@@ -100,7 +103,7 @@ interface ResolvedElements {
  */
 export function resolveTypeElements(
   ctx: TypeResolveContext,
-  node: Node & WithScope & { _resolvedElements?: ResolvedElements },
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
   scope?: TypeScope
 ): ResolvedElements {
   if (node._resolvedElements) {
@@ -177,7 +180,7 @@ function typeElementsToMap(
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
-      ;(e as WithScope)._ownerScope = scope
+      ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
       if (name && !e.computed) {
         res.props[name] = e as ResolvedElements['props'][string]
@@ -248,7 +251,7 @@ function createProperty(
 
 function resolveInterfaceMembers(
   ctx: TypeResolveContext,
-  node: TSInterfaceDeclaration & WithScope,
+  node: TSInterfaceDeclaration & MaybeWithScope,
   scope: TypeScope
 ): ResolvedElements {
   const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
@@ -289,7 +292,7 @@ function resolveIndexType(
   ctx: TypeResolveContext,
   node: TSIndexedAccessType,
   scope: TypeScope
-): (TSType & WithScope)[] {
+): (TSType & MaybeWithScope)[] {
   if (node.indexType.type === 'TSNumberKeyword') {
     return resolveArrayElementType(ctx, node.objectType, scope)
   }
@@ -308,7 +311,7 @@ function resolveIndexType(
   for (const key of keys) {
     const targetType = resolved.props[key]?.typeAnnotation?.typeAnnotation
     if (targetType) {
-      ;(targetType as TSType & WithScope)._ownerScope =
+      ;(targetType as TSType & MaybeWithScope)._ownerScope =
         resolved.props[key]._ownerScope
       types.push(targetType)
     }
@@ -532,22 +535,22 @@ function innerResolveTypeReference(
       }
     }
   } else {
-    const ns = innerResolveTypeReference(
-      ctx,
-      scope,
-      name[0],
-      node,
-      onlyExported
-    )
-    if (ns && ns.type === 'TSModuleDeclaration') {
-      const childScope = moduleDeclToScope(ns, scope)
-      return innerResolveTypeReference(
-        ctx,
-        childScope,
-        name.length > 2 ? name.slice(1) : name[name.length - 1],
-        node,
-        !ns.declare
-      )
+    let ns = innerResolveTypeReference(ctx, scope, name[0], node, onlyExported)
+    if (ns) {
+      if (ns.type !== 'TSModuleDeclaration') {
+        // namespace merged with other types, attached as _ns
+        ns = ns._ns
+      }
+      if (ns) {
+        const childScope = moduleDeclToScope(ns, ns._ownerScope || scope)
+        return innerResolveTypeReference(
+          ctx,
+          childScope,
+          name.length > 2 ? name.slice(1) : name[name.length - 1],
+          node,
+          !ns.declare
+        )
+      }
     }
   }
 }
@@ -771,7 +774,6 @@ export function fileToScope(
     exportedTypes: Object.create(null)
   }
   recordTypes(body, scope, asGlobal)
-
   fileToScopeCache.set(filename, scope)
   return scope
 }
@@ -858,10 +860,21 @@ function moduleDeclToScope(
   }
   const scope: TypeScope = {
     ...parentScope,
+    imports: Object.create(parentScope.imports),
+    // TODO this seems wrong
     types: Object.create(parentScope.types),
-    imports: Object.create(parentScope.imports)
+    exportedTypes: Object.create(null)
   }
-  recordTypes((node.body as TSModuleBlock).body, scope)
+
+  if (node.body.type === 'TSModuleDeclaration') {
+    const decl = node.body as TSModuleDeclaration & WithScope
+    decl._ownerScope = scope
+    const id = getId(decl.id)
+    scope.types[id] = scope.exportedTypes[id] = decl
+  } else {
+    recordTypes(node.body.body, scope)
+  }
+
   return (node._resolvedChildScope = scope)
 }
 
@@ -923,7 +936,9 @@ function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
     }
   }
   for (const key of Object.keys(types)) {
-    types[key]._ownerScope = scope
+    const node = types[key]
+    node._ownerScope = scope
+    if (node._ns) node._ns._ownerScope = scope
   }
 }
 
@@ -931,12 +946,42 @@ function recordType(node: Node, types: Record<string, Node>) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
-    case 'TSModuleDeclaration':
-    case 'ClassDeclaration': {
-      const id = node.id.type === 'Identifier' ? node.id.name : node.id.value
-      types[id] = node
+    case 'TSModuleDeclaration': {
+      const id = getId(node.id)
+      let existing = types[id]
+      if (existing) {
+        if (node.type === 'TSModuleDeclaration') {
+          if (existing.type === 'TSModuleDeclaration') {
+            mergeNamespaces(existing as typeof node, node)
+          } else {
+            attachNamespace(existing, node)
+          }
+          break
+        }
+        if (existing.type === 'TSModuleDeclaration') {
+          // replace and attach namespace
+          types[id] = node
+          attachNamespace(node, existing)
+          break
+        }
+
+        if (existing.type !== node.type) {
+          // type-level error
+          break
+        }
+        if (node.type === 'TSInterfaceDeclaration') {
+          ;(existing as typeof node).body.body.push(...node.body.body)
+        } else {
+          ;(existing as typeof node).members.push(...node.members)
+        }
+      } else {
+        types[id] = node
+      }
       break
     }
+    case 'ClassDeclaration':
+      types[getId(node.id)] = node
+      break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
       break
@@ -952,6 +997,47 @@ function recordType(node: Node, types: Record<string, Node>) {
       }
       break
     }
+  }
+}
+
+function mergeNamespaces(to: TSModuleDeclaration, from: TSModuleDeclaration) {
+  const toBody = to.body
+  const fromBody = from.body
+  if (toBody.type === 'TSModuleDeclaration') {
+    if (fromBody.type === 'TSModuleDeclaration') {
+      // both decl
+      mergeNamespaces(toBody, fromBody)
+    } else {
+      // to: decl -> from: block
+      fromBody.body.push({
+        type: 'ExportNamedDeclaration',
+        declaration: toBody,
+        exportKind: 'type',
+        specifiers: []
+      })
+    }
+  } else if (fromBody.type === 'TSModuleDeclaration') {
+    // to: block <- from: decl
+    toBody.body.push({
+      type: 'ExportNamedDeclaration',
+      declaration: fromBody,
+      exportKind: 'type',
+      specifiers: []
+    })
+  } else {
+    // both block
+    toBody.body.push(...fromBody.body)
+  }
+}
+
+function attachNamespace(
+  to: Node & { _ns?: TSModuleDeclaration },
+  ns: TSModuleDeclaration
+) {
+  if (!to._ns) {
+    to._ns = ns
+  } else {
+    mergeNamespaces(to._ns, ns)
   }
 }
 
@@ -977,7 +1063,7 @@ function recordImport(node: Node, imports: TypeScope['imports']) {
 
 export function inferRuntimeType(
   ctx: TypeResolveContext,
-  node: Node & WithScope,
+  node: Node & MaybeWithScope,
   scope = node._ownerScope || ctxToScope(ctx)
 ): string[] {
   switch (node.type) {
@@ -1035,11 +1121,11 @@ export function inferRuntimeType(
       }
 
     case 'TSTypeReference':
+      const resolved = resolveTypeReference(ctx, node, scope)
+      if (resolved) {
+        return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+      }
       if (node.typeName.type === 'Identifier') {
-        const resolved = resolveTypeReference(ctx, node, scope)
-        if (resolved) {
-          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
-        }
         switch (node.typeName.name) {
           case 'Array':
           case 'Function':
