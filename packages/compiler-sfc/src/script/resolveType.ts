@@ -542,7 +542,7 @@ function innerResolveTypeReference(
         ns = ns._ns
       }
       if (ns) {
-        const childScope = moduleDeclToScope(ns, ns._ownerScope || scope)
+        const childScope = moduleDeclToScope(ctx, ns, ns._ownerScope || scope)
         return innerResolveTypeReference(
           ctx,
           childScope,
@@ -581,7 +581,7 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
     return ctx.options.globalTypeFiles.map(file =>
-      fileToScope(normalizePath(file), fs, ctx.options.babelParserPlugins, true)
+      fileToScope(ctx, normalizePath(file), true)
     )
   }
 }
@@ -603,23 +603,36 @@ function resolveTypeFromImport(
   name: string,
   scope: TypeScope
 ): ScopeTypeNode | undefined {
+  const { source, imported } = scope.imports[name]
+  const resolved = resolveImportSource(ctx, node, scope, source)
+  return resolveTypeReference(
+    ctx,
+    node,
+    fileToScope(ctx, resolved),
+    imported,
+    true
+  )
+}
+
+function resolveImportSource(
+  ctx: TypeResolveContext,
+  node: Node,
+  scope: TypeScope,
+  source: string
+): string {
   const fs: FS = ctx.options.fs || ts?.sys
   if (!fs) {
     ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
-      node
+      node,
+      scope
     )
   }
-
-  const containingFile = scope.filename
-  const { source, imported } = scope.imports[name]
-
-  let resolved: string | undefined
-
+  let resolved
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = path.join(containingFile, '..', source)
+    const filename = path.join(scope.filename, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
@@ -632,36 +645,22 @@ function resolveTypeFromImport(
     }
     if (!ts) {
       ctx.error(
-        `Failed to resolve type ${imported} from module ${JSON.stringify(
-          source
-        )}. ` +
+        `Failed to resolve import source ${JSON.stringify(source)}. ` +
           `typescript is required as a peer dep for vue in order ` +
           `to support resolving types from module imports.`,
         node,
         scope
       )
     }
-    resolved = resolveWithTS(containingFile, source, fs)
+    resolved = resolveWithTS(scope.filename, source, fs)
   }
-
   if (resolved) {
-    resolved = normalizePath(resolved)
-
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
-
-    return resolveTypeReference(
-      ctx,
-      node,
-      fileToScope(resolved, fs, ctx.options.babelParserPlugins),
-      imported,
-      true
-    )
+    return normalizePath(resolved)
   } else {
-    ctx.error(
-      `Failed to resolve import source ${JSON.stringify(
-        source
-      )} for type ${name}`,
+    return ctx.error(
+      `Failed to resolve import source ${JSON.stringify(source)}.`,
       node,
       scope
     )
@@ -753,18 +752,18 @@ export function invalidateTypeCache(filename: string) {
 }
 
 export function fileToScope(
+  ctx: TypeResolveContext,
   filename: string,
-  fs: FS,
-  parserPlugins: SFCScriptCompileOptions['babelParserPlugins'],
   asGlobal = false
 ): TypeScope {
   const cached = fileToScopeCache.get(filename)
   if (cached) {
     return cached
   }
-
+  // fs should be guaranteed to exist here
+  const fs = ctx.options.fs || ts?.sys
   const source = fs.readFile(filename) || ''
-  const body = parseFile(filename, source, parserPlugins)
+  const body = parseFile(filename, source, ctx.options.babelParserPlugins)
   const scope: TypeScope = {
     filename,
     source,
@@ -773,7 +772,7 @@ export function fileToScope(
     types: Object.create(null),
     exportedTypes: Object.create(null)
   }
-  recordTypes(body, scope, asGlobal)
+  recordTypes(ctx, body, scope, asGlobal)
   fileToScopeCache.set(filename, scope)
   return scope
 }
@@ -846,12 +845,13 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
     exportedTypes: Object.create(null)
   }
 
-  recordTypes(body, scope)
+  recordTypes(ctx, body, scope)
 
   return (ctx.scope = scope)
 }
 
 function moduleDeclToScope(
+  ctx: TypeResolveContext,
   node: TSModuleDeclaration & { _resolvedChildScope?: TypeScope },
   parentScope: TypeScope
 ): TypeScope {
@@ -872,7 +872,7 @@ function moduleDeclToScope(
     const id = getId(decl.id)
     scope.types[id] = scope.exportedTypes[id] = decl
   } else {
-    recordTypes(node.body.body, scope)
+    recordTypes(ctx, node.body.body, scope)
   }
 
   return (node._resolvedChildScope = scope)
@@ -880,7 +880,12 @@ function moduleDeclToScope(
 
 const importExportRE = /^Import|^Export/
 
-function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
+function recordTypes(
+  ctx: TypeResolveContext,
+  body: Statement[],
+  scope: TypeScope,
+  asGlobal = false
+) {
   const { types, exportedTypes, imports } = scope
   const isAmbient = asGlobal
     ? !body.some(s => importExportRE.test(s.type))
@@ -932,6 +937,15 @@ function recordTypes(body: Statement[], scope: TypeScope, asGlobal = false) {
             }
           }
         }
+      } else if (stmt.type === 'ExportAllDeclaration') {
+        const targetFile = resolveImportSource(
+          ctx,
+          stmt.source,
+          scope,
+          stmt.source.value
+        )
+        const targetScope = fileToScope(ctx, targetFile)
+        Object.assign(scope.exportedTypes, targetScope.exportedTypes)
       }
     }
   }

@@ -454,6 +454,24 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export *)', () => {
+      const files = {
+        '/foo.ts': `export * from './bar'`,
+        '/bar.ts': 'export type P = { bar: string }'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
@@ -563,10 +581,10 @@ describe('resolveType', () => {
       )
     })
 
-    test('failed improt source resolve', () => {
+    test('failed import source resolve', () => {
       expect(() =>
         resolve(`import { X } from './foo'; defineProps<X>()`)
-      ).toThrow(`Failed to resolve import source "./foo" for type X`)
+      ).toThrow(`Failed to resolve import source "./foo"`)
     })
 
     test('should not error on unresolved type when inferring runtime type', () => {
