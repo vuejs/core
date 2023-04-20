@@ -73,3 +73,12 @@ export function inject(
     warn(`inject() can only be used inside setup() or functional components.`)
   }
 }
+
+/**
+ * Returns true if `inject()` can be used without warning about being called in the wrong place (e.g. outside of
+ * setup()). This is used by libraries that want to use `inject()` internally without triggering a warning to the end
+ * user. One example is `useRoute()` in `vue-router`.
+ */
+export function hasInjectionContext(): boolean {
+  return !!(currentInstance || currentRenderingInstance || currentApp)
+}
