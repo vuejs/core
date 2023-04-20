@@ -7,6 +7,7 @@ import {
   TSEnumDeclaration,
   TSExpressionWithTypeArguments,
   TSFunctionType,
+  TSImportType,
   TSIndexedAccessType,
   TSInterfaceDeclaration,
   TSMappedType,
@@ -168,6 +169,17 @@ function innerResolveTypeElements(
         )
       }
     }
+    case 'TSImportType':
+      const sourceScope = importSourceToScope(
+        ctx,
+        node.argument,
+        scope,
+        node.argument.value
+      )
+      const resolved = resolveTypeReference(ctx, node, sourceScope)
+      if (resolved) {
+        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+      }
   }
   return ctx.error(`Unresolvable type: ${node.type}`, node, scope)
 }
@@ -486,9 +498,14 @@ function resolveBuiltin(
   }
 }
 
+type ReferenceTypes =
+  | TSTypeReference
+  | TSExpressionWithTypeArguments
+  | TSImportType
+
 function resolveTypeReference(
   ctx: TypeResolveContext,
-  node: (TSTypeReference | TSExpressionWithTypeArguments) & {
+  node: ReferenceTypes & {
     _resolvedReference?: ScopeTypeNode
   },
   scope?: TypeScope,
@@ -511,7 +528,7 @@ function innerResolveTypeReference(
   ctx: TypeResolveContext,
   scope: TypeScope,
   name: string | string[],
-  node: TSTypeReference | TSExpressionWithTypeArguments,
+  node: ReferenceTypes,
   onlyExported: boolean
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
@@ -555,11 +572,16 @@ function innerResolveTypeReference(
   }
 }
 
-function getReferenceName(
-  node: TSTypeReference | TSExpressionWithTypeArguments
-): string | string[] {
-  const ref = node.type === 'TSTypeReference' ? node.typeName : node.expression
-  if (ref.type === 'Identifier') {
+function getReferenceName(node: ReferenceTypes): string | string[] {
+  const ref =
+    node.type === 'TSTypeReference'
+      ? node.typeName
+      : node.type === 'TSExpressionWithTypeArguments'
+      ? node.expression
+      : node.qualifier
+  if (!ref) {
+    return 'default'
+  } else if (ref.type === 'Identifier') {
     return ref.name
   } else {
     return qualifiedNameToPath(ref)
@@ -599,27 +621,21 @@ type FS = NonNullable<SFCScriptCompileOptions['fs']>
 
 function resolveTypeFromImport(
   ctx: TypeResolveContext,
-  node: TSTypeReference | TSExpressionWithTypeArguments,
+  node: ReferenceTypes,
   name: string,
   scope: TypeScope
 ): ScopeTypeNode | undefined {
   const { source, imported } = scope.imports[name]
-  const resolved = resolveImportSource(ctx, node, scope, source)
-  return resolveTypeReference(
-    ctx,
-    node,
-    fileToScope(ctx, resolved),
-    imported,
-    true
-  )
+  const sourceScope = importSourceToScope(ctx, node, scope, source)
+  return resolveTypeReference(ctx, node, sourceScope, imported, true)
 }
 
-function resolveImportSource(
+function importSourceToScope(
   ctx: TypeResolveContext,
   node: Node,
   scope: TypeScope,
   source: string
-): string {
+): TypeScope {
   const fs: FS = ctx.options.fs || ts?.sys
   if (!fs) {
     ctx.error(
@@ -657,7 +673,7 @@ function resolveImportSource(
   if (resolved) {
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
-    return normalizePath(resolved)
+    return fileToScope(ctx, normalizePath(resolved))
   } else {
     return ctx.error(
       `Failed to resolve import source ${JSON.stringify(source)}.`,
@@ -938,14 +954,13 @@ function recordTypes(
           }
         }
       } else if (stmt.type === 'ExportAllDeclaration') {
-        const targetFile = resolveImportSource(
+        const sourceScope = importSourceToScope(
           ctx,
           stmt.source,
           scope,
           stmt.source.value
         )
-        const targetScope = fileToScope(ctx, targetFile)
-        Object.assign(scope.exportedTypes, targetScope.exportedTypes)
+        Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
       }
     }
   }
@@ -1134,7 +1149,7 @@ export function inferRuntimeType(
           return [UNKNOWN_TYPE]
       }
 
-    case 'TSTypeReference':
+    case 'TSTypeReference': {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
         return inferRuntimeType(ctx, resolved, resolved._ownerScope)
@@ -1197,6 +1212,7 @@ export function inferRuntimeType(
       }
       // cannot infer, fallback to UNKNOWN: ThisParameterType
       return [UNKNOWN_TYPE]
+    }
 
     case 'TSParenthesizedType':
       return inferRuntimeType(ctx, node.typeAnnotation, scope)
@@ -1227,6 +1243,19 @@ export function inferRuntimeType(
 
     case 'ClassDeclaration':
       return ['Object']
+
+    case 'TSImportType': {
+      const sourceScope = importSourceToScope(
+        ctx,
+        node.argument,
+        scope,
+        node.argument.value
+      )
+      const resolved = resolveTypeReference(ctx, node, sourceScope)
+      if (resolved) {
+        return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+      }
+    }
 
     default:
       return [UNKNOWN_TYPE] // no runtime check
