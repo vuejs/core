@@ -513,8 +513,20 @@ function resolveBuiltin(
 ): ResolvedElements {
   const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
   switch (name) {
-    case 'Partial':
-    case 'Required':
+    case 'Partial': {
+      const res: ResolvedElements = { props: {}, calls: t.calls }
+      Object.keys(t.props).forEach(key => {
+        res.props[key] = { ...t.props[key], optional: true }
+      })
+      return res
+    }
+    case 'Required': {
+      const res: ResolvedElements = { props: {}, calls: t.calls }
+      Object.keys(t.props).forEach(key => {
+        res.props[key] = { ...t.props[key], optional: false }
+      })
+      return res
+    }
     case 'Readonly':
       return t
     case 'Pick': {
