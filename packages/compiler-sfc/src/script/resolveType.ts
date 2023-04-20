@@ -1235,26 +1235,25 @@ export function inferRuntimeType(
       try {
         const types = resolveIndexType(ctx, node, scope)
         return flattenTypes(ctx, types, scope)
-      } catch (e) {
-        // avoid hard error, fallback to unknown
-        return [UNKNOWN_TYPE]
-      }
+      } catch (e) {}
     }
 
     case 'ClassDeclaration':
       return ['Object']
 
     case 'TSImportType': {
-      const sourceScope = importSourceToScope(
-        ctx,
-        node.argument,
-        scope,
-        node.argument.value
-      )
-      const resolved = resolveTypeReference(ctx, node, sourceScope)
-      if (resolved) {
-        return inferRuntimeType(ctx, resolved, resolved._ownerScope)
-      }
+      try {
+        const sourceScope = importSourceToScope(
+          ctx,
+          node.argument,
+          scope,
+          node.argument.value
+        )
+        const resolved = resolveTypeReference(ctx, node, sourceScope)
+        if (resolved) {
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+        }
+      } catch (e) {}
     }
 
     default:
