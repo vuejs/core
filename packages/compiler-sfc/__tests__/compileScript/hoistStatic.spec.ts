@@ -1,6 +1,6 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { SFCScriptCompileOptions } from '../../src'
+import { compileSFCScript, assertCode } from '../utils'
 
 describe('sfc hoist static', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
@@ -201,5 +201,17 @@ describe('sfc hoist static', () => {
       foo: BindingTypes.SETUP_CONST
     })
     assertCode(content)
+  })
+
+  test('template binding access in inline mode', () => {
+    const { content } = compile(
+      `
+    <script setup>
+    const foo = 'bar'
+    </script>
+    <template>{{ foo }}</template>
+    `
+    )
+    expect(content).toMatch('_toDisplayString(foo)')
   })
 })
