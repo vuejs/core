@@ -294,6 +294,84 @@ describe('resolveType', () => {
     })
   })
 
+  test('interface merging', () => {
+    expect(
+      resolve(`
+      interface Foo {
+        a: string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo['a'],
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      namespace Foo {
+        export type B = number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo.B
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging with other types', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('enum merging', () => {
+    expect(
+      resolve(`
+      enum Foo {
+        A = 1
+      }
+      enum Foo {
+        B = 'hi'
+      }
+      defineProps<{
+        foo: Foo
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['Number', 'String']
+    })
+  })
+
   describe('external type imports', () => {
     const files = {
       '/foo.ts': 'export type P = { foo: number }',
@@ -435,6 +513,34 @@ describe('resolveType', () => {
         bar: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('global types with ambient references', () => {
+      const files = {
+        // with references
+        '/backend.d.ts': `
+          declare namespace App.Data {
+            export type AircraftData = {
+              id: string
+              manufacturer: App.Data.Listings.ManufacturerData
+            }
+          }
+          declare namespace App.Data.Listings {
+            export type ManufacturerData = {
+              id: string
+            }
+          }
+        `
+      }
+
+      const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
+        globalTypeFiles: Object.keys(files)
+      })
+
+      expect(props).toStrictEqual({
+        id: ['String'],
+        manufacturer: ['Object']
+      })
     })
   })
 
