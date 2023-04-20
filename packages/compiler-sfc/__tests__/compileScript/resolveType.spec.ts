@@ -372,6 +372,56 @@ describe('resolveType', () => {
     })
   })
 
+  test('typeof', () => {
+    expect(
+      resolve(`
+      declare const a: string
+      defineProps<{ foo: typeof a }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
+  test('ExtractPropTypes (element-plus)', () => {
+    const { props, raw } = resolve(
+      `
+      import { ExtractPropTypes } from 'vue'
+      declare const props: {
+        foo: StringConstructor,
+        bar: {
+          type: import('foo').EpPropFinalized<BooleanConstructor>,
+          required: true
+        }
+      }
+      type Props = ExtractPropTypes<typeof props>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+    expect(raw.props.bar.optional).toBe(false)
+  })
+
+  test('ExtractPropTypes (antd)', () => {
+    const { props } = resolve(
+      `
+      declare const props: () => {
+        foo: StringConstructor,
+        bar: { type: PropType<boolean> }
+      }
+      type Props = Partial<import('vue').ExtractPropTypes<ReturnType<typeof props>>>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+  })
+
   describe('external type imports', () => {
     const files = {
       '/foo.ts': 'export type P = { foo: number }',
@@ -659,6 +709,7 @@ function resolve(
   return {
     props,
     calls: raw.calls,
-    deps: ctx.deps
+    deps: ctx.deps,
+    raw
   }
 }
