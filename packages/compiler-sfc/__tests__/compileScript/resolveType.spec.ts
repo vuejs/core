@@ -207,6 +207,38 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: Partial', () => {
+    expect(
+      resolve(`
+    type T = { foo: number, bar: string }
+    defineProps<Partial<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: true
+      },
+      bar: {
+        optional: true
+      }
+    })
+  })
+
+  test('utility type: Required', () => {
+    expect(
+      resolve(`
+    type T = { foo?: number, bar?: string }
+    defineProps<Required<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: false
+      },
+      bar: {
+        optional: false
+      }
+    })
+  })
+
   test('utility type: Pick', () => {
     expect(
       resolve(`
@@ -294,6 +326,134 @@ describe('resolveType', () => {
     })
   })
 
+  test('interface merging', () => {
+    expect(
+      resolve(`
+      interface Foo {
+        a: string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo['a'],
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      namespace Foo {
+        export type B = number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo.B
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging with other types', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('enum merging', () => {
+    expect(
+      resolve(`
+      enum Foo {
+        A = 1
+      }
+      enum Foo {
+        B = 'hi'
+      }
+      defineProps<{
+        foo: Foo
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['Number', 'String']
+    })
+  })
+
+  test('typeof', () => {
+    expect(
+      resolve(`
+      declare const a: string
+      defineProps<{ foo: typeof a }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
+  test('ExtractPropTypes (element-plus)', () => {
+    const { props, raw } = resolve(
+      `
+      import { ExtractPropTypes } from 'vue'
+      declare const props: {
+        foo: StringConstructor,
+        bar: {
+          type: import('foo').EpPropFinalized<BooleanConstructor>,
+          required: true
+        }
+      }
+      type Props = ExtractPropTypes<typeof props>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+    expect(raw.props.bar.optional).toBe(false)
+  })
+
+  test('ExtractPropTypes (antd)', () => {
+    const { props } = resolve(
+      `
+      declare const props: () => {
+        foo: StringConstructor,
+        bar: { type: PropType<boolean> }
+      }
+      type Props = Partial<import('vue').ExtractPropTypes<ReturnType<typeof props>>>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+  })
+
   describe('external type imports', () => {
     const files = {
       '/foo.ts': 'export type P = { foo: number }',
@@ -376,6 +536,42 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export *)', () => {
+      const files = {
+        '/foo.ts': `export * from './bar'`,
+        '/bar.ts': 'export type P = { bar: string }'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (dynamic import)', () => {
+      const files = {
+        '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
+        '/bar.ts': 'export type N = number'
+      }
+      const { props, deps } = resolve(
+        `
+        defineProps<import('./foo').P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
@@ -436,6 +632,34 @@ describe('resolveType', () => {
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
+
+    test('global types with ambient references', () => {
+      const files = {
+        // with references
+        '/backend.d.ts': `
+          declare namespace App.Data {
+            export type AircraftData = {
+              id: string
+              manufacturer: App.Data.Listings.ManufacturerData
+            }
+          }
+          declare namespace App.Data.Listings {
+            export type ManufacturerData = {
+              id: string
+            }
+          }
+        `
+      }
+
+      const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
+        globalTypeFiles: Object.keys(files)
+      })
+
+      expect(props).toStrictEqual({
+        id: ['String'],
+        manufacturer: ['Object']
+      })
+    })
   })
 
   describe('errors', () => {
@@ -457,10 +681,10 @@ describe('resolveType', () => {
       )
     })
 
-    test('failed improt source resolve', () => {
+    test('failed import source resolve', () => {
       expect(() =>
         resolve(`import { X } from './foo'; defineProps<X>()`)
-      ).toThrow(`Failed to resolve import source "./foo" for type X`)
+      ).toThrow(`Failed to resolve import source "./foo"`)
     })
 
     test('should not error on unresolved type when inferring runtime type', () => {
@@ -517,6 +741,7 @@ function resolve(
   return {
     props,
     calls: raw.calls,
-    deps: ctx.deps
+    deps: ctx.deps,
+    raw
   }
 }

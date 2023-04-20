@@ -537,4 +537,35 @@ describe('hot module replacement', () => {
     render(h(Foo), root)
     expect(serializeInner(root)).toBe('bar')
   })
+
+  // #7155 - force HMR on slots content update
+  test('force update slot content change', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-computed-parent'
+    const childId = 'test-force-computed-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      computed: {
+        slotContent() {
+          return this.$slots.default?.()
+        }
+      },
+      render: compileToFunction(`<component :is="() => slotContent" />`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child>1</Child>`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    rerender(parentId, compileToFunction(`<Child>2</Child>`))
+    expect(serializeInner(root)).toBe(`2`)
+  })
 })
