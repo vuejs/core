@@ -44,6 +44,7 @@ return { a }
 })"
 `;
 
+<<<<<<< HEAD
 exports[`SFC compile <script setup> > <script> after <script setup> the script content not end with \`\\n\` 1`] = `
 "import { x } from './x'
     const n = 1
@@ -59,6 +60,8 @@ return { n, get x() { return x } }
 }"
 `;
 
+=======
+>>>>>>> main
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
 "function fn() {
         return \\"hello, world\\";
@@ -627,6 +630,7 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
+<<<<<<< HEAD
 exports[`SFC compile <script setup> > defineEmits() 1`] = `
 "export default {
   emits: ['foo', 'bar'],
@@ -828,6 +832,8 @@ return { props, bar }
 }"
 `;
 
+=======
+>>>>>>> main
 exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
 "export default {
   props: ['item'],
@@ -1489,6 +1495,7 @@ return { Foo }
 })"
 `;
 
+<<<<<<< HEAD
 exports[`SFC compile <script setup> > with TypeScript > defineEmits w/ type (exported interface) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Emits { (e: 'foo' | 'bar'): void }
@@ -2005,6 +2012,8 @@ return {  }
 })"
 `;
 
+=======
+>>>>>>> main
 exports[`SFC compile <script setup> > with TypeScript > hoist type declarations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 export interface Foo {}
@@ -2071,6 +2080,7 @@ return { D, C, B, Foo }
 })"
 `;
 
+<<<<<<< HEAD
 exports[`SFC compile <script setup> > with TypeScript > withDefaults (dynamic) 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 import { defaults } from './foo'
@@ -2236,6 +2246,8 @@ return { props }
 })"
 `;
 
+=======
+>>>>>>> main
 exports[`SFC genDefaultAs > <script setup> only 1`] = `
 "const a = 1
 
