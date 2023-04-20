@@ -294,6 +294,84 @@ describe('resolveType', () => {
     })
   })
 
+  test('interface merging', () => {
+    expect(
+      resolve(`
+      interface Foo {
+        a: string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo['a'],
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      namespace Foo {
+        export type B = number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo.B
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('namespace merging with other types', () => {
+    expect(
+      resolve(`
+      namespace Foo {
+        export type A = string
+      }
+      interface Foo {
+        b: number
+      }
+      defineProps<{
+        foo: Foo.A,
+        bar: Foo['b']
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number']
+    })
+  })
+
+  test('enum merging', () => {
+    expect(
+      resolve(`
+      enum Foo {
+        A = 1
+      }
+      enum Foo {
+        B = 'hi'
+      }
+      defineProps<{
+        foo: Foo
+      }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['Number', 'String']
+    })
+  })
+
   describe('external type imports', () => {
     const files = {
       '/foo.ts': 'export type P = { foo: number }',
@@ -376,6 +454,42 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export *)', () => {
+      const files = {
+        '/foo.ts': `export * from './bar'`,
+        '/bar.ts': 'export type P = { bar: string }'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (dynamic import)', () => {
+      const files = {
+        '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
+        '/bar.ts': 'export type N = number'
+      }
+      const { props, deps } = resolve(
+        `
+        defineProps<import('./foo').P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
@@ -436,6 +550,34 @@ describe('resolveType', () => {
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
+
+    test('global types with ambient references', () => {
+      const files = {
+        // with references
+        '/backend.d.ts': `
+          declare namespace App.Data {
+            export type AircraftData = {
+              id: string
+              manufacturer: App.Data.Listings.ManufacturerData
+            }
+          }
+          declare namespace App.Data.Listings {
+            export type ManufacturerData = {
+              id: string
+            }
+          }
+        `
+      }
+
+      const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
+        globalTypeFiles: Object.keys(files)
+      })
+
+      expect(props).toStrictEqual({
+        id: ['String'],
+        manufacturer: ['Object']
+      })
+    })
   })
 
   describe('errors', () => {
@@ -457,10 +599,10 @@ describe('resolveType', () => {
       )
     })
 
-    test('failed improt source resolve', () => {
+    test('failed import source resolve', () => {
       expect(() =>
         resolve(`import { X } from './foo'; defineProps<X>()`)
-      ).toThrow(`Failed to resolve import source "./foo" for type X`)
+      ).toThrow(`Failed to resolve import source "./foo"`)
     })
 
     test('should not error on unresolved type when inferring runtime type', () => {
