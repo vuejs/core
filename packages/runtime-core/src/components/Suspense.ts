@@ -35,6 +35,12 @@ export interface SuspenseProps {
   onPending?: () => void
   onFallback?: () => void
   timeout?: string | number
+  /**
+   * Allow suspense to be captured by parent suspense
+   *
+   * @default false
+   */
+  suspensible?: boolean
 }
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
@@ -401,7 +407,7 @@ let hasWarned = false
 
 function createSuspenseBoundary(
   vnode: VNode,
-  parent: SuspenseBoundary | null,
+  parentSuspense: SuspenseBoundary | null,
   parentComponent: ComponentInternalInstance | null,
   container: RendererElement,
   hiddenContainer: RendererElement,
@@ -429,6 +435,17 @@ function createSuspenseBoundary(
     o: { parentNode, remove }
   } = rendererInternals
 
+  // if set `suspensible: true`, set the current suspense as a dep of parent suspense
+  let parentSuspenseId: number | undefined
+  const isSuspensible =
+    vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  if (isSuspensible) {
+    if (parentSuspense?.pendingBranch) {
+      parentSuspenseId = parentSuspense?.pendingId
+      parentSuspense.deps++
+    }
+  }
+
   const timeout = vnode.props ? toNumber(vnode.props.timeout) : undefined
   if (__DEV__) {
     assertNumber(timeout, `Suspense timeout`)
@@ -436,7 +453,7 @@ function createSuspenseBoundary(
 
   const suspense: SuspenseBoundary = {
     vnode,
-    parent,
+    parent: parentSuspense,
     parentComponent,
     isSVG,
     container,
@@ -527,6 +544,20 @@ function createSuspenseBoundary(
         queuePostFlushCb(effects)
       }
       suspense.effects = []
+
+      // resolve parent suspense if all async deps are resolved
+      if (isSuspensible) {
+        if (
+          parentSuspense &&
+          parentSuspense.pendingBranch &&
+          parentSuspenseId === parentSuspense.pendingId
+        ) {
+          parentSuspense.deps--
+          if (parentSuspense.deps === 0) {
+            parentSuspense.resolve()
+          }
+        }
+      }
 
       // invoke @resolve event
       triggerEvent(vnode, 'onResolve')
