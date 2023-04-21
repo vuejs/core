@@ -99,6 +99,7 @@ export const enum ErrorCodes {
 
   // deprecations
   DEPRECATION_VNODE_HOOKS,
+  DEPRECATION_V_IS,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
@@ -183,7 +184,8 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
   // deprecations
-  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted.`,
+  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support will be removed in 3.4.`,
+  [ErrorCodes.DEPRECATION_V_IS]: `v-is="component-name" has been deprecated. Use is="vue:component-name" instead. v-is support will be removed in 3.4.`,
 
   // just to fulfill types
   [ErrorCodes.__EXTEND_POINT__]: ``
