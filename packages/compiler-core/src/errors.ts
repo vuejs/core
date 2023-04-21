@@ -97,6 +97,9 @@ export const enum ErrorCodes {
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
 
+  // deprecations
+  DEPRECATION_VNODE_HOOKS,
+
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
@@ -178,6 +181,9 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
+
+  // deprecations
+  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted.`,
 
   // just to fulfill types
   [ErrorCodes.__EXTEND_POINT__]: ``
