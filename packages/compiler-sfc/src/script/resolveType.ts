@@ -362,14 +362,11 @@ function resolveClassMembers(
 ): ResolvedElements {
   const base = classElementsToMap(ctx, node.body.body, node._ownerScope)
   if (node.superClass) {
-    const { props, calls } = resolveTypeElements(ctx, node.superClass, scope)
+    const { props } = resolveTypeElements(ctx, node.superClass, scope)
     for (const key in props) {
       if (!hasOwn(base.props, key)) {
         base.props[key] = props[key]
       }
-    }
-    if (calls) {
-      ;(base.calls || (base.calls = [])).push(...calls)
     }
   }
   return base
