@@ -78,18 +78,6 @@ const emit = defineEmits(['a', 'b'])
     expect(content).toMatch(`emits: ["foo", "bar"]`)
   })
 
-  test('w/ InstanceType', () => {
-    const { content } = compile(`
-    <script setup lang="ts">
-    class A { bar() {}; }
-    type T = InstanceType<typeof A>
-    const emit = defineEmits<T>()
-    </script>
-    `)
-    assertCode(content)
-    expect(content).toMatch(`emits: ["bar"]`)
-  })
-
   test('w/ type (exported interface)', () => {
     const { content } = compile(`
     <script setup lang="ts">

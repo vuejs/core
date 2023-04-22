@@ -102,7 +102,7 @@ interface ResolvedElements {
       _ownerScope: TypeScope
     }
   >
-  calls?: (TSCallSignatureDeclaration | TSFunctionType | ClassMethod)[]
+  calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
 }
 
 /**
@@ -270,7 +270,7 @@ function classElementsToMap(
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
-    if (e.type === 'ClassProperty') {
+    if (e.type === 'ClassProperty' || e.type === 'ClassMethod') {
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
       if (name && !e.computed) {
@@ -282,8 +282,6 @@ function classElementsToMap(
           scope
         )
       }
-    } else if (e.type === 'ClassMethod') {
-      ;(res.calls || (res.calls = [])).push(e)
     }
   }
   return res
@@ -1276,6 +1274,7 @@ export function inferRuntimeType(
             scope
           )
         }
+      case 'ClassMethod':
       case 'TSMethodSignature':
       case 'TSFunctionType':
         return ['Function']

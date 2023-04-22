@@ -208,7 +208,7 @@ describe('resolveType', () => {
   })
 
   test('utility type: InstanceType', () => {
-    const { props, calls } = resolve(`
+    const { props } = resolve(`
     class B { baz = ''; bazz() {}; }
     class A extends B { foo = 0; bar() {}; }
     type T = InstanceType<typeof A>
@@ -216,9 +216,10 @@ describe('resolveType', () => {
   `)
     expect(props).toStrictEqual({
       baz: ['String'],
-      foo: ['Number']
+      foo: ['Number'],
+      bar: ['Function'],
+      bazz: ['Function']
     })
-    expect(calls?.length).toBe(2)
   })
 
   test('utility type: Partial', () => {
