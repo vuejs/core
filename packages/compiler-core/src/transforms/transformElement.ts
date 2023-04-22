@@ -210,13 +210,14 @@ export const transformElement: NodeTransform = (node, context) => {
       if (__DEV__) {
         if (patchFlag < 0) {
           // special flags (negative and mutually exclusive)
-          vnodePatchFlag = patchFlag + ` /* ${PatchFlagNames[patchFlag]} */`
+          vnodePatchFlag =
+            patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
         } else {
           // bitwise flags
           const flagNames = Object.keys(PatchFlagNames)
             .map(Number)
             .filter(n => n > 0 && patchFlag & n)
-            .map(n => PatchFlagNames[n])
+            .map(n => PatchFlagNames[n as PatchFlags])
             .join(`, `)
           vnodePatchFlag = patchFlag + ` /* ${flagNames} */`
         }
@@ -284,9 +285,14 @@ export function resolveComponentType(
     }
   }
 
-  // 1.5 v-is (TODO: Deprecate)
+  // 1.5 v-is (TODO: remove in 3.4)
   const isDir = !isExplicitDynamic && findDir(node, 'is')
   if (isDir && isDir.exp) {
+    if (__DEV__) {
+      context.onWarn(
+        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
+      )
+    }
     return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
       isDir.exp
     ])
@@ -360,7 +366,8 @@ function resolveSetupReference(name: string, context: TransformContext) {
 
   const fromConst =
     checkType(BindingTypes.SETUP_CONST) ||
-    checkType(BindingTypes.SETUP_REACTIVE_CONST)
+    checkType(BindingTypes.SETUP_REACTIVE_CONST) ||
+    checkType(BindingTypes.LITERAL_CONST)
   if (fromConst) {
     return context.inline
       ? // in inline mode, const setup bindings (e.g. imports) can be used as-is

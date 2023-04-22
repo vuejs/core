@@ -26,7 +26,6 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
-import { VNode } from '@vue/runtime-core'
 import * as CSS from 'csstype'
 
 export interface CSSProperties
@@ -1021,7 +1020,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   zoomAndPan?: string
 }
 
-interface IntrinsicElementAttributes {
+export interface IntrinsicElementAttributes {
   a: AnchorHTMLAttributes
   abbr: HTMLAttributes
   address: HTMLAttributes
@@ -1321,42 +1320,16 @@ type EventHandlers<E> = {
     : (payload: E[K]) => void
 }
 
-// use namespace import to avoid collision with generated types which use
-// named imports.
-import * as RuntimeCore from '@vue/runtime-core'
+import { VNodeRef } from '@vue/runtime-core'
 
-type ReservedProps = {
+export type ReservedProps = {
   key?: string | number | symbol
-  ref?: RuntimeCore.VNodeRef
+  ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
 }
 
-type ElementAttrs<T> = T & ReservedProps
-
-type NativeElements = {
-  [K in keyof IntrinsicElementAttributes]: ElementAttrs<
-    IntrinsicElementAttributes[K]
-  >
+export type NativeElements = {
+  [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
+    ReservedProps
 }
-
-declare global {
-  namespace JSX {
-    interface Element extends VNode {}
-    interface ElementClass {
-      $props: {}
-    }
-    interface ElementAttributesProperty {
-      $props: {}
-    }
-    interface IntrinsicElements extends NativeElements {
-      // allow arbitrary elements
-      // @ts-ignore suppress ts:2374 = Duplicate string index signature.
-      [name: string]: any
-    }
-    interface IntrinsicAttributes extends ReservedProps {}
-  }
-}
-
-// suppress ts:2669
-export {}
