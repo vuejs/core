@@ -85,7 +85,11 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
       )
     }
     for (const call of calls) {
-      extractEventNames(call.parameters[0], emits)
+      if (call.type === 'ClassMethod') {
+        extractEventNames(call.key as Identifier, emits)
+      } else {
+        extractEventNames(call.parameters[0], emits)
+      }
     }
   }
 
@@ -96,29 +100,32 @@ function extractEventNames(
   eventName: Identifier | RestElement,
   emits: Set<string>
 ) {
-  if (
-    eventName.type === 'Identifier' &&
-    eventName.typeAnnotation &&
-    eventName.typeAnnotation.type === 'TSTypeAnnotation'
-  ) {
-    const typeNode = eventName.typeAnnotation.typeAnnotation
-    if (typeNode.type === 'TSLiteralType') {
-      if (
-        typeNode.literal.type !== 'UnaryExpression' &&
-        typeNode.literal.type !== 'TemplateLiteral'
-      ) {
-        emits.add(String(typeNode.literal.value))
-      }
-    } else if (typeNode.type === 'TSUnionType') {
-      for (const t of typeNode.types) {
+  if (eventName.type === 'Identifier') {
+    if (
+      eventName.typeAnnotation &&
+      eventName.typeAnnotation.type === 'TSTypeAnnotation'
+    ) {
+      const typeNode = eventName.typeAnnotation.typeAnnotation
+      if (typeNode.type === 'TSLiteralType') {
         if (
-          t.type === 'TSLiteralType' &&
-          t.literal.type !== 'UnaryExpression' &&
-          t.literal.type !== 'TemplateLiteral'
+          typeNode.literal.type !== 'UnaryExpression' &&
+          typeNode.literal.type !== 'TemplateLiteral'
         ) {
-          emits.add(String(t.literal.value))
+          emits.add(String(typeNode.literal.value))
+        }
+      } else if (typeNode.type === 'TSUnionType') {
+        for (const t of typeNode.types) {
+          if (
+            t.type === 'TSLiteralType' &&
+            t.literal.type !== 'UnaryExpression' &&
+            t.literal.type !== 'TemplateLiteral'
+          ) {
+            emits.add(String(t.literal.value))
+          }
         }
       }
+    } else {
+      emits.add(eventName.name)
     }
   }
 }

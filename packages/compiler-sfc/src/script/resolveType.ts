@@ -22,7 +22,10 @@ import {
   TSTypeLiteral,
   TSTypeQuery,
   TSTypeReference,
-  TemplateLiteral
+  TemplateLiteral,
+  ClassDeclaration,
+  ClassProperty,
+  ClassMethod
 } from '@babel/types'
 import {
   UNKNOWN_TYPE,
@@ -94,12 +97,12 @@ export interface MaybeWithScope {
 interface ResolvedElements {
   props: Record<
     string,
-    (TSPropertySignature | TSMethodSignature) & {
+    (TSPropertySignature | TSMethodSignature | ClassProperty) & {
       // resolved props always has ownerScope attached
       _ownerScope: TypeScope
     }
   >
-  calls?: (TSCallSignatureDeclaration | TSFunctionType)[]
+  calls?: (TSCallSignatureDeclaration | TSFunctionType | ClassMethod)[]
 }
 
 /**
@@ -131,6 +134,8 @@ function innerResolveTypeElements(
       return typeElementsToMap(ctx, node.members, scope)
     case 'TSInterfaceDeclaration':
       return resolveInterfaceMembers(ctx, node, scope)
+    case 'ClassDeclaration':
+      return resolveClassMembers(ctx, node, scope)
     case 'TSTypeAliasDeclaration':
     case 'TSParenthesizedType':
       return resolveTypeElements(ctx, node.typeAnnotation, scope)
@@ -217,6 +222,7 @@ function innerResolveTypeElements(
         return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       }
     }
+    case 'Identifier':
     case 'TSTypeQuery': {
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
@@ -251,6 +257,32 @@ function typeElementsToMap(
         )
       }
     } else if (e.type === 'TSCallSignatureDeclaration') {
+      ;(res.calls || (res.calls = [])).push(e)
+    }
+  }
+  return res
+}
+
+function classElementsToMap(
+  ctx: TypeResolveContext,
+  elements: Node[],
+  scope = ctxToScope(ctx)
+): ResolvedElements {
+  const res: ResolvedElements = { props: {} }
+  for (const e of elements) {
+    if (e.type === 'ClassProperty') {
+      ;(e as MaybeWithScope)._ownerScope = scope
+      const name = getId(e.key)
+      if (name && !e.computed) {
+        res.props[name] = e as ResolvedElements['props'][string]
+      } else {
+        ctx.error(
+          `Unsupported computed key in class referenced by a macro`,
+          e.key,
+          scope
+        )
+      }
+    } else if (e.type === 'ClassMethod') {
       ;(res.calls || (res.calls = [])).push(e)
     }
   }
@@ -326,6 +358,26 @@ function resolveInterfaceMembers(
   return base
 }
 
+function resolveClassMembers(
+  ctx: TypeResolveContext,
+  node: ClassDeclaration & MaybeWithScope,
+  scope: TypeScope
+): ResolvedElements {
+  const base = classElementsToMap(ctx, node.body.body, node._ownerScope)
+  if (node.superClass) {
+    const { props, calls } = resolveTypeElements(ctx, node.superClass, scope)
+    for (const key in props) {
+      if (!hasOwn(base.props, key)) {
+        base.props[key] = props[key]
+      }
+    }
+    if (calls) {
+      ;(base.calls || (base.calls = [])).push(...calls)
+    }
+  }
+  return base
+}
+
 function resolveMappedType(
   ctx: TypeResolveContext,
   node: TSMappedType,
@@ -368,7 +420,8 @@ function resolveIndexType(
     resolved = resolveTypeElements(ctx, objectType, scope)
   }
   for (const key of keys) {
-    const targetType = resolved.props[key]?.typeAnnotation?.typeAnnotation
+    const targetType = (resolved.props[key]?.typeAnnotation as TSTypeAnnotation)
+      ?.typeAnnotation
     if (targetType) {
       ;(targetType as TSType & MaybeWithScope)._ownerScope =
         resolved.props[key]._ownerScope
@@ -496,6 +549,7 @@ function resolveTemplateKeys(
 }
 
 const SupportedBuiltinsSet = new Set([
+  'InstanceType',
   'Partial',
   'Required',
   'Readonly',
@@ -513,6 +567,9 @@ function resolveBuiltin(
 ): ResolvedElements {
   const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
   switch (name) {
+    case 'InstanceType':
+    case 'Readonly':
+      return t
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
       Object.keys(t.props).forEach(key => {
@@ -527,8 +584,6 @@ function resolveBuiltin(
       })
       return res
     }
-    case 'Readonly':
-      return t
     case 'Pick': {
       const picked = resolveStringType(
         ctx,
@@ -562,6 +617,7 @@ type ReferenceTypes =
   | TSExpressionWithTypeArguments
   | TSImportType
   | TSTypeQuery
+  | Node
 
 function resolveTypeReference(
   ctx: TypeResolveContext,
@@ -599,7 +655,7 @@ function innerResolveTypeReference(
         node.type === 'TSTypeQuery'
           ? onlyExported
             ? scope.exportedDeclares
-            : scope.declares
+            : { ...scope.declares, ...scope.types }
           : onlyExported
           ? scope.exportedTypes
           : scope.types
@@ -648,7 +704,9 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
       ? node.expression
       : node.type === 'TSImportType'
       ? node.qualifier
-      : node.exprName
+      : node.type === 'TSTypeQuery'
+      ? node.exprName
+      : node
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -1226,18 +1284,15 @@ export function inferRuntimeType(
         // TODO (nice to have) generate runtime element type/length checks
         return ['Array']
 
+      case 'StringLiteral':
+        return ['String']
+      case 'BooleanLiteral':
+        return ['Boolean']
+      case 'NumericLiteral':
+      case 'BigIntLiteral':
+        return ['Number']
       case 'TSLiteralType':
-        switch (node.literal.type) {
-          case 'StringLiteral':
-            return ['String']
-          case 'BooleanLiteral':
-            return ['Boolean']
-          case 'NumericLiteral':
-          case 'BigIntLiteral':
-            return ['Number']
-          default:
-            return [UNKNOWN_TYPE]
-        }
+        return inferRuntimeType(ctx, node.literal, scope)
 
       case 'TSTypeReference': {
         const resolved = resolveTypeReference(ctx, node, scope)
@@ -1336,6 +1391,8 @@ export function inferRuntimeType(
 
       case 'ClassDeclaration':
         return ['Object']
+      case 'ClassProperty':
+        return inferRuntimeType(ctx, node.value!, scope)
 
       case 'TSImportType': {
         const sourceScope = importSourceToScope(
@@ -1416,7 +1473,7 @@ function resolveExtractPropTypes(
     const raw = props[key]
     res.props[key] = reverseInferType(
       raw.key,
-      raw.typeAnnotation!.typeAnnotation,
+      (raw.typeAnnotation! as TSTypeAnnotation).typeAnnotation,
       scope
     )
   }

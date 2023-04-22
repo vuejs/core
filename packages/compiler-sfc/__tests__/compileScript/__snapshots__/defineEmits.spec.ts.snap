@@ -14,6 +14,24 @@ return { myEmit }
 }"
 `;
 
+exports[`defineEmits > w/ InstanceType 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type T = InstanceType<typeof A>
+    
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"bar\\"],
+  setup(__props, { expose: __expose, emit }) {
+  __expose();
+
+    class A { bar() {}; }
+    
+    
+return { A, emit }
+}
+
+})"
+`;
+
 exports[`defineEmits > w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
