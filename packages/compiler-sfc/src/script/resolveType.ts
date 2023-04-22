@@ -24,8 +24,7 @@ import {
   TSTypeReference,
   TemplateLiteral,
   ClassDeclaration,
-  ClassProperty,
-  ClassMethod
+  ClassProperty
 } from '@babel/types'
 import {
   UNKNOWN_TYPE,

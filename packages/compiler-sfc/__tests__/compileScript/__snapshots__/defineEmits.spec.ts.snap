@@ -14,7 +14,6 @@ return { myEmit }
 }"
 `;
 
-
 exports[`defineEmits > w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
