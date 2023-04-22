@@ -14,10 +14,7 @@ import {
   isExternalUrl,
   isDataUrl
 } from './templateUtils'
-import {
-  AssetURLOptions,
-  defaultAssetUrlOptions
-} from './templateTransformAssetUrl'
+import { AssetURLOptions, defaultAssetUrlOptions } from './transformAssetUrl'
 
 const srcsetTags = ['img', 'source']
 

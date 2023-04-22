@@ -687,7 +687,7 @@ function isComponent(
       }
     } else {
       // directive
-      // v-is (TODO Deprecate)
+      // v-is (TODO: remove in 3.4)
       if (p.name === 'is') {
         return true
       } else if (
