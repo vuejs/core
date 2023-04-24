@@ -675,12 +675,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    resolveInjections(
-      injectOptions,
-      ctx,
-      checkDuplicateProperties,
-      instance.appContext.config.unwrapInjectedRef
-    )
+    resolveInjections(injectOptions, ctx, checkDuplicateProperties)
   }
 
   if (methods) {
@@ -884,8 +879,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
 export function resolveInjections(
   injectOptions: ComponentInjectOptions,
   ctx: any,
-  checkDuplicateProperties = NOOP as any,
-  unwrapRef = false
+  checkDuplicateProperties = NOOP as any
 ) {
   if (isArray(injectOptions)) {
     injectOptions = normalizeInject(injectOptions)!
@@ -907,26 +901,13 @@ export function resolveInjections(
       injected = inject(opt)
     }
     if (isRef(injected)) {
-      // TODO remove the check in 3.3
-      if (unwrapRef) {
-        Object.defineProperty(ctx, key, {
-          enumerable: true,
-          configurable: true,
-          get: () => (injected as Ref).value,
-          set: v => ((injected as Ref).value = v)
-        })
-      } else {
-        if (__DEV__) {
-          warn(
-            `injected property "${key}" is a ref and will be auto-unwrapped ` +
-              `and no longer needs \`.value\` in the next minor release. ` +
-              `To opt-in to the new behavior now, ` +
-              `set \`app.config.unwrapInjectedRef = true\` (this config is ` +
-              `temporary and will not be needed in the future.)`
-          )
-        }
-        ctx[key] = injected
-      }
+      // unwrap injected refs (ref #4196)
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => (injected as Ref).value,
+        set: v => ((injected as Ref).value = v)
+      })
     } else {
       ctx[key] = injected
     }

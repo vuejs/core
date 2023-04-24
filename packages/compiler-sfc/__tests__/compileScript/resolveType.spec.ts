@@ -690,6 +690,12 @@ describe('resolveType', () => {
     test('should not error on unresolved type when inferring runtime type', () => {
       expect(() => resolve(`defineProps<{ foo: T }>()`)).not.toThrow()
       expect(() => resolve(`defineProps<{ foo: T['bar'] }>()`)).not.toThrow()
+      expect(() =>
+        resolve(`
+        import type P from 'unknown'
+        defineProps<{ foo: P }>()
+      `)
+      ).not.toThrow()
     })
   })
 })

@@ -1180,156 +1180,164 @@ export function inferRuntimeType(
   node: Node & MaybeWithScope,
   scope = node._ownerScope || ctxToScope(ctx)
 ): string[] {
-  switch (node.type) {
-    case 'TSStringKeyword':
-      return ['String']
-    case 'TSNumberKeyword':
-      return ['Number']
-    case 'TSBooleanKeyword':
-      return ['Boolean']
-    case 'TSObjectKeyword':
-      return ['Object']
-    case 'TSNullKeyword':
-      return ['null']
-    case 'TSTypeLiteral':
-    case 'TSInterfaceDeclaration': {
-      // TODO (nice to have) generate runtime property validation
-      const types = new Set<string>()
-      const members =
-        node.type === 'TSTypeLiteral' ? node.members : node.body.body
-      for (const m of members) {
-        if (
-          m.type === 'TSCallSignatureDeclaration' ||
-          m.type === 'TSConstructSignatureDeclaration'
-        ) {
-          types.add('Function')
-        } else {
-          types.add('Object')
+  try {
+    switch (node.type) {
+      case 'TSStringKeyword':
+        return ['String']
+      case 'TSNumberKeyword':
+        return ['Number']
+      case 'TSBooleanKeyword':
+        return ['Boolean']
+      case 'TSObjectKeyword':
+        return ['Object']
+      case 'TSNullKeyword':
+        return ['null']
+      case 'TSTypeLiteral':
+      case 'TSInterfaceDeclaration': {
+        // TODO (nice to have) generate runtime property validation
+        const types = new Set<string>()
+        const members =
+          node.type === 'TSTypeLiteral' ? node.members : node.body.body
+        for (const m of members) {
+          if (
+            m.type === 'TSCallSignatureDeclaration' ||
+            m.type === 'TSConstructSignatureDeclaration'
+          ) {
+            types.add('Function')
+          } else {
+            types.add('Object')
+          }
         }
+        return types.size ? Array.from(types) : ['Object']
       }
-      return types.size ? Array.from(types) : ['Object']
-    }
-    case 'TSPropertySignature':
-      if (node.typeAnnotation) {
-        return inferRuntimeType(ctx, node.typeAnnotation.typeAnnotation, scope)
-      }
-    case 'TSMethodSignature':
-    case 'TSFunctionType':
-      return ['Function']
-    case 'TSArrayType':
-    case 'TSTupleType':
-      // TODO (nice to have) generate runtime element type/length checks
-      return ['Array']
+      case 'TSPropertySignature':
+        if (node.typeAnnotation) {
+          return inferRuntimeType(
+            ctx,
+            node.typeAnnotation.typeAnnotation,
+            scope
+          )
+        }
+      case 'TSMethodSignature':
+      case 'TSFunctionType':
+        return ['Function']
+      case 'TSArrayType':
+      case 'TSTupleType':
+        // TODO (nice to have) generate runtime element type/length checks
+        return ['Array']
 
-    case 'TSLiteralType':
-      switch (node.literal.type) {
-        case 'StringLiteral':
-          return ['String']
-        case 'BooleanLiteral':
-          return ['Boolean']
-        case 'NumericLiteral':
-        case 'BigIntLiteral':
-          return ['Number']
-        default:
-          return [UNKNOWN_TYPE]
-      }
-
-    case 'TSTypeReference': {
-      const resolved = resolveTypeReference(ctx, node, scope)
-      if (resolved) {
-        return inferRuntimeType(ctx, resolved, resolved._ownerScope)
-      }
-      if (node.typeName.type === 'Identifier') {
-        switch (node.typeName.name) {
-          case 'Array':
-          case 'Function':
-          case 'Object':
-          case 'Set':
-          case 'Map':
-          case 'WeakSet':
-          case 'WeakMap':
-          case 'Date':
-          case 'Promise':
-            return [node.typeName.name]
-
-          // TS built-in utility types
-          // https://www.typescriptlang.org/docs/handbook/utility-types.html
-          case 'Partial':
-          case 'Required':
-          case 'Readonly':
-          case 'Record':
-          case 'Pick':
-          case 'Omit':
-          case 'InstanceType':
-            return ['Object']
-
-          case 'Uppercase':
-          case 'Lowercase':
-          case 'Capitalize':
-          case 'Uncapitalize':
+      case 'TSLiteralType':
+        switch (node.literal.type) {
+          case 'StringLiteral':
             return ['String']
-
-          case 'Parameters':
-          case 'ConstructorParameters':
-            return ['Array']
-
-          case 'NonNullable':
-            if (node.typeParameters && node.typeParameters.params[0]) {
-              return inferRuntimeType(
-                ctx,
-                node.typeParameters.params[0],
-                scope
-              ).filter(t => t !== 'null')
-            }
-            break
-          case 'Extract':
-            if (node.typeParameters && node.typeParameters.params[1]) {
-              return inferRuntimeType(ctx, node.typeParameters.params[1], scope)
-            }
-            break
-          case 'Exclude':
-          case 'OmitThisParameter':
-            if (node.typeParameters && node.typeParameters.params[0]) {
-              return inferRuntimeType(ctx, node.typeParameters.params[0], scope)
-            }
-            break
+          case 'BooleanLiteral':
+            return ['Boolean']
+          case 'NumericLiteral':
+          case 'BigIntLiteral':
+            return ['Number']
+          default:
+            return [UNKNOWN_TYPE]
         }
-      }
-      // cannot infer, fallback to UNKNOWN: ThisParameterType
-      break
-    }
 
-    case 'TSParenthesizedType':
-      return inferRuntimeType(ctx, node.typeAnnotation, scope)
+      case 'TSTypeReference': {
+        const resolved = resolveTypeReference(ctx, node, scope)
+        if (resolved) {
+          return inferRuntimeType(ctx, resolved, resolved._ownerScope)
+        }
+        if (node.typeName.type === 'Identifier') {
+          switch (node.typeName.name) {
+            case 'Array':
+            case 'Function':
+            case 'Object':
+            case 'Set':
+            case 'Map':
+            case 'WeakSet':
+            case 'WeakMap':
+            case 'Date':
+            case 'Promise':
+              return [node.typeName.name]
 
-    case 'TSUnionType':
-      return flattenTypes(ctx, node.types, scope)
-    case 'TSIntersectionType': {
-      return flattenTypes(ctx, node.types, scope).filter(
-        t => t !== UNKNOWN_TYPE
-      )
-    }
+            // TS built-in utility types
+            // https://www.typescriptlang.org/docs/handbook/utility-types.html
+            case 'Partial':
+            case 'Required':
+            case 'Readonly':
+            case 'Record':
+            case 'Pick':
+            case 'Omit':
+            case 'InstanceType':
+              return ['Object']
 
-    case 'TSEnumDeclaration':
-      return inferEnumType(node)
+            case 'Uppercase':
+            case 'Lowercase':
+            case 'Capitalize':
+            case 'Uncapitalize':
+              return ['String']
 
-    case 'TSSymbolKeyword':
-      return ['Symbol']
+            case 'Parameters':
+            case 'ConstructorParameters':
+              return ['Array']
 
-    case 'TSIndexedAccessType': {
-      try {
-        const types = resolveIndexType(ctx, node, scope)
-        return flattenTypes(ctx, types, scope)
-      } catch (e) {
+            case 'NonNullable':
+              if (node.typeParameters && node.typeParameters.params[0]) {
+                return inferRuntimeType(
+                  ctx,
+                  node.typeParameters.params[0],
+                  scope
+                ).filter(t => t !== 'null')
+              }
+              break
+            case 'Extract':
+              if (node.typeParameters && node.typeParameters.params[1]) {
+                return inferRuntimeType(
+                  ctx,
+                  node.typeParameters.params[1],
+                  scope
+                )
+              }
+              break
+            case 'Exclude':
+            case 'OmitThisParameter':
+              if (node.typeParameters && node.typeParameters.params[0]) {
+                return inferRuntimeType(
+                  ctx,
+                  node.typeParameters.params[0],
+                  scope
+                )
+              }
+              break
+          }
+        }
+        // cannot infer, fallback to UNKNOWN: ThisParameterType
         break
       }
-    }
 
-    case 'ClassDeclaration':
-      return ['Object']
+      case 'TSParenthesizedType':
+        return inferRuntimeType(ctx, node.typeAnnotation, scope)
 
-    case 'TSImportType': {
-      try {
+      case 'TSUnionType':
+        return flattenTypes(ctx, node.types, scope)
+      case 'TSIntersectionType': {
+        return flattenTypes(ctx, node.types, scope).filter(
+          t => t !== UNKNOWN_TYPE
+        )
+      }
+
+      case 'TSEnumDeclaration':
+        return inferEnumType(node)
+
+      case 'TSSymbolKeyword':
+        return ['Symbol']
+
+      case 'TSIndexedAccessType': {
+        const types = resolveIndexType(ctx, node, scope)
+        return flattenTypes(ctx, types, scope)
+      }
+
+      case 'ClassDeclaration':
+        return ['Object']
+
+      case 'TSImportType': {
         const sourceScope = importSourceToScope(
           ctx,
           node.argument,
@@ -1340,21 +1348,23 @@ export function inferRuntimeType(
         if (resolved) {
           return inferRuntimeType(ctx, resolved, resolved._ownerScope)
         }
-      } catch (e) {}
-      break
-    }
-
-    case 'TSTypeQuery': {
-      const id = node.exprName
-      if (id.type === 'Identifier') {
-        // typeof only support identifier in local scope
-        const matched = scope.declares[id.name]
-        if (matched) {
-          return inferRuntimeType(ctx, matched, matched._ownerScope)
-        }
+        break
       }
-      break
+
+      case 'TSTypeQuery': {
+        const id = node.exprName
+        if (id.type === 'Identifier') {
+          // typeof only support identifier in local scope
+          const matched = scope.declares[id.name]
+          if (matched) {
+            return inferRuntimeType(ctx, matched, matched._ownerScope)
+          }
+        }
+        break
+      }
     }
+  } catch (e) {
+    // always soft fail on failed runtime type inference
   }
   return [UNKNOWN_TYPE] // no runtime check
 }
