@@ -26,7 +26,10 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
+
+      - run: pnpm install
 
       - name: Run unit tests
         run: pnpm run test-unit
@@ -46,7 +49,10 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $env:GITHUB_ENV
+
+      - run: pnpm install
 
       - name: Run compiler unit tests
         run: pnpm run test-unit compiler
@@ -95,7 +101,10 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
+
+      - run: pnpm install
 
       - name: Run eslint
         run: pnpm run lint
