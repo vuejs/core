@@ -21,7 +21,7 @@ export function createDOMCompilerError(
 }
 
 export const enum DOMErrorCodes {
-  X_V_HTML_NO_EXPRESSION = 51 /* ErrorCodes.__EXTEND_POINT__ */,
+  X_V_HTML_NO_EXPRESSION = 53 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
   X_V_TEXT_WITH_CHILDREN,
@@ -41,7 +41,9 @@ if (__TEST__) {
   // errors out if there are collisions.
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
     throw new Error(
-      'DOMErrorCodes need to be updated to match extension point from core ErrorCodes.'
+      `DOMErrorCodes need to be updated to ${
+        ErrorCodes.__EXTEND_POINT__ + 1
+      } to match extension point from core ErrorCodes.`
     )
   }
 }
