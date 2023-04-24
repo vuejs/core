@@ -29,7 +29,8 @@ import {
   createGetCanonicalFileName,
   getId,
   getImportedName,
-  normalizePath
+  normalizePath,
+  joinPaths
 } from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
@@ -38,7 +39,7 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import path from 'path'
+import { extname, dirname } from 'path'
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -718,7 +719,7 @@ function importSourceToScope(
   let resolved
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = normalizePath(path.join(scope.filename, '..', source))
+    const filename = joinPaths(scope.filename, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
@@ -741,9 +742,10 @@ function importSourceToScope(
     resolved = resolveWithTS(scope.filename, source, fs)
   }
   if (resolved) {
+    resolved = normalizePath(resolved)
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
-    return fileToScope(ctx, normalizePath(resolved))
+    return fileToScope(ctx, resolved)
   } else {
     return ctx.error(
       `Failed to resolve import source ${JSON.stringify(source)}.`,
@@ -761,8 +763,8 @@ function resolveExt(filename: string, fs: FS) {
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.d.ts`) ||
-    tryResolve(filename + `/index.ts`) ||
-    tryResolve(filename + `/index.d.ts`)
+    tryResolve(joinPaths(filename, `index.ts`)) ||
+    tryResolve(joinPaths(filename, `index.d.ts`))
   )
 }
 
@@ -800,7 +802,7 @@ function resolveWithTS(
       const parsed = ts.parseJsonConfigFileContent(
         ts.readConfigFile(configPath, fs.readFile).config,
         parseConfigHost,
-        path.dirname(configPath),
+        dirname(configPath),
         undefined,
         configPath
       )
@@ -870,7 +872,7 @@ function parseFile(
   content: string,
   parserPlugins?: SFCScriptCompileOptions['babelParserPlugins']
 ): Statement[] {
-  const ext = path.extname(filename)
+  const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
       plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
