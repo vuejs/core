@@ -718,7 +718,7 @@ function importSourceToScope(
   let resolved
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = normalizePath(path.join(scope.filename, '..', source))
+    const filename = path.join(scope.filename, '..', source)
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
@@ -741,9 +741,10 @@ function importSourceToScope(
     resolved = resolveWithTS(scope.filename, source, fs)
   }
   if (resolved) {
+    resolved = normalizePath(resolved)
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
-    return fileToScope(ctx, normalizePath(resolved))
+    return fileToScope(ctx, resolved)
   } else {
     return ctx.error(
       `Failed to resolve import source ${JSON.stringify(source)}.`,
@@ -761,8 +762,8 @@ function resolveExt(filename: string, fs: FS) {
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.d.ts`) ||
-    tryResolve(filename + `/index.ts`) ||
-    tryResolve(filename + `/index.d.ts`)
+    tryResolve(path.join(filename, `index.ts`)) ||
+    tryResolve(path.join(filename, `index.d.ts`))
   )
 }
 
