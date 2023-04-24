@@ -718,7 +718,7 @@ function importSourceToScope(
   let resolved
   if (source.startsWith('.')) {
     // relative import - fast path
-    const filename = path.join(scope.filename, '..', source)
+    const filename = normalizePath(path.join(scope.filename, '..', source))
     resolved = resolveExt(filename, fs)
   } else {
     // module or aliased import - use full TS resolution, only supported in Node
