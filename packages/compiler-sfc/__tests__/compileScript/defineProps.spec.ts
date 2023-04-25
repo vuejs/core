@@ -571,6 +571,21 @@ const props = defineProps({ foo: String })
     ).toMatch(`foo: { type: Number`)
   })
 
+  // #8148
+  test('should not override local bindings', () => {
+    const { bindings } = compile(`
+    <script setup lang="ts">
+    import { computed } from 'vue'
+    defineProps<{ bar: string }>()
+    const bar = computed(() => 1)
+    </script>
+  `)
+    expect(bindings).toStrictEqual({
+      bar: BindingTypes.SETUP_MAYBE_REF,
+      computed: BindingTypes.SETUP_CONST
+    })
+  })
+
   describe('errors', () => {
     test('w/ both type and non-type args', () => {
       expect(() => {
