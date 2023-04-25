@@ -1,3 +1,24 @@
+# [3.3.0-beta.2](https://github.com/vuejs/core/compare/v3.3.0-beta.1...v3.3.0-beta.2) (2023-04-25)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** avoid all hard errors when inferring runtime type ([2d9f6f9](https://github.com/vuejs/core/commit/2d9f6f926453c46f542789927bcd30d15da9c24b))
+* **compiler-sfc:** normalize windows paths when resolving types ([#8136](https://github.com/vuejs/core/issues/8136)) ([29da504](https://github.com/vuejs/core/commit/29da50468770fcee16ba5d5bec7166dd5bc120ee))
+* **compiler-sfc:** props bindings should not override user declared bindings ([433a58c](https://github.com/vuejs/core/commit/433a58ccb61c25512dcc3df155b8e285256917ef)), closes [#8148](https://github.com/vuejs/core/issues/8148)
+
+
+### Features
+
+* **compiler-sfc:** support project references when resolving types ([1c0be5c](https://github.com/vuejs/core/commit/1c0be5c7444966fa444460e87633cf44ec60292a)), closes [#8140](https://github.com/vuejs/core/issues/8140)
+
+
+### Performance Improvements
+
+* **compiler-sfc:** infer ref binding type for more built-in methods ([a370e80](https://github.com/vuejs/core/commit/a370e8006a70ea49a7d04c8c1a42d0947eba5dea))
+
+
+
 # [3.3.0-beta.1](https://github.com/vuejs/core/compare/v3.3.0-alpha.13...v3.3.0-beta.1) (2023-04-21)
 
 
