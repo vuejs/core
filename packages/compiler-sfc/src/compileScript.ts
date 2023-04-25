@@ -505,21 +505,6 @@ export function compileScript(
 
   // 2.2 process <script setup> body
   for (const node of scriptSetupAst.body) {
-    // (Dropped) `ref: x` bindings
-    // TODO remove when out of experimental
-    if (
-      node.type === 'LabeledStatement' &&
-      node.label.name === 'ref' &&
-      node.body.type === 'ExpressionStatement'
-    ) {
-      ctx.error(
-        `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback. Please check out ` +
-          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
-        node
-      )
-    }
-
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
