@@ -607,6 +607,44 @@ describe('resolveType', () => {
       ])
     })
 
+    test('ts module resolve w/ project reference & extends', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          references: [
+            {
+              path: './tsconfig.app.json'
+            }
+          ]
+        }),
+        '/tsconfig.app.json': JSON.stringify({
+          include: ['**/*.ts', '**/*.vue'],
+          extends: './tsconfig.web.json'
+        }),
+        '/tsconfig.web.json': JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['./user.ts']
+            }
+          }
+        }),
+        '/user.ts': 'export type User = { bar: string }'
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>()
+        `,
+        files
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
     test('global types', () => {
       const files = {
         // ambient

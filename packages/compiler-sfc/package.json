@@ -51,6 +51,7 @@
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
+    "minimatch": "^9.0.0",
     "postcss-modules": "^4.0.0",
     "postcss-selector-parser": "^6.0.4",
     "pug": "^3.0.1",

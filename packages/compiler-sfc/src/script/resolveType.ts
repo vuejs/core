@@ -40,6 +40,7 @@ import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
 import { extname, dirname } from 'path'
+import { minimatch as isMatch } from 'minimatch'
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -77,15 +78,19 @@ interface WithScope {
 type ScopeTypeNode = Node &
   WithScope & { _ns?: TSModuleDeclaration & WithScope }
 
-export interface TypeScope {
-  filename: string
-  source: string
-  offset: number
-  imports: Record<string, Import>
-  types: Record<string, ScopeTypeNode>
-  exportedTypes: Record<string, ScopeTypeNode>
-  declares: Record<string, ScopeTypeNode>
-  exportedDeclares: Record<string, ScopeTypeNode>
+export class TypeScope {
+  constructor(
+    public filename: string,
+    public source: string,
+    public offset: number = 0,
+    public imports: Record<string, Import> = Object.create(null),
+    public types: Record<string, ScopeTypeNode> = Object.create(null),
+    public declares: Record<string, ScopeTypeNode> = Object.create(null)
+  ) {}
+
+  resolvedImportSources: Record<string, string> = Object.create(null)
+  exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
+  exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
 }
 
 export interface MaybeWithScope {
@@ -716,33 +721,38 @@ function importSourceToScope(
       scope
     )
   }
-  let resolved
-  if (source.startsWith('.')) {
-    // relative import - fast path
-    const filename = joinPaths(scope.filename, '..', source)
-    resolved = resolveExt(filename, fs)
-  } else {
-    // module or aliased import - use full TS resolution, only supported in Node
-    if (!__NODE_JS__) {
-      ctx.error(
-        `Type import from non-relative sources is not supported in the browser build.`,
-        node,
-        scope
-      )
+
+  let resolved: string | undefined = scope.resolvedImportSources[source]
+  if (!resolved) {
+    if (source.startsWith('.')) {
+      // relative import - fast path
+      const filename = joinPaths(scope.filename, '..', source)
+      resolved = resolveExt(filename, fs)
+    } else {
+      // module or aliased import - use full TS resolution, only supported in Node
+      if (!__NODE_JS__) {
+        ctx.error(
+          `Type import from non-relative sources is not supported in the browser build.`,
+          node,
+          scope
+        )
+      }
+      if (!ts) {
+        ctx.error(
+          `Failed to resolve import source ${JSON.stringify(source)}. ` +
+            `typescript is required as a peer dep for vue in order ` +
+            `to support resolving types from module imports.`,
+          node,
+          scope
+        )
+      }
+      resolved = resolveWithTS(scope.filename, source, fs)
     }
-    if (!ts) {
-      ctx.error(
-        `Failed to resolve import source ${JSON.stringify(source)}. ` +
-          `typescript is required as a peer dep for vue in order ` +
-          `to support resolving types from module imports.`,
-        node,
-        scope
-      )
+    if (resolved) {
+      resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
     }
-    resolved = resolveWithTS(scope.filename, source, fs)
   }
   if (resolved) {
-    resolved = normalizePath(resolved)
     // (hmr) register dependency file on ctx
     ;(ctx.deps || (ctx.deps = new Set())).add(resolved)
     return fileToScope(ctx, resolved)
@@ -768,10 +778,13 @@ function resolveExt(filename: string, fs: FS) {
   )
 }
 
-const tsConfigCache = createCache<{
-  options: TS.CompilerOptions
-  cache: TS.ModuleResolutionCache
-}>()
+interface CachedConfig {
+  config: TS.ParsedCommandLine
+  cache?: TS.ModuleResolutionCache
+}
+
+const tsConfigCache = createCache<CachedConfig[]>()
+const tsConfigRefMap = new Map<string, string>()
 
 function resolveWithTS(
   containingFile: string,
@@ -783,49 +796,100 @@ function resolveWithTS(
   // 1. resolve tsconfig.json
   const configPath = ts.findConfigFile(containingFile, fs.fileExists)
   // 2. load tsconfig.json
-  let options: TS.CompilerOptions
-  let cache: TS.ModuleResolutionCache | undefined
+  let tsCompilerOptions: TS.CompilerOptions
+  let tsResolveCache: TS.ModuleResolutionCache | undefined
   if (configPath) {
+    let configs: CachedConfig[]
     const normalizedConfigPath = normalizePath(configPath)
     const cached = tsConfigCache.get(normalizedConfigPath)
     if (!cached) {
-      // The only case where `fs` is NOT `ts.sys` is during tests.
-      // parse config host requires an extra `readDirectory` method
-      // during tests, which is stubbed.
-      const parseConfigHost = __TEST__
-        ? {
-            ...fs,
-            useCaseSensitiveFileNames: true,
-            readDirectory: () => []
+      configs = loadTSConfig(configPath, fs).map(config => ({ config }))
+      tsConfigCache.set(normalizedConfigPath, configs)
+    } else {
+      configs = cached
+    }
+    let matchedConfig: CachedConfig | undefined
+    if (configs.length === 1) {
+      matchedConfig = configs[0]
+    } else {
+      // resolve which config matches the current file
+      for (const c of configs) {
+        const base = normalizePath(
+          (c.config.options.pathsBasePath as string) ||
+            dirname(c.config.options.configFilePath as string)
+        )
+        const included: string[] = c.config.raw?.include
+        const excluded: string[] = c.config.raw?.exclude
+        if (
+          (!included && (!base || containingFile.startsWith(base))) ||
+          included.some(p => isMatch(containingFile, joinPaths(base, p)))
+        ) {
+          if (
+            excluded &&
+            excluded.some(p => isMatch(containingFile, joinPaths(base, p)))
+          ) {
+            continue
           }
-        : ts.sys
-      const parsed = ts.parseJsonConfigFileContent(
-        ts.readConfigFile(configPath, fs.readFile).config,
-        parseConfigHost,
-        dirname(configPath),
-        undefined,
-        configPath
-      )
-      options = parsed.options
-      cache = ts.createModuleResolutionCache(
+          matchedConfig = c
+          break
+        }
+      }
+      if (!matchedConfig) {
+        matchedConfig = configs[configs.length - 1]
+      }
+    }
+    tsCompilerOptions = matchedConfig.config.options
+    tsResolveCache =
+      matchedConfig.cache ||
+      (matchedConfig.cache = ts.createModuleResolutionCache(
         process.cwd(),
         createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames),
-        options
-      )
-      tsConfigCache.set(normalizedConfigPath, { options, cache })
-    } else {
-      ;({ options, cache } = cached)
-    }
+        tsCompilerOptions
+      ))
   } else {
-    options = {}
+    tsCompilerOptions = {}
   }
 
   // 3. resolve
-  const res = ts.resolveModuleName(source, containingFile, options, fs, cache)
+  const res = ts.resolveModuleName(
+    source,
+    containingFile,
+    tsCompilerOptions,
+    fs,
+    tsResolveCache
+  )
 
   if (res.resolvedModule) {
     return res.resolvedModule.resolvedFileName
   }
+}
+
+function loadTSConfig(configPath: string, fs: FS): TS.ParsedCommandLine[] {
+  // The only case where `fs` is NOT `ts.sys` is during tests.
+  // parse config host requires an extra `readDirectory` method
+  // during tests, which is stubbed.
+  const parseConfigHost = __TEST__
+    ? {
+        ...fs,
+        useCaseSensitiveFileNames: true,
+        readDirectory: () => []
+      }
+    : ts.sys
+  const config = ts.parseJsonConfigFileContent(
+    ts.readConfigFile(configPath, fs.readFile).config,
+    parseConfigHost,
+    dirname(configPath),
+    undefined,
+    configPath
+  )
+  const res = [config]
+  if (config.projectReferences) {
+    for (const ref of config.projectReferences) {
+      tsConfigRefMap.set(ref.path, configPath)
+      res.unshift(...loadTSConfig(ref.path, fs))
+    }
+  }
+  return res
 }
 
 const fileToScopeCache = createCache<TypeScope>()
@@ -837,6 +901,8 @@ export function invalidateTypeCache(filename: string) {
   filename = normalizePath(filename)
   fileToScopeCache.delete(filename)
   tsConfigCache.delete(filename)
+  const affectedConfig = tsConfigRefMap.get(filename)
+  if (affectedConfig) tsConfigCache.delete(affectedConfig)
 }
 
 export function fileToScope(
@@ -852,16 +918,7 @@ export function fileToScope(
   const fs = ctx.options.fs || ts?.sys
   const source = fs.readFile(filename) || ''
   const body = parseFile(filename, source, ctx.options.babelParserPlugins)
-  const scope: TypeScope = {
-    filename,
-    source,
-    offset: 0,
-    imports: recordImports(body),
-    types: Object.create(null),
-    exportedTypes: Object.create(null),
-    declares: Object.create(null),
-    exportedDeclares: Object.create(null)
-  }
+  const scope = new TypeScope(filename, source, 0, recordImports(body))
   recordTypes(ctx, body, scope, asGlobal)
   fileToScopeCache.set(filename, scope)
   return scope
@@ -923,19 +980,12 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
       ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
       : ctx.scriptSetupAst!.body
 
-  const scope: TypeScope = {
-    filename: ctx.filename,
-    source: ctx.source,
-    offset: 'startOffset' in ctx ? ctx.startOffset! : 0,
-    imports:
-      'userImports' in ctx
-        ? Object.create(ctx.userImports)
-        : recordImports(body),
-    types: Object.create(null),
-    exportedTypes: Object.create(null),
-    declares: Object.create(null),
-    exportedDeclares: Object.create(null)
-  }
+  const scope = new TypeScope(
+    ctx.filename,
+    ctx.source,
+    'startOffset' in ctx ? ctx.startOffset! : 0,
+    'userImports' in ctx ? Object.create(ctx.userImports) : recordImports(body)
+  )
 
   recordTypes(ctx, body, scope)
 
@@ -950,14 +1000,15 @@ function moduleDeclToScope(
   if (node._resolvedChildScope) {
     return node._resolvedChildScope
   }
-  const scope: TypeScope = {
-    ...parentScope,
-    imports: Object.create(parentScope.imports),
-    types: Object.create(parentScope.types),
-    declares: Object.create(parentScope.declares),
-    exportedTypes: Object.create(null),
-    exportedDeclares: Object.create(null)
-  }
+
+  const scope = new TypeScope(
+    parentScope.filename,
+    parentScope.source,
+    parentScope.offset,
+    Object.create(parentScope.imports),
+    Object.create(parentScope.types),
+    Object.create(parentScope.declares)
+  )
 
   if (node.body.type === 'TSModuleDeclaration') {
     const decl = node.body as TSModuleDeclaration & WithScope
