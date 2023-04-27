@@ -58,7 +58,12 @@ import {
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
-import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
+import {
+  registerHMR,
+  unregisterHMR,
+  isHmrUpdating,
+  isHmrReloading
+} from './hmr'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
@@ -1327,7 +1332,7 @@ function baseCreateRenderer(
         }
         toggleRecurse(instance, true)
 
-        if (el && hydrateNode) {
+        if (el && hydrateNode && !isHmrReloading) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
             if (__DEV__) {

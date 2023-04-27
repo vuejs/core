@@ -13,6 +13,7 @@ import { extend, getGlobalThis } from '@vue/shared'
 type HMRComponent = ComponentOptions | ClassComponent
 
 export let isHmrUpdating = false
+export let isHmrReloading = false
 
 export const hmrDirtyComponents = new Set<ConcreteComponent>()
 
@@ -127,6 +128,8 @@ function reload(id: string, newComp: HMRComponent) {
     instance.appContext.emitsCache.delete(instance.type as any)
     instance.appContext.optionsCache.delete(instance.type as any)
 
+    isHmrReloading = true
+
     // 4. actually update
     if (instance.ceReload) {
       // custom element
@@ -153,6 +156,7 @@ function reload(id: string, newComp: HMRComponent) {
 
   // 5. make sure to cleanup dirty hmr components after update
   queuePostFlushCb(() => {
+    isHmrReloading = false
     for (const instance of instances) {
       hmrDirtyComponents.delete(
         normalizeClassComponent(instance.type as HMRComponent)
