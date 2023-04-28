@@ -2,6 +2,7 @@ import {
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
+  getCurrentInstance,
   h,
   inject,
   nextTick,
@@ -691,6 +692,26 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
       )
+    })
+  })
+
+  describe('shadowRoot', () => {
+    // # 6113
+    test('shadowRoot accessible for css-in-js', () => {
+      const Foo = defineCustomElement({
+        setup() {
+          const ins = getCurrentInstance()!
+          const style = document.createElement('style')
+          style.innerHTML = `div { color: red; }`
+          ins.container.appendChild(style)
+          return () => h('div', 'hello')
+        }
+      })
+      customElements.define('my-el', Foo)
+      container.innerHTML = `<my-el></my-el>`
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.textContent).toBe(`div { color: red; }`)
     })
   })
 })
