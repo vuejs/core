@@ -451,6 +451,17 @@ describe('vnode', () => {
       expect(mergeProps(props1, props3)).toMatchObject({
         onClick: clickHandler1
       })
+      let props4: Data = {
+        onNaming1: 0,
+        onNaming2: null,
+        onNaming3: ''
+      }
+      expect(mergeProps(props1, props4)).toMatchObject({
+        onClick: clickHandler1,
+        onNaming1: 0,
+        onNaming2: null,
+        onNaming3: ''
+      })
     })
 
     test('default', () => {

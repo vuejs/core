@@ -827,8 +827,9 @@ export function mergeProps(...args: (Data & VNodeProps)[]) {
       } else if (isOn(key)) {
         const existing = ret[key]
         const incoming = toMerge[key]
+
         if (
-          incoming &&
+          incoming !== undefined &&
           existing !== incoming &&
           !(isArray(existing) && existing.includes(incoming))
         ) {
