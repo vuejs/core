@@ -57,7 +57,6 @@
   "devDependencies": {
     "@babel/parser": "^7.21.3",
     "@babel/types": "^7.21.3",
-    "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
     "@rollup/plugin-alias": "^4.0.3",
     "@rollup/plugin-commonjs": "^24.0.1",
     "@rollup/plugin-json": "^6.0.0",
@@ -73,6 +72,7 @@
     "conventional-changelog-cli": "^2.0.31",
     "enquirer": "^2.3.2",
     "esbuild": "^0.17.4",
+    "esbuild-plugin-polyfill-node": "^0.2.0",
     "eslint": "^8.33.0",
     "eslint-plugin-jest": "^27.2.1",
     "estree-walker": "^2.0.2",
