@@ -320,4 +320,60 @@ h1 { color: red }
       )
     })
   })
+
+  describe('default script lang', () => {
+    test('default lang for script', () => {
+      const { descriptor, errors } = parse(
+        `<script>console.log(0x0f)</script>`,
+        {
+          defaultScriptLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBe('ts')
+    })
+
+    test('default lang for script setup', () => {
+      const { descriptor, errors } = parse(
+        `<script setup>console.log(0x03)</script>`,
+        {
+          defaultScriptLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.scriptSetup?.lang).toBe('ts')
+    })
+
+    test('default lang for script & script setup', () => {
+      const { descriptor, errors } = parse(
+        `
+        <script>console.log(0x06)</script>
+        <script setup>console.log(0x07)</script>
+        `,
+        {
+          defaultScriptLang: 'ts'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBe('ts')
+      expect(descriptor.scriptSetup?.lang).toBe('ts')
+    })
+
+    // This only tests if the "source to sfc" cache has "defaultScriptLang" as part of the cache key.
+    test('source cache key', () => {
+      // The same SFC as previous test
+      const { descriptor, errors } = parse(
+        `
+        <script>console.log(0x06)</script>
+        <script setup>console.log(0x07)</script>
+        `,
+        {
+          defaultScriptLang: 'tsx'
+        }
+      )
+      expect(errors.length).toBe(0)
+      expect(descriptor.script?.lang).toBe('tsx')
+      expect(descriptor.scriptSetup?.lang).toBe('tsx')
+    })
+  })
 })
