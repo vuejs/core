@@ -455,11 +455,11 @@ describe('resolveType', () => {
   })
 
   describe('external type imports', () => {
-    const files = {
-      '/foo.ts': 'export type P = { foo: number }',
-      '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
-    }
     test('relative ts', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+        '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+      }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
