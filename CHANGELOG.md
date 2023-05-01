@@ -1,3 +1,19 @@
+# [3.3.0-beta.3](https://github.com/vuejs/core/compare/v3.3.0-beta.2...v3.3.0-beta.3) (2023-05-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle slot argument parsing edge case ([b434d12](https://github.com/vuejs/core/commit/b434d12bf6cbd49a7c99b1646d9517d8393ea49f))
+* **hmr:** keep slots proxy mutable for hmr ([c117d9c](https://github.com/vuejs/core/commit/c117d9c257820481b85304db26ce5c77af5d050c)), closes [#8188](https://github.com/vuejs/core/issues/8188)
+* **types:** fix provide type checking for ref value ([de87e6e](https://github.com/vuejs/core/commit/de87e6e405dfaf9a917d7eb423fcee35237c2020)), closes [#8201](https://github.com/vuejs/core/issues/8201)
+
+
+### Features
+
+* **compiler-sfc:** expose parseCache ([4576548](https://github.com/vuejs/core/commit/45765488d498d94f8760c9e82f1177070057b17c)), closes [#8202](https://github.com/vuejs/core/issues/8202)
+
+
+
 # [3.3.0-beta.2](https://github.com/vuejs/core/compare/v3.3.0-beta.1...v3.3.0-beta.2) (2023-04-25)
 
 
