@@ -11,7 +11,7 @@ import { ComponentPublicInstance } from './componentPublicInstance'
 import { createVNode, VNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
-import { ref } from '@vue/reactivity'
+import { pauseTracking, ref, resetTracking } from '@vue/reactivity'
 import { handleError, ErrorCodes } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
@@ -162,12 +162,6 @@ export function defineAsyncComponent<
       const error = ref()
       const delayed = ref(!!delay)
 
-      if (delay) {
-        setTimeout(() => {
-          delayed.value = false
-        }, delay)
-      }
-
       if (timeout != null) {
         setTimeout(() => {
           if (!loaded.value && !error.value) {
@@ -194,8 +188,17 @@ export function defineAsyncComponent<
           error.value = err
         })
 
+      if (delay) {
+        setTimeout(() => {
+          delayed.value = false
+        }, delay)
+      }
+
       return () => {
         if (loaded.value && resolvedComp) {
+          pauseTracking()
+          delayed.value = false
+          resetTracking()
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
           return createVNode(errorComponent as ConcreteComponent, {
