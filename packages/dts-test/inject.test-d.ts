@@ -1,5 +1,8 @@
-import { provide, inject, InjectionKey } from 'vue'
+import { provide, inject, ref, Ref, InjectionKey } from 'vue'
 import { expectType } from './utils'
+
+provide('foo', 123)
+provide(123, 123)
 
 const key: InjectionKey<number> = Symbol()
 
@@ -14,3 +17,13 @@ expectType<number>(inject(key, () => 1, true /* treatDefaultAsFactory */))
 expectType<() => number>(inject('foo', () => 1))
 expectType<() => number>(inject('foo', () => 1, false))
 expectType<number>(inject('foo', () => 1, true))
+
+// #8201
+type Cube = {
+  size: number
+}
+
+const injectionKeyRef = Symbol('key') as InjectionKey<Ref<Cube>>
+
+// @ts-expect-error
+provide(injectionKeyRef, ref({}))
