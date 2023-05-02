@@ -177,8 +177,7 @@ export function h<P>(
 
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
-  const l = arguments.length
-
+  // #6913 disable tracking block in h function
   const doCreateVNode = (type: any, props?: any, children?: any) => {
     let vnode: VNode
     setBlockTracking(-1)
@@ -187,6 +186,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     return vnode
   }
 
+  const l = arguments.length
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props
