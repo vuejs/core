@@ -52,7 +52,7 @@ export function trackRefValue(ref: RefBase<any>) {
   }
 }
 
-export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
+export function triggerRefValue(ref: RefBase<any>, newVal?: any, oldVal?: any) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
@@ -61,7 +61,8 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
-        newValue: newVal
+        newValue: newVal,
+        oldValue: oldVal
       })
     } else {
       triggerEffects(dep)
@@ -153,9 +154,10 @@ class RefImpl<T> {
       this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
+      const oldVal = this._rawValue
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, newVal)
+      triggerRefValue(this, newVal, oldVal)
     }
   }
 }
