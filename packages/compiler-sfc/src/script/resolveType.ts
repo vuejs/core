@@ -162,7 +162,8 @@ function innerResolveTypeElements(
     case 'TSTypeReference': {
       const typeName = getReferenceName(node)
       if (
-        typeName === 'ExtractPropTypes' &&
+        (typeName === 'ExtractPropTypes' ||
+          typeName === 'ExtractPublicPropTypes') &&
         node.typeParameters &&
         scope.imports[typeName]?.source === 'vue'
       ) {
