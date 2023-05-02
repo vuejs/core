@@ -6,9 +6,9 @@ import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T extends InjectionKey<any>>(
-  key: T | string | number,
-  value: T extends InjectionKey<infer V> ? V : any
+export function provide<T, K = InjectionKey<T> | string | number>(
+  key: K,
+  value: K extends InjectionKey<infer V> ? V : T
 ) {
   if (!currentInstance) {
     if (__DEV__) {
