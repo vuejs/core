@@ -301,11 +301,13 @@ describe('component: emit', () => {
       created() {
         this.$emit('update:modelValue', '1')
         this.$emit('update:foo', '2')
+        this.$emit('update:empty', '')
       }
     })
 
     const fn1 = vi.fn()
     const fn2 = vi.fn()
+    const fn3 = vi.fn()
 
     const Comp = () =>
       h(Foo, {
@@ -315,7 +317,11 @@ describe('component: emit', () => {
 
         foo: null,
         fooModifiers: { number: true },
-        'onUpdate:foo': fn2
+        'onUpdate:foo': fn2,
+
+        empty: null,
+        emptyModifiers: { number: true },
+        'onUpdate:empty': fn3
       })
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -324,6 +330,8 @@ describe('component: emit', () => {
     expect(fn1).toHaveBeenCalledWith(1)
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith(2)
+    expect(fn3).toHaveBeenCalledTimes(1)
+    expect(fn3).toHaveBeenCalledWith(null)
   })
 
   test('.trim modifier should work with v-model on component', () => {
