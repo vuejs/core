@@ -109,7 +109,6 @@ export function doCompileStyle(
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
   const shortId = id.replace(/^data-v-/, '')
-  const longId = `data-v-${shortId}`
 
   const plugins = (postcssPlugins || []).slice()
   plugins.unshift(cssVarsPlugin({ id: shortId, isProd }))
@@ -117,7 +116,7 @@ export function doCompileStyle(
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(longId))
+    plugins.push(scopedPlugin(id))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {
