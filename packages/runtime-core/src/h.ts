@@ -6,7 +6,8 @@ import {
   Fragment,
   Text,
   Comment,
-  isVNode
+  isVNode,
+  setBlockTracking
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
@@ -177,17 +178,26 @@ export function h<P>(
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   const l = arguments.length
+
+  const doCreateVNode = (type: any, props?: any, children?: any) => {
+    let vnode: VNode
+    setBlockTracking(-1)
+    vnode = createVNode(type, props, children)
+    setBlockTracking(1)
+    return vnode
+  }
+
   if (l === 2) {
     if (isObject(propsOrChildren) && !isArray(propsOrChildren)) {
       // single vnode without props
       if (isVNode(propsOrChildren)) {
-        return createVNode(type, null, [propsOrChildren])
+        return doCreateVNode(type, null, [propsOrChildren])
       }
       // props without children
-      return createVNode(type, propsOrChildren)
+      return doCreateVNode(type, propsOrChildren)
     } else {
       // omit props
-      return createVNode(type, null, propsOrChildren)
+      return doCreateVNode(type, null, propsOrChildren)
     }
   } else {
     if (l > 3) {
@@ -195,6 +205,6 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
     } else if (l === 3 && isVNode(children)) {
       children = [children]
     }
-    return createVNode(type, propsOrChildren, children)
+    return doCreateVNode(type, propsOrChildren, children)
   }
 }
