@@ -127,12 +127,12 @@ describe('component props', () => {
     render(h(Comp, { foo: 1 }), root)
     expect(props).toEqual({ foo: 1 })
     expect(attrs).toEqual({ foo: 1 })
-    expect(props).toBe(attrs)
+    expect(props).toStrictEqual(attrs)
 
     render(h(Comp, { bar: 2 }), root)
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
-    expect(props).toBe(attrs)
+    expect(props).toStrictEqual(attrs)
   })
 
   test('boolean casting', () => {
