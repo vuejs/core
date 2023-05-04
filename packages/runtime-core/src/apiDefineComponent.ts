@@ -279,6 +279,11 @@ export function defineComponent(
   extraOptions?: ComponentOptions
 ) {
   return isFunction(options)
-    ? extend({}, extraOptions, { setup: options, name: options.name })
+    ? extend(
+        {},
+        extraOptions,
+        { setup: options },
+        options.name ? { name: options.name } : null
+      )
     : options
 }
