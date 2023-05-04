@@ -998,7 +998,7 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+      const root = baseCompile(`<div @vue:updated="foo" />`, {
         prefixIdentifiers: true,
         cacheHandlers: true
       }).ast
@@ -1184,6 +1184,7 @@ describe('compiler: element transform', () => {
       })
     })
 
+    // TODO remove in 3.4
     test('v-is', () => {
       const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
@@ -1201,6 +1202,7 @@ describe('compiler: element transform', () => {
         // should skip v-is runtime check
         directives: undefined
       })
+      expect('v-is="component-name" has been deprecated').toHaveBeenWarned()
     })
 
     // #3934
