@@ -1095,8 +1095,16 @@ function walkDeclaration(
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (
-            isCallOf(init, userImportAliases['ref']) ||
-            isCallOf(init, DEFINE_MODEL)
+            isCallOf(
+              init,
+              m =>
+                m === userImportAliases['ref'] ||
+                m === userImportAliases['computed'] ||
+                m === userImportAliases['shallowRef'] ||
+                m === userImportAliases['customRef'] ||
+                m === userImportAliases['toRef'] ||
+                m === DEFINE_MODEL
+            )
           ) {
             bindingType = BindingTypes.SETUP_REF
           } else {
