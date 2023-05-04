@@ -93,7 +93,7 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const sourceToSFC = createCache<SFCParseResult>()
+export const parseCache = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
@@ -108,7 +108,7 @@ export function parse(
 ): SFCParseResult {
   const sourceKey =
     source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = sourceToSFC.get(sourceKey)
+  const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache
   }
@@ -284,7 +284,7 @@ export function parse(
     descriptor,
     errors
   }
-  sourceToSFC.set(sourceKey, result)
+  parseCache.set(sourceKey, result)
   return result
 }
 
