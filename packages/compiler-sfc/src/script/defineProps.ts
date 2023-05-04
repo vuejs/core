@@ -58,7 +58,9 @@ export function processDefineProps(
   // register bindings
   if (ctx.propsRuntimeDecl) {
     for (const key of getObjectOrArrayExpressionKeys(ctx.propsRuntimeDecl)) {
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
+      if (!(key in ctx.bindingMetadata)) {
+        ctx.bindingMetadata[key] = BindingTypes.PROPS
+      }
     }
   }
 
@@ -170,7 +172,9 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
   for (const prop of props) {
     propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
     // register bindings
-    ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
+    if (!(prop.key in ctx.bindingMetadata)) {
+      ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
+    }
   }
 
   let propsDecls = `{
