@@ -1,3 +1,54 @@
+# [3.3.0-beta.3](https://github.com/vuejs/core/compare/v3.3.0-beta.2...v3.3.0-beta.3) (2023-05-01)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle slot argument parsing edge case ([b434d12](https://github.com/vuejs/core/commit/b434d12bf6cbd49a7c99b1646d9517d8393ea49f))
+* **hmr:** keep slots proxy mutable for hmr ([c117d9c](https://github.com/vuejs/core/commit/c117d9c257820481b85304db26ce5c77af5d050c)), closes [#8188](https://github.com/vuejs/core/issues/8188)
+* **types:** fix provide type checking for ref value ([de87e6e](https://github.com/vuejs/core/commit/de87e6e405dfaf9a917d7eb423fcee35237c2020)), closes [#8201](https://github.com/vuejs/core/issues/8201)
+
+
+### Features
+
+* **compiler-sfc:** expose parseCache ([4576548](https://github.com/vuejs/core/commit/45765488d498d94f8760c9e82f1177070057b17c)), closes [#8202](https://github.com/vuejs/core/issues/8202)
+
+
+
+# [3.3.0-beta.2](https://github.com/vuejs/core/compare/v3.3.0-beta.1...v3.3.0-beta.2) (2023-04-25)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** avoid all hard errors when inferring runtime type ([2d9f6f9](https://github.com/vuejs/core/commit/2d9f6f926453c46f542789927bcd30d15da9c24b))
+* **compiler-sfc:** normalize windows paths when resolving types ([#8136](https://github.com/vuejs/core/issues/8136)) ([29da504](https://github.com/vuejs/core/commit/29da50468770fcee16ba5d5bec7166dd5bc120ee))
+* **compiler-sfc:** props bindings should not override user declared bindings ([433a58c](https://github.com/vuejs/core/commit/433a58ccb61c25512dcc3df155b8e285256917ef)), closes [#8148](https://github.com/vuejs/core/issues/8148)
+
+
+### Features
+
+* **compiler-sfc:** support project references when resolving types ([1c0be5c](https://github.com/vuejs/core/commit/1c0be5c7444966fa444460e87633cf44ec60292a)), closes [#8140](https://github.com/vuejs/core/issues/8140)
+
+
+### Performance Improvements
+
+* **compiler-sfc:** infer ref binding type for more built-in methods ([a370e80](https://github.com/vuejs/core/commit/a370e8006a70ea49a7d04c8c1a42d0947eba5dea))
+
+
+
+# [3.3.0-beta.1](https://github.com/vuejs/core/compare/v3.3.0-alpha.13...v3.3.0-beta.1) (2023-04-21)
+
+
+### Features
+
+* allow accessing console in template ([#6508](https://github.com/vuejs/core/issues/6508)) ([fe76224](https://github.com/vuejs/core/commit/fe762247f8035d28d543bc5602ad01b0c258f6d6)), closes [#7939](https://github.com/vuejs/core/issues/7939)
+* **compiler-sfc:** improve utility type Partial and Required ([#8103](https://github.com/vuejs/core/issues/8103)) ([1d1d728](https://github.com/vuejs/core/commit/1d1d72894995fde14bd09e2990462c19d5176bf9))
+* **deprecation:** deprecate [@vnode](https://github.com/vnode) hooks in favor of vue: prefix ([5f0394a](https://github.com/vuejs/core/commit/5f0394a5ab88c82c74e240161499721f63d5462e))
+* **deprecation:** deprecate v-is directive ([bbd8301](https://github.com/vuejs/core/commit/bbd8301a1344b02de635ea16d4822db1c343bd12))
+* **deprecation:** unwrap injected refs in Options API by default, deprecate app.config.unwrapInjectedRefs ([526fa3b](https://github.com/vuejs/core/commit/526fa3b2ccf038375e76f8af2f1ddf79a7388878))
+* **suspense:** introduce suspensible option for `<Suspense>` ([#6736](https://github.com/vuejs/core/issues/6736)) ([cb37d0b](https://github.com/vuejs/core/commit/cb37d0b9ffb5d4bb81a0367d84295dec8dd4448c)), closes [#5513](https://github.com/vuejs/core/issues/5513)
+
+
+
 # [3.3.0-alpha.13](https://github.com/vuejs/core/compare/v3.3.0-alpha.12...v3.3.0-alpha.13) (2023-04-20)
 
 

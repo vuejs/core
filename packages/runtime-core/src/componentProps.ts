@@ -128,12 +128,40 @@ type InferPropType<T> = [T] extends [null]
     : V
   : T
 
+/**
+ * Extract prop types from a runtime props options object.
+ * The extracted types are **internal** - i.e. the resolved props received by
+ * the component.
+ * - Boolean props are always present
+ * - Props with default values are always present
+ *
+ * To extract accepted props from the parent, use {@link ExtractPublicPropTypes}.
+ */
 export type ExtractPropTypes<O> = {
-  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to support IDE features
+  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
+  // support IDE features
   [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
 } & {
-  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to support IDE features
+  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
+  // support IDE features
   [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+}
+
+type PublicRequiredKeys<T> = {
+  [K in keyof T]: T[K] extends { required: true } ? K : never
+}[keyof T]
+
+type PublicOptionalKeys<T> = Exclude<keyof T, PublicRequiredKeys<T>>
+
+/**
+ * Extract prop types from a runtime props options object.
+ * The extracted types are **public** - i.e. the expected props that can be
+ * passed to component.
+ */
+export type ExtractPublicPropTypes<O> = {
+  [K in keyof Pick<O, PublicRequiredKeys<O>>]: InferPropType<O[K]>
+} & {
+  [K in keyof Pick<O, PublicOptionalKeys<O>>]?: InferPropType<O[K]>
 }
 
 const enum BooleanFlags {
