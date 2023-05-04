@@ -1,6 +1,6 @@
 import LRU from 'lru-cache'
 
-export function createCache<T>(size = 500) {
+export function createCache<T>(size = 500): Map<string, T> & { max?: number } {
   if (__GLOBAL__ || __ESM_BROWSER__) {
     return new Map<string, T>()
   }
