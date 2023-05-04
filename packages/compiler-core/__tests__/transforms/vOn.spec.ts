@@ -438,6 +438,7 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  // TODO remove in 3.4
   test('case conversion for vnode hooks', () => {
     const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
@@ -452,6 +453,7 @@ describe('compiler: transform v-on', () => {
         }
       ]
     })
+    expect('@vnode-* hooks in templates are deprecated').toHaveBeenWarned()
   })
 
   test('vue: prefixed events', () => {
