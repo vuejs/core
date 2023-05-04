@@ -455,11 +455,11 @@ describe('resolveType', () => {
   })
 
   describe('external type imports', () => {
-    const files = {
-      '/foo.ts': 'export type P = { foo: number }',
-      '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
-    }
     test('relative ts', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+        '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+      }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
@@ -605,6 +605,44 @@ describe('resolveType', () => {
         '/node_modules/foo/index.d.ts',
         '/pp.ts'
       ])
+    })
+
+    test('ts module resolve w/ project reference & extends', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          references: [
+            {
+              path: './tsconfig.app.json'
+            }
+          ]
+        }),
+        '/tsconfig.app.json': JSON.stringify({
+          include: ['**/*.ts', '**/*.vue'],
+          extends: './tsconfig.web.json'
+        }),
+        '/tsconfig.web.json': JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['./user.ts']
+            }
+          }
+        }),
+        '/user.ts': 'export type User = { bar: string }'
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>()
+        `,
+        files
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
     test('global types', () => {

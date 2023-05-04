@@ -6,7 +6,6 @@ importers:
     specifiers:
       '@babel/parser': ^7.21.3
       '@babel/types': ^7.21.3
-      '@esbuild-plugins/node-modules-polyfill': ^0.2.2
       '@rollup/plugin-alias': ^4.0.3
       '@rollup/plugin-commonjs': ^24.0.1
       '@rollup/plugin-json': ^6.0.0
@@ -22,6 +21,7 @@ importers:
       conventional-changelog-cli: ^2.0.31
       enquirer: ^2.3.2
       esbuild: ^0.17.4
+      esbuild-plugin-polyfill-node: ^0.2.0
       eslint: ^8.33.0
       eslint-plugin-jest: ^27.2.1
       estree-walker: ^2.0.2
@@ -52,7 +52,6 @@ importers:
     devDependencies:
       '@babel/parser': 7.21.3
       '@babel/types': 7.21.3
-      '@esbuild-plugins/node-modules-polyfill': 0.2.2_esbuild@0.17.5
       '@rollup/plugin-alias': 4.0.3_rollup@3.20.2
       '@rollup/plugin-commonjs': 24.0.1_rollup@3.20.2
       '@rollup/plugin-json': 6.0.0_rollup@3.20.2
@@ -68,6 +67,7 @@ importers:
       conventional-changelog-cli: 2.2.2
       enquirer: 2.3.6
       esbuild: 0.17.5
+      esbuild-plugin-polyfill-node: 0.2.0_esbuild@0.17.5
       eslint: 8.33.0
       eslint-plugin-jest: 27.2.1_qesohl5arz7pvqyycxtsqomlr4
       estree-walker: 2.0.2
@@ -100,7 +100,7 @@ importers:
     specifiers:
       '@babel/parser': ^7.21.3
       '@babel/types': ^7.21.3
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/shared': 3.3.0-beta.3
       estree-walker: ^2.0.2
       source-map-js: ^1.0.2
     dependencies:
@@ -113,8 +113,8 @@ importers:
 
   packages/compiler-dom:
     specifiers:
-      '@vue/compiler-core': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/compiler-core': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/compiler-core': link:../compiler-core
       '@vue/shared': link:../shared
@@ -125,17 +125,18 @@ importers:
       '@babel/types': ^7.21.3
       '@types/estree': ^0.0.48
       '@types/lru-cache': ^5.1.0
-      '@vue/compiler-core': 3.3.0-beta.1
-      '@vue/compiler-dom': 3.3.0-beta.1
-      '@vue/compiler-ssr': 3.3.0-beta.1
+      '@vue/compiler-core': 3.3.0-beta.3
+      '@vue/compiler-dom': 3.3.0-beta.3
+      '@vue/compiler-ssr': 3.3.0-beta.3
       '@vue/consolidate': ^0.17.3
-      '@vue/reactivity-transform': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/reactivity-transform': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
       estree-walker: ^2.0.2
       hash-sum: ^2.0.0
       lru-cache: ^5.1.1
       magic-string: ^0.30.0
       merge-source-map: ^1.1.0
+      minimatch: ^9.0.0
       postcss: ^8.1.10
       postcss-modules: ^4.0.0
       postcss-selector-parser: ^6.0.4
@@ -161,6 +162,7 @@ importers:
       hash-sum: 2.0.0
       lru-cache: 5.1.1
       merge-source-map: 1.1.0
+      minimatch: 9.0.0
       postcss-modules: 4.3.1_postcss@8.4.21
       postcss-selector-parser: 6.0.11
       pug: 3.0.2
@@ -168,8 +170,8 @@ importers:
 
   packages/compiler-ssr:
     specifiers:
-      '@vue/compiler-dom': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/compiler-dom': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/shared': link:../shared
@@ -182,7 +184,7 @@ importers:
 
   packages/reactivity:
     specifiers:
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/shared': link:../shared
 
@@ -191,8 +193,8 @@ importers:
       '@babel/core': ^7.21.3
       '@babel/parser': ^7.20.15
       '@babel/types': ^7.21.3
-      '@vue/compiler-core': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/compiler-core': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
       estree-walker: ^2.0.2
       magic-string: ^0.30.0
     dependencies:
@@ -207,16 +209,16 @@ importers:
 
   packages/runtime-core:
     specifiers:
-      '@vue/reactivity': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/reactivity': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/reactivity': link:../reactivity
       '@vue/shared': link:../shared
 
   packages/runtime-dom:
     specifiers:
-      '@vue/runtime-core': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/runtime-core': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
       csstype: ^3.1.1
     dependencies:
       '@vue/runtime-core': link:../runtime-core
@@ -225,16 +227,16 @@ importers:
 
   packages/runtime-test:
     specifiers:
-      '@vue/runtime-core': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/runtime-core': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/runtime-core': link:../runtime-core
       '@vue/shared': link:../shared
 
   packages/server-renderer:
     specifiers:
-      '@vue/compiler-ssr': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/compiler-ssr': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/compiler-ssr': link:../compiler-ssr
       '@vue/shared': link:../shared
@@ -275,11 +277,11 @@ importers:
 
   packages/vue:
     specifiers:
-      '@vue/compiler-dom': 3.3.0-beta.1
-      '@vue/compiler-sfc': 3.3.0-beta.1
-      '@vue/runtime-dom': 3.3.0-beta.1
-      '@vue/server-renderer': 3.3.0-beta.1
-      '@vue/shared': 3.3.0-beta.1
+      '@vue/compiler-dom': 3.3.0-beta.3
+      '@vue/compiler-sfc': 3.3.0-beta.3
+      '@vue/runtime-dom': 3.3.0-beta.3
+      '@vue/server-renderer': 3.3.0-beta.3
+      '@vue/shared': 3.3.0-beta.3
     dependencies:
       '@vue/compiler-dom': link:../compiler-dom
       '@vue/compiler-sfc': link:../compiler-sfc
@@ -497,16 +499,6 @@ packages:
       '@babel/helper-string-parser': 7.19.4
       '@babel/helper-validator-identifier': 7.19.1
       to-fast-properties: 2.0.0
-
-  /@esbuild-plugins/node-modules-polyfill/0.2.2_esbuild@0.17.5:
-    resolution: {integrity: sha512-LXV7QsWJxRuMYvKbiznh+U1ilIop3g2TeKRzUxOG5X3YITc8JyyTa90BmLwqqv0YnX4v32CSlG+vsziZp9dMvA==}
-    peerDependencies:
-      esbuild: '*'
-    dependencies:
-      esbuild: 0.17.5
-      escape-string-regexp: 4.0.0
-      rollup-plugin-node-polyfills: 0.2.1
-    dev: true
 
   /@esbuild/android-arm/0.17.5:
     resolution: {integrity: sha512-crmPUzgCmF+qZXfl1YkiFoUta2XAfixR1tEnr/gXIixE+WL8Z0BGqfydP5oox0EUOgQMMRgtATtakyAcClQVqQ==}
@@ -795,6 +787,10 @@ packages:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.0
       '@jridgewell/sourcemap-codec': 1.4.14
+    dev: true
+
+  /@jspm/core/2.0.1:
+    resolution: {integrity: sha512-Lg3PnLp0QXpxwLIAuuJboLeRaIhrgJjeuh797QADg3xz8wGLugQOS5DpsE8A6i6Adgzf+bacllkKZG3J0tGfDw==}
     dev: true
 
   /@nodelib/fs.scandir/2.1.5:
@@ -2236,6 +2232,16 @@ packages:
       is-symbol: 1.0.4
     dev: true
 
+  /esbuild-plugin-polyfill-node/0.2.0_esbuild@0.17.5:
+    resolution: {integrity: sha512-rpCoK4mag0nehBtFlFMLSuL9bNBLEh8h3wZ/FsrJEDompA/AwOqInx6Xow01+CXAcvZYhkoJ0SIZiS37qkecDA==}
+    peerDependencies:
+      esbuild: '*'
+    dependencies:
+      '@jspm/core': 2.0.1
+      esbuild: 0.17.5
+      import-meta-resolve: 2.2.2
+    dev: true
+
   /esbuild/0.17.5:
     resolution: {integrity: sha512-Bu6WLCc9NMsNoMJUjGl3yBzTjVLXdysMltxQWiLAypP+/vQrf+3L1Xe8fCXzxaECus2cEJ9M7pk4yKatEwQMqQ==}
     engines: {node: '>=12'}
@@ -2435,10 +2441,6 @@ packages:
   /estraverse/5.3.0:
     resolution: {integrity: sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==}
     engines: {node: '>=4.0'}
-    dev: true
-
-  /estree-walker/0.6.1:
-    resolution: {integrity: sha512-SqmZANLWS0mnatqbSfRP5g8OXZC12Fgg1IwNtLsyHDzJizORW4khDfjPqJZsemPWBB2uqykUah5YpQ6epsqC/w==}
     dev: true
 
   /estree-walker/2.0.2:
@@ -2994,6 +2996,10 @@ packages:
     dependencies:
       parent-module: 1.0.1
       resolve-from: 4.0.0
+    dev: true
+
+  /import-meta-resolve/2.2.2:
+    resolution: {integrity: sha512-f8KcQ1D80V7RnqVm+/lirO9zkOxjGxhaTC1IPrBGd3MEfNgmNG67tSUO9gTi2F3Blr2Az6g1vocaxzkVnWl9MA==}
     dev: true
 
   /imurmurhash/0.1.4:
@@ -3612,12 +3618,6 @@ packages:
       yallist: 4.0.0
     dev: true
 
-  /magic-string/0.25.9:
-    resolution: {integrity: sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ==}
-    dependencies:
-      sourcemap-codec: 1.4.8
-    dev: true
-
   /magic-string/0.27.0:
     resolution: {integrity: sha512-8UnnX2PeRAPZuN12svgR9j7M1uWMovg/CEnIwIG0LFkXSJJe4PdfUGiTGl8V9bsBHFUtfVINcSyYxd7q+kx9fA==}
     engines: {node: '>=12'}
@@ -3755,6 +3755,13 @@ packages:
   /minimatch/5.1.6:
     resolution: {integrity: sha512-lKwV/1brpG6mBUFHtb7NUmtABCb2WZZmm2wNiOA5hAb8VdCS4B3dtMWyvcoViccwAW/COERjXLt0zP1zXUN26g==}
     engines: {node: '>=10'}
+    dependencies:
+      brace-expansion: 2.0.1
+    dev: true
+
+  /minimatch/9.0.0:
+    resolution: {integrity: sha512-0jJj8AvgKqWN05mrwuqi8QYKx1WmYSUoKSxu5Qhs9prezTz10sxAHGNZe9J9cqIJzta8DWsleh2KaVaLl6Ru2w==}
+    engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
       brace-expansion: 2.0.1
     dev: true
@@ -4663,21 +4670,6 @@ packages:
       - supports-color
     dev: true
 
-  /rollup-plugin-inject/3.0.2:
-    resolution: {integrity: sha512-ptg9PQwzs3orn4jkgXJ74bfs5vYz1NCZlSQMBUA0wKcGp5i5pA1AO3fOUEte8enhGUC+iapTCzEWw2jEFFUO/w==}
-    deprecated: This package has been deprecated and is no longer maintained. Please use @rollup/plugin-inject.
-    dependencies:
-      estree-walker: 0.6.1
-      magic-string: 0.25.9
-      rollup-pluginutils: 2.8.2
-    dev: true
-
-  /rollup-plugin-node-polyfills/0.2.1:
-    resolution: {integrity: sha512-4kCrKPTJ6sK4/gLL/U5QzVT8cxJcofO0OU74tnB19F40cmuAKSzH5/siithxlofFEjwvw1YAhPmbvGNA6jEroA==}
-    dependencies:
-      rollup-plugin-inject: 3.0.2
-    dev: true
-
   /rollup-plugin-polyfill-node/0.12.0_rollup@3.20.2:
     resolution: {integrity: sha512-PWEVfDxLEKt8JX1nZ0NkUAgXpkZMTb85rO/Ru9AQ69wYW8VUCfDgP4CGRXXWYni5wDF0vIeR1UoF3Jmw/Lt3Ug==}
     peerDependencies:
@@ -4685,12 +4677,6 @@ packages:
     dependencies:
       '@rollup/plugin-inject': 5.0.3_rollup@3.20.2
       rollup: 3.20.2
-    dev: true
-
-  /rollup-pluginutils/2.8.2:
-    resolution: {integrity: sha512-EEp9NhnUkwY8aif6bxgovPHMoMoNr2FulJziTndpt5H9RdwC47GSGuII9XxpSdzVGM0GWrNPHV6ie1LTNJPaLQ==}
-    dependencies:
-      estree-walker: 0.6.1
     dev: true
 
   /rollup/3.20.2:
@@ -4907,11 +4893,6 @@ packages:
   /source-map/0.6.1:
     resolution: {integrity: sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g==}
     engines: {node: '>=0.10.0'}
-    dev: true
-
-  /sourcemap-codec/1.4.8:
-    resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
-    deprecated: Please use @jridgewell/sourcemap-codec instead
     dev: true
 
   /spdx-correct/3.1.1:
