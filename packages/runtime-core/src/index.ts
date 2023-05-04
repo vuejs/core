@@ -254,6 +254,7 @@ export type {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
 export type {
