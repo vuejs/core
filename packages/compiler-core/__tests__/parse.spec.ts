@@ -11,7 +11,8 @@ import {
   Position,
   TextNode,
   InterpolationNode,
-  ConstantTypes
+  ConstantTypes,
+  DirectiveNode
 } from '../src/ast'
 
 describe('compiler: parse', () => {
@@ -1160,6 +1161,34 @@ describe('compiler: parse', () => {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
           source: 'v-on:click'
+        }
+      })
+    })
+
+    // #3494
+    test('directive argument edge case', () => {
+      const ast = baseParse('<div v-slot:slot />')
+      const directive = (ast.children[0] as ElementNode)
+        .props[0] as DirectiveNode
+      expect(directive.arg).toMatchObject({
+        loc: {
+          start: { offset: 12, line: 1, column: 13 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'slot'
+        }
+      })
+    })
+
+    // https://github.com/vuejs/language-tools/issues/2710
+    test('directive argument edge case (2)', () => {
+      const ast = baseParse('<div #item.item />')
+      const directive = (ast.children[0] as ElementNode)
+        .props[0] as DirectiveNode
+      expect(directive.arg).toMatchObject({
+        loc: {
+          start: { offset: 6, line: 1, column: 7 },
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'item.item'
         }
       })
     })
