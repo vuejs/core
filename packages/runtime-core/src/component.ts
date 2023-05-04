@@ -971,14 +971,6 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
       get(target, key: string) {
         track(instance, TrackOpTypes.GET, '$slots')
         return target[key]
-      },
-      set() {
-        warn(`setupContext.slots is readonly.`)
-        return false
-      },
-      deleteProperty() {
-        warn(`setupContext.slots is readonly.`)
-        return false
       }
     }))
   )
