@@ -41,7 +41,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   onMounted(() => {
     const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
+    ob.observe(instance.subTree.el!.parentNode, {
+      childList: true,
+      attributeFilter: ['style']
+    })
     onUnmounted(() => ob.disconnect())
   })
 }
