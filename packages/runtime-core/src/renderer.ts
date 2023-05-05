@@ -710,28 +710,6 @@ function baseCreateRenderer(
       transition!.beforeEnter(el)
     }
 
-    // The component has styles
-    // and is a child component of a custom element,
-    // then inject the style into the shadow dom
-    if (
-      parentComponent &&
-      !parentComponent.isAddedCEChildStyle &&
-      parentComponent.parent &&
-      // If the parent component is wrapped by an defineAsyncComponent function,
-      // it will not be processed
-      !(parentComponent.parent.type as ComponentOptions).__asyncLoader
-    ) {
-      const styles =
-        (parentComponent.isCEChild &&
-          (parentComponent.type as ConcreteComponent & { styles?: string[] })
-            .styles) ||
-        null
-      if (parentComponent.addCEChildStyle && styles) {
-        parentComponent.addCEChildStyle(styles)
-        parentComponent.isAddedCEChildStyle = true
-      }
-    }
-
     hostInsert(el, container, anchor)
     if (
       (vnodeHook = props && props.onVnodeMounted) ||
@@ -1190,6 +1168,7 @@ function baseCreateRenderer(
           optimized
         )
       } else {
+        debugger
         mountComponent(
           n2,
           container,
@@ -1203,6 +1182,27 @@ function baseCreateRenderer(
     } else {
       updateComponent(n1, n2, optimized)
     }
+    /*// The component has styles
+    // and is a child component of a custom element,
+    // then inject the style into the shadow dom
+    if (
+        parentComponent &&
+        !parentComponent.isAddedCEChildStyle &&
+        parentComponent.parent &&
+        // If the parent component is wrapped by an defineAsyncComponent function,
+        // it will not be processed
+        !(parentComponent.parent.type as ComponentOptions).__asyncLoader
+    ) {
+      const styles =
+          (parentComponent.isCEChild &&
+              (parentComponent.type as ConcreteComponent & { styles?: string[] })
+                  .styles) ||
+          null
+      if (parentComponent.addCEChildStyle && styles) {
+        parentComponent.addCEChildStyle(styles)
+        parentComponent.isAddedCEChildStyle = true
+      }
+    }*/
   }
 
   const mountComponent: MountComponentFn = (
@@ -1392,6 +1392,25 @@ function baseCreateRenderer(
             startMeasure(instance, `render`)
           }
           const subTree = (instance.subTree = renderComponentRoot(instance))
+
+          // TODO: bwsy
+          if (
+              instance &&
+              // If the parent component is wrapped by an defineAsyncComponent function,
+              // it will not be processed
+              !(instance.type as ComponentOptions).__asyncLoader
+          ) {
+            const styles =
+                (instance.isCEChild &&
+                    (instance.type as ConcreteComponent & { styles?: string[] })
+                        .styles) ||
+                null
+            if (instance.addCEChildStyle && styles) {
+              instance.addCEChildStyle(styles, instance.uid)
+            }
+          }
+
+
           if (__DEV__) {
             endMeasure(instance, `render`)
           }

@@ -79,7 +79,6 @@ import {
 } from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
-import { RendererNode } from './renderer'
 
 export type Data = Record<string, unknown>
 
@@ -410,10 +409,7 @@ export interface ComponentInternalInstance {
   // the method of adding style passed down from the ancestor
   addCEChildStyle:
     | null
-    | ((styles: string[], anchor?: RendererNode | null) => void)
-  // Marks whether the current component has been styled
-  // when it is a child component of a custom element
-  isAddedCEChildStyle: boolean | null
+    | ((styles: string[], uid: number) => void)
   /**
    * @internal
    */
@@ -567,9 +563,6 @@ export function createComponentInstance(
     isUnmounted: false,
     isDeactivated: false,
 
-    // Marks whether the current component has been styled
-    // when it is a child component of a custom element
-    isAddedCEChildStyle: false,
     // Whether the component is a child component of a custom element
     isCEChild: parent && (parent.isCE || parent.isCEChild),
     // When the component is a child component of a custom element,

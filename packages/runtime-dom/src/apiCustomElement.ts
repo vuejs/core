@@ -434,7 +434,30 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addStyles(styles: string[] | undefined) {
-    this._applyStyles(styles)
+  protected _addStyles(styles: string[] | undefined, uid: number) {
+    // const finalStyles = this._patchStyles(styles)
+    //this._applyStyles(finalStyles)
+
+    if (styles) {
+      styles.forEach((css,index) => {
+        const oldStyle = this.shadowRoot!.querySelector(`data-v-ce-${uid}-${index}`)
+        if(oldStyle){
+          this.shadowRoot!.removeChild(oldStyle)
+        }
+        const s = document.createElement('style')
+        s.textContent = css
+        s.setAttribute(`data-v-ce-${uid}-${index}`, '')
+        this.shadowRoot!.appendChild(s)
+        // record for HMR
+        if (__DEV__) {
+          ;(this._styles || (this._styles = [])).push(s)
+        }
+      })
+    }
+  }
+
+  protected _patchStyles(styles: string[] | undefined) {
+    debugger
+    return styles
   }
 }
