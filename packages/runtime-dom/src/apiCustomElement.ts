@@ -177,7 +177,7 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
-
+  private _childStylesAnchor?: HTMLStyleElement
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -418,11 +418,12 @@ export class VueElement extends BaseClass {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        if (anchor) {
-          this.shadowRoot!.insertBefore(s, anchor as Node)
+        if (this._childStylesAnchor) {
+          this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
         } else {
           this.shadowRoot!.appendChild(s)
         }
+        this._childStylesAnchor = s
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
@@ -433,10 +434,7 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addStyles(
-    styles: string[] | undefined,
-    anchor: RendererNode | null | undefined
-  ) {
-    this._applyStyles(styles, anchor)
+  protected _addStyles(styles: string[] | undefined) {
+    this._applyStyles(styles)
   }
 }

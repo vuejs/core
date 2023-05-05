@@ -715,6 +715,7 @@ function baseCreateRenderer(
     // then inject the style into the shadow dom
     if (
       parentComponent &&
+      !parentComponent.isAddedCEChildStyle &&
       parentComponent.parent &&
       // If the parent component is wrapped by an defineAsyncComponent function,
       // it will not be processed
@@ -726,7 +727,8 @@ function baseCreateRenderer(
             .styles) ||
         null
       if (parentComponent.addCEChildStyle && styles) {
-        parentComponent.addCEChildStyle(styles, anchor)
+        parentComponent.addCEChildStyle(styles)
+        parentComponent.isAddedCEChildStyle = true
       }
     }
 
