@@ -1,3 +1,20 @@
+# [3.3.0-beta.4](https://github.com/vuejs/core/compare/v3.3.0-beta.3...v3.3.0-beta.4) (2023-05-05)
+
+
+### Bug Fixes
+
+* **runtime-core:** handle template ref with number values ([#8233](https://github.com/vuejs/core/issues/8233)) ([1b1242f](https://github.com/vuejs/core/commit/1b1242f4d1349e361335b2815f41742d41283a94)), closes [#8230](https://github.com/vuejs/core/issues/8230)
+* **types:** retain compatibility for provide() usage with explicit type parameter ([038cd83](https://github.com/vuejs/core/commit/038cd830d5b34b47d7e7e1c61f0973d27cd8b915))
+
+
+### Features
+
+* **compiler-dom:** treat inert as boolean attribute ([#8209](https://github.com/vuejs/core/issues/8209)) ([918ec8a](https://github.com/vuejs/core/commit/918ec8a5cbc825a3947cd35fe966671c245af087)), closes [#8208](https://github.com/vuejs/core/issues/8208)
+* **types:** add slots types for built-in components ([#6033](https://github.com/vuejs/core/issues/6033)) ([3cb4dc9](https://github.com/vuejs/core/commit/3cb4dc9e5538e1c2bde9fa691b001615a848c546))
+* **types:** provide ExtractPublicPropTypes utility type ([bff63c5](https://github.com/vuejs/core/commit/bff63c5498f5fa098689c18defe48ae08d47eadb)), closes [#5272](https://github.com/vuejs/core/issues/5272) [#8168](https://github.com/vuejs/core/issues/8168)
+
+
+
 # [3.3.0-beta.3](https://github.com/vuejs/core/compare/v3.3.0-beta.2...v3.3.0-beta.3) (2023-05-01)
 
 
