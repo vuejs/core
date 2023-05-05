@@ -70,6 +70,36 @@ describe('SFC scoped CSS', () => {
       "[data-v-test] .foo { color: red;
       }"
     `)
+    expect(compileScoped(`:deep(.foo) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo,[data-v-test] .baz { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz,.bar,.fcc) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo,[data-v-test] .baz,[data-v-test] .bar,[data-v-test] .fcc { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz) .fc { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .fc,[data-v-test] .baz .fc { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-deep(.foo,.baz .bar) .fc { color: red; }`))
+      .toMatchInlineSnapshot(`
+      "[data-v-test] .foo .fc,[data-v-test] .baz .bar .fc { color: red;
+      }"
+    `)
+    expect(compileScoped(`.bar :deep(.foo,.baz,.abc) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".bar[data-v-test] .foo,.bar[data-v-test] .baz,.bar[data-v-test] .abc { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-deep(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       "[data-v-test] .foo { color: red;
@@ -83,6 +113,16 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`.baz .qux ::v-deep(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".baz .qux[data-v-test] .foo .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-deep(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux[data-v-test] .foo,.baz .qux[data-v-test] .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-deep(.foo,.bar) .m { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux[data-v-test] .foo .m,.baz .qux[data-v-test] .bar .m { color: red;
       }"
     `)
   })
