@@ -38,6 +38,7 @@ const sfcOptions: SFCOptions = {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
     reactivityTransform: true,
+    propsDestructure: true,
     defineModel: true
   },
   style: {
