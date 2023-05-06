@@ -132,7 +132,22 @@ describe('SFC scoped CSS', () => {
       .toMatchInlineSnapshot(`
     ".foo[data-v-test-s] { color: red;
     }"
-  `)
+    `)
+    expect(compileScoped(`:slotted(.foo) .bar { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s] .bar { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-slotted(.foo,.baz .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s],.baz .bar[data-v-test-s] { color: red;
+      }"
+    `)
+    expect(compileScoped(`::v-slotted(.foo,.baz) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo[data-v-test-s],.baz[data-v-test-s] { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-slotted(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo[data-v-test-s] { color: red;
@@ -148,6 +163,16 @@ describe('SFC scoped CSS', () => {
       ".baz .qux .foo .bar[data-v-test-s] { color: red;
       }"
     `)
+    expect(compileScoped(`.baz .qux ::v-slotted(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux .foo[data-v-test-s],.baz .qux .bar[data-v-test-s] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.baz .qux ::v-slotted(.foo,.bar) .m { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".baz .qux .foo[data-v-test-s] .m,.baz .qux .bar[data-v-test-s] .m { color: red;
+      }"
+    `)
   })
 
   test('::v-global', () => {
@@ -156,6 +181,11 @@ describe('SFC scoped CSS', () => {
     ".foo { color: red;
     }"
   `)
+    expect(compileScoped(`::v-global(.foo,.bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo,.bar { color: red;
+      }"
+    `)
     expect(compileScoped(`::v-global(.foo) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo { color: red;
@@ -170,6 +200,24 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`.baz .qux ::v-global(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo .bar { color: red;
+      }"
+    `)
+    expect(
+      compileScoped(`.baz .qux ::v-global(.foo .bar, .bar) { color: red; }`)
+    ).toMatchInlineSnapshot(`
+      ".foo .bar, .bar { color: red;
+      }"
+    `)
+    // global ignores anything after it
+    expect(compileScoped(`::v-global(.foo .bar) .baz { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ".foo .bar { color: red;
+      }"
+    `)
+    expect(
+      compileScoped(`.baz ::v-global(.foo .bar,.faa) .qux { color: red; }`)
+    ).toMatchInlineSnapshot(`
+      ".foo .bar,.faa { color: red;
       }"
     `)
   })

@@ -194,11 +194,37 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, n.nodes[0], selectorRoot, true /* slotted */)
         let last: selectorParser.Selector['nodes'][0] = n
-        n.nodes[0].each(ss => {
-          selector.insertAfter(last, ss)
-          last = ss
+        const nextNodes = [] as typeof selector.nodes
+        n.nodes.forEach((ss, i) => {
+          rewriteSelector(id, ss, selectorRoot, true /* slotted */)
+          const index = selector.index(n)
+          if (i > 0) {
+            const prevList = selector.nodes.slice(0, index).concat(ss.nodes)
+            if (nextNodes.length) {
+              prevList.push(...nextNodes)
+              nextNodes.forEach(s => {
+                selector.removeChild(s)
+                selector.insertAfter(last, s)
+                last = s
+              })
+            }
+            const newList = prevList.map(
+              s => s.clone({}) as selectorParser.Selector['nodes'][0]
+            )
+
+            newList.unshift(selectorParser.combinator({ value: ',' }))
+            newList.forEach(s => {
+              selector.insertAfter(last, s)
+              last = s
+            })
+          } else {
+            nextNodes.push(...selector.nodes.slice(index + 1))
+            ss.each(s => {
+              selector.insertAfter(last, s)
+              last = s
+            })
+          }
         })
         // selector.insertAfter(n, n.nodes[0])
         selector.removeChild(n)
@@ -211,7 +237,11 @@ function rewriteSelector(
       // global: replace with inner selector and do not inject [id].
       // ::v-global(.foo) -> .foo
       if (value === ':global' || value === '::v-global') {
-        selectorRoot.insertAfter(selector, n.nodes[0])
+        let last = selector
+        n.nodes.forEach(_node => {
+          selectorRoot.insertAfter(last, _node)
+          last = _node
+        })
         selectorRoot.removeChild(selector)
         return false
       }
