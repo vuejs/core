@@ -769,8 +769,8 @@ describe('defineCustomElement', () => {
           ]
         }
       })
-      customElements.define('my-el-with-grandchild-styles', Foo)
-      container.innerHTML = `<my-el-with-grandchild-styles></my-el-with-grandchild-styles>`
+      customElements.define('my-el-with-if-styles', Foo)
+      container.innerHTML = `<my-el-with-if-styles></my-el-with-if-styles>`
       await nextTick()
 
       const el = container.childNodes[0] as VueElement
