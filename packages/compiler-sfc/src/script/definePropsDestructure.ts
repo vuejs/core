@@ -27,7 +27,7 @@ export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
   }
 
