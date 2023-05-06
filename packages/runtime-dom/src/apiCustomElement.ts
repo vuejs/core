@@ -21,8 +21,7 @@ import {
   ConcreteComponent,
   ComponentOptions,
   ComponentInjectOptions,
-  SlotsType,
-  RendererNode
+  SlotsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -358,9 +357,12 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
-        // Reference the _addStyles method on the instance,
+        // Reference the _addChildStyles method on the instance,
         // which will be used to add styles in the child components of the custom element
-        instance.addCEChildStyle = this._addStyles.bind(this)
+        instance.addCEChildStyle = this._addChildStyles.bind(this)
+        // Reference the _removeChildStyles method on the instance,
+        // This will be used to remove styles in child components of custom elements
+        instance.removeCEChildStyle = this._removeChildStyles.bind(this)
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -410,19 +412,12 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(
-    styles: string[] | undefined,
-    anchor?: RendererNode | null
-  ) {
+  private _applyStyles(styles: string[] | undefined) {
     if (styles) {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
-        if (this._childStylesAnchor) {
-          this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
-        } else {
-          this.shadowRoot!.appendChild(s)
-        }
+        this.shadowRoot!.appendChild(s)
         this._childStylesAnchor = s
         // record for HMR
         if (__DEV__) {
@@ -434,20 +429,28 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addStyles(styles: string[] | undefined, uid: number) {
-    // const finalStyles = this._patchStyles(styles)
-    //this._applyStyles(finalStyles)
-
+  protected _addChildStyles(
+    styles: string[] | undefined,
+    instance: ComponentInternalInstance
+  ) {
     if (styles) {
-      styles.forEach((css,index) => {
-        const oldStyle = this.shadowRoot!.querySelector(`data-v-ce-${uid}-${index}`)
-        if(oldStyle){
-          this.shadowRoot!.removeChild(oldStyle)
-        }
+      styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
-        s.setAttribute(`data-v-ce-${uid}-${index}`, '')
-        this.shadowRoot!.appendChild(s)
+        // Generate ids and record them, and delete style tags based on
+        // them when components are unmounted
+        const ceStyleId = `data-v-ce-${new Date().getTime()}`
+        ;(instance.cecStyleIds || (instance.cecStyleIds = [])).push(ceStyleId)
+        s.setAttribute(ceStyleId, '')
+
+        if (this._childStylesAnchor) {
+          this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
+        } else {
+          this.shadowRoot!.appendChild(s)
+        }
+        // update anchor
+        this._childStylesAnchor = s
+
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
@@ -456,8 +459,14 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _patchStyles(styles: string[] | undefined) {
-    debugger
-    return styles
+  protected _removeChildStyles(cecStyleIds: string[] | null) {
+    if (cecStyleIds) {
+      cecStyleIds.forEach(id => {
+        const s = this.shadowRoot!.querySelector(`[${id}]`)
+        s && this.shadowRoot!.removeChild(s)
+      })
+      const archor = this.shadowRoot!.querySelectorAll('style')
+      this._childStylesAnchor = archor.length > 0 ? archor[0] : undefined
+    }
   }
 }

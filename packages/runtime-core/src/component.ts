@@ -409,7 +409,16 @@ export interface ComponentInternalInstance {
   // the method of adding style passed down from the ancestor
   addCEChildStyle:
     | null
-    | ((styles: string[], uid: number) => void)
+    | ((styles: string[], instance: ComponentInternalInstance) => void)
+  // When the component is a child component of a custom element,
+  // The method passed down from the ancestor to remove the style tag,
+  // which will be called when the component is unmounted
+  removeCEChildStyle: null | ((cecStyleIds: string[]) => void)
+  // When the component is a child component of a custom element,
+  // cecStyleIds will record the styles id of the current component,
+  // which will be used when removing the style tag
+  cecStyleIds: null | string[]
+
   /**
    * @internal
    */
@@ -569,6 +578,15 @@ export function createComponentInstance(
     // the method of adding style passed down from the ancestor
     addCEChildStyle:
       parent && parent.addCEChildStyle ? parent.addCEChildStyle : null,
+    // When the component is a child component of a custom element,
+    // The method passed down from the ancestor to remove the style tag,
+    // which will be called when the component is unmounted
+    removeCEChildStyle:
+      parent && parent.removeCEChildStyle ? parent.removeCEChildStyle : null,
+    // When the component is a child component of a custom element,
+    // cecStyleIds will record the styles id of the current component,
+    // which will be used when removing the style tag
+    cecStyleIds: null,
 
     bc: null,
     c: null,
