@@ -220,12 +220,10 @@ importers:
       '@vue/runtime-core': 3.3.0-beta.3
       '@vue/shared': 3.3.0-beta.3
       csstype: ^3.1.1
-      hash-sum: ^2.0.0
     dependencies:
       '@vue/runtime-core': link:../runtime-core
       '@vue/shared': link:../shared
       csstype: 3.1.1
-      hash-sum: 2.0.0
 
   packages/runtime-test:
     specifiers:
@@ -2905,6 +2903,7 @@ packages:
 
   /hash-sum/2.0.0:
     resolution: {integrity: sha512-WdZTbAByD+pHfl/g9QSsBIIwy8IT+EsPiKDs0KNX+zSHhdDLFKdZu0BQHljvO+0QI/BasbMSUa8wYNCZTvhslg==}
+    dev: true
 
   /hosted-git-info/2.8.9:
     resolution: {integrity: sha512-mxIDAb9Lsm6DoOJ7xH+5+X4y1LU/4Hi50L9C5sIswK3JzULS4bwk1FvjdBgvYR4bzT4tuUQiC15FE2f5HbLvYw==}
