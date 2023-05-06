@@ -167,7 +167,7 @@ function mountSuspense(
   // Explain that this suspense has no async deps,
   // parentSuspense.deps subtracts the number of deps added before,
   // to avoid wrongly calling parentSuspense.resolved
-  if (suspense.deps <= 0 && isSuspensibleFn(vnode) && parentSuspense) {
+  if (suspense.deps <= 0 && isVNodeSuspensible(vnode) && parentSuspense) {
     parentSuspense.deps--
   }
 
@@ -445,7 +445,7 @@ function createSuspenseBoundary(
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
   let parentSuspenseId: number | undefined
-  const isSuspensible = isSuspensibleFn(vnode)
+  const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
     if (parentSuspense?.pendingBranch) {
       parentSuspenseId = parentSuspense?.pendingId
@@ -839,6 +839,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   }
 }
 
-function isSuspensibleFn(vnode: VNode) {
+function isVNodeSuspensible(vnode: VNode) {
   return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }
