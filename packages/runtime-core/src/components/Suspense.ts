@@ -163,6 +163,14 @@ function mountSuspense(
     isSVG,
     slotScopeIds
   )
+  // suspense.deps <= 0 and suspensible is true
+  // Explain that this suspense has no async deps,
+  // parentSuspense.deps subtracts the number of deps added before,
+  // to avoid wrongly calling parentSuspense.resolved
+  if (suspense.deps <= 0 && isSuspensibleFn(vnode) && parentSuspense) {
+    parentSuspense.deps--
+  }
+
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
     // has async
@@ -437,8 +445,7 @@ function createSuspenseBoundary(
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
   let parentSuspenseId: number | undefined
-  const isSuspensible =
-    vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const isSuspensible = isSuspensibleFn(vnode)
   if (isSuspensible) {
     if (parentSuspense?.pendingBranch) {
       parentSuspenseId = parentSuspense?.pendingId
@@ -830,4 +837,8 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
     parentComponent.vnode.el = el
     updateHOCHostEl(parentComponent, el)
   }
+}
+
+function isSuspensibleFn(vnode: VNode) {
+  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }
