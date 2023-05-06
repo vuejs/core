@@ -13,6 +13,10 @@ import {
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
+  function getPropertyValue(el: unknown, key = `--color`) {
+    return (el as HTMLElement).style.getPropertyValue(key)
+  }
+
   async function assertCssVars(getApp: (state: any) => ComponentOptions) {
     const state = reactive({ color: 'red' })
     const App = getApp(state)
@@ -21,13 +25,13 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+      expect(getPropertyValue(c)).toBe(`red`)
     }
 
     state.color = 'green'
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+      expect(getPropertyValue(c)).toBe('green')
     }
   }
 
@@ -99,7 +103,7 @@ describe('useCssVars', () => {
     await nextTick()
     // css vars use with fallback tree
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+      expect(getPropertyValue(c)).toBe(`red`)
     }
     // AsyncComp resolve
     resolveAsync()
@@ -108,13 +112,13 @@ describe('useCssVars', () => {
     await nextTick()
     // css vars use with default tree
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+      expect(getPropertyValue(c)).toBe(`red`)
     }
 
     state.color = 'green'
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('green')
+      expect(getPropertyValue(c)).toBe('green')
     }
   })
 
@@ -134,13 +138,13 @@ describe('useCssVars', () => {
     await nextTick()
     // css vars use with fallback tree
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+      expect(getPropertyValue(c)).toBe(`red`)
     }
 
     value.value = false
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 
@@ -166,13 +170,13 @@ describe('useCssVars', () => {
     await nextTick()
     // css vars use with fallback tree
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe(`red`)
+      expect(getPropertyValue(c)).toBe(`red`)
     }
 
     value.value = false
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 
@@ -194,7 +198,7 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 
@@ -214,7 +218,7 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 
@@ -238,7 +242,7 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 
@@ -265,14 +269,14 @@ describe('useCssVars', () => {
     await nextTick()
     expect(target.children.length).toBe(1)
     for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
 
     toggle.value = true
     await nextTick()
     expect(target.children.length).toBe(2)
     for (const c of [].slice.call(target.children as any)) {
-      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+      expect(getPropertyValue(c)).toBe('red')
     }
   })
 })
