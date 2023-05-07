@@ -36,13 +36,21 @@ export function patchDOMProp(
     // non-string values will be stringified.
     el._value = value
     const newValue = value == null ? '' : value
+
     if (
-      el.value !== newValue ||
       // #4956: always set for OPTION elements because its value falls back to
       // textContent if no value attribute is present. And setting .value for
       // OPTION has no side effect
+      // #8227: set value will trigger autocomplete,
+      // so only set when attribute value !== newValue
       el.tagName === 'OPTION'
     ) {
+      const attrValue = el.getAttribute('value')
+
+      if (attrValue !== newValue) {
+        el.value = newValue
+      }
+    } else if (el.value !== newValue) {
       el.value = newValue
     }
     if (value == null) {
