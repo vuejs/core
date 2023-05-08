@@ -28,7 +28,7 @@ import {
   PropOptions
 } from './componentProps'
 import { warn } from './warning'
-import { SlotsType, TypedSlots } from './componentSlots'
+import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import { Ref, ref } from '@vue/reactivity'
 import { watch } from './apiWatch'
 
@@ -205,7 +205,7 @@ export function defineOptions<
 
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>
->(): TypedSlots<SlotsType<S>> {
+>(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
