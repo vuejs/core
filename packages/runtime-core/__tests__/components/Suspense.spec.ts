@@ -1335,9 +1335,14 @@ describe('Suspense', () => {
           h(Suspense, null, {
             default: [
               h(outerToggle.value ? OuterB : OuterA, null, {
-                default: () => h(Suspense, { suspensible: true },{
-                  default: h(innerToggle.value ? InnerB : InnerA)
-                })
+                default: () =>
+                  h(
+                    Suspense,
+                    { suspensible: true },
+                    {
+                      default: h(innerToggle.value ? InnerB : InnerA)
+                    }
+                  )
               })
             ],
             fallback: h('div', 'fallback outer')

@@ -5,13 +5,13 @@ import {
   defineCustomElement,
   h,
   inject,
-  nextTick, provide,
+  nextTick,
+  provide,
   Ref,
   ref,
   renderSlot,
   VueElement
 } from '../src'
-import {TextNode} from "@vue/compiler-core";
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -445,38 +445,41 @@ describe('defineCustomElement', () => {
 
     // # 8127
     test('bwsy before resolve', async () => {
+      const comp = {
+        setup() {
+          provide('message', 'hello')
+        },
+        render(this: any) {
+          return h('my-el-async-c')
+        }
+      }
       const P = defineCustomElement(
         defineAsyncComponent(() => {
-          return  new Promise((resolve) => {
+          return new Promise<typeof comp>(resolve => {
             setTimeout(() => {
-              resolve({
-                setup(){
-                  provide('message', 'hello')
-                },
-                render(this: any){
-                  return  h('my-el-async-c')
-                }
-              });
-            }, 200);
-          });
+              resolve(comp)
+            }, 200)
+          })
         })
       )
 
+      const compChild = {
+        setup() {
+          const message = inject('message', 'vue')
+          return { message }
+        },
+        render(this: { message: string }) {
+          return h('div', this.message)
+        }
+      }
+
       const C = defineCustomElement(
         defineAsyncComponent(() => {
-          return  new Promise((resolve) => {
+          return new Promise<typeof compChild>(resolve => {
             setTimeout(() => {
-              resolve({
-                setup() {
-                  const message = inject('message', 'vue')
-                  return { message }
-                },
-                render(this){
-                  return h('div', this.message)
-                }
-              });
-            }, 200);
-          });
+              resolve(compChild)
+            }, 200)
+          })
         })
       )
       customElements.define('my-el-async-c', C)
@@ -484,19 +487,21 @@ describe('defineCustomElement', () => {
 
       container.innerHTML = `<my-el-async-p><my-el-async-c></my-el-async-c></my-el-async-p><div id="anchor">anchor</div>`
 
-     setTimeout(() => {
-       const parentComponent = container.querySelector('my-el-async-p');
-       const anchor = container.querySelector('#anchor') as VueElement
-       anchor.appendChild(parentComponent as VueElement);
-       }, 100);
+      setTimeout(() => {
+        const parentComponent = container.querySelector('my-el-async-p')
+        const anchor = container.querySelector('#anchor') as VueElement
+        anchor.appendChild(parentComponent as VueElement)
+      }, 100)
 
       await new Promise(r => setTimeout(r, 500))
 
       const e = container.childNodes[0].childNodes[1] as VueElement
-      const cInner = (e.shadowRoot!.childNodes[0] as VueElement).shadowRoot!.innerHTML
+      const cInner = (e.shadowRoot!.childNodes[0] as VueElement).shadowRoot!
+        .innerHTML
       expect(cInner).toBe(`<div>hello</div>`)
-      expect((container.childNodes[0].childNodes[0] as Text).data).toBe(`anchor`)
-
+      expect((container.childNodes[0].childNodes[0] as Text).data).toBe(
+        `anchor`
+      )
     })
 
     test('over nested usage', async () => {
@@ -722,7 +727,6 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(`<div>20,number</div>`)
     })
-
 
     test('with slots', async () => {
       const E = defineCustomElement(
