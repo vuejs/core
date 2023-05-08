@@ -444,7 +444,10 @@ export class VueElement extends BaseClass {
         s.setAttribute(ceStyleId, '')
 
         if (this._childStylesAnchor) {
-          this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
+          this.shadowRoot!.insertBefore(
+            s,
+            (this._childStylesAnchor as Node).nextSibling
+          )
         } else {
           this.shadowRoot!.appendChild(s)
         }

@@ -569,8 +569,8 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
       expect(style.length).toBe(2)
-      expect(style[1].textContent).toBe(`div { color: red; }`)
-      expect(style[0].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[0].textContent).toBe(`div { color: red; }`)
+      expect(style[1].textContent).toBe(`.Child { color: blue; }`)
     })
   })
 
@@ -652,8 +652,8 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
       expect(style.length).toBe(2)
-      expect(style[1].textContent).toBe(`div { color: red; }`)
-      expect(style[0].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[0].textContent).toBe(`div { color: red; }`)
+      expect(style[1].textContent).toBe(`.Child { color: blue; }`)
     })
 
     test('set DOM property before resolve', async () => {
@@ -776,8 +776,8 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
       expect(style.length).toBe(2)
-      expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[0].textContent).toBe(`.my-red { color: red; }`)
+      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
 
       show.value = false
       await nextTick()
@@ -793,8 +793,8 @@ describe('defineCustomElement', () => {
       const el3 = container.childNodes[0] as VueElement
       const style3 = el3.shadowRoot?.querySelectorAll('style')!
       expect(style3.length).toBe(2)
-      expect(style3[1].textContent).toBe(`.my-red { color: red; }`)
-      expect(style3[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style3[0].textContent).toBe(`.my-red { color: red; }`)
+      expect(style3[1].textContent).toBe(`.my-green { color: green; }`)
     })
 
     test('nested child components w/ fragments in shadow dom should have styles', async () => {
@@ -828,9 +828,9 @@ describe('defineCustomElement', () => {
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
       expect(style.length).toBe(3)
-      expect(style[2].textContent).toBe(`.my-red { color: red; }`)
+      expect(style[0].textContent).toBe(`.my-red { color: red; }`)
       expect(style[1].textContent).toBe(`.my-blue { color: blue; }`)
-      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[2].textContent).toBe(`.my-green { color: green; }`)
     })
 
     test('deeply nested child components w/ fragments in shadow dom should have styles', async () => {
@@ -875,10 +875,10 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelectorAll('style')!
 
       expect(style.length).toBe(4)
-      expect(style[3].textContent).toBe(`.my-red { color: red; }`)
-      expect(style[2].textContent).toBe(`.my-blue { color: blue; }`)
-      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
-      expect(style[0].textContent).toBe(`.my-grey { color: grey; }`)
+      expect(style[0].textContent).toBe(`.my-red { color: red; }`)
+      expect(style[1].textContent).toBe(`.my-blue { color: blue; }`)
+      expect(style[2].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[3].textContent).toBe(`.my-grey { color: grey; }`)
     })
   })
 })
