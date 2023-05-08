@@ -475,6 +475,23 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    // #8244
+    test('utility type in external file', () => {
+      const files = {
+        '/foo.ts': 'type A = { n?: number }; export type B = Required<A>'
+      }
+      const { props } = resolve(
+        `
+        import { B } from './foo'
+        defineProps<B>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        n: ['Number']
+      })
+    })
+
     test('relative vue', () => {
       const files = {
         '/foo.vue':
