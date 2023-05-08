@@ -103,7 +103,7 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
   }
 
