@@ -50,7 +50,7 @@ describe('reactivity/reactive', () => {
     class CustomMap extends Map {}
     const cmap = reactive(new CustomMap())
 
-    expect(cmap instanceof Map).toBe(true)
+    expect(cmap).toBeInstanceOf(Map)
     expect(isReactive(cmap)).toBe(true)
 
     cmap.set('key', {})
@@ -60,7 +60,7 @@ describe('reactivity/reactive', () => {
     class CustomSet extends Set {}
     const cset = reactive(new CustomSet())
 
-    expect(cset instanceof Set).toBe(true)
+    expect(cset).toBeInstanceOf(Set)
     expect(isReactive(cset)).toBe(true)
 
     let dummy
@@ -77,7 +77,7 @@ describe('reactivity/reactive', () => {
     class CustomMap extends WeakMap {}
     const cmap = reactive(new CustomMap())
 
-    expect(cmap instanceof WeakMap).toBe(true)
+    expect(cmap).toBeInstanceOf(WeakMap)
     expect(isReactive(cmap)).toBe(true)
 
     const key = {}
@@ -88,7 +88,7 @@ describe('reactivity/reactive', () => {
     class CustomSet extends WeakSet {}
     const cset = reactive(new CustomSet())
 
-    expect(cset instanceof WeakSet).toBe(true)
+    expect(cset).toBeInstanceOf(WeakSet)
     expect(isReactive(cset)).toBe(true)
 
     let dummy
