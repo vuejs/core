@@ -1496,18 +1496,14 @@ function baseCreateRenderer(
 
         if (__DEV__) {
           startMeasure(instance, `patch`)
-        }
-        /**
-         * #7908
-         * During the hmr reload process, in some cases (such as "ref + v-for"),
-         * instance.update will be triggered twice.
-         */
-        const isHmrReload = hmrDirtyComponents.has(
-          nextTree.type as ConcreteComponent
-        )
-
-        if (isHmrReload) {
-          toggleRecurse(instance, false)
+          /**
+           * #7908
+           * During the hmr reload process, in some cases (such as "ref + v-for"),
+           * instance.update will be triggered twice.
+           */
+          if (hmrDirtyComponents.has(nextTree.type as ConcreteComponent)) {
+            toggleRecurse(instance, false)
+          }
         }
 
         patch(
@@ -1522,12 +1518,12 @@ function baseCreateRenderer(
           isSVG
         )
 
-        if (isHmrReload) {
-          toggleRecurse(instance, true)
-        }
-
         if (__DEV__) {
           endMeasure(instance, `patch`)
+
+          if (hmrDirtyComponents.has(nextTree.type as ConcreteComponent)) {
+            toggleRecurse(instance, true)
+          }
         }
         next.el = nextTree.el
         if (originNext === null) {
