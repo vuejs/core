@@ -451,11 +451,7 @@ export function traverse(value: unknown, seen?: Set<unknown>) {
   seen.add(value)
   if (isRef(value)) {
     traverse(value.value, seen)
-  } else if (isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      traverse(value[i], seen)
-    }
-  } else if (isSet(value) || isMap(value)) {
+  } else if (isSet(value) || isMap(value) || isArray(value)) {
     value.forEach((v: any) => {
       traverse(v, seen)
     })
