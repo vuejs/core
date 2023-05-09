@@ -755,7 +755,7 @@ function hydrateSuspense(
     optimized
   )
   if (suspense.deps === 0) {
-    suspense.resolve()
+    suspense.resolve(false, true)
   }
   return result
   /* eslint-enable no-restricted-globals */
