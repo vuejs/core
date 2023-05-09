@@ -104,7 +104,13 @@ export const Suspense = (__FEATURE_SUSPENSE__
   ? SuspenseImpl
   : null) as unknown as {
   __isSuspense: true
-  new (): { $props: VNodeProps & SuspenseProps }
+  new (): {
+    $props: VNodeProps & SuspenseProps
+    $slots: {
+      default(): VNode[]
+      fallback(): VNode[]
+    }
+  }
 }
 
 function triggerEvent(
@@ -178,7 +184,7 @@ function mountSuspense(
     setActiveBranch(suspense, vnode.ssFallback!)
   } else {
     // Suspense has no async deps. Just resolve.
-    suspense.resolve()
+    suspense.resolve(false, true)
   }
 }
 
@@ -388,7 +394,7 @@ export interface SuspenseBoundary {
   isHydrating: boolean
   isUnmounted: boolean
   effects: Function[]
-  resolve(force?: boolean): void
+  resolve(force?: boolean, sync?: boolean): void
   fallback(fallbackVNode: VNode): void
   move(
     container: RendererElement,
@@ -437,11 +443,10 @@ function createSuspenseBoundary(
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
   let parentSuspenseId: number | undefined
-  const isSuspensible =
-    vnode.props?.suspensible != null && vnode.props.suspensible !== false
+  const isSuspensible = isVNodeSuspensible(vnode)
   if (isSuspensible) {
     if (parentSuspense?.pendingBranch) {
-      parentSuspenseId = parentSuspense?.pendingId
+      parentSuspenseId = parentSuspense.pendingId
       parentSuspense.deps++
     }
   }
@@ -469,7 +474,7 @@ function createSuspenseBoundary(
     isUnmounted: false,
     effects: [],
 
-    resolve(resume = false) {
+    resolve(resume = false, sync = false) {
       if (__DEV__) {
         if (!resume && !suspense.pendingBranch) {
           throw new Error(
@@ -553,7 +558,7 @@ function createSuspenseBoundary(
           parentSuspenseId === parentSuspense.pendingId
         ) {
           parentSuspense.deps--
-          if (parentSuspense.deps === 0) {
+          if (parentSuspense.deps === 0 && !sync) {
             parentSuspense.resolve()
           }
         }
@@ -830,4 +835,8 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
     parentComponent.vnode.el = el
     updateHOCHostEl(parentComponent, el)
   }
+}
+
+function isVNodeSuspensible(vnode: VNode) {
+  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }
