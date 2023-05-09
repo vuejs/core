@@ -1,3 +1,19 @@
+# [3.3.0-beta.5](https://github.com/vuejs/core/compare/v3.3.0-beta.4...v3.3.0-beta.5) (2023-05-08)
+
+
+### Bug Fixes
+
+* **build:** retain defineComponent() treeshakability in Rollup ([c2172f3](https://github.com/vuejs/core/commit/c2172f3a0ebbd7153e209dd8df6d9724bc524d9a)), closes [#8236](https://github.com/vuejs/core/issues/8236)
+* **compiler-sfc:** enable props destructure when reactivity transform option is enabled ([862edfd](https://github.com/vuejs/core/commit/862edfd91a2c2f6b75f943cb1a9682c4be5d7fa8))
+* **compiler-sfc:** fix built-in type resolving in external files ([6b194bc](https://github.com/vuejs/core/commit/6b194bcf3b8143895c2a472cd87998ebf9856146)), closes [#8244](https://github.com/vuejs/core/issues/8244)
+* **compiler-sfc:** transform destructured props when reactivity transform option is enabled ([#8252](https://github.com/vuejs/core/issues/8252)) ([287bd99](https://github.com/vuejs/core/commit/287bd999942e58925377f50540c7134cff2a9279))
+* **runtime-core:** ensure defineComponent name in extraOptions takes higher priority ([b2be75b](https://github.com/vuejs/core/commit/b2be75bad4ba70da1da6930eb914e51ce2c630b2))
+* **runtime-dom:** check attribute value when setting option value ([#8246](https://github.com/vuejs/core/issues/8246)) ([4495373](https://github.com/vuejs/core/commit/4495373d28d9fa4479eedd224adb16248ae0b9f4)), closes [#8227](https://github.com/vuejs/core/issues/8227)
+* **suspense:** fix nested suspensible suspense with no asyn deps ([e147512](https://github.com/vuejs/core/commit/e1475129fc6f8c086c2ec667476900b8c8f46774)), closes [#8206](https://github.com/vuejs/core/issues/8206)
+* **types:** remove short syntax support in defineSlots() ([1279b17](https://github.com/vuejs/core/commit/1279b1730079f77692a0817d51bbba57eb2b871b))
+
+
+
 # [3.3.0-beta.4](https://github.com/vuejs/core/compare/v3.3.0-beta.3...v3.3.0-beta.4) (2023-05-05)
 
 
