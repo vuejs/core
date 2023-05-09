@@ -7,8 +7,8 @@ describe('reactivity/collections', () => {
       const original = new WeakSet()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof WeakSet).toBe(true)
-      expect(observed instanceof WeakSet).toBe(true)
+      expect(original).toBeInstanceOf(WeakSet)
+      expect(observed).toBeInstanceOf(WeakSet)
     })
 
     it('should observe mutations', () => {

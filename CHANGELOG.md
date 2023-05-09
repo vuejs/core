@@ -1,3 +1,36 @@
+# [3.3.0-beta.5](https://github.com/vuejs/core/compare/v3.3.0-beta.4...v3.3.0-beta.5) (2023-05-08)
+
+
+### Bug Fixes
+
+* **build:** retain defineComponent() treeshakability in Rollup ([c2172f3](https://github.com/vuejs/core/commit/c2172f3a0ebbd7153e209dd8df6d9724bc524d9a)), closes [#8236](https://github.com/vuejs/core/issues/8236)
+* **compiler-sfc:** enable props destructure when reactivity transform option is enabled ([862edfd](https://github.com/vuejs/core/commit/862edfd91a2c2f6b75f943cb1a9682c4be5d7fa8))
+* **compiler-sfc:** fix built-in type resolving in external files ([6b194bc](https://github.com/vuejs/core/commit/6b194bcf3b8143895c2a472cd87998ebf9856146)), closes [#8244](https://github.com/vuejs/core/issues/8244)
+* **compiler-sfc:** transform destructured props when reactivity transform option is enabled ([#8252](https://github.com/vuejs/core/issues/8252)) ([287bd99](https://github.com/vuejs/core/commit/287bd999942e58925377f50540c7134cff2a9279))
+* **runtime-core:** ensure defineComponent name in extraOptions takes higher priority ([b2be75b](https://github.com/vuejs/core/commit/b2be75bad4ba70da1da6930eb914e51ce2c630b2))
+* **runtime-dom:** check attribute value when setting option value ([#8246](https://github.com/vuejs/core/issues/8246)) ([4495373](https://github.com/vuejs/core/commit/4495373d28d9fa4479eedd224adb16248ae0b9f4)), closes [#8227](https://github.com/vuejs/core/issues/8227)
+* **suspense:** fix nested suspensible suspense with no asyn deps ([e147512](https://github.com/vuejs/core/commit/e1475129fc6f8c086c2ec667476900b8c8f46774)), closes [#8206](https://github.com/vuejs/core/issues/8206)
+* **types:** remove short syntax support in defineSlots() ([1279b17](https://github.com/vuejs/core/commit/1279b1730079f77692a0817d51bbba57eb2b871b))
+
+
+
+# [3.3.0-beta.4](https://github.com/vuejs/core/compare/v3.3.0-beta.3...v3.3.0-beta.4) (2023-05-05)
+
+
+### Bug Fixes
+
+* **runtime-core:** handle template ref with number values ([#8233](https://github.com/vuejs/core/issues/8233)) ([1b1242f](https://github.com/vuejs/core/commit/1b1242f4d1349e361335b2815f41742d41283a94)), closes [#8230](https://github.com/vuejs/core/issues/8230)
+* **types:** retain compatibility for provide() usage with explicit type parameter ([038cd83](https://github.com/vuejs/core/commit/038cd830d5b34b47d7e7e1c61f0973d27cd8b915))
+
+
+### Features
+
+* **compiler-dom:** treat inert as boolean attribute ([#8209](https://github.com/vuejs/core/issues/8209)) ([918ec8a](https://github.com/vuejs/core/commit/918ec8a5cbc825a3947cd35fe966671c245af087)), closes [#8208](https://github.com/vuejs/core/issues/8208)
+* **types:** add slots types for built-in components ([#6033](https://github.com/vuejs/core/issues/6033)) ([3cb4dc9](https://github.com/vuejs/core/commit/3cb4dc9e5538e1c2bde9fa691b001615a848c546))
+* **types:** provide ExtractPublicPropTypes utility type ([bff63c5](https://github.com/vuejs/core/commit/bff63c5498f5fa098689c18defe48ae08d47eadb)), closes [#5272](https://github.com/vuejs/core/issues/5272) [#8168](https://github.com/vuejs/core/issues/8168)
+
+
+
 # [3.3.0-beta.3](https://github.com/vuejs/core/compare/v3.3.0-beta.2...v3.3.0-beta.3) (2023-05-01)
 
 

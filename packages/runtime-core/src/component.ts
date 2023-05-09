@@ -32,7 +32,7 @@ import {
   InternalSlots,
   Slots,
   SlotsType,
-  TypedSlots
+  UnwrapSlotsType
 } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
@@ -188,7 +188,7 @@ export type SetupContext<
 > = E extends any
   ? {
       attrs: Data
-      slots: TypedSlots<S>
+      slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
     }
