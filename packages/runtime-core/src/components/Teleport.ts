@@ -393,7 +393,12 @@ function hydrateTeleport(
 // Force-casted public typing for h and TSX props inference
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
-  new (): { $props: VNodeProps & TeleportProps }
+  new(): {
+    $props: VNodeProps & TeleportProps
+    $slots: {
+      default(): VNode[]
+    }
+  }
 }
 
 function updateCssVars(vnode: VNode) {
