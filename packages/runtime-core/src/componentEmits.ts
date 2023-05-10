@@ -98,8 +98,8 @@ export function emit(
           )
         ) {
           warn(
-            `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(camelize(event))}" prop.`
+            `Component emitted event "${event}" but didn't declare a "${toHandlerKey(camelize(event))}" prop ` +
+              `or a "${camelize(event)}" emit option.`
           )
         }
       } else {
