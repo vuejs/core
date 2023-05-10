@@ -8,18 +8,11 @@ export {
   unref,
   proxyRefs,
   customRef,
-  triggerRef,
-  type Ref,
-  type MaybeRef,
-  type MaybeRefOrGetter,
-  type ToRef,
-  type ToRefs,
-  type UnwrapRef,
-  type ShallowRef,
-  type ShallowUnwrapRef,
-  type RefUnwrapBailTypes,
-  type CustomRefFactory
+  triggerRef
 } from './ref'
+
+export type * from './ref'
+
 export {
   reactive,
   readonly,
@@ -37,14 +30,11 @@ export {
   type ShallowReactive,
   type UnwrapNestedRefs
 } from './reactive'
-export {
-  computed,
-  type ComputedRef,
-  type WritableComputedRef,
-  type WritableComputedOptions,
-  type ComputedGetter,
-  type ComputedSetter
-} from './computed'
+
+export { computed } from './computed'
+
+export type * from './computed'
+
 export { deferredComputed } from './deferredComputed'
 export {
   effect,
@@ -55,20 +45,18 @@ export {
   pauseTracking,
   resetTracking,
   ITERATE_KEY,
-  ReactiveEffect,
-  type ReactiveEffectRunner,
-  type ReactiveEffectOptions,
-  type EffectScheduler,
-  type DebuggerOptions,
-  type DebuggerEvent,
-  type DebuggerEventExtraInfo
+  ReactiveEffect
 } from './effect'
+
+export type * from './effect'
+
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
   onScopeDispose
 } from './effectScope'
+
 export {
   TrackOpTypes /* @remove */,
   TriggerOpTypes /* @remove */

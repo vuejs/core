@@ -33,35 +33,18 @@ export {
 export { invalidateTypeCache, registerTS } from './script/resolveType'
 
 // Types
-export type {
-  SFCParseOptions,
-  SFCParseResult,
-  SFCDescriptor,
-  SFCBlock,
-  SFCTemplateBlock,
-  SFCScriptBlock,
-  SFCStyleBlock
-} from './parse'
-export type {
-  TemplateCompiler,
-  SFCTemplateCompileOptions,
-  SFCTemplateCompileResults
-} from './compileTemplate'
-export type {
-  SFCStyleCompileOptions,
-  SFCAsyncStyleCompileOptions,
-  SFCStyleCompileResults
-} from './compileStyle'
+export type * from './parse'
+export type * from './compileTemplate'
+export type * from './compileStyle'
+
 export type { SFCScriptCompileOptions } from './compileScript'
 export type { ScriptCompileContext } from './script/context'
+
 export type {
   TypeResolveContext,
   SimpleTypeResolveContext
 } from './script/resolveType'
-export type {
-  AssetURLOptions,
-  AssetURLTagConfig
-} from './template/transformAssetUrl'
+export type * from './template/transformAssetUrl'
 export type {
   CompilerOptions,
   CompilerError,

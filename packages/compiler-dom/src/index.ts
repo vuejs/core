@@ -1,13 +1,13 @@
 import {
   baseCompile,
   baseParse,
-  CompilerOptions,
-  CodegenResult,
-  ParserOptions,
-  RootNode,
   noopDirectiveTransform,
-  NodeTransform,
-  DirectiveTransform
+  type CompilerOptions,
+  type CodegenResult,
+  type ParserOptions,
+  type RootNode,
+  type NodeTransform,
+  type DirectiveTransform
 } from '@vue/compiler-core'
 import { parserOptions } from './parserOptions'
 import { transformStyle } from './transforms/transformStyle'

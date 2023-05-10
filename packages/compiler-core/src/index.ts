@@ -1,26 +1,20 @@
 export { baseCompile } from './compile'
 
 // Also expose lower level APIs & types
-export {
-  type CompilerOptions,
-  type ParserOptions,
-  type TransformOptions,
-  type CodegenOptions,
-  type HoistTransform,
-  type BindingMetadata,
-  BindingTypes
-} from './options'
+export { BindingTypes } from './options'
+
+export type * from './options'
+
 export { baseParse, TextModes } from './parse'
 export {
   transform,
-  type TransformContext,
   createTransformContext,
   traverseNode,
-  createStructuralDirectiveTransform,
-  type NodeTransform,
-  type StructuralDirectiveTransform,
-  type DirectiveTransform
+  createStructuralDirectiveTransform
 } from './transform'
+
+export type * from './transform'
+
 export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
   ErrorCodes,

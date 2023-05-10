@@ -155,58 +155,11 @@ declare module '@vue/reactivity' {
 }
 
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
-export type {
-  Ref,
-  MaybeRef,
-  MaybeRefOrGetter,
-  ToRef,
-  ToRefs,
-  UnwrapRef,
-  ShallowRef,
-  ShallowUnwrapRef,
-  CustomRefFactory,
-  ReactiveFlags,
-  DeepReadonly,
-  ShallowReactive,
-  UnwrapNestedRefs,
-  ComputedRef,
-  WritableComputedRef,
-  WritableComputedOptions,
-  ComputedGetter,
-  ComputedSetter,
-  ReactiveEffectRunner,
-  ReactiveEffectOptions,
-  EffectScheduler,
-  DebuggerOptions,
-  DebuggerEvent,
-  DebuggerEventExtraInfo,
-  Raw
-} from '@vue/reactivity'
-export type {
-  WatchEffect,
-  WatchOptions,
-  WatchOptionsBase,
-  WatchCallback,
-  WatchSource,
-  WatchStopHandle
-} from './apiWatch'
+export type * from '@vue/reactivity'
+export type * from './apiWatch'
 export type { InjectionKey } from './apiInject'
-export type {
-  App,
-  AppConfig,
-  AppContext,
-  Plugin,
-  CreateAppFunction,
-  OptionMergeFunction
-} from './apiCreateApp'
-export type {
-  VNode,
-  VNodeChild,
-  VNodeTypes,
-  VNodeProps,
-  VNodeArrayChildren,
-  VNodeNormalizedChildren
-} from './vnode'
+export type * from './apiCreateApp'
+export type * from './vnode'
 export type {
   Component,
   ConcreteComponent,
