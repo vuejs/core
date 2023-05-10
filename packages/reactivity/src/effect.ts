@@ -9,6 +9,7 @@ import {
   newTracked,
   wasTracked
 } from './dep'
+import { ComputedRefImpl } from './computed'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -23,7 +24,7 @@ let effectTrackDepth = 0
 export let trackOpBit = 1
 
 /**
- * The bitwise track markers support at most 30 levels op recursion.
+ * The bitwise track markers support at most 30 levels of recursion.
  * This value is chosen to enable modern JS engines to use a SMI on all platforms.
  * When recursion depth is greater, fall back to using a full cleanup.
  */
@@ -44,8 +45,7 @@ export type DebuggerEventExtraInfo = {
   oldTarget?: Map<any, any> | Set<any>
 }
 
-const effectStack: ReactiveEffect[] = []
-let activeEffect: ReactiveEffect | undefined
+export let activeEffect: ReactiveEffect | undefined
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
@@ -53,10 +53,22 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
+  parent: ReactiveEffect | undefined = undefined
 
-  // can be attached after creation
-  computed?: boolean
+  /**
+   * Can be attached after creation
+   * @internal
+   */
+  computed?: ComputedRefImpl<T>
+  /**
+   * @internal
+   */
   allowRecurse?: boolean
+  /**
+   * @internal
+   */
+  private deferStop?: boolean
+
   onStop?: () => void
   // dev only
   onTrack?: (event: DebuggerEvent) => void
@@ -66,7 +78,7 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public scheduler: EffectScheduler | null = null,
-    scope?: EffectScope | null
+    scope?: EffectScope
   ) {
     recordEffectScope(this, scope)
   }
@@ -75,36 +87,49 @@ export class ReactiveEffect<T = any> {
     if (!this.active) {
       return this.fn()
     }
-    if (!effectStack.includes(this)) {
-      try {
-        effectStack.push((activeEffect = this))
-        enableTracking()
+    let parent: ReactiveEffect | undefined = activeEffect
+    let lastShouldTrack = shouldTrack
+    while (parent) {
+      if (parent === this) {
+        return
+      }
+      parent = parent.parent
+    }
+    try {
+      this.parent = activeEffect
+      activeEffect = this
+      shouldTrack = true
 
-        trackOpBit = 1 << ++effectTrackDepth
+      trackOpBit = 1 << ++effectTrackDepth
 
-        if (effectTrackDepth <= maxMarkerBits) {
-          initDepMarkers(this)
-        } else {
-          cleanupEffect(this)
-        }
-        return this.fn()
-      } finally {
-        if (effectTrackDepth <= maxMarkerBits) {
-          finalizeDepMarkers(this)
-        }
+      if (effectTrackDepth <= maxMarkerBits) {
+        initDepMarkers(this)
+      } else {
+        cleanupEffect(this)
+      }
+      return this.fn()
+    } finally {
+      if (effectTrackDepth <= maxMarkerBits) {
+        finalizeDepMarkers(this)
+      }
 
-        trackOpBit = 1 << --effectTrackDepth
+      trackOpBit = 1 << --effectTrackDepth
 
-        resetTracking()
-        effectStack.pop()
-        const n = effectStack.length
-        activeEffect = n > 0 ? effectStack[n - 1] : undefined
+      activeEffect = this.parent
+      shouldTrack = lastShouldTrack
+      this.parent = undefined
+
+      if (this.deferStop) {
+        this.stop()
       }
     }
   }
 
   stop() {
-    if (this.active) {
+    // stopped while running itself - defer the cleanup
+    if (activeEffect === this) {
+      this.deferStop = true
+    } else if (this.active) {
       cleanupEffect(this)
       if (this.onStop) {
         this.onStop()
@@ -142,6 +167,16 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+/**
+ * Registers the given function to track reactive updates.
+ *
+ * The given function will be run once immediately. Every time any reactive
+ * property that's accessed within it gets updated, the function will run again.
+ *
+ * @param fn - The function that will track reactive updates.
+ * @param options - Allows to control the effect's behaviour.
+ * @returns A runner that can be used to control the effect after creation.
+ */
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
@@ -163,50 +198,69 @@ export function effect<T = any>(
   return runner
 }
 
+/**
+ * Stops the effect associated with the given runner.
+ *
+ * @param runner - Association with the effect to stop tracking.
+ */
 export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
 
-let shouldTrack = true
+export let shouldTrack = true
 const trackStack: boolean[] = []
 
+/**
+ * Temporarily pauses tracking.
+ */
 export function pauseTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
+/**
+ * Re-enables effect tracking (if it was paused).
+ */
 export function enableTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }
 
+/**
+ * Resets the previous global effect tracking state.
+ */
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
 }
 
+/**
+ * Tracks access to a reactive property.
+ *
+ * This will check which effect is running at the moment and record it as dep
+ * which records all effects that depend on the reactive property.
+ *
+ * @param target - Object holding the reactive property.
+ * @param type - Defines the type of access to the reactive property.
+ * @param key - Identifier of the reactive property to track.
+ */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
-  if (!isTracking()) {
-    return
-  }
-  let depsMap = targetMap.get(target)
-  if (!depsMap) {
-    targetMap.set(target, (depsMap = new Map()))
-  }
-  let dep = depsMap.get(key)
-  if (!dep) {
-    depsMap.set(key, (dep = createDep()))
-  }
+  if (shouldTrack && activeEffect) {
+    let depsMap = targetMap.get(target)
+    if (!depsMap) {
+      targetMap.set(target, (depsMap = new Map()))
+    }
+    let dep = depsMap.get(key)
+    if (!dep) {
+      depsMap.set(key, (dep = createDep()))
+    }
 
-  const eventInfo = __DEV__
-    ? { effect: activeEffect, target, type, key }
-    : undefined
+    const eventInfo = __DEV__
+      ? { effect: activeEffect, target, type, key }
+      : undefined
 
-  trackEffects(dep, eventInfo)
-}
-
-export function isTracking() {
-  return shouldTrack && activeEffect !== undefined
+    trackEffects(dep, eventInfo)
+  }
 }
 
 export function trackEffects(
@@ -229,17 +283,25 @@ export function trackEffects(
     activeEffect!.deps.push(dep)
     if (__DEV__ && activeEffect!.onTrack) {
       activeEffect!.onTrack(
-        Object.assign(
+        extend(
           {
             effect: activeEffect!
           },
-          debuggerEventExtraInfo
+          debuggerEventExtraInfo!
         )
       )
     }
   }
 }
 
+/**
+ * Finds all deps associated with the target (or a specific property) and
+ * triggers the effects stored within.
+ *
+ * @param target - The reactive object.
+ * @param type - Defines the type of the operation that needs to trigger effects.
+ * @param key - Can be used to target a specific reactive property in the target object.
+ */
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -260,8 +322,9 @@ export function trigger(
     // trigger all effects for target
     deps = [...depsMap.values()]
   } else if (key === 'length' && isArray(target)) {
+    const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= (newValue as number)) {
+      if (key === 'length' || key >= newLength) {
         deps.push(dep)
       }
     })
@@ -332,16 +395,35 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  for (const effect of isArray(dep) ? dep : [...dep]) {
-    if (effect !== activeEffect || effect.allowRecurse) {
-      if (__DEV__ && effect.onTrigger) {
-        effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
-      }
-      if (effect.scheduler) {
-        effect.scheduler()
-      } else {
-        effect.run()
-      }
+  const effects = isArray(dep) ? dep : [...dep]
+  for (const effect of effects) {
+    if (effect.computed) {
+      triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
+  for (const effect of effects) {
+    if (!effect.computed) {
+      triggerEffect(effect, debuggerEventExtraInfo)
+    }
+  }
+}
+
+function triggerEffect(
+  effect: ReactiveEffect,
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+) {
+  if (effect !== activeEffect || effect.allowRecurse) {
+    if (__DEV__ && effect.onTrigger) {
+      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+    }
+    if (effect.scheduler) {
+      effect.scheduler()
+    } else {
+      effect.run()
+    }
+  }
+}
+
+export function getDepFromReactive(object: any, key: string | number | symbol) {
+  return targetMap.get(object)?.get(key)
 }

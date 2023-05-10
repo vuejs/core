@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   onBeforeMount,
   h,
@@ -23,7 +24,7 @@ import { ITERATE_KEY, DebuggerEvent, TriggerOpTypes } from '@vue/reactivity'
 describe('api: lifecycle hooks', () => {
   it('onBeforeMount', () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called before inner div is rendered
       expect(serializeInner(root)).toBe(``)
     })
@@ -40,7 +41,7 @@ describe('api: lifecycle hooks', () => {
 
   it('onMounted', () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called after inner div is rendered
       expect(serializeInner(root)).toBe(`<div></div>`)
     })
@@ -58,7 +59,7 @@ describe('api: lifecycle hooks', () => {
   it('onBeforeUpdate', async () => {
     const count = ref(0)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called before inner div is updated
       expect(serializeInner(root)).toBe(`<div>0</div>`)
     })
@@ -80,12 +81,12 @@ describe('api: lifecycle hooks', () => {
   it('state mutation in onBeforeUpdate', async () => {
     const count = ref(0)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called before inner div is updated
       expect(serializeInner(root)).toBe(`<div>0</div>`)
       count.value++
     })
-    const renderSpy = jest.fn()
+    const renderSpy = vi.fn()
 
     const Comp = {
       setup() {
@@ -109,7 +110,7 @@ describe('api: lifecycle hooks', () => {
   it('onUpdated', async () => {
     const count = ref(0)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called after inner div is updated
       expect(serializeInner(root)).toBe(`<div>1</div>`)
     })
@@ -130,7 +131,7 @@ describe('api: lifecycle hooks', () => {
   it('onBeforeUnmount', async () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called before inner div is removed
       expect(serializeInner(root)).toBe(`<div></div>`)
     })
@@ -158,7 +159,7 @@ describe('api: lifecycle hooks', () => {
   it('onUnmounted', async () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called after inner div is removed
       expect(serializeInner(root)).toBe(`<!---->`)
     })
@@ -186,7 +187,7 @@ describe('api: lifecycle hooks', () => {
   it('onBeforeUnmount in onMounted', async () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')
-    const fn = jest.fn(() => {
+    const fn = vi.fn(() => {
       // should be called before inner div is removed
       expect(serializeInner(root)).toBe(`<div></div>`)
     })
@@ -231,6 +232,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Mid = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('mid onBeforeMount'))
         onMounted(() => calls.push('mid onMounted'))
@@ -243,6 +245,7 @@ describe('api: lifecycle hooks', () => {
     }
 
     const Child = {
+      props: ['count'],
       setup(props: any) {
         onBeforeMount(() => calls.push('child onBeforeMount'))
         onMounted(() => calls.push('child onMounted'))
@@ -295,7 +298,7 @@ describe('api: lifecycle hooks', () => {
 
   it('onRenderTracked', () => {
     const events: DebuggerEvent[] = []
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -331,10 +334,13 @@ describe('api: lifecycle hooks', () => {
 
   it('onRenderTriggered', async () => {
     const events: DebuggerEvent[] = []
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1, bar: 2 })
+    const obj = reactive<{
+      foo: number
+      bar?: number
+    }>({ foo: 1, bar: 2 })
 
     const Comp = {
       setup() {
@@ -356,7 +362,6 @@ describe('api: lifecycle hooks', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.bar
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -373,5 +378,28 @@ describe('api: lifecycle hooks', () => {
       key: 'baz',
       newValue: 3
     })
+  })
+
+  it('runs shared hook fn for each instance', async () => {
+    const fn = vi.fn()
+    const toggle = ref(true)
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? [h(Child), h(Child)] : null)
+      }
+    }
+    const Child = {
+      setup() {
+        onMounted(fn)
+        onBeforeUnmount(fn)
+        return () => h('div')
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledTimes(2)
+    toggle.value = false
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(4)
   })
 })

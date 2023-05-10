@@ -1,12 +1,15 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
+import { vi } from 'vitest'
 import {
   render,
   defineComponent,
   h,
   nodeOps,
-  toHandlers
+  toHandlers,
+  nextTick,
+  ComponentPublicInstance
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
@@ -22,9 +25,9 @@ describe('component: emit', () => {
       }
     })
 
-    const onfoo = jest.fn()
-    const onBar = jest.fn()
-    const onBaz = jest.fn()
+    const onfoo = vi.fn()
+    const onBar = vi.fn()
+    const onBaz = vi.fn()
     const Comp = () => h(Foo, { onfoo, onBar, ['on!baz']: onBaz })
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -42,7 +45,7 @@ describe('component: emit', () => {
       }
     })
 
-    const fooSpy = jest.fn()
+    const fooSpy = vi.fn()
     const Comp = () =>
       h(Foo, {
         onTestEvent: fooSpy
@@ -60,7 +63,7 @@ describe('component: emit', () => {
       }
     })
 
-    const fooSpy = jest.fn()
+    const fooSpy = vi.fn()
     const Comp = () =>
       h(Foo, {
         'onTest-event': fooSpy
@@ -80,8 +83,8 @@ describe('component: emit', () => {
       }
     })
 
-    const fooSpy = jest.fn()
-    const barSpy = jest.fn()
+    const fooSpy = vi.fn()
+    const barSpy = vi.fn()
     const Comp = () =>
       // simulate v-on="obj" usage
       h(
@@ -107,8 +110,8 @@ describe('component: emit', () => {
       }
     })
 
-    const fooSpy = jest.fn()
-    const barSpy = jest.fn()
+    const fooSpy = vi.fn()
+    const barSpy = vi.fn()
     const Comp = () =>
       h(Foo, {
         'onUpdate:fooProp': fooSpy,
@@ -128,8 +131,8 @@ describe('component: emit', () => {
       }
     })
 
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const App = {
       setup() {
@@ -152,7 +155,7 @@ describe('component: emit', () => {
       emits: ['foo'],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -169,7 +172,7 @@ describe('component: emit', () => {
       },
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('bar')
       }
     })
@@ -185,7 +188,7 @@ describe('component: emit', () => {
       emits: [],
       render() {},
       created() {
-        // @ts-ignore
+        // @ts-expect-error
         this.$emit('foo')
       }
     })
@@ -271,8 +274,8 @@ describe('component: emit', () => {
         this.$emit('bar')
       }
     })
-    const fn = jest.fn()
-    const barFn = jest.fn()
+    const fn = vi.fn()
+    const barFn = vi.fn()
     render(
       h(Foo, {
         onFooOnce: fn,
@@ -295,8 +298,8 @@ describe('component: emit', () => {
         this.$emit('foo')
       }
     })
-    const onFoo = jest.fn()
-    const onFooOnce = jest.fn()
+    const onFoo = vi.fn()
+    const onFooOnce = vi.fn()
     render(
       h(Foo, {
         onFoo,
@@ -317,8 +320,8 @@ describe('component: emit', () => {
       }
     })
 
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () =>
       h(Foo, {
@@ -348,8 +351,8 @@ describe('component: emit', () => {
       }
     })
 
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () =>
       h(Foo, {
@@ -368,6 +371,59 @@ describe('component: emit', () => {
     expect(fn1).toHaveBeenCalledWith('one')
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith('two')
+  })
+
+  test('.trim and .number modifiers should work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', '    +01.2    ')
+        this.$emit('update:foo', '    1    ')
+      }
+    })
+
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true, number: true },
+        'onUpdate:modelValue': fn1,
+
+        foo: null,
+        fooModifiers: { trim: true, number: true },
+        'onUpdate:foo': fn2
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn1).toHaveBeenCalledWith(1.2)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledWith(1)
+  })
+
+  test('only trim string parameter when work with v-model on component', () => {
+    const Foo = defineComponent({
+      render() {},
+      created() {
+        this.$emit('update:modelValue', ' foo ', { bar: ' bar ' })
+      }
+    })
+
+    const fn = vi.fn()
+    const Comp = () =>
+      h(Foo, {
+        modelValue: null,
+        modelModifiers: { trim: true },
+        'onUpdate:modelValue': fn
+      })
+
+    render(h(Comp), nodeOps.createElement('div'))
+
+    expect(fn).toHaveBeenCalledTimes(1)
+    expect(fn).toHaveBeenCalledWith('foo', { bar: ' bar ' })
   })
 
   test('isEmitListener', () => {
@@ -389,5 +445,81 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
+  })
+
+  test('does not emit after unmount', async () => {
+    const fn = vi.fn()
+    const Foo = defineComponent({
+      emits: ['closing'],
+      async beforeUnmount() {
+        await this.$nextTick()
+        this.$emit('closing', true)
+      },
+      render() {
+        return h('div')
+      }
+    })
+    const Comp = () =>
+      h(Foo, {
+        onClosing: fn
+      })
+
+    const el = nodeOps.createElement('div')
+    render(h(Comp), el)
+    await nextTick()
+    render(null, el)
+    await nextTick()
+    expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('merge string array emits', async () => {
+    const ComponentA = defineComponent({
+      emits: ['one', 'two']
+    })
+    const ComponentB = defineComponent({
+      emits: ['three']
+    })
+    const renderFn = vi.fn(function (this: ComponentPublicInstance) {
+      expect(this.$options.emits).toEqual(['one', 'two', 'three'])
+      return h('div')
+    })
+    const ComponentC = defineComponent({
+      render: renderFn,
+      mixins: [ComponentA, ComponentB]
+    })
+    const el = nodeOps.createElement('div')
+    expect(renderFn).toHaveBeenCalledTimes(0)
+    render(h(ComponentC), el)
+    expect(renderFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('merge object emits', async () => {
+    const twoFn = vi.fn((v: unknown) => !v)
+    const ComponentA = defineComponent({
+      emits: {
+        one: null,
+        two: twoFn
+      }
+    })
+    const ComponentB = defineComponent({
+      emits: ['three']
+    })
+    const renderFn = vi.fn(function (this: ComponentPublicInstance) {
+      expect(this.$options.emits).toEqual({
+        one: null,
+        two: twoFn,
+        three: null
+      })
+      expect(this.$options.emits.two).toBe(twoFn)
+      return h('div')
+    })
+    const ComponentC = defineComponent({
+      render: renderFn,
+      mixins: [ComponentA, ComponentB]
+    })
+    const el = nodeOps.createElement('div')
+    expect(renderFn).toHaveBeenCalledTimes(0)
+    render(h(ComponentC), el)
+    expect(renderFn).toHaveBeenCalledTimes(1)
   })
 })

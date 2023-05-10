@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: codeframe line in middle 1`] = `
+exports[`compiler: codeframe > line in middle 1`] = `
 "2  |    <template key=\\"one\\"></template>
 3  |    <ul>
 4  |      <li v-for=\\"foobar\\">hi</li>
@@ -9,7 +9,7 @@ exports[`compiler: codeframe line in middle 1`] = `
 6  |    <template key=\\"two\\"></template>"
 `;
 
-exports[`compiler: codeframe line near bottom 1`] = `
+exports[`compiler: codeframe > line near bottom 1`] = `
 "4  |      <li v-for=\\"foobar\\">hi</li>
 5  |    </ul>
 6  |    <template key=\\"two\\"></template>
@@ -17,7 +17,7 @@ exports[`compiler: codeframe line near bottom 1`] = `
 7  |  </div>"
 `;
 
-exports[`compiler: codeframe line near top 1`] = `
+exports[`compiler: codeframe > line near top 1`] = `
 "1  |  <div>
 2  |    <template key=\\"one\\"></template>
    |              ^^^^^^^^^
@@ -25,7 +25,7 @@ exports[`compiler: codeframe line near top 1`] = `
 4  |      <li v-for=\\"foobar\\">hi</li>"
 `;
 
-exports[`compiler: codeframe multi-line highlights 1`] = `
+exports[`compiler: codeframe > multi-line highlights 1`] = `
 "1  |  <div attr=\\"some
    |       ^^^^^^^^^^
 2  |    multiline
@@ -36,7 +36,7 @@ exports[`compiler: codeframe multi-line highlights 1`] = `
    |  ^"
 `;
 
-exports[`compiler: codeframe newline sequences - unix 1`] = `
+exports[`compiler: codeframe > newline sequences - unix 1`] = `
 "8  |          <input name=\\"email\\" type=\\"text\\"/>
 9  |        </div>
 10 |        <div id=\\"hook\\">
@@ -49,7 +49,7 @@ exports[`compiler: codeframe newline sequences - unix 1`] = `
    |  ^^^^^^^^^^^^"
 `;
 
-exports[`compiler: codeframe newline sequences - windows 1`] = `
+exports[`compiler: codeframe > newline sequences - windows 1`] = `
 "8  |          <input name=\\"email\\" type=\\"text\\"/>
 9  |        </div>
 10 |        <div id=\\"hook\\">

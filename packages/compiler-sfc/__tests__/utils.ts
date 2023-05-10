@@ -1,13 +1,19 @@
-import { parse, SFCScriptCompileOptions, compileScript } from '../src'
+import {
+  parse,
+  SFCScriptCompileOptions,
+  compileScript,
+  SFCParseOptions
+} from '../src'
 import { parse as babelParse } from '@babel/parser'
 
 export const mockId = 'xxxxxxxx'
 
 export function compileSFCScript(
   src: string,
-  options?: Partial<SFCScriptCompileOptions>
+  options?: Partial<SFCScriptCompileOptions>,
+  parseOptions?: SFCParseOptions
 ) {
-  const { descriptor } = parse(src)
+  const { descriptor } = parse(src, parseOptions)
   return compileScript(descriptor, {
     ...options,
     id: mockId

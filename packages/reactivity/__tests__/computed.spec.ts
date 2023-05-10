@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import {
   computed,
   reactive,
@@ -23,7 +24,7 @@ describe('reactivity/computed', () => {
 
   it('should compute lazily', () => {
     const value = reactive<{ foo?: number }>({})
-    const getter = jest.fn(() => value.foo)
+    const getter = vi.fn(() => value.foo)
     const cValue = computed(getter)
 
     // lazy
@@ -74,8 +75,8 @@ describe('reactivity/computed', () => {
 
   it('should trigger effect when chained', () => {
     const value = reactive({ foo: 0 })
-    const getter1 = jest.fn(() => value.foo)
-    const getter2 = jest.fn(() => {
+    const getter1 = vi.fn(() => value.foo)
+    const getter2 = vi.fn(() => {
       return c1.value + 1
     })
     const c1 = computed(getter1)
@@ -97,8 +98,8 @@ describe('reactivity/computed', () => {
 
   it('should trigger effect when chained (mixed invocations)', () => {
     const value = reactive({ foo: 0 })
-    const getter1 = jest.fn(() => value.foo)
-    const getter2 = jest.fn(() => {
+    const getter1 = vi.fn(() => value.foo)
+    const getter2 = vi.fn(() => {
       return c1.value + 1
     })
     const c1 = computed(getter1)
@@ -170,6 +171,23 @@ describe('reactivity/computed', () => {
     expect(dummy).toBe(-1)
   })
 
+  // #5720
+  it('should invalidate before non-computed effects', () => {
+    let plusOneValues: number[] = []
+    const n = ref(0)
+    const plusOne = computed(() => n.value + 1)
+    effect(() => {
+      n.value
+      plusOneValues.push(plusOne.value)
+    })
+    // access plusOne, causing it to be non-dirty
+    plusOne.value
+    // mutate n
+    n.value++
+    // on the 2nd run, plusOne.value should have already updated.
+    expect(plusOneValues).toMatchObject([1, 2, 2])
+  })
+
   it('should warn if trying to set a readonly computed', () => {
     const n = ref(1)
     const plusOne = computed(() => n.value + 1)
@@ -206,7 +224,7 @@ describe('reactivity/computed', () => {
 
   it('debug: onTrack', () => {
     let events: DebuggerEvent[] = []
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -239,7 +257,7 @@ describe('reactivity/computed', () => {
 
   it('debug: onTrigger', () => {
     let events: DebuggerEvent[] = []
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1 })
