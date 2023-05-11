@@ -471,7 +471,8 @@ export class VueElement extends BaseClass {
         sList.length > 0 && sList.forEach(s => this.shadowRoot!.removeChild(s))
       })
       const archor = this.shadowRoot!.querySelectorAll('style')
-      this._childStylesAnchor = archor.length > 0 ? archor[0] : undefined
+      this._childStylesAnchor =
+        archor.length > 0 ? archor[archor.length - 1] : undefined
     }
   }
 }
