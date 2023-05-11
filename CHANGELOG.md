@@ -7,7 +7,7 @@
 
 
 
-# [3.3.0](https://github.com/vuejs/core/compare/v3.3.0-beta.5...v3.3.0) (2023-05-11)
+# [3.3.0 Rurouni Kenshin](https://github.com/vuejs/core/compare/v3.3.0-beta.5...v3.3.0) (2023-05-11)
 
 - For a detailed walkthrough of the new features in 3.3, please read the [release blog post](https://blog.vuejs.org/posts/vue-3-3).
 
