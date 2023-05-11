@@ -413,11 +413,11 @@ export interface ComponentInternalInstance {
   // When the component is a child component of a custom element,
   // The method passed down from the ancestor to remove the style tag,
   // which will be called when the component is unmounted
-  removeCEChildStyle: null | ((cecStyleIds: string[]) => void)
+  removeCEChildStyle: null | ((cecStyleIds: Set<string>) => void)
   // When the component is a child component of a custom element,
   // cecStyleIds will record the styles id of the current component,
   // which will be used when removing the style tag
-  cecStyleIds: null | string[]
+  cecStyleIds: null | Set<string>
 
   /**
    * @internal

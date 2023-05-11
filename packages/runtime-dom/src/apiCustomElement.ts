@@ -434,13 +434,15 @@ export class VueElement extends BaseClass {
     instance: ComponentInternalInstance
   ) {
     if (styles) {
+      const ceStyleId = `data-v-ce-${instance.uid}`
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
         // Generate ids and record them, and delete style tags based on
         // them when components are unmounted
-        const ceStyleId = `data-v-ce-${new Date().getTime()}`
-        ;(instance.cecStyleIds || (instance.cecStyleIds = [])).push(ceStyleId)
+        ;(instance.cecStyleIds || (instance.cecStyleIds = new Set())).add(
+          ceStyleId
+        )
         s.setAttribute(ceStyleId, '')
 
         if (this._childStylesAnchor) {
@@ -462,11 +464,11 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStyles(cecStyleIds: string[] | null) {
+  protected _removeChildStyles(cecStyleIds: Set<string> | null) {
     if (cecStyleIds) {
       cecStyleIds.forEach(id => {
-        const s = this.shadowRoot!.querySelector(`[${id}]`)
-        s && this.shadowRoot!.removeChild(s)
+        const sList = this.shadowRoot!.querySelectorAll(`[${id}]`)
+        sList.length > 0 && sList.forEach(s => this.shadowRoot!.removeChild(s))
       })
       const archor = this.shadowRoot!.querySelectorAll('style')
       this._childStylesAnchor = archor.length > 0 ? archor[0] : undefined
