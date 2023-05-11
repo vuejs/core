@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -81,10 +81,10 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.3.0",
-    "@vue/compiler-dom": "3.3.0",
-    "@vue/runtime-dom": "3.3.0",
-    "@vue/compiler-sfc": "3.3.0",
-    "@vue/server-renderer": "3.3.0"
+    "@vue/shared": "3.3.1",
+    "@vue/compiler-dom": "3.3.1",
+    "@vue/runtime-dom": "3.3.1",
+    "@vue/compiler-sfc": "3.3.1",
+    "@vue/server-renderer": "3.3.1"
   }
 }

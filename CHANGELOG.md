@@ -1,3 +1,12 @@
+## [3.3.1](https://github.com/vuejs/core/compare/v3.3.0...v3.3.1) (2023-05-11)
+
+
+### Bug Fixes
+
+* **suspense:** handle nested sync suspense for hydration ([a3f5485](https://github.com/vuejs/core/commit/a3f54857858c8ca0e6b9f12618d151ab255fb040))
+
+
+
 # [3.3.0](https://github.com/vuejs/core/compare/v3.3.0-beta.5...v3.3.0) (2023-05-11)
 
 - For a detailed walkthrough of the new features in 3.3, please read the [release blog post](https://blog.vuejs.org/posts/vue-3-3).
