@@ -294,13 +294,15 @@ type InferDefault<P, T> = T extends
   ? T | ((props: P) => T)
   : (props: P) => T
 
-type PropsWithDefaults<Base, Defaults> = Base & {
-  [K in keyof Defaults]: K extends keyof Base
-    ? Defaults[K] extends undefined
-      ? Base[K]
-      : NotUndefined<Base[K]>
-    : never
-}
+type PropsWithDefaults<Base, Defaults> = Readonly<
+  Base & {
+    [K in keyof Defaults]: K extends keyof Base
+      ? Defaults[K] extends undefined
+        ? Base[K]
+        : NotUndefined<Base[K]>
+      : never
+  }
+>
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
  * using type-based `defineProps` declaration.
