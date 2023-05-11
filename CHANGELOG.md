@@ -1,3 +1,34 @@
+# [3.3.0](https://github.com/vuejs/core/compare/v3.3.0-beta.5...v3.3.0) (2023-05-11)
+
+- For a detailed walkthrough of the new features in 3.3, please read the [release blog post](https://blog.vuejs.org/posts/vue-3-3).
+
+- Features and deprecations listed here are aggregated from the beta and alpha releases. For full chronological history, bug fixes, and other minor features, please consult the individual logs of the 3.3 beta and alpha releases.
+
+## Features
+
+* **sfc:** support imported types in SFC macros ([#8083](https://github.com/vuejs/core/pull/8083))
+* **types/slots:** support slot presence / props type checks via `defineSlots` macro and `slots` option ([#7982](https://github.com/vuejs/core/issues/7982)) ([5a2f5d5](https://github.com/vuejs/core/commit/5a2f5d59cffa36a99e6f2feab6b3ba7958b7362f))
+* **sfc:** support more ergnomic defineEmits type syntax ([#7992](https://github.com/vuejs/core/issues/7992)) ([8876dcc](https://github.com/vuejs/core/commit/8876dccf42a7f05375d97cb18c1afdfd0fc51c94))
+* **sfc:** introduce `defineModel` macro and `useModel` helper ([#8018](https://github.com/vuejs/core/issues/8018)) ([14f3d74](https://github.com/vuejs/core/commit/14f3d747a34d45415b0036b274517d70a27ec0d3))
+* **reactivity:** improve support of getter usage in reactivity APIs ([#7997](https://github.com/vuejs/core/issues/7997)) ([59e8284](https://github.com/vuejs/core/commit/59e828448e7f37643cd0eaea924a764e9d314448))
+* **compiler-sfc:** add defineOptions macro ([#5738](https://github.com/vuejs/core/issues/5738)) ([bcf5841](https://github.com/vuejs/core/commit/bcf5841ddecc64d0bdbd56ce1463eb8ebf01bb9d))
+* **types/jsx:** support jsxImportSource, avoid global JSX conflict ([#7958](https://github.com/vuejs/core/issues/7958)) ([d0b7ef3](https://github.com/vuejs/core/commit/d0b7ef3b61d5f83e35e5854b3c2c874e23463102))
+* **dx:** improve readability of displayed types for props ([4c9bfd2](https://github.com/vuejs/core/commit/4c9bfd2b999ce472f7481aae4f9dc5bb9f76628e))
+* **app:** app.runWithContext() ([#7451](https://github.com/vuejs/core/issues/7451)) ([869f3fb](https://github.com/vuejs/core/commit/869f3fb93e61400be4fd925e0850c2b1564749e2))
+* hasInjectionContext() for libraries ([#8111](https://github.com/vuejs/core/issues/8111)) ([5510ce3](https://github.com/vuejs/core/commit/5510ce385abfa151c07a5253cccf4abccabdd01d))
+* allow accessing console in template ([#6508](https://github.com/vuejs/core/issues/6508)) ([fe76224](https://github.com/vuejs/core/commit/fe762247f8035d28d543bc5602ad01b0c258f6d6)), closes [#7939](https://github.com/vuejs/core/issues/7939)
+* **suspense:** introduce suspensible option for `<Suspense>` ([#6736](https://github.com/vuejs/core/issues/6736)) ([cb37d0b](https://github.com/vuejs/core/commit/cb37d0b9ffb5d4bb81a0367d84295dec8dd4448c)), closes [#5513](https://github.com/vuejs/core/issues/5513)
+* **compiler-dom:** treat inert as boolean attribute ([#8209](https://github.com/vuejs/core/issues/8209)) ([918ec8a](https://github.com/vuejs/core/commit/918ec8a5cbc825a3947cd35fe966671c245af087)), closes [#8208](https://github.com/vuejs/core/issues/8208)
+* **types:** add slots types for built-in components ([#6033](https://github.com/vuejs/core/issues/6033)) ([3cb4dc9](https://github.com/vuejs/core/commit/3cb4dc9e5538e1c2bde9fa691b001615a848c546))
+* **types:** provide ExtractPublicPropTypes utility type ([bff63c5](https://github.com/vuejs/core/commit/bff63c5498f5fa098689c18defe48ae08d47eadb)), closes [#5272](https://github.com/vuejs/core/issues/5272) [#8168](https://github.com/vuejs/core/issues/8168)
+* **compiler-sfc:** expose parseCache ([4576548](https://github.com/vuejs/core/commit/45765488d498d94f8760c9e82f1177070057b17c)), closes [#8202](https://github.com/vuejs/core/issues/8202)
+
+## Deprecations
+
+* **deprecation:** deprecate [@vnode](https://github.com/vnode) hooks in favor of vue: prefix ([5f0394a](https://github.com/vuejs/core/commit/5f0394a5ab88c82c74e240161499721f63d5462e))
+* **deprecation:** deprecate v-is directive ([bbd8301](https://github.com/vuejs/core/commit/bbd8301a1344b02de635ea16d4822db1c343bd12))
+* **deprecation:** unwrap injected refs in Options API by default, deprecate app.config.unwrapInjectedRefs ([526fa3b](https://github.com/vuejs/core/commit/526fa3b2ccf038375e76f8af2f1ddf79a7388878))
+
 # [3.3.0-beta.5](https://github.com/vuejs/core/compare/v3.3.0-beta.4...v3.3.0-beta.5) (2023-05-08)
 
 
