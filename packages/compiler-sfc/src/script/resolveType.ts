@@ -588,7 +588,7 @@ type ReferenceTypes =
   | TSImportType
   | TSTypeQuery
 
-function resolveTypeReference(
+export function resolveTypeReference(
   ctx: TypeResolveContext,
   node: ReferenceTypes & {
     _resolvedReference?: ScopeTypeNode
@@ -1604,4 +1604,24 @@ function resolveReturnType(
   if (resolved.type === 'TSDeclareFunction') {
     return resolved.returnType
   }
+}
+
+export function resolveUnionType(
+  ctx: TypeResolveContext,
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
+  scope?: TypeScope
+): Node[] {
+  if (node.type === 'TSTypeReference') {
+    const resolved = resolveTypeReference(ctx, node, scope)
+    if (resolved) node = resolved
+  }
+
+  let types: Node[]
+  if (node.type === 'TSUnionType') {
+    types = node.types.flatMap(node => resolveUnionType(ctx, node, scope))
+  } else {
+    types = [node]
+  }
+
+  return types
 }
