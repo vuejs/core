@@ -1520,4 +1520,19 @@ describe('SFC genDefaultAs', () => {
     )
     assertCode(content)
   })
+
+  test('binding type for edge cases', () => {
+    const { bindings } = compile(
+      `<script setup lang="ts">
+      import { toRef } from 'vue'
+      const props = defineProps<{foo: string}>()
+      const foo = toRef(() => props.foo)
+      </script>`
+    )
+    expect(bindings).toStrictEqual({
+      toRef: BindingTypes.SETUP_CONST,
+      props: BindingTypes.SETUP_REACTIVE_CONST,
+      foo: BindingTypes.SETUP_REF
+    })
+  })
 })

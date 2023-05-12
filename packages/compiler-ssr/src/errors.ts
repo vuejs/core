@@ -17,7 +17,7 @@ export function createSSRCompilerError(
 }
 
 export const enum SSRErrorCodes {
-  X_SSR_UNSAFE_ATTR_NAME = 62 /* DOMErrorCodes.__EXTEND_POINT__ */,
+  X_SSR_UNSAFE_ATTR_NAME = 65 /* DOMErrorCodes.__EXTEND_POINT__ */,
   X_SSR_NO_TELEPORT_TARGET,
   X_SSR_INVALID_AST_NODE
 }
@@ -28,7 +28,9 @@ if (__TEST__) {
   // errors out if there are collisions.
   if (SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME < DOMErrorCodes.__EXTEND_POINT__) {
     throw new Error(
-      'SSRErrorCodes need to be updated to match extension point from core DOMErrorCodes.'
+      `SSRErrorCodes need to be updated to ${
+        DOMErrorCodes.__EXTEND_POINT__ + 1
+      } to match extension point from core DOMErrorCodes.`
     )
   }
 }

@@ -5,7 +5,7 @@ import {
   walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -505,21 +505,6 @@ export function compileScript(
 
   // 2.2 process <script setup> body
   for (const node of scriptSetupAst.body) {
-    // (Dropped) `ref: x` bindings
-    // TODO remove when out of experimental
-    if (
-      node.type === 'LabeledStatement' &&
-      node.label.name === 'ref' &&
-      node.body.type === 'ExpressionStatement'
-    ) {
-      ctx.error(
-        `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback. Please check out ` +
-          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
-        node
-      )
-    }
-
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -1110,8 +1095,16 @@ function walkDeclaration(
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (
-            isCallOf(init, userImportAliases['ref']) ||
-            isCallOf(init, DEFINE_MODEL)
+            isCallOf(
+              init,
+              m =>
+                m === userImportAliases['ref'] ||
+                m === userImportAliases['computed'] ||
+                m === userImportAliases['shallowRef'] ||
+                m === userImportAliases['customRef'] ||
+                m === userImportAliases['toRef'] ||
+                m === DEFINE_MODEL
+            )
           ) {
             bindingType = BindingTypes.SETUP_REF
           } else {

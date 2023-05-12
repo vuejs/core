@@ -207,6 +207,38 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: Partial', () => {
+    expect(
+      resolve(`
+    type T = { foo: number, bar: string }
+    defineProps<Partial<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: true
+      },
+      bar: {
+        optional: true
+      }
+    })
+  })
+
+  test('utility type: Required', () => {
+    expect(
+      resolve(`
+    type T = { foo?: number, bar?: string }
+    defineProps<Required<T>>()
+    `).raw.props
+    ).toMatchObject({
+      foo: {
+        optional: false
+      },
+      bar: {
+        optional: false
+      }
+    })
+  })
+
   test('utility type: Pick', () => {
     expect(
       resolve(`
@@ -372,12 +404,65 @@ describe('resolveType', () => {
     })
   })
 
+  test('typeof', () => {
+    expect(
+      resolve(`
+      declare const a: string
+      defineProps<{ foo: typeof a }>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
+  test('ExtractPropTypes (element-plus)', () => {
+    const { props, raw } = resolve(
+      `
+      import { ExtractPropTypes } from 'vue'
+      declare const props: {
+        foo: StringConstructor,
+        bar: {
+          type: import('foo').EpPropFinalized<BooleanConstructor>,
+          required: true
+        }
+      }
+      type Props = ExtractPropTypes<typeof props>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+    expect(raw.props.bar.optional).toBe(false)
+  })
+
+  test('ExtractPropTypes (antd)', () => {
+    const { props } = resolve(
+      `
+      declare const props: () => {
+        foo: StringConstructor,
+        bar: { type: PropType<boolean> }
+      }
+      type Props = Partial<import('vue').ExtractPropTypes<ReturnType<typeof props>>>
+      defineProps<Props>()
+    `
+    )
+    expect(props).toStrictEqual({
+      foo: ['String'],
+      bar: ['Boolean']
+    })
+  })
+
   describe('external type imports', () => {
-    const files = {
-      '/foo.ts': 'export type P = { foo: number }',
-      '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
-    }
     test('relative ts', () => {
+      const files = {
+        '/foo.ts': 'export type P = { foo: number }',
+        '/bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean'
+      }
       const { props, deps } = resolve(
         `
         import { P } from './foo'
@@ -391,6 +476,23 @@ describe('resolveType', () => {
         bar: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #8244
+    test('utility type in external file', () => {
+      const files = {
+        '/foo.ts': 'type A = { n?: number }; export type B = Required<A>'
+      }
+      const { props } = resolve(
+        `
+        import { B } from './foo'
+        defineProps<B>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        n: ['Number']
+      })
     })
 
     test('relative vue', () => {
@@ -454,6 +556,42 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (chained, export *)', () => {
+      const files = {
+        '/foo.ts': `export * from './bar'`,
+        '/bar.ts': 'export type P = { bar: string }'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (dynamic import)', () => {
+      const files = {
+        '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
+        '/bar.ts': 'export type N = number'
+      }
+      const { props, deps } = resolve(
+        `
+        defineProps<import('./foo').P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
@@ -487,6 +625,44 @@ describe('resolveType', () => {
         '/node_modules/foo/index.d.ts',
         '/pp.ts'
       ])
+    })
+
+    test('ts module resolve w/ project reference & extends', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          references: [
+            {
+              path: './tsconfig.app.json'
+            }
+          ]
+        }),
+        '/tsconfig.app.json': JSON.stringify({
+          include: ['**/*.ts', '**/*.vue'],
+          extends: './tsconfig.web.json'
+        }),
+        '/tsconfig.web.json': JSON.stringify({
+          compilerOptions: {
+            composite: true,
+            paths: {
+              bar: ['./user.ts']
+            }
+          }
+        }),
+        '/user.ts': 'export type User = { bar: string }'
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { User } from 'bar'
+        defineProps<User>()
+        `,
+        files
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
     test('global types', () => {
@@ -563,15 +739,50 @@ describe('resolveType', () => {
       )
     })
 
-    test('failed improt source resolve', () => {
+    test('failed import source resolve', () => {
       expect(() =>
         resolve(`import { X } from './foo'; defineProps<X>()`)
-      ).toThrow(`Failed to resolve import source "./foo" for type X`)
+      ).toThrow(`Failed to resolve import source "./foo"`)
     })
 
     test('should not error on unresolved type when inferring runtime type', () => {
       expect(() => resolve(`defineProps<{ foo: T }>()`)).not.toThrow()
       expect(() => resolve(`defineProps<{ foo: T['bar'] }>()`)).not.toThrow()
+      expect(() =>
+        resolve(`
+        import type P from 'unknown'
+        defineProps<{ foo: P }>()
+      `)
+      ).not.toThrow()
+    })
+
+    test('error against failed extends', () => {
+      expect(() =>
+        resolve(`
+        import type Base from 'unknown'
+        interface Props extends Base {}
+        defineProps<Props>()
+      `)
+      ).toThrow(`@vue-ignore`)
+    })
+
+    test('allow ignoring failed extends', () => {
+      let res: any
+
+      expect(
+        () =>
+          (res = resolve(`
+        import type Base from 'unknown'
+        interface Props extends /*@vue-ignore*/ Base {
+          foo: string
+        }
+        defineProps<Props>()
+      `))
+      ).not.toThrow(`@vue-ignore`)
+
+      expect(res.props).toStrictEqual({
+        foo: ['String']
+      })
     })
   })
 })
@@ -623,6 +834,7 @@ function resolve(
   return {
     props,
     calls: raw.calls,
-    deps: ctx.deps
+    deps: ctx.deps,
+    raw
   }
 }
