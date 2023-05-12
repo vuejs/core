@@ -40,7 +40,7 @@ import {
   ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
-import { SlotsType, TypedSlots } from './componentSlots'
+import { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -213,7 +213,7 @@ export type ComponentPublicInstance<
   >
   $attrs: Data
   $refs: Data
-  $slots: TypedSlots<S>
+  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
