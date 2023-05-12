@@ -8,7 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
-import { escapeSymbolsRE } from '../script/defineProps'
+import { escapeSymbolsRE } from '../script/utils'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
@@ -32,10 +32,7 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(
-      escapeSymbolsRE,
-      s => `\\${s}`
-    )}`
+    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
   }
 }
 

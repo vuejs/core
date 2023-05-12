@@ -16,7 +16,8 @@ import {
   isLiteralNode,
   isCallOf,
   unwrapTSNode,
-  toRuntimeTypeString
+  toRuntimeTypeString,
+  getEscapedKey
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -363,15 +364,4 @@ function inferValueType(node: Node): string | undefined {
     case 'ArrowFunctionExpression':
       return 'Function'
   }
-}
-
-/**
- * key may contain symbols
- * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
- */
-export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-function getEscapedKey(key: string) {
-  return escapeSymbolsRE.test(key)
-    ? JSON.stringify(key)
-    : key
 }
