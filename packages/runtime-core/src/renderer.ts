@@ -187,7 +187,7 @@ type MountChildrenFn = (
 ) => void
 
 type PatchChildrenFn = (
-  n1: VNode | null,
+  n1: VNode,
   n2: VNode,
   container: RendererElement,
   anchor: RendererNode | null,
@@ -1599,8 +1599,8 @@ function baseCreateRenderer(
     slotScopeIds,
     optimized = false
   ) => {
-    const c1 = n1 && n1.children
-    const prevShapeFlag = n1 ? n1.shapeFlag : 0
+    const c1 = n1.children
+    const prevShapeFlag = n1.shapeFlag
     const c2 = n2.children
 
     const { patchFlag, shapeFlag } = n2
