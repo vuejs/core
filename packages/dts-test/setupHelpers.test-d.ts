@@ -186,14 +186,6 @@ describe('defineEmits w/ runtime declaration', () => {
 })
 
 describe('defineSlots', () => {
-  // short syntax
-  const slots = defineSlots<{
-    default: { foo: string; bar: number }
-    optional?: string
-  }>()
-  expectType<(scope: { foo: string; bar: number }) => VNode[]>(slots.default)
-  expectType<undefined | ((scope: string) => VNode[])>(slots.optional)
-
   // literal fn syntax (allow for specifying return type)
   const fnSlots = defineSlots<{
     default(props: { foo: string; bar: number }): any

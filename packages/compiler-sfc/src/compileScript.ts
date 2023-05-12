@@ -5,7 +5,7 @@ import {
   walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
