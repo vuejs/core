@@ -8,7 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
-import {escapeSymbolsRE} from '../script/defineProps'
+import { escapeSymbolsRE } from '../script/defineProps'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
