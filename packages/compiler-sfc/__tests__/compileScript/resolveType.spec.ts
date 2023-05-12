@@ -458,7 +458,10 @@ describe('resolveType', () => {
     test('relative ts', () => {
       const files = {
         '/foo.ts': 'export type P = { foo: number }',
-        '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+        '/bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean'
       }
       const { props, deps } = resolve(
         `
