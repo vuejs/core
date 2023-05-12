@@ -325,7 +325,7 @@ function genDestructuredDefaultValue(
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
-    // whether tje expected runtime prop type is `Function`.
+    // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
       !inferredType &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')

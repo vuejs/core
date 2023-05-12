@@ -518,7 +518,7 @@ function resolveBuiltin(
   name: GetSetType<typeof SupportedBuiltinsSet>,
   scope: TypeScope
 ): ResolvedElements {
-  const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
+  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope)
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
