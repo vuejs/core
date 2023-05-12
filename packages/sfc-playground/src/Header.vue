@@ -41,7 +41,12 @@ function resetVueVersion() {
   expanded.value = false
 }
 
-async function copyLink() {
+async function copyLink(e: MouseEvent) {
+  if (e.metaKey) {
+    // hidden logic for going to local debug from play.vuejs.org
+    window.location.href = 'http://localhost:5173/' + window.location.hash
+    return
+  }
   await navigator.clipboard.writeText(location.href)
   alert('Sharable URL has been copied to clipboard.')
 }
@@ -63,7 +68,7 @@ onMounted(async () => {
     if (document.activeElement?.tagName === 'IFRAME') {
       expanded.value = false
     }
-  });
+  })
 })
 
 async function fetchVersions(): Promise<string[]> {
