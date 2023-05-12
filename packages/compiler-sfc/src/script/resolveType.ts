@@ -933,7 +933,11 @@ function parseFile(
   const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
-      plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
+      plugins: resolveParserPlugins(
+        ext.slice(1),
+        parserPlugins,
+        filename.endsWith('.d.ts')
+      ),
       sourceType: 'module'
     }).program.body
   } else if (ext === '.vue') {
