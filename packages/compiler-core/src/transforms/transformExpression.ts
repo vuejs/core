@@ -45,6 +45,10 @@ import { BindingTypes } from '../options'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
+// a heuristic safeguard to bail constant expressions on presence of
+// likely function invocation and member access
+const constantBailRE = /\w\s*\(|\.[^\d]/
+
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
@@ -217,7 +221,7 @@ export function processExpression(
   // fast path if expression is a simple identifier.
   const rawExp = node.content
   // bail constant on parens (function invocation) and dot (member access)
-  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
+  const bailConstant = constantBailRE.test(rawExp)
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
