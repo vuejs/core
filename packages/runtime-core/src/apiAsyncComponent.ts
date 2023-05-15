@@ -11,7 +11,7 @@ import { ComponentPublicInstance } from './componentPublicInstance'
 import { createVNode, VNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
-import { pauseTracking, ref, resetTracking } from '@vue/reactivity'
+import { ref } from '@vue/reactivity'
 import { handleError, ErrorCodes } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
@@ -196,9 +196,6 @@ export function defineAsyncComponent<
 
       return () => {
         if (loaded.value && resolvedComp) {
-          pauseTracking()
-          delayed.value = false
-          resetTracking()
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
           return createVNode(errorComponent as ConcreteComponent, {
