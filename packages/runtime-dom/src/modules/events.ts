@@ -12,20 +12,52 @@ interface Invoker extends EventListener {
 
 type EventValue = Function | Function[]
 
+export function addEventListener<
+  E extends Element | Document | Window,
+  K extends keyof DocumentEventMap
+>(
+  el: E,
+  event: K,
+  handler: (
+    e: DocumentEventMap[K]
+  ) => void | EventListenerOrEventListenerObject,
+  options?: boolean | AddEventListenerOptions
+): void
 export function addEventListener(
   el: Element,
   event: string,
-  handler: EventListener,
-  options?: EventListenerOptions
+  handler: EventListenerOrEventListenerObject,
+  options?: boolean | AddEventListenerOptions
+): void
+export function addEventListener(
+  el: Element,
+  event: string,
+  handler: any,
+  options?: boolean | AddEventListenerOptions
 ) {
   el.addEventListener(event, handler, options)
 }
 
+export function removeEventListener<
+  E extends Element | Document | Window,
+  K extends keyof DocumentEventMap
+>(
+  el: E,
+  event: K,
+  listener: (ev: DocumentEventMap[K]) => any,
+  options?: boolean | EventListenerOptions
+): void
 export function removeEventListener(
   el: Element,
   event: string,
-  handler: EventListener,
-  options?: EventListenerOptions
+  listener: EventListenerOrEventListenerObject,
+  options?: boolean | EventListenerOptions
+): void
+export function removeEventListener(
+  el: Element,
+  event: string,
+  handler: any,
+  options?: boolean | EventListenerOptions
 ) {
   el.removeEventListener(event, handler, options)
 }
