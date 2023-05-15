@@ -431,6 +431,16 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  // #8295
+  test('should treat floating point number literals as constant', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [1, 2.1] }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY
+    })
+  })
+
   describe('ES Proposals support', () => {
     test('bigInt', () => {
       const node = parseWithExpressionTransform(

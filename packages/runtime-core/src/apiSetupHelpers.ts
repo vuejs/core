@@ -28,7 +28,7 @@ import {
   PropOptions
 } from './componentProps'
 import { warn } from './warning'
-import { SlotsType, TypedSlots } from './componentSlots'
+import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import { Ref, ref } from '@vue/reactivity'
 import { watch } from './apiWatch'
 
@@ -176,7 +176,7 @@ export function defineExpose<
 /**
  * Vue `<script setup>` compiler macro for declaring a component's additional
  * options. This should be used only for options that cannot be expressed via
- * Composition API - e.g. `inhertiAttrs`.
+ * Composition API - e.g. `inheritAttrs`.
  *
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
  */
@@ -205,7 +205,7 @@ export function defineOptions<
 
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>
->(): TypedSlots<SlotsType<S>> {
+>(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
