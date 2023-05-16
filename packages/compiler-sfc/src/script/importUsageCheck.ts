@@ -83,7 +83,11 @@ function processExp(exp: string, dir?: string): string {
     } else if (dir === 'for') {
       const inMatch = exp.match(forAliasRE)
       if (inMatch) {
-        const [, LHS, RHS] = inMatch
+        let [, LHS, RHS] = inMatch
+
+        // TODO bwsy
+         LHS = LHS.replace(/\(|\)/g, '');
+         RHS = RHS.replace(/\(|\)/g, '');
         return processExp(`(${LHS})=>{}`) + processExp(RHS)
       }
     }
