@@ -755,6 +755,35 @@ describe('resolveType', () => {
       `)
       ).not.toThrow()
     })
+
+    test('error against failed extends', () => {
+      expect(() =>
+        resolve(`
+        import type Base from 'unknown'
+        interface Props extends Base {}
+        defineProps<Props>()
+      `)
+      ).toThrow(`@vue-ignore`)
+    })
+
+    test('allow ignoring failed extends', () => {
+      let res: any
+
+      expect(
+        () =>
+          (res = resolve(`
+        import type Base from 'unknown'
+        interface Props extends /*@vue-ignore*/ Base {
+          foo: string
+        }
+        defineProps<Props>()
+      `))
+      ).not.toThrow(`@vue-ignore`)
+
+      expect(res.props).toStrictEqual({
+        foo: ['String']
+      })
+    })
   })
 })
 
