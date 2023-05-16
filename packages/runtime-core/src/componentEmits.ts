@@ -11,7 +11,9 @@ import {
   isString,
   isOn,
   UnionToIntersection,
-  looseToNumber
+  looseToNumber,
+  Hyphenate,
+  Camelize
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -55,18 +57,31 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : {}
 
+type EnhanceEmitEvent<T, Event = T> = T extends string
+  ?
+      | T
+      | ((
+          T extends `update:${infer P}` ? `update:${Hyphenate<P>}` : Camelize<T>
+        ) extends infer E
+          ? // preserve the original type of the existing event
+            E extends Event
+            ? T
+            : E
+          : T)
+  : T
+
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options
 > = Options extends Array<infer V>
-  ? (event: V, ...args: any[]) => void
+  ? (event: EnhanceEmitEvent<V>, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
   ? (event: string, ...args: any[]) => void
   : UnionToIntersection<
       {
         [key in Event]: Options[key] extends (...args: infer Args) => any
-          ? (event: key, ...args: Args) => void
-          : (event: key, ...args: any[]) => void
+          ? (event: EnhanceEmitEvent<key, Event>, ...args: Args) => void
+          : (event: EnhanceEmitEvent<key, Event>, ...args: any[]) => void
       }[Event]
     >
 
