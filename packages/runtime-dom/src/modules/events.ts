@@ -58,10 +58,10 @@ export function patchEvent(
 }
 
 const optionsModifierRE = /(?:Once|Passive|Capture)$/
-
+const ignoreModifierRE = /^(?!on(?:Once|Passive|Capture))/
 function parseName(name: string): [string, EventListenerOptions | undefined] {
   let options: EventListenerOptions | undefined
-  if (optionsModifierRE.test(name)) {
+  if (ignoreModifierRE.test(name) && optionsModifierRE.test(name)) {
     options = {}
     let m
     while ((m = name.match(optionsModifierRE))) {
