@@ -38,6 +38,26 @@ return { props }
 })"
 `;
 
+exports[`defineProps > destructure without enabling reactive destructure 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: null, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+const { foo } = __props;
+
+      
+      
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ TS assertion 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
