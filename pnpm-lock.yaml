@@ -146,7 +146,7 @@ importers:
         specifier: ^7.21.3
         version: 7.21.3
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -162,10 +162,10 @@ importers:
   packages/compiler-dom:
     dependencies:
       '@vue/compiler-core':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-core
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/compiler-sfc:
@@ -174,19 +174,19 @@ importers:
         specifier: ^7.20.15
         version: 7.21.3
       '@vue/compiler-core':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-core
       '@vue/compiler-dom':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-dom
       '@vue/compiler-ssr':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-ssr
       '@vue/reactivity-transform':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../reactivity-transform
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -241,10 +241,10 @@ importers:
   packages/compiler-ssr:
     dependencies:
       '@vue/compiler-dom':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-dom
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/dts-test:
@@ -256,7 +256,7 @@ importers:
   packages/reactivity:
     dependencies:
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/reactivity-transform:
@@ -265,10 +265,10 @@ importers:
         specifier: ^7.20.15
         version: 7.21.3
       '@vue/compiler-core':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-core
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -287,19 +287,19 @@ importers:
   packages/runtime-core:
     dependencies:
       '@vue/reactivity':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../reactivity
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/runtime-dom:
     dependencies:
       '@vue/runtime-core':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../runtime-core
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
       csstype:
         specifier: ^3.1.1
@@ -308,22 +308,22 @@ importers:
   packages/runtime-test:
     dependencies:
       '@vue/runtime-core':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../runtime-core
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/server-renderer:
     dependencies:
       '@vue/compiler-ssr':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-ssr
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
       vue:
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../vue
 
   packages/sfc-playground:
@@ -342,8 +342,8 @@ importers:
         version: link:../vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: ^4.1.0
-        version: 4.1.0(vite@4.3.1)(vue@packages+vue)
+        specifier: ^4.2.3
+        version: 4.2.3(vite@4.3.1)(vue@packages+vue)
       vite:
         specifier: ^4.3.0
         version: 4.3.1(@types/node@16.18.11)(terser@5.16.2)
@@ -368,19 +368,19 @@ importers:
   packages/vue:
     dependencies:
       '@vue/compiler-dom':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-dom
       '@vue/compiler-sfc':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../compiler-sfc
       '@vue/runtime-dom':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../runtime-dom
       '@vue/server-renderer':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../server-renderer
       '@vue/shared':
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../shared
 
   packages/vue-compat:
@@ -395,7 +395,7 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       vue:
-        specifier: 3.3.1
+        specifier: 3.3.2
         version: link:../vue
 
 packages:
@@ -1225,8 +1225,8 @@ packages:
       eslint-visitor-keys: 3.3.0
     dev: true
 
-  /@vitejs/plugin-vue@4.1.0(vite@4.3.1)(vue@packages+vue):
-    resolution: {integrity: sha512-++9JOAFdcXI3lyer9UKUV4rfoQ3T1RN8yDqoCLar86s0xQct5yblxAE+yWgRnU5/0FOlVCpTZpYSBV/bGWrSrQ==}
+  /@vitejs/plugin-vue@4.2.3(vite@4.3.1)(vue@packages+vue):
+    resolution: {integrity: sha512-R6JDUfiZbJA9cMiguQ7jxALsgiprjBeHL5ikpXfJCH62pPHtI+JdJ5xWj6Ev73yXSlYl86+blXn1kZHQ7uElxw==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
       vite: ^4.0.0
