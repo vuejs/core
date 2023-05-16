@@ -322,11 +322,29 @@ function resolveInterfaceMembers(
   const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
   if (node.extends) {
     for (const ext of node.extends) {
-      const { props } = resolveTypeElements(ctx, ext, scope)
-      for (const key in props) {
-        if (!hasOwn(base.props, key)) {
-          base.props[key] = props[key]
+      if (
+        ext.leadingComments &&
+        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
+      ) {
+        continue
+      }
+      try {
+        const { props } = resolveTypeElements(ctx, ext, scope)
+        for (const key in props) {
+          if (!hasOwn(base.props, key)) {
+            base.props[key] = props[key]
+          }
         }
+      } catch (e) {
+        ctx.error(
+          `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
+            `you can instruct the compiler to ignore this extend by adding ` +
+            `/* @vue-ignore */ before it, for example:\n\n` +
+            `interface Props extends /* @vue-ignore */ Base {}\n\n` +
+            `Note: both in 3.2 or with the ignore, the properties in the base ` +
+            `type are treated as fallthrough attrs at runtime.`,
+          ext
+        )
       }
     }
   }
@@ -933,7 +951,11 @@ function parseFile(
   const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
-      plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
+      plugins: resolveParserPlugins(
+        ext.slice(1),
+        parserPlugins,
+        filename.endsWith('.d.ts')
+      ),
       sourceType: 'module'
     }).program.body
   } else if (ext === '.vue') {
