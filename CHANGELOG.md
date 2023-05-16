@@ -1,3 +1,17 @@
+## [3.3.2](https://github.com/vuejs/core/compare/v3.3.1...v3.3.2) (2023-05-12)
+
+
+### Bug Fixes
+
+* **compiler-core:** treat floating point numbers as constants ([8dc8cf8](https://github.com/vuejs/core/commit/8dc8cf852bf8057aa5c4b5670f09e8c28a168b73)), closes [#8295](https://github.com/vuejs/core/issues/8295)
+* **compiler-dom:** do not throw in production on side effect tags ([c454b9d](https://github.com/vuejs/core/commit/c454b9d7f431d57abedb7184d1e4059914c4463f)), closes [#8287](https://github.com/vuejs/core/issues/8287) [#8292](https://github.com/vuejs/core/issues/8292)
+* **compiler-sfc:** fix regression on props destructure when transform is not enabled ([f25bd37](https://github.com/vuejs/core/commit/f25bd37c6707fde19d164d90a38de41168941f4b)), closes [#8289](https://github.com/vuejs/core/issues/8289)
+* **compiler-sfc:** handle prop keys that need escaping ([#7803](https://github.com/vuejs/core/issues/7803)) ([690ef29](https://github.com/vuejs/core/commit/690ef296357c7fc09f66ba9408df548e117f686f)), closes [#8291](https://github.com/vuejs/core/issues/8291)
+* **compiler-sfc:** properly parse d.ts files when resolving types ([aa1e77d](https://github.com/vuejs/core/commit/aa1e77d532b951ea5d3a5e26214a8b0c9c02fb6f)), closes [#8285](https://github.com/vuejs/core/issues/8285)
+* **compiler-sfc:** raise specific warning for failed extends and allow ignoring extends ([8235072](https://github.com/vuejs/core/commit/82350721a408e1f552c613c05971439d6c218d87)), closes [#8286](https://github.com/vuejs/core/issues/8286)
+
+
+
 ## [3.3.1](https://github.com/vuejs/core/compare/v3.3.0...v3.3.1) (2023-05-11)
 
 
