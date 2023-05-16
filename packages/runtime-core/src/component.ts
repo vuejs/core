@@ -161,7 +161,7 @@ export type ConcreteComponent<
   M extends MethodOptions = MethodOptions
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, any, any>
+  | FunctionalComponent<Props, any>
 
 /**
  * A type used in public APIs where a component type is expected.
