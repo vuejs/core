@@ -311,11 +311,7 @@ function genDestructuredDefaultValue(
     const value = ctx.getString(defaultVal)
     const unwrapped = unwrapTSNode(defaultVal)
 
-    if (
-      inferredType &&
-      inferredType.length &&
-      !inferredType.includes(UNKNOWN_TYPE)
-    ) {
+    if (inferredType && inferredType.length && !inferredType.includes('null')) {
       const valueType = inferValueType(unwrapped)
       if (valueType && !inferredType.includes(valueType)) {
         ctx.error(
