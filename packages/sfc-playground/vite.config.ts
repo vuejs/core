@@ -10,7 +10,6 @@ export default defineConfig({
   plugins: [
     vue({
       script: {
-        // @ts-ignore
         fs: {
           fileExists: fs.existsSync,
           readFile: file => fs.readFileSync(file, 'utf-8')
