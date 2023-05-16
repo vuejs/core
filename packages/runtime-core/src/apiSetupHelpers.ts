@@ -176,7 +176,7 @@ export function defineExpose<
 /**
  * Vue `<script setup>` compiler macro for declaring a component's additional
  * options. This should be used only for options that cannot be expressed via
- * Composition API - e.g. `inhertiAttrs`.
+ * Composition API - e.g. `inheritAttrs`.
  *
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
  */
