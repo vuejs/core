@@ -97,6 +97,44 @@ return () => {}
 }"
 `;
 
+exports[`sfc reactive props destructure > default values w/ runtime declaration & key is string 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  \\"foo:bar\\": 'foo-bar'
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > default values w/ type declaration & key is string 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    \\"foo:bar\\": { type: String, required: true, default: 'foo-bar' },
+    \\"onUpdate:modelValue\\": { type: Function, required: true }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
+`;
+
 exports[`sfc reactive props destructure > default values w/ type declaration 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
