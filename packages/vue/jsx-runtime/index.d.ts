@@ -1,16 +1,11 @@
-import type {
-  VNode,
-  IntrinsicElementAttributes,
-  ReservedProps,
-  NativeElements
-} from '@vue/runtime-dom'
+import type { VNode, ReservedProps, NativeElements } from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive
  * when ts compilerOptions.jsx is 'react-jsx' or 'react-jsxdev'
  * https://www.typescriptlang.org/tsconfig#jsxImportSource
  */
-export { h as jsx, h as jsxDEV, Fragment } from '@vue/runtime-dom'
+export { h as jsx, Fragment } from '@vue/runtime-dom'
 
 export namespace JSX {
   export interface Element extends VNode {}
