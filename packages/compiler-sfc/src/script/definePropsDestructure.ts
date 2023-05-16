@@ -28,6 +28,7 @@ export function processPropsDestructure(
   declId: ObjectPattern
 ) {
   if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+    ctx.propsIdentifier = ctx.getString(declId)
     return
   }
 
