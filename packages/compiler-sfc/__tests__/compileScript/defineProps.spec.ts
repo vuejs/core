@@ -586,6 +586,19 @@ const props = defineProps({ foo: String })
     })
   })
 
+  // #8289
+  test('destructure without enabling reactive destructure', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const { foo } = defineProps<{
+        foo: Foo
+      }>()
+      </script>`
+    )
+    expect(content).toMatch(`const { foo } = __props`)
+    assertCode(content)
+  })
+
   describe('errors', () => {
     test('w/ both type and non-type args', () => {
       expect(() => {
