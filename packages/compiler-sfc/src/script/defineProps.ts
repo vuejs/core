@@ -16,7 +16,8 @@ import {
   isLiteralNode,
   isCallOf,
   unwrapTSNode,
-  toRuntimeTypeString
+  toRuntimeTypeString,
+  getEscapedKey
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -133,10 +134,11 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       const defaults: string[] = []
       for (const key in ctx.propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(ctx, key)
+        const finalKey = getEscapedKey(key)
         if (d)
           defaults.push(
-            `${key}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${key}: true` : ``
+            `${finalKey}: ${d.valueString}${
+              d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
             }`
           )
       }
@@ -248,8 +250,9 @@ function genRuntimePropFromType(
     }
   }
 
+  const finalKey = getEscapedKey(key)
   if (!ctx.options.isProd) {
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       `required: ${required}`,
       skipCheck && 'skipCheck: true',
@@ -265,13 +268,13 @@ function genRuntimePropFromType(
     // #4783 for boolean, should keep the type
     // #7111 for function, if default value exists or it's not static, should keep it
     // in production
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       defaultString
     ])} }`
   } else {
     // production: checks are useless
-    return `${key}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
+    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }
 }
 
@@ -325,7 +328,7 @@ function genDestructuredDefaultValue(
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
-    // whether tje expected runtime prop type is `Function`.
+    // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
       !inferredType &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')
