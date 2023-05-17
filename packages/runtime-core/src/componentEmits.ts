@@ -57,6 +57,9 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : {}
 
+export type ExtractEmitEvent<T extends (...args: any[]) => any> =
+  Parameters<T>[0] & string
+
 export type EnrichEmitEvent<T, Event = T> = T extends string
   ?
       | T

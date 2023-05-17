@@ -4,7 +4,8 @@ import {
   isFunction,
   Prettify,
   UnionToIntersection,
-  extend
+  extend,
+  OverloadUnion
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -17,6 +18,7 @@ import {
   EmitFn,
   EmitsOptions,
   EnrichEmitEvent,
+  ExtractEmitEvent,
   ObjectEmitsOptions
 } from './componentEmits'
 import {
@@ -139,7 +141,7 @@ export function defineEmits<E extends EmitsOptions = EmitsOptions>(
 ): EmitFn<E>
 export function defineEmits<
   T extends ((...args: any[]) => any) | Record<string, any[]>
->(): T extends (...args: any[]) => any ? T : ShortEmits<T>
+>(): T extends (...args: any[]) => any ? ShortEmitFn<T> : ShortEmits<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -149,6 +151,17 @@ export function defineEmits() {
 }
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
+
+type ShortEmitFn<T extends (...args: any[]) => any> = UnionToIntersection<
+  OverloadUnion<T> extends infer Fn
+    ? Fn extends (event: infer Event extends string, ...args: infer Args) => any
+      ? (
+          event: EnrichEmitEvent<Event, ExtractEmitEvent<OverloadUnion<T>>>,
+          ...args: Args
+        ) => void
+      : T
+    : T
+>
 
 type ShortEmits<
   T extends Record<string, any>,

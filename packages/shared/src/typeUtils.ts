@@ -13,6 +13,39 @@ export type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] }
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N
 
+// https://github.com/microsoft/TypeScript/issues/14107#issuecomment-1146738780
+type OverloadProps<TOverload> = Pick<TOverload, keyof TOverload>
+
+type OverloadUnionRecursive<
+  TOverload,
+  TPartialOverload = unknown
+> = TOverload extends (...args: infer TArgs) => infer TReturn
+  ? // Prevent infinite recursion by stopping recursion when TPartialOverload
+    // has accumulated all of the TOverload signatures.
+    TPartialOverload extends TOverload
+    ? never
+    :
+        | OverloadUnionRecursive<
+            TPartialOverload & TOverload,
+            TPartialOverload &
+              ((...args: TArgs) => TReturn) &
+              OverloadProps<TOverload>
+          >
+        | ((...args: TArgs) => TReturn)
+  : never
+
+export type OverloadUnion<TOverload extends (...args: any[]) => any> = Exclude<
+  OverloadUnionRecursive<
+    // The "() => never" signature must be hoisted to the "front" of the
+    // intersection, for two reasons: a) because recursion stops when it is
+    // encountered, and b) it seems to prevent the collapse of subsequent
+    // "compatible" signatures (eg. "() => void" into "(a?: 1) => void"),
+    // which gives a direct conversion to a union.
+    (() => never) & TOverload
+  >,
+  TOverload extends () => never ? never : () => never
+>
+
 export type Camelize<T extends string> =
   T extends `${infer FirstPart}-${infer SecondPart}`
     ? `${FirstPart}${Camelize<Capitalize<SecondPart>>}`
