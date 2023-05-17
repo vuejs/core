@@ -592,6 +592,26 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    // #8339
+    test('relative, .js import', () => {
+      const files = {
+        '/foo.d.ts':
+          'import { PP } from "./bar.js"; export type P = { foo: PP }',
+        '/bar.d.ts': 'export type PP = "foo" | "bar"'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test('ts module resolve', () => {
       const files = {
         '/node_modules/foo/package.json': JSON.stringify({
