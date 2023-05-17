@@ -13,7 +13,12 @@ import {
   createSetupContext,
   unsetCurrentInstance
 } from './component'
-import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+import {
+  EmitFn,
+  EmitsOptions,
+  EnrichEmitEvent,
+  ObjectEmitsOptions
+} from './componentEmits'
 import {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
@@ -145,9 +150,12 @@ export function defineEmits() {
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
-type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
+type ShortEmits<
+  T extends Record<string, any>,
+  Event extends keyof T = keyof T
+> = UnionToIntersection<
   RecordToUnion<{
-    [K in keyof T]: (evt: K, ...args: T[K]) => void
+    [K in Event]: (evt: EnrichEmitEvent<K, Event>, ...args: T[K]) => void
   }>
 >
 

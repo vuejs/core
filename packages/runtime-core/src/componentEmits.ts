@@ -57,7 +57,7 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
     }
   : {}
 
-type EnhanceEmitEvent<T, Event = T> = T extends string
+export type EnrichEmitEvent<T, Event = T> = T extends string
   ?
       | T
       | ((
@@ -74,14 +74,14 @@ export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options
 > = Options extends Array<infer V>
-  ? (event: EnhanceEmitEvent<V>, ...args: any[]) => void
+  ? (event: EnrichEmitEvent<V>, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
   ? (event: string, ...args: any[]) => void
   : UnionToIntersection<
       {
         [key in Event]: Options[key] extends (...args: infer Args) => any
-          ? (event: EnhanceEmitEvent<key, Event>, ...args: Args) => void
-          : (event: EnhanceEmitEvent<key, Event>, ...args: any[]) => void
+          ? (event: EnrichEmitEvent<key, Event>, ...args: Args) => void
+          : (event: EnrichEmitEvent<key, Event>, ...args: any[]) => void
       }[Event]
     >
 
