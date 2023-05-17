@@ -81,7 +81,10 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): DefineProps<TypeProps>
+export function defineProps<TypeProps>(): DefineProps<
+  TypeProps,
+  BooleanKey<TypeProps>
+>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -90,8 +93,8 @@ export function defineProps() {
   return null as any
 }
 
-type DefineProps<T> = Readonly<T> & {
-  readonly [K in BooleanKey<T>]-?: boolean
+type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
+  readonly [K in BKeys]-?: boolean
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
@@ -281,26 +284,27 @@ interface DefineModelOptions {
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
-  [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
+  [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type InferDefault<P, T> = T extends
-  | null
-  | number
-  | string
-  | boolean
-  | symbol
-  | Function
-  ? T | ((props: P) => T)
-  : (props: P) => T
+type NativeType = null | number | string | boolean | symbol | Function
 
-type PropsWithDefaults<Base, Defaults> = Base & {
-  [K in keyof Defaults]: K extends keyof Base
+type InferDefault<P, T> =
+  | ((props: P) => T & {})
+  | (T extends NativeType ? T : never)
+
+type PropsWithDefaults<
+  T,
+  Defaults extends InferDefaults<T>,
+  BKeys extends keyof T
+> = Omit<T, keyof Defaults> & {
+  [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
-      ? Base[K]
-      : NotUndefined<Base[K]>
+      ? T[K]
+      : NotUndefined<T[K]>
     : never
-}
+} & { readonly [K in BKeys]-?: boolean }
+
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
  * using type-based `defineProps` declaration.
@@ -321,10 +325,14 @@ type PropsWithDefaults<Base, Defaults> = Base & {
  *
  * @see {@link https://vuejs.org/guide/typescript/composition-api.html#typing-component-props}
  */
-export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
-  props: Props,
+export function withDefaults<
+  T,
+  BKeys extends keyof T,
+  Defaults extends InferDefaults<T>
+>(
+  props: DefineProps<T, BKeys>,
   defaults: Defaults
-): PropsWithDefaults<Props, Defaults> {
+): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
   }
