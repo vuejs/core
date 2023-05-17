@@ -440,7 +440,7 @@ export function toRef(
   }
 }
 
-function propertyToRef(source: object, key: string, defaultValue?: unknown) {
+export function propertyToRef(source: object, key: string, defaultValue?: unknown) {
   const val = (source as any)[key]
   return isRef(val)
     ? val
