@@ -430,7 +430,7 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onFooBar')).toBe(true)
     // PascalCase option
     expect(isEmitListener(options, 'onFooBaz')).toBe(true)
-    //
+    // #8342
     expect(isEmitListener(options, 'onOnceOnce')).toBe(true)
     expect(isEmitListener(options, 'onOnce')).toBe(true)
   })
