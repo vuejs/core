@@ -132,18 +132,34 @@ describe('defineProps w/ runtime declaration', () => {
 })
 
 describe('defineEmits w/ type declaration', () => {
-  const emit = defineEmits<(e: 'change') => void>()
+  const emit =
+    defineEmits<(e: 'change' | 'foo-bar' | 'update:fooBar') => void>()
   emit('change')
+  emit('foo-bar')
+  emit('fooBar')
+  emit('update:fooBar')
+  emit('update:foo-bar')
   // @ts-expect-error
   emit()
   // @ts-expect-error
   emit('bar')
 
-  type Emits = { (e: 'foo' | 'bar'): void; (e: 'baz', id: number): void }
+  type Emits = {
+    (e: 'foo' | 'bar' | 'foo-bar'): void
+    (e: 'fooBar', id: string): void
+    (e: 'update:fooBar', id: string): void
+    (e: 'baz', id: number): void
+  }
   const emit2 = defineEmits<Emits>()
 
   emit2('foo')
   emit2('bar')
+  emit2('foo-bar')
+  emit2('fooBar', 'hi')
+  // @ts-expect-error
+  emit2('fooBar')
+  emit2('update:fooBar', 'hi')
+  emit2('update:foo-bar', 'hi')
   emit2('baz', 123)
   // @ts-expect-error
   emit2('baz')
