@@ -154,6 +154,9 @@ describe('defineEmits w/ alt type declaration', () => {
     foo: [id: string]
     bar: any[]
     baz: []
+    'foo-bar': []
+    fooBar: [id: string]
+    'update:fooBar': []
   }>()
 
   emit('foo', 'hi')
@@ -166,6 +169,14 @@ describe('defineEmits w/ alt type declaration', () => {
   emit('baz')
   // @ts-expect-error
   emit('baz', 1)
+
+  emit('foo-bar')
+  // @ts-expect-error
+  emit('fooBar')
+  emit('fooBar', 'hi')
+
+  emit('update:fooBar')
+  emit('update:foo-bar')
 })
 
 describe('defineEmits w/ runtime declaration', () => {
