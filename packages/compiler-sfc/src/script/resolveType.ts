@@ -225,13 +225,16 @@ function innerResolveTypeElements(
       if (resolved) {
         return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       }
+      break
     }
-    case 'TSTypeQuery': {
-      const resolved = resolveTypeReference(ctx, node, scope)
-      if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+    case 'TSTypeQuery':
+      {
+        const resolved = resolveTypeReference(ctx, node, scope)
+        if (resolved) {
+          return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        }
       }
-    }
+      break
   }
   return ctx.error(`Unresolvable type: ${node.type}`, node, scope)
 }
