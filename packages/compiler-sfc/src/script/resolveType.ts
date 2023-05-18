@@ -1117,7 +1117,7 @@ function recordTypes(
               const exported = getId(spec.exported)
               if (stmt.source) {
                 // re-export, register an import + export as a type reference
-                imports[local] = {
+                imports[exported] = {
                   source: stmt.source.value,
                   imported: local
                 }
