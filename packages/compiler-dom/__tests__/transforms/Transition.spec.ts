@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { compile } from '../../src'
 
 describe('Transition multi children warnings', () => {
