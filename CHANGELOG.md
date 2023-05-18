@@ -1,3 +1,20 @@
+## [3.3.3](https://github.com/vuejs/core/compare/v3.3.2...v3.3.3) (2023-05-18)
+
+
+### Bug Fixes
+
+* avoid regex s flag for old browsers ([91f1c62](https://github.com/vuejs/core/commit/91f1c62e6384a8b09f90e7e43b8d347901e529a0)), closes [#8316](https://github.com/vuejs/core/issues/8316)
+* **build:** fix dev flag replacement in esm-builder builds ([#8314](https://github.com/vuejs/core/issues/8314)) ([003836f](https://github.com/vuejs/core/commit/003836f90e1f00ebd04b77ec07ccfa4e649a2ff4)), closes [#8312](https://github.com/vuejs/core/issues/8312)
+* **compiler-sfc:** don't hoist regexp literial ([#8300](https://github.com/vuejs/core/issues/8300)) ([8ec73a3](https://github.com/vuejs/core/commit/8ec73a3aea7a52e9479f107ae5737761166ddae6))
+* **compiler-sfc:** fix props destructing default value type checking with unresolved type ([#8340](https://github.com/vuejs/core/issues/8340)) ([f69dbab](https://github.com/vuejs/core/commit/f69dbabf8794426c3e9ed33ae77dd8ce655eafd2)), closes [#8326](https://github.com/vuejs/core/issues/8326)
+* **compiler-sfc:** fix type import from path aliased vue file ([fab9c72](https://github.com/vuejs/core/commit/fab9c727805c6186c490f99023e8cf5401b0b5a9)), closes [#8348](https://github.com/vuejs/core/issues/8348)
+* **compiler-sfc:** handle ts files with relative imports with .js extension ([b36addd](https://github.com/vuejs/core/commit/b36addd3bde07467e9ff5641bd1c2bdc3085944c)), closes [#8339](https://github.com/vuejs/core/issues/8339)
+* **compiler-sfc:** parses correctly when inline mode is off ([#8337](https://github.com/vuejs/core/issues/8337)) ([ecbd42a](https://github.com/vuejs/core/commit/ecbd42a1444e3c599e464dec002e43d548d99669)), closes [#6088](https://github.com/vuejs/core/issues/6088)
+* **compiler-sfc:** support defineEmits type reference with unions ([#8299](https://github.com/vuejs/core/issues/8299)) ([b133e0f](https://github.com/vuejs/core/commit/b133e0fd97b0b4fabbb43151c19031b8fb47c05b)), closes [#7943](https://github.com/vuejs/core/issues/7943)
+* **types:** support generic usage with withDefaults + defineProps ([#8335](https://github.com/vuejs/core/issues/8335)) ([216f269](https://github.com/vuejs/core/commit/216f26995b63c2df26ca0f39f390fe8d59cdabfa)), closes [#8310](https://github.com/vuejs/core/issues/8310) [#8331](https://github.com/vuejs/core/issues/8331) [#8325](https://github.com/vuejs/core/issues/8325)
+
+
+
 ## [3.3.2](https://github.com/vuejs/core/compare/v3.3.1...v3.3.2) (2023-05-12)
 
 
