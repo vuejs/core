@@ -355,7 +355,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     if (publicGetter) {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
-        __DEV__ && markAttrsAccessed()
+        if (__DEV__) {
+        markAttrsAccessed()
+        }
       } else if (__DEV__ && key === '$slots') {
         track(instance, TrackOpTypes.GET, key)
       }
