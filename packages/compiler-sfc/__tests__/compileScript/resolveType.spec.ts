@@ -615,15 +615,15 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
-    test('relative (default as)', () => {
+    test('relative (default re-export /w same local name)', () => {
       const files = {
         '/foo.ts': `export default interface P { foo: string } `,
         '/bar.ts': `export default interface PP { bar: number }`,
-        '/baz.ts': `export { default as P } from './foo'; export { default as PP } from './bar'; `
+        '/baz.ts': `export { default as X } from './foo'; export { default as XX } from './bar'; `
       }
       const { props, deps } = resolve(
-        `import { P, PP } from './baz'
-        defineProps<P & PP>()
+        `import { X, XX } from './baz'
+        defineProps<X & XX>()
       `,
         files
       )
