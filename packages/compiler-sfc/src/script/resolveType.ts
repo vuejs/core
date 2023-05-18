@@ -1144,6 +1144,18 @@ function recordTypes(
           stmt.source.value
         )
         Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
+      } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
+        if (stmt.declaration.type !== 'Identifier') {
+          recordType(stmt.declaration, types, declares, 'default')
+          recordType(
+            stmt.declaration,
+            exportedTypes,
+            exportedDeclares,
+            'default'
+          )
+        } else if (types[stmt.declaration.name]) {
+          exportedTypes['default'] = types[stmt.declaration.name]
+        }
       }
     }
   }
@@ -1160,13 +1172,14 @@ function recordTypes(
 function recordType(
   node: Node,
   types: Record<string, Node>,
-  declares: Record<string, Node>
+  declares: Record<string, Node>,
+  overwriteId?: string
 ) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
     case 'TSModuleDeclaration': {
-      const id = getId(node.id)
+      const id = overwriteId || getId(node.id)
       let existing = types[id]
       if (existing) {
         if (node.type === 'TSModuleDeclaration') {
@@ -1199,7 +1212,7 @@ function recordType(
       break
     }
     case 'ClassDeclaration':
-      types[getId(node.id)] = node
+      types[overwriteId || getId(node.id)] = node
       break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
