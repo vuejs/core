@@ -62,7 +62,9 @@ export type SimpleTypeResolveContext = Pick<
   // required
   'source' | 'filename' | 'error' | 'options'
 > &
-  Partial<Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps'>> & {
+  Partial<
+    Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
+  > & {
     ast: Statement[]
   }
 
@@ -693,7 +695,7 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
 
 function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
   if (ctx.options.globalTypeFiles) {
-    const fs: FS = ctx.options.fs || ts?.sys
+    const fs = resolveFS(ctx)
     if (!fs) {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
@@ -714,6 +716,30 @@ export function registerTS(_ts: any) {
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
 
+function resolveFS(ctx: TypeResolveContext): FS | undefined {
+  if (ctx.fs) {
+    return ctx.fs
+  }
+  const fs = ctx.options.fs || ts.sys
+  if (!fs) {
+    return
+  }
+  return (ctx.fs = {
+    fileExists(file) {
+      if (file.endsWith('.vue.ts')) {
+        file = file.replace(/\.ts$/, '')
+      }
+      return fs.fileExists(file)
+    },
+    readFile(file) {
+      if (file.endsWith('.vue.ts')) {
+        file = file.replace(/\.ts$/, '')
+      }
+      return fs.readFile(file)
+    }
+  })
+}
+
 function resolveTypeFromImport(
   ctx: TypeResolveContext,
   node: ReferenceTypes,
@@ -731,9 +757,9 @@ function importSourceToScope(
   scope: TypeScope,
   source: string
 ): TypeScope {
-  const fs: FS = ctx.options.fs || ts?.sys
+  const fs = resolveFS(ctx)
   if (!fs) {
-    ctx.error(
+    return ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
       node,
@@ -881,7 +907,11 @@ function resolveWithTS(
   )
 
   if (res.resolvedModule) {
-    return res.resolvedModule.resolvedFileName
+    let filename = res.resolvedModule.resolvedFileName
+    if (filename.endsWith('.vue.ts')) {
+      filename = filename.replace(/\.ts$/, '')
+    }
+    return filename
   }
 }
 
@@ -936,7 +966,7 @@ export function fileToScope(
     return cached
   }
   // fs should be guaranteed to exist here
-  const fs = ctx.options.fs || ts?.sys
+  const fs = resolveFS(ctx)!
   const source = fs.readFile(filename) || ''
   const body = parseFile(filename, source, ctx.options.babelParserPlugins)
   const scope = new TypeScope(filename, source, 0, recordImports(body))

@@ -685,6 +685,34 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
     })
 
+    test('ts module resolve w/ path aliased vue file', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            include: ['**/*.ts', '**/*.vue'],
+            paths: {
+              '@/*': ['./src/*']
+            }
+          }
+        }),
+        '/src/Foo.vue':
+          '<script lang="ts">export type P = { bar: string }</script>'
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { P } from '@/Foo.vue'
+        defineProps<P>()
+        `,
+        files
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/src/Foo.vue'])
+    })
+
     test('global types', () => {
       const files = {
         // ambient
