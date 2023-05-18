@@ -1,3 +1,14 @@
+## [3.3.4](https://github.com/vuejs/core/compare/v3.3.3...v3.3.4) (2023-05-18)
+
+
+### Bug Fixes
+
+* **build:** ensure correct typing for node esm ([d621d4c](https://github.com/vuejs/core/commit/d621d4c646b2d7b190fbd44ad1fd04512b3de300))
+* **build:** fix __DEV__ flag replacement edge case ([8b7c04b](https://github.com/vuejs/core/commit/8b7c04b18f73aad9a08dd57eba90101b5b2aef28)), closes [#8353](https://github.com/vuejs/core/issues/8353)
+* **compiler-sfc:** handle imported types from default exports ([5aec717](https://github.com/vuejs/core/commit/5aec717a2402652306085f58432ba3ab91848a74)), closes [#8355](https://github.com/vuejs/core/issues/8355)
+
+
+
 ## [3.3.3](https://github.com/vuejs/core/compare/v3.3.2...v3.3.3) (2023-05-18)
 
 
