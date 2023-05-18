@@ -161,35 +161,44 @@ export function emit(
     handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
 
+  const results = []
   if (handler) {
-    callWithAsyncErrorHandling(
+    const values = callWithAsyncErrorHandling(
       handler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
       args
     )
+    
+    results.push(...(Array.isArray(values) ? values : [values]))
   }
 
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
       instance.emitted = {} as Record<any, boolean>
-    } else if (instance.emitted[handlerName]) {
-      return
     }
-    instance.emitted[handlerName] = true
-    callWithAsyncErrorHandling(
-      onceHandler,
-      instance,
-      ErrorCodes.COMPONENT_EVENT_HANDLER,
-      args
-    )
+    
+    if (!instance.emitted[handlerName]) {
+      instance.emitted[handlerName] = true
+      
+      const values = callWithAsyncErrorHandling(
+        onceHandler,
+        instance,
+        ErrorCodes.COMPONENT_EVENT_HANDLER,
+        args
+      )
+    
+      results.push(...(Array.isArray(values) ? values : [values]))
+    }
   }
 
   if (__COMPAT__) {
     compatModelEmit(instance, event, args)
     return compatInstanceEmit(instance, event, args)
   }
+  
+  return results
 }
 
 export function normalizeEmitsOptions(
