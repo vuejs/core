@@ -1637,3 +1637,23 @@ function resolveReturnType(
     return resolved.returnType
   }
 }
+
+export function resolveUnionType(
+  ctx: TypeResolveContext,
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
+  scope?: TypeScope
+): Node[] {
+  if (node.type === 'TSTypeReference') {
+    const resolved = resolveTypeReference(ctx, node, scope)
+    if (resolved) node = resolved
+  }
+
+  let types: Node[]
+  if (node.type === 'TSUnionType') {
+    types = node.types.flatMap(node => resolveUnionType(ctx, node, scope))
+  } else {
+    types = [node]
+  }
+
+  return types
+}
