@@ -615,9 +615,9 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
-    test('relative (default re-export /w same local name)', () => {
+    test('relative (re-export /w same source type name)', () => {
       const files = {
-        '/foo.ts': `export default interface P { foo: string } `,
+        '/foo.ts': `export default interface P { foo: string }`,
         '/bar.ts': `export default interface PP { bar: number }`,
         '/baz.ts': `export { default as X } from './foo'; export { default as XX } from './bar'; `
       }
