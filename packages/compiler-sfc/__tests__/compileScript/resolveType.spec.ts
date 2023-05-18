@@ -615,6 +615,25 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (default as)', () => {
+      const files = {
+        '/foo.ts': `export default interface P { foo: string } `,
+        '/bar.ts': `export default interface PP { bar: number }`,
+        '/baz.ts': `export { default as P } from './foo'; export { default as PP } from './bar'; `
+      }
+      const { props, deps } = resolve(
+        `import { P, PP } from './baz'
+        defineProps<P & PP>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/baz.ts', '/foo.ts', '/bar.ts'])
+    })
+
     test('relative (dynamic import)', () => {
       const files = {
         '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
