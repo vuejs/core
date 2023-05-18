@@ -85,7 +85,7 @@ function processExp(exp: string, dir?: string): string {
       if (inMatch) {
         let [, LHS, RHS] = inMatch
         // #6088
-        LHS = LHS.replace(/\(|\)/g, '')
+        LHS = LHS.trim().replace(/^\(|\)$/g, '')
         return processExp(`(${LHS})=>{}`) + processExp(RHS)
       }
     }
