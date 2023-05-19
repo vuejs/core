@@ -903,9 +903,12 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()
-    applyOptions(instance)
-    resetTracking()
-    unsetCurrentInstance()
+    try {
+      applyOptions(instance)
+    } finally {
+      resetTracking()
+      unsetCurrentInstance()
+    }
   }
 
   // warn missing template/render
