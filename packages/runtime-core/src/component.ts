@@ -905,8 +905,8 @@ export function finishComponentSetup(
     pauseTracking()
     try {
       applyOptions(instance)
-      resetTracking()
     } finally {
+      resetTracking()
       unsetCurrentInstance()
     }
   }

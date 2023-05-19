@@ -817,21 +817,24 @@ function testRender(type: string, render: typeof renderToString) {
       const prev = getCurrentInstance()
 
       expect(prev).toBe(null)
+
+      const Child = {
+        created() {
+          throw new Error()
+        }
+      }
       try {
         await render(
           createApp({
             errorCaptured() {
               throw new Error()
             },
-            template: `<div>hello</div>`,
-            created() {
-              throw new Error()
-            }
+            render: () => h(Child)
           })
         )
       } catch {}
       expect(
-        'Unhandled error during execution of created hook'
+        'Unhandled error during execution of errorCaptured hook'
       ).toHaveBeenWarned()
       expect(getCurrentInstance()).toBe(null)
     })
