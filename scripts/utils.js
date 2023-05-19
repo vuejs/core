@@ -11,7 +11,10 @@ export const targets = fs.readdirSync('packages').filter(f => {
   }
   const pkg = require(`../packages/${f}/package.json`)
 
-  return !(pkg.private && !pkg.buildOptions)
+  if (pkg.private && !pkg.buildOptions) {
+    return false
+  }
+  return true
 })
 
 export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
