@@ -232,6 +232,30 @@ describe('defineSlots', () => {
   expectType<Slots>(slotsUntype)
 })
 
+describe('defineSlots generic', <T extends Record<string, any>>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  for (const key of Object.keys(props.item) as (keyof T & string)[]) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+  }
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: true })
