@@ -6,9 +6,13 @@ import type {
   Function,
   ObjectProperty,
   BlockStatement,
-  Program
+  Program,
+  ArrayPattern
 } from '@babel/types'
 import { walk } from 'estree-walker'
+interface ForOfDesclarationsType {
+  id: Identifier | ArrayPattern
+}
 
 export function walkIdentifiers(
   root: Node,
@@ -63,6 +67,9 @@ export function walkIdentifiers(
         walkBlockDeclarations(node, id =>
           markScopeIdentifier(node, id, knownIds)
         )
+      } else if (node.type === 'ForOfStatement') {
+        // #8378 record loop varible in inline anonymous function in template
+        walkForOfStatement(node, knownIds)
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
@@ -75,6 +82,21 @@ export function walkIdentifiers(
           }
         }
       }
+    }
+  })
+}
+
+function walkForOfStatement(
+  node: any,
+  knownIds: Record<string, number> = Object.create(null)
+) {
+  node.left.declarations.forEach((c: ForOfDesclarationsType) => {
+    if (c.id.type === 'Identifier') {
+      markScopeIdentifier(node, c.id, knownIds)
+    } else {
+      c.id.elements.forEach((item: any) => {
+        markScopeIdentifier(node, item, knownIds)
+      })
     }
   })
 }
