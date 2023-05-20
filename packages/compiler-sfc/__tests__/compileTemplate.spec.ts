@@ -199,3 +199,43 @@ test('dynamic v-on + static v-on should merged', () => {
 
   expect(result.code).toMatchSnapshot()
 })
+
+test('compiler for of should record variable', () => {
+  const source = `<template>
+    <div
+      @click="
+        () => {
+          for (const item of arr) {
+            console.log('item', item);
+          }
+        }
+      "
+    >
+    click me
+    </div>
+  </template>
+  `
+
+  const res = compile({ filename: 'btncli.vue', source })
+  expect(res.code).toMatchSnapshot()
+})
+
+test('compiler for of with Map should record variable', () => {
+  const source = `<template>
+    <div
+      @click="
+        () => {
+          for (const [item,index] of Maptype) {
+            console.log('item', item, index);
+          }
+        }
+      "
+    >
+    click me
+    </div>
+  </template>
+  `
+
+  const res = compile({ filename: 'btncli.vue', source })
+  expect(res.code).toMatchSnapshot()
+})

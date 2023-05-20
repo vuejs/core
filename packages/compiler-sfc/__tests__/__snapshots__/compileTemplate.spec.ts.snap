@@ -1,5 +1,41 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler for of should record variable 1`] = `
+"import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"template\\", null, [
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[0] || (_cache[0] = 
+        () => {
+          for (const item of _ctx.arr) {
+            console.log('item', item);
+          }
+        }
+      )
+    }, \\" click me \\")
+  ]))
+}"
+`;
+
+exports[`compiler for of with Map should record variable 1`] = `
+"import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(\\"template\\", null, [
+    _createElementVNode(\\"div\\", {
+      onClick: _cache[0] || (_cache[0] = 
+        () => {
+          for (const [item,index] of _ctx.Maptype) {
+            console.log('item', item, index);
+          }
+        }
+      )
+    }, \\" click me \\")
+  ]))
+}"
+`;
+
 exports[`dynamic v-on + static v-on should merged 1`] = `
 "import { toHandlerKey as _toHandlerKey, mergeProps as _mergeProps, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
