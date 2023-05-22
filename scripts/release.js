@@ -97,13 +97,11 @@ async function main() {
       )
       let versions = JSON.parse(stdout)
       versions = Array.isArray(versions) ? versions : [versions]
-      const latestSameDayPatch = /** @type {string} */ semver.maxSatisfying(
-        versions,
-        `~${canaryVersion}`
+      const latestSameDayPatch = /** @type {string} */ (
+        semver.maxSatisfying(versions, `~${canaryVersion}`)
       )
-      canaryVersion = /** @type {string} */ semver.inc(
-        latestSameDayPatch,
-        'patch'
+      canaryVersion = /** @type {string} */ (
+        semver.inc(latestSameDayPatch, 'patch')
       )
     } catch (e) {
       if (/E404/.test(e.message)) {

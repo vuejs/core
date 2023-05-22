@@ -104,8 +104,8 @@ export function createHydrationFunctions(
     optimized = false
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
-    const onMismatch = () => {
-      const res = handleMismatch(
+    const onMismatch = () =>
+      handleMismatch(
         node,
         vnode,
         parentComponent,
@@ -113,8 +113,6 @@ export function createHydrationFunctions(
         slotScopeIds,
         isFragmentStart
       )
-      return res
-    }
 
     const { type, ref, shapeFlag, patchFlag } = vnode
     let domType = node.nodeType
@@ -528,7 +526,6 @@ export function createHydrationFunctions(
     isFragment: boolean
   ): Node | null => {
     hasMismatch = true
-
     __DEV__ &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
