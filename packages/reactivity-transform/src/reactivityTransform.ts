@@ -33,6 +33,9 @@ const IMPORT_SOURCE = 'vue/macros'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
 }
@@ -64,6 +67,9 @@ export interface ImportBinding {
   specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
 }
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function transform(
   src: string,
   {
@@ -112,6 +118,9 @@ export function transform(
   }
 }
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function transformAST(
   ast: Program,
   s: MagicString,
