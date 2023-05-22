@@ -11,6 +11,7 @@ import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
+import { VNode } from './vnode'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -78,7 +79,16 @@ export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
-export const onMisMatched = createHook(LifecycleHooks.MIS_MATCHED)
+
+export type MisMatchedHookParams = {
+  node: Node | null
+  vnode: VNode | null
+  parentComponent: ComponentInternalInstance | null
+}
+export type MisMatchedHook = (e: MisMatchedHookParams) => void
+export const onMisMatched = createHook<MisMatchedHook>(
+  LifecycleHooks.MIS_MATCHED
+)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(

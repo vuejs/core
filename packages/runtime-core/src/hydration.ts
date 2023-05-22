@@ -112,7 +112,6 @@ export function createHydrationFunctions(
         slotScopeIds,
         isFragmentStart
       )
-      handleMismatchHook(vnode, parentComponent, node)
       return res
     }
 
@@ -136,13 +135,6 @@ export function createHydrationFunctions(
             nextNode = node
           } else {
             nextNode = onMismatch()
-            if (vnode.component && vnode.component.mm) {
-              invokeArrayFns(vnode.component.mm, {
-                parentComponent,
-                vnode,
-                node
-              })
-            }
           }
         } else {
           if ((node as Text).data !== vnode.children) {
@@ -604,6 +596,7 @@ export function createHydrationFunctions(
     parentComponent: ComponentInternalInstance | null,
     node: Node | null
   ) => {
+    // TODO compat
     const mm = parentComponent ? parentComponent.mm : null
     if (__DEV__ && mm) {
       invokeArrayFns(mm, {
