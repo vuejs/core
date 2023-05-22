@@ -30,6 +30,7 @@ import {
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -596,7 +597,6 @@ export function createHydrationFunctions(
     parentComponent: ComponentInternalInstance | null,
     node: Node | null
   ) => {
-    // TODO compat
     const mm = parentComponent ? parentComponent.mm : null
     if (__DEV__ && mm) {
       invokeArrayFns(mm, {
@@ -604,6 +604,14 @@ export function createHydrationFunctions(
         vnode,
         node
       })
+    }
+    if (
+      parentComponent &&
+      __DEV__ &&
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, parentComponent)
+    ) {
+      parentComponent.emit('hook:mismatched')
     }
   }
 

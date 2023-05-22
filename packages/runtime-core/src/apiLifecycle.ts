@@ -80,13 +80,13 @@ export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
-export type MisMatchedHookParams = {
+export type MismatchedHookParams = {
   node: Node | null
   vnode: VNode | null
   parentComponent: ComponentInternalInstance | null
 }
-export type MisMatchedHook = (e: MisMatchedHookParams) => void
-export const onMisMatched = createHook<MisMatchedHook>(
+export type MismatchedHook = (e: MismatchedHookParams) => void
+export const onMismatched = createHook<MismatchedHook>(
   LifecycleHooks.MIS_MATCHED
 )
 

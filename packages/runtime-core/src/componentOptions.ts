@@ -42,7 +42,7 @@ import {
   DebuggerHook,
   ErrorCapturedHook,
   onServerPrefetch,
-  onMisMatched
+  onMismatched
 } from './apiLifecycle'
 import {
   reactive,
@@ -829,7 +829,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   registerLifecycleHook(onBeforeUnmount, beforeUnmount)
   registerLifecycleHook(onUnmounted, unmounted)
   registerLifecycleHook(onServerPrefetch, serverPrefetch)
-  registerLifecycleHook(onMisMatched, mismatched)
+  registerLifecycleHook(onMismatched, mismatched)
   if (__COMPAT__) {
     if (
       beforeDestroy &&
