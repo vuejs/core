@@ -236,7 +236,7 @@ export function defineSlots<
  * modelValue.value = "hello"
  *
  * // default model with options
- * const modelValue = defineModel<stirng>({ required: true })
+ * const modelValue = defineModel<string>({ required: true })
  *
  * // with specified name (consumed via `v-model:count`)
  * const count = defineModel<number>('count')
