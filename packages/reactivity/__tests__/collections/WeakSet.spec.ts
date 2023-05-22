@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { reactive, isReactive, effect, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
