@@ -1,7 +1,6 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { vi } from 'vitest'
 import {
   render,
   defineComponent,

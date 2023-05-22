@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createSSRApp, defineComponent, h, computed, reactive } from 'vue'
 import { renderToString } from '../src/renderToString'
 
