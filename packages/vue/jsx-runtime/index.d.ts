@@ -1,9 +1,4 @@
-import type {
-  VNode,
-  IntrinsicElementAttributes,
-  ReservedProps,
-  NativeElements
-} from '@vue/runtime-dom'
+import type { VNode, ReservedProps, NativeElements } from '@vue/runtime-dom'
 
 /**
  * JSX namespace for usage with @jsxImportsSource directive

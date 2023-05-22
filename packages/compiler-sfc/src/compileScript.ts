@@ -1247,6 +1247,8 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
 }
 
 function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
   switch (node.type) {
     case 'UnaryExpression': // void 0, !true
       return isStaticNode(node.argument)
@@ -1269,15 +1271,14 @@ function isStaticNode(node: Node): boolean {
       return node.expressions.every(expr => isStaticNode(expr))
 
     case 'ParenthesizedExpression': // (1)
-    case 'TSNonNullExpression': // 1!
-    case 'TSAsExpression': // 1 as number
-    case 'TSTypeAssertion': // (<number>2)
       return isStaticNode(node.expression)
 
-    default:
-      if (isLiteralNode(node)) {
-        return true
-      }
-      return false
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
   }
+  return false
 }

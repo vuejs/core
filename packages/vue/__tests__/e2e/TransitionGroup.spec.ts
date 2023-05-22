@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { createApp, ref } from 'vue'
