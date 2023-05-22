@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
 import { ComponentOptions, InternalRenderFunction } from '../src/component'

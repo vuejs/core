@@ -440,15 +440,15 @@ export function toRef(
   }
 }
 
-function propertyToRef(source: object, key: string, defaultValue?: unknown) {
-  const val = (source as any)[key]
+function propertyToRef(
+  source: Record<string, any>,
+  key: string,
+  defaultValue?: unknown
+) {
+  const val = source[key]
   return isRef(val)
     ? val
-    : (new ObjectRefImpl(
-        source as Record<string, any>,
-        key,
-        defaultValue
-      ) as any)
+    : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
 // corner case when use narrows type
