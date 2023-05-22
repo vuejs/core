@@ -14,7 +14,13 @@ import { flushPostFlushCbs } from './scheduler'
 import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
-import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isReservedProp,
+  isOn,
+  invokeArrayFns
+} from '@vue/shared'
 import { RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
@@ -97,8 +103,8 @@ export function createHydrationFunctions(
     optimized = false
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
-    const onMismatch = () =>
-      handleMismatch(
+    const onMismatch = () => {
+      const res = handleMismatch(
         node,
         vnode,
         parentComponent,
@@ -106,6 +112,9 @@ export function createHydrationFunctions(
         slotScopeIds,
         isFragmentStart
       )
+      handleMismatchHook(vnode, parentComponent, node)
+      return res
+    }
 
     const { type, ref, shapeFlag, patchFlag } = vnode
     let domType = node.nodeType
@@ -127,6 +136,13 @@ export function createHydrationFunctions(
             nextNode = node
           } else {
             nextNode = onMismatch()
+            if (vnode.component && vnode.component.mm) {
+              invokeArrayFns(vnode.component.mm, {
+                parentComponent,
+                vnode,
+                node
+              })
+            }
           }
         } else {
           if ((node as Text).data !== vnode.children) {
@@ -137,6 +153,7 @@ export function createHydrationFunctions(
                   `\n- Client: ${JSON.stringify((node as Text).data)}` +
                   `\n- Server: ${JSON.stringify(vnode.children)}`
               )
+            handleMismatchHook(vnode, parentComponent, node)
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -391,6 +408,7 @@ export function createHydrationFunctions(
               `Hydration children mismatch in <${vnode.type as string}>: ` +
                 `server rendered element contains more child nodes than client vdom.`
             )
+            handleMismatchHook(vnode, parentComponent, null)
             hasWarned = true
           }
           // The SSRed DOM contains more nodes than it should. Remove them.
@@ -409,6 +427,7 @@ export function createHydrationFunctions(
                 `- Client: ${el.textContent}\n` +
                 `- Server: ${vnode.children as string}`
             )
+          handleMismatchHook(vnode, parentComponent, el)
           el.textContent = vnode.children as string
         }
       }
@@ -451,6 +470,7 @@ export function createHydrationFunctions(
             `Hydration children mismatch in <${container.tagName.toLowerCase()}>: ` +
               `server rendered element contains fewer child nodes than client vdom.`
           )
+          handleMismatchHook(vnode, parentComponent, null)
           hasWarned = true
         }
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
@@ -515,6 +535,7 @@ export function createHydrationFunctions(
     isFragment: boolean
   ): Node | null => {
     hasMismatch = true
+
     __DEV__ &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
@@ -527,6 +548,7 @@ export function createHydrationFunctions(
           ? `(start of fragment)`
           : ``
       )
+    handleMismatchHook(vnode, parentComponent, node)
     vnode.el = null
 
     if (isFragment) {
@@ -575,6 +597,21 @@ export function createHydrationFunctions(
       }
     }
     return node
+  }
+
+  const handleMismatchHook = (
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    node: Node | null
+  ) => {
+    const mm = parentComponent ? parentComponent.mm : null
+    if (__DEV__ && mm) {
+      invokeArrayFns(mm, {
+        parentComponent,
+        vnode,
+        node
+      })
+    }
   }
 
   return [hydrate, hydrateNode] as const

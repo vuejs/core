@@ -12,5 +12,6 @@ export const enum LifecycleHooks {
   RENDER_TRIGGERED = 'rtg',
   RENDER_TRACKED = 'rtc',
   ERROR_CAPTURED = 'ec',
-  SERVER_PREFETCH = 'sp'
+  SERVER_PREFETCH = 'sp',
+  MIS_MATCHED = 'mm'
 }

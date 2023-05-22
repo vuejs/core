@@ -65,10 +65,11 @@ export function injectHook(
 
 export const createHook =
   <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
-  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance) => {
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
-    (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+    ;(!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
+      injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+  }
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
@@ -77,6 +78,7 @@ export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
+export const onMisMatched = createHook(LifecycleHooks.MIS_MATCHED)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(

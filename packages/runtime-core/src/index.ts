@@ -54,7 +54,8 @@ export {
   onRenderTracked,
   onRenderTriggered,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  onMisMatched
 } from './apiLifecycle'
 export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
