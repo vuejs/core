@@ -37,7 +37,6 @@ exports[`sfc hoist static > should hoist literal value 1`] = `
     const nil = null
     const bigint = 100n
     const template = \`str\`
-    const regex = /.*/g
     
 export default {
   setup(__props) {
@@ -124,6 +123,8 @@ exports[`sfc hoist static > should not hoist a variable 1`] = `
 
     let KEY1 = 'default value'
     var KEY2 = 123
+    const regex = /.*/g
+    const undef = undefined
     
 return () => {}
 }
