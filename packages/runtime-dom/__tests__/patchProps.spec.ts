@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { patchProp } from '../src/patchProp'
 import { render, h } from '../src'
 
