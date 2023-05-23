@@ -198,8 +198,11 @@ function doWatch(
     )
   }
 
+  const _currentInstance = currentInstance
   const instance =
-    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+    getCurrentScope() === _currentInstance?.scope ? _currentInstance : null
+  const detachedInstance = () =>
+    !_currentInstance || _currentInstance?.isUnmounted ? null : _currentInstance
   // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
@@ -221,7 +224,11 @@ function doWatch(
         } else if (isReactive(s)) {
           return traverse(s)
         } else if (isFunction(s)) {
-          return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+          return callWithErrorHandling(
+            s,
+            instance || detachedInstance(),
+            ErrorCodes.WATCH_GETTER
+          )
         } else {
           __DEV__ && warnInvalidSource(s)
         }
@@ -230,7 +237,11 @@ function doWatch(
     if (cb) {
       // getter with cb
       getter = () =>
-        callWithErrorHandling(source, instance, ErrorCodes.WATCH_GETTER)
+        callWithErrorHandling(
+          source,
+          instance || detachedInstance(),
+          ErrorCodes.WATCH_GETTER
+        )
     } else {
       // no cb -> simple effect
       getter = () => {
@@ -242,7 +253,7 @@ function doWatch(
         }
         return callWithAsyncErrorHandling(
           source,
-          instance,
+          instance || detachedInstance(),
           ErrorCodes.WATCH_CALLBACK,
           [onCleanup]
         )
@@ -260,7 +271,10 @@ function doWatch(
       const val = baseGetter()
       if (
         isArray(val) &&
-        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+        checkCompatEnabled(
+          DeprecationTypes.WATCH_ARRAY,
+          instance || detachedInstance()
+        )
       ) {
         traverse(val)
       }
@@ -276,7 +290,11 @@ function doWatch(
   let cleanup: () => void
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
+      callWithErrorHandling(
+        fn,
+        instance || detachedInstance(),
+        ErrorCodes.WATCH_CLEANUP
+      )
     }
   }
 
@@ -289,11 +307,12 @@ function doWatch(
     if (!cb) {
       getter()
     } else if (immediate) {
-      callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-        getter(),
-        isMultiSource ? [] : undefined,
-        onCleanup
-      ])
+      callWithAsyncErrorHandling(
+        cb,
+        instance || detachedInstance(),
+        ErrorCodes.WATCH_CALLBACK,
+        [getter(), isMultiSource ? [] : undefined, onCleanup]
+      )
     }
     if (flush === 'sync') {
       const ctx = useSSRContext()!
@@ -321,22 +340,30 @@ function doWatch(
           : hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
           isArray(newValue) &&
-          isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance))
+          isCompatEnabled(
+            DeprecationTypes.WATCH_ARRAY,
+            instance || detachedInstance()
+          ))
       ) {
         // cleanup before running cb again
         if (cleanup) {
           cleanup()
         }
-        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-          newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE
-            ? undefined
-            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-            ? []
-            : oldValue,
-          onCleanup
-        ])
+        callWithAsyncErrorHandling(
+          cb,
+          instance || detachedInstance(),
+          ErrorCodes.WATCH_CALLBACK,
+          [
+            newValue,
+            // pass undefined as the old value when it's changed for the first time
+            oldValue === INITIAL_WATCHER_VALUE
+              ? undefined
+              : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+              ? []
+              : oldValue,
+            onCleanup
+          ]
+        )
         oldValue = newValue
       }
     } else {

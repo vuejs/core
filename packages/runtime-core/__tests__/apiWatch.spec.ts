@@ -8,7 +8,8 @@ import {
   defineComponent,
   getCurrentInstance,
   ComponentInternalInstance,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  onErrorCaptured
 } from '../src/index'
 import {
   render,
@@ -1204,5 +1205,63 @@ describe('api: watch', () => {
     // both watchers run again event though component has been unmounted
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
+  })
+
+  test('watch immediate error in effect scope should be catched by onErrorCaptured', async () => {
+    const warn = vi.spyOn(console, 'warn')
+    warn.mockImplementation(() => {})
+    const ERROR_IN_SCOPE = 'ERROR_IN_SCOPE'
+    const ERROR_OUT_SCOPE = 'ERROR_OUT_SCOPE'
+
+    const errors = ref<string[]>([])
+    const Comp = {
+      setup() {
+        const trigger = ref(0)
+
+        effectScope(true).run(() => {
+          watch(
+            trigger,
+            () => {
+              throw new Error(ERROR_IN_SCOPE)
+            },
+            { immediate: true }
+          )
+        })
+
+        watchEffect(() => {
+          throw new Error(ERROR_OUT_SCOPE)
+        })
+
+        return () => ''
+      }
+    }
+
+    // const ErrorCapture =
+
+    const root = nodeOps.createElement('div')
+    render(
+      h(
+        {
+          setup(_, { slots }) {
+            onErrorCaptured(e => {
+              errors.value.push(e.message)
+              return false
+            })
+
+            return () => h('div', slots.default && slots.default())
+          }
+        },
+        null,
+        () => [h(Comp)]
+      ),
+      root
+    )
+    await nextTick()
+    // only watchEffect as ran so far
+    expect(errors.value).toHaveLength(2)
+    expect(errors.value[0]).toBe(ERROR_IN_SCOPE)
+    expect(errors.value[1]).toBe(ERROR_OUT_SCOPE)
+
+    warn.mockRestore()
   })
 })
