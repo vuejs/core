@@ -71,7 +71,7 @@ export default {
 
       
       
-return () => {}
+return {  }
 }
 
 }"
@@ -91,7 +91,7 @@ export default {
 
       
       
-return () => {}
+return {  }
 }
 
 }"
@@ -109,7 +109,7 @@ export default {
 
       
       
-return () => {}
+return {  }
 }
 
 }"
@@ -129,7 +129,7 @@ export default /*#__PURE__*/_defineComponent({
 
       
       
-return () => {}
+return {  }
 }
 
 })"
@@ -148,7 +148,7 @@ export default /*#__PURE__*/_defineComponent({
 
       
       
-return () => {}
+return {  }
 }
 
 })"
@@ -170,7 +170,7 @@ export default /*#__PURE__*/_defineComponent({
 
       
       
-return () => {}
+return {  }
 }
 
 })"
@@ -205,7 +205,7 @@ exports[`sfc reactive props destructure > nested scope 1`] = `
         console.log(__props.bar)
       }
       
-return () => {}
+return { test }
 }
 
 }"
@@ -241,7 +241,7 @@ const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
 
       
       
-return () => {}
+return {  }
 }
 
 }"

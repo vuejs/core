@@ -8,7 +8,7 @@ export default {
 
     const foo = 'bar'
     
-return () => {}
+return { foo }
 }
 
 }"
@@ -24,7 +24,7 @@ export default {
   setup(__props) {
 
     
-return () => {}
+return { unary, binary, conditional, sequence }
 }
 
 }"
@@ -42,7 +42,7 @@ export default {
   setup(__props) {
 
     
-return () => {}
+return { string, number, boolean, nil, bigint, template }
 }
 
 }"
@@ -61,7 +61,7 @@ export default {
 
     
     
-return () => {}
+return { defaultValue }
 }
 
 }"
@@ -84,7 +84,7 @@ export default /*#__PURE__*/_defineComponent({
     }
     const KEY6 = \`template\${i}\`
     
-return () => {}
+return { KEY1, KEY2, KEY3, get i() { return i }, set i(v) { i = v }, KEY4, KEY5, KEY6 }
 }
 
 })"
@@ -98,7 +98,7 @@ exports[`sfc hoist static > should not hoist a function or class 1`] = `
     function fn2() {}
     class Foo {}
     
-return () => {}
+return { fn, fn2, Foo }
 }
 
 }"
@@ -111,7 +111,7 @@ exports[`sfc hoist static > should not hoist a object or array 1`] = `
     const obj = { foo: 'bar' }
     const arr = [1, 2, 3]
     
-return () => {}
+return { obj, arr }
 }
 
 }"
@@ -126,7 +126,7 @@ exports[`sfc hoist static > should not hoist a variable 1`] = `
     const regex = /.*/g
     const undef = undefined
     
-return () => {}
+return { get KEY1() { return KEY1 }, set KEY1(v) { KEY1 = v }, get KEY2() { return KEY2 }, set KEY2(v) { KEY2 = v }, regex, undef }
 }
 
 }"
@@ -138,7 +138,7 @@ exports[`sfc hoist static > should not hoist when disabled 1`] = `
 
     const foo = 'bar'
     
-return () => {}
+return { foo }
 }
 
 }"

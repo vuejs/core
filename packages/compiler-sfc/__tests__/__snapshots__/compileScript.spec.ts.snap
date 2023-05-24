@@ -1212,7 +1212,7 @@ exports[`SFC compile <script setup> > inlineTemplate mode > with defineExpose() 
         const count = ref(0)
         __expose({ count })
         
-return () => {}
+return { count }
 }
 
 }"
