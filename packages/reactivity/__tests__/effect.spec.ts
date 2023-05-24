@@ -423,8 +423,8 @@ describe('reactivity/effect', () => {
     }
     const effect1 = effect(greet)
     const effect2 = effect(greet)
-    expect(typeof effect1).toBe('function')
-    expect(typeof effect2).toBe('function')
+    expect(effect1).toBeTypeOf('function')
+    expect(effect2).toBeTypeOf('function')
     expect(effect1).not.toBe(greet)
     expect(effect1).not.toBe(effect2)
   })

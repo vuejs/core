@@ -97,7 +97,7 @@ describe('vModel', () => {
     input.value = 1
     triggerEvent('input', input)
     await nextTick()
-    expect(typeof data.value).toEqual('number')
+    expect(data.value).toBeTypeOf('number')
     expect(data.value).toEqual(1)
   })
 
@@ -860,7 +860,7 @@ describe('vModel', () => {
     one.selected = true
     triggerEvent('change', input)
     await nextTick()
-    expect(typeof data.value).toEqual('number')
+    expect(data.value).toBeTypeOf('number')
     expect(data.value).toEqual(1)
   })
 

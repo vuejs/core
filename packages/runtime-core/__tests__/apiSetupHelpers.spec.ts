@@ -61,8 +61,8 @@ describe('SFC <script setup> helpers', () => {
       x: () => {}
     }
     render(h(Comp, passedAttrs, passedSlots), nodeOps.createElement('div'))
-    expect(typeof slots!.default).toBe('function')
-    expect(typeof slots!.x).toBe('function')
+    expect(slots!.default).toBeTypeOf('function')
+    expect(slots!.x).toBeTypeOf('function')
     expect(attrs).toMatchObject(passedAttrs)
   })
 

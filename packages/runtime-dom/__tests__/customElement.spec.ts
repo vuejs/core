@@ -607,7 +607,7 @@ describe('defineCustomElement', () => {
           return Promise.resolve({
             props: ['msg'],
             setup(props) {
-              expect(typeof props.msg).toBe('string')
+              expect(props.msg).toBeTypeOf('string')
             },
             render(this: any) {
               return h('div', this.msg)

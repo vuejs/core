@@ -80,6 +80,6 @@ test('singleton config should affect apps created with createApp()', () => {
 
 test('config.optionMergeStrategies', () => {
   toggleDeprecationWarning(true)
-  expect(typeof Vue.config.optionMergeStrategies.created).toBe('function')
+  expect(Vue.config.optionMergeStrategies.created).toBeTypeOf('function')
   expect(DeprecationTypes.CONFIG_OPTION_MERGE_STRATS).toHaveBeenWarned()
 })

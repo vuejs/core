@@ -304,8 +304,8 @@ describe('GLOBAL_PROTOTYPE', () => {
         }
       }
     }) as any
-    expect(typeof vm.$test).toBe('function')
-    expect(typeof vm.$test.additionalFn).toBe('function')
+    expect(vm.$test).toBeTypeOf('function')
+    expect(vm.$test.additionalFn).toBeTypeOf('function')
     expect(vm.$test.additionalFn()).toBe('additional fn')
     delete Vue.prototype.$test
   })

@@ -193,8 +193,8 @@ describe('reactivity/reactive', () => {
     // check type
     obj.a + 1
     obj.b + 1
-    expect(typeof obj.a).toBe(`number`)
-    expect(typeof obj.b).toBe(`number`)
+    expect(obj.a).toBeTypeOf(`number`)
+    expect(obj.b).toBeTypeOf(`number`)
   })
 
   test('should allow setting property from a ref to another ref', () => {

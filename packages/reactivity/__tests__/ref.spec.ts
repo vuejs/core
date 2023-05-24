@@ -100,7 +100,7 @@ describe('reactivity/ref', () => {
     const a = ref(0)
     const b = ref(a)
 
-    expect(typeof (b.value + 1)).toBe('number')
+    expect(b.value + 1).toBeTypeOf('number')
   })
 
   it('should unwrap nested values in types', () => {
@@ -110,7 +110,7 @@ describe('reactivity/ref', () => {
 
     const c = ref(a)
 
-    expect(typeof (c.value.b + 1)).toBe('number')
+    expect(c.value.b + 1).toBeTypeOf('number')
   })
 
   it('should NOT unwrap ref types nested inside arrays', () => {
