@@ -8,7 +8,7 @@ import {
   compatUtils,
   DeprecationTypes
 } from '@vue/runtime-core'
-import { isObject, toNumber, extend, isArray } from '@vue/shared'
+import { isObject, toNumber, extend, isArray, isFunction } from '@vue/shared'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -87,10 +87,11 @@ const callHook = (
   hook: Function | Function[] | undefined,
   args: any[] = []
 ) => {
-  if (isArray(hook)) {
-    hook.forEach(h => h(...args))
-  } else if (hook) {
+  if (!hook) return
+  if (isFunction(hook)) {
     hook(...args)
+  } else if (isArray(hook)) {
+    hook.forEach(h => h(...args))
   }
 }
 
