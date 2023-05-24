@@ -1,33 +1,41 @@
 import {
-  CallExpression,
-  ConditionalExpression,
-  createArrayExpression,
-  createCallExpression,
-  createConditionalExpression,
-  createFunctionExpression,
+  ElementNode,
+  ObjectExpression,
   createObjectExpression,
+  NodeTypes,
   createObjectProperty,
   createSimpleExpression,
+  createFunctionExpression,
   DirectiveNode,
-  ElementNode,
   ElementTypes,
   ExpressionNode,
-  FunctionExpression,
-  NodeTypes,
-  ObjectExpression,
   Property,
-  RenderSlotCall,
-  SimpleExpressionNode,
-  SlotsExpression,
-  SourceLocation,
   TemplateChildNode,
+  SourceLocation,
+  createConditionalExpression,
+  ConditionalExpression,
+  SimpleExpressionNode,
+  FunctionExpression,
+  CallExpression,
+  createCallExpression,
+  createArrayExpression,
+  SlotsExpression, RenderSlotCall
 } from '../ast'
-import {NodeTransform, TransformContext} from '../transform'
-import {createCompilerError, ErrorCodes} from '../errors'
-import {assert, findDir, findProp, hasScopeRef, injectProp, isStaticExp, isTemplateNode, isVSlot} from '../utils'
-import {CREATE_SLOTS, RENDER_LIST, WITH_CTX} from '../runtimeHelpers'
-import {createForLoopParams, parseForExpression} from './vFor'
-import {SlotFlags, slotFlagsText} from '@vue/shared'
+import { TransformContext, NodeTransform } from '../transform'
+import { createCompilerError, ErrorCodes } from '../errors'
+import {
+  findDir,
+  isTemplateNode,
+  assert,
+  isVSlot,
+  hasScopeRef,
+  isStaticExp,
+  findProp,
+  injectProp
+} from '../utils'
+import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
+import { parseForExpression, createForLoopParams } from './vFor'
+import { SlotFlags, slotFlagsText } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
