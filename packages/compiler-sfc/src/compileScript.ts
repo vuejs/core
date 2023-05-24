@@ -820,6 +820,8 @@ export function compileScript(
   let returned
   if (
     !options.inlineTemplate ||
+      // #8391
+     (!sfc.template && options.inlineTemplate) ||
     (!sfc.template && ctx.hasDefaultExportRender)
   ) {
     // non-inline mode, or has manual render in normal <script>
