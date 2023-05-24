@@ -1,39 +1,33 @@
 import {
-  ElementNode,
-  ObjectExpression,
+  CallExpression,
+  ConditionalExpression,
+  createArrayExpression,
+  createCallExpression,
+  createConditionalExpression,
+  createFunctionExpression,
   createObjectExpression,
-  NodeTypes,
   createObjectProperty,
   createSimpleExpression,
-  createFunctionExpression,
   DirectiveNode,
+  ElementNode,
   ElementTypes,
   ExpressionNode,
-  Property,
-  TemplateChildNode,
-  SourceLocation,
-  createConditionalExpression,
-  ConditionalExpression,
-  SimpleExpressionNode,
   FunctionExpression,
-  CallExpression,
-  createCallExpression,
-  createArrayExpression,
-  SlotsExpression
+  NodeTypes,
+  ObjectExpression,
+  Property,
+  RenderSlotCall,
+  SimpleExpressionNode,
+  SlotsExpression,
+  SourceLocation,
+  TemplateChildNode,
 } from '../ast'
-import { TransformContext, NodeTransform } from '../transform'
-import { createCompilerError, ErrorCodes } from '../errors'
-import {
-  findDir,
-  isTemplateNode,
-  assert,
-  isVSlot,
-  hasScopeRef,
-  isStaticExp
-} from '../utils'
-import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
-import { parseForExpression, createForLoopParams } from './vFor'
-import { SlotFlags, slotFlagsText } from '@vue/shared'
+import {NodeTransform, TransformContext} from '../transform'
+import {createCompilerError, ErrorCodes} from '../errors'
+import {assert, findDir, findProp, hasScopeRef, injectProp, isStaticExp, isTemplateNode, isVSlot} from '../utils'
+import {CREATE_SLOTS, RENDER_LIST, WITH_CTX} from '../runtimeHelpers'
+import {createForLoopParams, parseForExpression} from './vFor'
+import {SlotFlags, slotFlagsText} from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
 
@@ -263,6 +257,8 @@ export function buildSlots(
         vFor.parseResult ||
         parseForExpression(vFor.exp as SimpleExpressionNode, context)
       if (parseResult) {
+        // #8395
+        injectRefFor(slotElement.children, context)
         // Render the dynamic slots as an array and add it to the createSlot()
         // args. The runtime knows how to handle it appropriately.
         dynamicSlots.push(
@@ -421,4 +417,19 @@ function isNonWhitespaceContent(node: TemplateChildNode): boolean {
   return node.type === NodeTypes.TEXT
     ? !!node.content.trim()
     : isNonWhitespaceContent(node.content)
+}
+
+function injectRefFor(
+  children: TemplateChildNode[],
+  context: TransformContext){
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i]
+    if(child.type === NodeTypes.ELEMENT && findProp(child, 'ref') ){
+      const Property = createObjectProperty(
+        createSimpleExpression('ref_for', true),
+        createSimpleExpression('true')
+      )
+      injectProp(child.codegenNode as RenderSlotCall, Property, context)
+    }
+  }
 }
