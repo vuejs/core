@@ -17,7 +17,7 @@ export function getRegistry(
 ): EventRegistry {
   let events = eventRegistryMap.get(instance)
   if (!events) {
-    eventRegistryMap.set(instance, (events = Object.create(null)))
+    eventRegistryMap.set(instance, (events = Object.create({})))
   }
   return events!
 }
@@ -68,7 +68,7 @@ export function off(
   const vm = instance.proxy
   // all
   if (!event) {
-    eventRegistryMap.set(instance, Object.create(null))
+    eventRegistryMap.set(instance, Object.create({}))
     return vm
   }
   // array of events

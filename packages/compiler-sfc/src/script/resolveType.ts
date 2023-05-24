@@ -85,14 +85,14 @@ export class TypeScope {
     public filename: string,
     public source: string,
     public offset: number = 0,
-    public imports: Record<string, Import> = Object.create(null),
-    public types: Record<string, ScopeTypeNode> = Object.create(null),
-    public declares: Record<string, ScopeTypeNode> = Object.create(null)
+    public imports: Record<string, Import> = Object.create({}),
+    public types: Record<string, ScopeTypeNode> = Object.create({}),
+    public declares: Record<string, ScopeTypeNode> = Object.create({})
   ) {}
 
-  resolvedImportSources: Record<string, string> = Object.create(null)
-  exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
-  exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
+  resolvedImportSources: Record<string, string> = Object.create({})
+  exportedTypes: Record<string, ScopeTypeNode> = Object.create({})
+  exportedDeclares: Record<string, ScopeTypeNode> = Object.create({})
 }
 
 export interface MaybeWithScope {
@@ -1280,7 +1280,7 @@ function attachNamespace(
 }
 
 export function recordImports(body: Statement[]) {
-  const imports: TypeScope['imports'] = Object.create(null)
+  const imports: TypeScope['imports'] = Object.create({})
   for (const s of body) {
     recordImport(s, imports)
   }

@@ -113,7 +113,7 @@ export function transformDestructuredProps(
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
-  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
+  const propsLocalToPublicMap: Record<string, string> = Object.create({})
 
   for (const key in ctx.propsDestructuredBindings) {
     const { local } = ctx.propsDestructuredBindings[key]

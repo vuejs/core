@@ -25,7 +25,7 @@ export class ScriptCompileContext {
   // import / type analysis
   scope?: TypeScope
   globalScopes?: TypeScope[]
-  userImports: Record<string, ImportBinding> = Object.create(null)
+  userImports: Record<string, ImportBinding> = Object.create({})
 
   // macros presence check
   hasDefinePropsCall = false
@@ -42,7 +42,7 @@ export class ScriptCompileContext {
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
-  propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
+  propsDestructuredBindings: PropsDestructureBindings = Object.create({})
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
 

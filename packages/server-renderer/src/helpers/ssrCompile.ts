@@ -13,7 +13,7 @@ type SSRRenderFunction = (
   parentInstance: ComponentInternalInstance
 ) => void
 
-const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+const compileCache: Record<string, SSRRenderFunction> = Object.create({})
 
 export function ssrCompile(
   template: string,

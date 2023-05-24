@@ -43,7 +43,7 @@ describe('toDisplayString', () => {
     )
 
     // object created from null does not have .toString in its prototype
-    const nullObjectWithoutToString = Object.create(null)
+    const nullObjectWithoutToString = Object.create({})
     nullObjectWithoutToString.bar = 1
     expect(toDisplayString(nullObjectWithoutToString)).toBe(
       `{

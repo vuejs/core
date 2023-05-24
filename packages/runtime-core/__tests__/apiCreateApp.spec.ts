@@ -101,7 +101,6 @@ describe('api: createApp', () => {
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe(`3,2`)
-    expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
 
     const app2 = createApp(Root)
     app2.provide('bar', 1)

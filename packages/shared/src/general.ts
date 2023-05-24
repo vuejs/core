@@ -84,7 +84,7 @@ export const isBuiltInDirective = /*#__PURE__*/ makeMap(
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  const cache: Record<string, string> = Object.create({})
   return ((str: string) => {
     const hit = cache[str]
     return hit || (cache[str] = fn(str))

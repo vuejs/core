@@ -425,8 +425,8 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   }
 }
 
-const instanceWarned: Record<string, true> = Object.create(null)
-const warnCount: Record<string, number> = Object.create(null)
+const instanceWarned: Record<string, true> = Object.create({})
+const warnCount: Record<string, number> = Object.create({})
 
 // test only
 let warningEnabled = true

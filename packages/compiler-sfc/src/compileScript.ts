@@ -191,8 +191,8 @@ export function compileScript(
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
-  const scriptBindings: Record<string, BindingTypes> = Object.create(null)
-  const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const scriptBindings: Record<string, BindingTypes> = Object.create({})
+  const setupBindings: Record<string, BindingTypes> = Object.create({})
 
   let defaultExport: Node | undefined
   let hasAwait = false

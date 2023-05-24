@@ -296,7 +296,7 @@ function getLeavingNodesForType(
   const { leavingVNodes } = state
   let leavingVNodesCache = leavingVNodes.get(vnode.type)!
   if (!leavingVNodesCache) {
-    leavingVNodesCache = Object.create(null)
+    leavingVNodesCache = Object.create({})
     leavingVNodes.set(vnode.type, leavingVNodesCache)
   }
   return leavingVNodesCache

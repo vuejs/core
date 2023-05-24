@@ -197,7 +197,7 @@ export function initProps(
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
 
-  instance.propsDefaults = Object.create(null)
+  instance.propsDefaults = Object.create({})
 
   setFullProps(instance, rawProps, props, attrs)
 

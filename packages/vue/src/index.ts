@@ -11,7 +11,7 @@ if (__DEV__) {
   initDev()
 }
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Record<string, RenderFunction> = Object.create({})
 
 function compileToFunction(
   template: string | HTMLElement,

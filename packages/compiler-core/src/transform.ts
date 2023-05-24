@@ -184,7 +184,7 @@ export function createTransformContext(
     constantCache: new Map(),
     temps: 0,
     cached: 0,
-    identifiers: Object.create(null),
+    identifiers: Object.create({}),
     scopes: {
       vFor: 0,
       vSlot: 0,

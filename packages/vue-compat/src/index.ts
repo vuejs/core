@@ -11,7 +11,7 @@ import {
   warnDeprecation
 } from '../../runtime-core/src/compat/compatConfig'
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Record<string, RenderFunction> = Object.create({})
 
 function compileToFunction(
   template: string | HTMLElement,

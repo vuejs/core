@@ -140,7 +140,7 @@ export function transformAST(
 } {
   warnExperimental()
 
-  const userImports: Record<string, ImportBinding> = Object.create(null)
+  const userImports: Record<string, ImportBinding> = Object.create({})
   for (const node of ast.body) {
     if (node.type !== 'ImportDeclaration') continue
     walkImportDeclaration(node)
@@ -181,7 +181,7 @@ export function transformAST(
   let escapeScope: CallExpression | undefined // inside $$()
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
-  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
+  const propsLocalToPublicMap: Record<string, string> = Object.create({})
 
   if (knownRefs) {
     for (const key of knownRefs) {

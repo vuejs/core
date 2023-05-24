@@ -6,7 +6,7 @@ const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
-  const keyframes = Object.create(null)
+  const keyframes = Object.create({})
   const shortId = id.replace(/^data-v-/, '')
 
   return {

@@ -21,7 +21,7 @@ export function walkIdentifiers(
   ) => void,
   includeAll = false,
   parentStack: Node[] = [],
-  knownIds: Record<string, number> = Object.create(null)
+  knownIds: Record<string, number> = Object.create({})
 ) {
   if (__BROWSER__) {
     return

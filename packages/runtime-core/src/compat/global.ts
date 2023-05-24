@@ -251,7 +251,7 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-        ? extend(Object.create(null), superValue)
+        ? extend(Object.create({}), superValue)
         : superValue
     }
 
@@ -629,7 +629,7 @@ function defineReactive(obj: any, key: string, val: any) {
   if (i && obj === i.proxy) {
     // target is a Vue instance - define on instance.ctx
     defineReactiveSimple(i.ctx, key, val)
-    i.accessCache = Object.create(null)
+    i.accessCache = Object.create({})
   } else if (isReactive(obj)) {
     obj[key] = val
   } else {
