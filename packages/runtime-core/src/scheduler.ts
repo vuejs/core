@@ -54,7 +54,7 @@ export function nextTick(): Promise<void>
 export function nextTick<T = void, R = any>(
   this: T,
   fn: (this: T) => R
-): Promise<R extends Promise<any> ? Awaited<R> : R>
+): Promise<R extends Promise<infer P> ? P : R>
 export function nextTick<T, R>(this: T, fn?: (this: T) => R) {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
