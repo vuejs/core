@@ -809,7 +809,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     if (!hook) return
     if (isFunction(hook)) {
       register(hook.bind(publicThis))
-    } else if (isArray(hook)) {
+    } else {
       hook.forEach(_hook => register(_hook.bind(publicThis)))
     }
   }

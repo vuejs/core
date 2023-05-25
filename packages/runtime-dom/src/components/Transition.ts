@@ -90,7 +90,7 @@ const callHook = (
   if (!hook) return
   if (isFunction(hook)) {
     hook(...args)
-  } else if (isArray(hook)) {
+  } else {
     hook.forEach(h => h(...args))
   }
 }
