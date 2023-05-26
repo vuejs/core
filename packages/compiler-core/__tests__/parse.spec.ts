@@ -1687,20 +1687,38 @@ describe('compiler: parse', () => {
       expect(divWithPre.props).toMatchObject([
         {
           type: NodeTypes.ATTRIBUTE,
+          name: `v-pre`,
+          value: undefined,
+          loc: {
+            source: `v-pre`,
+            start: {
+              line: 1,
+              column: 6
+            },
+            end: {
+              line: 1,
+              column: 11
+            }
+          }
+        },
+        {
+          type: NodeTypes.ATTRIBUTE,
           name: `:id`,
           value: {
             type: NodeTypes.TEXT,
             content: `foo`
           },
           loc: {
-            source: `:id="foo"`,
-            start: {
-              line: 1,
-              column: 12
-            },
             end: {
+              column: 21,
               line: 1,
-              column: 21
+              offset: 20
+            },
+            source: ':id="foo"',
+            start: {
+              column: 12,
+              line: 1,
+              offset: 11
             }
           }
         }
