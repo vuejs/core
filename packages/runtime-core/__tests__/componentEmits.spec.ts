@@ -505,4 +505,24 @@ describe('component: emit', () => {
     render(h(ComponentC), el)
     expect(renderFn).toHaveBeenCalledTimes(1)
   })
+
+  test('do not trigger handler when emits is string', async () => {
+    const Foo = defineComponent({
+      render() {},
+      // @ts-expect-error simulate incorrect usage
+      emits: 'one',
+      created() {
+        // @ts-expect-error simulate incorrect usage
+        this.$emit('one')
+      }
+    })
+
+    const onOne = vi.fn()
+    const Comp = () => h(Foo, { onOne })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      '[Vue warn]: Component emitted event "one" but it is neither declared in the emits option nor as an "onOne" prop.'
+    ).toHaveBeenWarned()
+    expect(onOne).not.toHaveBeenCalled()
+  })
 })

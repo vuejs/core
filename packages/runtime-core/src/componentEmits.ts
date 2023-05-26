@@ -78,35 +78,34 @@ export function emit(
   if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
-  if (__DEV__) {
-    const {
-      emitsOptions,
-      propsOptions: [propsOptions]
-    } = instance
-    if (emitsOptions) {
-      if (
-        !(event in emitsOptions) &&
-        !(
-          __COMPAT__ &&
-          (event.startsWith('hook:') ||
-            event.startsWith(compatModelEventPrefix))
-        )
-      ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+  const {
+    emitsOptions,
+    propsOptions: [propsOptions]
+  } = instance
+  if (emitsOptions) {
+    if (
+      !(event in emitsOptions) &&
+      !(
+        __COMPAT__ &&
+        (event.startsWith('hook:') || event.startsWith(compatModelEventPrefix))
+      )
+    ) {
+      if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        __DEV__ &&
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
               `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
-        }
-      } else {
-        const validator = emitsOptions[event]
-        if (isFunction(validator)) {
-          const isValid = validator(...rawArgs)
-          if (!isValid) {
-            warn(
-              `Invalid event arguments: event validation failed for event "${event}".`
-            )
-          }
+        return
+      }
+    } else if (__DEV__) {
+      const validator = emitsOptions[event]
+      if (isFunction(validator)) {
+        const isValid = validator(...rawArgs)
+        if (!isValid) {
+          warn(
+            `Invalid event arguments: event validation failed for event "${event}".`
+          )
         }
       }
     }
