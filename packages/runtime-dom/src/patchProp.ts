@@ -19,12 +19,18 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   prevChildren,
   parentComponent,
   parentSuspense,
-  unmountChildren
+  unmountChildren,
+  isVPre: boolean
 ) => {
+  if(key === 'v-pre'){
+    return
+  }
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
+  } else if(isVPre) {
+    patchAttr(el, key, nextValue, isSVG, parentComponent)
   } else if (isOn(key)) {
     // ignore v-model listeners
     if (!isModelListener(key)) {

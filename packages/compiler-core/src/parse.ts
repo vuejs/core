@@ -566,8 +566,8 @@ function parseTag(
     // reset context
     extend(context, cursor)
     context.source = currentSource
-    // re-parse attrs and filter out v-pre itself
-    props = parseAttributes(context, type).filter(p => p.name !== 'v-pre')
+    // re-parse attrs
+    props = parseAttributes(context, type)
   }
 
   // Tag close.
