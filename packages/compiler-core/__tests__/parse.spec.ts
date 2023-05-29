@@ -1709,16 +1709,14 @@ describe('compiler: parse', () => {
             content: `foo`
           },
           loc: {
-            end: {
-              column: 21,
-              line: 1,
-              offset: 20
-            },
-            source: ':id="foo"',
+            source: `:id="foo"`,
             start: {
-              column: 12,
               line: 1,
-              offset: 11
+              column: 12
+            },
+            end: {
+              line: 1,
+              column: 21
             }
           }
         }
@@ -1781,6 +1779,122 @@ describe('compiler: parse', () => {
       const ast = baseParse(
         `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
       )
+      // should not affect siblings after it
+      const divWithoutPre = ast.children[1] as ElementNode
+      expect(divWithoutPre.props).toMatchObject([
+        {
+          type: NodeTypes.DIRECTIVE,
+          name: `bind`,
+          arg: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: true,
+            content: `id`
+          },
+          exp: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            isStatic: false,
+            content: `foo`
+          },
+          loc: {
+            source: `:id="foo"`,
+            start: {
+              line: 2,
+              column: 6
+            },
+            end: {
+              line: 2,
+              column: 15
+            }
+          }
+        }
+      ])
+      expect(divWithoutPre.children[0]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tagType: ElementTypes.COMPONENT,
+        tag: `Comp`
+      })
+      expect(divWithoutPre.children[1]).toMatchObject({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `bar`,
+          isStatic: false
+        }
+      })
+    })
+    // #8417
+    test('v-pre & attribute should not be processed', () => {
+      const ast = baseParse(
+        `<div v-pre on-test test @click />\n<div :id="foo"><Comp/>{{ bar }}</div>`
+      )
+      const divWithPre = ast.children[0] as ElementNode
+      expect(divWithPre.props).toMatchObject([
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `v-pre`,
+          value: undefined,
+          loc: {
+            source: `v-pre`,
+            start: {
+              line: 1,
+              column: 6
+            },
+            end: {
+              line: 1,
+              column: 11
+            }
+          }
+        },
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `on-test`,
+          value: undefined,
+          loc: {
+            source: `on-test`,
+            start: {
+              line: 1,
+              column: 12
+            },
+            end: {
+              line: 1,
+              column: 19
+            }
+          }
+        },
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `test`,
+          value: undefined,
+          loc: {
+            source: `test`,
+            start: {
+              line: 1,
+              column: 20
+            },
+            end: {
+              line: 1,
+              column: 24
+            }
+          }
+        },
+        {
+          type: NodeTypes.ATTRIBUTE,
+          name: `@click`,
+          value: undefined,
+          loc: {
+            source: `@click`,
+            start: {
+              line: 1,
+              column: 25
+            },
+            end: {
+              line: 1,
+              column: 31
+            }
+          }
+        }
+      ])
+
       // should not affect siblings after it
       const divWithoutPre = ast.children[1] as ElementNode
       expect(divWithoutPre.props).toMatchObject([
