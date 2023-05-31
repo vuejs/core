@@ -13,7 +13,8 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow
+  isShallow,
+  type DeepReadonly
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -411,7 +412,7 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
 export function toRef<T>(
   value: T
 ): T extends () => infer R
-  ? Readonly<Ref<R>>
+  ? DeepReadonly<Ref<R>>
   : T extends Ref
   ? T
   : Ref<UnwrapRef<T>>

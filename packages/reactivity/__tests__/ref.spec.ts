@@ -311,6 +311,21 @@ describe('reactivity/ref', () => {
     expect(isReadonly(x)).toBe(true)
   })
 
+  test('toRef getter object', () => {
+    const obj = toRef(() => ({ a: 1 }))
+
+    expect(isRef(obj)).toBe(true)
+    expect(unref(obj)).toEqual({ a: 1 })
+    expect(obj.value.a).toBe(1)
+
+    //@ts-expect-error
+    obj.value.a = 2
+
+    expect(obj.value.a).toBe(1)
+
+    expect(isReadonly(obj)).toBe(true)
+  })
+
   test('toRefs', () => {
     const a = reactive({
       x: 1,
