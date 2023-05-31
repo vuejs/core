@@ -749,6 +749,36 @@ describe('defineCustomElement', () => {
   })
 
   describe('child components styles', () => {
+    test('Components are used multiple times without adding duplicate styles', async () => {
+      const Child = {
+        styles: [`.my-green { color: green; }`],
+        render() {
+          return h('p', { class: 'my-green' }, 'This should be green')
+        }
+      }
+
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [
+            h('p', { class: 'my-red' }, 'This should be red'),
+            h(Child),
+            h(Child)
+          ]
+        }
+      })
+      customElements.define('my-el-with-multiple-child', Foo)
+      container.innerHTML = `<my-el-with-multiple-child></my-el-with-multiple-child>`
+      await nextTick()
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`.my-red { color: red; }`)
+      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
+    })
+
     test('When the component is unmounted, the style tag can be handled correctly', async () => {
       const show = ref(true)
       const Child = {

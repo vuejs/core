@@ -30,6 +30,8 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
+const ceChildStyleMap = new Map<string, Set<number>>()
+
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
@@ -434,15 +436,23 @@ export class VueElement extends BaseClass {
     instance: ComponentInternalInstance
   ) {
     if (styles) {
+      const styleContent = styles.join()
+      let cecStyle = new Set<number>()
+      if (ceChildStyleMap.has(styleContent)) {
+        cecStyle = ceChildStyleMap.get(styleContent)!
+        cecStyle!.add(instance.uid)
+        ceChildStyleMap.set(styleContent, cecStyle)
+        return
+      }
+
+      cecStyle!.add(instance.uid)
+      ceChildStyleMap.set(styleContent, cecStyle)
+
       const ceStyleId = `data-v-ce-${instance.uid}`
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
-        // Generate ids and record them, and delete style tags based on
-        // them when components are unmounted
-        ;(instance.cecStyleIds || (instance.cecStyleIds = new Set())).add(
-          ceStyleId
-        )
+
         s.setAttribute(ceStyleId, '')
 
         if (this._childStylesAnchor) {
@@ -464,15 +474,32 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStyles(cecStyleIds: Set<string> | null) {
-    if (cecStyleIds) {
-      cecStyleIds.forEach(id => {
-        const sList = this.shadowRoot!.querySelectorAll(`[${id}]`)
-        sList.length > 0 && sList.forEach(s => this.shadowRoot!.removeChild(s))
-      })
-      const archor = this.shadowRoot!.querySelectorAll('style')
-      this._childStylesAnchor =
-        archor.length > 0 ? archor[archor.length - 1] : undefined
+  protected _removeChildStyles(styles: string[] | undefined, uid: number) {
+    if (styles) {
+      const styleContent = styles.join()
+      let cecStyle = new Set<number>()
+      if (ceChildStyleMap.has(styleContent)) {
+        // update cecStyle
+        cecStyle = ceChildStyleMap.get(styleContent)!
+        cecStyle.delete(uid)
+
+        if (cecStyle.size === 0) {
+          // remove style tag
+          const sList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+          sList.length > 0 &&
+            sList.forEach(s => this.shadowRoot!.removeChild(s))
+          // update archor
+          const archor = this.shadowRoot!.querySelectorAll('style')
+          this._childStylesAnchor =
+            archor.length > 0 ? archor[archor.length - 1] : undefined
+
+          // clear ceChildStyleMap
+          ceChildStyleMap.delete(styleContent)
+        } else {
+          // update ceChildStyleMap
+          ceChildStyleMap.set(styleContent, cecStyle)
+        }
+      }
     }
   }
 }

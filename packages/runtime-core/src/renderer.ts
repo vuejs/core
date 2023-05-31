@@ -2122,13 +2122,12 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       // remove style tags when the component is a child
       // component of a custom element
-      if (
-        vnode.component!.isCEChild &&
-        vnode.component!.cecStyleIds &&
-        vnode.component!.removeCEChildStyle
-      ) {
-        vnode.component!.removeCEChildStyle(vnode.component!.cecStyleIds)
-        vnode.component!.cecStyleIds = null
+      if (vnode.component!.isCEChild && vnode.component!.removeCEChildStyle) {
+        vnode.component!.removeCEChildStyle(
+          (vnode.component!.type as ConcreteComponent & { styles?: string[] })
+            .styles,
+          vnode.component!.uid
+        )
       }
       unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
