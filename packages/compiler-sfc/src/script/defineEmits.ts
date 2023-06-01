@@ -112,6 +112,12 @@ function extractEventNames(
         ) {
           emits.add(String(type.literal.value))
         }
+      } else if (type.type === 'TSEnumDeclaration') {
+        for (const m of type.members) {
+          if (m.initializer && m.initializer.type === 'StringLiteral') {
+            emits.add(String(m.initializer.value))
+          }
+        }
       }
     }
   }

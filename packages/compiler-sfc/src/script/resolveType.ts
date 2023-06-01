@@ -650,21 +650,35 @@ function innerResolveTypeReference(
       }
     }
   } else {
-    let ns = innerResolveTypeReference(ctx, scope, name[0], node, onlyExported)
-    if (ns) {
-      if (ns.type !== 'TSModuleDeclaration') {
-        // namespace merged with other types, attached as _ns
-        ns = ns._ns
-      }
-      if (ns) {
-        const childScope = moduleDeclToScope(ctx, ns, ns._ownerScope || scope)
-        return innerResolveTypeReference(
-          ctx,
-          childScope,
-          name.length > 2 ? name.slice(1) : name[name.length - 1],
-          node,
-          !ns.declare
-        )
+    let resolved = innerResolveTypeReference(
+      ctx,
+      scope,
+      name[0],
+      node,
+      onlyExported
+    )
+    if (resolved) {
+      if (resolved.type === 'TSEnumDeclaration') {
+        return resolved
+      } else {
+        if (resolved.type !== 'TSModuleDeclaration') {
+          // namespace merged with other types, attached as _ns
+          resolved = resolved._ns
+        }
+        if (resolved) {
+          const childScope = moduleDeclToScope(
+            ctx,
+            resolved,
+            resolved._ownerScope || scope
+          )
+          return innerResolveTypeReference(
+            ctx,
+            childScope,
+            name.length > 2 ? name.slice(1) : name[name.length - 1],
+            node,
+            !resolved.declare
+          )
+        }
       }
     }
   }
