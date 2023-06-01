@@ -54,6 +54,11 @@ describe('reactivity/ref', () => {
     expect(dummy).toBe(1)
     a.value.count = 2
     expect(dummy).toBe(2)
+
+    a.value = {
+      count: 100
+    }
+    expect(dummy).toBe(100)
   })
 
   it('should work without initial value', () => {
