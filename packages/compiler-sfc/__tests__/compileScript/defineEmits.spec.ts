@@ -78,6 +78,18 @@ const emit = defineEmits(['a', 'b'])
     expect(content).toMatch(`emits: ["foo", "bar"]`)
   })
 
+  test('w/ type (interface w/ entends)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    interface Base { (e: 'foo'): void }
+    interface Emits extends Base { (e: 'bar'): void }
+    const emit = defineEmits<Emits>()
+    </script>
+    `)
+    assertCode(content)
+    expect(content).toMatch(`emits: ["bar", "foo"]`)
+  })
+
   test('w/ type (exported interface)', () => {
     const { content } = compile(`
     <script setup lang="ts">

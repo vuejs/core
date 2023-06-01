@@ -334,10 +334,17 @@ function resolveInterfaceMembers(
         continue
       }
       try {
-        const { props } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
+          }
+        }
+        if (calls) {
+          if (!base.calls) {
+            base.calls = calls
+          } else {
+            base.calls.push(...calls)
           }
         }
       } catch (e) {
