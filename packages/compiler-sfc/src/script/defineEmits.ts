@@ -1,7 +1,17 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import {
+  Identifier,
+  LVal,
+  Node,
+  RestElement,
+  TSEnumDeclaration
+} from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
-import { resolveTypeElements, resolveUnionType } from './resolveType'
+import {
+  resolveTypeElements,
+  resolveUnionType,
+  resolveTypeReference
+} from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
 
@@ -102,7 +112,8 @@ function extractEventNames(
     eventName.typeAnnotation &&
     eventName.typeAnnotation.type === 'TSTypeAnnotation'
   ) {
-    const types = resolveUnionType(ctx, eventName.typeAnnotation.typeAnnotation)
+    const typeNode = eventName.typeAnnotation.typeAnnotation
+    const types = resolveUnionType(ctx, typeNode)
 
     for (const type of types) {
       if (type.type === 'TSLiteralType') {
@@ -113,12 +124,43 @@ function extractEventNames(
           emits.add(String(type.literal.value))
         }
       } else if (type.type === 'TSEnumDeclaration') {
-        for (const m of type.members) {
-          if (m.initializer && m.initializer.type === 'StringLiteral') {
-            emits.add(String(m.initializer.value))
+        if (typeNode.type === 'TSTypeReference') {
+          if (typeNode.typeName.type === 'TSQualifiedName') {
+            extractEnumValue(type, typeNode.typeName.right.name, emits)
+          }
+        }
+      } else if (type.type === 'TSTypeReference') {
+        if (
+          type.typeName.type === 'TSQualifiedName' &&
+          type.typeName.left.type === 'Identifier'
+        ) {
+          const resolved = resolveTypeReference(
+            ctx,
+            type,
+            undefined,
+            type.typeName.left.name
+          )
+          if (resolved && resolved.type === 'TSEnumDeclaration') {
+            extractEnumValue(resolved, type.typeName.right.name, emits)
           }
         }
       }
+    }
+  }
+}
+function extractEnumValue(
+  typeNode: TSEnumDeclaration,
+  typeName: string,
+  emits: Set<string>
+) {
+  for (const m of typeNode.members) {
+    if (
+      m.id.type === 'Identifier' &&
+      m.id.name === typeName &&
+      m.initializer &&
+      m.initializer.type === 'StringLiteral'
+    ) {
+      emits.add(String(m.initializer.value))
     }
   }
 }

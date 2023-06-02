@@ -92,15 +92,17 @@ const emit = defineEmits(['a', 'b'])
   test('w/ enum value', () => {
     const { content } = compile(`
     <script setup lang="ts">
-    enum Foo { BAR = 'bar' }
+    enum Foo { BAR = 'bar', BAZ = 'baz', QUX = 'qux' }
+    type BAZ = Foo.BAZ
     interface Emits {
       (e: Foo.BAR, value: string): void;
+      (e: BAZ, value: string): void;
     }
     const emit = defineEmits<Emits>()
     </script>
     `)
     assertCode(content)
-    expect(content).toMatch(`emits: ["bar"]`)
+    expect(content).toMatch(`emits: ["bar", "baz"]`)
   })
 
   test('w/ type from normal script', () => {

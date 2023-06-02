@@ -593,7 +593,7 @@ type ReferenceTypes =
   | TSImportType
   | TSTypeQuery
 
-function resolveTypeReference(
+export function resolveTypeReference(
   ctx: TypeResolveContext,
   node: ReferenceTypes & {
     _resolvedReference?: ScopeTypeNode
