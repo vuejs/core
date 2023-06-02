@@ -18,6 +18,7 @@ describe('defineProps w/ type declaration', () => {
   // type declaration
   const props = defineProps<{
     foo: string
+    baz?: number
     bool?: boolean
     boolAndUndefined: boolean | undefined
   }>()
@@ -26,6 +27,12 @@ describe('defineProps w/ type declaration', () => {
   // @ts-expect-error
   props.bar
 
+  expectType<{
+    foo: string
+    baz: number | undefined
+    bool: boolean
+    boolAndUndefined: boolean
+  }>(props)
   expectType<boolean>(props.bool)
   expectType<boolean>(props.boolAndUndefined)
 })
