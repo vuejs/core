@@ -1,16 +1,11 @@
-import {
-  Identifier,
-  LVal,
-  Node,
-  RestElement,
-  TSEnumDeclaration
-} from '@babel/types'
+import { Identifier, LVal, Node, RestElement } from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
 import {
   resolveTypeElements,
   resolveUnionType,
-  resolveTypeReference
+  resolveTypeReference,
+  resolveEnumMemberValue
 } from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
@@ -124,10 +119,16 @@ function extractEventNames(
           emits.add(String(type.literal.value))
         }
       } else if (type.type === 'TSEnumDeclaration') {
-        if (typeNode.type === 'TSTypeReference') {
-          if (typeNode.typeName.type === 'TSQualifiedName') {
-            extractEnumValue(type, typeNode.typeName.right.name, emits)
-          }
+        if (
+          typeNode.type === 'TSTypeReference' &&
+          typeNode.typeName.type === 'TSQualifiedName'
+        ) {
+          const memberValue = resolveEnumMemberValue(
+            ctx,
+            type,
+            typeNode.typeName.right.name
+          )
+          if (memberValue) emits.add(memberValue)
         }
       } else if (type.type === 'TSTypeReference') {
         if (
@@ -141,26 +142,15 @@ function extractEventNames(
             type.typeName.left.name
           )
           if (resolved && resolved.type === 'TSEnumDeclaration') {
-            extractEnumValue(resolved, type.typeName.right.name, emits)
+            const memberValue = resolveEnumMemberValue(
+              ctx,
+              resolved,
+              type.typeName.right.name
+            )
+            if (memberValue) emits.add(memberValue)
           }
         }
       }
-    }
-  }
-}
-function extractEnumValue(
-  typeNode: TSEnumDeclaration,
-  typeName: string,
-  emits: Set<string>
-) {
-  for (const m of typeNode.members) {
-    if (
-      m.id.type === 'Identifier' &&
-      m.id.name === typeName &&
-      m.initializer &&
-      m.initializer.type === 'StringLiteral'
-    ) {
-      emits.add(String(m.initializer.value))
     }
   }
 }

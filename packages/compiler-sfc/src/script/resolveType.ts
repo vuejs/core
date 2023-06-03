@@ -592,6 +592,7 @@ type ReferenceTypes =
   | TSExpressionWithTypeArguments
   | TSImportType
   | TSTypeQuery
+  | Identifier
 
 export function resolveTypeReference(
   ctx: TypeResolveContext,
@@ -692,7 +693,9 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
       ? node.expression
       : node.type === 'TSImportType'
       ? node.qualifier
-      : node.exprName
+      : node.type === 'TSTypeQuery'
+      ? node.exprName
+      : node
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -1686,4 +1689,45 @@ export function resolveUnionType(
   }
 
   return types
+}
+
+export function resolveEnumMemberValue(
+  ctx: TypeResolveContext,
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
+  typeName: string,
+  scope?: TypeScope
+): string | undefined {
+  if (node.type === 'TSTypeReference') {
+    const resolved = resolveTypeReference(ctx, node, scope, typeName)
+    if (resolved) node = resolved
+  }
+
+  if (node.type === 'Identifier') {
+    const resolved = resolveTypeReference(ctx, node, scope, node.name)
+    if (resolved) node = resolved
+  }
+
+  if (node.type === 'TSEnumDeclaration') {
+    for (const m of node.members) {
+      if (m.id.type === 'Identifier' && m.id.name === typeName) {
+        if (m.initializer) {
+          if (m.initializer.type === 'StringLiteral') {
+            return m.initializer.value
+          } else if (m.initializer.type === 'MemberExpression') {
+            if (
+              m.initializer.object.type === 'Identifier' &&
+              m.initializer.property.type === 'Identifier'
+            ) {
+              return resolveEnumMemberValue(
+                ctx,
+                m.initializer.object,
+                m.initializer.property.name,
+                scope
+              )
+            }
+          }
+        }
+      }
+    }
+  }
 }
