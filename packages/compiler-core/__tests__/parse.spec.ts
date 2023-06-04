@@ -219,6 +219,45 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('it can resolve comment before }}', () => {
+      const ast = baseParse(`{{ 
+        // a
+        1
+        // b
+        }}`)
+      const interpolation = ast.children[0] as InterpolationNode
+
+      expect(interpolation).toStrictEqual({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `// a
+        1
+        // b
+`,
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+          loc: {
+            start: { offset: 12, line: 2, column: 9 },
+            end: { offset: 40, line: 5, column: 1 },
+            source: `// a
+        1
+        // b
+`
+          }
+        },
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 50, line: 5, column: 11 },
+          source: `{{ 
+        // a
+        1
+        // b
+        }}`
+        }
+      })
+    })
+
     test('it can have tag-like notation (2)', () => {
       const ast = baseParse('{{ a<b }}{{ c>d }}')
       const interpolation1 = ast.children[0] as InterpolationNode

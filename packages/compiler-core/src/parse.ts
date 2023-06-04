@@ -995,7 +995,11 @@ function parseInterpolation(
   const rawContentLength = closeIndex - open.length
   const rawContent = context.source.slice(0, rawContentLength)
   const preTrimContent = parseTextData(context, rawContentLength, mode)
-  const content = preTrimContent.trim()
+  let content = preTrimContent.trim()
+  if (preTrimContent.slice(content.length).includes('\n')) {
+    content = content.concat('\n')
+  }
+
   const startOffset = preTrimContent.indexOf(content)
   if (startOffset > 0) {
     advancePositionWithMutation(innerStart, rawContent, startOffset)
