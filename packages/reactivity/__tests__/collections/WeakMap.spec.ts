@@ -98,8 +98,8 @@ describe('reactivity/collections', () => {
       const key = {}
       const value = reactive({})
       observed.set(key, value)
-      expect(map.get(key)).not.toBe(value)
-      expect(map.get(key)).toBe(toRaw(value))
+      expect(map.get(key)).toBe(value)
+      expect(toRaw(map.get(key))).toBe(toRaw(value))
     })
 
     it('should return observable versions of contained values', () => {
