@@ -34,7 +34,7 @@ import {
 } from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { capitalize, hasOwn, isString } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -178,7 +178,7 @@ function innerResolveTypeElements(
       if (resolved) {
         return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       } else {
-        if (typeof typeName === 'string') {
+        if (isString(typeName)) {
           if (
             // @ts-ignore
             SupportedBuiltinsSet.has(typeName)
@@ -621,7 +621,7 @@ function innerResolveTypeReference(
   node: ReferenceTypes,
   onlyExported: boolean
 ): ScopeTypeNode | undefined {
-  if (typeof name === 'string') {
+  if (isString(name)) {
     if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {

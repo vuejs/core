@@ -537,7 +537,7 @@ export function transformAST(
   function segToString(seg: PathSegmentAtom): string {
     if (typeof seg === 'number') {
       return `[${seg}]`
-    } else if (typeof seg === 'string') {
+    } else if (isString(seg)) {
       return `.${seg}`
     } else {
       return snip(seg)

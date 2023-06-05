@@ -1,5 +1,12 @@
 import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
-import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  extend,
+  isArray,
+  isFunction,
+  isObject,
+  isString
+} from '@vue/shared'
 import { isShallow } from '../../reactivity/src/reactive'
 import { ComponentInternalInstance, ComponentOptions } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
@@ -140,7 +147,7 @@ export function initCustomFormatter() {
   function formatValue(v: unknown, asRaw = true) {
     if (typeof v === 'number') {
       return ['span', numberStyle, v]
-    } else if (typeof v === 'string') {
+    } else if (isString(v)) {
       return ['span', stringStyle, JSON.stringify(v)]
     } else if (typeof v === 'boolean') {
       return ['span', keywordStyle, v]

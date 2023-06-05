@@ -6,7 +6,7 @@ import {
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame, isString } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -901,7 +901,7 @@ export function compileScript(
         tips.forEach(warnOnce)
       }
       const err = errors[0]
-      if (typeof err === 'string') {
+      if (isString(err)) {
         throw new Error(err)
       } else if (err) {
         if (err.loc) {
