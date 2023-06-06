@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.3.2",
+  "version": "3.3.4",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -21,22 +21,35 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/vue.d.ts",
       "import": {
+        "types": "./dist/vue.d.mts",
         "node": "./index.mjs",
         "default": "./dist/vue.runtime.esm-bundler.js"
       },
-      "require": "./index.js"
+      "require": {
+        "types": "./dist/vue.d.ts",
+        "default": "./index.js"
+      }
     },
     "./server-renderer": {
-      "types": "./server-renderer/index.d.ts",
-      "import": "./server-renderer/index.mjs",
-      "require": "./server-renderer/index.js"
+      "import": {
+        "types": "./server-renderer/index.d.mts",
+        "default": "./server-renderer/index.mjs"
+      },
+      "require": {
+        "types": "./server-renderer/index.d.ts",
+        "default": "./server-renderer/index.js"
+      }
     },
     "./compiler-sfc": {
-      "types": "./compiler-sfc/index.d.ts",
-      "import": "./compiler-sfc/index.mjs",
-      "require": "./compiler-sfc/index.js"
+      "import": {
+        "types": "./compiler-sfc/index.d.mts",
+        "default": "./compiler-sfc/index.mjs"
+      },
+      "require": {
+        "types": "./compiler-sfc/index.d.ts",
+        "default": "./compiler-sfc/index.js"
+      }
     },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
@@ -81,10 +94,10 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.3.2",
-    "@vue/compiler-dom": "3.3.2",
-    "@vue/runtime-dom": "3.3.2",
-    "@vue/compiler-sfc": "3.3.2",
-    "@vue/server-renderer": "3.3.2"
+    "@vue/shared": "3.3.4",
+    "@vue/compiler-dom": "3.3.4",
+    "@vue/runtime-dom": "3.3.4",
+    "@vue/compiler-sfc": "3.3.4",
+    "@vue/server-renderer": "3.3.4"
   }
 }

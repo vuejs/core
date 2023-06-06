@@ -70,6 +70,11 @@ export class ScriptCompileContext {
    */
   deps?: Set<string>
 
+  /**
+   * cache for resolved fs
+   */
+  fs?: NonNullable<SFCScriptCompileOptions['fs']>
+
   constructor(
     public descriptor: SFCDescriptor,
     public options: Partial<SFCScriptCompileOptions>

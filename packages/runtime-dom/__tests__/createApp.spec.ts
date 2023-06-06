@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createApp, h } from '../src'
 
 describe('createApp for dom', () => {

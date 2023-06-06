@@ -804,6 +804,25 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
       assertCode(content)
     })
+
+    test('the v-for wrapped in parentheses can be correctly parsed & inline is false', () => {
+      expect(() =>
+        compile(
+          `
+        <script setup lang="ts">
+        import { ref } from 'vue'
+        const stacks = ref([])
+        </script>
+        <template>
+            <div v-for="({ file: efile }) of stacks"></div>
+        </template>
+        `,
+          {
+            inlineTemplate: false
+          }
+        )
+      ).not.toThrowError()
+    })
   })
 
   describe('with TypeScript', () => {

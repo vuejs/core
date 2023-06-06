@@ -330,10 +330,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
-          )
+          const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
