@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '@vue/runtime-core'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'

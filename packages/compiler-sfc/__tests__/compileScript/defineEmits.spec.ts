@@ -179,6 +179,23 @@ const emit = defineEmits(['a', 'b'])
     assertCode(content)
   })
 
+  // #7943
+  test('w/ type (type references in union)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    type BaseEmit = "change"
+    type Emit = "some" | "emit" | BaseEmit
+    const emit = defineEmits<{
+      (e: Emit): void;
+      (e: "another", val: string): void;
+    }>();
+    </script>
+    `)
+
+    expect(content).toMatch(`emits: ["some", "emit", "change", "another"]`)
+    assertCode(content)
+  })
+
   describe('errors', () => {
     test('w/ both type and non-type args', () => {
       expect(() => {

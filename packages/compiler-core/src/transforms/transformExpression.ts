@@ -25,7 +25,7 @@ import {
 } from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   makeMap,
   hasOwn,
   isString,
@@ -225,7 +225,7 @@ export function processExpression(
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
-    const isAllowedGlobal = isGloballyWhitelisted(rawExp)
+    const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
     if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
       // const bindings exposed from setup can be skipped for patching but
@@ -358,7 +358,7 @@ export function processExpression(
 
 function canPrefix(id: Identifier) {
   // skip whitelisted globals
-  if (isGloballyWhitelisted(id.name)) {
+  if (isGloballyAllowed(id.name)) {
     return false
   }
   // special case for webpack compilation
