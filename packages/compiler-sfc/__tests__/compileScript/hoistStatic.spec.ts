@@ -19,7 +19,6 @@ describe('sfc hoist static', () => {
     const nil = null
     const bigint = 100n
     const template = \`str\`
-    const regex = /.*/g
     `.trim()
     const { content, bindings } = compile(`
     <script setup>
@@ -35,8 +34,7 @@ describe('sfc hoist static', () => {
       boolean: BindingTypes.LITERAL_CONST,
       nil: BindingTypes.LITERAL_CONST,
       bigint: BindingTypes.LITERAL_CONST,
-      template: BindingTypes.LITERAL_CONST,
-      regex: BindingTypes.LITERAL_CONST
+      template: BindingTypes.LITERAL_CONST
     })
     assertCode(content)
   })
@@ -90,6 +88,8 @@ describe('sfc hoist static', () => {
     const code = `
     let KEY1 = 'default value'
     var KEY2 = 123
+    const regex = /.*/g
+    const undef = undefined
     `.trim()
     const { content, bindings } = compile(`
     <script setup>
@@ -98,7 +98,9 @@ describe('sfc hoist static', () => {
     `)
     expect(bindings).toStrictEqual({
       KEY1: BindingTypes.SETUP_LET,
-      KEY2: BindingTypes.SETUP_LET
+      KEY2: BindingTypes.SETUP_LET,
+      regex: BindingTypes.SETUP_CONST,
+      undef: BindingTypes.SETUP_MAYBE_REF
     })
     expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
     assertCode(content)
