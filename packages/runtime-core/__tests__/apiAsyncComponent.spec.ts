@@ -18,7 +18,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
 
@@ -51,7 +51,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         }),
       loadingComponent: () => 'loading',
       delay: 1 // defaults to 200
@@ -90,7 +90,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         }),
       loadingComponent: () => 'loading',
       delay: 0
@@ -126,7 +126,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise((_resolve, _reject) => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
           reject = _reject
         })
     )
@@ -170,7 +170,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise((_resolve, _reject) => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
           reject = _reject
         }),
       errorComponent: (props: { error: Error }) => props.error.message
@@ -215,7 +215,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise((_resolve, _reject) => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
           reject = _reject
         }),
       errorComponent: (props: { error: Error }) => props.error.message
@@ -259,7 +259,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise((_resolve, _reject) => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
           reject = _reject
         }),
       errorComponent: (props: { error: Error }) => props.error.message,
@@ -314,7 +314,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         }),
       timeout: 1
     })
@@ -348,7 +348,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         }),
       timeout: 1,
       errorComponent: () => 'timed out'
@@ -379,7 +379,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         }),
       delay: 1,
       timeout: 16,
@@ -411,7 +411,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         }),
       delay: 1,
       timeout: 16,
@@ -447,7 +447,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         })
     )
 
@@ -473,7 +473,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent({
       loader: () =>
         new Promise(_resolve => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
         }),
       suspensible: false
     })
@@ -533,7 +533,7 @@ describe('api: defineAsyncComponent', () => {
       loader: () => {
         loaderCallCount++
         return new Promise((_resolve, _reject) => {
-          resolve = _resolve as any
+          resolve = _resolve as unknown as (comp: Component) => void
           reject = _reject
         })
       },
@@ -662,7 +662,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
 
@@ -708,7 +708,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
 
@@ -754,7 +754,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
     const updater = ref(0)
@@ -811,7 +811,7 @@ describe('api: defineAsyncComponent', () => {
     const Foo = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
 

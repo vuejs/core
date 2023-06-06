@@ -840,7 +840,7 @@ describe('KeepAlive', () => {
     const AsyncComp = defineAsyncComponent(
       () =>
         new Promise(r => {
-          resolve = r as any
+          resolve = r as unknown as (comp: Component) => void
         })
     )
 
