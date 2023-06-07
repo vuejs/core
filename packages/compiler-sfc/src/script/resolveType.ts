@@ -118,7 +118,8 @@ interface ResolvedElements {
 export function resolveTypeElements(
   ctx: TypeResolveContext,
   node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
-  scope?: TypeScope
+  scope?: TypeScope,
+  typeParameters?: Record<string, Node>
 ): ResolvedElements {
   if (node._resolvedElements) {
     return node._resolvedElements
@@ -126,14 +127,16 @@ export function resolveTypeElements(
   return (node._resolvedElements = innerResolveTypeElements(
     ctx,
     node,
-    node._ownerScope || scope || ctxToScope(ctx)
+    node._ownerScope || scope || ctxToScope(ctx),
+    typeParameters
   ))
 }
 
 function innerResolveTypeElements(
   ctx: TypeResolveContext,
   node: Node,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>
 ): ResolvedElements {
   switch (node.type) {
     case 'TSTypeLiteral':
@@ -142,14 +145,31 @@ function innerResolveTypeElements(
       return resolveInterfaceMembers(ctx, node, scope)
     case 'TSTypeAliasDeclaration':
     case 'TSParenthesizedType':
-      return resolveTypeElements(ctx, node.typeAnnotation, scope)
+      return resolveTypeElements(
+        ctx,
+        node.typeAnnotation,
+        scope,
+        typeParameters
+      )
     case 'TSFunctionType': {
       return { props: {}, calls: [node] }
     }
     case 'TSUnionType':
     case 'TSIntersectionType':
+      const types = typeParameters
+        ? node.types.map(t => {
+            if (
+              t.type === 'TSTypeReference' &&
+              t.typeName.type === 'Identifier' &&
+              typeParameters[t.typeName.name]
+            ) {
+              return typeParameters[t.typeName.name]
+            }
+            return t
+          })
+        : node.types
       return mergeElements(
-        node.types.map(t => resolveTypeElements(ctx, t, scope)),
+        types.map(t => resolveTypeElements(ctx, t, scope)),
         node.type
       )
     case 'TSMappedType':
@@ -177,7 +197,22 @@ function innerResolveTypeElements(
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        const typeParameters: Record<string, Node> = Object.create(null)
+        if (
+          resolved.type === 'TSTypeAliasDeclaration' &&
+          resolved.typeParameters &&
+          node.typeParameters
+        ) {
+          resolved.typeParameters.params.forEach((p, i) => {
+            typeParameters[p.name] = node.typeParameters!.params[i]
+          })
+        }
+        return resolveTypeElements(
+          ctx,
+          resolved,
+          resolved._ownerScope,
+          typeParameters
+        )
       } else {
         if (typeof typeName === 'string') {
           if (
@@ -1262,7 +1297,7 @@ function recordType(
       if (overwriteId || node.id) types[overwriteId || getId(node.id!)] = node
       break
     case 'TSTypeAliasDeclaration':
-      types[node.id.name] = node.typeAnnotation
+      types[node.id.name] = node.typeParameters ? node : node.typeAnnotation
       break
     case 'TSDeclareFunction':
       if (node.id) declares[node.id.name] = node

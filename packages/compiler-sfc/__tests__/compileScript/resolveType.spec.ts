@@ -347,6 +347,21 @@ describe('resolveType', () => {
     })
   })
 
+  test('generic type', () => {
+    expect(
+      resolve(`
+      type Foo = { foo: string; }
+      type Bar = { bar: number; }
+      type Props<T,U> = T & U & { baz: boolean }
+      defineProps<Props<Foo, Bar>>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String'],
+      bar: ['Number'],
+      baz: ['Boolean']
+    })
+  })
+
   test('namespace merging', () => {
     expect(
       resolve(`
