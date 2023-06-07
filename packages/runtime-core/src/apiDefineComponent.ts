@@ -96,7 +96,7 @@ export type DefineComponent<
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function
-// (uses user defined props interface)]
+// (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
