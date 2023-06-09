@@ -63,13 +63,21 @@ describe('SSR Suspense', () => {
     const Comp = {
       errorCaptured: vi.fn(() => false),
       render() {
-        return h(Suspense, null, {
-          default: h('div', [h(ResolvingAsync), h(RejectingAsync)]),
-          fallback: h('div', 'fallback')
-        })
+        return h(
+          Suspense,
+          {
+            onResolve: () => {
+              debugger
+            }
+          },
+          {
+            default: h('div', [h(ResolvingAsync), h(RejectingAsync)]),
+            fallback: h('div', 'fallback')
+          }
+        )
       }
     }
-
+    debugger
     expect(await renderToString(createApp(Comp))).toBe(
       `<div><div>async</div><!----></div>`
     )

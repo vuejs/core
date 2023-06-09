@@ -557,7 +557,6 @@ function createSuspenseBoundary(
           }
         }
       }
-
       // invoke @resolve event
       triggerEvent(vnode, 'onResolve')
     },
@@ -833,4 +832,10 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
 
 function isVNodeSuspensible(vnode: VNode) {
   return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+}
+
+export function createSSRSuspenseBoundary() {
+  return {
+    deps: 0
+  }
 }

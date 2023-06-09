@@ -12,7 +12,8 @@ import {
   VNode,
   VNodeArrayChildren,
   VNodeProps,
-  warn
+  warn,
+  createSSRSuspenseBoundary
 } from 'vue'
 import {
   escapeHtml,
@@ -89,6 +90,7 @@ export function createBuffer() {
 export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
+  parentSuspense: any,
   slotScopeId?: string
 ): SSRBuffer | Promise<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
@@ -96,6 +98,7 @@ export function renderComponentVNode(
   const hasAsyncSetup = isPromise(res)
   const prefetches = instance.sp /* LifecycleHooks.SERVER_PREFETCH */
   if (hasAsyncSetup || prefetches) {
+    parentSuspense && parentSuspense.deps++
     let p: Promise<unknown> = hasAsyncSetup
       ? (res as Promise<void>)
       : Promise.resolve()
@@ -107,14 +110,18 @@ export function renderComponentVNode(
         // Note: error display is already done by the wrapped lifecycle hook function.
         .catch(() => {})
     }
-    return p.then(() => renderComponentSubTree(instance, slotScopeId))
+    return p.then(() => {
+      renderComponentSubTree(instance, parentSuspense, slotScopeId)
+      parentSuspense && parentSuspense.deps--
+    })
   } else {
-    return renderComponentSubTree(instance, slotScopeId)
+    return renderComponentSubTree(instance, parentSuspense, slotScopeId)
   }
 }
 
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
+  parentSuspense: any,
   slotScopeId?: string
 ): SSRBuffer | Promise<SSRBuffer> {
   const comp = instance.type as Component
@@ -130,7 +137,13 @@ function renderComponentSubTree(
         }
       }
     }
-    renderVNode(push, (instance.subTree = root), instance, slotScopeId)
+    renderVNode(
+      push,
+      (instance.subTree = root),
+      instance,
+      parentSuspense,
+      slotScopeId
+    )
   } else {
     if (
       (!instance.render || instance.render === NOOP) &&
@@ -216,6 +229,7 @@ export function renderVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
+  parentSuspense: any,
   slotScopeId?: string
 ) {
   const { type, shapeFlag, children } = vnode
@@ -241,19 +255,57 @@ export function renderVNode(
         push,
         children as VNodeArrayChildren,
         parentComponent,
+        parentSuspense,
         slotScopeId
       )
       push(`<!--]-->`) // close
       break
     default:
       if (shapeFlag & ShapeFlags.ELEMENT) {
-        renderElementVNode(push, vnode, parentComponent, slotScopeId)
+        renderElementVNode(
+          push,
+          vnode,
+          parentComponent,
+          parentSuspense,
+          slotScopeId
+        )
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
-        push(renderComponentVNode(vnode, parentComponent, slotScopeId))
+        push(
+          renderComponentVNode(
+            vnode,
+            parentComponent,
+            parentSuspense,
+            slotScopeId
+          )
+        )
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
-        renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
+        renderTeleportVNode(
+          push,
+          vnode,
+          parentComponent,
+          parentSuspense,
+          slotScopeId
+        )
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
-        renderVNode(push, vnode.ssContent!, parentComponent, slotScopeId)
+        if (!vnode.suspense) {
+          vnode.suspense = createSSRSuspenseBoundary() as any
+        }
+        if (parentSuspense) {
+          parentSuspense.deps++
+        }
+        renderVNode(
+          push,
+          vnode.ssContent!,
+          parentComponent,
+          vnode.suspense,
+          slotScopeId
+        )
+        if (vnode.suspense && vnode.suspense.deps! <= 0) {
+          console.log('resolve')
+        }
+        if (parentSuspense) {
+          parentSuspense.deps--
+        }
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',
@@ -268,10 +320,17 @@ export function renderVNodeChildren(
   push: PushFn,
   children: VNodeArrayChildren,
   parentComponent: ComponentInternalInstance,
+  parentSuspense: any,
   slotScopeId: string | undefined
 ) {
   for (let i = 0; i < children.length; i++) {
-    renderVNode(push, normalizeVNode(children[i]), parentComponent, slotScopeId)
+    renderVNode(
+      push,
+      normalizeVNode(children[i]),
+      parentComponent,
+      parentSuspense,
+      slotScopeId
+    )
   }
 }
 
@@ -279,6 +338,7 @@ function renderElementVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
+  parentSuspense: any,
   slotScopeId: string | undefined
 ) {
   const tag = vnode.type as string
@@ -333,6 +393,7 @@ function renderElementVNode(
           push,
           children as VNodeArrayChildren,
           parentComponent,
+          parentSuspense,
           slotScopeId
         )
       }
@@ -364,6 +425,7 @@ function renderTeleportVNode(
   push: PushFn,
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
+  parentSuspense: any,
   slotScopeId: string | undefined
 ) {
   const target = vnode.props && vnode.props.to
@@ -387,6 +449,7 @@ function renderTeleportVNode(
         push,
         vnode.children as VNodeArrayChildren,
         parentComponent,
+        parentSuspense,
         slotScopeId
       )
     },

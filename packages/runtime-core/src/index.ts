@@ -95,7 +95,11 @@ export { createVNode, cloneVNode, mergeProps, isVNode } from './vnode'
 export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 // Built-in components
 export { Teleport, type TeleportProps } from './components/Teleport'
-export { Suspense, type SuspenseProps } from './components/Suspense'
+export {
+  Suspense,
+  createSSRSuspenseBoundary,
+  type SuspenseProps
+} from './components/Suspense'
 export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {
   BaseTransition,
