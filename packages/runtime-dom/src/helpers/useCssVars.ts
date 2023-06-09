@@ -32,7 +32,16 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   })
 
   const setVars = () => {
-    const vars = getter(instance.proxy)
+    // #8520
+    if (!instance.asyncResolved && instance.asyncDep && __FEATURE_SUSPENSE__) {
+      instance.asyncDep.then(() => {
+        watchPostEffect(setVars)
+      })
+    } else {
+      const vars = getter(instance.proxy)
+      setVarsOnVNode(instance.subTree, vars)
+      updateTeleports(vars)
+    }
     // #8520
     if (!instance.asyncResolved && instance.asyncDep && __FEATURE_SUSPENSE__) {
       instance.asyncDep.then(() => {
