@@ -13,7 +13,8 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow
+  isShallow,
+  DeepReadonly
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -438,6 +439,35 @@ export function toRef(
   } else {
     return ref(source)
   }
+}
+
+/**
+ * Converts the given value to a shallow reference.
+ * @param value The value to be converted. It can be a function that returns a value, a Ref object, or a regular value.
+ * @returns The converted reference object. If the value is a function, it returns a Readonly<Ref<T>>.
+ * If the value is a Ref object, it returns a Ref<T>. Otherwise, it returns a ShallowRef<T>.
+ */
+export function toShallowRef<T>(value: () => T): DeepReadonly<Ref<T>>
+
+/**
+ * Converts the given value to a shallow reference.
+ * @param value The value to be converted. It can be a Ref object or a regular value.
+ * @returns The converted reference object. If the value is a Ref object, it returns a Ref<T>.
+ * Otherwise, it returns a ShallowRef<T>.
+ */
+export function toShallowRef<T>(value: Ref<T>): Ref<T>
+
+/**
+ * Converts the given value to a shallow reference.
+ * @param value The value to be converted. It can be any type of value.
+ * @returns The converted reference object. If the value is a Ref object or a function that returns a value,
+ * it returns the corresponding reference object (Ref<T> or Readonly<Ref<T>>). Otherwise, it returns a ShallowRef<T>.
+ */
+export function toShallowRef<T>(value: T): ShallowRef<T>
+export function toShallowRef<T>(value: unknown) {
+  return isRef(value) || typeof value === 'function'
+    ? toRef(value)
+    : shallowRef(value)
 }
 
 function propertyToRef(
