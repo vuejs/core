@@ -42,15 +42,6 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
       setVarsOnVNode(instance.subTree, vars)
       updateTeleports(vars)
     }
-    // #8520
-    if (!instance.asyncResolved && instance.asyncDep && __FEATURE_SUSPENSE__) {
-      instance.asyncDep.then(() => {
-        watchPostEffect(setVars)
-      })
-    } else {
-      setVarsOnVNode(instance.subTree, vars)
-    }
-    updateTeleports(vars)
   }
 
   watchPostEffect(setVars)
