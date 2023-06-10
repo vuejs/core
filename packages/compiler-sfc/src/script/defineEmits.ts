@@ -21,7 +21,7 @@ export function processDefineEmits(
   node: Node,
   declId?: LVal,
 ): boolean {
-  if (!isCallOf(node, DEFINE_EMITS)) {
+  if (!isCallOf(node, ctx.macrosAliases[DEFINE_EMITS])) {
     return false
   }
   if (ctx.hasDefineEmitCall) {

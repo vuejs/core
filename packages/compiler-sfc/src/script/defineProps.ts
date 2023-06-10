@@ -49,7 +49,7 @@ export function processDefineProps(
   node: Node,
   declId?: LVal,
 ) {
-  if (!isCallOf(node, DEFINE_PROPS)) {
+  if (!isCallOf(node, ctx.macrosAliases[DEFINE_PROPS])) {
     return processWithDefaults(ctx, node, declId)
   }
 

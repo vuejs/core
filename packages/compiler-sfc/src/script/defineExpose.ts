@@ -8,12 +8,12 @@ export function processDefineExpose(
   ctx: ScriptCompileContext,
   node: Node,
 ): boolean {
-  if (isCallOf(node, DEFINE_EXPOSE)) {
-    if (ctx.hasDefineExposeCall) {
-      ctx.error(`duplicate ${DEFINE_EXPOSE}() call`, node)
-    }
-    ctx.hasDefineExposeCall = true
-    return true
+  if (!isCallOf(node, ctx.macrosAliases[DEFINE_EXPOSE])) {
+    return false
   }
-  return false
+  if (ctx.hasDefineExposeCall) {
+    ctx.error(`duplicate ${DEFINE_EXPOSE}() call`, node)
+  }
+  ctx.hasDefineExposeCall = true
+  return true
 }
