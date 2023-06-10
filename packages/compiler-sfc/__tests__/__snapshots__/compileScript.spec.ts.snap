@@ -616,12 +616,11 @@ exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable 
 "export default {
   props: ['item'],
   emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props,
+          emit = __emit;
     
 return { props, emit }
 }
@@ -633,12 +632,12 @@ exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable 
 "export default {
   props: ['item'],
   emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-const props = __props;
-
-    const a = 1;
+    const props = __props,
+      a = 1,
+      emit = __emit;
     
 return { props, a, emit }
 }
@@ -650,12 +649,12 @@ exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable 
 "export default {
   props: ['item'],
   emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-const props = __props;
-
-    const a = 1;
+    const a = 1,
+          props = __props,
+          emit = __emit;
     
 return { a, props, emit }
 }
@@ -667,12 +666,12 @@ exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable 
 "export default {
   props: ['item'],
   emits: ['foo'],
-  setup(__props, { expose: __expose, emit: emits }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-const props = __props;
-
-    const a = 0,
+    const props = __props,
+          emits = __emit,
+          a = 0,
           b = 0;
     
 return { props, emits, a, b }

@@ -237,9 +237,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
-
-      
+      const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
       
 return () => {}
 }

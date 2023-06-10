@@ -10,9 +10,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-
+const props = __props
 
 return { props, bar }
 }
@@ -28,9 +26,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-
+const props = __props
 
 return { props }
 }
@@ -48,9 +44,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const { foo } = __props;
-
-      
+      const { foo } = __props
       
 return {  }
 }
@@ -167,9 +161,7 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get propsModel() { return propsModel } }
 }
@@ -203,9 +195,7 @@ export default {
   props: {},
   setup(__props, { expose: __expose }) {
   __expose();
-
-const props = __props;
-
+const props = __props
     
 return { props, get x() { return x } }
 }
@@ -304,9 +294,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -328,9 +316,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -351,9 +337,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props, get defaults() { return defaults } }
 }
@@ -375,9 +359,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-      
+      const props = __props;
     
 return { props }
 }
@@ -401,9 +383,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }
@@ -424,9 +404,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }
@@ -446,9 +424,7 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props: any, { expose: __expose }) {
   __expose();
 
-const props = __props;
-
-    
+    const props = __props
     
 return { props }
 }

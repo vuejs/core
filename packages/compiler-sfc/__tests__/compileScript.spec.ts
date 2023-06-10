@@ -77,7 +77,9 @@ describe('SFC compile <script setup>', () => {
     </script>
   `)
     assertCode(content)
-    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`const props = __props,`)
+    expect(content).toMatch(`a = 1,`)
+    expect(content).toMatch(`emit = __emit;`)
     expect(content).toMatch(`props: ['item'],`)
     expect(content).toMatch(`emits: ['a'],`)
   })
@@ -92,7 +94,9 @@ describe('SFC compile <script setup>', () => {
     </script>
   `)
     assertCode(content)
-    expect(content).toMatch(`const a = 1;`) // test correct removal
+    expect(content).toMatch(`const a = 1,`)
+    expect(content).toMatch(`props = __props,`)
+    expect(content).toMatch(`emit = __emit;`)
     expect(content).toMatch(`props: ['item'],`)
     expect(content).toMatch(`emits: ['a'],`)
   })
@@ -110,7 +114,8 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
     expect(content).toMatch(`props: ['item'],`)
     expect(content).toMatch(`emits: ['foo'],`)
-    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`const props = __props,`)
+    expect(content).toMatch(`a = 0,`)
     expect(content).toMatch(`b = 0;`)
   })
 
