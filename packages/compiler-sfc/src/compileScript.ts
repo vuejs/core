@@ -274,7 +274,7 @@ export function compileScript(
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
