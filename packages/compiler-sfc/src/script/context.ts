@@ -48,10 +48,9 @@ export class ScriptCompileContext {
   propsRuntimeDefaults: Node | undefined
 
   // defineEmits
-  emitsCall: CallExpression | undefined
-  emitDecl: Node | undefined
   emitsRuntimeDecl: Node | undefined
   emitsTypeDecl: Node | undefined
+  emitDecl: Node | undefined
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}

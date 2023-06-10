@@ -29,7 +29,6 @@ export function processDefineEmits(
     ctx.emitsTypeDecl = node.typeParameters.params[0]
   }
 
-  ctx.emitsCall = node
   ctx.emitDecl = declId
 
   return true
