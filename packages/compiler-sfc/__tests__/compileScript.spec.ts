@@ -521,7 +521,7 @@ describe('SFC compile <script setup>', () => {
         </script>
         <template>
           <div ref="foo"></div>
-          <div ref="" /></div>
+          <div ref=""></div>
           <Baz ref="bar" />
         </template>
         `)
