@@ -1,4 +1,4 @@
-import { getGlobalThis } from '@vue/shared'
+import { getGlobalThis, isBoolean } from '@vue/shared'
 
 /**
  * This is only called in esm-bundler builds.
@@ -10,12 +10,12 @@ import { getGlobalThis } from '@vue/shared'
 export function initFeatureFlags() {
   const needWarn = []
 
-  if (typeof __FEATURE_OPTIONS_API__ !== 'boolean') {
+  if (!isBoolean(__FEATURE_OPTIONS_API__)) {
     __DEV__ && needWarn.push(`__VUE_OPTIONS_API__`)
     getGlobalThis().__VUE_OPTIONS_API__ = true
   }
 
-  if (typeof __FEATURE_PROD_DEVTOOLS__ !== 'boolean') {
+  if (!isBoolean(__FEATURE_PROD_DEVTOOLS__)) {
     __DEV__ && needWarn.push(`__VUE_PROD_DEVTOOLS__`)
     getGlobalThis().__VUE_PROD_DEVTOOLS__ = false
   }

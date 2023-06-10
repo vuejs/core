@@ -1,4 +1,4 @@
-import { isArray, isString, isObject, hyphenate } from './general'
+import { isArray, isString, isObject, hyphenate, isNumber } from './general'
 
 export type NormalizedStyle = Record<string, string | number>
 
@@ -52,7 +52,7 @@ export function stringifyStyle(
   for (const key in styles) {
     const value = styles[key]
     const normalizedKey = key.startsWith(`--`) ? key : hyphenate(key)
-    if (isString(value) || typeof value === 'number') {
+    if (isString(value) || isNumber(value)) {
       // only render valid values
       ret += `${normalizedKey}:${value};`
     }

@@ -5,7 +5,7 @@ import {
   ConcreteComponent,
   formatComponentName
 } from './component'
-import { isString, isFunction } from '@vue/shared'
+import { isString, isNumber, isFunction, isBoolean } from '@vue/shared'
 import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 
@@ -146,11 +146,7 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
   if (isString(value)) {
     value = JSON.stringify(value)
     return raw ? value : [`${key}=${value}`]
-  } else if (
-    typeof value === 'number' ||
-    typeof value === 'boolean' ||
-    value == null
-  ) {
+  } else if (isNumber(value) || isBoolean(value) || value == null) {
     return raw ? value : [`${key}=${value}`]
   } else if (isRef(value)) {
     value = formatProp(key, toRaw(value.value), true)
@@ -170,7 +166,7 @@ export function assertNumber(val: unknown, type: string) {
   if (!__DEV__) return
   if (val === undefined) {
     return
-  } else if (typeof val !== 'number') {
+  } else if (!isNumber(val)) {
     warn(`${type} is not a valid number - ` + `got ${JSON.stringify(val)}.`)
   } else if (isNaN(val)) {
     warn(`${type} is NaN - ` + 'the duration expression might be incorrect.')
