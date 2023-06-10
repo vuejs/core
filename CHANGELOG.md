@@ -1,3 +1,45 @@
+## [3.3.4](https://github.com/vuejs/core/compare/v3.3.3...v3.3.4) (2023-05-18)
+
+
+### Bug Fixes
+
+* **build:** ensure correct typing for node esm ([d621d4c](https://github.com/vuejs/core/commit/d621d4c646b2d7b190fbd44ad1fd04512b3de300))
+* **build:** fix __DEV__ flag replacement edge case ([8b7c04b](https://github.com/vuejs/core/commit/8b7c04b18f73aad9a08dd57eba90101b5b2aef28)), closes [#8353](https://github.com/vuejs/core/issues/8353)
+* **compiler-sfc:** handle imported types from default exports ([5aec717](https://github.com/vuejs/core/commit/5aec717a2402652306085f58432ba3ab91848a74)), closes [#8355](https://github.com/vuejs/core/issues/8355)
+
+
+
+## [3.3.3](https://github.com/vuejs/core/compare/v3.3.2...v3.3.3) (2023-05-18)
+
+
+### Bug Fixes
+
+* avoid regex s flag for old browsers ([91f1c62](https://github.com/vuejs/core/commit/91f1c62e6384a8b09f90e7e43b8d347901e529a0)), closes [#8316](https://github.com/vuejs/core/issues/8316)
+* **build:** fix dev flag replacement in esm-builder builds ([#8314](https://github.com/vuejs/core/issues/8314)) ([003836f](https://github.com/vuejs/core/commit/003836f90e1f00ebd04b77ec07ccfa4e649a2ff4)), closes [#8312](https://github.com/vuejs/core/issues/8312)
+* **compiler-sfc:** don't hoist regexp literial ([#8300](https://github.com/vuejs/core/issues/8300)) ([8ec73a3](https://github.com/vuejs/core/commit/8ec73a3aea7a52e9479f107ae5737761166ddae6))
+* **compiler-sfc:** fix props destructing default value type checking with unresolved type ([#8340](https://github.com/vuejs/core/issues/8340)) ([f69dbab](https://github.com/vuejs/core/commit/f69dbabf8794426c3e9ed33ae77dd8ce655eafd2)), closes [#8326](https://github.com/vuejs/core/issues/8326)
+* **compiler-sfc:** fix type import from path aliased vue file ([fab9c72](https://github.com/vuejs/core/commit/fab9c727805c6186c490f99023e8cf5401b0b5a9)), closes [#8348](https://github.com/vuejs/core/issues/8348)
+* **compiler-sfc:** handle ts files with relative imports with .js extension ([b36addd](https://github.com/vuejs/core/commit/b36addd3bde07467e9ff5641bd1c2bdc3085944c)), closes [#8339](https://github.com/vuejs/core/issues/8339)
+* **compiler-sfc:** parses correctly when inline mode is off ([#8337](https://github.com/vuejs/core/issues/8337)) ([ecbd42a](https://github.com/vuejs/core/commit/ecbd42a1444e3c599e464dec002e43d548d99669)), closes [#6088](https://github.com/vuejs/core/issues/6088)
+* **compiler-sfc:** support defineEmits type reference with unions ([#8299](https://github.com/vuejs/core/issues/8299)) ([b133e0f](https://github.com/vuejs/core/commit/b133e0fd97b0b4fabbb43151c19031b8fb47c05b)), closes [#7943](https://github.com/vuejs/core/issues/7943)
+* **types:** support generic usage with withDefaults + defineProps ([#8335](https://github.com/vuejs/core/issues/8335)) ([216f269](https://github.com/vuejs/core/commit/216f26995b63c2df26ca0f39f390fe8d59cdabfa)), closes [#8310](https://github.com/vuejs/core/issues/8310) [#8331](https://github.com/vuejs/core/issues/8331) [#8325](https://github.com/vuejs/core/issues/8325)
+
+
+
+## [3.3.2](https://github.com/vuejs/core/compare/v3.3.1...v3.3.2) (2023-05-12)
+
+
+### Bug Fixes
+
+* **compiler-core:** treat floating point numbers as constants ([8dc8cf8](https://github.com/vuejs/core/commit/8dc8cf852bf8057aa5c4b5670f09e8c28a168b73)), closes [#8295](https://github.com/vuejs/core/issues/8295)
+* **compiler-dom:** do not throw in production on side effect tags ([c454b9d](https://github.com/vuejs/core/commit/c454b9d7f431d57abedb7184d1e4059914c4463f)), closes [#8287](https://github.com/vuejs/core/issues/8287) [#8292](https://github.com/vuejs/core/issues/8292)
+* **compiler-sfc:** fix regression on props destructure when transform is not enabled ([f25bd37](https://github.com/vuejs/core/commit/f25bd37c6707fde19d164d90a38de41168941f4b)), closes [#8289](https://github.com/vuejs/core/issues/8289)
+* **compiler-sfc:** handle prop keys that need escaping ([#7803](https://github.com/vuejs/core/issues/7803)) ([690ef29](https://github.com/vuejs/core/commit/690ef296357c7fc09f66ba9408df548e117f686f)), closes [#8291](https://github.com/vuejs/core/issues/8291)
+* **compiler-sfc:** properly parse d.ts files when resolving types ([aa1e77d](https://github.com/vuejs/core/commit/aa1e77d532b951ea5d3a5e26214a8b0c9c02fb6f)), closes [#8285](https://github.com/vuejs/core/issues/8285)
+* **compiler-sfc:** raise specific warning for failed extends and allow ignoring extends ([8235072](https://github.com/vuejs/core/commit/82350721a408e1f552c613c05971439d6c218d87)), closes [#8286](https://github.com/vuejs/core/issues/8286)
+
+
+
 ## [3.3.1](https://github.com/vuejs/core/compare/v3.3.0...v3.3.1) (2023-05-11)
 
 

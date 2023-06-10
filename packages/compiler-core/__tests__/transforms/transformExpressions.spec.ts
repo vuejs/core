@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   baseParse as parse,
   transform,
@@ -428,6 +427,16 @@ describe('compiler: expression transform', () => {
         `] } = `,
         { content: `_ctx.obj` }
       ]
+    })
+  })
+
+  // #8295
+  test('should treat floating point number literals as constant', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [1, 2.1] }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY
     })
   })
 

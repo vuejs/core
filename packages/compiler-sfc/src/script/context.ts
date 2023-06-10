@@ -70,6 +70,11 @@ export class ScriptCompileContext {
    */
   deps?: Set<string>
 
+  /**
+   * cache for resolved fs
+   */
+  fs?: NonNullable<SFCScriptCompileOptions['fs']>
+
   constructor(
     public descriptor: SFCDescriptor,
     public options: Partial<SFCScriptCompileOptions>
@@ -145,7 +150,8 @@ export class ScriptCompileContext {
 
 export function resolveParserPlugins(
   lang: string,
-  userPlugins?: ParserPlugin[]
+  userPlugins?: ParserPlugin[],
+  dts = false
 ) {
   const plugins: ParserPlugin[] = []
   if (lang === 'jsx' || lang === 'tsx') {
@@ -156,7 +162,7 @@ export function resolveParserPlugins(
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
   if (lang === 'ts' || lang === 'tsx') {
-    plugins.push('typescript')
+    plugins.push(['typescript', { dts }])
     if (!plugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
