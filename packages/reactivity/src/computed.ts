@@ -11,19 +11,23 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   [ComputedRefSymbol]: true
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
+export interface WritableComputedRef<T, S = T> extends Ref<T> {
+  get value(): T
+  set value(newValue: S | T)
   readonly effect: ReactiveEffect<T>
 }
+
+//The return type of a 'get' accessor must be assignable to its 'set' accessor type
 
 export type ComputedGetter<T> = (...args: any[]) => T
 export type ComputedSetter<T> = (v: T) => void
 
-export interface WritableComputedOptions<T> {
+export interface WritableComputedOptions<T, S = T> {
   get: ComputedGetter<T>
-  set: ComputedSetter<T>
+  set: ComputedSetter<S>
 }
 
-export class ComputedRefImpl<T> {
+export class ComputedRefImpl<T, S = T> {
   public dep?: Dep = undefined
 
   private _value!: T
@@ -37,7 +41,7 @@ export class ComputedRefImpl<T> {
 
   constructor(
     getter: ComputedGetter<T>,
-    private readonly _setter: ComputedSetter<T>,
+    private readonly _setter: ComputedSetter<S>,
     isReadonly: boolean,
     isSSR: boolean
   ) {
@@ -60,10 +64,10 @@ export class ComputedRefImpl<T> {
       self._dirty = false
       self._value = self.effect.run()!
     }
-    return self._value
+    return self._value as any
   }
 
-  set value(newValue: T) {
+  set value(newValue: S) {
     this._setter(newValue)
   }
 }
@@ -109,13 +113,17 @@ export function computed<T>(
   options: WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions
 ): WritableComputedRef<T>
-export function computed<T>(
-  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
+export function computed<T, S>(
+  options: WritableComputedOptions<T, S>,
+  debugOptions?: DebuggerOptions
+): WritableComputedRef<T, S>
+export function computed<T, S>(
+  getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T, S>,
   debugOptions?: DebuggerOptions,
   isSSR = false
 ) {
   let getter: ComputedGetter<T>
-  let setter: ComputedSetter<T>
+  let setter: ComputedSetter<S>
 
   const onlyGetter = isFunction(getterOrOptions)
   if (onlyGetter) {
