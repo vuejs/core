@@ -21,6 +21,7 @@ export default defineConfig({
     alias: entries
   },
   test: {
+    include: ['packages/*/__test{,s}__/**/*.{spec,test}.ts?(x)'],
     globals: true,
     // disable threads on GH actions to speed it up
     threads: !process.env.GITHUB_ACTIONS,
