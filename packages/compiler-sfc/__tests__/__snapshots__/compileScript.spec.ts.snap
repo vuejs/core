@@ -747,14 +747,14 @@ return { get vMyDir() { return vMyDir } }
 
 exports[`SFC compile <script setup> > dev mode import usage check > dynamic arguments 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, Obj, AnotherObj, UnusedObj } from './x'
+import { FooBar, foo, bar, unused } from './x'
         
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
         
-return { get FooBar() { return FooBar }, get Obj() { return Obj }, get AnotherObj() { return AnotherObj } }
+return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar } }
 }
 
 })"
