@@ -62,6 +62,24 @@ return { fn }
 })"
 `;
 
+exports[`SFC compile <script setup> > <script> and <script setup> co-usage > keep original semi style 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['change'],
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+        console.log('test')
+        const props = __props;
+        const emit = __emit;
+        (function () {})()
+        
+return { props, emit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > script first 1`] = `
 "import { x } from './x'
       

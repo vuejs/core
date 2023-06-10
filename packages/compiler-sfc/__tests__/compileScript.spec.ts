@@ -161,6 +161,24 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    // #7805
+    test('keep original semi style', () => {
+      const { content } = compile(`
+        <script setup>
+        console.log('test')
+        const props = defineProps(['item']);
+        const emit = defineEmits(['change']);
+        (function () {})()
+        </script>
+      `)
+      assertCode(content)
+
+      expect(content).toMatch(`console.log('test')`)
+      expect(content).toMatch(`const props = __props;`)
+      expect(content).toMatch(`const emit = __emit;`)
+      expect(content).toMatch(`(function () {})()`)
+    })
+
     test('script setup first, named default export', () => {
       const { content } = compile(`
       <script setup>
