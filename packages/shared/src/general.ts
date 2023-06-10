@@ -149,7 +149,7 @@ export const looseToNumber = (val: any): any => {
 }
 
 /**
- * Only conerces number-like strings
+ * Only concerns number-like strings
  * "123-foo" will be returned as-is
  */
 export const toNumber = (val: any): any => {
