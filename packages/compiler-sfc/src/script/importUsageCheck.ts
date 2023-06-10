@@ -50,6 +50,12 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDirective(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
+              if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+                code += `,${processExp(
+                  (prop.arg as SimpleExpressionNode).content,
+                  prop.name
+                )}`
+              }
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
