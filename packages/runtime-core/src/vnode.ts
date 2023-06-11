@@ -11,7 +11,8 @@ import {
   ShapeFlags,
   SlotFlags,
   isOn,
-  isBoolean
+  isBoolean,
+  isNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -405,7 +406,7 @@ const normalizeRef = ({
   ref_key,
   ref_for
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
-  if (typeof ref === 'number') {
+  if (isNumber(ref)) {
     ref = '' + ref
   }
   return (
