@@ -12,12 +12,11 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
 }
 
 export interface WritableComputedRef<T, S = T> extends Ref<T> {
+  // @ts-ignore
   get value(): T
-  set value(newValue: S | T)
+  set value(newValue: S)
   readonly effect: ReactiveEffect<T>
 }
-
-//The return type of a 'get' accessor must be assignable to its 'set' accessor type
 
 export type ComputedGetter<T> = (...args: any[]) => T
 export type ComputedSetter<T> = (v: T) => void
