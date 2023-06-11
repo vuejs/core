@@ -96,7 +96,7 @@ function processWithDefaults(
   node: Node,
   declId?: LVal,
 ): boolean {
-  if (!isCallOf(node, WITH_DEFAULTS)) {
+  if (!isCallOf(node, ctx.macrosAliases[WITH_DEFAULTS])) {
     return false
   }
   if (!processDefineProps(ctx, node.arguments[0], declId)) {
