@@ -1,4 +1,4 @@
-import { createApp, createSSRApp, h, Suspense } from 'vue'
+import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { expect } from 'vitest'
 
@@ -164,15 +164,13 @@ describe('SSR Suspense', () => {
         return h(
           Suspense,
           {
-            id: 'ss1',
             onResolve
           },
           {
             default: h(
               Suspense,
               {
-                id: 'ss2',
-                onNestedResolve
+                onResolve: onNestedResolve
               },
               {
                 default: h(ResolvingAsync)
@@ -182,9 +180,7 @@ describe('SSR Suspense', () => {
         )
       }
     }
-    expect(await renderToString(createSSRApp(Comp))).toBe(
-      `<div><div>async</div><div>async</div></div>`
-    )
+    expect(await renderToString(createApp(Comp))).toBe(`<div>async</div>`)
     expect(onResolve).toHaveBeenCalledTimes(1)
     expect(onNestedResolve).toHaveBeenCalledTimes(1)
   })

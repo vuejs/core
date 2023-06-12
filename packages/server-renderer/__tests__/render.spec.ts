@@ -927,7 +927,8 @@ function testRender(type: string, render: typeof renderToString) {
               ssrRenderVNode(
                 _push,
                 createVNode(resolveDynamicComponent('B'), null, null),
-                _parent
+                _parent,
+                null
               )
             }
           })

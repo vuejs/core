@@ -838,6 +838,7 @@ export type ssrSuspenseBoundary = {
   deps: number
   resolve: (node: VNode) => void
   vnode: VNode
+  parentSuspense: null | ssrSuspenseBoundary
 } & SuspenseBoundary
 export function createSSRSuspenseBoundary(vnode: VNode) {
   return {
@@ -846,6 +847,7 @@ export function createSSRSuspenseBoundary(vnode: VNode) {
       // invoke @resolve event
       triggerEvent(vnode, 'onResolve')
     },
-    vnode: vnode
+    vnode: vnode,
+    parentSuspense: null
   }
 }

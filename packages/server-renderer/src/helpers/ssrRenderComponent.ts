@@ -12,6 +12,7 @@ export function ssrRenderComponent(
   return renderComponentVNode(
     createVNode(comp, props, children),
     parentComponent,
+    null,
     slotScopeId
   )
 }
