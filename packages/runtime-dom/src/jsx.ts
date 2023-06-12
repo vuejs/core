@@ -1323,7 +1323,7 @@ type EventHandlers<E> = {
 import { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
-  key?: string | number | symbol
+  key?: keyof any
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
