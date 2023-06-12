@@ -491,6 +491,10 @@ export function createComponentInstance(
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
+  const inheritAttrs =
+    type.inheritAttrs == null
+      ? appContext.config.globalInheritAttrs
+      : type.inheritAttrs
   const instance: ComponentInternalInstance = {
     uid: uid++,
     vnode,
@@ -528,7 +532,7 @@ export function createComponentInstance(
     propsDefaults: EMPTY_OBJ,
 
     // inheritAttrs
-    inheritAttrs: type.inheritAttrs,
+    inheritAttrs,
 
     // state
     ctx: EMPTY_OBJ,

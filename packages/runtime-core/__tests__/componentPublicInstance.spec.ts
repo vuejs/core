@@ -5,7 +5,8 @@ import {
   nodeOps,
   createApp,
   shallowReadonly,
-  defineComponent
+  defineComponent,
+  TestElement
 } from '@vue/runtime-test'
 import { ComponentInternalInstance, ComponentOptions } from '../src/component'
 
@@ -125,6 +126,102 @@ describe('component: proxy', () => {
     const obj = (instanceProxy.$store = {})
     expect(instanceProxy.$store).toBe(obj)
     expect(instance!.ctx.$store).toBe(obj)
+  })
+
+  test('globalInheritAttrs: true', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        return () => h('div')
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Comp, { id: 'comp' }))
+    app.config.globalInheritAttrs = true
+    app.mount(root)
+    expect(instance!.inheritAttrs).toBe(true)
+    expect((root.children[0] as TestElement).props.id).toBe('comp')
+  })
+
+  test('globalInheritAttrs: false', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        return () => h('div')
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Comp, { id: 'comp' }))
+    app.config.globalInheritAttrs = false
+    app.mount(root)
+    expect(instance!.inheritAttrs).toBe(false)
+    expect((root.children[0] as TestElement).props.id).not.toBe('comp')
+  })
+
+  test('globalInheritAttrs: false && inheritAttrs: true ', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      inheritAttrs: true,
+      setup() {
+        return () => h('div')
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Comp, { id: 'comp' }))
+    app.config.globalInheritAttrs = false
+    app.mount(root)
+    expect(instance!.inheritAttrs).toBe(true)
+    expect((root.children[0] as TestElement).props.id).toBe('comp')
+  })
+
+  test('globalInheritAttrs: true && inheritAttrs: false', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      inheritAttrs: false,
+      setup() {
+        return () => h('div')
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Comp, { id: 'comp' }))
+    app.config.globalInheritAttrs = true
+    app.mount(root)
+    expect(instance!.inheritAttrs).toBe(false)
+    expect((root.children[0] as TestElement).props.id).not.toBe('comp')
+  })
+
+  test('globalInheritAttrs: undefined && inheritAttrs: undefined ', () => {
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        return () => h('div')
+      },
+      mounted() {
+        instance = getCurrentInstance()!
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const app = createApp(() => h(Comp, { id: 'comp' }))
+    app.mount(root)
+    expect(instance!.inheritAttrs).toBe(undefined)
+    expect((root.children[0] as TestElement).props.id).toBe('comp')
   })
 
   test('globalProperties', () => {
