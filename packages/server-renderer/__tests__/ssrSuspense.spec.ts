@@ -1,10 +1,17 @@
 import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
+import { expect } from 'vitest'
 
 describe('SSR Suspense', () => {
   const ResolvingAsync = {
     async setup() {
       return () => h('div', 'async')
+    }
+  }
+
+  const ResolvingSync = {
+    setup() {
+      return () => h('div', 'sync')
     }
   }
 
@@ -63,21 +70,13 @@ describe('SSR Suspense', () => {
     const Comp = {
       errorCaptured: vi.fn(() => false),
       render() {
-        return h(
-          Suspense,
-          {
-            onResolve: () => {
-              debugger
-            }
-          },
-          {
-            default: h('div', [h(ResolvingAsync), h(RejectingAsync)]),
-            fallback: h('div', 'fallback')
-          }
-        )
+        return h(Suspense, null, {
+          default: h('div', [h(ResolvingAsync), h(RejectingAsync)]),
+          fallback: h('div', 'fallback')
+        })
       }
     }
-    debugger
+
     expect(await renderToString(createApp(Comp))).toBe(
       `<div><div>async</div><!----></div>`
     )
@@ -85,6 +84,112 @@ describe('SSR Suspense', () => {
     expect(Comp.errorCaptured).toHaveBeenCalledTimes(1)
     expect('missing template or render function').toHaveBeenWarned()
   })
+
+  test('suspense onResolve & ssr render & async', async () => {
+    const onResolve = vi.fn()
+    const Comp = {
+      render() {
+        return h(
+          Suspense,
+          {
+            onResolve
+          },
+          {
+            default: h('div', [h(ResolvingAsync), h(ResolvingAsync)]),
+            fallback: h('div', 'fallback')
+          }
+        )
+      }
+    }
+    expect(await renderToString(createApp(Comp))).toBe(
+      `<div><div>async</div><div>async</div></div>`
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  test('suspense onResolve & ssr render & nested async deps', async () => {
+    const onResolve = vi.fn()
+    const child = {
+      async setup() {
+        return () => h(ResolvingAsync)
+      }
+    }
+    const Comp = {
+      render() {
+        return h(
+          Suspense,
+          {
+            onResolve
+          },
+          {
+            default: h('div', [h(child)]),
+            fallback: h('div', 'fallback')
+          }
+        )
+      }
+    }
+    expect(await renderToString(createApp(Comp))).toBe(
+      `<div><div>async</div></div>`
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  test('suspense onResolve & ssr render & sync', async () => {
+    const onResolve = vi.fn()
+    const Comp = {
+      render() {
+        return h(
+          Suspense,
+          {
+            onResolve
+          },
+          {
+            default: h('div', [h(ResolvingSync), h(ResolvingSync)]),
+            fallback: h('div', 'fallback')
+          }
+        )
+      }
+    }
+    expect(await renderToString(createApp(Comp))).toBe(
+      `<div><div>sync</div><div>sync</div></div>`
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
+  })
+
+  /*  test('nested suspense onResolve & ssr render', async () => {
+    const onResolve = vi.fn()
+    const onNestedResolve = vi.fn()
+    const Comp = {
+      render() {
+        return h(
+          Suspense,
+          {
+            id: 'ss1',
+            onResolve
+          },
+          {
+            default:
+              h(
+                Suspense,
+              {
+                id: 'ss2',
+                onNestedResolve
+              },
+              {
+                default: [h(ResolvingAsync), h(ResolvingAsync)],
+              }
+            ),
+            // h('div', [h(ResolvingSync), h(ResolvingSync)]),
+          }
+        )
+      }
+    }
+    expect(await renderToString(createApp(Comp))).toBe(
+      `<div><div>async</div><div>async</div></div>`
+    )
+    expect(onResolve).toHaveBeenCalledTimes(1)
+    expect(onNestedResolve).toHaveBeenCalledTimes(1)
+  })*/
 
   test('failing suspense in passing suspense', async () => {
     const Comp = {

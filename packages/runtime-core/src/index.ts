@@ -98,6 +98,7 @@ export { Teleport, type TeleportProps } from './components/Teleport'
 export {
   Suspense,
   createSSRSuspenseBoundary,
+  type ssrSuspenseBoundary,
   type SuspenseProps
 } from './components/Suspense'
 export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'

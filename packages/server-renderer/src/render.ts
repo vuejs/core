@@ -13,7 +13,8 @@ import {
   VNodeArrayChildren,
   VNodeProps,
   warn,
-  createSSRSuspenseBoundary
+  createSSRSuspenseBoundary,
+  ssrSuspenseBoundary
 } from 'vue'
 import {
   escapeHtml,
@@ -110,9 +111,20 @@ export function renderComponentVNode(
         // Note: error display is already done by the wrapped lifecycle hook function.
         .catch(() => {})
     }
+
     return p.then(() => {
-      renderComponentSubTree(instance, parentSuspense, slotScopeId)
-      parentSuspense && parentSuspense.deps--
+      const subtree = renderComponentSubTree(
+        instance,
+        parentSuspense,
+        slotScopeId
+      )
+      if (__FEATURE_SUSPENSE__ && parentSuspense) {
+        parentSuspense.deps--
+        if (parentSuspense.deps === 0) {
+          parentSuspense.resolve(parentSuspense.vnode)
+        }
+      }
+      return subtree
     })
   } else {
     return renderComponentSubTree(instance, parentSuspense, slotScopeId)
@@ -288,11 +300,15 @@ export function renderVNode(
         )
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         if (!vnode.suspense) {
-          vnode.suspense = createSSRSuspenseBoundary() as any
+          vnode.suspense = createSSRSuspenseBoundary(
+            vnode
+          ) as ssrSuspenseBoundary
         }
-        if (parentSuspense) {
-          parentSuspense.deps++
-        }
+
+        // nested ???
+        // if (parentSuspense) {
+        //   parentSuspense.deps++
+        // }
         renderVNode(
           push,
           vnode.ssContent!,
@@ -300,12 +316,16 @@ export function renderVNode(
           vnode.suspense,
           slotScopeId
         )
+
+        // sync
         if (vnode.suspense && vnode.suspense.deps! <= 0) {
-          console.log('resolve')
+          ;(vnode.suspense as ssrSuspenseBoundary).resolve(vnode)
         }
-        if (parentSuspense) {
-          parentSuspense.deps--
-        }
+
+        // nested ???
+        // if (parentSuspense) {
+        //   parentSuspense.deps--
+        // }
       } else {
         warn(
           '[@vue/server-renderer] Invalid VNode type:',

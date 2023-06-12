@@ -834,8 +834,18 @@ function isVNodeSuspensible(vnode: VNode) {
   return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }
 
-export function createSSRSuspenseBoundary() {
+export type ssrSuspenseBoundary = {
+  deps: number
+  resolve: (node: VNode) => void
+  vnode: VNode
+} & SuspenseBoundary
+export function createSSRSuspenseBoundary(vnode: VNode) {
   return {
-    deps: 0
+    deps: 0,
+    resolve(vnode: VNode) {
+      // invoke @resolve event
+      triggerEvent(vnode, 'onResolve')
+    },
+    vnode: vnode
   }
 }
