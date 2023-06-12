@@ -12,9 +12,6 @@ type SetTypes = Set<any> | WeakSet<any>
 
 const toShallow = <T extends unknown>(value: T): T => value
 
-const getProto = <T extends CollectionTypes>(v: T): any =>
-  Reflect.getPrototypeOf(v)
-
 function get(
   target: MapTypes,
   key: unknown,
@@ -32,11 +29,10 @@ function get(
     }
     track(rawTarget, TrackOpTypes.GET, rawKey)
   }
-  const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-  if (has.call(rawTarget, key)) {
+  if (rawTarget.has(key)) {
     return wrap(target.get(key))
-  } else if (has.call(rawTarget, rawKey)) {
+  } else if (rawTarget.has(rawKey)) {
     return wrap(target.get(rawKey))
   } else if (target !== rawTarget) {
     // #3602 readonly(reactive(Map))
@@ -69,9 +65,7 @@ function size(target: IterableCollections, isReadonly = false) {
 function add(this: SetTypes, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
-  const proto = getProto(target)
-  const hadKey = proto.has.call(target, value)
-  if (!hadKey) {
+  if (!target.has(value)) {
     target.add(value)
     trigger(target, TriggerOpTypes.ADD, value, value)
   }
@@ -81,17 +75,16 @@ function add(this: SetTypes, value: unknown) {
 function set(this: MapTypes, key: unknown, value: unknown) {
   value = toRaw(value)
   const target = toRaw(this)
-  const { has, get } = getProto(target)
 
-  let hadKey = has.call(target, key)
+  let hadKey = target.has(key)
   if (!hadKey) {
     key = toRaw(key)
-    hadKey = has.call(target, key)
+    hadKey = target.has(key)
   } else if (__DEV__) {
-    checkIdentityKeys(target, has, key)
+    checkIdentityKeys(target, key)
   }
 
-  const oldValue = get.call(target, key)
+  const oldValue = target.get(key)
   target.set(key, value)
   if (!hadKey) {
     trigger(target, TriggerOpTypes.ADD, key, value)
@@ -103,16 +96,15 @@ function set(this: MapTypes, key: unknown, value: unknown) {
 
 function deleteEntry(this: CollectionTypes, key: unknown) {
   const target = toRaw(this)
-  const { has, get } = getProto(target)
-  let hadKey = has.call(target, key)
+  let hadKey = target.has(key)
   if (!hadKey) {
     key = toRaw(key)
-    hadKey = has.call(target, key)
+    hadKey = target.has(key)
   } else if (__DEV__) {
-    checkIdentityKeys(target, has, key)
+    checkIdentityKeys(target, key)
   }
 
-  const oldValue = get ? get.call(target, key) : undefined
+  const oldValue = (target as any).get ? (target as any).get(key) : undefined
   // forward the operation before queueing reactions
   const result = target.delete(key)
   if (hadKey) {
@@ -380,13 +372,9 @@ export const shallowReadonlyCollectionHandlers: ProxyHandler<CollectionTypes> =
     get: /*#__PURE__*/ createInstrumentationGetter(true, true)
   }
 
-function checkIdentityKeys(
-  target: CollectionTypes,
-  has: (key: unknown) => boolean,
-  key: unknown
-) {
+function checkIdentityKeys(target: CollectionTypes, key: unknown) {
   const rawKey = toRaw(key)
-  if (rawKey !== key && has.call(target, rawKey)) {
+  if (rawKey !== key && target.has(rawKey)) {
     const type = toRawType(target)
     console.warn(
       `Reactive ${type} contains both the raw and reactive ` +
