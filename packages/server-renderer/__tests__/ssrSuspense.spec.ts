@@ -1,4 +1,4 @@
-import { createApp, h, Suspense } from 'vue'
+import { createApp, createSSRApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { expect } from 'vitest'
 
@@ -156,7 +156,7 @@ describe('SSR Suspense', () => {
     expect(onResolve).toHaveBeenCalledTimes(1)
   })
 
-  /*  test('nested suspense onResolve & ssr render', async () => {
+  test('nested suspense onResolve & ssr render', async () => {
     const onResolve = vi.fn()
     const onNestedResolve = vi.fn()
     const Comp = {
@@ -168,28 +168,26 @@ describe('SSR Suspense', () => {
             onResolve
           },
           {
-            default:
-              h(
-                Suspense,
+            default: h(
+              Suspense,
               {
                 id: 'ss2',
                 onNestedResolve
               },
               {
-                default: [h(ResolvingAsync), h(ResolvingAsync)],
+                default: h(ResolvingAsync)
               }
-            ),
-            // h('div', [h(ResolvingSync), h(ResolvingSync)]),
+            )
           }
         )
       }
     }
-    expect(await renderToString(createApp(Comp))).toBe(
+    expect(await renderToString(createSSRApp(Comp))).toBe(
       `<div><div>async</div><div>async</div></div>`
     )
     expect(onResolve).toHaveBeenCalledTimes(1)
     expect(onNestedResolve).toHaveBeenCalledTimes(1)
-  })*/
+  })
 
   test('failing suspense in passing suspense', async () => {
     const Comp = {
