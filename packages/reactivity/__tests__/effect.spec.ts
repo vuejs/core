@@ -6,11 +6,11 @@ import {
   toRaw,
   TrackOpTypes,
   TriggerOpTypes,
-  DebuggerEvent,
+  type DebuggerEvent,
   markRaw,
   shallowReactive,
   readonly,
-  ReactiveEffectRunner
+  type ReactiveEffectRunner
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 

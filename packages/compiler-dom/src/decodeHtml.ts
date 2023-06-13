@@ -1,4 +1,4 @@
-import { ParserOptions } from '@vue/compiler-core'
+import { type ParserOptions } from '@vue/compiler-core'
 import namedCharacterReferences from './namedChars.json'
 
 // lazy compute this to make this file tree-shakable for browser

@@ -4,10 +4,10 @@ import {
   useAttrs,
   useSlots,
   withDefaults,
-  Slots,
+  type Slots,
   defineSlots,
-  VNode,
-  Ref,
+  type VNode,
+  type Ref,
   defineModel
 } from 'vue'
 import { describe, expectType } from './utils'

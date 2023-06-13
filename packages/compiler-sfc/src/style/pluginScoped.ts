@@ -1,4 +1,4 @@
-import { PluginCreator, Rule, AtRule } from 'postcss'
+import { type PluginCreator, type Rule, type AtRule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 

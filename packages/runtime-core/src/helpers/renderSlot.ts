@@ -1,17 +1,17 @@
-import { Data } from '../component'
-import { Slots, RawSlots } from '../componentSlots'
+import { type Data } from '../component'
+import { type Slots, type RawSlots } from '../componentSlots'
 import {
-  ContextualRenderFn,
+  type ContextualRenderFn,
   currentRenderingInstance
 } from '../componentRenderContext'
 import {
   Comment,
   isVNode,
-  VNodeArrayChildren,
+  type VNodeArrayChildren,
   openBlock,
   createBlock,
   Fragment,
-  VNode
+  type VNode
 } from '../vnode'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { warn } from '../warning'

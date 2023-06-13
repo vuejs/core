@@ -1,7 +1,7 @@
 import {
-  VNode,
+  type VNode,
   normalizeVNode,
-  VNodeProps,
+  type VNodeProps,
   isSameVNodeType,
   openBlock,
   closeBlock,
@@ -11,14 +11,14 @@ import {
   isBlockTreeEnabled
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
-import { ComponentInternalInstance, handleSetupResult } from '../component'
-import { Slots } from '../componentSlots'
+import { type ComponentInternalInstance, handleSetupResult } from '../component'
+import { type Slots } from '../componentSlots'
 import {
-  RendererInternals,
+  type RendererInternals,
   MoveType,
-  SetupRenderEffectFn,
-  RendererNode,
-  RendererElement
+  type SetupRenderEffectFn,
+  type RendererNode,
+  type RendererElement
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'

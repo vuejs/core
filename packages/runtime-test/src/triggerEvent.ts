@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { TestElement } from './nodeOps'
+import { type TestElement } from './nodeOps'
 
 export function triggerEvent(
   el: TestElement,

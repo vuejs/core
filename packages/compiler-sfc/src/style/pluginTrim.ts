@@ -1,4 +1,4 @@
-import { PluginCreator } from 'postcss'
+import { type PluginCreator } from 'postcss'
 
 const trimPlugin: PluginCreator<{}> = () => {
   return {

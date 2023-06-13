@@ -2,10 +2,10 @@ import {
   h,
   render,
   nodeOps,
-  VNodeProps,
-  TestElement,
+  type VNodeProps,
+  type TestElement,
   TestNodeTypes,
-  VNode
+  type VNode
 } from '@vue/runtime-test'
 
 describe('renderer: vnode hooks', () => {

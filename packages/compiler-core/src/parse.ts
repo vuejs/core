@@ -1,4 +1,4 @@
-import { ErrorHandlingOptions, ParserOptions } from './options'
+import { type ErrorHandlingOptions, type ParserOptions } from './options'
 import { NO, isArray, makeMap, extend } from '@vue/shared'
 import {
   ErrorCodes,
@@ -15,25 +15,25 @@ import {
 } from './utils'
 import {
   Namespaces,
-  AttributeNode,
-  CommentNode,
-  DirectiveNode,
-  ElementNode,
+  type AttributeNode,
+  type CommentNode,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  ExpressionNode,
+  type ExpressionNode,
   NodeTypes,
-  Position,
-  RootNode,
-  SourceLocation,
-  TextNode,
-  TemplateChildNode,
-  InterpolationNode,
+  type Position,
+  type RootNode,
+  type SourceLocation,
+  type TextNode,
+  type TemplateChildNode,
+  type InterpolationNode,
   createRoot,
   ConstantTypes
 } from './ast'
 import {
   checkCompatEnabled,
-  CompilerCompatOptions,
+  type CompilerCompatOptions,
   CompilerDeprecationTypes,
   isCompatEnabled,
   warnDeprecation

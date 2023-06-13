@@ -1,10 +1,10 @@
 import {
-  ComponentOptions,
-  FunctionalComponent,
+  type ComponentOptions,
+  type FunctionalComponent,
   getCurrentInstance
 } from '../component'
 import { resolveInjections } from '../componentOptions'
-import { InternalSlots } from '../componentSlots'
+import { type InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 

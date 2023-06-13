@@ -1,9 +1,9 @@
 import {
   baseParse as parse,
   transform,
-  ElementNode,
+  type ElementNode,
   noopDirectiveTransform,
-  VNodeCall
+  type VNodeCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 

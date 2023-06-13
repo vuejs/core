@@ -2,34 +2,38 @@ import {
   isArray,
   isPromise,
   isFunction,
-  Prettify,
-  UnionToIntersection,
+  type Prettify,
+  type UnionToIntersection,
   extend
 } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
-  SetupContext,
+  type SetupContext,
   createSetupContext,
   unsetCurrentInstance
 } from './component'
-import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import {
-  ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
-  ComputedOptions,
-  MethodOptions
+  type EmitFn,
+  type EmitsOptions,
+  type ObjectEmitsOptions
+} from './componentEmits'
+import {
+  type ComponentOptionsMixin,
+  type ComponentOptionsWithoutProps,
+  type ComputedOptions,
+  type MethodOptions
 } from './componentOptions'
 import {
-  ComponentPropsOptions,
-  ComponentObjectPropsOptions,
-  ExtractPropTypes,
-  NormalizedProps,
-  PropOptions
+  type ComponentPropsOptions,
+  type ComponentObjectPropsOptions,
+  type ExtractPropTypes,
+  type NormalizedProps,
+  type PropOptions
 } from './componentProps'
 import { warn } from './warning'
-import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
-import { Ref, ref } from '@vue/reactivity'
+import { type SlotsType, type StrictUnwrapSlotsType } from './componentSlots'
+import { type Ref, ref } from '@vue/reactivity'
 import { watch } from './apiWatch'
 
 // dev only

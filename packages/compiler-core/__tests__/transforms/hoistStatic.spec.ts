@@ -3,11 +3,11 @@ import {
   transform,
   NodeTypes,
   generate,
-  CompilerOptions,
-  VNodeCall,
-  IfNode,
-  ElementNode,
-  ForNode,
+  type CompilerOptions,
+  type VNodeCall,
+  type IfNode,
+  type ElementNode,
+  type ForNode,
   ConstantTypes
 } from '../../src'
 import {

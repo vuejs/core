@@ -8,7 +8,7 @@ import {
   resolveComponent,
   resolveDirective,
   withDirectives,
-  Plugin,
+  type Plugin,
   ref,
   getCurrentInstance,
   defineComponent

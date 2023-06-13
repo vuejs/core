@@ -5,7 +5,7 @@ import {
   isRef,
   toRef,
   toRefs,
-  Ref,
+  type Ref,
   isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'

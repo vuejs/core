@@ -4,20 +4,20 @@ import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import {
-  CommentNode,
-  ConditionalExpression,
-  ElementNode,
+  type CommentNode,
+  type ConditionalExpression,
+  type ElementNode,
   ElementTypes,
-  IfBranchNode,
-  IfConditionalExpression,
-  IfNode,
+  type IfBranchNode,
+  type IfConditionalExpression,
+  type IfNode,
   NodeTypes,
-  SimpleExpressionNode,
-  TextNode,
-  VNodeCall
+  type SimpleExpressionNode,
+  type TextNode,
+  type VNodeCall
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { CompilerOptions, generate, TO_HANDLERS } from '../../src'
+import { type CompilerOptions, generate, TO_HANDLERS } from '../../src'
 import {
   CREATE_COMMENT,
   FRAGMENT,

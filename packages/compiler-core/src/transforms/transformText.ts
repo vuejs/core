@@ -1,9 +1,9 @@
-import { NodeTransform } from '../transform'
+import { type NodeTransform } from '../transform'
 import {
   NodeTypes,
-  CompoundExpressionNode,
+  type CompoundExpressionNode,
   createCallExpression,
-  CallExpression,
+  type CallExpression,
   ElementTypes,
   ConstantTypes,
   createCompoundExpression

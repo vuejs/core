@@ -1,6 +1,11 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import {
+  type Identifier,
+  type LVal,
+  type Node,
+  type RestElement
+} from '@babel/types'
 import { isCallOf } from './utils'
-import { ScriptCompileContext } from './context'
+import { type ScriptCompileContext } from './context'
 import { resolveTypeElements, resolveUnionType } from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'

@@ -1,4 +1,4 @@
-import { NodeTransform, NodeTypes, ElementTypes } from '@vue/compiler-core'
+import { type NodeTransform, NodeTypes, ElementTypes } from '@vue/compiler-core'
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const ignoreSideEffectTags: NodeTransform = (node, context) => {

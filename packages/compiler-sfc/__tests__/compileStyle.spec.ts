@@ -1,7 +1,7 @@
 import {
   compileStyle,
   compileStyleAsync,
-  SFCStyleCompileOptions
+  type SFCStyleCompileOptions
 } from '../src/compileStyle'
 import path from 'path'
 

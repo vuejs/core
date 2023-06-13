@@ -1,9 +1,9 @@
 import {
-  NodeTransform,
+  type NodeTransform,
   NodeTypes,
   ElementTypes,
-  ComponentNode,
-  IfBranchNode
+  type ComponentNode,
+  type IfBranchNode
 } from '@vue/compiler-core'
 import { TRANSITION } from '../runtimeHelpers'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'

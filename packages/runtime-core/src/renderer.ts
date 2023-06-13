@@ -4,20 +4,20 @@ import {
   Comment,
   cloneIfMounted,
   normalizeVNode,
-  VNode,
-  VNodeArrayChildren,
+  type VNode,
+  type VNodeArrayChildren,
   createVNode,
   isSameVNodeType,
   Static,
-  VNodeHook,
-  VNodeProps,
+  type VNodeHook,
+  type VNodeProps,
   invokeVNodeHook
 } from './vnode'
 import {
-  ComponentInternalInstance,
-  ComponentOptions,
+  type ComponentInternalInstance,
+  type ComponentOptions,
   createComponentInstance,
-  Data,
+  type Data,
   setupComponent
 } from './component'
 import {
@@ -43,23 +43,23 @@ import {
   flushPostFlushCbs,
   invalidateJob,
   flushPreFlushCbs,
-  SchedulerJob
+  type SchedulerJob
 } from './scheduler'
 import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
-import { createAppAPI, CreateAppFunction } from './apiCreateApp'
+import { createAppAPI, type CreateAppFunction } from './apiCreateApp'
 import { setRef } from './rendererTemplateRef'
 import {
-  SuspenseBoundary,
+  type SuspenseBoundary,
   queueEffectWithSuspense,
-  SuspenseImpl
+  type SuspenseImpl
 } from './components/Suspense'
-import { TeleportImpl, TeleportVNode } from './components/Teleport'
-import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
+import { type TeleportImpl, type TeleportVNode } from './components/Teleport'
+import { isKeepAlive, type KeepAliveContext } from './components/KeepAlive'
 import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
-import { createHydrationFunctions, RootHydrateFunction } from './hydration'
+import { createHydrationFunctions, type RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
 import {

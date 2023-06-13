@@ -22,20 +22,20 @@ import {
   def,
   extend,
   isOn,
-  IfAny
+  type IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import {
-  Data,
-  ComponentInternalInstance,
-  ComponentOptions,
-  ConcreteComponent,
+  type Data,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
   setCurrentInstance,
   unsetCurrentInstance
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
-import { AppContext } from './apiCreateApp'
+import { type AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'

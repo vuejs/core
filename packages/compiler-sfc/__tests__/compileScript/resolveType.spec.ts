@@ -1,5 +1,5 @@
-import { Identifier } from '@babel/types'
-import { SFCScriptCompileOptions, parse } from '../../src'
+import { type Identifier } from '@babel/types'
+import { type SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
 import {
   inferRuntimeType,

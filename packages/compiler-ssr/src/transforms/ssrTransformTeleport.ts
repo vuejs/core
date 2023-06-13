@@ -1,14 +1,14 @@
 import {
-  ComponentNode,
+  type ComponentNode,
   findProp,
   NodeTypes,
   createSimpleExpression,
   createFunctionExpression,
   createCallExpression,
-  ExpressionNode
+  type ExpressionNode
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'

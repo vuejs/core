@@ -1,7 +1,10 @@
 import { extend, ShapeFlags } from '@vue/shared'
-import { ComponentInternalInstance, ComponentOptions } from '../component'
+import {
+  type ComponentInternalInstance,
+  type ComponentOptions
+} from '../component'
 import { callWithErrorHandling, ErrorCodes } from '../errorHandling'
-import { VNode } from '../vnode'
+import { type VNode } from '../vnode'
 import { popWarningContext, pushWarningContext } from '../warning'
 import {
   DeprecationTypes,

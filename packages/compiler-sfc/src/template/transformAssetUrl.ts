@@ -2,12 +2,12 @@ import path from 'path'
 import {
   ConstantTypes,
   createSimpleExpression,
-  ExpressionNode,
-  NodeTransform,
+  type ExpressionNode,
+  type NodeTransform,
   NodeTypes,
-  SimpleExpressionNode,
-  SourceLocation,
-  TransformContext
+  type SimpleExpressionNode,
+  type SourceLocation,
+  type TransformContext
 } from '@vue/compiler-core'
 import {
   isRelativeUrl,

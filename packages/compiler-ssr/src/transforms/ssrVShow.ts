@@ -1,5 +1,5 @@
 import {
-  DirectiveTransform,
+  type DirectiveTransform,
   DOMErrorCodes,
   createObjectProperty,
   createSimpleExpression,

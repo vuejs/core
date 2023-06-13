@@ -5,7 +5,7 @@ import {
   defineComponent,
   vModelDynamic,
   withDirectives,
-  VNode,
+  type VNode,
   ref
 } from '@vue/runtime-dom'
 

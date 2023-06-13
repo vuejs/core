@@ -7,16 +7,16 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformSlotOutlet } from '../../src/transforms/transformSlotOutlet'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import {
-  ForNode,
+  type ForNode,
   NodeTypes,
-  SimpleExpressionNode,
-  ElementNode,
-  InterpolationNode,
-  ForCodegenNode,
+  type SimpleExpressionNode,
+  type ElementNode,
+  type InterpolationNode,
+  type ForCodegenNode,
   ConstantTypes
 } from '../../src/ast'
 import { ErrorCodes } from '../../src/errors'
-import { CompilerOptions, generate } from '../../src'
+import { type CompilerOptions, generate } from '../../src'
 import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'

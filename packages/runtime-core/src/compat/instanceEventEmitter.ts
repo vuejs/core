@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
+import { type ComponentInternalInstance } from '../component'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { assertCompatEnabled, DeprecationTypes } from './compatConfig'
 

@@ -1,7 +1,7 @@
-import { SourceLocation } from '../ast'
-import { CompilerError } from '../errors'
-import { ParserContext } from '../parse'
-import { TransformContext } from '../transform'
+import { type SourceLocation } from '../ast'
+import { type CompilerError } from '../errors'
+import { type ParserContext } from '../parse'
+import { type TransformContext } from '../transform'
 
 export type CompilerCompatConfig = Partial<
   Record<CompilerDeprecationTypes, boolean | 'suppress-warning'>

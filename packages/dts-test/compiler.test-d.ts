@@ -1,6 +1,6 @@
 import {
   createBlock,
-  VNode,
+  type VNode,
   Teleport,
   Text,
   Static,

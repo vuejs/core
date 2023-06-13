@@ -1,8 +1,8 @@
 import {
-  CompilerOptions,
+  type CompilerOptions,
   baseParse as parse,
   transform,
-  ElementNode,
+  type ElementNode,
   NodeTypes,
   ErrorCodes
 } from '../../src'

@@ -1,6 +1,6 @@
 import {
   createStructuralDirectiveTransform,
-  ForNode,
+  type ForNode,
   processFor,
   createCallExpression,
   createFunctionExpression,
@@ -8,7 +8,7 @@ import {
   NodeTypes
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { SSR_RENDER_LIST } from '../runtimeHelpers'

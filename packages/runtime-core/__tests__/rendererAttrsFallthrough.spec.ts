@@ -13,7 +13,7 @@ import {
   defineComponent,
   openBlock,
   createBlock,
-  FunctionalComponent,
+  type FunctionalComponent,
   createCommentVNode,
   Fragment,
   withModifiers

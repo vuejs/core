@@ -1,16 +1,16 @@
 import {
-  Component,
+  type Component,
   defineComponent,
-  PropType,
+  type PropType,
   ref,
-  Ref,
-  ShallowUnwrapRef,
-  FunctionalComponent,
-  ComponentPublicInstance,
+  type Ref,
+  type ShallowUnwrapRef,
+  type FunctionalComponent,
+  type ComponentPublicInstance,
   toRefs,
-  SetupContext
+  type SetupContext
 } from 'vue'
-import { describe, expectAssignable, expectType, IsAny } from './utils'
+import { describe, expectAssignable, expectType, type IsAny } from './utils'
 
 declare function extractComponentOptions<Props, RawBindings>(
   obj: Component<Props, RawBindings>

@@ -1,5 +1,9 @@
-import { SuspenseBoundary } from './components/Suspense'
-import { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
+import { type SuspenseBoundary } from './components/Suspense'
+import {
+  type VNode,
+  type VNodeNormalizedRef,
+  type VNodeNormalizedRefAtom
+} from './vnode'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -14,7 +18,7 @@ import { getExposeProxy } from './component'
 import { warn } from './warning'
 import { isRef } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
-import { SchedulerJob } from './scheduler'
+import { type SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 
 /**

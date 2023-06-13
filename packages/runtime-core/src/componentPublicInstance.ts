@@ -1,11 +1,15 @@
 import {
-  ComponentInternalInstance,
-  Data,
+  type ComponentInternalInstance,
+  type Data,
   getExposeProxy,
   isStatefulComponent
 } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
+import {
+  instanceWatch,
+  type WatchOptions,
+  type WatchStopHandle
+} from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -14,33 +18,33 @@ import {
   extend,
   isString,
   isFunction,
-  UnionToIntersection,
-  Prettify
+  type UnionToIntersection,
+  type Prettify
 } from '@vue/shared'
 import {
   toRaw,
   shallowReadonly,
   track,
   TrackOpTypes,
-  ShallowUnwrapRef,
-  UnwrapNestedRefs
+  type ShallowUnwrapRef,
+  type UnwrapNestedRefs
 } from '@vue/reactivity'
 import {
-  ExtractComputedReturns,
-  ComponentOptionsBase,
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsMixin,
-  OptionTypesType,
-  OptionTypesKeys,
+  type ExtractComputedReturns,
+  type ComponentOptionsBase,
+  type ComputedOptions,
+  type MethodOptions,
+  type ComponentOptionsMixin,
+  type OptionTypesType,
+  type OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride,
-  InjectToObject,
-  ComponentInjectOptions
+  type MergedComponentOptionsOverride,
+  type InjectToObject,
+  type ComponentInjectOptions
 } from './componentOptions'
-import { EmitsOptions, EmitFn } from './componentEmits'
-import { SlotsType, UnwrapSlotsType } from './componentSlots'
+import { type EmitsOptions, type EmitFn } from './componentEmits'
+import { type SlotsType, type UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'

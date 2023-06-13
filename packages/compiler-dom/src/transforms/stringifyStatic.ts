@@ -3,18 +3,18 @@
  */
 import {
   NodeTypes,
-  ElementNode,
-  TransformContext,
-  TemplateChildNode,
-  SimpleExpressionNode,
+  type ElementNode,
+  type TransformContext,
+  type TemplateChildNode,
+  type SimpleExpressionNode,
   createCallExpression,
-  HoistTransform,
+  type HoistTransform,
   CREATE_STATIC,
-  ExpressionNode,
+  type ExpressionNode,
   ElementTypes,
-  PlainElementNode,
-  JSChildNode,
-  TextCallNode,
+  type PlainElementNode,
+  type JSChildNode,
+  type TextCallNode,
   ConstantTypes
 } from '@vue/compiler-core'
 import {

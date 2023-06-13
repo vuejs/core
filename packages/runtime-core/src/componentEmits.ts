@@ -10,19 +10,19 @@ import {
   isObject,
   isString,
   isOn,
-  UnionToIntersection,
+  type UnionToIntersection,
   looseToNumber
 } from '@vue/shared'
 import {
-  ComponentInternalInstance,
-  ComponentOptions,
-  ConcreteComponent,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
   formatComponentName
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
 import { devtoolsComponentEmit } from './devtools'
-import { AppContext } from './apiCreateApp'
+import { type AppContext } from './apiCreateApp'
 import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
 import {
   compatModelEventPrefix,

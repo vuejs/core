@@ -1,11 +1,11 @@
 import {
   baseParse as parse,
   transform,
-  ElementNode,
-  DirectiveNode,
+  type ElementNode,
+  type DirectiveNode,
   NodeTypes,
-  CompilerOptions,
-  InterpolationNode,
+  type CompilerOptions,
+  type InterpolationNode,
   ConstantTypes,
   BindingTypes,
   baseCompile

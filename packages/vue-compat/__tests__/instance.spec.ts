@@ -1,13 +1,13 @@
-import { vi, Mock } from 'vitest'
+import { vi, type Mock } from 'vitest'
 import Vue from '@vue/compat'
-import { Slots } from '../../runtime-core/src/componentSlots'
+import { type Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
 import {
   DeprecationTypes,
   deprecationData,
   toggleDeprecationWarning
 } from '../../runtime-core/src/compat/compatConfig'
-import { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
+import { type LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)

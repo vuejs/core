@@ -1,20 +1,20 @@
 import {
-  Node,
-  Identifier,
-  BlockStatement,
-  CallExpression,
-  ObjectPattern,
-  ArrayPattern,
-  Program,
-  VariableDeclarator,
-  Expression,
-  VariableDeclaration,
-  ImportDeclaration,
-  ImportSpecifier,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier
+  type Node,
+  type Identifier,
+  type BlockStatement,
+  type CallExpression,
+  type ObjectPattern,
+  type ArrayPattern,
+  type Program,
+  type VariableDeclarator,
+  type Expression,
+  type VariableDeclaration,
+  type ImportDeclaration,
+  type ImportSpecifier,
+  type ImportDefaultSpecifier,
+  type ImportNamespaceSpecifier
 } from '@babel/types'
-import MagicString, { SourceMap } from 'magic-string'
+import MagicString, { type SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
 import {
   extractIdentifiers,
@@ -24,7 +24,7 @@ import {
   isStaticProperty,
   walkFunctionParams
 } from '@vue/compiler-core'
-import { parse, ParserPlugin } from '@babel/parser'
+import { parse, type ParserPlugin } from '@babel/parser'
 import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
 
 const CONVERT_SYMBOL = '$'

@@ -4,27 +4,34 @@ import {
   isFunctionType,
   walkIdentifiers
 } from '@vue/compiler-dom'
-import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { ParserPlugin } from '@babel/parser'
+import {
+  DEFAULT_FILENAME,
+  type SFCDescriptor,
+  type SFCScriptBlock
+} from './parse'
+import { type ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
-  Node,
-  Declaration,
-  ObjectPattern,
-  ArrayPattern,
-  Identifier,
-  ExportSpecifier,
-  Statement,
-  CallExpression
+  type Node,
+  type Declaration,
+  type ObjectPattern,
+  type ArrayPattern,
+  type Identifier,
+  type ExportSpecifier,
+  type Statement,
+  type CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { RawSourceMap } from 'source-map-js'
+import { type RawSourceMap } from 'source-map-js'
 import {
   processNormalScript,
   normalScriptDefaultVar
 } from './script/normalScript'
 import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
-import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+import {
+  compileTemplate,
+  type SFCTemplateCompileOptions
+} from './compileTemplate'
 import { warnOnce } from './warn'
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { transformDestructuredProps } from './script/definePropsDestructure'

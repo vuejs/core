@@ -8,7 +8,7 @@ import {
   nodeOps,
   toHandlers,
   nextTick,
-  ComponentPublicInstance
+  type ComponentPublicInstance
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 

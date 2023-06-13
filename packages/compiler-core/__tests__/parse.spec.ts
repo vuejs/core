@@ -1,17 +1,17 @@
-import { ParserOptions } from '../src/options'
+import { type ParserOptions } from '../src/options'
 import { baseParse, TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
 import {
-  CommentNode,
-  ElementNode,
+  type CommentNode,
+  type ElementNode,
   ElementTypes,
   Namespaces,
   NodeTypes,
-  Position,
-  TextNode,
-  InterpolationNode,
+  type Position,
+  type TextNode,
+  type InterpolationNode,
   ConstantTypes,
-  DirectiveNode
+  type DirectiveNode
 } from '../src/ast'
 
 describe('compiler: parse', () => {

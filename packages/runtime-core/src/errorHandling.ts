@@ -1,5 +1,5 @@
-import { VNode } from './vnode'
-import { ComponentInternalInstance } from './component'
+import { type VNode } from './vnode'
+import { type ComponentInternalInstance } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
 import { isPromise, isFunction } from '@vue/shared'
 import { LifecycleHooks } from './enums'

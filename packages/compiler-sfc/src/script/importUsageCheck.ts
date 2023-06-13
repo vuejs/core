@@ -1,8 +1,8 @@
 import { parseExpression } from '@babel/parser'
-import { SFCDescriptor } from '../parse'
+import { type SFCDescriptor } from '../parse'
 import {
   NodeTypes,
-  SimpleExpressionNode,
+  type SimpleExpressionNode,
   createRoot,
   parserOptions,
   transform,

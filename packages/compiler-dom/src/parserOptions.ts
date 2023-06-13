@@ -1,7 +1,7 @@
 import {
   TextModes,
-  ParserOptions,
-  ElementNode,
+  type ParserOptions,
+  type ElementNode,
   NodeTypes,
   isBuiltInType
 } from '@vue/compiler-core'

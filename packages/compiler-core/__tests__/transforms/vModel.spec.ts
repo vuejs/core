@@ -2,14 +2,14 @@ import {
   baseParse as parse,
   transform,
   generate,
-  ElementNode,
-  ObjectExpression,
-  CompilerOptions,
-  ForNode,
-  PlainElementNode,
-  ComponentNode,
+  type ElementNode,
+  type ObjectExpression,
+  type CompilerOptions,
+  type ForNode,
+  type PlainElementNode,
+  type ComponentNode,
   NodeTypes,
-  VNodeCall,
+  type VNodeCall,
   NORMALIZE_PROPS,
   BindingTypes
 } from '../../src'
@@ -19,7 +19,7 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformFor } from '../../src/transforms/vFor'
 import { trackSlotScopes } from '../../src/transforms/vSlot'
-import { CallExpression } from '@babel/types'
+import { type CallExpression } from '@babel/types'
 
 function parseWithVModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)

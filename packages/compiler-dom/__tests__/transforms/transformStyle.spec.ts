@@ -1,10 +1,10 @@
 import {
   baseParse as parse,
   transform,
-  CompilerOptions,
-  ElementNode,
+  type CompilerOptions,
+  type ElementNode,
   NodeTypes,
-  VNodeCall
+  type VNodeCall
 } from '@vue/compiler-core'
 import { transformBind } from '../../../compiler-core/src/transforms/vBind'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'

@@ -3,14 +3,14 @@ import {
   nodeOps,
   resolveComponent,
   resolveDirective,
-  Component,
-  Directive,
+  type Component,
+  type Directive,
   resolveDynamicComponent,
   h,
   serializeInner,
   createVNode,
   Comment,
-  VNode
+  type VNode
 } from '@vue/runtime-test'
 
 describe('resolveAssets', () => {

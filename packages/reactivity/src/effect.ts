@@ -1,15 +1,15 @@
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { type TrackOpTypes, TriggerOpTypes } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
-import { EffectScope, recordEffectScope } from './effectScope'
+import { type EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
-  Dep,
+  type Dep,
   finalizeDepMarkers,
   initDepMarkers,
   newTracked,
   wasTracked
 } from './dep'
-import { ComputedRefImpl } from './computed'
+import { type ComputedRefImpl } from './computed'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class

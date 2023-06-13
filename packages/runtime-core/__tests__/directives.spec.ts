@@ -4,13 +4,16 @@ import {
   ref,
   render,
   nodeOps,
-  DirectiveHook,
-  VNode,
-  DirectiveBinding,
+  type DirectiveHook,
+  type VNode,
+  type DirectiveBinding,
   nextTick,
   defineComponent
 } from '@vue/runtime-test'
-import { currentInstance, ComponentInternalInstance } from '../src/component'
+import {
+  currentInstance,
+  type ComponentInternalInstance
+} from '../src/component'
 
 describe('directives', () => {
   it('should work', async () => {

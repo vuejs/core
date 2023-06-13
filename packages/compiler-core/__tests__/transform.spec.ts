@@ -1,11 +1,11 @@
 import { baseParse } from '../src/parse'
-import { transform, NodeTransform } from '../src/transform'
+import { transform, type NodeTransform } from '../src/transform'
 import {
-  ElementNode,
+  type ElementNode,
   NodeTypes,
-  DirectiveNode,
-  ExpressionNode,
-  VNodeCall
+  type DirectiveNode,
+  type ExpressionNode,
+  type VNodeCall
 } from '../src/ast'
 import { ErrorCodes, createCompilerError } from '../src/errors'
 import {

@@ -1,14 +1,14 @@
-import { ComponentInternalInstance } from '../component'
-import { SuspenseBoundary } from './Suspense'
+import { type ComponentInternalInstance } from '../component'
+import { type SuspenseBoundary } from './Suspense'
 import {
-  RendererInternals,
+  type RendererInternals,
   MoveType,
-  RendererElement,
-  RendererNode,
-  RendererOptions,
+  type RendererElement,
+  type RendererNode,
+  type RendererOptions,
   traverseStaticChildren
 } from '../renderer'
-import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
+import { type VNode, type VNodeArrayChildren, type VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
@@ -393,7 +393,7 @@ function hydrateTeleport(
 // Force-casted public typing for h and TSX props inference
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
-  new(): {
+  new (): {
     $props: VNodeProps & TeleportProps
     $slots: {
       default(): VNode[]

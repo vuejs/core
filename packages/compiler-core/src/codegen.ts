@@ -1,34 +1,34 @@
-import { CodegenOptions } from './options'
+import { type CodegenOptions } from './options'
 import {
-  RootNode,
-  TemplateChildNode,
-  TextNode,
-  CommentNode,
-  ExpressionNode,
+  type RootNode,
+  type TemplateChildNode,
+  type TextNode,
+  type CommentNode,
+  type ExpressionNode,
   NodeTypes,
-  JSChildNode,
-  CallExpression,
-  ArrayExpression,
-  ObjectExpression,
-  Position,
-  InterpolationNode,
-  CompoundExpressionNode,
-  SimpleExpressionNode,
-  FunctionExpression,
-  ConditionalExpression,
-  CacheExpression,
+  type JSChildNode,
+  type CallExpression,
+  type ArrayExpression,
+  type ObjectExpression,
+  type Position,
+  type InterpolationNode,
+  type CompoundExpressionNode,
+  type SimpleExpressionNode,
+  type FunctionExpression,
+  type ConditionalExpression,
+  type CacheExpression,
   locStub,
-  SSRCodegenNode,
-  TemplateLiteral,
-  IfStatement,
-  AssignmentExpression,
-  ReturnStatement,
-  VNodeCall,
-  SequenceExpression,
+  type SSRCodegenNode,
+  type TemplateLiteral,
+  type IfStatement,
+  type AssignmentExpression,
+  type ReturnStatement,
+  type VNodeCall,
+  type SequenceExpression,
   getVNodeBlockHelper,
   getVNodeHelper
 } from './ast'
-import { SourceMapGenerator, RawSourceMap } from 'source-map-js'
+import { SourceMapGenerator, type RawSourceMap } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
@@ -54,7 +54,7 @@ import {
   WITH_CTX,
   RESOLVE_FILTER
 } from './runtimeHelpers'
-import { ImportItem } from './transform'
+import { type ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
 

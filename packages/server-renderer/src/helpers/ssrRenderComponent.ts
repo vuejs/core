@@ -1,6 +1,11 @@
-import { Component, ComponentInternalInstance, createVNode, Slots } from 'vue'
-import { Props, renderComponentVNode, SSRBuffer } from '../render'
-import { SSRSlots } from './ssrRenderSlot'
+import {
+  type Component,
+  type ComponentInternalInstance,
+  createVNode,
+  type Slots
+} from 'vue'
+import { type Props, renderComponentVNode, type SSRBuffer } from '../render'
+import { type SSRSlots } from './ssrRenderSlot'
 
 export function ssrRenderComponent(
   comp: Component,

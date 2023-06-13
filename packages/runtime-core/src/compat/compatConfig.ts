@@ -1,8 +1,8 @@
 import { extend, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
-  Component,
-  ComponentInternalInstance,
-  ComponentOptions,
+  type Component,
+  type ComponentInternalInstance,
+  type ComponentOptions,
   formatComponentName,
   getComponentName,
   getCurrentInstance,

@@ -11,14 +11,14 @@ import {
   toHandlerKey
 } from '@vue/shared'
 import {
-  Component,
-  ComponentInternalInstance,
-  ComponentOptions,
-  Data,
-  InternalRenderFunction
+  type Component,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type Data,
+  type InternalRenderFunction
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
-import { DirectiveArguments, withDirectives } from '../directives'
+import { type DirectiveArguments, withDirectives } from '../directives'
 import {
   resolveDirective,
   resolveDynamicComponent
@@ -28,9 +28,9 @@ import {
   createVNode,
   isVNode,
   normalizeChildren,
-  VNode,
-  VNodeArrayChildren,
-  VNodeProps
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps
 } from '../vnode'
 import {
   checkCompatEnabled,

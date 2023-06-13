@@ -1,8 +1,8 @@
 import {
-  ObjectDirective,
-  VNode,
-  DirectiveHook,
-  DirectiveBinding,
+  type ObjectDirective,
+  type VNode,
+  type DirectiveHook,
+  type DirectiveBinding,
   warn
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'

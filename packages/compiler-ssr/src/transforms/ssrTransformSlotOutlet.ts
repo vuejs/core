@@ -1,9 +1,9 @@
 import {
-  NodeTransform,
+  type NodeTransform,
   isSlotOutlet,
   processSlotOutlet,
   createCallExpression,
-  SlotOutletNode,
+  type SlotOutletNode,
   createFunctionExpression,
   NodeTypes,
   ElementTypes,
@@ -12,7 +12,7 @@ import {
 } from '@vue/compiler-dom'
 import { SSR_RENDER_SLOT, SSR_RENDER_SLOT_INNER } from '../runtimeHelpers'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 

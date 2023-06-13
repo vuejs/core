@@ -3,14 +3,14 @@ import {
   render,
   h,
   BaseTransition,
-  BaseTransitionProps,
+  type BaseTransitionProps,
   ref,
   nextTick,
   serializeInner,
   serialize,
-  VNodeProps,
+  type VNodeProps,
   KeepAlive,
-  TestElement
+  type TestElement
 } from '@vue/runtime-test'
 
 function mount(

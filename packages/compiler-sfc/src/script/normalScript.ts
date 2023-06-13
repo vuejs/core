@@ -1,8 +1,8 @@
 import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { analyzeScriptBindings } from './analyzeScriptBindings'
-import { ScriptCompileContext } from './context'
+import { type ScriptCompileContext } from './context'
 import MagicString from 'magic-string'
-import { RawSourceMap } from 'source-map-js'
+import { type RawSourceMap } from 'source-map-js'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { genNormalScriptCssVarsCode } from '../style/cssVars'
 

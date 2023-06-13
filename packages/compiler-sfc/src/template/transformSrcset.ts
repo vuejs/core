@@ -3,10 +3,10 @@ import {
   ConstantTypes,
   createCompoundExpression,
   createSimpleExpression,
-  ExpressionNode,
-  NodeTransform,
+  type ExpressionNode,
+  type NodeTransform,
   NodeTypes,
-  SimpleExpressionNode
+  type SimpleExpressionNode
 } from '@vue/compiler-core'
 import {
   isRelativeUrl,
@@ -14,7 +14,10 @@ import {
   isExternalUrl,
   isDataUrl
 } from './templateUtils'
-import { AssetURLOptions, defaultAssetUrlOptions } from './transformAssetUrl'
+import {
+  type AssetURLOptions,
+  defaultAssetUrlOptions
+} from './transformAssetUrl'
 
 const srcsetTags = ['img', 'source']
 

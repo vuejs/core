@@ -2,7 +2,7 @@ import {
   generate,
   baseParse,
   transform,
-  TransformOptions
+  type TransformOptions
 } from '@vue/compiler-core'
 import {
   transformSrcset,
@@ -11,7 +11,7 @@ import {
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 import {
-  AssetURLOptions,
+  type AssetURLOptions,
   normalizeOptions
 } from '../src/template/transformAssetUrl'
 import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'

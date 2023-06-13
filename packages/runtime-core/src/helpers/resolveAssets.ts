@@ -1,14 +1,14 @@
 import {
   currentInstance,
-  ConcreteComponent,
-  ComponentOptions,
+  type ConcreteComponent,
+  type ComponentOptions,
   getComponentName
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'
-import { Directive } from '../directives'
+import { type Directive } from '../directives'
 import { camelize, capitalize, isString } from '@vue/shared'
 import { warn } from '../warning'
-import { VNodeTypes } from '../vnode'
+import { type VNodeTypes } from '../vnode'
 
 export const COMPONENTS = 'components'
 export const DIRECTIVES = 'directives'

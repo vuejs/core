@@ -1,11 +1,11 @@
 import {
-  NodeTransform,
+  type NodeTransform,
   NodeTypes,
   ElementTypes,
   locStub,
   createSimpleExpression,
-  RootNode,
-  TemplateChildNode,
+  type RootNode,
+  type TemplateChildNode,
   findDir,
   isBuiltInType
 } from '@vue/compiler-dom'

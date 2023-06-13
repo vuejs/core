@@ -1,13 +1,13 @@
 import {
   baseParse as parse,
-  CompilerOptions,
-  ElementNode,
+  type CompilerOptions,
+  type ElementNode,
   TO_HANDLER_KEY,
   helperNameMap,
   NodeTypes,
-  ObjectExpression,
+  type ObjectExpression,
   transform,
-  VNodeCall
+  type VNodeCall
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../../src/runtimeHelpers'

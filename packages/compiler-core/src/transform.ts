@@ -1,23 +1,23 @@
-import { TransformOptions } from './options'
+import { type TransformOptions } from './options'
 import {
-  RootNode,
+  type RootNode,
   NodeTypes,
-  ParentNode,
-  TemplateChildNode,
-  ElementNode,
-  DirectiveNode,
-  Property,
-  ExpressionNode,
+  type ParentNode,
+  type TemplateChildNode,
+  type ElementNode,
+  type DirectiveNode,
+  type Property,
+  type ExpressionNode,
   createSimpleExpression,
-  JSChildNode,
-  SimpleExpressionNode,
+  type JSChildNode,
+  type SimpleExpressionNode,
   ElementTypes,
-  CacheExpression,
+  type CacheExpression,
   createCacheExpression,
-  TemplateLiteral,
+  type TemplateLiteral,
   createVNodeCall,
   ConstantTypes,
-  ArrayExpression,
+  type ArrayExpression,
   convertToBlock
 } from './ast'
 import {
@@ -39,7 +39,7 @@ import {
 } from './runtimeHelpers'
 import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
-import { CompilerCompatOptions } from './compat/compatConfig'
+import { type CompilerCompatOptions } from './compat/compatConfig'
 
 // There are two types of transforms:
 //

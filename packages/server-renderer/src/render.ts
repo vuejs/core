@@ -1,17 +1,17 @@
 import {
   Comment,
-  Component,
-  ComponentInternalInstance,
-  DirectiveBinding,
+  type Component,
+  type ComponentInternalInstance,
+  type DirectiveBinding,
   Fragment,
-  FunctionalComponent,
+  type FunctionalComponent,
   mergeProps,
   ssrUtils,
   Static,
   Text,
-  VNode,
-  VNodeArrayChildren,
-  VNodeProps,
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
   warn
 } from 'vue'
 import {

@@ -1,5 +1,8 @@
 /* eslint-disable no-restricted-globals */
-import { ComponentInternalInstance, formatComponentName } from './component'
+import {
+  type ComponentInternalInstance,
+  formatComponentName
+} from './component'
 import { devtoolsPerfEnd, devtoolsPerfStart } from './devtools'
 
 let supported: boolean

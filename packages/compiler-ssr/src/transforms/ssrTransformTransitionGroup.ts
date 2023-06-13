@@ -1,16 +1,19 @@
 import {
-  AttributeNode,
+  type AttributeNode,
   buildProps,
-  ComponentNode,
+  type ComponentNode,
   createCallExpression,
-  DirectiveNode,
+  type DirectiveNode,
   findProp,
-  JSChildNode,
+  type JSChildNode,
   NodeTypes,
-  TransformContext
+  type TransformContext
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
-import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
+import {
+  processChildren,
+  type SSRTransformContext
+} from '../ssrCodegenTransform'
 import { buildSSRProps } from './ssrTransformElement'
 
 const wipMap = new WeakMap<ComponentNode, WIPEntry>()

@@ -1,11 +1,19 @@
 // This entry is the "full-build" that includes both the runtime
 // and the compiler, and supports on-the-fly compilation of the template option.
 import { initDev } from './dev'
-import { compile, CompilerOptions, CompilerError } from '@vue/compiler-dom'
-import { registerRuntimeCompiler, RenderFunction, warn } from '@vue/runtime-dom'
+import {
+  compile,
+  type CompilerOptions,
+  type CompilerError
+} from '@vue/compiler-dom'
+import {
+  registerRuntimeCompiler,
+  type RenderFunction,
+  warn
+} from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
-import { InternalRenderFunction } from 'packages/runtime-core/src/component'
+import { type InternalRenderFunction } from 'packages/runtime-core/src/component'
 
 if (__DEV__) {
   initDev()

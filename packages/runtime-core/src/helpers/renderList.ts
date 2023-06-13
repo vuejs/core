@@ -1,4 +1,4 @@
-import { VNode, VNodeChild } from '../vnode'
+import { type VNode, type VNodeChild } from '../vnode'
 import { isArray, isString, isObject } from '@vue/shared'
 import { warn } from '../warning'
 

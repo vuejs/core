@@ -1,31 +1,31 @@
 import {
-  SourceLocation,
-  Position,
-  ElementNode,
+  type SourceLocation,
+  type Position,
+  type ElementNode,
   NodeTypes,
-  CallExpression,
+  type CallExpression,
   createCallExpression,
-  DirectiveNode,
+  type DirectiveNode,
   ElementTypes,
-  TemplateChildNode,
-  RootNode,
-  ObjectExpression,
-  Property,
-  JSChildNode,
+  type TemplateChildNode,
+  type RootNode,
+  type ObjectExpression,
+  type Property,
+  type JSChildNode,
   createObjectExpression,
-  SlotOutletNode,
-  TemplateNode,
-  RenderSlotCall,
-  ExpressionNode,
-  IfBranchNode,
-  TextNode,
-  InterpolationNode,
-  VNodeCall,
-  SimpleExpressionNode,
-  BlockCodegenNode,
-  MemoExpression
+  type SlotOutletNode,
+  type TemplateNode,
+  type RenderSlotCall,
+  type ExpressionNode,
+  type IfBranchNode,
+  type TextNode,
+  type InterpolationNode,
+  type VNodeCall,
+  type SimpleExpressionNode,
+  type BlockCodegenNode,
+  type MemoExpression
 } from './ast'
-import { TransformContext } from './transform'
+import { type TransformContext } from './transform'
 import {
   MERGE_PROPS,
   TELEPORT,
@@ -38,9 +38,9 @@ import {
   WITH_MEMO
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
-import { PropsExpression } from './transforms/transformElement'
+import { type PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
-import { Expression } from '@babel/types'
+import { type Expression } from '@babel/types'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic

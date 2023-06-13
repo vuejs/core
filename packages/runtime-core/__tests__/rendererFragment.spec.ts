@@ -4,7 +4,7 @@ import {
   render,
   nodeOps,
   TestNodeTypes,
-  TestElement,
+  type TestElement,
   Fragment,
   resetOps,
   dumpOps,

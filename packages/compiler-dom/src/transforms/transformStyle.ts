@@ -1,9 +1,9 @@
 import {
-  NodeTransform,
+  type NodeTransform,
   NodeTypes,
   createSimpleExpression,
-  SimpleExpressionNode,
-  SourceLocation,
+  type SimpleExpressionNode,
+  type SourceLocation,
   ConstantTypes
 } from '@vue/compiler-core'
 import { parseStringStyle } from '@vue/shared'

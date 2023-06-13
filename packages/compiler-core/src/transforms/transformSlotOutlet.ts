@@ -1,14 +1,14 @@
-import { NodeTransform, TransformContext } from '../transform'
+import { type NodeTransform, type TransformContext } from '../transform'
 import {
   NodeTypes,
-  CallExpression,
+  type CallExpression,
   createCallExpression,
-  ExpressionNode,
-  SlotOutletNode,
+  type ExpressionNode,
+  type SlotOutletNode,
   createFunctionExpression
 } from '../ast'
 import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
-import { buildProps, PropsExpression } from './transformElement'
+import { buildProps, type PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
 import { camelize } from '@vue/shared'

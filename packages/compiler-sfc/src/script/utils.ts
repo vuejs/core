@@ -1,12 +1,12 @@
 import {
-  CallExpression,
-  Expression,
-  Identifier,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier,
-  ImportSpecifier,
-  Node,
-  StringLiteral
+  type CallExpression,
+  type Expression,
+  type Identifier,
+  type ImportDefaultSpecifier,
+  type ImportNamespaceSpecifier,
+  type ImportSpecifier,
+  type Node,
+  type StringLiteral
 } from '@babel/types'
 import path from 'path'
 import { TS_NODE_TYPES } from '@vue/compiler-dom'

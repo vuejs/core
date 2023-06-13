@@ -3,7 +3,7 @@ import {
   transform,
   NodeTypes,
   generate,
-  CompilerOptions,
+  type CompilerOptions,
   getBaseTransformPreset
 } from '../../src'
 import { RENDER_SLOT, SET_BLOCK_TRACKING } from '../../src/runtimeHelpers'

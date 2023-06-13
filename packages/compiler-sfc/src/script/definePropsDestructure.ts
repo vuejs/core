@@ -1,11 +1,11 @@
 import {
-  Node,
-  Identifier,
-  BlockStatement,
-  Program,
-  VariableDeclaration,
-  ObjectPattern,
-  Expression
+  type Node,
+  type Identifier,
+  type BlockStatement,
+  type Program,
+  type VariableDeclaration,
+  type ObjectPattern,
+  type Expression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import {
@@ -19,7 +19,7 @@ import {
 } from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
-import { ScriptCompileContext } from './context'
+import { type ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
 import { warnOnce } from '../warn'
 

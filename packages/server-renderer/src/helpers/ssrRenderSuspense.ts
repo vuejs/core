@@ -1,4 +1,4 @@
-import { PushFn } from '../render'
+import { type PushFn } from '../render'
 
 export async function ssrRenderSuspense(
   push: PushFn,

@@ -1,5 +1,5 @@
 import {
-  Ref,
+  type Ref,
   ref,
   shallowRef,
   isRef,
@@ -9,12 +9,12 @@ import {
   toRef,
   toValue,
   toRefs,
-  ToRefs,
+  type ToRefs,
   shallowReactive,
   readonly,
-  MaybeRef,
-  MaybeRefOrGetter,
-  ComputedRef,
+  type MaybeRef,
+  type MaybeRefOrGetter,
+  type ComputedRef,
   computed
 } from 'vue'
 import { expectType, describe } from './utils'

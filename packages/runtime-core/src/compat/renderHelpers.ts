@@ -7,12 +7,12 @@ import {
   isReservedProp,
   normalizeClass
 } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
-import { Slot } from '../componentSlots'
+import { type ComponentInternalInstance } from '../component'
+import { type Slot } from '../componentSlots'
 import { createSlots } from '../helpers/createSlots'
 import { renderSlot } from '../helpers/renderSlot'
 import { toHandlers } from '../helpers/toHandlers'
-import { mergeProps, VNode } from '../vnode'
+import { mergeProps, type VNode } from '../vnode'
 
 function toObject(arr: Array<any>): Object {
   const res = {}

@@ -1,27 +1,27 @@
 import {
-  ElementNode,
-  ObjectExpression,
+  type ElementNode,
+  type ObjectExpression,
   createObjectExpression,
   NodeTypes,
   createObjectProperty,
   createSimpleExpression,
   createFunctionExpression,
-  DirectiveNode,
+  type DirectiveNode,
   ElementTypes,
-  ExpressionNode,
-  Property,
-  TemplateChildNode,
-  SourceLocation,
+  type ExpressionNode,
+  type Property,
+  type TemplateChildNode,
+  type SourceLocation,
   createConditionalExpression,
-  ConditionalExpression,
-  SimpleExpressionNode,
-  FunctionExpression,
-  CallExpression,
+  type ConditionalExpression,
+  type SimpleExpressionNode,
+  type FunctionExpression,
+  type CallExpression,
   createCallExpression,
   createArrayExpression,
-  SlotsExpression
+  type SlotsExpression
 } from '../ast'
-import { TransformContext, NodeTransform } from '../transform'
+import { type TransformContext, type NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   findDir,

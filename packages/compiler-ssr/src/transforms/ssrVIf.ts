@@ -1,16 +1,16 @@
 import {
   createStructuralDirectiveTransform,
   processIf,
-  IfNode,
+  type IfNode,
   createIfStatement,
   createBlockStatement,
   createCallExpression,
-  IfBranchNode,
-  BlockStatement,
+  type IfBranchNode,
+  type BlockStatement,
   NodeTypes
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 

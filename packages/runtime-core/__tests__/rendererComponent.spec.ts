@@ -5,12 +5,12 @@ import {
   nodeOps,
   serializeInner,
   nextTick,
-  VNode,
+  type VNode,
   provide,
   inject,
-  Ref,
+  type Ref,
   watch,
-  SetupContext
+  type SetupContext
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {

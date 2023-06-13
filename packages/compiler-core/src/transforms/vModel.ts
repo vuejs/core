@@ -1,12 +1,12 @@
-import { DirectiveTransform } from '../transform'
+import { type DirectiveTransform } from '../transform'
 import {
   createSimpleExpression,
   createObjectProperty,
   createCompoundExpression,
   NodeTypes,
-  Property,
+  type Property,
   ElementTypes,
-  ExpressionNode,
+  type ExpressionNode,
   ConstantTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'

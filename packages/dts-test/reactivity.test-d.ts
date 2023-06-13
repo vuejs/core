@@ -1,4 +1,11 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  ref,
+  readonly,
+  shallowReadonly,
+  type Ref,
+  reactive,
+  markRaw
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {

@@ -1,13 +1,13 @@
 import {
   baseParse as parse,
   transform,
-  ElementNode,
-  ObjectExpression,
-  CompilerOptions,
+  type ElementNode,
+  type ObjectExpression,
+  type CompilerOptions,
   ErrorCodes,
-  VNodeCall,
+  type VNodeCall,
   NodeTypes,
-  CallExpression
+  type CallExpression
 } from '../../src'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'

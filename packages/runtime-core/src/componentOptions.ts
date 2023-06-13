@@ -1,11 +1,11 @@
 import {
-  ComponentInternalInstance,
-  Data,
-  SetupContext,
-  ComponentInternalOptions,
-  Component,
-  ConcreteComponent,
-  InternalRenderFunction
+  type ComponentInternalInstance,
+  type Data,
+  type SetupContext,
+  type ComponentInternalOptions,
+  type Component,
+  type ConcreteComponent,
+  type InternalRenderFunction
 } from './component'
 import {
   isFunction,
@@ -15,15 +15,15 @@ import {
   isArray,
   NOOP,
   isPromise,
-  LooseRequired,
-  Prettify
+  type LooseRequired,
+  type Prettify
 } from '@vue/shared'
-import { isRef, Ref } from '@vue/reactivity'
+import { isRef, type Ref } from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   watch,
-  WatchOptions,
-  WatchCallback,
+  type WatchOptions,
+  type WatchCallback,
   createPathGetter
 } from './apiWatch'
 import { provide, inject } from './apiInject'
@@ -39,43 +39,43 @@ import {
   onActivated,
   onDeactivated,
   onRenderTriggered,
-  DebuggerHook,
-  ErrorCapturedHook,
+  type DebuggerHook,
+  type ErrorCapturedHook,
   onServerPrefetch
 } from './apiLifecycle'
 import {
   reactive,
-  ComputedGetter,
-  WritableComputedOptions
+  type ComputedGetter,
+  type WritableComputedOptions
 } from '@vue/reactivity'
 import {
-  ComponentObjectPropsOptions,
-  ExtractPropTypes,
-  ExtractDefaultPropTypes,
-  ComponentPropsOptions
+  type ComponentObjectPropsOptions,
+  type ExtractPropTypes,
+  type ExtractDefaultPropTypes,
+  type ComponentPropsOptions
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
-import { Directive } from './directives'
+import { type EmitsOptions, type EmitsToProps } from './componentEmits'
+import { type Directive } from './directives'
 import {
-  CreateComponentPublicInstance,
-  ComponentPublicInstance,
+  type CreateComponentPublicInstance,
+  type ComponentPublicInstance,
   isReservedPrefix,
-  IntersectionMixin,
-  UnwrapMixinsType
+  type IntersectionMixin,
+  type UnwrapMixinsType
 } from './componentPublicInstance'
 import { warn } from './warning'
-import { VNodeChild } from './vnode'
+import { type VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { deepMergeData } from './compat/data'
 import { DeprecationTypes } from './compat/compatConfig'
 import {
-  CompatConfig,
+  type CompatConfig,
   isCompatEnabled,
   softAssertCompatEnabled
 } from './compat/compatConfig'
-import { OptionMergeFunction } from './apiCreateApp'
+import { type OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
-import { SlotsType } from './componentSlots'
+import { type SlotsType } from './componentSlots'
 import { normalizePropsOrEmits } from './apiSetupHelpers'
 
 /**

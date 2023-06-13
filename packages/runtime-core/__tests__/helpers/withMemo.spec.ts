@@ -4,7 +4,7 @@
 
 // since v-memo really is a compiler + runtime combo feature, we are performing
 // more of an integration test here.
-import { ComponentOptions, createApp, nextTick } from 'vue'
+import { type ComponentOptions, createApp, nextTick } from 'vue'
 
 describe('v-memo', () => {
   function mount(options: ComponentOptions): [HTMLElement, any] {

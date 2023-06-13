@@ -1,8 +1,8 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
-import { Ref, trackRefValue, triggerRefValue } from './ref'
+import { type DebuggerOptions, ReactiveEffect } from './effect'
+import { type Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
-import { Dep } from './dep'
+import { type Dep } from './dep'
 
 declare const ComputedRefSymbol: unique symbol
 

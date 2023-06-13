@@ -4,7 +4,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
-import { RendererOptions } from '@vue/runtime-core'
+import { type RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
 

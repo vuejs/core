@@ -1,16 +1,16 @@
 import {
   isRef,
   isShallow,
-  Ref,
-  ComputedRef,
+  type Ref,
+  type ComputedRef,
   ReactiveEffect,
   isReactive,
   ReactiveFlags,
-  EffectScheduler,
-  DebuggerOptions,
+  type EffectScheduler,
+  type DebuggerOptions,
   getCurrentScope
 } from '@vue/reactivity'
-import { SchedulerJob, queueJob } from './scheduler'
+import { type SchedulerJob, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   isObject,
@@ -27,7 +27,7 @@ import {
 } from '@vue/shared'
 import {
   currentInstance,
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
   unsetCurrentInstance
@@ -41,7 +41,7 @@ import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
-import { ObjectWatchOptionItem } from './componentOptions'
+import { type ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from '@vue/runtime-core'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void

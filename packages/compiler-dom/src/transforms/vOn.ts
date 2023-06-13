@@ -1,17 +1,17 @@
 import {
   transformOn as baseTransform,
-  DirectiveTransform,
+  type DirectiveTransform,
   createObjectProperty,
   createCallExpression,
   createSimpleExpression,
   NodeTypes,
   createCompoundExpression,
-  ExpressionNode,
-  SimpleExpressionNode,
+  type ExpressionNode,
+  type SimpleExpressionNode,
   isStaticExp,
   CompilerDeprecationTypes,
-  TransformContext,
-  SourceLocation,
+  type TransformContext,
+  type SourceLocation,
   checkCompatEnabled
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'

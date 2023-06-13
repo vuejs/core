@@ -1,8 +1,8 @@
-import { DirectiveTransform } from '../transform'
+import { type DirectiveTransform } from '../transform'
 import {
   createObjectProperty,
   createSimpleExpression,
-  ExpressionNode,
+  type ExpressionNode,
   NodeTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'

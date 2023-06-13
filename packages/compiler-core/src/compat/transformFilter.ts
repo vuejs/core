@@ -1,17 +1,17 @@
 import { RESOLVE_FILTER } from '../runtimeHelpers'
 import {
-  ExpressionNode,
-  AttributeNode,
-  DirectiveNode,
+  type ExpressionNode,
+  type AttributeNode,
+  type DirectiveNode,
   NodeTypes,
-  SimpleExpressionNode
+  type SimpleExpressionNode
 } from '../ast'
 import {
   CompilerDeprecationTypes,
   isCompatEnabled,
   warnDeprecation
 } from './compatConfig'
-import { NodeTransform, TransformContext } from '../transform'
+import { type NodeTransform, type TransformContext } from '../transform'
 import { toValidAssetId } from '../utils'
 
 const validDivisionCharRE = /[\w).+\-_$\]]/

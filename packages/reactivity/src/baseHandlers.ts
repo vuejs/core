@@ -3,7 +3,7 @@ import {
   readonly,
   toRaw,
   ReactiveFlags,
-  Target,
+  type Target,
   readonlyMap,
   reactiveMap,
   shallowReactiveMap,

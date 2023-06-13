@@ -1,13 +1,13 @@
 import {
-  App,
+  type App,
   createApp,
   createVNode,
   ssrContextKey,
   ssrUtils,
-  VNode
+  type VNode
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { SSRContext, renderComponentVNode, SSRBuffer } from './render'
+import { type SSRContext, renderComponentVNode, type SSRBuffer } from './render'
 
 const { isVNode } = ssrUtils
 

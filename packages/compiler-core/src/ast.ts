@@ -1,5 +1,5 @@
 import { isString } from '@vue/shared'
-import { ForParseResult } from './transforms/vFor'
+import { type ForParseResult } from './transforms/vFor'
 import {
   type RENDER_SLOT,
   type CREATE_SLOTS,
@@ -13,8 +13,8 @@ import {
   WITH_DIRECTIVES,
   OPEN_BLOCK
 } from './runtimeHelpers'
-import { PropsExpression } from './transforms/transformElement'
-import { ImportItem, TransformContext } from './transform'
+import { type PropsExpression } from './transforms/transformElement'
+import { type ImportItem, type TransformContext } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific

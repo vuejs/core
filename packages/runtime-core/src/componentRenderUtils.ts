@@ -1,16 +1,16 @@
 import {
-  ComponentInternalInstance,
-  FunctionalComponent,
-  Data,
+  type ComponentInternalInstance,
+  type FunctionalComponent,
+  type Data,
   getComponentName
 } from './component'
 import {
-  VNode,
+  type VNode,
   normalizeVNode,
   createVNode,
   Comment,
   cloneVNode,
-  VNodeArrayChildren,
+  type VNodeArrayChildren,
   isVNode,
   blockStack
 } from './vnode'
@@ -18,7 +18,7 @@ import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
-import { NormalizedProps } from './componentProps'
+import { type NormalizedProps } from './componentProps'
 import { isEmitListener } from './componentEmits'
 import { setCurrentRenderingInstance } from './componentRenderContext'
 import {

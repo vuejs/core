@@ -1,17 +1,17 @@
 import {
-  ConcreteComponent,
+  type ConcreteComponent,
   getCurrentInstance,
-  SetupContext,
-  ComponentInternalInstance,
+  type SetupContext,
+  type ComponentInternalInstance,
   currentInstance,
   getComponentName,
-  ComponentOptions
+  type ComponentOptions
 } from '../component'
 import {
-  VNode,
+  type VNode,
   cloneVNode,
   isVNode,
-  VNodeProps,
+  type VNodeProps,
   invokeVNodeHook,
   isSameVNodeType
 } from '../vnode'
@@ -33,14 +33,14 @@ import {
 } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
-  RendererInternals,
+  type RendererInternals,
   queuePostRenderEffect,
   MoveType,
-  RendererElement,
-  RendererNode
+  type RendererElement,
+  type RendererNode
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentRenderContext } from '../componentPublicInstance'
+import { type ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
