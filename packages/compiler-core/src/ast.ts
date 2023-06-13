@@ -1,17 +1,17 @@
 import { isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
-  RENDER_SLOT,
-  CREATE_SLOTS,
-  RENDER_LIST,
-  OPEN_BLOCK,
-  FRAGMENT,
-  WITH_DIRECTIVES,
-  WITH_MEMO,
+  type RENDER_SLOT,
+  type CREATE_SLOTS,
+  type RENDER_LIST,
+  type FRAGMENT,
+  type WITH_MEMO,
   CREATE_VNODE,
   CREATE_ELEMENT_VNODE,
   CREATE_BLOCK,
-  CREATE_ELEMENT_BLOCK
+  CREATE_ELEMENT_BLOCK,
+  WITH_DIRECTIVES,
+  OPEN_BLOCK
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
