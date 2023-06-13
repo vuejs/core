@@ -294,7 +294,7 @@ function mergeElements(
       }
     }
     if (calls) {
-      ;(res.calls || (res.calls = [])).push(...calls)
+      ;(res.calls ||= []).push(...calls)
     }
   }
   return res
@@ -341,11 +341,7 @@ function resolveInterfaceMembers(
           }
         }
         if (calls) {
-          if (!base.calls) {
-            base.calls = calls
-          } else {
-            base.calls.push(...calls)
-          }
+          ;(base.calls ||= []).push(...calls)
         }
       } catch (e) {
         ctx.error(
