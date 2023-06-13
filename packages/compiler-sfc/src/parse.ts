@@ -47,6 +47,13 @@ export interface SFCScriptBlock extends SFCBlock {
   imports?: Record<string, ImportBinding>
   scriptAst?: import('@babel/types').Statement[]
   scriptSetupAst?: import('@babel/types').Statement[]
+  warnings?: string[]
+  /**
+   * Fully resolved dependency file paths (unix slashes) with imported types
+   * used in macros, used for HMR cache busting in @vitejs/plugin-vue and
+   * vue-loader.
+   */
+  deps?: string[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -86,7 +93,7 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const sourceToSFC = createCache<SFCParseResult>()
+export const parseCache = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
@@ -101,7 +108,7 @@ export function parse(
 ): SFCParseResult {
   const sourceKey =
     source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = sourceToSFC.get(sourceKey)
+  const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache
   }
@@ -277,7 +284,7 @@ export function parse(
     descriptor,
     errors
   }
-  sourceToSFC.set(sourceKey, result)
+  parseCache.set(sourceKey, result)
   return result
 }
 

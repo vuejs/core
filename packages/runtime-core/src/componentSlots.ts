@@ -23,6 +23,8 @@ import { ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
+import { trigger } from '@vue/reactivity'
+import { TriggerOpTypes } from '@vue/reactivity'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
@@ -39,7 +41,12 @@ export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
   [SlotSymbol]?: T
 }
 
-export type TypedSlots<
+export type StrictUnwrapSlotsType<
+  S extends SlotsType,
+  T = NonNullable<S[typeof SlotSymbol]>
+> = [keyof S] extends [never] ? Slots : Readonly<T>
+
+export type UnwrapSlotsType<
   S extends SlotsType,
   T = NonNullable<S[typeof SlotSymbol]>
 > = [keyof S] extends [never]
@@ -196,6 +203,7 @@ export const updateSlots = (
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
+        trigger(instance, TriggerOpTypes.SET, '$slots')
       } else if (optimized && type === SlotFlags.STABLE) {
         // compiled AND stable.
         // no need to update, and skip stale slots removal.

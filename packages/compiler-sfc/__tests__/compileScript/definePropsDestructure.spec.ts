@@ -1,11 +1,12 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { SFCScriptCompileOptions } from '../../src'
+import { compileSFCScript, assertCode } from '../utils'
 
-describe('sfc props transform', () => {
+describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
+      propsDestructure: true,
       ...options
     })
   }
@@ -105,6 +106,28 @@ describe('sfc props transform', () => {
 })`)
     assertCode(content)
   })
+  test('default values w/ runtime declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { foo = 1, 'foo:bar': fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED
+    })
+
+    expect(content).toMatch(`
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  "foo:bar": 'foo-bar'
+}),`)
+    assertCode(content)
+  })
 
   test('default values w/ type declaration', () => {
     const { content } = compile(`
@@ -119,6 +142,37 @@ describe('sfc props transform', () => {
     bar: { type: Object, required: false, default: () => ({}) },
     func: { type: Function, required: false, default: () => {} }
   }`)
+    assertCode(content)
+  })
+
+  test('default values w/ type declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup lang="ts">
+      const { foo = 1, bar = 2, 'foo:bar': fooBar = 'foo-bar' } = defineProps<{ 
+        "foo": number // double-quoted string
+        'bar': number // single-quoted string
+        'foo:bar': string // single-quoted string containing symbols
+        "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
+      }>()
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      'onUpdate:modelValue': BindingTypes.PROPS
+    })
+    expect(content).toMatch(`
+  props: {
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    "foo:bar": { type: String, required: true, default: 'foo-bar' },
+    "onUpdate:modelValue": { type: Function, required: true }
+  },`)
     assertCode(content)
   })
 
