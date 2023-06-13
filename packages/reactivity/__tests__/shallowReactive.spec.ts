@@ -7,7 +7,7 @@ import {
 } from '../src/reactive'
 
 import { effect } from '../src/effect'
-import { Ref, isRef, ref } from '../src/ref'
+import { type Ref, isRef, ref } from '../src/ref'
 
 describe('shallowReactive', () => {
   test('should not make non-reactive properties reactive', () => {

@@ -6,7 +6,13 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
+import {
+  isArray,
+  hasChanged,
+  type IfAny,
+  isFunction,
+  isObject
+} from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -16,8 +22,8 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
-import { createDep, Dep } from './dep'
+import { type CollectionTypes } from './collectionHandlers'
+import { createDep, type Dep } from './dep'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol

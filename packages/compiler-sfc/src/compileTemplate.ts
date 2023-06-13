@@ -1,21 +1,21 @@
 import {
-  CompilerOptions,
-  CodegenResult,
-  CompilerError,
-  NodeTransform,
-  ParserOptions,
-  RootNode
+  type CompilerOptions,
+  type CodegenResult,
+  type CompilerError,
+  type NodeTransform,
+  type ParserOptions,
+  type RootNode
 } from '@vue/compiler-core'
 import {
   SourceMapConsumer,
   SourceMapGenerator,
-  RawSourceMap
+  type RawSourceMap
 } from 'source-map-js'
 import {
   transformAssetUrl,
-  AssetURLOptions,
+  type AssetURLOptions,
   createAssetUrlTransformWithOptions,
-  AssetURLTagConfig,
+  type AssetURLTagConfig,
   normalizeOptions
 } from './template/transformAssetUrl'
 import {

@@ -1,12 +1,12 @@
 import {
   baseParse as parse,
   NodeTypes,
-  ElementNode,
-  TextNode,
+  type ElementNode,
+  type TextNode,
   ErrorCodes,
   ElementTypes,
-  InterpolationNode,
-  AttributeNode,
+  type InterpolationNode,
+  type AttributeNode,
   ConstantTypes
 } from '@vue/compiler-core'
 import { parserOptions, DOMNamespaces } from '../src/parserOptions'

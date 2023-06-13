@@ -1,8 +1,8 @@
 import {
-  TransitionProps,
+  type TransitionProps,
   addTransitionClass,
   removeTransitionClass,
-  ElementWithTransition,
+  type ElementWithTransition,
   getTransitionInfo,
   resolveTransitionProps,
   TransitionPropsValidators,
@@ -10,7 +10,7 @@ import {
 } from './Transition'
 import {
   Fragment,
-  VNode,
+  type VNode,
   warn,
   resolveTransitionHooks,
   useTransitionState,
@@ -19,11 +19,11 @@ import {
   setTransitionHooks,
   createVNode,
   onUpdated,
-  SetupContext,
+  type SetupContext,
   toRaw,
   compatUtils,
   DeprecationTypes,
-  ComponentOptions
+  type ComponentOptions
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 

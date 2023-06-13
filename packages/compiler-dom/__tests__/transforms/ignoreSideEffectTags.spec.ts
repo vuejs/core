@@ -1,4 +1,4 @@
-import { compile, CompilerError } from '../../src'
+import { compile, type CompilerError } from '../../src'
 
 describe('compiler: ignore side effect tags', () => {
   it('should ignore script', () => {

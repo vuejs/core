@@ -1,5 +1,5 @@
 import {
-  DirectiveTransform,
+  type DirectiveTransform,
   createObjectProperty,
   createSimpleExpression,
   TO_DISPLAY_STRING,

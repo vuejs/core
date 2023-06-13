@@ -1,35 +1,35 @@
 import {
-  NodeTransform,
+  type NodeTransform,
   NodeTypes,
   ElementTypes,
-  TemplateLiteral,
+  type TemplateLiteral,
   createTemplateLiteral,
   createInterpolation,
   createCallExpression,
   createConditionalExpression,
   createSimpleExpression,
   buildProps,
-  DirectiveNode,
-  PlainElementNode,
+  type DirectiveNode,
+  type PlainElementNode,
   createCompilerError,
   ErrorCodes,
-  CallExpression,
+  type CallExpression,
   createArrayExpression,
-  ExpressionNode,
-  JSChildNode,
-  ArrayExpression,
+  type ExpressionNode,
+  type JSChildNode,
+  type ArrayExpression,
   createAssignmentExpression,
-  TextNode,
+  type TextNode,
   hasDynamicKeyVBind,
   MERGE_PROPS,
   isStaticArgOf,
   createSequenceExpression,
-  InterpolationNode,
+  type InterpolationNode,
   isStaticExp,
-  AttributeNode,
+  type AttributeNode,
   buildDirectiveArgs,
-  TransformContext,
-  PropsExpression
+  type TransformContext,
+  type PropsExpression
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -51,7 +51,10 @@ import {
   SSR_INCLUDE_BOOLEAN_ATTR,
   SSR_GET_DIRECTIVE_PROPS
 } from '../runtimeHelpers'
-import { SSRTransformContext, processChildren } from '../ssrCodegenTransform'
+import {
+  type SSRTransformContext,
+  processChildren
+} from '../ssrCodegenTransform'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
 // store the raw children so that they can be added in the 2nd pass.

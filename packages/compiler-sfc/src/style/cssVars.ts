@@ -4,12 +4,12 @@ import {
   createSimpleExpression,
   createRoot,
   NodeTypes,
-  SimpleExpressionNode,
-  BindingMetadata
+  type SimpleExpressionNode,
+  type BindingMetadata
 } from '@vue/compiler-dom'
-import { SFCDescriptor } from '../parse'
+import { type SFCDescriptor } from '../parse'
 import { escapeSymbolsRE } from '../script/utils'
-import { PluginCreator } from 'postcss'
+import { type PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`

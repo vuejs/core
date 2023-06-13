@@ -1,6 +1,6 @@
 import { h } from '../src/h'
 import { createVNode } from '../src/vnode'
-import { RawSlots } from '../src/componentSlots'
+import { type RawSlots } from '../src/componentSlots'
 
 // Since h is a thin layer on top of createVNode, we are only testing its
 // own logic here. Details of vnode creation is tested in vnode.spec.ts.

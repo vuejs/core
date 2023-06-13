@@ -1,17 +1,17 @@
 import {
   NodeTypes,
-  ElementNode,
+  type ElementNode,
   locStub,
   Namespaces,
   ElementTypes,
-  VNodeCall
+  type VNodeCall
 } from '../src'
 import {
   isString,
-  PatchFlags,
+  type PatchFlags,
   PatchFlagNames,
   isArray,
-  ShapeFlags
+  type ShapeFlags
 } from '@vue/shared'
 
 const leadingBracketRE = /^\[/

@@ -16,7 +16,11 @@ import {
   TrackOpTypes,
   onRenderTriggered
 } from '@vue/runtime-test'
-import { ITERATE_KEY, DebuggerEvent, TriggerOpTypes } from '@vue/reactivity'
+import {
+  ITERATE_KEY,
+  type DebuggerEvent,
+  TriggerOpTypes
+} from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#lifecycle-hooks
 

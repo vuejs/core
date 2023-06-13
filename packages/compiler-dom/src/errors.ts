@@ -1,6 +1,6 @@
 import {
-  SourceLocation,
-  CompilerError,
+  type SourceLocation,
+  type CompilerError,
   createCompilerError,
   ErrorCodes
 } from '@vue/compiler-core'

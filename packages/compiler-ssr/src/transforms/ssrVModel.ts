@@ -1,5 +1,5 @@
 import {
-  DirectiveTransform,
+  type DirectiveTransform,
   ElementTypes,
   transformModel,
   findProp,
@@ -9,8 +9,8 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createCallExpression,
-  PlainElementNode,
-  ExpressionNode,
+  type PlainElementNode,
+  type ExpressionNode,
   createConditionalExpression,
   createInterpolation,
   hasDynamicKeyVBind
@@ -21,7 +21,7 @@ import {
   SSR_RENDER_DYNAMIC_MODEL,
   SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
-import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
+import { type DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!

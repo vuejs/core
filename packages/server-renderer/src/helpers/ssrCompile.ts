@@ -1,8 +1,12 @@
-import { ComponentInternalInstance, ComponentOptions, warn } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  warn
+} from 'vue'
 import { compile } from '@vue/compiler-ssr'
 import { extend, generateCodeFrame, isFunction, NO } from '@vue/shared'
-import { CompilerError, CompilerOptions } from '@vue/compiler-core'
-import { PushFn } from '../render'
+import { type CompilerError, type CompilerOptions } from '@vue/compiler-core'
+import { type PushFn } from '../render'
 
 import * as Vue from 'vue'
 import * as helpers from '../internal'

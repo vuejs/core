@@ -1,4 +1,8 @@
-import puppeteer, { Browser, Page, ClickOptions } from 'puppeteer'
+import puppeteer, {
+  type Browser,
+  type Page,
+  type ClickOptions
+} from 'puppeteer'
 
 export const E2E_TIMEOUT = 30 * 1000
 

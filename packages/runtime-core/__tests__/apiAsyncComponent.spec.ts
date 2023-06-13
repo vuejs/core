@@ -1,7 +1,7 @@
 import {
   defineAsyncComponent,
   h,
-  Component,
+  type Component,
   ref,
   nextTick,
   Suspense,

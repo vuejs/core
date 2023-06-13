@@ -1,13 +1,16 @@
-import { DirectiveTransform, DirectiveTransformResult } from '../transform'
+import {
+  type DirectiveTransform,
+  type DirectiveTransformResult
+} from '../transform'
 import {
   createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
-  DirectiveNode,
+  type DirectiveNode,
   ElementTypes,
-  ExpressionNode,
+  type ExpressionNode,
   NodeTypes,
-  SimpleExpressionNode
+  type SimpleExpressionNode
 } from '../ast'
 import { camelize, toHandlerKey } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'

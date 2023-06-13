@@ -1,4 +1,4 @@
-import { TestElement, logNodeOp, NodeOpTypes } from './nodeOps'
+import { type TestElement, logNodeOp, NodeOpTypes } from './nodeOps'
 import { isOn } from '@vue/shared'
 
 export function patchProp(

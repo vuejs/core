@@ -1,15 +1,15 @@
 import {
-  ComponentNode,
-  TransformContext,
+  type ComponentNode,
+  type TransformContext,
   buildSlots,
   createFunctionExpression,
-  FunctionExpression,
-  TemplateChildNode,
+  type FunctionExpression,
+  type TemplateChildNode,
   createCallExpression,
-  SlotsExpression
+  type SlotsExpression
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
+  type SSRTransformContext,
   processChildrenAsStatement
 } from '../ssrCodegenTransform'
 import { SSR_RENDER_SUSPENSE } from '../runtimeHelpers'

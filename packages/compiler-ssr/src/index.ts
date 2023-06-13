@@ -1,10 +1,10 @@
 import {
-  CodegenResult,
+  type CodegenResult,
   baseParse,
   parserOptions,
   transform,
   generate,
-  CompilerOptions,
+  type CompilerOptions,
   transformExpression,
   trackVForSlotScopes,
   trackSlotScopes,

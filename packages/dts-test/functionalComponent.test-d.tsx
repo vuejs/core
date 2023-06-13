@@ -1,4 +1,10 @@
-import { h, Text, FunctionalComponent, Component, VNode } from 'vue'
+import {
+  h,
+  Text,
+  type FunctionalComponent,
+  type Component,
+  type VNode
+} from 'vue'
 import { expectType } from './utils'
 
 // simple function signature

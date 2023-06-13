@@ -1,10 +1,10 @@
 /* eslint-disable no-restricted-globals */
 import {
-  ConcreteComponent,
-  ComponentInternalInstance,
-  ComponentOptions,
-  InternalRenderFunction,
-  ClassComponent,
+  type ConcreteComponent,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type InternalRenderFunction,
+  type ClassComponent,
   isClassComponent
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'

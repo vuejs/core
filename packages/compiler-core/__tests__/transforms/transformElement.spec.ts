@@ -1,10 +1,10 @@
 import {
-  CompilerOptions,
+  type CompilerOptions,
   baseParse as parse,
   transform,
   ErrorCodes,
   BindingTypes,
-  NodeTransform,
+  type NodeTransform,
   transformExpression,
   baseCompile
 } from '../../src'
@@ -28,9 +28,9 @@ import {
 import {
   NodeTypes,
   createObjectProperty,
-  DirectiveNode,
-  RootNode,
-  VNodeCall
+  type DirectiveNode,
+  type RootNode,
+  type VNodeCall
 } from '../../src/ast'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformStyle } from '../../../compiler-dom/src/transforms/transformStyle'

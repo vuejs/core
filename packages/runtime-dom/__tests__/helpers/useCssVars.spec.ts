@@ -6,10 +6,10 @@ import {
   h,
   reactive,
   nextTick,
-  ComponentOptions,
+  type ComponentOptions,
   Suspense,
   Teleport,
-  FunctionalComponent
+  type FunctionalComponent
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {

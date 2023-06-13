@@ -4,7 +4,7 @@ import {
   render,
   nodeOps,
   TestNodeTypes,
-  TestElement,
+  type TestElement,
   serialize,
   serializeInner
 } from '@vue/runtime-test'

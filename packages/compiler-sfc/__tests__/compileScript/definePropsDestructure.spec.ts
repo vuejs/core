@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../../src'
+import { type SFCScriptCompileOptions } from '../../src'
 import { compileSFCScript, assertCode } from '../utils'
 
 describe('sfc reactive props destructure', () => {

@@ -1,10 +1,10 @@
 import {
   BaseTransition,
-  BaseTransitionProps,
+  type BaseTransitionProps,
   BaseTransitionPropsValidators,
   h,
   assertNumber,
-  FunctionalComponent,
+  type FunctionalComponent,
   compatUtils,
   DeprecationTypes
 } from '@vue/runtime-core'

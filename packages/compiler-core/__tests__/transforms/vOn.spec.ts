@@ -1,14 +1,14 @@
 import {
   baseParse as parse,
-  CompilerOptions,
-  ElementNode,
+  type CompilerOptions,
+  type ElementNode,
   ErrorCodes,
   TO_HANDLER_KEY,
   helperNameMap,
   NodeTypes,
-  ObjectExpression,
+  type ObjectExpression,
   transform,
-  VNodeCall
+  type VNodeCall
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'

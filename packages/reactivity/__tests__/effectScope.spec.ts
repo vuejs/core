@@ -6,7 +6,7 @@ import {
   onScopeDispose,
   computed,
   ref,
-  ComputedRef,
+  type ComputedRef,
   getCurrentScope
 } from '../src'
 

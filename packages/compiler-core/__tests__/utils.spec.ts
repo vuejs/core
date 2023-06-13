@@ -1,5 +1,5 @@
-import { TransformContext } from '../src'
-import { Position } from '../src/ast'
+import { type TransformContext } from '../src'
+import { type Position } from '../src/ast'
 import {
   getInnerRange,
   advancePositionWithClone,

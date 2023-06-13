@@ -2,12 +2,12 @@ import {
   generate,
   baseParse,
   transform,
-  TransformOptions
+  type TransformOptions
 } from '@vue/compiler-core'
 import {
   transformAssetUrl,
   createAssetUrlTransformWithOptions,
-  AssetURLOptions,
+  type AssetURLOptions,
   normalizeOptions
 } from '../src/template/transformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'

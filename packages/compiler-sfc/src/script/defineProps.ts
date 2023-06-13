@@ -1,13 +1,13 @@
 import {
-  Node,
-  LVal,
-  ObjectProperty,
-  ObjectMethod,
-  ObjectExpression,
-  Expression
+  type Node,
+  type LVal,
+  type ObjectProperty,
+  type ObjectMethod,
+  type ObjectExpression,
+  type Expression
 } from '@babel/types'
 import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
-import { ScriptCompileContext } from './context'
+import { type ScriptCompileContext } from './context'
 import { inferRuntimeType, resolveTypeElements } from './resolveType'
 import {
   resolveObjectKey,

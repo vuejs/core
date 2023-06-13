@@ -1,5 +1,9 @@
-import * as m from 'monaco-editor'
-import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
+import type * as m from 'monaco-editor'
+import {
+  compile,
+  type CompilerError,
+  type CompilerOptions
+} from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
 import {
   defaultOptions,

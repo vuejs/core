@@ -2,7 +2,7 @@ import { ShapeFlags } from '@vue/shared'
 import Vue from '@vue/compat'
 import { createComponentInstance } from '../../runtime-core/src/component'
 import { setCurrentRenderingInstance } from '../../runtime-core/src/componentRenderContext'
-import { DirectiveBinding } from '../../runtime-core/src/directives'
+import { type DirectiveBinding } from '../../runtime-core/src/directives'
 import { createVNode } from '../../runtime-core/src/vnode'
 import {
   deprecationData,

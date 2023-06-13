@@ -1,34 +1,34 @@
 import {
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsMixin,
-  RenderFunction,
-  ComponentOptionsBase,
-  ComponentInjectOptions,
-  ComponentOptions
+  type ComputedOptions,
+  type MethodOptions,
+  type ComponentOptionsWithoutProps,
+  type ComponentOptionsWithArrayProps,
+  type ComponentOptionsWithObjectProps,
+  type ComponentOptionsMixin,
+  type RenderFunction,
+  type ComponentOptionsBase,
+  type ComponentInjectOptions,
+  type ComponentOptions
 } from './componentOptions'
 import {
-  SetupContext,
-  AllowedComponentProps,
-  ComponentCustomProps
+  type SetupContext,
+  type AllowedComponentProps,
+  type ComponentCustomProps
 } from './component'
 import {
-  ExtractPropTypes,
-  ComponentPropsOptions,
-  ExtractDefaultPropTypes,
-  ComponentObjectPropsOptions
+  type ExtractPropTypes,
+  type ComponentPropsOptions,
+  type ExtractDefaultPropTypes,
+  type ComponentObjectPropsOptions
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
+import { type EmitsOptions, type EmitsToProps } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
-import { VNodeProps } from './vnode'
+import { type VNodeProps } from './vnode'
 import {
-  CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
+  type CreateComponentPublicInstance,
+  type ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
-import { SlotsType } from './componentSlots'
+import { type SlotsType } from './componentSlots'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &

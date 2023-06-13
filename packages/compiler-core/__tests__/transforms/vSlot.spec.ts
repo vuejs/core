@@ -1,18 +1,18 @@
 import {
-  CompilerOptions,
+  type CompilerOptions,
   baseParse as parse,
   transform,
   generate,
-  ElementNode,
+  type ElementNode,
   NodeTypes,
   ErrorCodes,
-  ForNode,
-  ComponentNode,
-  VNodeCall,
-  SlotsExpression,
-  ObjectExpression,
-  SimpleExpressionNode,
-  RenderSlotCall
+  type ForNode,
+  type ComponentNode,
+  type VNodeCall,
+  type SlotsExpression,
+  type ObjectExpression,
+  type SimpleExpressionNode,
+  type RenderSlotCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'

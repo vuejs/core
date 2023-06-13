@@ -7,7 +7,7 @@ import {
   h,
   ref,
   nextTick,
-  VNode,
+  type VNode,
   Teleport,
   createStaticVNode,
   Suspense,
@@ -20,7 +20,7 @@ import {
   vModelCheckbox,
   renderSlot
 } from '@vue/runtime-dom'
-import { renderToString, SSRContext } from '@vue/server-renderer'
+import { renderToString, type SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
 
 function mountWithHydration(html: string, render: () => any) {

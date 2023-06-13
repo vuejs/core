@@ -1,8 +1,8 @@
-import { VNode } from './vnode'
+import { type VNode } from './vnode'
 import {
-  Data,
-  ComponentInternalInstance,
-  ConcreteComponent,
+  type Data,
+  type ComponentInternalInstance,
+  type ConcreteComponent,
   formatComponentName
 } from './component'
 import { isString, isFunction } from '@vue/shared'

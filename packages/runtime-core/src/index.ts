@@ -138,8 +138,8 @@ export { devtools, setDevtoolsHook } from './devtools'
 
 // Types -------------------------------------------------------------------------
 
-import { VNode } from './vnode'
-import { ComponentInternalInstance } from './component'
+import { type VNode } from './vnode'
+import { type ComponentInternalInstance } from './component'
 
 // Augment Ref unwrap bail types.
 declare module '@vue/reactivity' {

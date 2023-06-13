@@ -1,4 +1,4 @@
-import { createApp, App, Plugin } from 'vue'
+import { createApp, type App, type Plugin } from 'vue'
 
 const app = createApp({})
 

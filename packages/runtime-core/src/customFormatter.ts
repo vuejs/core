@@ -1,8 +1,11 @@
-import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
+import { isReactive, isReadonly, isRef, type Ref, toRaw } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
 import { isShallow } from '../../reactivity/src/reactive'
-import { ComponentInternalInstance, ComponentOptions } from './component'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import {
+  type ComponentInternalInstance,
+  type ComponentOptions
+} from './component'
+import { type ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter() {
   /* eslint-disable no-restricted-globals */

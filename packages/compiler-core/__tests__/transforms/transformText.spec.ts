@@ -1,11 +1,11 @@
 import {
-  CompilerOptions,
+  type CompilerOptions,
   baseParse as parse,
   transform,
   NodeTypes,
   generate,
-  ForNode,
-  ElementNode
+  type ForNode,
+  type ElementNode
 } from '../../src'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformText } from '../../src/transforms/transformText'

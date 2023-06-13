@@ -1,4 +1,4 @@
-import { VNode, VNodeChild, isVNode } from './vnode'
+import { type VNode, type VNodeChild, isVNode } from './vnode'
 import {
   isRef,
   pauseTracking,
@@ -9,46 +9,50 @@ import {
   markRaw,
   track,
   TrackOpTypes,
-  ReactiveEffect
+  type ReactiveEffect
 } from '@vue/reactivity'
 import {
-  ComponentPublicInstance,
+  type ComponentPublicInstance,
   PublicInstanceProxyHandlers,
   createDevRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  ComponentPublicInstanceConstructor,
+  type ComponentPublicInstanceConstructor,
   publicPropertiesMap,
   RuntimeCompiledPublicInstanceProxyHandlers
 } from './componentPublicInstance'
 import {
-  ComponentPropsOptions,
-  NormalizedPropsOptions,
+  type ComponentPropsOptions,
+  type NormalizedPropsOptions,
   initProps,
   normalizePropsOptions
 } from './componentProps'
 import {
   initSlots,
-  InternalSlots,
-  Slots,
-  SlotsType,
-  UnwrapSlotsType
+  type InternalSlots,
+  type Slots,
+  type SlotsType,
+  type UnwrapSlotsType
 } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
-import { Directive, validateDirectiveName } from './directives'
+import {
+  type AppContext,
+  createAppContext,
+  type AppConfig
+} from './apiCreateApp'
+import { type Directive, validateDirectiveName } from './directives'
 import {
   applyOptions,
-  ComponentOptions,
-  ComputedOptions,
-  MethodOptions,
+  type ComponentOptions,
+  type ComputedOptions,
+  type MethodOptions,
   resolveMergedOptions
 } from './componentOptions'
 import {
-  EmitsOptions,
-  ObjectEmitsOptions,
-  EmitFn,
+  type EmitsOptions,
+  type ObjectEmitsOptions,
+  type EmitFn,
   emit,
   normalizeEmitsOptions
 } from './componentEmits'
@@ -64,21 +68,21 @@ import {
   ShapeFlags,
   extend,
   getGlobalThis,
-  IfAny
+  type IfAny
 } from '@vue/shared'
-import { SuspenseBoundary } from './components/Suspense'
-import { CompilerOptions } from '@vue/compiler-core'
+import { type SuspenseBoundary } from './components/Suspense'
+import { type CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import {
-  CompatConfig,
+  type CompatConfig,
   globalCompatConfig,
   validateCompatConfig
 } from './compat/compatConfig'
-import { SchedulerJob } from './scheduler'
-import { LifecycleHooks } from './enums'
+import { type SchedulerJob } from './scheduler'
+import { type LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
 

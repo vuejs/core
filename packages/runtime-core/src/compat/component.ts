@@ -1,5 +1,5 @@
 import { isFunction, isObject } from '@vue/shared'
-import { Component, ComponentInternalInstance } from '../component'
+import { type Component, type ComponentInternalInstance } from '../component'
 import {
   checkCompatEnabled,
   DeprecationTypes,

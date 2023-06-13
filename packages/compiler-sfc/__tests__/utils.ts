@@ -1,8 +1,8 @@
 import {
   parse,
-  SFCScriptCompileOptions,
+  type SFCScriptCompileOptions,
   compileScript,
-  SFCParseOptions
+  type SFCParseOptions
 } from '../src'
 import { parse as babelParse } from '@babel/parser'
 

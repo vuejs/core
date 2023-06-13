@@ -1,6 +1,12 @@
-import { ref, computed, Ref, ComputedRef, WritableComputedRef } from 'vue'
+import {
+  ref,
+  computed,
+  type Ref,
+  type ComputedRef,
+  type WritableComputedRef
+} from 'vue'
 import 'vue/macros-global'
-import { RefType, RefTypes } from 'vue/macros'
+import { RefType, type RefTypes } from 'vue/macros'
 import { expectType } from './utils'
 
 // wrapping refs

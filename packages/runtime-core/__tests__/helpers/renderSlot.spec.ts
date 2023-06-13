@@ -7,7 +7,7 @@ import {
   createBlock,
   Fragment,
   createCommentVNode,
-  Slot
+  type Slot
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
 import { setCurrentRenderingInstance } from '../../src/componentRenderContext'

@@ -9,7 +9,7 @@ import {
   watchEffect,
   defineComponent,
   triggerEvent,
-  TestElement
+  type TestElement
 } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#setup

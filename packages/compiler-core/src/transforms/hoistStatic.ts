@@ -1,22 +1,22 @@
 import {
   ConstantTypes,
-  RootNode,
+  type RootNode,
   NodeTypes,
-  TemplateChildNode,
-  SimpleExpressionNode,
+  type TemplateChildNode,
+  type SimpleExpressionNode,
   ElementTypes,
-  PlainElementNode,
-  ComponentNode,
-  TemplateNode,
-  VNodeCall,
-  ParentNode,
-  JSChildNode,
-  CallExpression,
+  type PlainElementNode,
+  type ComponentNode,
+  type TemplateNode,
+  type VNodeCall,
+  type ParentNode,
+  type JSChildNode,
+  type CallExpression,
   createArrayExpression,
   getVNodeBlockHelper,
   getVNodeHelper
 } from '../ast'
-import { TransformContext } from '../transform'
+import { type TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
 import { isSlotOutlet } from '../utils'
 import {

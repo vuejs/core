@@ -1,7 +1,7 @@
 import {
   baseParse as parse,
   transform,
-  CompilerOptions,
+  type CompilerOptions,
   generate
 } from '@vue/compiler-core'
 import { transformModel } from '../../src/transforms/vModel'

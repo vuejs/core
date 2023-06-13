@@ -1,14 +1,14 @@
 import {
-  Component,
-  ConcreteComponent,
+  type Component,
+  type ConcreteComponent,
   currentInstance,
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   isInSSRComponentSetup,
-  ComponentOptions
+  type ComponentOptions
 } from './component'
 import { isFunction, isObject } from '@vue/shared'
-import { ComponentPublicInstance } from './componentPublicInstance'
-import { createVNode, VNode } from './vnode'
+import { type ComponentPublicInstance } from './componentPublicInstance'
+import { createVNode, type VNode } from './vnode'
 import { defineComponent } from './apiDefineComponent'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'

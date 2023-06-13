@@ -17,38 +17,38 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
-import { RootRenderFunction } from '../renderer'
+import { type RootRenderFunction } from '../renderer'
 import {
-  App,
-  AppConfig,
-  AppContext,
-  CreateAppFunction,
-  Plugin
+  type App,
+  type AppConfig,
+  type AppContext,
+  type CreateAppFunction,
+  type Plugin
 } from '../apiCreateApp'
 import {
-  Component,
-  ComponentOptions,
+  type Component,
+  type ComponentOptions,
   createComponentInstance,
   finishComponentSetup,
   isRuntimeOnly,
   setupComponent
 } from '../component'
 import {
-  RenderFunction,
+  type RenderFunction,
   mergeOptions,
   internalOptionMergeStrats
 } from '../componentOptions'
-import { ComponentPublicInstance } from '../componentPublicInstance'
+import { type ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
-import { Directive } from '../directives'
+import { type Directive } from '../directives'
 import { nextTick } from '../scheduler'
 import { version } from '..'
 import {
   installLegacyConfigWarnings,
   installLegacyOptionMergeStrats,
-  LegacyConfig
+  type LegacyConfig
 } from './globalConfig'
-import { LegacyDirective } from './customDirective'
+import { type LegacyDirective } from './customDirective'
 import {
   warnDeprecation,
   DeprecationTypes,
@@ -57,7 +57,7 @@ import {
   isCompatEnabled,
   softAssertCompatEnabled
 } from './compatConfig'
-import { LegacyPublicInstance } from './instance'
+import { type LegacyPublicInstance } from './instance'
 
 /**
  * @deprecated the default `Vue` export has been removed in Vue 3. The type for

@@ -2,7 +2,7 @@ import {
   h,
   render,
   nodeOps,
-  TestElement,
+  type TestElement,
   serializeInner as inner
 } from '@vue/runtime-test'
 

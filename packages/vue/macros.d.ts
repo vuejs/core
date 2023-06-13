@@ -1,11 +1,11 @@
 import {
-  Ref,
-  UnwrapRef,
-  ComputedRef,
-  WritableComputedOptions,
-  DebuggerOptions,
-  WritableComputedRef,
-  CustomRefFactory
+  type Ref,
+  type UnwrapRef,
+  type ComputedRef,
+  type WritableComputedOptions,
+  type DebuggerOptions,
+  type WritableComputedRef,
+  type CustomRefFactory
 } from '@vue/runtime-dom'
 
 export declare const RefType: unique symbol

@@ -1,5 +1,10 @@
-import { ComponentInternalInstance, Slots } from 'vue'
-import { Props, PushFn, renderVNodeChildren, SSRBufferItem } from '../render'
+import { type ComponentInternalInstance, type Slots } from 'vue'
+import {
+  type Props,
+  type PushFn,
+  renderVNodeChildren,
+  type SSRBufferItem
+} from '../render'
 import { isArray } from '@vue/shared'
 
 export type SSRSlots = Record<string, SSRSlot>

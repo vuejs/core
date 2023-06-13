@@ -1,32 +1,32 @@
 import {
-  ConcreteComponent,
-  Data,
+  type ConcreteComponent,
+  type Data,
   validateComponentName,
-  Component,
-  ComponentInternalInstance,
+  type Component,
+  type ComponentInternalInstance,
   getExposeProxy
 } from './component'
 import {
-  ComponentOptions,
-  MergedComponentOptions,
-  RuntimeCompilerOptions
+  type ComponentOptions,
+  type MergedComponentOptions,
+  type RuntimeCompilerOptions
 } from './componentOptions'
 import {
-  ComponentCustomProperties,
-  ComponentPublicInstance
+  type ComponentCustomProperties,
+  type ComponentPublicInstance
 } from './componentPublicInstance'
-import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
-import { InjectionKey } from './apiInject'
+import { type Directive, validateDirectiveName } from './directives'
+import { type RootRenderFunction } from './renderer'
+import { type InjectionKey } from './apiInject'
 import { warn } from './warning'
-import { createVNode, cloneVNode, VNode } from './vnode'
-import { RootHydrateFunction } from './hydration'
+import { createVNode, cloneVNode, type VNode } from './vnode'
+import { type RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject, extend } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
-import { NormalizedPropsOptions } from './componentProps'
-import { ObjectEmitsOptions } from './componentEmits'
+import { type NormalizedPropsOptions } from './componentProps'
+import { type ObjectEmitsOptions } from './componentEmits'
 
 export interface App<HostElement = any> {
   version: string

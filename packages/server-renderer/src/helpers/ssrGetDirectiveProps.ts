@@ -1,4 +1,4 @@
-import { ComponentPublicInstance, Directive } from '@vue/runtime-core'
+import { type ComponentPublicInstance, type Directive } from '@vue/runtime-core'
 
 export function ssrGetDirectiveProps(
   instance: ComponentPublicInstance,

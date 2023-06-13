@@ -1,5 +1,5 @@
 import {
-  DirectiveTransform,
+  type DirectiveTransform,
   createObjectProperty,
   createSimpleExpression
 } from '@vue/compiler-core'

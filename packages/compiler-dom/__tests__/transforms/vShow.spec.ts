@@ -2,7 +2,7 @@ import {
   baseParse as parse,
   transform,
   generate,
-  CompilerOptions
+  type CompilerOptions
 } from '@vue/compiler-core'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import { transformShow } from '../../src/transforms/vShow'

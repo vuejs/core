@@ -1,4 +1,4 @@
-import { UserConfig } from 'vitest/config'
+import type { UserConfig } from 'vitest/config'
 import config from './vitest.config'
 
 export default {

@@ -13,38 +13,48 @@ import {
   isOn
 } from '@vue/shared'
 import {
-  ComponentInternalInstance,
-  Data,
-  ConcreteComponent,
-  ClassComponent,
-  Component,
+  type ComponentInternalInstance,
+  type Data,
+  type ConcreteComponent,
+  type ClassComponent,
+  type Component,
   isClassComponent
 } from './component'
-import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
-import { AppContext } from './apiCreateApp'
+import { type RawSlots } from './componentSlots'
 import {
-  Suspense,
-  SuspenseImpl,
+  isProxy,
+  type Ref,
+  toRaw,
+  type ReactiveFlags,
+  isRef
+} from '@vue/reactivity'
+import { type AppContext } from './apiCreateApp'
+import {
+  type Suspense,
+  type SuspenseImpl,
   isSuspense,
-  SuspenseBoundary
+  type SuspenseBoundary
 } from './components/Suspense'
-import { DirectiveBinding } from './directives'
-import { TransitionHooks } from './components/BaseTransition'
+import { type DirectiveBinding } from './directives'
+import { type TransitionHooks } from './components/BaseTransition'
 import { warn } from './warning'
-import { Teleport, TeleportImpl, isTeleport } from './components/Teleport'
+import {
+  type Teleport,
+  type TeleportImpl,
+  isTeleport
+} from './components/Teleport'
 import {
   currentRenderingInstance,
   currentScopeId
 } from './componentRenderContext'
-import { RendererNode, RendererElement } from './renderer'
+import { type RendererNode, type RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
 import { hmrDirtyComponents } from './hmr'
 import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import { type ComponentPublicInstance } from './componentPublicInstance'
 
 export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true

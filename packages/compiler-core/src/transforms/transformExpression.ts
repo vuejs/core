@@ -7,13 +7,13 @@
 // - This transform is only applied in non-browser builds because it relies on
 //   an additional JavaScript parser. In the browser, there is no source-map
 //   support and the code is wrapped in `with (this) { ... }`.
-import { NodeTransform, TransformContext } from '../transform'
+import { type NodeTransform, type TransformContext } from '../transform'
 import {
   NodeTypes,
   createSimpleExpression,
-  ExpressionNode,
-  SimpleExpressionNode,
-  CompoundExpressionNode,
+  type ExpressionNode,
+  type SimpleExpressionNode,
+  type CompoundExpressionNode,
   createCompoundExpression,
   ConstantTypes
 } from '../ast'
@@ -33,10 +33,10 @@ import {
 } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
-  Node,
-  Identifier,
-  AssignmentExpression,
-  UpdateExpression
+  type Node,
+  type Identifier,
+  type AssignmentExpression,
+  type UpdateExpression
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parse } from '@babel/parser'

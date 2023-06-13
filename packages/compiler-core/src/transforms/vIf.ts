@@ -1,29 +1,29 @@
 import {
   createStructuralDirectiveTransform,
-  TransformContext,
+  type TransformContext,
   traverseNode
 } from '../transform'
 import {
   NodeTypes,
   ElementTypes,
-  ElementNode,
-  DirectiveNode,
-  IfBranchNode,
-  SimpleExpressionNode,
+  type ElementNode,
+  type DirectiveNode,
+  type IfBranchNode,
+  type SimpleExpressionNode,
   createCallExpression,
   createConditionalExpression,
   createSimpleExpression,
   createObjectProperty,
   createObjectExpression,
-  IfConditionalExpression,
-  BlockCodegenNode,
-  IfNode,
+  type IfConditionalExpression,
+  type BlockCodegenNode,
+  type IfNode,
   createVNodeCall,
-  AttributeNode,
+  type AttributeNode,
   locStub,
-  CacheExpression,
+  type CacheExpression,
   ConstantTypes,
-  MemoExpression,
+  type MemoExpression,
   convertToBlock
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'

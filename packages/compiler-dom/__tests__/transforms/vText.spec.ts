@@ -1,8 +1,8 @@
 import {
   baseParse as parse,
   transform,
-  PlainElementNode,
-  CompilerOptions
+  type PlainElementNode,
+  type CompilerOptions
 } from '@vue/compiler-core'
 import { transformVText } from '../../src/transforms/vText'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'

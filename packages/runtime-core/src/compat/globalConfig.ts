@@ -1,4 +1,4 @@
-import { AppConfig } from '../apiCreateApp'
+import { type AppConfig } from '../apiCreateApp'
 import {
   DeprecationTypes,
   softAssertCompatEnabled,

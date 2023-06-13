@@ -1,5 +1,5 @@
-import { SimpleExpressionNode } from './ast'
-import { TransformContext } from './transform'
+import { type SimpleExpressionNode } from './ast'
+import { type TransformContext } from './transform'
 import { createCompilerError, ErrorCodes } from './errors'
 
 // these keywords should not appear inside expressions, but operators like

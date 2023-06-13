@@ -1,4 +1,4 @@
-import { Slot } from '../../src/componentSlots'
+import { type Slot } from '../../src/componentSlots'
 import { createSlots } from '../../src/helpers/createSlots'
 
 describe('createSlot', () => {

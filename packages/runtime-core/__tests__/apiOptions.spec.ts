@@ -8,7 +8,7 @@ import {
   render,
   serializeInner,
   triggerEvent,
-  TestElement,
+  type TestElement,
   nextTick,
   renderToString,
   ref,

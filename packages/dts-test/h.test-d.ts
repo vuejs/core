@@ -5,7 +5,7 @@ import {
   Fragment,
   Teleport,
   Suspense,
-  Component,
+  type Component,
   resolveComponent
 } from 'vue'
 import { describe, expectAssignable } from './utils'

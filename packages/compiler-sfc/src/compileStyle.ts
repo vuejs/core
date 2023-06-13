@@ -1,19 +1,19 @@
 import postcss, {
-  ProcessOptions,
-  Result,
-  SourceMap,
-  Message,
-  LazyResult
+  type ProcessOptions,
+  type Result,
+  type SourceMap,
+  type Message,
+  type LazyResult
 } from 'postcss'
 import trimPlugin from './style/pluginTrim'
 import scopedPlugin from './style/pluginScoped'
 import {
   processors,
-  StylePreprocessor,
-  StylePreprocessorResults,
-  PreprocessLang
+  type StylePreprocessor,
+  type StylePreprocessorResults,
+  type PreprocessLang
 } from './style/preprocessors'
-import { RawSourceMap } from 'source-map-js'
+import { type RawSourceMap } from 'source-map-js'
 import { cssVarsPlugin } from './style/cssVars'
 import postcssModules from 'postcss-modules'
 

@@ -1,9 +1,9 @@
-import { ComponentInternalInstance, currentInstance } from './component'
+import { type ComponentInternalInstance, currentInstance } from './component'
 import {
-  VNode,
-  VNodeNormalizedChildren,
+  type VNode,
+  type VNodeNormalizedChildren,
   normalizeVNode,
-  VNodeChild,
+  type VNodeChild,
   InternalObjectKey
 } from './vnode'
 import {
@@ -14,12 +14,12 @@ import {
   extend,
   def,
   SlotFlags,
-  Prettify,
-  IfAny
+  type Prettify,
+  type IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { ContextualRenderFn, withCtx } from './componentRenderContext'
+import { type ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'

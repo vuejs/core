@@ -7,8 +7,8 @@ import {
   toDisplayString
 } from '@vue/shared'
 import {
-  ComponentPublicInstance,
-  PublicPropertiesMap
+  type ComponentPublicInstance,
+  type PublicPropertiesMap
 } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
@@ -35,8 +35,8 @@ import {
   legacyresolveScopedSlots
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import { InternalSlots, Slots } from '../componentSlots'
-import { ContextualRenderFn } from '../componentRenderContext'
+import { type InternalSlots, type Slots } from '../componentSlots'
+import { type ContextualRenderFn } from '../componentRenderContext'
 import { resolveMergedOptions } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &

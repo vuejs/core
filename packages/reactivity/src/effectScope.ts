@@ -1,4 +1,4 @@
-import { ReactiveEffect } from './effect'
+import { type ReactiveEffect } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined

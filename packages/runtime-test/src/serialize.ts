@@ -1,9 +1,9 @@
 import {
-  TestElement,
-  TestNode,
+  type TestElement,
+  type TestNode,
   TestNodeTypes,
-  TestText,
-  TestComment
+  type TestText,
+  type TestComment
 } from './nodeOps'
 import { isOn } from '@vue/shared'
 

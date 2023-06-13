@@ -1,4 +1,4 @@
-import { ComponentInternalInstance } from './component'
+import { type ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
 import { setBlockTracking } from './vnode'
 

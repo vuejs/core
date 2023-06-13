@@ -1,7 +1,7 @@
 import { hyphenate, isArray } from '@vue/shared'
 import {
   ErrorCodes,
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   callWithAsyncErrorHandling
 } from '@vue/runtime-core'
 

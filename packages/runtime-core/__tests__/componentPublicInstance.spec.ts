@@ -7,7 +7,10 @@ import {
   shallowReadonly,
   defineComponent
 } from '@vue/runtime-test'
-import { ComponentInternalInstance, ComponentOptions } from '../src/component'
+import {
+  type ComponentInternalInstance,
+  type ComponentOptions
+} from '../src/component'
 
 describe('component: proxy', () => {
   test('data', () => {

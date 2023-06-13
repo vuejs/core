@@ -6,7 +6,7 @@ import {
   h,
   ref,
   Suspense,
-  ComponentOptions,
+  type ComponentOptions,
   render,
   nodeOps,
   serializeInner,

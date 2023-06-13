@@ -1,8 +1,12 @@
-import { CompilerOptions } from './options'
+import { type CompilerOptions } from './options'
 import { baseParse } from './parse'
-import { transform, NodeTransform, DirectiveTransform } from './transform'
-import { generate, CodegenResult } from './codegen'
-import { RootNode } from './ast'
+import {
+  transform,
+  type NodeTransform,
+  type DirectiveTransform
+} from './transform'
+import { generate, type CodegenResult } from './codegen'
+import { type RootNode } from './ast'
 import { isString, extend } from '@vue/shared'
 import { transformIf } from './transforms/vIf'
 import { transformFor } from './transforms/vFor'

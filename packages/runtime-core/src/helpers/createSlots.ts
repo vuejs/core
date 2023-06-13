@@ -1,5 +1,5 @@
 import { isArray } from '@vue/shared'
-import { VNode } from '../vnode'
+import { type VNode } from '../vnode'
 
 // #6651 res can be undefined in SSR in string push mode
 type SSRSlot = (...args: any[]) => VNode[] | undefined

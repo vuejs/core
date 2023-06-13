@@ -1,6 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import { defineConfig, Plugin } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import execa from 'execa'
 

@@ -6,7 +6,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
-  plugins: ['jest'],
+  plugins: ['jest', '@typescript-eslint'],
   rules: {
     'no-debugger': 'error',
     'no-unused-vars': [
@@ -27,6 +27,14 @@ module.exports = {
       // still generates verbose helpers, so spread assignment is also prohiboted
       'ObjectExpression > SpreadElement',
       'AwaitExpression'
+    ],
+    '@typescript-eslint/consistent-type-imports': [
+      'error',
+      {
+        prefer: 'type-imports',
+        disallowTypeAnnotations: false,
+        fixStyle: 'inline-type-imports'
+      }
     ]
   },
   overrides: [

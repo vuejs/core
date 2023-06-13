@@ -1,22 +1,22 @@
 import {
   h,
-  TestElement,
+  type TestElement,
   nodeOps,
   render,
   ref,
   KeepAlive,
   serializeInner,
   nextTick,
-  ComponentOptions,
+  type ComponentOptions,
   markRaw,
   inject,
   defineComponent,
-  ComponentPublicInstance,
-  Ref,
+  type ComponentPublicInstance,
+  type Ref,
   cloneVNode,
   provide,
   defineAsyncComponent,
-  Component,
+  type Component,
   createApp,
   onActivated,
   onUnmounted,
@@ -25,7 +25,7 @@ import {
   shallowRef,
   onDeactivated
 } from '@vue/runtime-test'
-import { KeepAliveProps } from '../../src/components/KeepAlive'
+import { type KeepAliveProps } from '../../src/components/KeepAlive'
 
 const timeout = (n: number = 0) => new Promise(r => setTimeout(r, n))
 

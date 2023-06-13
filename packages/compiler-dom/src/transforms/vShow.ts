@@ -1,4 +1,4 @@
-import { DirectiveTransform } from '@vue/compiler-core'
+import { type DirectiveTransform } from '@vue/compiler-core'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'
 import { V_SHOW } from '../runtimeHelpers'
 

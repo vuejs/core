@@ -6,7 +6,7 @@ import {
 } from '@vue/shared'
 import {
   compatUtils,
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   DeprecationTypes
 } from '@vue/runtime-core'
 

@@ -1,7 +1,7 @@
 import {
   getCurrentInstance,
   warn,
-  VNode,
+  type VNode,
   Fragment,
   Static,
   watchPostEffect,

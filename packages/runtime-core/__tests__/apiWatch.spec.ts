@@ -7,14 +7,14 @@ import {
   ref,
   defineComponent,
   getCurrentInstance,
-  ComponentInternalInstance,
-  ComponentPublicInstance
+  type ComponentInternalInstance,
+  type ComponentPublicInstance
 } from '../src/index'
 import {
   render,
   nodeOps,
   serializeInner,
-  TestElement,
+  type TestElement,
   h,
   createApp,
   watchPostEffect,
@@ -23,12 +23,12 @@ import {
 } from '@vue/runtime-test'
 import {
   ITERATE_KEY,
-  DebuggerEvent,
+  type DebuggerEvent,
   TrackOpTypes,
   TriggerOpTypes,
   triggerRef,
   shallowRef,
-  Ref,
+  type Ref,
   effectScope,
   toRef
 } from '@vue/reactivity'

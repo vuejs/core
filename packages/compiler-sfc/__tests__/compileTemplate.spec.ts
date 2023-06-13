@@ -1,8 +1,8 @@
 import {
   compileTemplate,
-  SFCTemplateCompileOptions
+  type SFCTemplateCompileOptions
 } from '../src/compileTemplate'
-import { parse, SFCTemplateBlock } from '../src/parse'
+import { parse, type SFCTemplateBlock } from '../src/parse'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
   return compileTemplate({

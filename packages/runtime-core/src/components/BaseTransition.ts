@@ -1,15 +1,15 @@
 import {
   getCurrentInstance,
-  SetupContext,
-  ComponentInternalInstance,
-  ComponentOptions
+  type SetupContext,
+  type ComponentInternalInstance,
+  type ComponentOptions
 } from '../component'
 import {
   cloneVNode,
   Comment,
   isSameVNodeType,
-  VNode,
-  VNodeArrayChildren,
+  type VNode,
+  type VNodeArrayChildren,
   Fragment
 } from '../vnode'
 import { warn } from '../warning'
@@ -18,7 +18,7 @@ import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
 import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
-import { RendererElement } from '../renderer'
+import { type RendererElement } from '../renderer'
 
 type Hook<T = () => void> = T | T[]
 

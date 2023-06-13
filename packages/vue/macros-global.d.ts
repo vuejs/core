@@ -1,11 +1,11 @@
 import {
-  $ as _$,
-  $$ as _$$,
-  $ref as _$ref,
-  $shallowRef as _$shallowRef,
-  $computed as _$computed,
-  $customRef as _$customRef,
-  $toRef as _$toRef
+  type $ as _$,
+  type $$ as _$$,
+  type $ref as _$ref,
+  type $shallowRef as _$shallowRef,
+  type $computed as _$computed,
+  type $customRef as _$customRef,
+  type $toRef as _$toRef
 } from './macros'
 
 declare global {

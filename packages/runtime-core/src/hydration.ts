@@ -1,28 +1,28 @@
 import {
-  VNode,
+  type VNode,
   normalizeVNode,
   Text,
   Comment,
   Static,
   Fragment,
-  VNodeHook,
+  type VNodeHook,
   createVNode,
   createTextVNode,
   invokeVNodeHook
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import { ComponentInternalInstance } from './component'
+import { type ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals } from './renderer'
+import { type RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
-  SuspenseImpl,
-  SuspenseBoundary,
+  type SuspenseImpl,
+  type SuspenseBoundary,
   queueEffectWithSuspense
 } from './components/Suspense'
-import { TeleportImpl, TeleportVNode } from './components/Teleport'
+import { type TeleportImpl, type TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (

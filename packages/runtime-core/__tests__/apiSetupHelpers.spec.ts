@@ -1,5 +1,5 @@
 import {
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -8,10 +8,10 @@ import {
   onMounted,
   render,
   serializeInner,
-  SetupContext,
+  type SetupContext,
   Suspense,
   computed,
-  ComputedRef,
+  type ComputedRef,
   shallowReactive,
   nextTick,
   ref

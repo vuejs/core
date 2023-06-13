@@ -1,13 +1,21 @@
-import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
-import { SFCDescriptor } from '../parse'
+import {
+  type Node,
+  type ObjectPattern,
+  type Program,
+  type CallExpression
+} from '@babel/types'
+import { type SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
-import { parse as babelParse, ParserPlugin } from '@babel/parser'
-import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { PropsDestructureBindings } from './defineProps'
-import { ModelDecl } from './defineModel'
-import { BindingMetadata } from '../../../compiler-core/src'
+import { parse as babelParse, type ParserPlugin } from '@babel/parser'
+import {
+  type ImportBinding,
+  type SFCScriptCompileOptions
+} from '../compileScript'
+import { type PropsDestructureBindings } from './defineProps'
+import { type ModelDecl } from './defineModel'
+import { type BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { TypeScope } from './resolveType'
+import { type TypeScope } from './resolveType'
 
 export class ScriptCompileContext {
   isJS: boolean

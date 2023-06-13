@@ -1,6 +1,6 @@
-import { Dep } from './dep'
+import { type Dep } from './dep'
 import { ReactiveEffect } from './effect'
-import { ComputedGetter, ComputedRef } from './computed'
+import { type ComputedGetter, type ComputedRef } from './computed'
 import { ReactiveFlags, toRaw } from './reactive'
 import { trackRefValue, triggerRefValue } from './ref'
 

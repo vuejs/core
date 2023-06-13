@@ -1,9 +1,9 @@
 import {
   getCurrentInstance,
   DeprecationTypes,
-  LegacyConfig,
+  type LegacyConfig,
   compatUtils,
-  ComponentInternalInstance
+  type ComponentInternalInstance
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 

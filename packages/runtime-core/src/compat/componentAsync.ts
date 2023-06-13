@@ -1,6 +1,6 @@
 import { isArray, isObject, isPromise } from '@vue/shared'
 import { defineAsyncComponent } from '../apiAsyncComponent'
-import { Component } from '../component'
+import { type Component } from '../component'
 import { isVNode } from '../vnode'
 
 interface LegacyAsyncOptions {

@@ -3,12 +3,12 @@
  */
 
 import {
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   getCurrentInstance,
   render,
   h,
   nodeOps,
-  FunctionalComponent,
+  type FunctionalComponent,
   defineComponent,
   ref,
   serializeInner,
@@ -17,7 +17,7 @@ import {
   inject,
   watch,
   toRefs,
-  SetupContext
+  type SetupContext
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 

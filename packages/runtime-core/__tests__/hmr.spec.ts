@@ -1,13 +1,16 @@
-import { HMRRuntime } from '../src/hmr'
+import { type HMRRuntime } from '../src/hmr'
 import '../src/hmr'
-import { ComponentOptions, InternalRenderFunction } from '../src/component'
+import {
+  type ComponentOptions,
+  type InternalRenderFunction
+} from '../src/component'
 import {
   render,
   nodeOps,
   h,
   serializeInner,
   triggerEvent,
-  TestElement,
+  type TestElement,
   nextTick
 } from '@vue/runtime-test'
 import * as runtimeTest from '@vue/runtime-test'

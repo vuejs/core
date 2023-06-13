@@ -1,28 +1,28 @@
 import {
-  Expression,
-  Identifier,
-  Node,
-  Statement,
-  TSCallSignatureDeclaration,
-  TSEnumDeclaration,
-  TSExpressionWithTypeArguments,
-  TSFunctionType,
-  TSImportType,
-  TSIndexedAccessType,
-  TSInterfaceDeclaration,
-  TSMappedType,
-  TSMethodSignature,
-  TSModuleBlock,
-  TSModuleDeclaration,
-  TSPropertySignature,
-  TSQualifiedName,
-  TSType,
-  TSTypeAnnotation,
-  TSTypeElement,
-  TSTypeLiteral,
-  TSTypeQuery,
-  TSTypeReference,
-  TemplateLiteral
+  type Expression,
+  type Identifier,
+  type Node,
+  type Statement,
+  type TSCallSignatureDeclaration,
+  type TSEnumDeclaration,
+  type TSExpressionWithTypeArguments,
+  type TSFunctionType,
+  type TSImportType,
+  type TSIndexedAccessType,
+  type TSInterfaceDeclaration,
+  type TSMappedType,
+  type TSMethodSignature,
+  type TSModuleBlock,
+  type TSModuleDeclaration,
+  type TSPropertySignature,
+  type TSQualifiedName,
+  type TSType,
+  type TSTypeAnnotation,
+  type TSTypeElement,
+  type TSTypeLiteral,
+  type TSTypeQuery,
+  type TSTypeReference,
+  type TemplateLiteral
 } from '@babel/types'
 import {
   UNKNOWN_TYPE,
@@ -32,8 +32,11 @@ import {
   normalizePath,
   joinPaths
 } from './utils'
-import { ScriptCompileContext, resolveParserPlugins } from './context'
-import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
+import { type ScriptCompileContext, resolveParserPlugins } from './context'
+import {
+  type ImportBinding,
+  type SFCScriptCompileOptions
+} from '../compileScript'
 import { capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'

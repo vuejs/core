@@ -3,7 +3,7 @@ import {
   defineComponent,
   h,
   nextTick,
-  VNode,
+  type VNode,
   ref,
   watch
 } from '@vue/runtime-core'

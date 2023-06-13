@@ -1,4 +1,4 @@
-import { provide, inject, ref, Ref, InjectionKey } from 'vue'
+import { provide, inject, ref, type Ref, type InjectionKey } from 'vue'
 import { expectType } from './utils'
 
 // non-symbol keys

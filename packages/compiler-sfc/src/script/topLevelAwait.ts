@@ -1,5 +1,5 @@
-import { AwaitExpression } from '@babel/types'
-import { ScriptCompileContext } from './context'
+import { type AwaitExpression } from '@babel/types'
+import { type ScriptCompileContext } from './context'
 
 /**
  * Support context-persistence between top-level await expressions:

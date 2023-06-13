@@ -5,10 +5,10 @@ import {
   h,
   inject,
   nextTick,
-  Ref,
+  type Ref,
   ref,
   renderSlot,
-  VueElement
+  type VueElement
 } from '../src'
 
 describe('defineCustomElement', () => {

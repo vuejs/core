@@ -1,5 +1,5 @@
-import { ExtractPropTypes, ExtractPublicPropTypes } from 'vue'
-import { expectType, Prettify } from './utils'
+import { type ExtractPropTypes, type ExtractPublicPropTypes } from 'vue'
+import { expectType, type Prettify } from './utils'
 
 const propsOptions = {
   foo: {

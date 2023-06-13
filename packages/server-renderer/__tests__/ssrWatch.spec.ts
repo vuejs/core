@@ -1,5 +1,5 @@
 import { createSSRApp, defineComponent, h, watch, ref } from 'vue'
-import { SSRContext, renderToString } from '../src'
+import { type SSRContext, renderToString } from '../src'
 
 describe('ssr: watch', () => {
   // #6013

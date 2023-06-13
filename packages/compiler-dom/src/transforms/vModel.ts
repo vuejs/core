@@ -1,6 +1,6 @@
 import {
   transformModel as baseTransform,
-  DirectiveTransform,
+  type DirectiveTransform,
   ElementTypes,
   findProp,
   NodeTypes,
