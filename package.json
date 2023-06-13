@@ -65,6 +65,7 @@
     "@rollup/plugin-terser": "^0.4.0",
     "@types/hash-sum": "^1.0.0",
     "@types/node": "^16.4.7",
+    "@typescript-eslint/eslint-plugin": "^5.59.11",
     "@typescript-eslint/parser": "^5.56.0",
     "@vitest/coverage-istanbul": "^0.29.7",
     "@vue/consolidate": "0.17.3",
