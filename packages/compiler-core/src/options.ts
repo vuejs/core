@@ -1,13 +1,18 @@
-import { ElementNode, Namespace, TemplateChildNode, ParentNode } from './ast'
-import { TextModes } from './parse'
-import { CompilerError } from './errors'
-import {
+import type {
+  ElementNode,
+  Namespace,
+  TemplateChildNode,
+  ParentNode
+} from './ast'
+import type { TextModes } from './parse'
+import type { CompilerError } from './errors'
+import type {
   NodeTransform,
   DirectiveTransform,
   TransformContext
 } from './transform'
-import { CompilerCompatOptions } from './compat/compatConfig'
-import { ParserPlugin } from '@babel/parser'
+import type { CompilerCompatOptions } from './compat/compatConfig'
+import type { ParserPlugin } from '@babel/parser'
 
 export interface ErrorHandlingOptions {
   onWarn?: (warning: CompilerError) => void
