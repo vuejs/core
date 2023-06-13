@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { ref, reactive } from '@vue/reactivity'
 import {
   renderToString,

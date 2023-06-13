@@ -2,11 +2,10 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers,
-  getImportedName
+  walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -16,8 +15,7 @@ import {
   Identifier,
   ExportSpecifier,
   Statement,
-  CallExpression,
-  TSEnumDeclaration
+  CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import { RawSourceMap } from 'source-map-js'
@@ -46,8 +44,12 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { isLiteralNode, unwrapTSNode, isCallOf } from './script/utils'
-import { inferRuntimeType } from './script/resolveType'
+import {
+  isLiteralNode,
+  unwrapTSNode,
+  isCallOf,
+  getImportedName
+} from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -71,13 +73,10 @@ export interface SFCScriptCompileOptions {
    */
   babelParserPlugins?: ParserPlugin[]
   /**
-   * (Experimental) Enable syntax transform for using refs without `.value` and
-   * using destructured props with reactivity
-   * @deprecated the Reactivity Transform proposal has been dropped. This
-   * feature will be removed from Vue core in 3.4. If you intend to continue
-   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
+   * A list of files to parse for global types to be made available for type
+   * resolving in SFC macros. The list must be fully resolved file system paths.
    */
-  reactivityTransform?: boolean
+  globalTypeFiles?: string[]
   /**
    * Compile the template and inline the resulting render function
    * directly inside setup().
@@ -106,8 +105,31 @@ export interface SFCScriptCompileOptions {
   hoistStatic?: boolean
   /**
    * (**Experimental**) Enable macro `defineModel`
+   * @default false
    */
   defineModel?: boolean
+  /**
+   * (**Experimental**) Enable reactive destructure for `defineProps`
+   * @default false
+   */
+  propsDestructure?: boolean
+  /**
+   * File system access methods to be used when resolving types
+   * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
+   * to use a virtual file system for use in browsers (e.g. in REPLs)
+   */
+  fs?: {
+    fileExists(file: string): boolean
+    readFile(file: string): string | undefined
+  }
+  /**
+   * (Experimental) Enable syntax transform for using refs without `.value` and
+   * using destructured props with reactivity
+   * @deprecated the Reactivity Transform proposal has been dropped. This
+   * feature will be removed from Vue core in 3.4. If you intend to continue
+   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
+   */
+  reactivityTransform?: boolean
 }
 
 export interface ImportBinding {
@@ -169,7 +191,6 @@ export function compileScript(
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
-  const userImports: Record<string, ImportBinding> = Object.create(null)
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
 
@@ -223,7 +244,7 @@ export function compileScript(
       isUsedInTemplate = isImportUsed(local, sfc)
     }
 
-    userImports[local] = {
+    ctx.userImports[local] = {
       isType,
       imported,
       local,
@@ -253,7 +274,7 @@ export function compileScript(
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
@@ -303,7 +324,7 @@ export function compileScript(
         const local = specifier.local.name
         const imported = getImportedName(specifier)
         const source = node.source.value
-        const existing = userImports[local]
+        const existing = ctx.userImports[local]
         if (
           source === 'vue' &&
           (imported === DEFINE_PROPS ||
@@ -345,8 +366,8 @@ export function compileScript(
 
   // 1.3 resolve possible user import alias of `ref` and `reactive`
   const vueImportAliases: Record<string, string> = {}
-  for (const key in userImports) {
-    const { source, imported, local } = userImports[key]
+  for (const key in ctx.userImports) {
+    const { source, imported, local } = ctx.userImports[key]
     if (source === 'vue') vueImportAliases[imported] = local
   }
 
@@ -484,21 +505,6 @@ export function compileScript(
 
   // 2.2 process <script setup> body
   for (const node of scriptSetupAst.body) {
-    // (Dropped) `ref: x` bindings
-    // TODO remove when out of experimental
-    if (
-      node.type === 'LabeledStatement' &&
-      node.label.name === 'ref' &&
-      node.body.type === 'ExpressionStatement'
-    ) {
-      ctx.error(
-        `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback. Please check out ` +
-          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
-        node
-      )
-    }
-
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -658,7 +664,6 @@ export function compileScript(
           node.exportKind === 'type') ||
         (node.type === 'VariableDeclaration' && node.declare)
       ) {
-        recordType(node, ctx.declaredTypes)
         if (node.type !== 'TSEnumDeclaration') {
           hoistNode(node)
         }
@@ -723,7 +728,7 @@ export function compileScript(
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   for (const [key, { isType, imported, source }] of Object.entries(
-    userImports
+    ctx.userImports
   )) {
     if (isType) continue
     ctx.bindingMetadata[key] =
@@ -823,8 +828,11 @@ export function compileScript(
       ...scriptBindings,
       ...setupBindings
     }
-    for (const key in userImports) {
-      if (!userImports[key].isType && userImports[key].isUsedInTemplate) {
+    for (const key in ctx.userImports) {
+      if (
+        !ctx.userImports[key].isType &&
+        ctx.userImports[key].isUsedInTemplate
+      ) {
         allBindings[key] = true
       }
     }
@@ -832,8 +840,8 @@ export function compileScript(
     for (const key in allBindings) {
       if (
         allBindings[key] === true &&
-        userImports[key].source !== 'vue' &&
-        !userImports[key].source.endsWith('.vue')
+        ctx.userImports[key].source !== 'vue' &&
+        !ctx.userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
         // skip vue imports since we know they will never change
@@ -1012,7 +1020,7 @@ export function compileScript(
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,
-    imports: userImports,
+    imports: ctx.userImports,
     content: ctx.s.toString(),
     map:
       options.sourceMap !== false
@@ -1023,7 +1031,8 @@ export function compileScript(
           }) as unknown as RawSourceMap)
         : undefined,
     scriptAst: scriptAst?.body,
-    scriptSetupAst: scriptSetupAst?.body
+    scriptSetupAst: scriptSetupAst?.body,
+    deps: ctx.deps ? [...ctx.deps] : undefined
   }
 }
 
@@ -1086,8 +1095,16 @@ function walkDeclaration(
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (
-            isCallOf(init, userImportAliases['ref']) ||
-            isCallOf(init, DEFINE_MODEL)
+            isCallOf(
+              init,
+              m =>
+                m === userImportAliases['ref'] ||
+                m === userImportAliases['computed'] ||
+                m === userImportAliases['shallowRef'] ||
+                m === userImportAliases['customRef'] ||
+                m === userImportAliases['toRef'] ||
+                m === DEFINE_MODEL
+            )
           ) {
             bindingType = BindingTypes.SETUP_REF
           } else {
@@ -1201,38 +1218,6 @@ function walkPattern(
   }
 }
 
-function recordType(node: Node, declaredTypes: Record<string, string[]>) {
-  if (node.type === 'TSInterfaceDeclaration') {
-    declaredTypes[node.id.name] = [`Object`]
-  } else if (node.type === 'TSTypeAliasDeclaration') {
-    declaredTypes[node.id.name] = inferRuntimeType(
-      node.typeAnnotation,
-      declaredTypes
-    )
-  } else if (node.type === 'ExportNamedDeclaration' && node.declaration) {
-    recordType(node.declaration, declaredTypes)
-  } else if (node.type === 'TSEnumDeclaration') {
-    declaredTypes[node.id.name] = inferEnumType(node)
-  }
-}
-
-function inferEnumType(node: TSEnumDeclaration): string[] {
-  const types = new Set<string>()
-  for (const m of node.members) {
-    if (m.initializer) {
-      switch (m.initializer.type) {
-        case 'StringLiteral':
-          types.add('String')
-          break
-        case 'NumericLiteral':
-          types.add('Number')
-          break
-      }
-    }
-  }
-  return types.size ? [...types] : ['Number']
-}
-
 function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
   if (isCallOf(node, userReactiveImport)) {
     return true
@@ -1262,6 +1247,8 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
 }
 
 function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
   switch (node.type) {
     case 'UnaryExpression': // void 0, !true
       return isStaticNode(node.argument)
@@ -1284,15 +1271,14 @@ function isStaticNode(node: Node): boolean {
       return node.expressions.every(expr => isStaticNode(expr))
 
     case 'ParenthesizedExpression': // (1)
-    case 'TSNonNullExpression': // 1!
-    case 'TSAsExpression': // 1 as number
-    case 'TSTypeAssertion': // (<number>2)
       return isStaticNode(node.expression)
 
-    default:
-      if (isLiteralNode(node)) {
-        return true
-      }
-      return false
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
   }
+  return false
 }
