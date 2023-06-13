@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi, type Mock } from 'vitest'
+import { type Mock } from 'vitest'
 import {
   h,
   nodeOps,
