@@ -1,4 +1,8 @@
-lockfileVersion: '6.0'
+lockfileVersion: '6.1'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
 
 importers:
 
@@ -329,8 +333,8 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^1.4.1
-        version: 1.4.1(vue@packages+vue)
+        specifier: ^1.5.0
+        version: 1.5.0(vue@packages+vue)
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1296,8 +1300,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@1.4.1(vue@packages+vue):
-    resolution: {integrity: sha512-7ONz/o1OtS611jW6SdAOZXn4HdN8gfyatcOzcEu+3bDMvgbyr7ZUcbRV6Y4xdkxDARKDBzs+sb3/oz1Na5hAeQ==}
+  /@vue/repl@1.5.0(vue@packages+vue):
+    resolution: {integrity: sha512-qFqKtvA2FM9viYXzbWrpGrL8mDGswsqDsEjfaibr/YOqeza7i49VmO0AKPrOdQDOS2qmq9uV+G6OPX1rGhUSIQ==}
     peerDependencies:
       vue: ^3.2.13
     dependencies:
