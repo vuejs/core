@@ -585,8 +585,8 @@ function _createVNode(
   if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
     type = toRaw(type)
     warn(
-      `Vue received a Component which was made a reactive object. This can ` +
-        `lead to unnecessary performance overhead, and should be avoided by ` +
+      `Vue received a Component that was made a reactive object. This can ` +
+        `lead to unnecessary performance overhead and should be avoided by ` +
         `marking the component with \`markRaw\` or using \`shallowRef\` ` +
         `instead of \`ref\`.`,
       `\nComponent that was made reactive: `,
