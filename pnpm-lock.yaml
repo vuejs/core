@@ -386,6 +386,9 @@ importers:
       '@vue/shared':
         specifier: 3.3.4
         version: link:../shared
+      typescript:
+        specifier: '*'
+        version: 5.0.2
 
   packages/vue-compat:
     dependencies:
@@ -5410,7 +5413,6 @@ packages:
     resolution: {integrity: sha512-wVORMBGO/FAs/++blGNeAVdbNKtIh1rbBL2EyQ1+J9lClJ93KiiKe8PmFIVdXhHcyv44SL9oglmfeSsndo0jRw==}
     engines: {node: '>=12.20'}
     hasBin: true
-    dev: true
 
   /ufo@1.1.1:
     resolution: {integrity: sha512-MvlCc4GHrmZdAllBc0iUDowff36Q9Ndw/UzqmEKyrfSzokTd9ZCy1i+IIk5hrYKkjoYVQyNbrw7/F8XJ2rEwTg==}
