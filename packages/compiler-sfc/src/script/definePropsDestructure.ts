@@ -34,7 +34,7 @@ export function processPropsDestructure(
 
   warnOnce(
     `This project is using reactive props destructure, which is an experimental ` +
-      ` feature. It may receive breaking changes or be removed in the future, so ` +
+      `feature. It may receive breaking changes or be removed in the future, so ` +
       `use at your own risk.\n` +
       `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`
   )
