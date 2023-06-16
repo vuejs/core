@@ -91,7 +91,6 @@ function rewriteSelector(
   let node: selectorParser.Node | null = null
   let shouldInject = true
   // find the last child node to insert attribute selector
-  console.log('selector', selector)
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
 
@@ -102,8 +101,8 @@ function rewriteSelector(
       n.value = ' '
       n.spaces.before = n.spaces.after = ''
       warn(
-        `the >>> and /deep/ combinators have been deprecated.  ${filename} ` +
-          `Use :deep() instead.`
+        `the >>> and /deep/ combinators have been deprecated.   ` +
+          `Use :deep() instead.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
       )
       return false
     }
@@ -137,8 +136,9 @@ function rewriteSelector(
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
             `::v-deep usage as a combinator has ` +
-              `been deprecated. ${filename} Use :deep(<inner-selector>) instead.`
+              `been deprecated.  Use :deep(<inner-selector>) instead.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
           )
+
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)
