@@ -193,7 +193,13 @@ export function compileScript(
   // const ctx.bindingMetadata: BindingMetadata = {}
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
-  const withDefaultsVariables: Record<string, Statement> = {}
+  const withDefaultsVariables: Record<
+    string,
+    {
+      node: Statement
+      useWithDefaults: boolean
+    }
+  > = {}
 
   let defaultExport: Node | undefined
   let hasAwait = false
@@ -262,7 +268,7 @@ export function compileScript(
       if (
         binding &&
         binding !== BindingTypes.LITERAL_CONST &&
-        !withDefaultsVariables[id.name]
+        !withDefaultsVariables[id.name].useWithDefaults
       ) {
         ctx.error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
@@ -644,15 +650,19 @@ export function compileScript(
 
           if (child.type === 'Identifier') {
             if (parent.type === 'VariableDeclarator') {
-              withDefaultsVariables[child.name] = node
+              withDefaultsVariables[child.name] = {
+                node,
+                useWithDefaults: false
+              }
             } else if (
               parent.type === 'CallExpression' &&
               parent.callee.type === 'Identifier' &&
               parent.callee.name === WITH_DEFAULTS &&
               withDefaultsVariables[child.name]
             ) {
-              const node = withDefaultsVariables[child.name]
-              hoistNode(node)
+              const variable = withDefaultsVariables[child.name]
+              variable.useWithDefaults = true
+              hoistNode(variable.node)
             }
           }
         },
