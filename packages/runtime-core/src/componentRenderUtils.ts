@@ -291,7 +291,11 @@ export function filterSingleRoot(
     }
   }
 
-  if (singleRoot && singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+  if (
+    singleRoot &&
+    singleRoot.patchFlag > 0 &&
+    singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
     return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
   }
 
