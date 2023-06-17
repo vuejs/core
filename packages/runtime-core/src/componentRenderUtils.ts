@@ -290,6 +290,11 @@ export function filterSingleRoot(
       return
     }
   }
+
+  if (singleRoot && singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT) {
+    return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
+  }
+
   return singleRoot
 }
 
