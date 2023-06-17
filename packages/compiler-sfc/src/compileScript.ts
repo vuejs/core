@@ -197,7 +197,7 @@ export function compileScript(
     string,
     {
       node: Statement
-      useWithDefaults: boolean
+      needHoist?: boolean
     }
   > = {}
 
@@ -268,14 +268,13 @@ export function compileScript(
       if (
         binding &&
         binding !== BindingTypes.LITERAL_CONST &&
-        !withDefaultsVariables[id.name].useWithDefaults
+        !withDefaultsVariables[id.name].needHoist
       ) {
         ctx.error(
-          `\`${method}()\` in <script setup> cannot reference locally ` +
-            `declared variables because it will be hoisted outside of the ` +
-            `setup() function. If your component options require initialization ` +
-            `in the module scope, use a separate normal <script> to export ` +
-            `the options instead.`,
+          `\`${method}()\` in <script setup> cannot reference locally declared variables ` +
+            `because it will be hoisted outside of the setup() function. ` +
+            `If your component options require initialization in the module scope, ` +
+            `use a separate normal <script> to export the options instead.`,
           id
         )
       }
@@ -651,8 +650,7 @@ export function compileScript(
           if (child.type === 'Identifier') {
             if (parent.type === 'VariableDeclarator') {
               withDefaultsVariables[child.name] = {
-                node,
-                useWithDefaults: false
+                node
               }
             } else if (
               parent.type === 'CallExpression' &&
@@ -661,8 +659,15 @@ export function compileScript(
               withDefaultsVariables[child.name]
             ) {
               const variable = withDefaultsVariables[child.name]
-              variable.useWithDefaults = true
-              hoistNode(variable.node)
+              if (variable.needHoist !== false) {
+                variable.needHoist = true
+              }
+            } else if (
+              parent.type === 'MemberExpression' &&
+              withDefaultsVariables[child.name]
+            ) {
+              const variable = withDefaultsVariables[child.name]
+              variable.needHoist = false
             }
           }
         },
@@ -697,6 +702,13 @@ export function compileScript(
           hoistNode(node)
         }
       }
+    }
+  }
+
+  for (const key in withDefaultsVariables) {
+    const variable = withDefaultsVariables[key]
+    if (variable.needHoist) {
+      hoistNode(variable.node)
     }
   }
 

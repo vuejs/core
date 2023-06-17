@@ -627,5 +627,19 @@ const props = defineProps({ foo: String })
         </script>`)
       }).toThrow(`cannot accept both type and non-type arguments`)
     })
+
+    test('withDefaults (locally variable)', () => {
+      expect(() => {
+        compile(`
+        <script setup lang="ts">
+        const defaults = { bar: 1 }
+        withDefaults(defineProps<{
+          bar?: number
+        }>(), defaults)
+        defaults.bar++
+        </script>
+      `)
+      }).toThrow(`cannot reference locally declared variables`)
+    })
   })
 })
