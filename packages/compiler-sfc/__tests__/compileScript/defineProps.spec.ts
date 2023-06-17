@@ -470,6 +470,26 @@ const props = defineProps({ foo: String })
     )
   })
 
+  test('withDefaults (locally variable)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    const defaults = { baz: false }
+    const props = withDefaults(defineProps<{
+      baz: boolean
+    }>(), defaults)
+    </script>
+    `)
+
+    assertCode(content)
+    expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
+    expect(content).toMatch(
+      `
+  _mergeDefaults({
+    baz: { type: Boolean, required: true }
+  }, defaults)`.trim()
+    )
+  })
+
   // #7111
   test('withDefaults (dynamic) w/ production mode', () => {
     const { content } = compile(

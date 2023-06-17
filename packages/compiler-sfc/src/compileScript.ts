@@ -193,6 +193,7 @@ export function compileScript(
   // const ctx.bindingMetadata: BindingMetadata = {}
   const scriptBindings: Record<string, BindingTypes> = Object.create(null)
   const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const withDefaultsVariables: Record<string, Statement> = {}
 
   let defaultExport: Node | undefined
   let hasAwait = false
@@ -258,7 +259,11 @@ export function compileScript(
     if (!node) return
     walkIdentifiers(node, id => {
       const binding = setupBindings[id.name]
-      if (binding && binding !== BindingTypes.LITERAL_CONST) {
+      if (
+        binding &&
+        binding !== BindingTypes.LITERAL_CONST &&
+        !withDefaultsVariables[id.name]
+      ) {
         ctx.error(
           `\`${method}()\` in <script setup> cannot reference locally ` +
             `declared variables because it will be hoisted outside of the ` +
@@ -635,6 +640,20 @@ export function compileScript(
               needsSemi,
               parent.type === 'ExpressionStatement'
             )
+          }
+
+          if (child.type === 'Identifier') {
+            if (parent.type === 'VariableDeclarator') {
+              withDefaultsVariables[child.name] = node
+            } else if (
+              parent.type === 'CallExpression' &&
+              parent.callee.type === 'Identifier' &&
+              parent.callee.name === WITH_DEFAULTS &&
+              withDefaultsVariables[child.name]
+            ) {
+              const node = withDefaultsVariables[child.name]
+              hoistNode(node)
+            }
           }
         },
         exit(node: Node) {
