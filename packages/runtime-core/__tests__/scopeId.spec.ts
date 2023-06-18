@@ -13,7 +13,6 @@ import {
   createBlock,
   Fragment,
   createCommentVNode,
-  mergeProps,
   createVNode,
   nextTick
 } from '@vue/runtime-test'
