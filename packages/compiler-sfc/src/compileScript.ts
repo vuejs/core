@@ -271,10 +271,11 @@ export function compileScript(
         !withDefaultsVariables[id.name].needHoist
       ) {
         ctx.error(
-          `\`${method}()\` in <script setup> cannot reference locally declared variables ` +
-            `because it will be hoisted outside of the setup() function. ` +
-            `If your component options require initialization in the module scope, ` +
-            `use a separate normal <script> to export the options instead.`,
+          `\`${method}()\` in <script setup> cannot reference locally ` +
+            `declared variables because it will be hoisted outside of the ` +
+            `setup() function. If your component options require initialization ` +
+            `in the module scope, use a separate normal <script> to export ` +
+            `the options instead.`,
           id
         )
       }
