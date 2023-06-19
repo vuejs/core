@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { patchEvent } from '../../src/modules/events'
 import { withModifiers, withKeys } from '@vue/runtime-dom'
 

@@ -6,11 +6,7 @@ import type {
   Function,
   ObjectProperty,
   BlockStatement,
-  Program,
-  ImportDefaultSpecifier,
-  ImportNamespaceSpecifier,
-  ImportSpecifier,
-  CallExpression
+  Program
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -247,17 +243,6 @@ export const isStaticProperty = (node: Node): node is ObjectProperty =>
 export const isStaticPropertyKey = (node: Node, parent: Node) =>
   isStaticProperty(parent) && parent.key === node
 
-export function getImportedName(
-  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
-) {
-  if (specifier.type === 'ImportSpecifier')
-    return specifier.imported.type === 'Identifier'
-      ? specifier.imported.name
-      : specifier.imported.value
-  else if (specifier.type === 'ImportNamespaceSpecifier') return '*'
-  return 'default'
-}
-
 /**
  * Copied from https://github.com/babel/babel/blob/main/packages/babel-types/src/validators/isReferenced.ts
  * To avoid runtime dependency on @babel/types (which includes process references)
@@ -443,25 +428,3 @@ export const TS_NODE_TYPES = [
   'TSInstantiationExpression', // foo<string>
   'TSSatisfiesExpression' // foo satisfies T
 ]
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
-}
-
-export function isCallOf(
-  node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
-): node is CallExpression {
-  return !!(
-    node &&
-    test &&
-    node.type === 'CallExpression' &&
-    node.callee.type === 'Identifier' &&
-    (typeof test === 'string'
-      ? node.callee.name === test
-      : test(node.callee.name))
-  )
-}

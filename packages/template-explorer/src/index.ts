@@ -8,7 +8,7 @@ import {
   ssrMode
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
-import { SourceMapConsumer } from 'source-map'
+import { SourceMapConsumer } from 'source-map-js'
 import theme from './theme'
 
 declare global {

@@ -198,11 +198,11 @@ export function defineAsyncComponent<
         if (loaded.value && resolvedComp) {
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
-          return createVNode(errorComponent as ConcreteComponent, {
+          return createVNode(errorComponent, {
             error: error.value
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent as ConcreteComponent)
+          return createVNode(loadingComponent)
         }
       }
     }
