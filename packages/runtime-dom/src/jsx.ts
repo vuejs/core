@@ -433,13 +433,17 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   allow?: string
   allowfullscreen?: Booleanish
   allowtransparency?: Booleanish
+  /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
+  /** @deprecated */
   marginheight?: Numberish
+  /** @deprecated */
   marginwidth?: Numberish
   name?: string
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sandbox?: string
+  /** @deprecated */
   scrolling?: string
   seamless?: Booleanish
   src?: string
@@ -633,6 +637,7 @@ export interface ProgressHTMLAttributes extends HTMLAttributes {
 
 export interface ScriptHTMLAttributes extends HTMLAttributes {
   async?: Booleanish
+  /** @deprecated */
   charset?: string
   crossorigin?: string
   defer?: Booleanish
