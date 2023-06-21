@@ -194,6 +194,55 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('simple interpolation', () => {
+      const ast = baseParse('{{<!--message-->}}')
+      const interpolation = ast.children[0] as InterpolationNode
+
+      expect(interpolation).toStrictEqual({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: '',
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+          loc: {
+            start: { offset: 2, line: 1, column: 3 },
+            end: { offset: 2, line: 1, column: 3 },
+            source: ''
+          }
+        },
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 18, line: 1, column: 19 },
+          source: '{{<!--message-->}}'
+        }
+      })
+    })
+    test('interpolation with comment', () => {
+      const ast = baseParse('{{<!--message-->message}}')
+      const interpolation = ast.children[0] as InterpolationNode
+
+      expect(interpolation).toStrictEqual({
+        type: NodeTypes.INTERPOLATION,
+        content: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'message',
+          isStatic: false,
+          constType: ConstantTypes.NOT_CONSTANT,
+          loc: {
+            start: { offset: 6, line: 1, column: 7 },
+            end: { offset: 13, line: 1, column: 14 },
+            source: 'message'
+          }
+        },
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 25, line: 1, column: 26 },
+          source: '{{<!--message-->message}}'
+        }
+      })
+    })
+
     test('it can have tag-like notation', () => {
       const ast = baseParse('{{ a<b }}')
       const interpolation = ast.children[0] as InterpolationNode

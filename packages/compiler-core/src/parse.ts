@@ -101,6 +101,7 @@ export interface ParserContext {
   onWarn: NonNullable<ErrorHandlingOptions['onWarn']>
 }
 
+//Basic function for parsing, used to parse template content.
 export function baseParse(
   content: string,
   options: ParserOptions = {}
@@ -113,6 +114,7 @@ export function baseParse(
   )
 }
 
+// Create parser context.
 function createParserContext(
   content: string,
   rawOptions: ParserOptions
@@ -145,9 +147,10 @@ function parseChildren(
   mode: TextModes,
   ancestors: ElementNode[]
 ): TemplateChildNode[] {
-  const parent = last(ancestors)
-  const ns = parent ? parent.ns : Namespaces.HTML
-  const nodes: TemplateChildNode[] = []
+  const parent = last(ancestors) //get the parent node
+
+  const ns = parent ? parent.ns : Namespaces.HTML //Get the namespace of the current node
+  const nodes: TemplateChildNode[] = [] // Store the parsed child nodes
 
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
@@ -156,7 +159,7 @@ function parseChildren(
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {
-        // '{{'
+        // '{{'Parse the interpolation expression
         node = parseInterpolation(context, mode)
       } else if (mode === TextModes.DATA && s[0] === '<') {
         // https://html.spec.whatwg.org/multipage/parsing.html#tag-open-state
@@ -981,7 +984,6 @@ function parseInterpolation(
 ): InterpolationNode | undefined {
   const [open, close] = context.options.delimiters
   __TEST__ && assert(startsWith(context.source, open))
-
   const closeIndex = context.source.indexOf(close, open.length)
   if (closeIndex === -1) {
     emitError(context, ErrorCodes.X_MISSING_INTERPOLATION_END)
@@ -995,7 +997,8 @@ function parseInterpolation(
   const rawContentLength = closeIndex - open.length
   const rawContent = context.source.slice(0, rawContentLength)
   const preTrimContent = parseTextData(context, rawContentLength, mode)
-  const content = preTrimContent.trim()
+  //Remove the comment section.
+  const content = rawContent.replace(/<!--[\s\S]*?-->/g, '').trim()
   const startOffset = preTrimContent.indexOf(content)
   if (startOffset > 0) {
     advancePositionWithMutation(innerStart, rawContent, startOffset)
