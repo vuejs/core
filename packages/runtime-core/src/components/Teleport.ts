@@ -134,7 +134,7 @@ export const TeleportImpl = {
       if (disabled) {
         mount(container, mainAnchor)
       } else if (target) {
-        if (parentSuspense) {
+        if (parentSuspense && parentSuspense.pendingBranch) {
           queuePostRenderEffect(() => {
             mount(target, targetAnchor)
           }, parentSuspense)
