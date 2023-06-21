@@ -45,12 +45,6 @@ export interface SuspenseProps {
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
 
-interface InnerSuspenseHooks {
-  onResolve: Array<Function>
-  onPending: Array<Function>
-  onFallback: Array<Function>
-}
-
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -121,19 +115,11 @@ export const Suspense = (__FEATURE_SUSPENSE__
 
 function triggerEvent(
   vnode: VNode,
-  name: 'onResolve' | 'onPending' | 'onFallback',
-  innerHooks: InnerSuspenseHooks
+  name: 'onResolve' | 'onPending' | 'onFallback'
 ) {
   const eventListener = vnode.props && vnode.props[name]
   if (isFunction(eventListener)) {
     eventListener()
-  }
-  if (innerHooks && innerHooks[name] && innerHooks[name].length > 0) {
-    innerHooks[name].forEach(fn => {
-      if (isFunction(fn)) {
-        fn()
-      }
-    })
   }
 }
 
@@ -181,8 +167,8 @@ function mountSuspense(
   if (suspense.deps > 0) {
     // has async
     // invoke @fallback event
-    triggerEvent(vnode, 'onPending', suspense.innerHooks)
-    triggerEvent(vnode, 'onFallback', suspense.innerHooks)
+    triggerEvent(vnode, 'onPending')
+    triggerEvent(vnode, 'onFallback')
 
     // mount the fallback tree
     patch(
@@ -351,7 +337,7 @@ function patchSuspense(
     } else {
       // root node toggled
       // invoke @pending event
-      triggerEvent(n2, 'onPending', suspense.innerHooks)
+      triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
       suspense.pendingId++
@@ -415,7 +401,6 @@ export interface SuspenseBoundary {
     setupRenderEffect: SetupRenderEffectFn
   ): void
   unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void
-  innerHooks: InnerSuspenseHooks
 }
 
 let hasWarned = false
@@ -482,11 +467,7 @@ function createSuspenseBoundary(
     isHydrating,
     isUnmounted: false,
     effects: [],
-    innerHooks: {
-      onResolve: [],
-      onPending: [],
-      onFallback: []
-    },
+
     resolve(resume = false, sync = false) {
       if (__DEV__) {
         if (!resume && !suspense.pendingBranch) {
@@ -578,7 +559,7 @@ function createSuspenseBoundary(
       }
 
       // invoke @resolve event
-      triggerEvent(vnode, 'onResolve', suspense.innerHooks)
+      triggerEvent(vnode, 'onResolve')
     },
 
     fallback(fallbackVNode) {
@@ -590,7 +571,7 @@ function createSuspenseBoundary(
         suspense
 
       // invoke @fallback event
-      triggerEvent(vnode, 'onFallback', suspense.innerHooks)
+      triggerEvent(vnode, 'onFallback')
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {

@@ -6,7 +6,8 @@ import {
   RendererElement,
   RendererNode,
   RendererOptions,
-  traverseStaticChildren
+  traverseStaticChildren,
+  queuePostRenderEffect
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
@@ -133,11 +134,13 @@ export const TeleportImpl = {
       if (disabled) {
         mount(container, mainAnchor)
       } else if (target) {
-        parentSuspense
-          ? parentSuspense.innerHooks.onResolve.push(() => {
-              mount.call(this, target, targetAnchor)
-            })
-          : mount(target, targetAnchor)
+        if (parentSuspense) {
+          queuePostRenderEffect(() => {
+            mount(target, targetAnchor)
+          }, parentSuspense)
+        } else {
+          mount(target, targetAnchor)
+        }
       }
     } else {
       // update content
