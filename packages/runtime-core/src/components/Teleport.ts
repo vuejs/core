@@ -133,7 +133,11 @@ export const TeleportImpl = {
       if (disabled) {
         mount(container, mainAnchor)
       } else if (target) {
-        mount(target, targetAnchor)
+        parentSuspense
+          ? parentSuspense.innerHooks.onResolve.push(() => {
+              mount.call(this, target, targetAnchor)
+            })
+          : mount(target, targetAnchor)
       }
     } else {
       // update content
@@ -393,7 +397,7 @@ function hydrateTeleport(
 // Force-casted public typing for h and TSX props inference
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
-  new(): {
+  new (): {
     $props: VNodeProps & TeleportProps
     $slots: {
       default(): VNode[]
