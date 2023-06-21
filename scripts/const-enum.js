@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * We use rollup-plugin-esbuild for faster builds, but esbuild in insolation
+ * We use rollup-plugin-esbuild for faster builds, but esbuild in isolation
  * mode compiles const enums into runtime enums, bloating bundle size.
  *
  * Here we pre-process all the const enums in the project and turn them into
@@ -189,7 +189,7 @@ export function constEnum() {
   )
 
   // 3. during transform:
-  //    3.1 files w/ const enum declaration: remove delcaration
+  //    3.1 files w/ const enum declaration: remove declaration
   //    3.2 files using const enum: inject into esbuild define
   /**
    * @type {import('rollup').Plugin}
