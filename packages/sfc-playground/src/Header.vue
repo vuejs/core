@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { downloadProject } from './download/download'
 import { ref, onMounted } from 'vue'
-import Sun from './icons/Sun.vue'
-import Moon from './icons/Moon.vue'
+// import Sun from './icons/Sun.vue'
+// import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
@@ -51,14 +51,14 @@ async function copyLink(e: MouseEvent) {
   alert('Sharable URL has been copied to clipboard.')
 }
 
-function toggleDark() {
-  const cls = document.documentElement.classList
-  cls.toggle('dark')
-  localStorage.setItem(
-    'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
-  )
-}
+// function toggleDark() {
+//   const cls = document.documentElement.classList
+//   cls.toggle('dark')
+//   localStorage.setItem(
+//     'vue-sfc-playground-prefer-dark',
+//     String(cls.contains('dark'))
+//   )
+// }
 
 onMounted(async () => {
   window.addEventListener('click', () => {
@@ -145,10 +145,10 @@ async function fetchVersions(): Promise<string[]> {
       >
         <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+      <!-- <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
-      </button>
+      </button> -->
       <button title="Copy sharable URL" class="share" @click="copyLink">
         <Share />
       </button>
