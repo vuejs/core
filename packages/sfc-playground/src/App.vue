@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore, SFCOptions } from '@vue/repl'
+import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect } from 'vue'
 
 const setVH = () => {
@@ -82,6 +83,7 @@ function toggleSSR() {
     @toggle-ssr="toggleSSR"
   />
   <Repl
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"

@@ -333,8 +333,8 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^1.5.0
-        version: 1.5.0(vue@packages+vue)
+        specifier: ^2.1.3
+        version: 2.1.3
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1303,12 +1303,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@1.5.0(vue@packages+vue):
-    resolution: {integrity: sha512-qFqKtvA2FM9viYXzbWrpGrL8mDGswsqDsEjfaibr/YOqeza7i49VmO0AKPrOdQDOS2qmq9uV+G6OPX1rGhUSIQ==}
-    peerDependencies:
-      vue: ^3.2.13
-    dependencies:
-      vue: link:packages/vue
+  /@vue/repl@2.1.3:
+    resolution: {integrity: sha512-W6BiDOrDH3dsWYs5StVRdl1exXjVgXZYuKu1uG2FJdm3O7+yWWFPYXLdNneB9eOCaF1wbfQVaj4ZP46N0nPSpw==}
     dev: false
 
   /@zeit/schemas@2.6.0:
@@ -3286,7 +3282,7 @@ packages:
   /is-reference@1.2.1:
     resolution: {integrity: sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ==}
     dependencies:
-      '@types/estree': 1.0.0
+      '@types/estree': 0.0.48
     dev: true
 
   /is-regex@1.1.4:
