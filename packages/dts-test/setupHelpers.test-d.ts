@@ -6,9 +6,13 @@ import {
   withDefaults,
   Slots,
   defineSlots,
-  VNode
+  VNode,
+  Ref,
+  defineModel
 } from 'vue'
 import { describe, expectType } from './utils'
+import { defineComponent } from 'vue'
+import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration
@@ -94,6 +98,40 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union4: () => 123
     }
   )
+})
+
+describe('defineProps w/ generic type declaration + withDefaults', <T extends number, TA extends {
+  a: string
+}, TString extends string>() => {
+  const res = withDefaults(
+    defineProps<{
+      n?: number
+      bool?: boolean
+
+      generic1?: T[] | { x: T }
+      generic2?: { x: T }
+      generic3?: TString
+      generic4?: TA
+    }>(),
+    {
+      n: 123,
+
+      generic1: () => [123, 33] as T[],
+      generic2: () => ({ x: 123 } as { x: T }),
+
+      generic3: () => 'test' as TString,
+      generic4: () => ({ a: 'test' } as TA)
+    }
+  )
+
+  res.n + 1
+
+  expectType<T[] | { x: T }>(res.generic1)
+  expectType<{ x: T }>(res.generic2)
+  expectType<TString>(res.generic3)
+  expectType<TA>(res.generic4)
+
+  expectType<boolean>(res.bool)
 })
 
 describe('defineProps w/ runtime declaration', () => {
@@ -182,14 +220,6 @@ describe('defineEmits w/ runtime declaration', () => {
 })
 
 describe('defineSlots', () => {
-  // short syntax
-  const slots = defineSlots<{
-    default: { foo: string; bar: number }
-    optional?: string
-  }>()
-  expectType<(scope: { foo: string; bar: number }) => VNode[]>(slots.default)
-  expectType<undefined | ((scope: string) => VNode[])>(slots.optional)
-
   // literal fn syntax (allow for specifying return type)
   const fnSlots = defineSlots<{
     default(props: { foo: string; bar: number }): any
@@ -200,6 +230,72 @@ describe('defineSlots', () => {
 
   const slotsUntype = defineSlots()
   expectType<Slots>(slotsUntype)
+})
+
+describe('defineModel', () => {
+  // overload 1
+  const modelValueRequired = defineModel<boolean>({ required: true })
+  expectType<Ref<boolean>>(modelValueRequired)
+
+  // overload 2
+  const modelValue = defineModel<string>()
+  expectType<Ref<string | undefined>>(modelValue)
+  modelValue.value = 'new value'
+
+  const modelValueDefault = defineModel<boolean>({ default: true })
+  expectType<Ref<boolean>>(modelValueDefault)
+
+  // overload 3
+  const countRequired = defineModel<number>('count', { required: false })
+  expectType<Ref<number | undefined>>(countRequired)
+
+  // overload 4
+  const count = defineModel<number>('count')
+  expectType<Ref<number | undefined>>(count)
+
+  const countDefault = defineModel<number>('count', { default: 1 })
+  expectType<Ref<number>>(countDefault)
+
+  // infer type from default
+  const inferred = defineModel({ default: 123 })
+  expectType<Ref<number | undefined>>(inferred)
+  const inferredRequired = defineModel({ default: 123, required: true })
+  expectType<Ref<number>>(inferredRequired)
+
+  // @ts-expect-error type / default mismatch
+  defineModel<string>({ default: 123 })
+  // @ts-expect-error unknown props option
+  defineModel({ foo: 123 })
+
+  // accept defineModel-only options
+  defineModel({ local: true })
+  defineModel('foo', { local: true })
+})
+
+describe('useModel', () => {
+  defineComponent({
+    props: ['foo'],
+    setup(props) {
+      const r = useModel(props, 'foo')
+      expectType<Ref<any>>(r)
+
+      // @ts-expect-error
+      useModel(props, 'bar')
+    }
+  })
+
+  defineComponent({
+    props: {
+      foo: String,
+      bar: { type: Number, required: true },
+      baz: { type: Boolean }
+    },
+    setup(props) {
+      expectType<Ref<string | undefined>>(useModel(props, 'foo'))
+      expectType<Ref<number>>(useModel(props, 'bar'))
+      expectType<Ref<boolean>>(useModel(props, 'baz'))
+    }
+  })
 })
 
 describe('useAttrs', () => {

@@ -3,7 +3,8 @@ import {
   isPromise,
   isFunction,
   Prettify,
-  UnionToIntersection
+  UnionToIntersection,
+  extend
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -12,7 +13,7 @@ import {
   createSetupContext,
   unsetCurrentInstance
 } from './component'
-import { EmitFn, EmitsOptions } from './componentEmits'
+import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
@@ -22,10 +23,14 @@ import {
 import {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
-  ExtractPropTypes
+  ExtractPropTypes,
+  NormalizedProps,
+  PropOptions
 } from './componentProps'
 import { warn } from './warning'
-import { SlotsType, TypedSlots } from './componentSlots'
+import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
+import { Ref, ref } from '@vue/reactivity'
+import { watch } from './apiWatch'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -76,7 +81,10 @@ export function defineProps<
   PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
-export function defineProps<TypeProps>(): DefineProps<TypeProps>
+export function defineProps<TypeProps>(): DefineProps<
+  TypeProps,
+  BooleanKey<TypeProps>
+>
 // implementation
 export function defineProps() {
   if (__DEV__) {
@@ -85,8 +93,8 @@ export function defineProps() {
   return null as any
 }
 
-type DefineProps<T> = Readonly<T> & {
-  readonly [K in BooleanKey<T>]-?: boolean
+type DefineProps<T, BKeys extends keyof T> = Readonly<T> & {
+  readonly [K in BKeys]-?: boolean
 }
 
 type BooleanKey<T, K extends keyof T = keyof T> = K extends any
@@ -171,7 +179,7 @@ export function defineExpose<
 /**
  * Vue `<script setup>` compiler macro for declaring a component's additional
  * options. This should be used only for options that cannot be expressed via
- * Composition API - e.g. `inhertiAttrs`.
+ * Composition API - e.g. `inheritAttrs`.
  *
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineoptions}
  */
@@ -200,36 +208,103 @@ export function defineOptions<
 
 export function defineSlots<
   S extends Record<string, any> = Record<string, any>
->(): // @ts-expect-error
-TypedSlots<SlotsType<S>> {
+>(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
+  return null as any
+}
+
+/**
+ * (**Experimental**) Vue `<script setup>` compiler macro for declaring a
+ * two-way binding prop that can be consumed via `v-model` from the parent
+ * component. This will declare a prop with the same name and a corresponding
+ * `update:propName` event.
+ *
+ * If the first argument is a string, it will be used as the prop name;
+ * Otherwise the prop name will default to "modelValue". In both cases, you
+ * can also pass an additional object which will be used as the prop's options.
+ *
+ * The options object can also specify an additional option, `local`. When set
+ * to `true`, the ref can be locally mutated even if the parent did not pass
+ * the matching `v-model`.
+ *
+ * @example
+ * ```ts
+ * // default model (consumed via `v-model`)
+ * const modelValue = defineModel<string>()
+ * modelValue.value = "hello"
+ *
+ * // default model with options
+ * const modelValue = defineModel<string>({ required: true })
+ *
+ * // with specified name (consumed via `v-model:count`)
+ * const count = defineModel<number>('count')
+ * count.value++
+ *
+ * // with specified name and default value
+ * const count = defineModel<number>('count', { default: 0 })
+ *
+ * // local mutable model, can be mutated locally
+ * // even if the parent did not pass the matching `v-model`.
+ * const count = defineModel<number>('count', { local: true, default: 0 })
+ * ```
+ */
+export function defineModel<T>(
+  options: { required: true } & PropOptions<T> & DefineModelOptions
+): Ref<T>
+export function defineModel<T>(
+  options: { default: any } & PropOptions<T> & DefineModelOptions
+): Ref<T>
+export function defineModel<T>(
+  options?: PropOptions<T> & DefineModelOptions
+): Ref<T | undefined>
+export function defineModel<T>(
+  name: string,
+  options: { required: true } & PropOptions<T> & DefineModelOptions
+): Ref<T>
+export function defineModel<T>(
+  name: string,
+  options: { default: any } & PropOptions<T> & DefineModelOptions
+): Ref<T>
+export function defineModel<T>(
+  name: string,
+  options?: PropOptions<T> & DefineModelOptions
+): Ref<T | undefined>
+export function defineModel(): any {
+  if (__DEV__) {
+    warnRuntimeUsage('defineModel')
+  }
+}
+
+interface DefineModelOptions {
+  local?: boolean
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
 
 type InferDefaults<T> = {
-  [K in keyof T]?: InferDefault<T, NotUndefined<T[K]>>
+  [K in keyof T]?: InferDefault<T, T[K]>
 }
 
-type InferDefault<P, T> = T extends
-  | null
-  | number
-  | string
-  | boolean
-  | symbol
-  | Function
-  ? T | ((props: P) => T)
-  : (props: P) => T
+type NativeType = null | number | string | boolean | symbol | Function
 
-type PropsWithDefaults<Base, Defaults> = Base & {
-  [K in keyof Defaults]: K extends keyof Base
+type InferDefault<P, T> =
+  | ((props: P) => T & {})
+  | (T extends NativeType ? T : never)
+
+type PropsWithDefaults<
+  T,
+  Defaults extends InferDefaults<T>,
+  BKeys extends keyof T
+> = Omit<T, keyof Defaults> & {
+  [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
-      ? Base[K]
-      : NotUndefined<Base[K]>
+      ? T[K]
+      : NotUndefined<T[K]>
     : never
-}
+} & { readonly [K in BKeys]-?: boolean }
+
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
  * using type-based `defineProps` declaration.
@@ -250,10 +325,14 @@ type PropsWithDefaults<Base, Defaults> = Base & {
  *
  * @see {@link https://vuejs.org/guide/typescript/composition-api.html#typing-component-props}
  */
-export function withDefaults<Props, Defaults extends InferDefaults<Props>>(
-  props: Props,
+export function withDefaults<
+  T,
+  BKeys extends keyof T,
+  Defaults extends InferDefaults<T>
+>(
+  props: DefineProps<T, BKeys>,
   defaults: Defaults
-): PropsWithDefaults<Props, Defaults> {
+): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
   }
@@ -268,12 +347,75 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
+export function useModel<T extends Record<string, any>, K extends keyof T>(
+  props: T,
+  name: K,
+  options?: { local?: boolean }
+): Ref<T[K]>
+export function useModel(
+  props: Record<string, any>,
+  name: string,
+  options?: { local?: boolean }
+): Ref {
+  const i = getCurrentInstance()!
+  if (__DEV__ && !i) {
+    warn(`useModel() called without active instance.`)
+    return ref() as any
+  }
+
+  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
+    warn(`useModel() called with prop "${name}" which is not declared.`)
+    return ref() as any
+  }
+
+  if (options && options.local) {
+    const proxy = ref<any>(props[name])
+
+    watch(
+      () => props[name],
+      v => (proxy.value = v)
+    )
+
+    watch(proxy, value => {
+      if (value !== props[name]) {
+        i.emit(`update:${name}`, value)
+      }
+    })
+
+    return proxy
+  } else {
+    return {
+      __v_isRef: true,
+      get value() {
+        return props[name]
+      },
+      set value(value) {
+        i.emit(`update:${name}`, value)
+      }
+    } as any
+  }
+}
+
 function getContext(): SetupContext {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useContext() called without active instance.`)
   }
   return i.setupContext || (i.setupContext = createSetupContext(i))
+}
+
+/**
+ * @internal
+ */
+export function normalizePropsOrEmits(
+  props: ComponentPropsOptions | EmitsOptions
+) {
+  return isArray(props)
+    ? props.reduce(
+        (normalized, p) => ((normalized[p] = null), normalized),
+        {} as ComponentObjectPropsOptions | ObjectEmitsOptions
+      )
+    : props
 }
 
 /**
@@ -285,12 +427,7 @@ export function mergeDefaults(
   raw: ComponentPropsOptions,
   defaults: Record<string, any>
 ): ComponentObjectPropsOptions {
-  const props = isArray(raw)
-    ? raw.reduce(
-        (normalized, p) => ((normalized[p] = {}), normalized),
-        {} as ComponentObjectPropsOptions
-      )
-    : raw
+  const props = normalizePropsOrEmits(raw)
   for (const key in defaults) {
     if (key.startsWith('__skip')) continue
     let opt = props[key]
@@ -310,6 +447,20 @@ export function mergeDefaults(
     }
   }
   return props
+}
+
+/**
+ * Runtime helper for merging model declarations.
+ * Imported by compiled code only.
+ * @internal
+ */
+export function mergeModels(
+  a: ComponentPropsOptions | EmitsOptions,
+  b: ComponentPropsOptions | EmitsOptions
+) {
+  if (!a || !b) return a || b
+  if (isArray(a) && isArray(b)) return a.concat(b)
+  return extend({}, normalizePropsOrEmits(a), normalizePropsOrEmits(b))
 }
 
 /**

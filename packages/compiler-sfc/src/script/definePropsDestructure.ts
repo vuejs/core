@@ -3,22 +3,96 @@ import {
   Identifier,
   BlockStatement,
   Program,
-  VariableDeclaration
+  VariableDeclaration,
+  ObjectPattern,
+  Expression
 } from '@babel/types'
-import MagicString from 'magic-string'
 import { walk } from 'estree-walker'
 import {
+  BindingTypes,
   extractIdentifiers,
   isFunctionType,
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams,
-  isCallOf,
-  unwrapTSNode
-} from '@vue/compiler-core'
+  walkFunctionParams
+} from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
-import { PropsDestructureBindings } from '../compileScript'
+import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
+import { ScriptCompileContext } from './context'
+import { DEFINE_PROPS } from './defineProps'
+import { warnOnce } from '../warn'
+
+export function processPropsDestructure(
+  ctx: ScriptCompileContext,
+  declId: ObjectPattern
+) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+    ctx.propsIdentifier = ctx.getString(declId)
+    return
+  }
+
+  warnOnce(
+    `This project is using reactive props destructure, which is an experimental ` +
+      `feature. It may receive breaking changes or be removed in the future, so ` +
+      `use at your own risk.\n` +
+      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`
+  )
+
+  ctx.propsDestructureDecl = declId
+
+  const registerBinding = (
+    key: string,
+    local: string,
+    defaultValue?: Expression
+  ) => {
+    ctx.propsDestructuredBindings[key] = { local, default: defaultValue }
+    if (local !== key) {
+      ctx.bindingMetadata[local] = BindingTypes.PROPS_ALIASED
+      ;(ctx.bindingMetadata.__propsAliases ||
+        (ctx.bindingMetadata.__propsAliases = {}))[local] = key
+    }
+  }
+
+  for (const prop of declId.properties) {
+    if (prop.type === 'ObjectProperty') {
+      const propKey = resolveObjectKey(prop.key, prop.computed)
+
+      if (!propKey) {
+        ctx.error(
+          `${DEFINE_PROPS}() destructure cannot use computed key.`,
+          prop.key
+        )
+      }
+
+      if (prop.value.type === 'AssignmentPattern') {
+        // default value { foo = 123 }
+        const { left, right } = prop.value
+        if (left.type !== 'Identifier') {
+          ctx.error(
+            `${DEFINE_PROPS}() destructure does not support nested patterns.`,
+            left
+          )
+        }
+        registerBinding(propKey, left.name, right)
+      } else if (prop.value.type === 'Identifier') {
+        // simple destructure
+        registerBinding(propKey, prop.value.name)
+      } else {
+        ctx.error(
+          `${DEFINE_PROPS}() destructure does not support nested patterns.`,
+          prop.value
+        )
+      }
+    } else {
+      // rest spread
+      ctx.propsDestructureRestId = (prop.argument as Identifier).name
+      // register binding
+      ctx.bindingMetadata[ctx.propsDestructureRestId] =
+        BindingTypes.SETUP_REACTIVE_CONST
+    }
+  }
+}
 
 /**
  * true -> prop binding
@@ -27,13 +101,13 @@ import { PropsDestructureBindings } from '../compileScript'
 type Scope = Record<string, boolean>
 
 export function transformDestructuredProps(
-  ast: Program,
-  s: MagicString,
-  offset = 0,
-  knownProps: PropsDestructureBindings,
-  error: (msg: string, node: Node, end?: number) => never,
+  ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+    return
+  }
+
   const rootScope: Scope = {}
   const scopeStack: Scope[] = [rootScope]
   let currentScope: Scope = rootScope
@@ -41,8 +115,8 @@ export function transformDestructuredProps(
   const parentStack: Node[] = []
   const propsLocalToPublicMap: Record<string, string> = Object.create(null)
 
-  for (const key in knownProps) {
-    const { local } = knownProps[key]
+  for (const key in ctx.propsDestructuredBindings) {
+    const { local } = ctx.propsDestructuredBindings[key]
     rootScope[local] = true
     propsLocalToPublicMap[local] = key
   }
@@ -61,7 +135,7 @@ export function transformDestructuredProps(
     if (currentScope) {
       currentScope[id.name] = false
     } else {
-      error(
+      ctx.error(
         'registerBinding called without active scope, something is wrong.',
         id
       )
@@ -122,7 +196,7 @@ export function transformDestructuredProps(
       (parent.type === 'AssignmentExpression' && id === parent.left) ||
       parent.type === 'UpdateExpression'
     ) {
-      error(`Cannot assign to destructured props as they are readonly.`, id)
+      ctx.error(`Cannot assign to destructured props as they are readonly.`, id)
     }
 
     if (isStaticProperty(parent) && parent.shorthand) {
@@ -133,16 +207,16 @@ export function transformDestructuredProps(
         isInDestructureAssignment(parent, parentStack)
       ) {
         // { prop } -> { prop: __props.prop }
-        s.appendLeft(
-          id.end! + offset,
+        ctx.s.appendLeft(
+          id.end! + ctx.startOffset!,
           `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
         )
       }
     } else {
       // x --> __props.x
-      s.overwrite(
-        id.start! + offset,
-        id.end! + offset,
+      ctx.s.overwrite(
+        id.start! + ctx.startOffset!,
+        id.end! + ctx.startOffset!,
         genPropsAccessExp(propsLocalToPublicMap[id.name])
       )
     }
@@ -152,7 +226,7 @@ export function transformDestructuredProps(
     if (isCallOf(node, alias)) {
       const arg = unwrapTSNode(node.arguments[0])
       if (arg.type === 'Identifier' && currentScope[arg.name]) {
-        error(
+        ctx.error(
           `"${arg.name}" is a destructured prop and should not be passed directly to ${method}(). ` +
             `Pass a getter () => ${arg.name} instead.`,
           arg
@@ -162,8 +236,9 @@ export function transformDestructuredProps(
   }
 
   // check root scope first
+  const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 

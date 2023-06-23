@@ -56,7 +56,7 @@ export {
   onErrorCaptured,
   onServerPrefetch
 } from './apiLifecycle'
-export { provide, inject } from './apiInject'
+export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
@@ -71,9 +71,12 @@ export {
   defineExpose,
   defineOptions,
   defineSlots,
+  defineModel,
   withDefaults,
+  useModel,
   // internal
   mergeDefaults,
+  mergeModels,
   createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'
@@ -251,6 +254,7 @@ export type {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
 export type {
