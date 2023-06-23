@@ -649,12 +649,12 @@ export function compileScript(
           }
 
           if (child.type === 'Identifier') {
-            if (parent.type === 'VariableDeclarator') {
+            if (parent!.type === 'VariableDeclarator') {
               withDefaultsVariables[child.name] = {
                 node
               }
             } else if (
-              parent.type === 'CallExpression' &&
+              parent!.type === 'CallExpression' &&
               parent.callee.type === 'Identifier' &&
               parent.callee.name === WITH_DEFAULTS &&
               withDefaultsVariables[child.name]
@@ -664,7 +664,7 @@ export function compileScript(
                 variable.needHoist = true
               }
             } else if (
-              parent.type !== 'VariableDeclaration' &&
+              parent!.type !== 'VariableDeclaration' &&
               withDefaultsVariables[child.name]
             ) {
               const variable = withDefaultsVariables[child.name]
