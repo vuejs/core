@@ -285,7 +285,7 @@ export function compileScript(
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
@@ -618,8 +618,8 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
-      ;(walk as any)(node, {
-        enter(child: Node, parent: Node) {
+      walk(node, {
+        enter(child: Node, parent: Node | undefined) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -644,7 +644,7 @@ export function compileScript(
               ctx,
               child,
               needsSemi,
-              parent.type === 'ExpressionStatement'
+              parent!.type === 'ExpressionStatement'
             )
           }
 
