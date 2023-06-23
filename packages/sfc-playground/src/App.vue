@@ -95,29 +95,8 @@ function toggleSSR() {
   />
 </template>
 
-<style>
-.dark {
-  color-scheme: dark;
-}
-
-body {
-  font-size: 13px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  margin: 0;
-  --base: #444;
-  --nav-height: 50px;
-}
-
+<style scoped>
 .vue-repl {
   height: calc(var(--vh) - var(--nav-height));
-}
-
-button {
-  border: none;
-  outline: none;
-  cursor: pointer;
-  margin: 0;
-  background-color: transparent;
 }
 </style>
