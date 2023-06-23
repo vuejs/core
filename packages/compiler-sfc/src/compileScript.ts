@@ -664,7 +664,7 @@ export function compileScript(
                 variable.needHoist = true
               }
             } else if (
-              parent.type === 'MemberExpression' &&
+              parent.type !== 'VariableDeclaration' &&
               withDefaultsVariables[child.name]
             ) {
               const variable = withDefaultsVariables[child.name]
