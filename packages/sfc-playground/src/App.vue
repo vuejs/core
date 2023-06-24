@@ -110,7 +110,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height));
+  height: calc(var(--vh) - var(--nav-height)) !important;
 }
 
 button {
