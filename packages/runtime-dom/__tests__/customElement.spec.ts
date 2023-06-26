@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   defineAsyncComponent,
   defineComponent,
@@ -323,7 +322,7 @@ describe('defineCustomElement', () => {
               emit('my-click', 1)
             },
             onMousedown: () => {
-              emit('myEvent', 1) // validate hypenization
+              emit('myEvent', 1) // validate hyphenation
             }
           })
       }
