@@ -50,7 +50,8 @@ import {
   ObjectEmitsOptions,
   EmitFn,
   emit,
-  normalizeEmitsOptions
+  normalizeEmitsOptions,
+  ShortEmitsToObject
 } from './componentEmits'
 import {
   EMPTY_OBJ,
@@ -126,16 +127,19 @@ export interface ComponentInternalOptions {
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions = {},
+  E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
     props: P,
-    ctx: Omit<SetupContext<E, IfAny<S, {}, SlotsType<S>>>, 'expose'>
+    ctx: Omit<
+      SetupContext<ShortEmitsToObject<E>, IfAny<S, {}, SlotsType<S>>>,
+      'expose'
+    >
   ): any
   props?: ComponentPropsOptions<P>
-  emits?: E | (keyof E)[]
+  emits?: ShortEmitsToObject<E> | (keyof ShortEmitsToObject<E>)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
@@ -158,10 +162,12 @@ export type ConcreteComponent<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  E extends EmitsOptions | Record<string, any[]> = {},
+  S extends Record<string, any> = any
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, any>
+  | FunctionalComponent<Props, E, S>
 
 /**
  * A type used in public APIs where a component type is expected.
@@ -172,9 +178,11 @@ export type Component<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  E extends EmitsOptions | Record<string, any[]> = {},
+  S extends Record<string, any> = any
 > =
-  | ConcreteComponent<Props, RawBindings, D, C, M>
+  | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
   | ComponentPublicInstanceConstructor<Props>
 
 export type { ComponentOptions }
