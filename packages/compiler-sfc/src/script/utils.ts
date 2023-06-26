@@ -113,8 +113,8 @@ export const joinPaths = (path.posix || path).join
  * key may contain symbols
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
-export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\-]/g
 
 export function getEscapedKey(key: string) {
-  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
+  return key.search(escapeSymbolsRE) !== -1 ? JSON.stringify(key) : key
 }
