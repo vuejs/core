@@ -38,7 +38,11 @@ export function renderSlot(
       currentRenderingInstance!.parent.isCE)
   ) {
     if (name !== 'default') props.name = name
-    return createVNode('slot', props, fallback && fallback())
+    openBlock()
+    const rendered = createBlock(
+      createVNode('slot', props, fallback && fallback())
+    )
+    return rendered
   }
 
   let slot = slots[name]
