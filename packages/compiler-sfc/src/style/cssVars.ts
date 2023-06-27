@@ -32,7 +32,10 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
+    return `${id}-${raw.replace(escapeSymbolsRE, s =>
+      // dash is allowed symbol in variable name
+      s === '-' ? s : `\\${s}`
+    )}`
   }
 }
 
