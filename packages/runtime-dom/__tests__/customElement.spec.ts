@@ -8,6 +8,10 @@ import {
   Ref,
   ref,
   renderSlot,
+  openBlock,
+  createElementBlock,
+  createTextVNode,
+  createCommentVNode,
   VueElement
 } from '../src'
 
@@ -690,6 +694,41 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
+      )
+    })
+
+    test('with slots & v-if', async () => {
+      const show = ref(false)
+      const E = defineCustomElement({
+        render(this: any) {
+          return (
+            openBlock(),
+            createElementBlock('button', null, [
+              show.value
+                ? renderSlot(
+                    this.$slots,
+                    'default',
+                    { key: 0 },
+                    () => [createTextVNode('Fallback Content')],
+                    true
+                  )
+                : createCommentVNode('v-if', true),
+              createTextVNode('Button')
+            ])
+          )
+        }
+      })
+      customElements.define('my-el-v-if-slots', E)
+      container.innerHTML = `<my-el-v-if-slots><span>hi</span></my-el-v-if-slots>`
+
+      await nextTick()
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<button><!--v-if-->Button</button>`)
+
+      show.value = true
+      await nextTick()
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `<button><slot>Fallback Content</slot>Button</button>`
       )
     })
   })
