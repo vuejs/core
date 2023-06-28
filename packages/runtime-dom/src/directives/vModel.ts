@@ -75,7 +75,7 @@ export const vModelText: ModelDirective<
   },
   // set value on mounted so it's after min/max for type="range"
   mounted(el, { value }) {
-    el.value = value == null ? '' : value
+    el.value = value === null ? '' : value
   },
   beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
     el._assign = getModelAssigner(vnode)
