@@ -75,7 +75,7 @@ export function processNormalScript(
       bindings,
       scriptAst: scriptAst.body
     }
-  } catch (e: any) {
+  } catch {
     // silently fallback if parse fails since user may be using custom
     // babel syntax
     return script

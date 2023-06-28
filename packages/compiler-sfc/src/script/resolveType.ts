@@ -340,7 +340,7 @@ function resolveInterfaceMembers(
             base.props[key] = props[key]
           }
         }
-      } catch (e) {
+      } catch {
         ctx.error(
           `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
             `you can instruct the compiler to ignore this extend by adding ` +
@@ -1499,7 +1499,7 @@ export function inferRuntimeType(
         break
       }
     }
-  } catch (e) {
+  } catch {
     // always soft fail on failed runtime type inference
   }
   return [UNKNOWN_TYPE] // no runtime check

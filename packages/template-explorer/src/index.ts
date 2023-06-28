@@ -46,7 +46,7 @@ window.init = () => {
     let hash = window.location.hash.slice(1)
     try {
       hash = escape(atob(hash))
-    } catch (e) {}
+    } catch {}
     persistedState = JSON.parse(
       decodeURIComponent(hash) || localStorage.getItem('state') || `{}`
     )

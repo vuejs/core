@@ -191,7 +191,7 @@ export function pipeToWebWritable(
   let hasReady = false
   try {
     hasReady = isPromise(writer.ready)
-  } catch (e: any) {}
+  } catch {}
 
   renderToSimpleStream(input, context, {
     async push(content) {
