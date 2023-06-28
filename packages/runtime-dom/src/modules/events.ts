@@ -16,7 +16,7 @@ export function addEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
+  options?: AddEventListenerOptions
 ) {
   el.addEventListener(event, handler, options)
 }
