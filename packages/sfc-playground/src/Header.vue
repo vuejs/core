@@ -6,6 +6,7 @@ import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
+import Reload from './icons/Reload.vue'
 import type { ReplStore } from '@vue/repl'
 
 const props = defineProps<{
@@ -51,16 +52,16 @@ async function copyLink(e: MouseEvent) {
   alert('Sharable URL has been copied to clipboard.')
 }
 
-const emit = defineEmits(['toggle-theme', 'toggle-ssr','toggle-dev'])
- function toggleDark() {
+const emit = defineEmits(['toggle-theme', 'toggle-ssr', 'toggle-dev','reload-page'])
+function toggleDark() {
   const cls = document.documentElement.classList
-   cls.toggle('dark')
-   localStorage.setItem(
-     'vue-sfc-playground-prefer-dark',
-     String(cls.contains('dark'))
+  cls.toggle('dark')
+  localStorage.setItem(
+    'vue-sfc-playground-prefer-dark',
+    String(cls.contains('dark'))
   )
-   emit('toggle-theme', cls.contains('dark'))
- }
+  emit('toggle-theme', cls.contains('dark'))
+}
 
 onMounted(async () => {
   window.addEventListener('click', () => {
@@ -153,6 +154,9 @@ async function fetchVersions(): Promise<string[]> {
       </button>
       <button title="Copy sharable URL" class="share" @click="copyLink">
         <Share />
+      </button>
+      <button title="Reload page" class="reload" @click="$emit('reload-page')">
+        <Reload />
       </button>
       <button
         title="Download project files"

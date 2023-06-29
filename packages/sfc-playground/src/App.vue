@@ -4,6 +4,8 @@ import { Repl, ReplStore, SFCOptions } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted } from 'vue'
 
+const replRef = ref<InstanceType<typeof Repl>>()
+
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
 }
@@ -73,6 +75,10 @@ function toggleSSR() {
   store.setFiles(store.getFiles())
 }
 
+function reloadPage() {
+  replRef.value?.reload()
+}
+
 const theme = ref('dark')
 function toggleTheme(isDark: boolean) {
   theme.value = isDark ? 'dark' : 'light'
@@ -91,8 +97,10 @@ onMounted(() => {
     @toggle-theme="toggleTheme"
     @toggle-dev="toggleDevMode"
     @toggle-ssr="toggleSSR"
+    @reload-page="reloadPage"
   />
   <Repl
+    ref="replRef"
     :theme="theme"
     :editor="Monaco"
     @keydown.ctrl.s.prevent
