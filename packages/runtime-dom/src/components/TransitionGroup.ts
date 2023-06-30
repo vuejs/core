@@ -6,7 +6,8 @@ import {
   getTransitionInfo,
   resolveTransitionProps,
   TransitionPropsValidators,
-  forceReflow
+  forceReflow,
+  vtcKey
 } from './Transition'
 import {
   Fragment,
@@ -199,7 +200,7 @@ function hasCSSTransform(
   // all other transition classes applied to ensure only the move class
   // is applied.
   const clone = el.cloneNode() as HTMLElement
-  const _vtc = el._vtc
+  const _vtc = el[vtcKey]
   if (_vtc) {
     _vtc.forEach(cls => {
       cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
