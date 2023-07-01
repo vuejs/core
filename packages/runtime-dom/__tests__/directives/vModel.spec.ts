@@ -1172,4 +1172,58 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
   })
+
+  it('should trasform date to timestamp with numebr modifier', async () => {
+    const component = defineComponent({
+      data() {
+        return { date: null, datetime: null }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              class: 'date',
+              type: 'date',
+              'onUpdate:modelValue': (val: any) => {
+                this.date = val
+              }
+            }),
+            this.date,
+            {
+              number: true
+            }
+          ),
+          withVModel(
+            h('input', {
+              class: 'datetime',
+              type: 'datetime-local',
+              'onUpdate:modelValue': (val: any) => {
+                console.log('zxxx', val)
+                this.datetime = val
+              }
+            }),
+            this.datetime,
+            {
+              number: true
+            }
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+
+    const date = root.querySelector('.date')
+    const datetime = root.querySelector('.datetime')
+    const data = root._vnode.component.data
+
+    date.value = '2023-07-01'
+    triggerEvent('input', date)
+    await nextTick()
+    expect(data.date).toEqual(1688169600000)
+
+    datetime.value = '2023-07-01T20:00'
+    triggerEvent('input', datetime)
+    await nextTick()
+    expect(data.datetime).toEqual(1688212800000)
+  })
 })
