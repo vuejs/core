@@ -51,14 +51,16 @@ async function copyLink(e: MouseEvent) {
   alert('Sharable URL has been copied to clipboard.')
 }
 
-function toggleDark() {
+const emit = defineEmits(['toggle-theme', 'toggle-ssr','toggle-dev'])
+ function toggleDark() {
   const cls = document.documentElement.classList
-  cls.toggle('dark')
-  localStorage.setItem(
-    'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+   cls.toggle('dark')
+   localStorage.setItem(
+     'vue-sfc-playground-prefer-dark',
+     String(cls.contains('dark'))
   )
-}
+   emit('toggle-theme', cls.contains('dark'))
+ }
 
 onMounted(async () => {
   window.addEventListener('click', () => {
@@ -145,7 +147,7 @@ async function fetchVersions(): Promise<string[]> {
       >
         <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
       </button>
