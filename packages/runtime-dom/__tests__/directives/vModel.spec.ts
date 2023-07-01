@@ -1219,11 +1219,11 @@ describe('vModel', () => {
     date.value = '2023-07-01'
     triggerEvent('input', date)
     await nextTick()
-    expect(data.date).toEqual(1688169600000)
+    expect(data.date).toEqual(new Date('2023-07-01').getTime())
 
     datetime.value = '2023-07-01T20:00'
     triggerEvent('input', datetime)
     await nextTick()
-    expect(data.datetime).toEqual(1688212800000)
+    expect(data.datetime).toEqual(new Date('2023-07-01T20:00').getTime())
   })
 })
