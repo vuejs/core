@@ -62,6 +62,11 @@ export const vModelText: ModelDirective<
       }
       el._assign(domValue)
     })
+    if (trim) {
+      addEventListener(el, 'change', () => {
+        el.value = el.value.trim()
+      })
+    }
     if (!lazy) {
       addEventListener(el, 'compositionstart', onCompositionStart)
       addEventListener(el, 'compositionend', onCompositionEnd)
