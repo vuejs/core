@@ -34,14 +34,12 @@ export const hasOwn = (
 
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
-  toTypeString(val) === '[object Map]'
-export const isSet = (val: unknown): val is Set<any> =>
-  toTypeString(val) === '[object Set]'
+  toRawType(val) === 'Map'
+export const isSet = (val: unknown): val is Set<any> => toRawType(val) === 'Set'
 
-export const isDate = (val: unknown): val is Date =>
-  toTypeString(val) === '[object Date]'
+export const isDate = (val: unknown): val is Date => toRawType(val) === 'Date'
 export const isRegExp = (val: unknown): val is RegExp =>
-  toTypeString(val) === '[object RegExp]'
+  toRawType(val) === 'RegExp'
 export const isFunction = (val: unknown): val is Function =>
   typeof val === 'function'
 export const isString = (val: unknown): val is string => typeof val === 'string'
@@ -63,7 +61,7 @@ export const toRawType = (value: unknown): string => {
 }
 
 export const isPlainObject = (val: unknown): val is object =>
-  toTypeString(val) === '[object Object]'
+  toRawType(val) === 'Object'
 
 export const isIntegerKey = (key: unknown) =>
   isString(key) &&
@@ -86,8 +84,7 @@ export const isBuiltInDirective = /*#__PURE__*/ makeMap(
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
   const cache: Record<string, string> = Object.create(null)
   return ((str: string) => {
-    const hit = cache[str]
-    return hit || (cache[str] = fn(str))
+    return cache[str] || (cache[str] = fn(str))
   }) as T
 }
 
