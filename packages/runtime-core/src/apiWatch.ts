@@ -273,7 +273,7 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: (() => void) | undefined
+  let cleanup: (() => void) | void
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
