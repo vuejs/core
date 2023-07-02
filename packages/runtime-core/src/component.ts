@@ -442,10 +442,19 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.RENDER_TRIGGERED]: LifecycleHook
+
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_ACTIVATE]: LifecycleHook
   /**
    * @internal
    */
   [LifecycleHooks.ACTIVATED]: LifecycleHook
+  /**
+   * @internal
+   */
+  [LifecycleHooks.BEFORE_DEACTIVATE]: LifecycleHook
   /**
    * @internal
    */
@@ -562,7 +571,9 @@ export function createComponentInstance(
     u: null,
     um: null,
     bum: null,
+    bda: null,
     da: null,
+    ba: null,
     a: null,
     rtg: null,
     rtc: null,

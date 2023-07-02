@@ -12,7 +12,12 @@ import { toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
 
-export { onActivated, onDeactivated } from './components/KeepAlive'
+export {
+  onActivated,
+  onDeactivated,
+  onBeforeActivate,
+  onBeforeDeactivate
+} from './components/KeepAlive'
 
 export function injectHook(
   type: LifecycleHooks,
