@@ -170,7 +170,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  */
 export function defineExpose<
   Exposed extends Record<string, any> = Record<string, any>
->(exposed?: Exposed) {
+>(_exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
   }
@@ -191,7 +191,7 @@ export function defineOptions<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin
 >(
-  options?: ComponentOptionsWithoutProps<
+  _options?: ComponentOptionsWithoutProps<
     {},
     RawBindings,
     D,
@@ -330,8 +330,8 @@ export function withDefaults<
   BKeys extends keyof T,
   Defaults extends InferDefaults<T>
 >(
-  props: DefineProps<T, BKeys>,
-  defaults: Defaults
+  _props: DefineProps<T, BKeys>,
+  _defaults: Defaults
 ): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
