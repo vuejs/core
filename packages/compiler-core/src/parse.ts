@@ -117,16 +117,7 @@ function createParserContext(
   content: string,
   rawOptions: ParserOptions
 ): ParserContext {
-  const options = extend({}, defaultParserOptions)
-
-  let key: keyof ParserOptions
-  for (key in rawOptions) {
-    // @ts-ignore
-    options[key] =
-      rawOptions[key] === undefined
-        ? defaultParserOptions[key]
-        : rawOptions[key]
-  }
+  const options = extend({}, defaultParserOptions, rawOptions)
   return {
     options,
     column: 1,
