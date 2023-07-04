@@ -27,6 +27,7 @@ import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
 import { scanEnums } from './const-enum.js'
+import { start } from 'node:repl'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))
@@ -45,6 +46,7 @@ run()
 async function run() {
   const removeCache = scanEnums()
   try {
+    const startTime = performance.now()
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
@@ -64,7 +66,11 @@ async function run() {
           stdio: 'inherit'
         }
       )
+      console.log()
     }
+    console.log(
+      `build in ${((performance.now() - startTime) / 1000).toFixed(2)} s`
+    )
   } finally {
     removeCache()
   }
@@ -76,15 +82,15 @@ async function buildAll(targets) {
 
 async function runParallel(maxConcurrency, source, iteratorFn) {
   const ret = []
-  const executing = []
+  const executing = new Set()
   for (const item of source) {
     const p = Promise.resolve().then(() => iteratorFn(item, source))
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
-      executing.push(e)
-      if (executing.length >= maxConcurrency) {
+      const e = p.then(() => executing.delete(e))
+      executing.add(e)
+      if (executing.size >= maxConcurrency) {
         await Promise.race(executing)
       }
     }
