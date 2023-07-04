@@ -27,7 +27,6 @@ import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
 import { scanEnums } from './const-enum.js'
-import { start } from 'node:repl'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))
