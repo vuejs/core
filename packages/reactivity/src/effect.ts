@@ -391,17 +391,15 @@ export function trigger(
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
+  dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
-  for (const effect of effects) {
+  for (const effect of dep) {
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
     }
   }
-  for (const effect of effects) {
+  for (const effect of dep) {
     if (!effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
     }
