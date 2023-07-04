@@ -85,14 +85,18 @@ function createArrayInstrumentations() {
   return instrumentations
 }
 
-function hasOwnProperty(this: object, key: string) {
+function hasOwnProperty(this: Record<any, any>, key: string) {
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
   return obj.hasOwnProperty(key)
 }
 
 function createGetter(isReadonly = false, shallow = false) {
-  return function get(target: Target, key: string | symbol, receiver: object) {
+  return function get(
+    target: Target,
+    key: string | symbol,
+    receiver: Record<any, any>
+  ) {
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -160,12 +164,12 @@ const shallowSet = /*#__PURE__*/ createSetter(true)
 
 function createSetter(shallow = false) {
   return function set(
-    target: object,
+    target: Record<string | symbol, any>,
     key: string | symbol,
     value: unknown,
-    receiver: object
+    receiver: Record<string, any>
   ): boolean {
-    let oldValue = (target as any)[key]
+    let oldValue = target[key]
     if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
       return false
     }
@@ -199,9 +203,12 @@ function createSetter(shallow = false) {
   }
 }
 
-function deleteProperty(target: object, key: string | symbol): boolean {
+function deleteProperty(
+  target: Record<string | symbol, any>,
+  key: string | symbol
+): boolean {
   const hadKey = hasOwn(target, key)
-  const oldValue = (target as any)[key]
+  const oldValue = target[key]
   const result = Reflect.deleteProperty(target, key)
   if (result && hadKey) {
     trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -209,7 +216,7 @@ function deleteProperty(target: object, key: string | symbol): boolean {
   return result
 }
 
-function has(target: object, key: string | symbol): boolean {
+function has(target: Record<any, any>, key: string | symbol): boolean {
   const result = Reflect.has(target, key)
   if (!isSymbol(key) || !builtInSymbols.has(key)) {
     track(target, TrackOpTypes.HAS, key)
@@ -217,7 +224,7 @@ function has(target: object, key: string | symbol): boolean {
   return result
 }
 
-function ownKeys(target: object): (string | symbol)[] {
+function ownKeys(target: Record<any, any>): (string | symbol)[] {
   track(target, TrackOpTypes.ITERATE, isArray(target) ? 'length' : ITERATE_KEY)
   return Reflect.ownKeys(target)
 }

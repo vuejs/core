@@ -394,7 +394,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       (!isString(key) ||
         // #1091 avoid internal isRef/isVNode checks on component instance leading
         // to infinite warning loop
-        key.indexOf('__v') !== 0)
+        (key as string).indexOf('__v') !== 0)
     ) {
       if (data !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data, key)) {
         warn(
@@ -435,7 +435,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       __DEV__ && warn(`Attempting to mutate prop "${key}". Props are readonly.`)
       return false
     }
-    if (key[0] === '$' && key.slice(1) in instance) {
+    if (key[0] === '$' && (key as string).slice(1) in instance) {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}". ` +
