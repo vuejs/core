@@ -24,6 +24,7 @@ export {
 export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
   ErrorCodes,
+  errorMessages,
   createCompilerError,
   type CoreCompilerError,
   type CompilerError
@@ -62,7 +63,6 @@ export {
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/hoistStatic'
 export { generateCodeFrame } from '@vue/shared'
-
 // v2 compat only
 export {
   checkCompatEnabled,
