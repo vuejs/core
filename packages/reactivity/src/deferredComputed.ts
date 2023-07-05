@@ -1,5 +1,5 @@
 import { Dep } from './dep'
-import { ReactiveEffect } from './effect'
+import { reactiveEffect, type ReactiveEffect } from './effect'
 import { ComputedGetter, ComputedRef } from './computed'
 import { ReactiveFlags, toRaw } from './reactive'
 import { trackRefValue, triggerRefValue } from './ref'
@@ -38,7 +38,7 @@ class DeferredComputedRefImpl<T> {
     let compareTarget: any
     let hasCompareTarget = false
     let scheduled = false
-    this.effect = new ReactiveEffect(getter, (computedTrigger?: boolean) => {
+    this.effect = reactiveEffect(getter, (computedTrigger?: boolean) => {
       if (this.dep) {
         if (computedTrigger) {
           compareTarget = this._value

@@ -139,6 +139,20 @@ export class ReactiveEffect<T = any> {
   }
 }
 
+/**
+ * Creates a ReactiveEffect.
+ *
+ * @param fn - The function representing the ReactiveEffect.
+ * @param [scheduler] - The scheduler used to control the execution of the ReactiveEffect.
+ * @param [scope] - The effect scope associated with the ReactiveEffect.
+ * @returns A new instance of the ReactiveEffect class representing the reactive effect.
+ */
+export function reactiveEffect<T>(
+  ...args: ConstructorParameters<typeof ReactiveEffect<T>>
+) {
+  return new ReactiveEffect(...args)
+}
+
 function cleanupEffect(effect: ReactiveEffect) {
   const { deps } = effect
   if (deps.length) {
@@ -185,7 +199,7 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const _effect = new ReactiveEffect(fn)
+  const _effect = reactiveEffect(fn)
   if (options) {
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)

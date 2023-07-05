@@ -1,4 +1,4 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
+import { type ReactiveEffect, DebuggerOptions, reactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -41,7 +41,7 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, () => {
+    this.effect = reactiveEffect(getter, () => {
       if (!this._dirty) {
         this._dirty = true
         triggerRefValue(this)

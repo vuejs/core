@@ -54,6 +54,7 @@ export {
   enableTracking,
   pauseTracking,
   resetTracking,
+  reactiveEffect,
   ITERATE_KEY,
   ReactiveEffect,
   type ReactiveEffectRunner,

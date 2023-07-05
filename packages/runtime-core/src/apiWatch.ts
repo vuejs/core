@@ -3,7 +3,7 @@ import {
   isShallow,
   Ref,
   ComputedRef,
-  ReactiveEffect,
+  reactiveEffect,
   isReactive,
   ReactiveFlags,
   EffectScheduler,
@@ -361,7 +361,7 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, scheduler)
+  const effect = reactiveEffect(getter, scheduler)
 
   if (__DEV__) {
     effect.onTrack = onTrack
