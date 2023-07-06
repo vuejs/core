@@ -243,9 +243,7 @@ async function main() {
 
   // publish packages
   step('\nPublishing packages...')
-  for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion)
-  }
+  await Promise.all(packages.map((pkg) => publishPackage(pkg, targetVersion)))
 
   // push to GitHub
   if (!skipGit) {
