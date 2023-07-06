@@ -237,8 +237,8 @@ export function resetTracking() {
 /**
  * Tracks access to a reactive property.
  *
- * This will check which effect is running at the moment and record it as dep
- * which records all effects that depend on the reactive property.
+ * This will identify the currently active effect and record it as dep
+ * recording all effects that depend on the reactive property.
  *
  * @param target - Object holding the reactive property.
  * @param type - Defines the type of access to the reactive property.
