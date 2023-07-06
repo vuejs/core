@@ -222,7 +222,7 @@ function ownKeys(target: object): (string | symbol)[] {
   return Reflect.ownKeys(target)
 }
 
-export const mutableHandlers: ProxyHandler<object> = {
+export const mutableBaseHandlers: ProxyHandler<object> = {
   get,
   set,
   deleteProperty,
@@ -254,7 +254,7 @@ export const readonlyHandlers: ProxyHandler<object> = {
 
 export const shallowReactiveHandlers = /*#__PURE__*/ extend(
   {},
-  mutableHandlers,
+  mutableBaseHandlers,
   {
     get: shallowGet,
     set: shallowSet

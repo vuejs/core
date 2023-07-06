@@ -1,6 +1,6 @@
 import { isObject, toRawType, def } from '@vue/shared'
 import {
-  mutableHandlers,
+  mutableBaseHandlers,
   readonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
@@ -88,7 +88,7 @@ export function reactive(target: object) {
   return createReactiveObject(
     target,
     false,
-    mutableHandlers,
+    mutableBaseHandlers,
     mutableCollectionHandlers,
     reactiveMap
   )
