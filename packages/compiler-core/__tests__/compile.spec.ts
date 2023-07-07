@@ -1,5 +1,5 @@
 import { baseCompile as compile } from '../src'
-import { SourceMapConsumer, RawSourceMap } from 'source-map'
+import { SourceMapConsumer, RawSourceMap } from 'source-map-js'
 
 describe('compiler: integration tests', () => {
   const source = `

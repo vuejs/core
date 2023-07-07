@@ -26,7 +26,8 @@ import {
   MemoExpression,
   VNodeCall,
   CallExpression,
-  FunctionExpression
+  FunctionExpression,
+  convertToBlock
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
@@ -37,10 +38,9 @@ import {
   findDir,
   findProp,
   isBuiltInType,
-  makeBlock
+  getMemoedVNodeCall
 } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
-import { getMemoedVNodeCall } from '..'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -309,7 +309,7 @@ function createChildrenCodegenNode(
 
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {
-      makeBlock(vnodeCall, context)
+      convertToBlock(vnodeCall, context)
     }
     // inject branch key
     injectProp(vnodeCall, keyProperty, context)

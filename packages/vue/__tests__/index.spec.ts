@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { EMPTY_ARR } from '@vue/shared'
 import { createApp, ref, nextTick, reactive } from '../src'
 

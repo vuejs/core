@@ -26,7 +26,9 @@ import {
   ForIteratorExpression,
   ConstantTypes,
   createBlockStatement,
-  createCompoundExpression
+  createCompoundExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
@@ -35,8 +37,6 @@ import {
   isTemplateNode,
   isSlotOutlet,
   injectProp,
-  getVNodeBlockHelper,
-  getVNodeHelper,
   findDir
 } from '../utils'
 import {

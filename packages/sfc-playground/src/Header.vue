@@ -6,9 +6,14 @@ import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
+import type { ReplStore } from '@vue/repl'
 
-// @ts-ignore
-const props = defineProps(['store', 'dev', 'ssr'])
+const props = defineProps<{
+  store: ReplStore
+  dev: boolean
+  ssr: boolean
+}>()
+
 const { store } = props
 
 const currentCommit = __COMMIT__
@@ -36,19 +41,26 @@ function resetVueVersion() {
   expanded.value = false
 }
 
-async function copyLink() {
+async function copyLink(e: MouseEvent) {
+  if (e.metaKey) {
+    // hidden logic for going to local debug from play.vuejs.org
+    window.location.href = 'http://localhost:5173/' + window.location.hash
+    return
+  }
   await navigator.clipboard.writeText(location.href)
   alert('Sharable URL has been copied to clipboard.')
 }
 
-function toggleDark() {
+const emit = defineEmits(['toggle-theme', 'toggle-ssr','toggle-dev'])
+ function toggleDark() {
   const cls = document.documentElement.classList
-  cls.toggle('dark')
-  localStorage.setItem(
-    'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+   cls.toggle('dark')
+   localStorage.setItem(
+     'vue-sfc-playground-prefer-dark',
+     String(cls.contains('dark'))
   )
-}
+   emit('toggle-theme', cls.contains('dark'))
+ }
 
 onMounted(async () => {
   window.addEventListener('click', () => {
@@ -58,7 +70,7 @@ onMounted(async () => {
     if (document.activeElement?.tagName === 'IFRAME') {
       expanded.value = false
     }
-  });
+  })
 })
 
 async function fetchVersions(): Promise<string[]> {
@@ -135,7 +147,7 @@ async function fetchVersions(): Promise<string[]> {
       >
         <span>{{ ssr ? 'SSR ON' : 'SSR OFF' }}</span>
       </button>
-      <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
+       <button title="Toggle dark mode" class="toggle-dark" @click="toggleDark">
         <Sun class="light" />
         <Moon class="dark" />
       </button>

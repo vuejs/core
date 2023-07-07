@@ -20,7 +20,8 @@ import {
   warn,
   ConcreteComponent,
   ComponentOptions,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  SlotsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -52,7 +53,8 @@ export function defineCustomElement<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -65,7 +67,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
@@ -81,7 +84,8 @@ export function defineCustomElement<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -94,7 +98,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
@@ -110,7 +115,8 @@ export function defineCustomElement<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -123,7 +129,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
@@ -137,7 +144,7 @@ export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
 ): VueElementConstructor {
-  const Comp = defineComponent(options as any)
+  const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
