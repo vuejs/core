@@ -44,7 +44,7 @@ export function transformScopeExpression(
   const rExpString = stringifyExpression(exp)
   let match
   while ((match = extractKeyValueRE.exec(rExpString))) {
-    params.push(createSimpleExpression(`${match[1]}=${match[2]}`))
+    params.push(createSimpleExpression(`${match[1]} = ${match[2]}`))
   }
   return params
 }

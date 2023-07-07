@@ -8,7 +8,7 @@ describe('ssr: v-scope', () => {
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
-          ;((a=1) => {
+          ;((a = 1) => {
             _push(\`\${_ssrInterpolate(a)}\`)
           })()
           _push(\`</div>\`)
@@ -28,9 +28,9 @@ describe('ssr: v-scope', () => {
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
-        ;((a=1) => {
+        ;((a = 1) => {
           _push(\`<div>\`)
-          ;((b=2) => {
+          ;((b = 2) => {
             _push(\`\${_ssrInterpolate(a)} \${_ssrInterpolate(b)}\`)
           })()
           _push(\`</div>\`)
@@ -53,7 +53,7 @@ describe('ssr: v-scope', () => {
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.ok) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
-          ;((a=true) => {
+          ;((a = true) => {
             _push(\`\${_ssrInterpolate(a)}\`)
           })()
           _push(\`</div>\`)
