@@ -333,8 +333,8 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^2.5.2
-        version: 2.5.2
+        specifier: ^2.5.3
+        version: 2.5.3
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1315,8 +1315,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@2.5.2:
-    resolution: {integrity: sha512-2+YwL5/7QFhnwkK1A2sSJMVie04kY9Kz3l6Z60QySIldDUDfxUNxe0xICUwRucEOdQnu3TueUXn4+F504QmM5Q==}
+  /@vue/repl@2.5.3:
+    resolution: {integrity: sha512-t9Ny4/pzV0Rq1kEnh0WsauzZljajmdhsmYER8120uDv+zabJv/MMNytw/qdvEHMqkvwvoFA6E0sLSxgqpQpk3Q==}
     requiresBuild: true
     dev: false
 
