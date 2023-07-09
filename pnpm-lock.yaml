@@ -16,7 +16,7 @@ importers:
         version: 7.21.3
       '@rollup/plugin-alias':
         specifier: ^4.0.3
-        version: 4.0.3(rollup@3.20.2)
+        version: 4.0.4(rollup@3.20.2)
       '@rollup/plugin-commonjs':
         specifier: ^24.0.1
         version: 24.0.1(rollup@3.20.2)
@@ -932,8 +932,8 @@ packages:
       fastq: 1.15.0
     dev: true
 
-  /@rollup/plugin-alias@4.0.3(rollup@3.20.2):
-    resolution: {integrity: sha512-ZuDWE1q4PQDhvm/zc5Prun8sBpLJy41DMptYrS6MhAy9s9kL/doN1613BWfEchGVfKxzliJ3BjbOPizXX38DbQ==}
+  /@rollup/plugin-alias@4.0.4(rollup@3.20.2):
+    resolution: {integrity: sha512-0CaAY238SMtYAWEXXptWSR8iz8NYZnH7zNBKuJ14xFJSGwLtPgjvXYsoApAHfzYXXH1ejxpVw7WlHss3zhh9SQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       rollup: ^1.20.0||^2.0.0||^3.0.0
