@@ -21,6 +21,7 @@ import { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { traverse } from './apiWatch'
+import { RendererElement } from './renderer'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -31,7 +32,11 @@ export interface DirectiveBinding<V = any> {
   dir: ObjectDirective<any, V>
 }
 
-export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
+export type DirectiveHook<
+  T extends RendererElement = any,
+  Prev = VNode<any, T> | null,
+  V = any
+> = (
   el: T,
   binding: DirectiveBinding<V>,
   vnode: VNode<any, T>,
@@ -43,7 +48,7 @@ export type SSRDirectiveHook = (
   vnode: VNode
 ) => Data | undefined
 
-export interface ObjectDirective<T = any, V = any> {
+export interface ObjectDirective<T extends RendererElement = any, V = any> {
   created?: DirectiveHook<T, null, V>
   beforeMount?: DirectiveHook<T, null, V>
   mounted?: DirectiveHook<T, null, V>
@@ -55,9 +60,12 @@ export interface ObjectDirective<T = any, V = any> {
   deep?: boolean
 }
 
-export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
+export type FunctionDirective<
+  T extends RendererElement = any,
+  V = any
+> = DirectiveHook<T, any, V>
 
-export type Directive<T = any, V = any> =
+export type Directive<T extends RendererElement = any, V = any> =
   | ObjectDirective<T, V>
   | FunctionDirective<T, V>
 
