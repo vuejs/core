@@ -88,7 +88,7 @@ importers:
         version: 0.30.0
       marked:
         specifier: ^4.0.10
-        version: 4.2.12
+        version: 4.3.0
       minimist:
         specifier: ^1.2.0
         version: 1.2.7
@@ -3990,8 +3990,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /marked@4.2.12:
-    resolution: {integrity: sha512-yr8hSKa3Fv4D3jdZmtMMPghgVt6TWbk86WQaWhDloQjRSQhMMYCAro7jP7VDJrjjdV8pxVxMssXS8B8Y5DZ5aw==}
+  /marked@4.3.0:
+    resolution: {integrity: sha512-PRsaiG84bK+AMvxziE/lCFss8juXjNaWzVbN5tXAm4XjeaS9NAHhop+PjQxz2A9h8Q4M/xGmzP8vqNwy6JeK0A==}
     engines: {node: '>= 12'}
     hasBin: true
     dev: true
