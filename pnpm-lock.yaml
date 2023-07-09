@@ -37,7 +37,7 @@ importers:
         version: 1.0.0
       '@types/node':
         specifier: ^16.4.7
-        version: 16.18.11
+        version: 16.18.38
       '@typescript-eslint/parser':
         specifier: ^5.56.0
         version: 5.56.0(eslint@8.33.0)(typescript@5.0.2)
@@ -139,7 +139,7 @@ importers:
         version: 5.0.2
       vite:
         specifier: ^4.3.0
-        version: 4.3.1(@types/node@16.18.11)(terser@5.16.2)
+        version: 4.3.1(@types/node@16.18.38)(terser@5.16.2)
       vitest:
         specifier: ^0.30.1
         version: 0.30.1(jsdom@21.1.0)(terser@5.16.2)
@@ -350,7 +350,7 @@ importers:
         version: 4.2.3(vite@4.3.9)(vue@packages+vue)
       vite:
         specifier: ^4.3.9
-        version: 4.3.9(@types/node@16.18.11)(terser@5.16.2)
+        version: 4.3.9(@types/node@16.18.38)(terser@5.16.2)
 
   packages/shared: {}
 
@@ -1290,8 +1290,8 @@ packages:
     resolution: {integrity: sha512-jhuKLIRrhvCPLqwPcx6INqmKeiA5EWrsCOPhrlFSrbrmU4ZMPjj5Ul/oLCMDO98XRUIwVm78xICz4EPCektzeQ==}
     dev: true
 
-  /@types/node@16.18.11:
-    resolution: {integrity: sha512-3oJbGBUWuS6ahSnEq1eN2XrCyf4YsWI8OyCvo7c64zQJNplk3mO84t53o8lfTk+2ji59g5ycfc6qQ3fdHliHuA==}
+  /@types/node@16.18.38:
+    resolution: {integrity: sha512-6sfo1qTulpVbkxECP+AVrHV9OoJqhzCsfTNp5NIG+enM4HyM3HvZCO798WShIXBN0+QtDIcutJCjsVYnQP5rIQ==}
     dev: true
 
   /@types/normalize-package-data@2.4.1:
@@ -1314,7 +1314,7 @@ packages:
     resolution: {integrity: sha512-Cn6WYCm0tXv8p6k+A8PvbDG763EDpBoTzHdA+Q/MF6H3sapGjCm9NzoaJncJS9tUKSuCoDs9XHxYYsQDgxR6kw==}
     requiresBuild: true
     dependencies:
-      '@types/node': 16.18.11
+      '@types/node': 16.18.38
     dev: true
     optional: true
 
@@ -1449,7 +1449,7 @@ packages:
       vite: ^4.0.0
       vue: ^3.2.25
     dependencies:
-      vite: 4.3.9(@types/node@16.18.11)(terser@5.16.2)
+      vite: 4.3.9(@types/node@16.18.38)(terser@5.16.2)
       vue: link:packages/vue
     dev: true
 
@@ -5758,7 +5758,7 @@ packages:
     engines: {node: '>= 0.8'}
     dev: true
 
-  /vite-node@0.30.1(@types/node@16.18.11)(terser@5.16.2):
+  /vite-node@0.30.1(@types/node@16.18.38)(terser@5.16.2):
     resolution: {integrity: sha512-vTikpU/J7e6LU/8iM3dzBo8ZhEiKZEKRznEMm+mJh95XhWaPrJQraT/QsT2NWmuEf+zgAoMe64PKT7hfZ1Njmg==}
     engines: {node: '>=v14.18.0'}
     hasBin: true
@@ -5768,7 +5768,7 @@ packages:
       mlly: 1.2.0
       pathe: 1.1.0
       picocolors: 1.0.0
-      vite: 4.3.1(@types/node@16.18.11)(terser@5.16.2)
+      vite: 4.3.1(@types/node@16.18.38)(terser@5.16.2)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -5779,7 +5779,7 @@ packages:
       - terser
     dev: true
 
-  /vite@4.3.1(@types/node@16.18.11)(terser@5.16.2):
+  /vite@4.3.1(@types/node@16.18.38)(terser@5.16.2):
     resolution: {integrity: sha512-EPmfPLAI79Z/RofuMvkIS0Yr091T2ReUoXQqc5ppBX/sjFRhHKiPPF/R46cTdoci/XgeQpB23diiJxq5w30vdg==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -5804,7 +5804,7 @@ packages:
       terser:
         optional: true
     dependencies:
-      '@types/node': 16.18.11
+      '@types/node': 16.18.38
       esbuild: 0.17.5
       postcss: 8.4.21
       rollup: 3.20.2
@@ -5813,7 +5813,7 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /vite@4.3.9(@types/node@16.18.11)(terser@5.16.2):
+  /vite@4.3.9(@types/node@16.18.38)(terser@5.16.2):
     resolution: {integrity: sha512-qsTNZjO9NoJNW7KnOrgYwczm0WctJ8m/yqYAMAK9Lxt4SoySUfS5S8ia9K7JHpa3KEeMfyF8LoJ3c5NeBJy6pg==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -5838,7 +5838,7 @@ packages:
       terser:
         optional: true
     dependencies:
-      '@types/node': 16.18.11
+      '@types/node': 16.18.38
       esbuild: 0.17.19
       postcss: 8.4.24
       rollup: 3.25.1
@@ -5880,7 +5880,7 @@ packages:
     dependencies:
       '@types/chai': 4.3.4
       '@types/chai-subset': 1.3.3
-      '@types/node': 16.18.11
+      '@types/node': 16.18.38
       '@vitest/expect': 0.30.1
       '@vitest/runner': 0.30.1
       '@vitest/snapshot': 0.30.1
@@ -5902,8 +5902,8 @@ packages:
       strip-literal: 1.0.1
       tinybench: 2.4.0
       tinypool: 0.4.0
-      vite: 4.3.1(@types/node@16.18.11)(terser@5.16.2)
-      vite-node: 0.30.1(@types/node@16.18.11)(terser@5.16.2)
+      vite: 4.3.1(@types/node@16.18.38)(terser@5.16.2)
+      vite-node: 0.30.1(@types/node@16.18.38)(terser@5.16.2)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less
