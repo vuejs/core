@@ -10,7 +10,7 @@ import {
 } from '../../src/script/resolveType'
 
 import ts from 'typescript'
-registerTS(ts)
+registerTS(() => ts)
 
 describe('resolveType', () => {
   test('type literal', () => {
