@@ -775,7 +775,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
    */
   class?: any
-  style?: string | CSSProperties
+  style?: StyleValue
 
   color?: string
   height?: Numberish
