@@ -434,6 +434,7 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   allowtransparency?: Booleanish
   frameborder?: Numberish
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   marginheight?: Numberish
   marginwidth?: Numberish
   name?: string
