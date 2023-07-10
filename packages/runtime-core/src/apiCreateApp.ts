@@ -16,7 +16,7 @@ import {
   ComponentPublicInstance
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
+import { RendererElement, RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
@@ -196,7 +196,7 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
-export function createAppAPI<HostElement>(
+export function createAppAPI<HostElement extends RendererElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
@@ -221,7 +221,7 @@ export function createAppAPI<HostElement>(
         set() {
           warn(
             `app.config.unwrapInjectedRef has been deprecated. ` +
-              `3.3 now alawys unwraps injected refs in Options API.`
+              `3.3 now always unwraps injected refs in Options API.`
           )
         }
       })
