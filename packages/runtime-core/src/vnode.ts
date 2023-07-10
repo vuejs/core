@@ -681,7 +681,7 @@ export function cloneVNode<T extends RendererNode, U extends RendererElement>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**
