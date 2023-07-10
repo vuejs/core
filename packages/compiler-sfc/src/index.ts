@@ -7,6 +7,8 @@ export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
+
+// TODO remove in 3.4
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,

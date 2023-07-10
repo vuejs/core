@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createApp, h } from '../src'
 
 describe('createApp for dom', () => {
@@ -11,7 +10,7 @@ describe('createApp for dom', () => {
       }
     }).mount(root)
     expect(root.children.length).toBe(1)
-    expect(root.children[0] instanceof SVGElement).toBe(true)
+    expect(root.children[0]).toBeInstanceOf(SVGElement)
   })
 
   // #4398

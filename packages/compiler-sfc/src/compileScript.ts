@@ -5,7 +5,7 @@ import {
   walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -274,7 +274,7 @@ export function compileScript(
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
@@ -607,8 +607,8 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
-      ;(walk as any)(node, {
-        enter(child: Node, parent: Node) {
+      walk(node, {
+        enter(child: Node, parent: Node | undefined) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -633,7 +633,7 @@ export function compileScript(
               ctx,
               child,
               needsSemi,
-              parent.type === 'ExpressionStatement'
+              parent!.type === 'ExpressionStatement'
             )
           }
         },
@@ -1247,6 +1247,8 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
 }
 
 function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
   switch (node.type) {
     case 'UnaryExpression': // void 0, !true
       return isStaticNode(node.argument)
@@ -1269,15 +1271,14 @@ function isStaticNode(node: Node): boolean {
       return node.expressions.every(expr => isStaticNode(expr))
 
     case 'ParenthesizedExpression': // (1)
-    case 'TSNonNullExpression': // 1!
-    case 'TSAsExpression': // 1 as number
-    case 'TSTypeAssertion': // (<number>2)
       return isStaticNode(node.expression)
 
-    default:
-      if (isLiteralNode(node)) {
-        return true
-      }
-      return false
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
   }
+  return false
 }

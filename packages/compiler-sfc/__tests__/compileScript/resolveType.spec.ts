@@ -10,7 +10,7 @@ import {
 } from '../../src/script/resolveType'
 
 import ts from 'typescript'
-registerTS(ts)
+registerTS(() => ts)
 
 describe('resolveType', () => {
   test('type literal', () => {
@@ -458,7 +458,10 @@ describe('resolveType', () => {
     test('relative ts', () => {
       const files = {
         '/foo.ts': 'export type P = { foo: number }',
-        '/bar.d.ts': 'type X = { bar: string }; export { X as Y }'
+        '/bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean'
       }
       const { props, deps } = resolve(
         `
@@ -473,6 +476,23 @@ describe('resolveType', () => {
         bar: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #8244
+    test('utility type in external file', () => {
+      const files = {
+        '/foo.ts': 'type A = { n?: number }; export type B = Required<A>'
+      }
+      const { props } = resolve(
+        `
+        import { B } from './foo'
+        defineProps<B>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        n: ['Number']
+      })
     })
 
     test('relative vue', () => {
@@ -554,6 +574,66 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test('relative (default export)', () => {
+      const files = {
+        '/foo.ts': `export default interface P { foo: string }`,
+        '/bar.ts': `type X = { bar: string }; export default X`
+      }
+      const { props, deps } = resolve(
+        `
+        import P from './foo'
+        import X from './bar'
+        defineProps<P & X>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (default re-export)', () => {
+      const files = {
+        '/bar.ts': `export { default } from './foo'`,
+        '/foo.ts': `export default interface P { foo: string }; export interface PP { bar: number }`,
+        '/baz.ts': `export { PP as default } from './foo'`
+      }
+      const { props, deps } = resolve(
+        `
+        import P from './bar'
+        import PP from './baz'
+        defineProps<P & PP>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test('relative (re-export /w same source type name)', () => {
+      const files = {
+        '/foo.ts': `export default interface P { foo: string }`,
+        '/bar.ts': `export default interface PP { bar: number }`,
+        '/baz.ts': `export { default as X } from './foo'; export { default as XX } from './bar'; `
+      }
+      const { props, deps } = resolve(
+        `import { X, XX } from './baz'
+        defineProps<X & XX>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/baz.ts', '/foo.ts', '/bar.ts'])
+    })
+
     test('relative (dynamic import)', () => {
       const files = {
         '/foo.ts': `export type P = { foo: string, bar: import('./bar').N }`,
@@ -568,6 +648,26 @@ describe('resolveType', () => {
       expect(props).toStrictEqual({
         foo: ['String'],
         bar: ['Number']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #8339
+    test('relative, .js import', () => {
+      const files = {
+        '/foo.d.ts':
+          'import { PP } from "./bar.js"; export type P = { foo: PP }',
+        '/bar.d.ts': 'export type PP = "foo" | "bar"'
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
@@ -643,6 +743,34 @@ describe('resolveType', () => {
         bar: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(['/user.ts'])
+    })
+
+    test('ts module resolve w/ path aliased vue file', () => {
+      const files = {
+        '/tsconfig.json': JSON.stringify({
+          compilerOptions: {
+            include: ['**/*.ts', '**/*.vue'],
+            paths: {
+              '@/*': ['./src/*']
+            }
+          }
+        }),
+        '/src/Foo.vue':
+          '<script lang="ts">export type P = { bar: string }</script>'
+      }
+
+      const { props, deps } = resolve(
+        `
+        import { P } from '@/Foo.vue'
+        defineProps<P>()
+        `,
+        files
+      )
+
+      expect(props).toStrictEqual({
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(['/src/Foo.vue'])
     })
 
     test('global types', () => {
@@ -734,6 +862,35 @@ describe('resolveType', () => {
         defineProps<{ foo: P }>()
       `)
       ).not.toThrow()
+    })
+
+    test('error against failed extends', () => {
+      expect(() =>
+        resolve(`
+        import type Base from 'unknown'
+        interface Props extends Base {}
+        defineProps<Props>()
+      `)
+      ).toThrow(`@vue-ignore`)
+    })
+
+    test('allow ignoring failed extends', () => {
+      let res: any
+
+      expect(
+        () =>
+          (res = resolve(`
+        import type Base from 'unknown'
+        interface Props extends /*@vue-ignore*/ Base {
+          foo: string
+        }
+        defineProps<Props>()
+      `))
+      ).not.toThrow(`@vue-ignore`)
+
+      expect(res.props).toStrictEqual({
+        foo: ['String']
+      })
     })
   })
 })
