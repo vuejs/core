@@ -35,7 +35,7 @@
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
     "build-ssr-esm": "node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages/sfc-playground && npm run build",
-    "preinstall": "node ./scripts/preinstall.js",
+    "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
