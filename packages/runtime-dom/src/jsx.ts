@@ -464,6 +464,31 @@ export interface InsHTMLAttributes extends HTMLAttributes {
   datetime?: string
 }
 
+export type InputTypeHTMLAttribute =
+  | 'button'
+  | 'checkbox'
+  | 'color'
+  | 'date'
+  | 'datetime-local'
+  | 'email'
+  | 'file'
+  | 'hidden'
+  | 'image'
+  | 'month'
+  | 'number'
+  | 'password'
+  | 'radio'
+  | 'range'
+  | 'reset'
+  | 'search'
+  | 'submit'
+  | 'tel'
+  | 'text'
+  | 'time'
+  | 'url'
+  | 'week'
+  | (string & {})
+
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string
   alt?: string
@@ -495,7 +520,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   size?: Numberish
   src?: string
   step?: Numberish
-  type?: string
+  type?: InputTypeHTMLAttribute
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish
 }
@@ -677,7 +702,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   minlength?: Numberish
   name?: string
   placeholder?: string
-  readonly?: boolean
+  readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
   value?: string | string[] | number
