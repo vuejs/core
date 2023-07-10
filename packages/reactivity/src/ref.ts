@@ -1,3 +1,4 @@
+import type { ComputedRef } from './computed'
 import {
   activeEffect,
   getDepFromReactive,
@@ -208,7 +209,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
