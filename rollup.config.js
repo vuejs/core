@@ -193,7 +193,7 @@ function createConfig(format, output, plugins = []) {
     if (isBundlerESMBuild) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
-        __DEV__: `process.env.NODE_ENV !== 'production'`
+        __DEV__: `!!(process.env.NODE_ENV !== 'production')`
       })
     }
 
@@ -215,7 +215,7 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
+    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {

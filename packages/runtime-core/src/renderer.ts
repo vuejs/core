@@ -90,7 +90,7 @@ export type RootRenderFunction<HostElement = RendererElement> = (
 
 export interface RendererOptions<
   HostNode = RendererNode,
-  HostElement = RendererElement
+  HostElement extends RendererElement = RendererElement
 > {
   patchProp(
     el: HostElement,
@@ -145,7 +145,7 @@ export interface RendererElement extends RendererNode {}
 // to optimize bundle size.
 export interface RendererInternals<
   HostNode = RendererNode,
-  HostElement = RendererElement
+  HostElement extends RendererElement = RendererElement
 > {
   p: PatchFn
   um: UnmountFn
@@ -295,7 +295,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
  */
 export function createRenderer<
   HostNode = RendererNode,
-  HostElement = RendererElement
+  HostElement extends RendererElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>) {
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
@@ -312,7 +312,7 @@ export function createHydrationRenderer(
 // overload 1: no hydration
 function baseCreateRenderer<
   HostNode = RendererNode,
-  HostElement = RendererElement
+  HostElement extends RendererElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement>
 
 // overload 2: with hydration
@@ -835,7 +835,8 @@ function baseCreateRenderer(
         areChildrenSVG,
         slotScopeIds
       )
-      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+      if (__DEV__) {
+        // necessary for HMR
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
@@ -1110,7 +1111,8 @@ function baseCreateRenderer(
           isSVG,
           slotScopeIds
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        if (__DEV__) {
+          // necessary for HMR
           traverseStaticChildren(n1, n2)
         } else if (
           // #2080 if the stable fragment has a key, it's a <template v-for> that may

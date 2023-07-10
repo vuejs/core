@@ -110,16 +110,17 @@ export const hyphenate = cacheStringFunction((str: string) =>
 /**
  * @private
  */
-export const capitalize = cacheStringFunction(
-  (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
-)
+export const capitalize = cacheStringFunction(<T extends string>(str: T) => {
+  return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
+})
 
 /**
  * @private
  */
-export const toHandlerKey = cacheStringFunction((str: string) =>
-  str ? `on${capitalize(str)}` : ``
-)
+export const toHandlerKey = cacheStringFunction(<T extends string>(str: T) => {
+  const s = str ? `on${capitalize(str)}` : ``
+  return s as T extends '' ? '' : `on${Capitalize<T>}`
+})
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
@@ -149,7 +150,7 @@ export const looseToNumber = (val: any): any => {
 }
 
 /**
- * Only conerces number-like strings
+ * Only concerns number-like strings
  * "123-foo" will be returned as-is
  */
 export const toNumber = (val: any): any => {
