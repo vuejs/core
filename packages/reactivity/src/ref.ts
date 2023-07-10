@@ -229,7 +229,7 @@ export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T>): T {
+export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 
