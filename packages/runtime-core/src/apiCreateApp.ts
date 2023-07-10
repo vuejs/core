@@ -16,7 +16,7 @@ import {
   ComponentPublicInstance
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
+import { RendererElement, RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
@@ -196,7 +196,7 @@ export type CreateAppFunction<HostElement> = (
 
 let uid = 0
 
-export function createAppAPI<HostElement>(
+export function createAppAPI<HostElement extends RendererElement>(
   render: RootRenderFunction<HostElement>,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
