@@ -168,7 +168,12 @@ function getImportsExpressionExp(
         loc,
         ConstantTypes.CAN_STRINGIFY
       )
-      context.imports.push({ exp, path })
+      // When path starts with /, for example, /foo/bar.png, it is an absolute file path
+      // In this case we need to ensure the path is not encoded
+      context.imports.push({
+        exp,
+        path: path && path[0] === '/' ? decodeURIComponent(path) : path
+      })
     }
 
     if (!hash) {
