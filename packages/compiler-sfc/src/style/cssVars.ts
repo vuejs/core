@@ -53,7 +53,8 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    // ignore v-bind() in comments, eg /* ... */ and // (Less, Sass and Stylus all support the use of // to comment.)
+    // ignore v-bind() in comments, eg /* ... */
+    // and // (Less, Sass and Stylus all support the use of // to comment)
     const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
