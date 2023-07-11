@@ -50,7 +50,11 @@ export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
-  return isObject(val) && isFunction(val.then) && isFunction(val.catch)
+  return (
+    (isObject(val) || isFunction(val)) &&
+    isFunction(val.then) &&
+    isFunction(val.catch)
+  )
 }
 
 export const objectToString = Object.prototype.toString
