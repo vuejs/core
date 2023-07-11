@@ -775,6 +775,21 @@ return { get FooBaz() { return FooBaz }, get Last() { return Last } }
 })"
 `;
 
+exports[`SFC compile <script setup> > dev mode import usage check > template ref 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { foo, bar, Baz } from './foo'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          
+return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > dev mode import usage check > vue interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { x, y, z, x$y } from './x'

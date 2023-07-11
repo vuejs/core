@@ -513,6 +513,23 @@ describe('SFC compile <script setup>', () => {
       </template>
       `)
     })
+
+    test('template ref', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { foo, bar, Baz } from './foo'
+        </script>
+        <template>
+          <div ref="foo"></div>
+          <div ref=""></div>
+          <Baz ref="bar" />
+        </template>
+        `)
+      expect(content).toMatch(
+        'return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }'
+      )
+      assertCode(content)
+    })
   })
 
   describe('inlineTemplate mode', () => {
