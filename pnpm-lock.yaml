@@ -43,7 +43,7 @@ importers:
         version: 5.56.0(eslint@8.33.0)(typescript@5.0.2)
       '@vitest/coverage-istanbul':
         specifier: ^0.29.7
-        version: 0.29.7(vitest@0.30.1)
+        version: 0.29.8(vitest@0.30.1)
       '@vue/consolidate':
         specifier: 0.17.3
         version: 0.17.3
@@ -1453,8 +1453,8 @@ packages:
       vue: link:packages/vue
     dev: true
 
-  /@vitest/coverage-istanbul@0.29.7(vitest@0.30.1):
-    resolution: {integrity: sha512-PPnvqEkwSSgjJ1cOgkm5g49/3UiPGPLC5qmWvrx2ITF9AfN2NejnjaEKxoYrX7oQQyBFgf/ph/BraxsqOOo+Kg==}
+  /@vitest/coverage-istanbul@0.29.8(vitest@0.30.1):
+    resolution: {integrity: sha512-ZCBDQFM8Quu5yQN2BNhTRL2XHxzghE1aH2pUctwrCDcafabpLE2CV8KaYHg1bBVNIKGtyLqQagv4E455uAn6dw==}
     peerDependencies:
       vitest: '>=0.28.0 <1'
     dependencies:
@@ -2037,7 +2037,7 @@ packages:
     dev: true
 
   /concat-map@0.0.1:
-    resolution: {integrity: sha1-2Klr13/Wjfd5OnMDajug1UBdR3s=}
+    resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
     dev: true
 
   /concordance@5.0.4:
