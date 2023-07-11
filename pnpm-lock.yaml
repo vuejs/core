@@ -5841,7 +5841,7 @@ packages:
     dependencies:
       '@types/node': 16.18.38
       esbuild: 0.17.19
-      postcss: 8.4.21
+      postcss: 8.4.25
       rollup: 3.20.2
       terser: 5.18.2
     optionalDependencies:
