@@ -7,6 +7,7 @@ export const enum LifecycleHooks {
   UPDATED = 'u',
   BEFORE_UNMOUNT = 'bum',
   UNMOUNTED = 'um',
+  AFTER_UNMOUNT = 'au',
   DEACTIVATED = 'da',
   ACTIVATED = 'a',
   RENDER_TRIGGERED = 'rtg',

@@ -41,7 +41,8 @@ import {
   onRenderTriggered,
   DebuggerHook,
   ErrorCapturedHook,
-  onServerPrefetch
+  onServerPrefetch,
+  onAfterUnmounted
 } from './apiLifecycle'
 import {
   reactive,
@@ -641,6 +642,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     beforeUnmount,
     destroyed,
     unmounted,
+    afterUnmount,
     render,
     renderTracked,
     renderTriggered,
@@ -824,8 +826,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
   registerLifecycleHook(onRenderTriggered, renderTriggered)
   registerLifecycleHook(onBeforeUnmount, beforeUnmount)
   registerLifecycleHook(onUnmounted, unmounted)
+  registerLifecycleHook(onAfterUnmounted, afterUnmount)
   registerLifecycleHook(onServerPrefetch, serverPrefetch)
-
   if (__COMPAT__) {
     if (
       beforeDestroy &&
@@ -1066,6 +1068,7 @@ export const internalOptionMergeStrats: Record<string, Function> = {
   updated: mergeAsArray,
   beforeDestroy: mergeAsArray,
   beforeUnmount: mergeAsArray,
+  afterUnmount: mergeAsArray,
   destroyed: mergeAsArray,
   unmounted: mergeAsArray,
   activated: mergeAsArray,

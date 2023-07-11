@@ -35,7 +35,8 @@ import {
   NOOP,
   invokeArrayFns,
   isArray,
-  getGlobalThis
+  getGlobalThis,
+  observeDomRemoval
 } from '@vue/shared'
 import {
   queueJob,
@@ -1255,6 +1256,7 @@ function baseCreateRenderer(
       popWarningContext()
       endMeasure(instance, `mount`)
     }
+    afterUnmount(instance)
   }
 
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
@@ -2154,6 +2156,14 @@ function baseCreateRenderer(
         shouldInvokeDirs &&
           invokeDirectiveHook(vnode, null, parentComponent, 'unmounted')
       }, parentSuspense)
+    }
+  }
+
+  const afterUnmount = (instance: ComponentInternalInstance) => {
+    const { vnode, au } = instance
+    const { el } = vnode
+    if (au && el) {
+      observeDomRemoval(el as Node, au)
     }
   }
 

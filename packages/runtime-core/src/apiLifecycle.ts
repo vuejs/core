@@ -28,7 +28,7 @@ export function injectHook(
     const wrappedHook =
       hook.__weh ||
       (hook.__weh = (...args: unknown[]) => {
-        if (target.isUnmounted) {
+        if (target.isUnmounted && type !== LifecycleHooks.AFTER_UNMOUNT) {
           return
         }
         // disable tracking inside all lifecycle hooks
@@ -76,6 +76,7 @@ export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
+export const onAfterUnmounted = createHook(LifecycleHooks.AFTER_UNMOUNT)
 export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 export type DebuggerHook = (e: DebuggerEvent) => void

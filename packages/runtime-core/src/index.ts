@@ -52,6 +52,7 @@ export {
   onActivated,
   onDeactivated,
   onRenderTracked,
+  onAfterUnmounted,
   onRenderTriggered,
   onErrorCaptured,
   onServerPrefetch

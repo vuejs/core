@@ -34,6 +34,7 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [LifecycleHooks.UPDATED]: 'updated',
   [LifecycleHooks.BEFORE_UNMOUNT]: 'beforeUnmount hook',
   [LifecycleHooks.UNMOUNTED]: 'unmounted hook',
+  [LifecycleHooks.AFTER_UNMOUNT]: 'afterUnmounted hook',
   [LifecycleHooks.ACTIVATED]: 'activated hook',
   [LifecycleHooks.DEACTIVATED]: 'deactivated hook',
   [LifecycleHooks.ERROR_CAPTURED]: 'errorCaptured hook',

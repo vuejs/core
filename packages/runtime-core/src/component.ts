@@ -437,6 +437,10 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
+  [LifecycleHooks.AFTER_UNMOUNT]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
   /**
    * @internal
@@ -561,6 +565,7 @@ export function createComponentInstance(
     bu: null,
     u: null,
     um: null,
+    au: null,
     bum: null,
     da: null,
     a: null,
