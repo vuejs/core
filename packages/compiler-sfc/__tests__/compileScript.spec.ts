@@ -413,6 +413,25 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    test('dynamic arguments', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { FooBar, foo, bar, unused } from './x'
+        </script>
+        <template>
+          <FooBar #[foo.slotName] />
+          <FooBar #unused />
+          <div :[bar.attrName]="15"></div>
+          <div unused="unused"></div>
+        </template>
+        `)
+      expect(content).toMatch(
+        `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
+          `get bar() { return bar } }`
+      )
+      assertCode(content)
+    })
+
     // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
