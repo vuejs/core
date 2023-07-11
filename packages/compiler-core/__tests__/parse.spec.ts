@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { ParserOptions } from '../src/options'
 import { baseParse, TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'

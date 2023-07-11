@@ -17,7 +17,7 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync, brotliCompressSync } from 'node:zlib'

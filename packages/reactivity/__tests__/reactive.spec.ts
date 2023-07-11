@@ -23,7 +23,7 @@ describe('reactivity/reactive', () => {
     const reactiveObj = reactive(obj)
     expect(isReactive(reactiveObj)).toBe(true)
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
-    // @ts-ignore
+    // @ts-expect-error
     const prototype = reactiveObj['__proto__']
     const otherObj = { data: ['a'] }
     expect(isReactive(otherObj)).toBe(false)
@@ -204,7 +204,7 @@ describe('reactivity/reactive', () => {
     const dummy = computed(() => observed.a)
     expect(dummy.value).toBe(0)
 
-    // @ts-ignore
+    // @ts-expect-error
     observed.a = bar
     expect(dummy.value).toBe(1)
 
@@ -233,6 +233,9 @@ describe('reactivity/reactive', () => {
     // symbol
     const s = Symbol()
     assertValue(s)
+    // bigint
+    const bn = BigInt('9007199254740991')
+    assertValue(bn)
 
     // built-ins should work and return same value
     const p = Promise.resolve()

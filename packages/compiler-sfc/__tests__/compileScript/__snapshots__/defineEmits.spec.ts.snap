@@ -197,6 +197,24 @@ return { emit }
 })"
 `;
 
+exports[`defineEmits > w/ type (type references in union) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type BaseEmit = \\"change\\"
+    type Emit = \\"some\\" | \\"emit\\" | BaseEmit
+    
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"some\\", \\"emit\\", \\"change\\", \\"another\\"],
+  setup(__props, { expose: __expose, emit }) {
+  __expose();
+
+    
+    
+return { emit }
+}
+
+})"
+`;
+
 exports[`defineEmits > w/ type (union) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
