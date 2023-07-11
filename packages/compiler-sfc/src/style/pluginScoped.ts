@@ -129,17 +129,10 @@ function rewriteSelector(
         } else {
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
-          if (value === '::v-deep') {
-            warn(
-              `::v-deep usage as a combinator has ` +
-                `been deprecated. Use :deep(<inner-selector>) instead.`
-            )
-          } else {
-            warn(
-              `The usage of :deep is not standardized ` +
-                `please use :deep(<inner-selector>) instead of :deep <inner-selector>.`
-            )
-          }
+          warn(
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
+          )
 
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
