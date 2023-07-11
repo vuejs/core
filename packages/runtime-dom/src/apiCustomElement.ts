@@ -140,6 +140,7 @@ export function defineCustomElement(options: {
   new (...args: any[]): ComponentPublicInstance
 }): VueElementConstructor
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
@@ -155,6 +156,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
   return defineCustomElement(options, hydrate)
