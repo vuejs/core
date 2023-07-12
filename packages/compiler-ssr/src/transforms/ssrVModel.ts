@@ -18,7 +18,8 @@ import {
 import {
   SSR_LOOSE_EQUAL,
   SSR_LOOSE_CONTAIN,
-  SSR_RENDER_DYNAMIC_MODEL
+  SSR_RENDER_DYNAMIC_MODEL,
+  SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
 import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
@@ -129,8 +130,34 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      // NOOP
-      // select relies on client-side directive to set initial selected state.
+      node.children.forEach(option => {
+        if (option.type === NodeTypes.ELEMENT) {
+          const plainNode = option as PlainElementNode
+          if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
+            const value = findValueBinding(plainNode)
+            plainNode.ssrCodegenNode!.elements.push(
+              createConditionalExpression(
+                createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
+                  createConditionalExpression(
+                    createCallExpression(`Array.isArray`, [model]),
+                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                      model,
+                      value
+                    ]),
+                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                      model,
+                      value
+                    ])
+                  )
+                ]),
+                createSimpleExpression(' selected', true),
+                createSimpleExpression('', true),
+                false /* no newline */
+              )
+            )
+          }
+        }
+      })
     } else {
       context.onError(
         createDOMCompilerError(
