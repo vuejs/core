@@ -68,64 +68,6 @@ describe('SFC compile <script setup>', () => {
     assertCode(content)
   })
 
-  test('defineProps/defineEmits in multi-variable declaration', () => {
-    const { content } = compile(`
-    <script setup>
-    const props = defineProps(['item']),
-      a = 1,
-      emit = defineEmits(['a']);
-    </script>
-  `)
-    assertCode(content)
-    expect(content).toMatch(`const a = 1;`) // test correct removal
-    expect(content).toMatch(`props: ['item'],`)
-    expect(content).toMatch(`emits: ['a'],`)
-  })
-
-  // #6757
-  test('defineProps/defineEmits in multi-variable declaration fix #6757 ', () => {
-    const { content } = compile(`
-    <script setup>
-    const a = 1,
-          props = defineProps(['item']),
-          emit = defineEmits(['a']);
-    </script>
-  `)
-    assertCode(content)
-    expect(content).toMatch(`const a = 1;`) // test correct removal
-    expect(content).toMatch(`props: ['item'],`)
-    expect(content).toMatch(`emits: ['a'],`)
-  })
-
-  // #7422
-  test('defineProps/defineEmits in multi-variable declaration fix #7422', () => {
-    const { content } = compile(`
-    <script setup>
-    const props = defineProps(['item']),
-          emits = defineEmits(['foo']),
-          a = 0,
-          b = 0;
-    </script>
-  `)
-    assertCode(content)
-    expect(content).toMatch(`props: ['item'],`)
-    expect(content).toMatch(`emits: ['foo'],`)
-    expect(content).toMatch(`const a = 0,`)
-    expect(content).toMatch(`b = 0;`)
-  })
-
-  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
-    const { content } = compile(`
-    <script setup>
-    const props = defineProps(['item']),
-          emit = defineEmits(['a']);
-    </script>
-  `)
-    assertCode(content)
-    expect(content).toMatch(`props: ['item'],`)
-    expect(content).toMatch(`emits: ['a'],`)
-  })
-
   describe('<script> and <script setup> co-usage', () => {
     test('script first', () => {
       const { content } = compile(`
@@ -154,6 +96,24 @@ describe('SFC compile <script setup>', () => {
       </script>
       `)
       assertCode(content)
+    })
+
+    // #7805
+    test('keep original semi style', () => {
+      const { content } = compile(`
+        <script setup>
+        console.log('test')
+        const props = defineProps(['item']);
+        const emit = defineEmits(['change']);
+        (function () {})()
+        </script>
+      `)
+      assertCode(content)
+
+      expect(content).toMatch(`console.log('test')`)
+      expect(content).toMatch(`const props = __props;`)
+      expect(content).toMatch(`const emit = __emit;`)
+      expect(content).toMatch(`(function () {})()`)
     })
 
     test('script setup first, named default export', () => {

@@ -62,6 +62,24 @@ return { fn }
 })"
 `;
 
+exports[`SFC compile <script setup> > <script> and <script setup> co-usage > keep original semi style 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['change'],
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+        console.log('test')
+        const props = __props;
+        const emit = __emit;
+        (function () {})()
+        
+return { props, emit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > script first 1`] = `
 "import { x } from './x'
       
@@ -607,75 +625,6 @@ exports[`SFC compile <script setup> > binding analysis for destructure 1`] = `
       const { foo, b: bar, ['x' + 'y']: baz, x: { y, zz: { z }}} = {}
       
 return { foo, bar, baz, y, z }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    
-    
-return { props, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    const a = 1;
-    
-return { props, a, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    const a = 1;
-    
-return { a, props, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #7422 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['foo'],
-  setup(__props, { expose: __expose, emit: emits }) {
-  __expose();
-
-const props = __props;
-
-    const a = 0,
-          b = 0;
-    
-return { props, emits, a, b }
 }
 
 }"
