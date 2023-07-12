@@ -745,6 +745,21 @@ return { get vMyDir() { return vMyDir } }
 })"
 `;
 
+exports[`SFC compile <script setup> > dev mode import usage check > dynamic arguments 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { FooBar, foo, bar, unused } from './x'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar } }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > dev mode import usage check > js template string interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { VAR, VAR2, VAR3 } from './x'
@@ -770,6 +785,21 @@ export default /*#__PURE__*/_defineComponent({
 
         
 return { get FooBaz() { return FooBaz }, get Last() { return Last } }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > dev mode import usage check > template ref 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { foo, bar, Baz } from './foo'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          
+return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }
 }
 
 })"

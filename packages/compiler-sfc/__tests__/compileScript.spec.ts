@@ -413,6 +413,25 @@ describe('SFC compile <script setup>', () => {
       assertCode(content)
     })
 
+    test('dynamic arguments', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+        import { FooBar, foo, bar, unused } from './x'
+        </script>
+        <template>
+          <FooBar #[foo.slotName] />
+          <FooBar #unused />
+          <div :[bar.attrName]="15"></div>
+          <div unused="unused"></div>
+        </template>
+        `)
+      expect(content).toMatch(
+        `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
+          `get bar() { return bar } }`
+      )
+      assertCode(content)
+    })
+
     // https://github.com/vuejs/core/issues/4599
     test('attribute expressions', () => {
       const { content } = compile(`
@@ -512,6 +531,23 @@ describe('SFC compile <script setup>', () => {
         <div @click="$emit('update:a');"></div>
       </template>
       `)
+    })
+
+    test('template ref', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { foo, bar, Baz } from './foo'
+        </script>
+        <template>
+          <div ref="foo"></div>
+          <div ref=""></div>
+          <Baz ref="bar" />
+        </template>
+        `)
+      expect(content).toMatch(
+        'return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }'
+      )
+      assertCode(content)
     })
   })
 
