@@ -62,6 +62,24 @@ return { fn }
 })"
 `;
 
+exports[`SFC compile <script setup> > <script> and <script setup> co-usage > keep original semi style 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['change'],
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+        console.log('test')
+        const props = __props;
+        const emit = __emit;
+        (function () {})()
+        
+return { props, emit }
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > script first 1`] = `
 "import { x } from './x'
       
@@ -612,75 +630,6 @@ return { foo, bar, baz, y, z }
 }"
 `;
 
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    
-    
-return { props, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    const a = 1;
-    
-return { props, a, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #6757  1`] = `
-"export default {
-  props: ['item'],
-  emits: ['a'],
-  setup(__props, { expose: __expose, emit }) {
-  __expose();
-
-const props = __props;
-
-    const a = 1;
-    
-return { a, props, emit }
-}
-
-}"
-`;
-
-exports[`SFC compile <script setup> > defineProps/defineEmits in multi-variable declaration fix #7422 1`] = `
-"export default {
-  props: ['item'],
-  emits: ['foo'],
-  setup(__props, { expose: __expose, emit: emits }) {
-  __expose();
-
-const props = __props;
-
-    const a = 0,
-          b = 0;
-    
-return { props, emits, a, b }
-}
-
-}"
-`;
-
 exports[`SFC compile <script setup> > dev mode import usage check > TS annotations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz, Qux, Fred } from './x'
@@ -745,6 +694,21 @@ return { get vMyDir() { return vMyDir } }
 })"
 `;
 
+exports[`SFC compile <script setup> > dev mode import usage check > dynamic arguments 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { FooBar, foo, bar, unused } from './x'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar } }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > dev mode import usage check > js template string interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { VAR, VAR2, VAR3 } from './x'
@@ -770,6 +734,21 @@ export default /*#__PURE__*/_defineComponent({
 
         
 return { get FooBaz() { return FooBaz }, get Last() { return Last } }
+}
+
+})"
+`;
+
+exports[`SFC compile <script setup> > dev mode import usage check > template ref 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { foo, bar, Baz } from './foo'
+        
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+          
+return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }
 }
 
 })"
