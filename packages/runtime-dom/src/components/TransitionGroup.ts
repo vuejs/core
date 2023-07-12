@@ -23,7 +23,8 @@ import {
   toRaw,
   compatUtils,
   DeprecationTypes,
-  ComponentOptions
+  ComponentOptions,
+  onUnmounted
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -48,6 +49,9 @@ const TransitionGroupImpl: ComponentOptions = {
     const state = useTransitionState()
     let prevChildren: VNode[]
     let children: VNode[]
+
+    const controller = new AbortController()
+    const { signal } = controller
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -90,8 +94,12 @@ const TransitionGroupImpl: ComponentOptions = {
             removeTransitionClass(el, moveClass)
           }
         })
-        el.addEventListener('transitionend', cb)
+        el.addEventListener('transitionend', cb, { signal })
       })
+    })
+
+    onUnmounted(() => {
+      controller.abort()
     })
 
     return () => {
