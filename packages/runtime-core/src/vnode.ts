@@ -133,7 +133,7 @@ export type VNodeNormalizedChildren =
 
 export interface VNode<
   HostNode = RendererNode,
-  HostElement = RendererElement,
+  HostElement extends RendererElement = RendererElement,
   ExtraProps = { [key: string]: any }
 > {
   /**
@@ -613,7 +613,7 @@ export function guardReactiveProps(props: (Data & VNodeProps) | null) {
     : props
 }
 
-export function cloneVNode<T, U>(
+export function cloneVNode<T extends RendererNode, U extends RendererElement>(
   vnode: VNode<T, U>,
   extraProps?: (Data & VNodeProps) | null,
   mergeRef = false
@@ -681,7 +681,7 @@ export function cloneVNode<T, U>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**

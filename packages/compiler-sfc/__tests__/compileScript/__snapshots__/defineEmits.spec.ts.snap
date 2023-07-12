@@ -3,10 +3,10 @@
 exports[`defineEmits > basic usage 1`] = `
 "export default {
   emits: ['foo', 'bar'],
-  setup(__props, { expose: __expose, emit: myEmit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-
+const myEmit = __emit
 
 return { myEmit }
 }
@@ -19,10 +19,10 @@ exports[`defineEmits > w/ runtime options 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: ['a', 'b'],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-
+const emit = __emit
 
 return { emit }
 }
@@ -36,10 +36,10 @@ export interface Emits { (e: 'foo' | 'bar'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -53,10 +53,10 @@ export type Emits = { (e: 'foo' | 'bar'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -70,10 +70,10 @@ interface Emits { (e: 'foo'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: ['foo'],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit: Emits = __emit
     
 return { emit }
 }
@@ -87,10 +87,10 @@ interface Emits { (e: 'foo' | 'bar'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -103,10 +103,10 @@ exports[`defineEmits > w/ type (property syntax string literal) 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo:bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -119,10 +119,10 @@ exports[`defineEmits > w/ type (property syntax) 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -136,10 +136,10 @@ export type Emits = (e: 'foo' | 'bar') => void
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -153,10 +153,10 @@ type Emits = (e: 'foo' | 'bar') => void
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -170,10 +170,10 @@ type Emits = { (e: 'foo' | 'bar'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -186,10 +186,10 @@ exports[`defineEmits > w/ type (type literal w/ call signatures) 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -204,10 +204,10 @@ type BaseEmit = \\"change\\"
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"some\\", \\"emit\\", \\"change\\", \\"another\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit;
     
 return { emit }
 }
@@ -220,10 +220,10 @@ exports[`defineEmits > w/ type (union) 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\", \\"baz\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -236,10 +236,10 @@ exports[`defineEmits > w/ type 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
@@ -254,10 +254,10 @@ exports[`defineEmits > w/ type from normal script 1`] = `
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
