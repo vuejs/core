@@ -115,8 +115,7 @@ export const TeleportImpl = {
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
         if (namespace === 'svg' || isTargetSVG(target)) {
           namespace = 'svg'
-        }
-        else if (namespace === 'mathml' || isTargetMathML(target)) {
+        } else if (namespace === 'mathml' || isTargetMathML(target)) {
           namespace = 'mathml'
         }
       } else if (__DEV__ && !disabled) {
@@ -157,8 +156,7 @@ export const TeleportImpl = {
 
       if (namespace === 'svg' || isTargetSVG(target)) {
         namespace = 'svg'
-      }
-      else if (namespace === 'mathml' || isTargetMathML(target)) {
+      } else if (namespace === 'mathml' || isTargetMathML(target)) {
         namespace = 'mathml'
       }
 
