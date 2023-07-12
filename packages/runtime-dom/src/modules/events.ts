@@ -19,6 +19,7 @@ export function addEventListener(
   options?: EventListenerOptions
 ) {
   el.addEventListener(event, handler, options)
+  return () => el.removeEventListener(event, handler, options)
 }
 
 export function removeEventListener(

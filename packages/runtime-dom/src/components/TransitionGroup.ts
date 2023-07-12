@@ -27,7 +27,7 @@ import {
   onUnmounted
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
-
+import { addEventListener } from '../modules/events'
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
 
@@ -50,8 +50,7 @@ const TransitionGroupImpl: ComponentOptions = {
     let prevChildren: VNode[]
     let children: VNode[]
 
-    const controller = new AbortController()
-    const { signal } = controller
+    const offs = new Set<Function>()
 
     onUpdated(() => {
       // children is guaranteed to exist after initial render
@@ -89,17 +88,19 @@ const TransitionGroupImpl: ComponentOptions = {
             return
           }
           if (!e || /transform$/.test(e.propertyName)) {
-            el.removeEventListener('transitionend', cb)
+            off()
             ;(el as any)._moveCb = null
             removeTransitionClass(el, moveClass)
           }
         })
-        el.addEventListener('transitionend', cb, { signal })
+        const off = addEventListener(el, 'transitionend', cb as any)
+        offs.add(off)
       })
     })
 
     onUnmounted(() => {
-      controller.abort()
+      offs.forEach(off => off())
+      offs.clear()
     })
 
     return () => {
