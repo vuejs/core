@@ -89,6 +89,7 @@ const TransitionGroupImpl: ComponentOptions = {
           }
           if (!e || /transform$/.test(e.propertyName)) {
             off()
+            offs.delete(off)
             ;(el as any)._moveCb = null
             removeTransitionClass(el, moveClass)
           }
