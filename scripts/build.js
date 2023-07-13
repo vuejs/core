@@ -22,7 +22,7 @@ import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
 import chalk from 'chalk'
-import execa from 'execa'
+import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
@@ -38,7 +38,7 @@ const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildAllMatching = args.all || args.a
-const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 
 run()
 

@@ -76,7 +76,7 @@
     "eslint": "^8.33.0",
     "eslint-plugin-jest": "^27.2.1",
     "estree-walker": "^2.0.2",
-    "execa": "^4.0.2",
+    "execa": "^7.1.1",
     "jsdom": "^21.1.0",
     "lint-staged": "^10.2.10",
     "lodash": "^4.17.15",
