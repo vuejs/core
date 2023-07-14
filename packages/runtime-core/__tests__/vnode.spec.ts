@@ -9,7 +9,8 @@ import {
   mergeProps,
   normalizeVNode,
   transformVNodeArgs,
-  isBlockTreeEnabled
+  isBlockTreeEnabled,
+  VNodeChild
 } from '../src/vnode'
 import { Data } from '../src/component'
 import { ShapeFlags, PatchFlags } from '@vue/shared'
@@ -201,6 +202,12 @@ describe('vnode', () => {
     // primitive types
     expect(normalizeVNode('foo')).toMatchObject({ type: Text, children: `foo` })
     expect(normalizeVNode(1)).toMatchObject({ type: Text, children: `1` })
+
+    // #8778 object from render function
+    expect(normalizeVNode({ key: '1' } as VNodeChild)).toMatchObject({
+      type: Text,
+      children: `[object Object]`
+    })
   })
 
   test('type shapeFlag inference', () => {

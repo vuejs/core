@@ -354,4 +354,41 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<h1>1</h1>`)
     expect(spy).toHaveBeenCalledTimes(2)
   })
+
+  // #8778
+  describe('render return non-VNode', () => {
+    test('render return Object', async () => {
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return { info: 'hi' }
+        }
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('[object Object]')
+    })
+
+    test('render return Proxy', async () => {
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return ref('hi')
+        }
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('[object Object]')
+    })
+
+    test('render return Class', async () => {
+      const A = class {}
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return new A()
+        }
+      }
+      render(h(App), root)
+      expect(serializeInner(root)).toBe('[object Object]')
+    })
+  })
 })

@@ -743,12 +743,12 @@ export function normalizeVNode(child: VNodeChild): VNode {
       // #3666, avoid reference pollution when reusing vnode
       child.slice()
     )
-  } else if (typeof child === 'object') {
+  } else if (typeof child === 'object' && isVNode(child)) {
     // already vnode, this should be the most common since compiled templates
     // always produce all-vnode children arrays
     return cloneIfMounted(child)
   } else {
-    // strings and numbers
+    // strings and numbers or object that doesn't a vnode
     return createVNode(Text, null, String(child))
   }
 }
