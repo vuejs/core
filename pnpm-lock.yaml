@@ -348,6 +348,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^4.2.3
         version: 4.2.3(vite@4.4.2)(vue@packages+vue)
+      execa:
+        specifier: ^7.1.1
+        version: 7.1.1
       vite:
         specifier: ^4.4.2
         version: 4.4.2(@types/node@16.18.38)(terser@5.18.2)

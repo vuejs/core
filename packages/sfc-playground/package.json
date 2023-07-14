@@ -2,6 +2,7 @@
   "name": "@vue/sfc-playground",
   "version": "3.3.4",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -9,6 +10,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
+    "execa": "^7.1.1",
     "vite": "^4.4.2"
   },
   "dependencies": {
