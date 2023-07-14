@@ -164,6 +164,9 @@ export function resolveParserPlugins(
   }
   if (lang === 'ts' || lang === 'tsx') {
     plugins.push(['typescript', { dts }])
+    if (!plugins.includes('importAssertions')) {
+      plugins.push(['importAttributes', { deprecatedAssertSyntax: true }])
+    }
     if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
