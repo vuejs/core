@@ -8,6 +8,8 @@ import { RendererOptions } from '@vue/runtime-core'
 
 const nativeOnRE = /^on[a-z]/
 
+const embeddedTags = ['IMG', 'VIDEO', 'CANVAS', 'SOURCE']
+
 type DOMRendererOptions = RendererOptions<Node, Element>
 
 export const patchProp: DOMRendererOptions['patchProp'] = (
@@ -102,6 +104,14 @@ function shouldSetAsProp(
 
   // #2766 <textarea type> must be set as attribute
   if (key === 'type' && el.tagName === 'TEXTAREA') {
+    return false
+  }
+
+  // #8780 the width or heigth of embedded tags must be set as attribute
+  if (
+    (key === 'width' || key === 'height') &&
+    embeddedTags.includes(el.tagName)
+  ) {
     return false
   }
 
