@@ -152,6 +152,17 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Foo.Example`)
   })
 
+  test('resolve namespaced component from setup bindings (inline props)', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Foo: BindingTypes.PROPS
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(props["Foo"]).Example`)
+  })
+
   test('do not resolve component from non-script-setup bindings', () => {
     const bindingMetadata = {
       Example: BindingTypes.SETUP_MAYBE_REF
