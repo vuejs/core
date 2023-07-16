@@ -28,7 +28,7 @@ describe('defineOptions()', () => {
     expect(content).not.toMatch('defineOptions')
   })
 
-  it('should emit an error with two defineProps', () => {
+  it('should emit an error with two defineOptions', () => {
     expect(() =>
       compile(`
       <script setup>
