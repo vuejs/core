@@ -152,7 +152,7 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Foo.Example`)
   })
 
-  test('resolve namespaced component from setup bindings (inline props)', () => {
+  test('resolve namespaced component from props bindings (inline)', () => {
     const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
       inline: true,
       bindingMetadata: {
