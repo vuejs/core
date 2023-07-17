@@ -32,7 +32,7 @@ export function walkIdentifiers(
     root.body[0].type === 'ExpressionStatement' &&
     root.body[0].expression
 
-  ;(walk as any)(root, {
+  walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (
