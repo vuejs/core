@@ -342,7 +342,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? (this._defaultValue as T[K]) : val
+    return val === undefined ? this._defaultValue! : val
   }
 
   set value(newVal) {
