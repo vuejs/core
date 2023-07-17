@@ -10,7 +10,8 @@ import {
   RootHydrateFunction,
   isRuntimeOnly,
   DeprecationTypes,
-  compatUtils
+  compatUtils,
+  effectScope
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -63,6 +64,8 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
+  const scope = effectScope()
+
   const app = ensureRenderer().createApp(...args)
 
   if (__DEV__) {
@@ -70,7 +73,7 @@ export const createApp = ((...args) => {
     injectCompilerOptionsCheck(app)
   }
 
-  const { mount } = app
+  const { mount, unmount, runWithContext } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
@@ -105,6 +108,15 @@ export const createApp = ((...args) => {
       container.setAttribute('data-v-app', '')
     }
     return proxy
+  }
+
+  app.runWithContext = <T>(fn: () => T): T => {
+    return scope.run(() => runWithContext(fn)) as T
+  }
+
+  app.unmount = () => {
+    scope.stop()
+    unmount()
   }
 
   return app
