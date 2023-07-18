@@ -134,6 +134,26 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
   expectType<boolean>(res.bool)
 })
 
+describe('withDefaults w/ boolean type', () => {
+  const res1 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    { bool: false }
+  )
+  expectType<boolean>(res1.bool)
+
+  const res2 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    {
+      bool: undefined
+    }
+  )
+  expectType<boolean | undefined>(res2.bool)
+})
+
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
   const props = defineProps({

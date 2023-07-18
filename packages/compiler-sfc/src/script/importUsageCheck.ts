@@ -50,12 +50,21 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDirective(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
+              if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+                code += `,${processExp(
+                  (prop.arg as SimpleExpressionNode).content,
+                  prop.name
+                )}`
+              }
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
                   prop.name
                 )}`
               }
+            }
+            if (prop.type === NodeTypes.ATTRIBUTE && prop.name === 'ref' && prop.value?.content) {
+              code += `,${prop.value.content}`
             }
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
