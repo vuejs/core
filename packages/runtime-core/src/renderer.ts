@@ -2136,12 +2136,7 @@ function baseCreateRenderer(
             (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
         (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
       ) {
-        unmountChildren(
-          children as VNode[],
-          parentComponent,
-          parentSuspense,
-          doRemove
-        )
+        unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
 
       if (doRemove) {
