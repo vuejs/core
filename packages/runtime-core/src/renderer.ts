@@ -2118,7 +2118,7 @@ function baseCreateRenderer(
         )
       } else if (
         dynamicChildren &&
-        dynamicChildren.length > 0 &&
+        optimized &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
           (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
