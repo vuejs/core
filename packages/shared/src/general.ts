@@ -50,7 +50,11 @@ export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
-  return isObject(val) && isFunction(val.then) && isFunction(val.catch)
+  return (
+    (isObject(val) || isFunction(val)) &&
+    isFunction((val as any).then) &&
+    isFunction((val as any).catch)
+  )
 }
 
 export const objectToString = Object.prototype.toString
@@ -110,16 +114,17 @@ export const hyphenate = cacheStringFunction((str: string) =>
 /**
  * @private
  */
-export const capitalize = cacheStringFunction(
-  (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
-)
+export const capitalize = cacheStringFunction(<T extends string>(str: T) => {
+  return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
+})
 
 /**
  * @private
  */
-export const toHandlerKey = cacheStringFunction((str: string) =>
-  str ? `on${capitalize(str)}` : ``
-)
+export const toHandlerKey = cacheStringFunction(<T extends string>(str: T) => {
+  const s = str ? `on${capitalize(str)}` : ``
+  return s as T extends '' ? '' : `on${Capitalize<T>}`
+})
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
