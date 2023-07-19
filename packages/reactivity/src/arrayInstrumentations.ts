@@ -227,6 +227,7 @@ function iterator(
 // higher than that
 type ArrayMethods = keyof Array<any> | 'findLast' | 'findLastIndex'
 
+const arrayProto = Array.prototype
 // instrument functions that read (potentially) all items
 // to take ARRAY_ITERATE dependency
 function apply(
@@ -237,6 +238,12 @@ function apply(
   wrappedRetFn?: (result: any) => unknown,
 ) {
   const arr = shallowReadArray(self)
+  // @ts-expect-error
+  if (arr[method] !== arrayProto[method]) {
+    // @ts-expect-error
+    return arr[method](fn, thisArg)
+  }
+
   let needsWrap = false
   let wrappedFn = fn
   if (arr !== self) {
