@@ -404,6 +404,9 @@ const normalizeRef = ({
   ref_key,
   ref_for
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
+  if (typeof ref === 'number') {
+    ref = '' + ref
+  }
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
@@ -678,7 +681,7 @@ export function cloneVNode<T, U>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**

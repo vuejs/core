@@ -7,7 +7,8 @@ import {
   SimpleExpressionNode,
   BindingMetadata
 } from '@vue/compiler-dom'
-import { SFCDescriptor } from './parse'
+import { SFCDescriptor } from '../parse'
+import { escapeSymbolsRE } from '../script/utils'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
@@ -31,10 +32,7 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(
-      /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g,
-      s => `\\${s}`
-    )}`
+    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
   }
 }
 
@@ -55,8 +53,9 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    // ignore v-bind() in comments /* ... */
-    const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
+    // ignore v-bind() in comments, eg /* ... */
+    // and // (Less, Sass and Stylus all support the use of // to comment)
+    const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
       const end = lexBinding(content, start)
@@ -184,7 +183,8 @@ export function genNormalScriptCssVarsCode(
   cssVars: string[],
   bindings: BindingMetadata,
   id: string,
-  isProd: boolean
+  isProd: boolean,
+  defaultVar: string
 ): string {
   return (
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
@@ -194,8 +194,8 @@ export function genNormalScriptCssVarsCode(
       id,
       isProd
     )}}\n` +
-    `const __setup__ = __default__.setup\n` +
-    `__default__.setup = __setup__\n` +
+    `const __setup__ = ${defaultVar}.setup\n` +
+    `${defaultVar}.setup = __setup__\n` +
     `  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }\n` +
     `  : __injectCSSVars__\n`
   )
