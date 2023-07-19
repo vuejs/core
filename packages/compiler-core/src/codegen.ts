@@ -918,6 +918,8 @@ function genCacheExpression(node: CacheExpression, context: CodegenContext) {
   if (node.isVNode) {
     push(`,`)
     newline()
+    push(`_cache[${node.index}].cached = true,`)
+    newline()
     push(`${helper(SET_BLOCK_TRACKING)}(1),`)
     newline()
     push(`_cache[${node.index}]`)

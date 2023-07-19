@@ -456,6 +456,7 @@ describe('compiler: codegen', () => {
   _cache[1] || (
     _setBlockTracking(-1),
     _cache[1] = foo,
+    _cache[1].cached = true,
     _setBlockTracking(1),
     _cache[1]
   )

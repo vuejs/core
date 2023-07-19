@@ -222,6 +222,10 @@ export interface VNode<
    * @internal custom element interception hook
    */
   ce?: (instance: ComponentInternalInstance) => void
+  /**
+   * @internal attached by v-once
+   */
+  cached?: false
 }
 
 // Since v-if and v-for are the two possible ways node structure can dynamically
@@ -272,6 +276,7 @@ export let isBlockTreeEnabled = 1
  * _cache[1] || (
  *   setBlockTracking(-1),
  *   _cache[1] = createVNode(...),
+ *   _cache[1].cached = true,
  *   setBlockTracking(1),
  *   _cache[1]
  * )
@@ -676,7 +681,8 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
-    ce: vnode.ce
+    ce: vnode.ce,
+    cached: vnode.cached
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
