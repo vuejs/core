@@ -2118,10 +2118,10 @@ function baseCreateRenderer(
         )
       } else if (
         dynamicChildren &&
-        optimized &&
+        patchFlag > 0 &&
         // #1153: fast path should not be taken for non-stable (v-for) fragments
         (type !== Fragment ||
-          (patchFlag > 0 && patchFlag & PatchFlags.STABLE_FRAGMENT))
+          (patchFlag & PatchFlags.STABLE_FRAGMENT))
       ) {
         // fast path for block nodes: only need to unmount dynamic children.
         unmountChildren(
