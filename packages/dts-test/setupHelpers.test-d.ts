@@ -19,7 +19,7 @@ describe('defineProps w/ type declaration', () => {
   const props = defineProps<{
     foo: string
     bool?: boolean
-    boolAndUndefined: boolean | undefined
+    boolOrUndefined: boolean | undefined
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
@@ -27,7 +27,7 @@ describe('defineProps w/ type declaration', () => {
   props.bar
 
   expectType<boolean>(props.bool)
-  expectType<boolean>(props.boolAndUndefined)
+  expectType<boolean>(props.boolOrUndefined)
 })
 
 describe('defineProps w/ generics', () => {
@@ -52,7 +52,8 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       y?: string
       z?: string
       bool?: boolean
-      boolAndUndefined: boolean | undefined
+      boolOrUndefined: boolean | undefined
+      defaultUndefined?: string
     }>(),
     {
       number: 123,
@@ -61,9 +62,13 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       fn: () => {},
       genStr: () => '',
       y: undefined,
-      z: 'string'
+      z: 'string',
+      defaultUndefined: undefined as string | undefined
     }
   )
+
+  // @ts-expect-error
+  res.number++
 
   res.number + 1
   res.arr.push('hi')
@@ -75,12 +80,21 @@ describe('defineProps w/ type declaration + withDefaults', () => {
   // @ts-expect-error
   res.y.slice()
 
-  expectType<string | undefined>(res.x)
-  expectType<string | undefined>(res.y)
-  expectType<string>(res.z)
-
-  expectType<boolean>(res.bool)
-  expectType<boolean>(res.boolAndUndefined)
+  type T = {
+    number: number
+    arr: string[]
+    obj: { x: number }
+    fn: (e: string) => void
+    genStr: string
+    x: string | undefined
+    y: string | undefined
+    z: string
+    bool: boolean
+    boolOrUndefined: boolean
+    defaultUndefined: string | undefined
+  }
+  expectType<T>(res)
+  expectType<typeof res>({} as T)
 })
 
 describe('defineProps w/ union type declaration + withDefaults', () => {
@@ -126,6 +140,9 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   )
 
   res.n + 1
+
+  // @ts-expect-error readonly
+  res.n++
 
   expectType<T[] | { x: T }>(res.generic1)
   expectType<{ x: T }>(res.generic2)

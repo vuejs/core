@@ -293,23 +293,31 @@ type InferDefault<P, T> =
   | ((props: P) => T & {})
   | (T extends NativeType ? T : never)
 
+type NonPartial<T> = {
+  [K in keyof Required<T>]: T[K]
+}
+
+type UndefinedDefault<T, Default> = Default extends undefined
+  ? T
+  : NotUndefined<T>
+
 type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T
-> = Omit<T, keyof Defaults> & {
-  [K in keyof Defaults]-?: K extends keyof T
-    ? Defaults[K] extends undefined
-      ? T[K]
-      : NotUndefined<T[K]>
-    : never
-} & {
-  readonly [K in BKeys]-?: K extends keyof Defaults
-    ? Defaults[K] extends undefined
-      ? boolean | undefined
+> = Readonly<
+  NonPartial<Omit<T, keyof (Defaults | BKeys)>> & {
+    [K in keyof Defaults]-?: K extends keyof T
+      ? UndefinedDefault<T[K], Defaults[K]>
+      : never
+  } & {
+    [K in BKeys]: K extends keyof Defaults
+      ? Defaults[K] extends undefined
+        ? boolean | undefined
+        : boolean
       : boolean
-    : boolean
-}
+  }
+>
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when
