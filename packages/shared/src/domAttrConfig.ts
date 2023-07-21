@@ -20,7 +20,7 @@ export const isSpecialBooleanAttr = /*#__PURE__*/ makeMap(specialBooleanAttrs)
 export const isBooleanAttr = /*#__PURE__*/ makeMap(
   specialBooleanAttrs +
     `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
-    `loop,open,required,reversed,scoped,seamless,` +
+    `inert,loop,open,required,reversed,scoped,seamless,` +
     `checked,muted,multiple,selected`
 )
 
@@ -67,7 +67,7 @@ export const isKnownHtmlAttr = /*#__PURE__*/ makeMap(
     `coords,crossorigin,csp,data,datetime,decoding,default,defer,dir,dirname,` +
     `disabled,download,draggable,dropzone,enctype,enterkeyhint,for,form,` +
     `formaction,formenctype,formmethod,formnovalidate,formtarget,headers,` +
-    `height,hidden,high,href,hreflang,http-equiv,icon,id,importance,integrity,` +
+    `height,hidden,high,href,hreflang,http-equiv,icon,id,importance,inert,integrity,` +
     `ismap,itemprop,keytype,kind,label,lang,language,loading,list,loop,low,` +
     `manifest,max,maxlength,minlength,media,min,multiple,muted,name,novalidate,` +
     `open,optimum,pattern,ping,placeholder,poster,preload,radiogroup,readonly,` +

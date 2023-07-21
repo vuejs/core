@@ -1,12 +1,12 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { SFCScriptCompileOptions } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { SFCScriptCompileOptions } from '../../src'
+import { compileSFCScript, assertCode } from '../utils'
 
-describe('sfc props transform', () => {
+describe('sfc reactive props destructure', () => {
   function compile(src: string, options?: Partial<SFCScriptCompileOptions>) {
     return compileSFCScript(src, {
       inlineTemplate: true,
-      reactivityTransform: true,
+      propsDestructure: true,
       ...options
     })
   }
@@ -69,33 +69,110 @@ describe('sfc props transform', () => {
     })
   })
 
-  test('default values w/ runtime declaration', () => {
+  test('default values w/ array runtime declaration', () => {
     const { content } = compile(`
       <script setup>
-      const { foo = 1, bar = {} } = defineProps(['foo', 'bar'])
+      const { foo = 1, bar = {}, func = () => {} } = defineProps(['foo', 'bar', 'baz'])
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
     // function
-    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar'], {
+    // functions need to be marked with a skip marker
+    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
-  bar: () => ({})
+  bar: () => ({}),
+  func: () => {}, __skip_func: true
 })`)
+    assertCode(content)
+  })
+
+  test('default values w/ object runtime declaration', () => {
+    const { content } = compile(`
+      <script setup>
+      const { foo = 1, bar = {}, func = () => {}, ext = x } = defineProps({ foo: Number, bar: Object, func: Function, ext: null })
+      </script>
+    `)
+    // literals can be used as-is, non-literals are always returned from a
+    // function
+    // functions need to be marked with a skip marker since we cannot always
+    // safely infer whether runtime type is Function (e.g. if the runtime decl
+    // is imported, or spreads another object)
+    expect(content)
+      .toMatch(`props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  foo: 1,
+  bar: () => ({}),
+  func: () => {}, __skip_func: true,
+  ext: x, __skip_ext: true
+})`)
+    assertCode(content)
+  })
+  test('default values w/ runtime declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { foo = 1, 'foo:bar': fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED
+    })
+
+    expect(content).toMatch(`
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  "foo:bar": 'foo-bar'
+}),`)
     assertCode(content)
   })
 
   test('default values w/ type declaration', () => {
     const { content } = compile(`
       <script setup lang="ts">
-      const { foo = 1, bar = {} } = defineProps<{ foo?: number, bar?: object }>()
+      const { foo = 1, bar = {}, func = () => {} } = defineProps<{ foo?: number, bar?: object, func?: () => any }>()
       </script>
     `)
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
     foo: { type: Number, required: false, default: 1 },
-    bar: { type: Object, required: false, default: () => ({}) }
+    bar: { type: Object, required: false, default: () => ({}) },
+    func: { type: Function, required: false, default: () => {} }
   }`)
+    assertCode(content)
+  })
+
+  test('default values w/ type declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup lang="ts">
+      const { foo = 1, bar = 2, 'foo:bar': fooBar = 'foo-bar' } = defineProps<{ 
+        "foo": number // double-quoted string
+        'bar': number // single-quoted string
+        'foo:bar': string // single-quoted string containing symbols
+        "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
+      }>()
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      'onUpdate:modelValue': BindingTypes.PROPS
+    })
+    expect(content).toMatch(`
+  props: {
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    "foo:bar": { type: String, required: true, default: 'foo-bar' },
+    "onUpdate:modelValue": { type: Function, required: true }
+  },`)
     assertCode(content)
   })
 
@@ -108,17 +185,17 @@ describe('sfc props transform', () => {
     `,
       { isProd: true }
     )
+    assertCode(content)
     // literals can be used as-is, non-literals are always returned from a
     // function
     expect(content).toMatch(`props: {
     foo: { default: 1 },
     bar: { default: () => ({}) },
-    baz: null,
+    baz: {},
     boola: { type: Boolean },
     boolb: { type: [Boolean, Number] },
-    func: { type: Function, default: () => (() => {}) }
+    func: { type: Function, default: () => {} }
   }`)
-    assertCode(content)
   })
 
   test('aliasing', () => {
@@ -187,23 +264,6 @@ describe('sfc props transform', () => {
     })
   })
 
-  test('$$() escape', () => {
-    const { content } = compile(`
-      <script setup>
-      const { foo, bar: baz } = defineProps(['foo'])
-      console.log($$(foo))
-      console.log($$(baz))
-      $$({ foo, baz })
-      </script>
-    `)
-    expect(content).toMatch(`const __props_foo = _toRef(__props, 'foo')`)
-    expect(content).toMatch(`const __props_bar = _toRef(__props, 'bar')`)
-    expect(content).toMatch(`console.log((__props_foo))`)
-    expect(content).toMatch(`console.log((__props_bar))`)
-    expect(content).toMatch(`({ foo: __props_foo, baz: __props_bar })`)
-    assertCode(content)
-  })
-
   // #6960
   test('computed static key', () => {
     const { content, bindings } = compile(`
@@ -220,6 +280,58 @@ describe('sfc props transform', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
     })
+  })
+
+  test('multi-variable declaration', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+      a = 1;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #6757
+  test('multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+      { item } = defineProps(['item']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #7422
+  test('multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
   })
 
   describe('errors', () => {
@@ -268,7 +380,7 @@ describe('sfc props transform', () => {
       ).toThrow(`cannot reference locally declared variables`)
     })
 
-    test('should error if assignment to constant variable', () => {
+    test('should error if assignment to destructured prop binding', () => {
       expect(() =>
         compile(
           `<script setup>
@@ -276,7 +388,92 @@ describe('sfc props transform', () => {
           foo = 'bar'
           </script>`
         )
-      ).toThrow(`Assignment to constant variable.`)
+      ).toThrow(`Cannot assign to destructured props`)
+
+      expect(() =>
+        compile(
+          `<script setup>
+          let { foo } = defineProps(['foo'])
+          foo = 'bar'
+          </script>`
+        )
+      ).toThrow(`Cannot assign to destructured props`)
+    })
+
+    test('should error when passing destructured prop into certain methods', () => {
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch } from 'vue'
+        const { foo } = defineProps(['foo'])
+        watch(foo, () => {})
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to watch().`
+      )
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { watch as w } from 'vue'
+        const { foo } = defineProps(['foo'])
+        w(foo, () => {})
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to watch().`
+      )
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { toRef } from 'vue'
+        const { foo } = defineProps(['foo'])
+        toRef(foo)
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to toRef().`
+      )
+
+      expect(() =>
+        compile(
+          `<script setup>
+        import { toRef as r } from 'vue'
+        const { foo } = defineProps(['foo'])
+        r(foo)
+        </script>`
+        )
+      ).toThrow(
+        `"foo" is a destructured prop and should not be passed directly to toRef().`
+      )
+    })
+
+    // not comprehensive, but should help for most common cases
+    test('should error if default value type does not match declared type', () => {
+      expect(() =>
+        compile(
+          `<script setup lang="ts">
+        const { foo = 'hello' } = defineProps<{ foo?: number }>()
+        </script>`
+        )
+      ).toThrow(`Default value of prop "foo" does not match declared type.`)
+    })
+
+    // #8017
+    test('should not throw an error if the variable is not a props', () => {
+      expect(() =>
+        compile(
+          `<script setup lang='ts'>
+        import { watch } from 'vue'
+        const { userId } = defineProps({ userId: Number })
+        const { error: e, info } = useRequest();
+        watch(e, () => {});
+        watch(info, () => {});
+        </script>`
+        )
+      ).not.toThrowError()
     })
   })
 })

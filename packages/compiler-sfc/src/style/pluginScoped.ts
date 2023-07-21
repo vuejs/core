@@ -1,6 +1,6 @@
 import { PluginCreator, Rule, AtRule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
-import { warn } from './warn'
+import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
@@ -130,9 +130,10 @@ function rewriteSelector(
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated. Use :deep(<inner-selector>) instead.`
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
           )
+
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)

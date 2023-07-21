@@ -57,7 +57,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Development Setup
 
-You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 7+**.
+You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 8+**.
 
 We also recommend installing [ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
@@ -244,7 +244,7 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
   - `dts-test`: Contains type-only tests against generated dts files.
 
-  - `sfc-playground`: The playground continuously deployed at https://sfc.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
+  - `sfc-playground`: The playground continuously deployed at https://play.vuejs.org. To run the playground locally, use [`nr dev-sfc`](#nr-dev-sfc).
 
   - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
 
@@ -261,7 +261,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- Vitest and Rollup share the sae set of aliases from `scripts/aliases.js`
+- Vitest and Rollup share the same set of aliases from `scripts/aliases.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
@@ -330,4 +330,4 @@ Funds donated via Patreon go directly to support Evan You's full-time work on Vu
 
 Thank you to all the people who have already contributed to Vue.js!
 
-<a href="https://github.com/vuejs/vue/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
+<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
