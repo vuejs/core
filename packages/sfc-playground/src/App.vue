@@ -73,7 +73,7 @@ function toggleSSR() {
   store.setFiles(store.getFiles())
 }
 
-const theme = ref('dark')
+const theme = ref<'dark' | 'light'>('dark')
 function toggleTheme(isDark: boolean) {
   theme.value = isDark ? 'dark' : 'light'
 }
