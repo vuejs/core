@@ -6,7 +6,8 @@ import {
   Static,
   watchPostEffect,
   onMounted,
-  onUnmounted
+  onUnmounted,
+  ComponentInternalInstance
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -28,12 +29,12 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
       document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)
-    ).forEach(node => setVarsOnNode(node, vars))
+    ).forEach(node => setVarsOnNode(node, vars, instance))
   })
 
   const setVars = () => {
     const vars = getter(instance.proxy)
-    setVarsOnVNode(instance.subTree, vars)
+    setVarsOnVNode(instance.subTree, vars, instance)
     updateTeleports(vars)
   }
 
@@ -46,13 +47,17 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   })
 }
 
-function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
+function setVarsOnVNode(
+  vnode: VNode,
+  vars: Record<string, string>,
+  instance: ComponentInternalInstance
+) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
     if (suspense.pendingBranch && !suspense.isHydrating) {
       suspense.effects.push(() => {
-        setVarsOnVNode(suspense.activeBranch!, vars)
+        setVarsOnVNode(suspense.activeBranch!, vars, instance)
       })
     }
   }
@@ -63,24 +68,28 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   }
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
-    setVarsOnNode(vnode.el as Node, vars)
+    setVarsOnNode(vnode.el as Node, vars, instance)
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, instance))
   } else if (vnode.type === Static) {
     let { el, anchor } = vnode
     while (el) {
-      setVarsOnNode(el as Node, vars)
+      setVarsOnNode(el as Node, vars, instance)
       if (el === anchor) break
       el = el.nextSibling
     }
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, string>) {
+function setVarsOnNode(el: Node, vars: Record<string, string>, instance:ComponentInternalInstance | null) {
   if (el.nodeType === 1) {
     const style = (el as HTMLElement).style
     for (const key in vars) {
       style.setProperty(`--${key}`, vars[key])
+    }
+
+    if(instance && instance.isCE ) {
+      instance.ceSetCssVars && instance.ceSetCssVars(vars)
     }
   }
 }
