@@ -81,15 +81,19 @@ function setVarsOnVNode(
   }
 }
 
-function setVarsOnNode(el: Node, vars: Record<string, string>, instance:ComponentInternalInstance | null) {
+function setVarsOnNode(
+  el: Node,
+  vars: Record<string, string>,
+  instance: ComponentInternalInstance | null
+) {
   if (el.nodeType === 1) {
-    const style = (el as HTMLElement).style
-    for (const key in vars) {
-      style.setProperty(`--${key}`, vars[key])
-    }
-
-    if(instance && instance.isCE ) {
+    if (instance && instance.isCE) {
       instance.ceSetCssVars && instance.ceSetCssVars(vars)
+    } else {
+      const style = (el as HTMLElement).style
+      for (const key in vars) {
+        style.setProperty(`--${key}`, vars[key])
+      }
     }
   }
 }
