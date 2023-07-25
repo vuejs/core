@@ -823,7 +823,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    const el = (n2.el = n1.el!)
+    const el = (n2.el = n1.el!) // 将旧的el赋值给新的vnode属性
     let { patchFlag, dynamicChildren, dirs } = n2
     // #1426 take the old vnode's patch flag into account since user may clone a
     // compiler-generated vnode, which de-opts to FULL_PROPS
