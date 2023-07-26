@@ -5,6 +5,7 @@ import {
   resetTracking,
   shallowReadonly,
   proxyRefs,
+  effectScope,
   EffectScope,
   markRaw,
   track,
@@ -502,7 +503,7 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
-    scope: new EffectScope(true /* detached */),
+    scope: effectScope(true /* detached */),
     render: null,
     proxy: null,
     exposed: null,
