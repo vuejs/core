@@ -13,8 +13,11 @@ import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
+// 获取参数
 const args = minimist(process.argv.slice(2))
+// 输入目标，打包哪些package
 const target = args._[0] || 'vue'
+// 输出格式， 比如cjs,esm,global
 const format = args.f || 'global'
 const inlineDeps = args.i || args.inline
 const pkg = require(`../packages/${target}/package.json`)

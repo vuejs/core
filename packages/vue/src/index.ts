@@ -32,6 +32,8 @@ function compileToFunction(
     return cached
   }
 
+  // mount时候传入的参数
+  // #开头
   if (template[0] === '#') {
     const el = document.querySelector(template)
     if (__DEV__ && !el) {
@@ -56,7 +58,7 @@ function compileToFunction(
   if (!opts.isCustomElement && typeof customElements !== 'undefined') {
     opts.isCustomElement = tag => !!customElements.get(tag)
   }
-
+  // 模板字符串需要编译的，最终希望得到一个render
   const { code } = compile(template, opts)
 
   function onError(err: CompilerError, asWarning = false) {
