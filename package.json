@@ -4,7 +4,7 @@
   "packageManager": "pnpm@8.6.2",
   "type": "module",
   "scripts": {
-    "dev": "node scripts/dev.js",
+    "dev": "node scripts/dev.js --sourcemap",
     "build": "node scripts/build.js",
     "build-dts": "tsc -p tsconfig.build.json && rollup -c rollup.dts.config.js",
     "size": "run-s size-global size-baseline",
@@ -86,7 +86,6 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^2.7.1",
     "pug": "^3.0.1",
-    "puppeteer": "~19.6.0",
     "rollup": "^3.26.0",
     "rollup-plugin-dts": "^5.3.0",
     "rollup-plugin-esbuild": "^5.0.0",
