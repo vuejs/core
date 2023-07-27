@@ -18,6 +18,13 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
     }
   },
 
+  replace: (newChild, oldChild) => {
+    const parent = oldChild.parentNode
+    if (parent) {
+      parent.replaceChild(newChild, oldChild)
+    }
+  },
+
   createElement: (tag, isSVG, is, props): Element => {
     const el = isSVG
       ? doc.createElementNS(svgNS, tag)

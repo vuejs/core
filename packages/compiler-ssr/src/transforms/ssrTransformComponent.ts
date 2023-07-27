@@ -56,6 +56,10 @@ import {
 } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
+import {
+  ssrProcessTransition,
+  ssrTransformTransition
+} from './ssrTransformTransition'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -102,6 +106,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     }
     if (component === TRANSITION_GROUP) {
       return ssrTransformTransitionGroup(node, context)
+    }
+    if (component === TRANSITION) {
+      return ssrTransformTransition(node, context)
     }
     return // other built-in components: fallthrough
   }
@@ -216,9 +223,8 @@ export function ssrProcessComponent(
       if ((parent as WIPSlotEntry).type === WIP_SLOT) {
         context.pushStringPart(``)
       }
-      // #5351: filter out comment children inside transition
       if (component === TRANSITION) {
-        node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
+        return ssrProcessTransition(node, context)
       }
       processChildren(node, context)
     }

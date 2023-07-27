@@ -62,7 +62,8 @@ export function createHydrationFunctions(
       parentNode,
       remove,
       insert,
-      createComment
+      createComment,
+      replace
     }
   } = rendererInternals
 
@@ -144,7 +145,15 @@ export function createHydrationFunctions(
         break
       case Comment:
         if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
-          nextNode = onMismatch()
+          if ((node as Element).tagName.toLowerCase() === 'template') {
+            const content = (vnode.el! as HTMLTemplateElement).content
+              .firstChild!
+            replace(content, node)
+            node = content
+            nextNode = nextSibling(node)
+          } else {
+            nextNode = onMismatch()
+          }
         } else {
           nextNode = nextSibling(node)
         }
@@ -194,9 +203,13 @@ export function createHydrationFunctions(
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
-            domType !== DOMNodeTypes.ELEMENT ||
-            (vnode.type as string).toLowerCase() !==
-              (node as Element).tagName.toLowerCase()
+            (domType !== DOMNodeTypes.ELEMENT ||
+              (vnode.type as string).toLowerCase() !==
+                (node as Element).tagName.toLowerCase()) &&
+            !(
+              node.nodeType === DOMNodeTypes.ELEMENT &&
+              (node as Element).tagName.toLowerCase() === 'template'
+            )
           ) {
             nextNode = onMismatch()
           } else {
@@ -215,6 +228,14 @@ export function createHydrationFunctions(
           // on its sub-tree.
           vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
+
+          // component may be async, so in the case of fragments we cannot rely
+          // on component's rendered output to determine the end of the fragment
+          // instead, we do a lookahead to find the end anchor node.
+          nextNode = isFragmentStart
+            ? locateClosingAsyncAnchor(node)
+            : nextSibling(node)
+
           mountComponent(
             vnode,
             container,
@@ -224,13 +245,6 @@ export function createHydrationFunctions(
             isSVGContainer(container),
             optimized
           )
-
-          // component may be async, so in the case of fragments we cannot rely
-          // on component's rendered output to determine the end of the fragment
-          // instead, we do a lookahead to find the end anchor node.
-          nextNode = isFragmentStart
-            ? locateClosingAsyncAnchor(node)
-            : nextSibling(node)
 
           // #4293 teleport as component root
           if (
@@ -307,7 +321,7 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
@@ -362,9 +376,35 @@ export function createHydrationFunctions(
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
+
+      let needCallTransitionHooks = false
+      if (
+        el.nodeType === DOMNodeTypes.ELEMENT &&
+        el.tagName.toLowerCase() === 'template'
+      ) {
+        needCallTransitionHooks =
+          (!parentSuspense ||
+            (parentSuspense && !parentSuspense.pendingBranch)) &&
+          transition &&
+          !transition.persisted &&
+          parentComponent?.vnode.props?.appear
+
+        const tpl = el
+        const content = (tpl as HTMLTemplateElement).content
+          .firstChild as Element
+        needCallTransitionHooks && transition!.beforeEnter(content)
+        el = content
+        replace(content, tpl)
+      }
+
+      if (
+        (vnodeHooks = props && props.onVnodeMounted) ||
+        dirs ||
+        needCallTransitionHooks
+      ) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)
       }
