@@ -18,7 +18,9 @@ import {
   createVNode,
   withDirectives,
   vModelCheckbox,
-  renderSlot
+  renderSlot,
+  Transition,
+  createCommentVNode
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
@@ -991,6 +993,45 @@ describe('SSR hydration', () => {
     mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
       createStaticVNode(`<div></div>`, 1)
     )
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear', () => {
+    const { container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', 'foo')
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-if false', () => {
+    const show = false
+    const { container } = mountWithHydration(
+      `<template><!----></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => (show ? h('div', 'foo') : createCommentVNode(''))
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot('<!---->')
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 

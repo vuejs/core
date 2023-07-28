@@ -389,12 +389,13 @@ export function createHydrationFunctions(
           !transition.persisted &&
           parentComponent?.vnode.props?.appear
 
-        const tpl = el
-        const content = (tpl as HTMLTemplateElement).content
+        const content = (el as HTMLTemplateElement).content
           .firstChild as Element
         needCallTransitionHooks && transition!.beforeEnter(content)
+
+        // replace <template> node with inner child
+        replace(content, el)
         el = content
-        replace(content, tpl)
       }
 
       if (
