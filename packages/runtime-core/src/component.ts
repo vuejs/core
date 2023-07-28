@@ -1055,7 +1055,7 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
 
 const classifyRE = /(?:^|[-_])(\w)/g
 const classify = (str: string): string =>
-  str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
+  str.replace(classifyRE, c => c.toString().toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
   Component: ConcreteComponent,

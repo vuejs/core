@@ -100,7 +100,7 @@ const camelizeRE = /-(\w)/g
  * @private
  */
 export const camelize = cacheStringFunction((str: string): string => {
-  return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''))
+  return str.replace(camelizeRE, (_, c) => (c ? c.toString().toUpperCase() : ''))
 })
 
 const hyphenateRE = /\B([A-Z])/g
