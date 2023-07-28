@@ -148,7 +148,17 @@ export function createHydrationFunctions(
           if ((node as Element).tagName.toLowerCase() === 'template') {
             const content = (vnode.el! as HTMLTemplateElement).content
               .firstChild!
+
+            // replace <template> node with inner child
             replace(content, node)
+            let parent = parentComponent
+            while (parent) {
+              if (parent.vnode.el === node) {
+                parent.vnode.el = content
+                parent.subTree.el = content
+              }
+              parent = parent.parent
+            }
             node = content
             nextNode = nextSibling(node)
           } else {
@@ -393,8 +403,19 @@ export function createHydrationFunctions(
           .firstChild as Element
         needCallTransitionHooks && transition!.beforeEnter(content)
 
+        vnode.el = content
+        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
+
         // replace <template> node with inner child
         replace(content, el)
+        let parent = parentComponent
+        while (parent) {
+          if (parent.vnode.el === el) {
+            parent.vnode.el = content
+            parent.subTree.el = content
+          }
+          parent = parent.parent
+        }
         el = content
       }
 

@@ -20,7 +20,8 @@ import {
   vModelCheckbox,
   renderSlot,
   Transition,
-  createCommentVNode
+  createCommentVNode,
+  vShow
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
@@ -997,7 +998,7 @@ describe('SSR hydration', () => {
   })
 
   test('transition appear', () => {
-    const { container } = mountWithHydration(
+    const { vnode, container } = mountWithHydration(
       `<template><div>foo</div></template>`,
       () =>
         h(
@@ -1015,12 +1016,13 @@ describe('SSR hydration', () => {
         foo
       </div>
     `)
+    expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
-  test('transition appear with v-if false', () => {
+  test('transition appear with v-if', () => {
     const show = false
-    const { container } = mountWithHydration(
+    const { vnode, container } = mountWithHydration(
       `<template><!----></template>`,
       () =>
         h(
@@ -1032,6 +1034,34 @@ describe('SSR hydration', () => {
         )
     )
     expect(container.firstChild).toMatchInlineSnapshot('<!---->')
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-show', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><div style="display: none;">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]])
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+        style="display: none;"
+      >
+        foo
+      </div>
+    `)
+    expect((container.firstChild as any)._vod).toBe('')
+    expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
