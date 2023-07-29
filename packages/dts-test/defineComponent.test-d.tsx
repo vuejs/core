@@ -1363,7 +1363,7 @@ describe('function syntax w/ runtime props', () => {
     }
   )
 
-  // @ts-expect-error prop type mismatch
+  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
