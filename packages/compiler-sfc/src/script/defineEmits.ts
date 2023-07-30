@@ -57,7 +57,7 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
   return emitsDecl
 }
 
-function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
+export function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
   const emits = new Set<string>()
   const node = ctx.emitsTypeDecl!
 

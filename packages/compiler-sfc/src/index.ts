@@ -33,6 +33,8 @@ export {
 
 // Internals for type resolution
 export { invalidateTypeCache, registerTS } from './script/resolveType'
+export { extractRuntimeProps } from './script/defineProps'
+export { extractRuntimeEmits } from './script/defineEmits'
 
 // Types
 export type {

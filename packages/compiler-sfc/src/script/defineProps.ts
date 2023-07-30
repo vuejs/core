@@ -150,7 +150,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       }
     }
   } else if (ctx.propsTypeDecl) {
-    propsDecls = genRuntimePropsFromTypes(ctx)
+    propsDecls = extractRuntimeProps(ctx)
   }
 
   const modelsDecls = genModelProps(ctx)
@@ -162,7 +162,9 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   }
 }
 
-function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
+export function extractRuntimeProps(
+  ctx: ScriptCompileContext
+): string | undefined {
   // this is only called if propsTypeDecl exists
   const props = resolveRuntimePropsFromType(ctx, ctx.propsTypeDecl!)
   if (!props.length) {
