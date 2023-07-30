@@ -140,6 +140,9 @@ function createParserContext(
   }
 }
 
+const whitespaceRE = /[^\t\r\n\f ]/
+const newlineRE = /[\r\n]/
+
 function parseChildren(
   context: ParserContext,
   mode: TextModes,
@@ -259,7 +262,7 @@ function parseChildren(
       const node = nodes[i]
       if (node.type === NodeTypes.TEXT) {
         if (!context.inPre) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
+          if (!whitespaceRE.test(node.content)) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // Remove if:
@@ -279,7 +282,7 @@ function parseChildren(
                     next.type === NodeTypes.COMMENT) ||
                   (prev.type === NodeTypes.ELEMENT &&
                     next.type === NodeTypes.ELEMENT &&
-                    /[\r\n]/.test(node.content))))
+                    newlineRE.test(node.content))))
             ) {
               removedWhitespace = true
               nodes[i] = null as any
@@ -358,6 +361,8 @@ function parseCDATA(
   return nodes
 }
 
+const commentRE = /--(\!)?>/
+
 function parseComment(context: ParserContext): CommentNode {
   __TEST__ && assert(startsWith(context.source, '<!--'))
 
@@ -365,7 +370,7 @@ function parseComment(context: ParserContext): CommentNode {
   let content: string
 
   // Regular comment.
-  const match = /--(\!)?>/.exec(context.source)
+  const match = commentRE.exec(context.source)
   if (!match) {
     content = context.source.slice(4)
     advanceBy(context, context.source.length)
@@ -510,6 +515,8 @@ const enum TagType {
 const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
   `if,else,else-if,for,slot`
 )
+
+const capitalLetterRE = /^[A-Z]/
 
 /**
  * Parse a tag (E.g. `<div id=a>`) with that type (start tag or end tag).
@@ -659,7 +666,7 @@ function isComponent(
   }
   if (
     tag === 'component' ||
-    /^[A-Z]/.test(tag) ||
+    capitalLetterRE.test(tag) ||
     isCoreComponent(tag) ||
     (options.isBuiltInComponent && options.isBuiltInComponent(tag)) ||
     (options.isNativeTag && !options.isNativeTag(tag))
@@ -707,6 +714,8 @@ function isComponent(
   }
 }
 
+const missingWhitespaceRE = /^[^\t\r\n\f />]/
+
 function parseAttributes(
   context: ParserContext,
   type: TagType
@@ -744,7 +753,7 @@ function parseAttributes(
       props.push(attr)
     }
 
-    if (/^[^\t\r\n\f />]/.test(context.source)) {
+    if (missingWhitespaceRE.test(context.source)) {
       emitError(context, ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES)
     }
     advanceSpaces(context)
@@ -752,15 +761,19 @@ function parseAttributes(
   return props
 }
 
+const missingAttributeValueRE = /^[\t\r\n\f ]*=/
+const directiveRE = /^(v-[A-Za-z0-9-]|:|\.|@|#)/
+const attributeRE = /^[^\t\r\n\f />][^\t\r\n\f />=]*/
+
 function parseAttribute(
   context: ParserContext,
   nameSet: Set<string>
 ): AttributeNode | DirectiveNode {
-  __TEST__ && assert(/^[^\t\r\n\f />]/.test(context.source))
+  __TEST__ && assert(missingWhitespaceRE.test(context.source))
 
   // Name.
   const start = getCursor(context)
-  const match = /^[^\t\r\n\f />][^\t\r\n\f />=]*/.exec(context.source)!
+  const match = attributeRE.exec(context.source)!
   const name = match[0]
 
   if (nameSet.has(name)) {
@@ -788,7 +801,7 @@ function parseAttribute(
   // Value
   let value: AttributeValue = undefined
 
-  if (/^[\t\r\n\f ]*=/.test(context.source)) {
+  if (missingAttributeValueRE.test(context.source)) {
     advanceSpaces(context)
     advanceBy(context, 1)
     advanceSpaces(context)
@@ -799,7 +812,7 @@ function parseAttribute(
   }
   const loc = getSelection(context, start)
 
-  if (!context.inVPre && /^(v-[A-Za-z0-9-]|:|\.|@|#)/.test(name)) {
+  if (!context.inVPre && directiveRE.test(name)) {
     const match =
       /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
         name
@@ -933,6 +946,8 @@ function parseAttribute(
   }
 }
 
+const unquotedAttributeRE = /^[^\t\r\n\f >]+/
+
 function parseAttributeValue(context: ParserContext): AttributeValue {
   const start = getCursor(context)
   let content: string
@@ -956,7 +971,7 @@ function parseAttributeValue(context: ParserContext): AttributeValue {
     }
   } else {
     // Unquoted
-    const match = /^[^\t\r\n\f >]+/.exec(context.source)
+    const match = unquotedAttributeRE.exec(context.source)
     if (!match) {
       return undefined
     }
@@ -1104,8 +1119,10 @@ function advanceBy(context: ParserContext, numberOfCharacters: number): void {
   context.source = source.slice(numberOfCharacters)
 }
 
+const blankRE = /^[\t\r\n\f ]+/
+
 function advanceSpaces(context: ParserContext): void {
-  const match = /^[\t\r\n\f ]+/.exec(context.source)
+  const match = blankRE.exec(context.source)
   if (match) {
     advanceBy(context, match[0].length)
   }
@@ -1180,10 +1197,12 @@ function isEnd(
   return !s
 }
 
+const startsWithEndTagOpenRE = /[\t\r\n\f />]/
+
 function startsWithEndTagOpen(source: string, tag: string): boolean {
   return (
     startsWith(source, '</') &&
     source.slice(2, 2 + tag.length).toLowerCase() === tag.toLowerCase() &&
-    /[\t\r\n\f />]/.test(source[2 + tag.length] || '>')
+    startsWithEndTagOpenRE.test(source[2 + tag.length] || '>')
   )
 }

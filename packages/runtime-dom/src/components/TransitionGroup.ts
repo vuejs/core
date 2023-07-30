@@ -35,6 +35,8 @@ export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   moveClass?: string
 }
 
+const transformRE = /transform$/
+
 const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
@@ -84,7 +86,7 @@ const TransitionGroupImpl: ComponentOptions = {
           if (e && e.target !== el) {
             return
           }
-          if (!e || /transform$/.test(e.propertyName)) {
+          if (!e || transformRE.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
             ;(el as any)._moveCb = null
             removeTransitionClass(el, moveClass)

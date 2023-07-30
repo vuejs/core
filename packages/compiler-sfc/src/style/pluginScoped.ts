@@ -4,6 +4,7 @@ import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
+const keyframesRE = /-?keyframes$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
   const keyframes = Object.create(null)
@@ -15,10 +16,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       processRule(id, rule)
     },
     AtRule(node) {
-      if (
-        /-?keyframes$/.test(node.name) &&
-        !node.params.endsWith(`-${shortId}`)
-      ) {
+      if (keyframesRE.test(node.name) && !node.params.endsWith(`-${shortId}`)) {
         // register keyframes
         keyframes[node.params] = node.params = node.params + '-' + shortId
       }
@@ -66,7 +64,7 @@ function processRule(id: string, rule: Rule) {
     processedRules.has(rule) ||
     (rule.parent &&
       rule.parent.type === 'atrule' &&
-      /-?keyframes$/.test((rule.parent as AtRule).name))
+      keyframesRE.test((rule.parent as AtRule).name))
   ) {
     return
   }
@@ -200,8 +198,10 @@ function rewriteSelector(
   }
 }
 
+const spaceCombinatorRE = /^\s+$/
+
 function isSpaceCombinator(node: selectorParser.Node) {
-  return node.type === 'combinator' && /^\s+$/.test(node.value)
+  return node.type === 'combinator' && spaceCombinatorRE.test(node.value)
 }
 
 scopedPlugin.postcss = true

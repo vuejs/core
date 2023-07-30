@@ -1,6 +1,8 @@
 import { toHandlerKey, isObject } from '@vue/shared'
 import { warn } from '../warning'
 
+const capitalLetterRE = /[A-Z]/
+
 /**
  * For prefixing keys in v-on="obj" with "on"
  * @private
@@ -16,7 +18,7 @@ export function toHandlers(
   }
   for (const key in obj) {
     ret[
-      preserveCaseIfNecessary && /[A-Z]/.test(key)
+      preserveCaseIfNecessary && capitalLetterRE.test(key)
         ? `on:${key}`
         : toHandlerKey(key)
     ] = obj[key]

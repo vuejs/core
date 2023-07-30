@@ -104,12 +104,14 @@ export function hasDefaultExport(ast: Statement[]): boolean {
   return false
 }
 
+const whitespaceRE = /\s/
+
 function specifierEnd(s: MagicString, end: number, nodeEnd: number | null) {
   // export { default   , foo } ...
   let hasCommas = false
   let oldEnd = end
   while (end < nodeEnd!) {
-    if (/\s/.test(s.slice(end, end + 1))) {
+    if (whitespaceRE.test(s.slice(end, end + 1))) {
       end++
     } else if (s.slice(end, end + 1) === ',') {
       end++

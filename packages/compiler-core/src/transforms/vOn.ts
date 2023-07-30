@@ -29,6 +29,8 @@ export interface VOnDirectiveNode extends DirectiveNode {
   exp: SimpleExpressionNode | undefined
 }
 
+const capitalLetterRE = /[A-Z]/
+
 export const transformOn: DirectiveTransform = (
   dir,
   node,
@@ -54,7 +56,7 @@ export const transformOn: DirectiveTransform = (
       const eventString =
         node.tagType !== ElementTypes.ELEMENT ||
         rawName.startsWith('vnode') ||
-        !/[A-Z]/.test(rawName)
+        !capitalLetterRE.test(rawName)
           ? // for non-element and vnode lifecycle event listeners, auto convert
             // it to camelCase. See issue #2249
             toHandlerKey(camelize(rawName))

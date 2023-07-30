@@ -1,6 +1,8 @@
 import { AwaitExpression } from '@babel/types'
 import { ScriptCompileContext } from './context'
 
+const awaitRE = /\bawait\b/
+
 /**
  * Support context-persistence between top-level await expressions:
  *
@@ -51,7 +53,7 @@ export function processAwait(
     node.argument.end! + startOffset
   )
 
-  const containsNestedAwait = /\bawait\b/.test(argumentStr)
+  const containsNestedAwait = awaitRE.test(argumentStr)
 
   ctx.s.overwrite(
     node.start! + startOffset,

@@ -21,6 +21,9 @@ export const enum DOMNamespaces {
   MATH_ML
 }
 
+// TODO: better name
+const mtextRE = /^m(?:[ions]|text)$/
+
 export const parserOptions: ParserOptions = {
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
@@ -57,7 +60,7 @@ export const parserOptions: ParserOptions = {
           ns = DOMNamespaces.HTML
         }
       } else if (
-        /^m(?:[ions]|text)$/.test(parent.tag) &&
+        mtextRE.test(parent.tag) &&
         tag !== 'mglyph' &&
         tag !== 'malignmark'
       ) {

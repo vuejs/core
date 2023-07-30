@@ -38,8 +38,10 @@ const enum DOMNodeTypes {
 
 let hasMismatch = false
 
+const svgRE = /svg/
+
 const isSVGContainer = (container: Element) =>
-  /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
+  svgRE.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
 
 const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT

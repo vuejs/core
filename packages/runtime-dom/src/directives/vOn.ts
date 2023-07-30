@@ -54,6 +54,8 @@ const keyNames: Record<string, string | string[]> = {
   delete: 'backspace'
 }
 
+const numberRE = /^\d+$/
+
 /**
  * @private
  */
@@ -69,7 +71,7 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
         globalKeyCodes = (instance.appContext.config as LegacyConfig).keyCodes
       }
     }
-    if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
+    if (__DEV__ && modifiers.some(m => numberRE.test(m))) {
       compatUtils.warnDeprecation(
         DeprecationTypes.V_ON_KEYCODE_MODIFIER,
         instance

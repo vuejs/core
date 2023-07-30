@@ -442,6 +442,8 @@ function applySingletonPrototype(app: App, Ctor: Function) {
   }
 }
 
+const globalMountContainerRE = /^(v-|:|@)/
+
 function installCompatMount(
   app: App,
   context: AppContext,
@@ -523,7 +525,10 @@ function installCompatMount(
         if (__DEV__) {
           for (let i = 0; i < container.attributes.length; i++) {
             const attr = container.attributes[i]
-            if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+            if (
+              attr.name !== 'v-cloak' &&
+              globalMountContainerRE.test(attr.name)
+            ) {
               warnDeprecation(DeprecationTypes.GLOBAL_MOUNT_CONTAINER, null)
               break
             }
