@@ -223,8 +223,8 @@ export function effect<T = any>(
           (a, b) => _effect.deps.indexOf(a.dep!) - _effect.deps.indexOf(b.dep!)
         )
       }
-      for (const computedToAskDirty of _deferredComputeds) {
-        computedToAskDirty.value
+      for (const deferredComputed of _deferredComputeds) {
+        deferredComputed.value
         if (_dirty) {
           break
         }
