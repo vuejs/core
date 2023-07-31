@@ -6,7 +6,10 @@ import { warn } from './warning'
 
 export interface InjectionKey<T> extends Symbol {}
 
-export function provide<T>(key: InjectionKey<T> | string | number, value: T) {
+export function provide<T, K = InjectionKey<T> | string | number>(
+  key: K,
+  value: K extends InjectionKey<infer V> ? V : T
+) {
   if (!currentInstance) {
     if (__DEV__) {
       warn(`provide() can only be used inside setup().`)
@@ -72,4 +75,13 @@ export function inject(
   } else if (__DEV__) {
     warn(`inject() can only be used inside setup() or functional components.`)
   }
+}
+
+/**
+ * Returns true if `inject()` can be used without warning about being called in the wrong place (e.g. outside of
+ * setup()). This is used by libraries that want to use `inject()` internally without triggering a warning to the end
+ * user. One example is `useRoute()` in `vue-router`.
+ */
+export function hasInjectionContext(): boolean {
+  return !!(currentInstance || currentRenderingInstance || currentApp)
 }

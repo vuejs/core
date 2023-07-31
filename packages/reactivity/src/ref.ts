@@ -347,7 +347,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? (this._defaultValue as T[K]) : val
+    return val === undefined ? this._defaultValue! : val
   }
 
   set value(newVal) {
@@ -437,7 +437,7 @@ export function toRef(
   if (isRef(source)) {
     return source
   } else if (isFunction(source)) {
-    return new GetterRefImpl(source as () => unknown) as any
+    return new GetterRefImpl(source) as any
   } else if (isObject(source) && arguments.length > 1) {
     return propertyToRef(source, key!, defaultValue)
   } else {
@@ -445,15 +445,15 @@ export function toRef(
   }
 }
 
-function propertyToRef(source: object, key: string, defaultValue?: unknown) {
-  const val = (source as any)[key]
+function propertyToRef(
+  source: Record<string, any>,
+  key: string,
+  defaultValue?: unknown
+) {
+  const val = source[key]
   return isRef(val)
     ? val
-    : (new ObjectRefImpl(
-        source as Record<string, any>,
-        key,
-        defaultValue
-      ) as any)
+    : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
 // corner case when use narrows type

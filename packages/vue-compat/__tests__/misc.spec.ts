@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '../../runtime-core/src/scheduler'
 import {

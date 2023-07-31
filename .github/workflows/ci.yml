@@ -26,10 +26,39 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
+
+      - run: pnpm install
 
       - name: Run unit tests
         run: pnpm run test-unit
+
+  unit-test-windows:
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $env:GITHUB_ENV
+
+      - run: pnpm install
+
+      - name: Run compiler unit tests
+        run: pnpm run test-unit compiler
+
+      - name: Run ssr unit tests
+        run: pnpm run test-unit server-renderer
 
   e2e-test:
     runs-on: ubuntu-latest
@@ -72,7 +101,10 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - name: Skip Puppeteer download
+        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
+
+      - run: pnpm install
 
       - name: Run eslint
         run: pnpm run lint

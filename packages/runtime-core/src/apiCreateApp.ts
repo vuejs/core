@@ -110,9 +110,10 @@ export interface AppConfig {
    */
   isCustomElement?: (tag: string) => boolean
 
+  // TODO remove in 3.4
   /**
    * Temporary config for opt-in to unwrap injected refs.
-   * TODO deprecate in 3.3
+   * @deprecated this no longer has effect. 3.3 always unwraps injected refs.
    */
   unwrapInjectedRef?: boolean
 }
@@ -210,6 +211,22 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
+
+    // TODO remove in 3.4
+    if (__DEV__) {
+      Object.defineProperty(context.config, 'unwrapInjectedRef', {
+        get() {
+          return true
+        },
+        set() {
+          warn(
+            `app.config.unwrapInjectedRef has been deprecated. ` +
+              `3.3 now always unwraps injected refs in Options API.`
+          )
+        }
+      })
+    }
+
     const installedPlugins = new Set()
 
     let isMounted = false
@@ -313,10 +330,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
-          )
+          const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context

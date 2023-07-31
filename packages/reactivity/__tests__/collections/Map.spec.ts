@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { reactive, effect, toRaw, isReactive } from '../../src'
 
 describe('reactivity/collections', () => {
@@ -14,8 +13,8 @@ describe('reactivity/collections', () => {
       const original = new Map()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof Map).toBe(true)
-      expect(observed instanceof Map).toBe(true)
+      expect(original).toBeInstanceOf(Map)
+      expect(observed).toBeInstanceOf(Map)
     })
 
     it('should observe mutations', () => {

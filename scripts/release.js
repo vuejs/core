@@ -199,9 +199,9 @@ async function main() {
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build'])
-    step('\nBuilding and testing types...')
-    await run('pnpm', ['test-dts'])
+    await run('pnpm', ['run', 'build', '--withTypes'])
+    step('\nTesting built types...')
+    await run('pnpm', ['test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
@@ -347,15 +347,14 @@ async function publishPackage(pkgName, version) {
   step(`Publishing ${pkgName}...`)
   try {
     await run(
-      // note: use of yarn is intentional here as we rely on its publishing
-      // behavior.
-      'npm',
+      'pnpm',
       [
         'publish',
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
-        ...(isDryRun ? ['--dry-run'] : [])
+        ...(isDryRun ? ['--dry-run'] : []),
+        ...(skipGit ? ['--no-git-checks'] : [])
       ],
       {
         cwd: pkgRoot,
