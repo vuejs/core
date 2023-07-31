@@ -1,5 +1,5 @@
 import merge from 'merge-source-map'
-import { RawSourceMap } from 'source-map'
+import { RawSourceMap } from 'source-map-js'
 import { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
 
@@ -98,8 +98,7 @@ const less: StylePreprocessor = (source, map, options, load = require) => {
 const styl: StylePreprocessor = (source, map, options, load = require) => {
   const nodeStylus = load('stylus')
   try {
-    const ref = nodeStylus(source)
-    Object.keys(options).forEach(key => ref.set(key, options[key]))
+    const ref = nodeStylus(source, options)
     if (map) ref.set('sourcemap', { inline: false, comment: false })
 
     const result = ref.render()

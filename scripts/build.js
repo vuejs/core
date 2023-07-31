@@ -17,11 +17,10 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
-import { gzipSync } from 'node:zlib'
-import { compress } from 'brotli'
+import { gzipSync, brotliCompressSync } from 'node:zlib'
 import chalk from 'chalk'
 import execa from 'execa'
 import { cpus } from 'node:os'
@@ -35,6 +34,7 @@ const targets = args._
 const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
+const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildAllMatching = args.all || args.a
@@ -45,12 +45,25 @@ run()
 async function run() {
   const removeCache = scanEnums()
   try {
-    if (!targets.length) {
-      await buildAll(allTargets)
-      checkAllSizes(allTargets)
-    } else {
-      await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
-      checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
+    const resolvedTargets = targets.length
+      ? fuzzyMatchTarget(targets, buildAllMatching)
+      : allTargets
+    await buildAll(resolvedTargets)
+    checkAllSizes(resolvedTargets)
+    if (buildTypes) {
+      await execa(
+        'pnpm',
+        [
+          'run',
+          'build-dts',
+          ...(targets.length
+            ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
+            : [])
+        ],
+        {
+          stdio: 'inherit'
+        }
+      )
     }
   } finally {
     removeCache()
@@ -143,7 +156,7 @@ function checkFileSize(filePath) {
   const minSize = (file.length / 1024).toFixed(2) + 'kb'
   const gzipped = gzipSync(file)
   const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = compress(file)
+  const compressed = brotliCompressSync(file)
   // @ts-ignore
   const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
   console.log(
