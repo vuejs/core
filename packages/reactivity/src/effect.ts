@@ -201,7 +201,7 @@ export function effect<T = any>(
       }
       if (!_scheduled) {
         _scheduled = true
-        schedulerCallbacks.push(cb)
+        pendingEffectRunners.push(run)
       }
     }
   })
@@ -216,9 +216,8 @@ export function effect<T = any>(
   runner.effect = _effect
   return runner
 
-  function cb() {
+  function run() {
     if (!_dirty && _deferredComputeds.length) {
-      pauseTracking()
       if (_deferredComputeds.length >= 2) {
         _deferredComputeds = _deferredComputeds.sort((a, b) => {
           const aIndex = _effect.deps.indexOf(a.dep!)
@@ -232,7 +231,6 @@ export function effect<T = any>(
           break
         }
       }
-      resetTracking()
     }
     if (_dirty) {
       _dirty = false
@@ -454,7 +452,7 @@ export function triggerEffects(
   }
 }
 
-const schedulerCallbacks: (() => void)[] = []
+const pendingEffectRunners: (() => void)[] = []
 
 function triggerEffect(
   effect: ReactiveEffect,
@@ -473,8 +471,8 @@ function triggerEffect(
     }
   }
   if (isRootTrigger) {
-    while (schedulerCallbacks.length) {
-      schedulerCallbacks.shift()!()
+    while (pendingEffectRunners.length) {
+      pendingEffectRunners.shift()!()
     }
   }
 }
