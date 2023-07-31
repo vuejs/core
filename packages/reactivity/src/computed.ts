@@ -38,10 +38,9 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _dirty = true
+  public _scheduled = false
+  public _deferredComputed: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
-
-  private _computedsToAskDirty: ComputedRefImpl<any>[] = []
-  private _triggeredAfterLastEffect = false
 
   constructor(
     getter: ComputedGetter<T>,
@@ -52,12 +51,12 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, _c => {
       if (!this._dirty) {
         if (_c) {
-          this._computedsToAskDirty.push(_c)
+          this._deferredComputed.push(_c)
         } else {
           this._dirty = true
         }
-        if (!this._triggeredAfterLastEffect) {
-          this._triggeredAfterLastEffect = true
+        if (!this._scheduled) {
+          this._scheduled = true
           triggerRefValue(this, this)
         }
       }
@@ -70,17 +69,17 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (!self._dirty && self._computedsToAskDirty.length) {
+    if (!self._dirty && self._deferredComputed.length) {
       pauseTracking()
-      if (self._computedsToAskDirty.length >= 2) {
-        self._computedsToAskDirty = self._computedsToAskDirty.sort((a, b) => {
+      if (self._deferredComputed.length >= 2) {
+        self._deferredComputed = self._deferredComputed.sort((a, b) => {
           const aIndex = self.effect.deps.indexOf(a.dep!)
           const bIndex = self.effect.deps.indexOf(b.dep!)
           return aIndex - bIndex
         })
       }
-      for (const computedToAskDirty of self._computedsToAskDirty) {
-        computedToAskDirty.value
+      for (const deferredComputed of self._deferredComputed) {
+        deferredComputed.value
         if (self._dirty) {
           break
         }
@@ -95,9 +94,9 @@ export class ComputedRefImpl<T> {
       }
       self._value = newValue
       self._dirty = false
-      self._triggeredAfterLastEffect = false
+      self._scheduled = false
     }
-    self._computedsToAskDirty.length = 0
+    self._deferredComputed.length = 0
     return self._value
   }
 

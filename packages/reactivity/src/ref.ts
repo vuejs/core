@@ -55,21 +55,21 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  computedToAskDirty: ComputedRefImpl<any> | undefined,
+  deferredComputed: ComputedRefImpl<any> | undefined,
   newVal?: any
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, computedToAskDirty, {
+      triggerEffects(dep, deferredComputed, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, computedToAskDirty)
+      triggerEffects(dep, deferredComputed)
     }
   }
 }

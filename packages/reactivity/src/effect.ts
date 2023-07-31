@@ -30,7 +30,10 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export type EffectScheduler = (computedToAskDirty: ComputedRefImpl<any> | undefined, ...args: any[]) => any
+export type EffectScheduler = (
+  deferredComputed: ComputedRefImpl<any> | undefined,
+  ...args: any[]
+) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -392,26 +395,26 @@ export function trigger(
 
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
-  computedToAskDirty: ComputedRefImpl<any> | undefined,
+  deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
   for (const effect of effects) {
     if (effect.computed) {
-      triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
+      triggerEffect(effect, deferredComputed, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
-      triggerEffect(effect, computedToAskDirty, debuggerEventExtraInfo)
+      triggerEffect(effect, deferredComputed, debuggerEventExtraInfo)
     }
   }
 }
 
 function triggerEffect(
   effect: ReactiveEffect,
-  computedToAskDirty: ComputedRefImpl<any> | undefined,
+  deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
@@ -419,7 +422,7 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) {
-      effect.scheduler(computedToAskDirty)
+      effect.scheduler(deferredComputed)
     } else {
       effect.run()
     }
