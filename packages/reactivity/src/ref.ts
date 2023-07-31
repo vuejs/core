@@ -16,9 +16,9 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
+import type { ComputedRefImpl } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
-import { ComputedRefImpl } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
