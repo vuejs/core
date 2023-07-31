@@ -219,11 +219,9 @@ export function effect<T = any>(
   function run() {
     if (!_dirty && _deferredComputeds.length) {
       if (_deferredComputeds.length >= 2) {
-        _deferredComputeds = _deferredComputeds.sort((a, b) => {
-          const aIndex = _effect.deps.indexOf(a.dep!)
-          const bIndex = _effect.deps.indexOf(b.dep!)
-          return aIndex - bIndex
-        })
+        _deferredComputeds = _deferredComputeds.sort(
+          (a, b) => _effect.deps.indexOf(a.dep!) - _effect.deps.indexOf(b.dep!)
+        )
       }
       for (const computedToAskDirty of _deferredComputeds) {
         computedToAskDirty.value
