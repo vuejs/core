@@ -189,18 +189,18 @@ export function effect<T = any>(
   }
 
   let _dirty = false
-  let _triggeredAfterLastEffect = false
-  let _computedsToAskDirty: ComputedRefImpl<any>[] = []
+  let _scheduled = false
+  let _deferredComputeds: ComputedRefImpl<any>[] = []
 
   const _effect = new ReactiveEffect(fn, _c => {
     if (!_dirty) {
       if (_c) {
-        _computedsToAskDirty.push(_c)
+        _deferredComputeds.push(_c)
       } else {
         _dirty = true
       }
-      if (!_triggeredAfterLastEffect) {
-        _triggeredAfterLastEffect = true
+      if (!_scheduled) {
+        _scheduled = true
         schedulerCallbacks.push(cb)
       }
     }
@@ -217,16 +217,16 @@ export function effect<T = any>(
   return runner
 
   function cb() {
-    if (!_dirty && _computedsToAskDirty.length) {
+    if (!_dirty && _deferredComputeds.length) {
       pauseTracking()
-      if (_computedsToAskDirty.length >= 2) {
-        _computedsToAskDirty = _computedsToAskDirty.sort((a, b) => {
+      if (_deferredComputeds.length >= 2) {
+        _deferredComputeds = _deferredComputeds.sort((a, b) => {
           const aIndex = _effect.deps.indexOf(a.dep!)
           const bIndex = _effect.deps.indexOf(b.dep!)
           return aIndex - bIndex
         })
       }
-      for (const computedToAskDirty of _computedsToAskDirty) {
+      for (const computedToAskDirty of _deferredComputeds) {
         computedToAskDirty.value
         if (_dirty) {
           break
@@ -238,8 +238,8 @@ export function effect<T = any>(
       _dirty = false
       _effect.run()
     }
-    _computedsToAskDirty.length = 0
-    _triggeredAfterLastEffect = false
+    _deferredComputeds.length = 0
+    _scheduled = false
   }
 }
 
