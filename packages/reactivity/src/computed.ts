@@ -39,7 +39,7 @@ export class ComputedRefImpl<T> {
 
   public _dirty = true
   public _scheduled = false
-  public _deferredComputed: ComputedRefImpl<any>[] = []
+  public _deferredComputeds: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
 
   constructor(
@@ -51,7 +51,7 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, _c => {
       if (!this._dirty) {
         if (_c) {
-          this._deferredComputed.push(_c)
+          this._deferredComputeds.push(_c)
         } else {
           this._dirty = true
         }
@@ -69,16 +69,16 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (!self._dirty && self._deferredComputed.length) {
+    if (!self._dirty && self._deferredComputeds.length) {
       pauseTracking()
-      if (self._deferredComputed.length >= 2) {
-        self._deferredComputed = self._deferredComputed.sort((a, b) => {
+      if (self._deferredComputeds.length >= 2) {
+        self._deferredComputeds = self._deferredComputeds.sort((a, b) => {
           const aIndex = self.effect.deps.indexOf(a.dep!)
           const bIndex = self.effect.deps.indexOf(b.dep!)
           return aIndex - bIndex
         })
       }
-      for (const deferredComputed of self._deferredComputed) {
+      for (const deferredComputed of self._deferredComputeds) {
         deferredComputed.value
         if (self._dirty) {
           break
@@ -96,7 +96,7 @@ export class ComputedRefImpl<T> {
       self._dirty = false
       self._scheduled = false
     }
-    self._deferredComputed.length = 0
+    self._deferredComputeds.length = 0
     return self._value
   }
 
