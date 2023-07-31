@@ -48,10 +48,10 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, _c => {
+    this.effect = new ReactiveEffect(getter, deferredComputed => {
       if (!this._dirty) {
-        if (_c) {
-          this._deferredComputeds.push(_c)
+        if (deferredComputed) {
+          this._deferredComputeds.push(deferredComputed)
         } else {
           this._dirty = true
         }
