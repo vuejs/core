@@ -72,11 +72,10 @@ export class ComputedRefImpl<T> {
     if (!self._dirty && self._deferredComputeds.length) {
       pauseTracking()
       if (self._deferredComputeds.length >= 2) {
-        self._deferredComputeds = self._deferredComputeds.sort((a, b) => {
-          const aIndex = self.effect.deps.indexOf(a.dep!)
-          const bIndex = self.effect.deps.indexOf(b.dep!)
-          return aIndex - bIndex
-        })
+        self._deferredComputeds = self._deferredComputeds.sort(
+          (a, b) =>
+            self.effect.deps.indexOf(a.dep!) - self.effect.deps.indexOf(b.dep!)
+        )
       }
       for (const deferredComputed of self._deferredComputeds) {
         deferredComputed.value
