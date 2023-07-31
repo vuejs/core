@@ -8,10 +8,10 @@ export default {
   props: ['foo'],
   setup(__props) {
 
-
+      
       let x = foo
       let y = __props.foo
-
+      
 return (_ctx, _cache) => {
   return _toDisplayString(__props.foo + __props.foo)
 }
@@ -28,9 +28,9 @@ export default {
   props: ['foo'],
   setup(__props) {
 
-
+      
       console.log(__props.foo)
-
+      
 return (_ctx, _cache) => {
   return _toDisplayString(__props.foo)
 }
@@ -47,9 +47,9 @@ export default {
   props: ['foo'],
   setup(__props) {
 
-
+    
     console.log(__props.foo)
-
+    
 return (_ctx, _cache) => {
   return _toDisplayString(__props.foo)
 }
@@ -69,8 +69,8 @@ export default {
 }),
   setup(__props) {
 
-
-
+      
+      
 return () => {}
 }
 
@@ -89,12 +89,50 @@ export default {
 }),
   setup(__props) {
 
-
-
+      
+      
 return () => {}
 }
 
 }"
+`;
+
+exports[`sfc reactive props destructure > default values w/ runtime declaration & key is string 1`] = `
+"import { mergeDefaults as _mergeDefaults } from 'vue'
+
+export default {
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  \\"foo:bar\\": 'foo-bar'
+}),
+  setup(__props) {
+
+      
+      
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > default values w/ type declaration & key is string 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    \\"foo:bar\\": { type: String, required: true, default: 'foo-bar' },
+    \\"onUpdate:modelValue\\": { type: Function, required: true }
+  },
+  setup(__props: any) {
+
+      
+      
+return () => {}
+}
+
+})"
 `;
 
 exports[`sfc reactive props destructure > default values w/ type declaration 1`] = `
@@ -108,8 +146,8 @@ export default /*#__PURE__*/_defineComponent({
   },
   setup(__props: any) {
 
-
-
+      
+      
 return () => {}
 }
 
@@ -130,12 +168,67 @@ export default /*#__PURE__*/_defineComponent({
   },
   setup(__props: any) {
 
-
-
+      
+      
 return () => {}
 }
 
 })"
+`;
+
+exports[`sfc reactive props destructure > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { emit: __emit }) {
+
+    const props = __props,
+          emit = __emit;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration 1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 1;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration fix #6757  1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 1;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration fix #7422 1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 0,
+          b = 0;
+    
+return () => {}
+}
+
+}"
 `;
 
 exports[`sfc reactive props destructure > multiple variable declarations 1`] = `
@@ -147,7 +240,7 @@ export default {
   setup(__props) {
 
       const bar = 'fish', hello = 'world'
-
+      
 return (_ctx, _cache) => {
   return (_openBlock(), _createElementBlock(\\"div\\", null, _toDisplayString(__props.foo) + \\" \\" + _toDisplayString(hello) + \\" \\" + _toDisplayString(bar), 1 /* TEXT */))
 }
@@ -161,12 +254,12 @@ exports[`sfc reactive props destructure > nested scope 1`] = `
   props: ['foo', 'bar'],
   setup(__props) {
 
-
+      
       function test(foo) {
         console.log(foo)
         console.log(__props.bar)
       }
-
+      
 return () => {}
 }
 
@@ -181,9 +274,9 @@ export default {
   props: { 'foo.bar': Function },
   setup(__props) {
 
-
+      
       let x = __props[\\"foo.bar\\"]
-
+      
 return (_ctx, _cache) => {
   return _toDisplayString(__props[\\"foo.bar\\"])
 }
@@ -199,10 +292,8 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
-
-
-
+      const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
+      
 return () => {}
 }
 

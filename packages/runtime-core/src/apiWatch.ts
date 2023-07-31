@@ -43,7 +43,6 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from '@vue/runtime-core'
-import { SSRContext } from '@vue/server-renderer'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -299,7 +298,7 @@ function doWatch(
       ])
     }
     if (flush === 'sync') {
-      const ctx = useSSRContext() as SSRContext
+      const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
       return NOOP
@@ -320,9 +319,7 @@ function doWatch(
         deep ||
         forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
-            )
+          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
           isArray(newValue) &&
@@ -463,7 +460,7 @@ export function traverse(value: unknown, seen?: Set<unknown>) {
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse((value as any)[key], seen)
+      traverse(value[key], seen)
     }
   }
   return value

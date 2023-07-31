@@ -5,7 +5,7 @@ import {
   walkIdentifiers
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { parse as _parse, ParserPlugin } from '@babel/parser'
+import { ParserPlugin } from '@babel/parser'
 import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
@@ -274,7 +274,7 @@ export function compileScript(
   const scriptAst = ctx.scriptAst
   const scriptSetupAst = ctx.scriptSetupAst!
 
-  // 1.1 walk import delcarations of <script>
+  // 1.1 walk import declarations of <script>
   if (scriptAst) {
     for (const node of scriptAst.body) {
       if (node.type === 'ImportDeclaration') {
@@ -505,21 +505,6 @@ export function compileScript(
 
   // 2.2 process <script setup> body
   for (const node of scriptSetupAst.body) {
-    // (Dropped) `ref: x` bindings
-    // TODO remove when out of experimental
-    if (
-      node.type === 'LabeledStatement' &&
-      node.label.name === 'ref' &&
-      node.body.type === 'ExpressionStatement'
-    ) {
-      ctx.error(
-        `ref sugar using the label syntax was an experimental proposal and ` +
-          `has been dropped based on community feedback. Please check out ` +
-          `the new proposal at https://github.com/vuejs/rfcs/discussions/369`,
-        node
-      )
-    }
-
     if (node.type === 'ExpressionStatement') {
       const expr = unwrapTSNode(node.expression)
       // process `defineProps` and `defineEmit(s)` calls
@@ -567,7 +552,11 @@ export function compileScript(
             (processDefineSlots(ctx, init, decl.id) ||
               processDefineModel(ctx, init, decl.id))
 
-          if (isDefineProps || isDefineEmits) {
+          if (
+            isDefineProps &&
+            !ctx.propsDestructureRestId &&
+            ctx.propsDestructureDecl
+          ) {
             if (left === 1) {
               ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -585,6 +574,12 @@ export function compileScript(
               ctx.s.remove(start, end)
               left--
             }
+          } else if (isDefineEmits) {
+            ctx.s.overwrite(
+              startOffset + init.start!,
+              startOffset + init.end!,
+              '__emit'
+            )
           } else {
             lastNonRemoved = i
           }
@@ -622,8 +617,8 @@ export function compileScript(
       node.type.endsWith('Statement')
     ) {
       const scope: Statement[][] = [scriptSetupAst.body]
-      ;(walk as any)(node, {
-        enter(child: Node, parent: Node) {
+      walk(node, {
+        enter(child: Node, parent: Node | undefined) {
           if (isFunctionType(child)) {
             this.skip()
           }
@@ -648,7 +643,7 @@ export function compileScript(
               ctx,
               child,
               needsSemi,
-              parent.type === 'ExpressionStatement'
+              parent!.type === 'ExpressionStatement'
             )
           }
         },
@@ -796,22 +791,29 @@ export function compileScript(
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
   // can use it directly
-  if (ctx.propsIdentifier) {
-    ctx.s.prependLeft(
-      startOffset,
-      `\nconst ${ctx.propsIdentifier} = __props;\n`
-    )
+  if (ctx.propsDecl) {
+    if (ctx.propsDestructureRestId) {
+      ctx.s.overwrite(
+        startOffset + ctx.propsCall!.start!,
+        startOffset + ctx.propsCall!.end!,
+        `${ctx.helper(`createPropsRestProxy`)}(__props, ${JSON.stringify(
+          Object.keys(ctx.propsDestructuredBindings)
+        )})`
+      )
+      ctx.s.overwrite(
+        startOffset + ctx.propsDestructureDecl!.start!,
+        startOffset + ctx.propsDestructureDecl!.end!,
+        ctx.propsDestructureRestId
+      )
+    } else if (!ctx.propsDestructureDecl) {
+      ctx.s.overwrite(
+        startOffset + ctx.propsCall!.start!,
+        startOffset + ctx.propsCall!.end!,
+        '__props'
+      )
+    }
   }
-  if (ctx.propsDestructureRestId) {
-    ctx.s.prependLeft(
-      startOffset,
-      `\nconst ${ctx.propsDestructureRestId} = ${ctx.helper(
-        `createPropsRestProxy`
-      )}(__props, ${JSON.stringify(
-        Object.keys(ctx.propsDestructuredBindings)
-      )});\n`
-    )
-  }
+
   // inject temp variables for async context preservation
   if (hasAwait) {
     const any = ctx.isTS ? `: any` : ``
@@ -822,10 +824,8 @@ export function compileScript(
     ctx.hasDefineExposeCall || !options.inlineTemplate
       ? [`expose: __expose`]
       : []
-  if (ctx.emitIdentifier) {
-    destructureElements.push(
-      ctx.emitIdentifier === `emit` ? `emit` : `emit: ${ctx.emitIdentifier}`
-    )
+  if (ctx.emitDecl) {
+    destructureElements.push(`emit: __emit`)
   }
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
@@ -1110,8 +1110,16 @@ function walkDeclaration(
             : BindingTypes.SETUP_CONST
         } else if (isConst) {
           if (
-            isCallOf(init, userImportAliases['ref']) ||
-            isCallOf(init, DEFINE_MODEL)
+            isCallOf(
+              init,
+              m =>
+                m === userImportAliases['ref'] ||
+                m === userImportAliases['computed'] ||
+                m === userImportAliases['shallowRef'] ||
+                m === userImportAliases['customRef'] ||
+                m === userImportAliases['toRef'] ||
+                m === DEFINE_MODEL
+            )
           ) {
             bindingType = BindingTypes.SETUP_REF
           } else {
@@ -1254,6 +1262,8 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
 }
 
 function isStaticNode(node: Node): boolean {
+  node = unwrapTSNode(node)
+
   switch (node.type) {
     case 'UnaryExpression': // void 0, !true
       return isStaticNode(node.argument)
@@ -1276,15 +1286,14 @@ function isStaticNode(node: Node): boolean {
       return node.expressions.every(expr => isStaticNode(expr))
 
     case 'ParenthesizedExpression': // (1)
-    case 'TSNonNullExpression': // 1!
-    case 'TSAsExpression': // 1 as number
-    case 'TSTypeAssertion': // (<number>2)
       return isStaticNode(node.expression)
 
-    default:
-      if (isLiteralNode(node)) {
-        return true
-      }
-      return false
+    case 'StringLiteral':
+    case 'NumericLiteral':
+    case 'BooleanLiteral':
+    case 'NullLiteral':
+    case 'BigIntLiteral':
+      return true
   }
+  return false
 }
