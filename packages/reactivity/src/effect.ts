@@ -192,10 +192,10 @@ export function effect<T = any>(
   let _scheduled = false
   let _deferredComputeds: ComputedRefImpl<any>[] = []
 
-  const _effect = new ReactiveEffect(fn, _c => {
+  const _effect = new ReactiveEffect(fn, deferredComputed => {
     if (!_dirty) {
-      if (_c) {
-        _deferredComputeds.push(_c)
+      if (deferredComputed) {
+        _deferredComputeds.push(deferredComputed)
       } else {
         _dirty = true
       }
