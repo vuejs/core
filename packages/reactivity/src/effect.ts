@@ -456,15 +456,15 @@ export function triggerEffects(
 
 const schedulerCallbacks: (() => void)[] = []
 
-let tracking = false
+let triggeringEffect = false
 
 function triggerEffect(
   effect: ReactiveEffect,
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  let isRootEffect = !tracking
-  tracking = true
+  const isRootTrigger = !triggeringEffect
+  triggeringEffect = true
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
@@ -475,11 +475,11 @@ function triggerEffect(
       effect.run()
     }
   }
-  if (isRootEffect) {
+  if (isRootTrigger) {
     while (schedulerCallbacks.length) {
       schedulerCallbacks.shift()!()
     }
-    tracking = false
+    triggeringEffect = false
   }
 }
 
