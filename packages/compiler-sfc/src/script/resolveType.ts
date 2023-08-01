@@ -715,7 +715,25 @@ let loadTS: (() => typeof TS) | undefined
  * @private
  */
 export function registerTS(_loadTS: () => typeof TS) {
-  loadTS = _loadTS
+  loadTS = () => {
+    try {
+      return _loadTS()
+    } catch (err: any) {
+      if (
+        typeof err.message === 'string' &&
+        err.message.includes('Cannot find module')
+      ) {
+        throw new Error(
+          'Failed to load TypeScript, which is required for resolving imported types. ' +
+            'Please check "typescript" dependency is installed.'
+        )
+      } else {
+        throw new Error(
+          'Failed to load TypeScript for resolving imported types.'
+        )
+      }
+    }
+  }
 }
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
@@ -764,7 +782,12 @@ function importSourceToScope(
   scope: TypeScope,
   source: string
 ): TypeScope {
-  const fs = resolveFS(ctx)
+  let fs: FS | undefined
+  try {
+    fs = resolveFS(ctx)
+  } catch (err: any) {
+    return ctx.error(err.message, node, scope)
+  }
   if (!fs) {
     return ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
