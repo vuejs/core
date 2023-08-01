@@ -70,13 +70,13 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     if (!self._dirty && self._deferredComputeds.length) {
-      pauseTracking()
       if (self._deferredComputeds.length >= 2) {
         self._deferredComputeds = self._deferredComputeds.sort(
           (a, b) =>
             self.effect.deps.indexOf(a.dep!) - self.effect.deps.indexOf(b.dep!)
         )
       }
+      pauseTracking()
       for (const deferredComputed of self._deferredComputeds) {
         deferredComputed.value
         if (self._dirty) {
