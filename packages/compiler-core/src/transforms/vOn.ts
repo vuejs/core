@@ -106,9 +106,13 @@ export const transformOn: DirectiveTransform = (
         context.cacheHandlers &&
         // unnecessary to cache inside v-once
         !context.inVOnce &&
-        // runtime constants don't need to be cached
+        // runtime constants don't need to be cached if without modifiers
         // (this is analyzed by compileScript in SFC <script setup>)
-        !(exp.type === NodeTypes.SIMPLE_EXPRESSION && exp.constType > 0) &&
+        !(
+          exp.type === NodeTypes.SIMPLE_EXPRESSION &&
+          exp.constType > 0 &&
+          modifiers.length === 0
+        ) &&
         // #1541 bail if this is a member exp handler passed to a component -
         // we need to use the original function to preserve arity,
         // e.g. <transition> relies on checking cb.length to determine
@@ -172,10 +176,7 @@ export const transformOn: DirectiveTransform = (
     ret = augmentor(ret)
   }
 
-  if (
-    shouldCache &&
-    ret.props[0].value.type !== NodeTypes.JS_CACHE_EXPRESSION
-  ) {
+  if (shouldCache) {
     // cache handlers so that it's always the same handler being passed down.
     // this avoids unnecessary re-renders when users use inline handlers on
     // components.

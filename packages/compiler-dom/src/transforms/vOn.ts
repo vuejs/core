@@ -12,8 +12,7 @@ import {
   CompilerDeprecationTypes,
   TransformContext,
   SourceLocation,
-  checkCompatEnabled,
-  hasScopeRef
+  checkCompatEnabled
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
 import { makeMap, capitalize } from '@vue/shared'
@@ -109,7 +108,7 @@ const transformClick = (key: ExpressionNode, event: string) => {
 
 export const transformOn: DirectiveTransform = (dir, node, context) => {
   return baseTransform(dir, node, context, baseResult => {
-    const { modifiers, exp } = dir
+    const { modifiers } = dir
     if (!modifiers.length) return baseResult
 
     let { key, value: handlerExp } = baseResult.props[0]
@@ -140,16 +139,6 @@ export const transformOn: DirectiveTransform = (dir, node, context) => {
         handlerExp,
         JSON.stringify(keyModifiers)
       ])
-    }
-
-    if (
-      !__BROWSER__ &&
-      context.prefixIdentifiers &&
-      !context.inVOnce &&
-      context.cacheHandlers &&
-      !hasScopeRef(exp, context.identifiers)
-    ) {
-      handlerExp = context.cache(handlerExp)
     }
 
     if (eventOptionModifiers.length) {
