@@ -7,7 +7,8 @@ import {
   NodeTypes,
   ObjectExpression,
   transform,
-  VNodeCall
+  VNodeCall,
+  BindingTypes
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../../src/runtimeHelpers'
@@ -266,7 +267,10 @@ describe('compiler-dom: transform v-on', () => {
       props: [prop]
     } = parseWithVOn(`<div @keyup.enter.capture="foo" />`, {
       prefixIdentifiers: true,
-      cacheHandlers: true
+      cacheHandlers: true,
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST
+      }
     })
     expect(root.cached).toBe(1)
     // should not treat cached handler as dynamicProp, so it should have no
