@@ -20,7 +20,7 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
   return new RegExp(
     // #4274 escape $ since it's a special char in regex
     // (and is the only regex special char that is valid in identifiers)
-    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+    `[^\\w$_\.]${local.replace(/\$/g, '\\$')}[^\\w$_]`
   ).test(resolveTemplateUsageCheckString(sfc))
 }
 
@@ -63,7 +63,11 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 )}`
               }
             }
-            if (prop.type === NodeTypes.ATTRIBUTE && prop.name === 'ref' && prop.value?.content) {
+            if (
+              prop.type === NodeTypes.ATTRIBUTE &&
+              prop.name === 'ref' &&
+              prop.value?.content
+            ) {
               code += `,${prop.value.content}`
             }
           }

@@ -509,6 +509,19 @@ describe('SFC compile <script setup>', () => {
       )
       assertCode(content)
     })
+
+    test('property access', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo.Bar.Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
   })
 
   describe('inlineTemplate mode', () => {
