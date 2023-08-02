@@ -172,7 +172,10 @@ export const transformOn: DirectiveTransform = (
     ret = augmentor(ret)
   }
 
-  if (shouldCache) {
+  if (
+    shouldCache &&
+    ret.props[0].value.type !== NodeTypes.JS_CACHE_EXPRESSION
+  ) {
     // cache handlers so that it's always the same handler being passed down.
     // this avoids unnecessary re-renders when users use inline handlers on
     // components.
