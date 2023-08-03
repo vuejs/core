@@ -20,7 +20,7 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
   return new RegExp(
     // #4274 escape $ since it's a special char in regex
     // (and is the only regex special char that is valid in identifiers)
-    `[^\\w$_\.]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+    `[^\\w$.]${local.replace(/\$/g, '\\$')}[^\\w$]`
   ).test(resolveTemplateUsageCheckString(sfc))
 }
 
