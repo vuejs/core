@@ -252,6 +252,34 @@ export const readonlyHandlers: ProxyHandler<object> = {
   }
 }
 
+export const strictReadonlyHandlers: ProxyHandler<object> = {
+  get: readonlyGet,
+  set(target, key) {
+    if (__DEV__) {
+      warn(
+        `Set operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+      throw new Error(
+        `Set operation on key "${String(key)}" failed: target is readonly.`,
+      )
+    }
+    return true
+  },
+  deleteProperty(target, key) {
+    if (__DEV__) {
+      warn(
+        `Delete operation on key "${String(key)}" failed: target is readonly.`,
+        target
+      )
+      throw new Error(
+        `Delete operation on key "${String(key)}" failed: target is readonly.`,
+      )
+    }
+    return true
+  }
+}
+
 export const shallowReactiveHandlers = /*#__PURE__*/ extend(
   {},
   mutableHandlers,

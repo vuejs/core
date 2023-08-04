@@ -2,6 +2,7 @@ import { isObject, toRawType, def } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
+  strictReadonlyHandlers,
   shallowReactiveHandlers,
   shallowReadonlyHandlers
 } from './baseHandlers'
@@ -163,7 +164,10 @@ export type DeepReadonly<T> = T extends Builtin
   : T extends {}
   ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
   : Readonly<T>
-
+interface ReadonlyOptions { 
+  strict?: boolean 
+}
+  
 /**
  * Takes an object (reactive or plain) or a ref and returns a readonly proxy to
  * the original.
@@ -194,12 +198,13 @@ export type DeepReadonly<T> = T extends Builtin
  * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
 export function readonly<T extends object>(
-  target: T
+  target: T,
+  options: ReadonlyOptions = {}
 ): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
     true,
-    readonlyHandlers,
+    options.strict ? strictReadonlyHandlers : readonlyHandlers,
     readonlyCollectionHandlers,
     readonlyMap
   )
