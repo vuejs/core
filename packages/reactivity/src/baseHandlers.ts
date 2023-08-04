@@ -260,11 +260,10 @@ export const strictReadonlyHandlers: ProxyHandler<object> = {
         `Set operation on key "${String(key)}" failed: target is readonly.`,
         target
       )
-      throw new Error(
-        `Set operation on key "${String(key)}" failed: target is readonly.`,
-      )
     }
-    return true
+    throw new Error(
+      `Set operation on key "${String(key)}" failed: target is readonly.`,
+    )
   },
   deleteProperty(target, key) {
     if (__DEV__) {
@@ -272,11 +271,10 @@ export const strictReadonlyHandlers: ProxyHandler<object> = {
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
         target
       )
-      throw new Error(
-        `Delete operation on key "${String(key)}" failed: target is readonly.`,
-      )
     }
-    return true
+    throw new Error(
+      `Delete operation on key "${String(key)}" failed: target is readonly.`,
+    )
   }
 }
 
