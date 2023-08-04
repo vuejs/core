@@ -152,6 +152,7 @@ describe('sfc reactive props destructure', () => {
         "foo": number // double-quoted string
         'bar': number // single-quoted string
         'foo:bar': string // single-quoted string containing symbols
+        'foo:baz': string
         "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
       }>()
       </script>
@@ -163,6 +164,7 @@ describe('sfc reactive props destructure', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       'foo:bar': BindingTypes.PROPS,
+      'foo:baz': BindingTypes.PROPS,
       fooBar: BindingTypes.PROPS_ALIASED,
       'onUpdate:modelValue': BindingTypes.PROPS
     })
@@ -171,6 +173,7 @@ describe('sfc reactive props destructure', () => {
     foo: { type: Number, required: true, default: 1 },
     bar: { type: Number, required: true, default: 2 },
     "foo:bar": { type: String, required: true, default: 'foo-bar' },
+    "foo:baz": { type: String, required: true },
     "onUpdate:modelValue": { type: Function, required: true }
   },`)
     assertCode(content)
