@@ -116,6 +116,9 @@ export const joinPaths = (path.posix || path).join
 export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 
 export function getEscapedKey(key: string) {
-  escapeSymbolsRE.lastIndex = 0
-  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
+  if (escapeSymbolsRE.test(key)) {
+    escapeSymbolsRE.lastIndex = 0
+    return JSON.stringify(key)
+  }
+  return key
 }
