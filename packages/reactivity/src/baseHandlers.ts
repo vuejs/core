@@ -9,7 +9,8 @@ import {
   shallowReactiveMap,
   shallowReadonlyMap,
   isReadonly,
-  isShallow
+  isShallow,
+  StrictMode
 } from './reactive'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -230,27 +231,35 @@ export const mutableHandlers: ProxyHandler<object> = {
   ownKeys
 }
 
-export const readonlyHandlers: ProxyHandler<object> = {
+export const readonlyHandlers = (
+  strictMode?: StrictMode
+): ProxyHandler<object> => ({
   get: readonlyGet,
-  set(target, key) {
+  set(target: object, key: string | symbol) {
+    const setReadonlyErrorMessage = `Set operation on key "${String(
+      key
+    )}" failed: target is readonly.`
+    if (strictMode?.strict) {
+      throw new Error(setReadonlyErrorMessage, target)
+    }
     if (__DEV__) {
-      warn(
-        `Set operation on key "${String(key)}" failed: target is readonly.`,
-        target
-      )
+      warn(setReadonlyErrorMessage, target)
     }
     return true
   },
-  deleteProperty(target, key) {
+  deleteProperty(target: object, key: string | symbol) {
+    const deleteReadonlyErrorMessage = `Delete operation on key "${String(
+      key
+    )}" failed: target is readonly.`
+    if (strictMode?.strict) {
+      throw new Error(deleteReadonlyErrorMessage, target)
+    }
     if (__DEV__) {
-      warn(
-        `Delete operation on key "${String(key)}" failed: target is readonly.`,
-        target
-      )
+      warn(deleteReadonlyErrorMessage, target)
     }
     return true
   }
-}
+})
 
 export const shallowReactiveHandlers = /*#__PURE__*/ extend(
   {},
@@ -264,10 +273,7 @@ export const shallowReactiveHandlers = /*#__PURE__*/ extend(
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
-export const shallowReadonlyHandlers = /*#__PURE__*/ extend(
-  {},
-  readonlyHandlers,
-  {
+export const shallowReadonlyHandlers = (strictMode?: StrictMode) =>
+  /*#__PURE__*/ extend({}, readonlyHandlers(strictMode), {
     get: shallowReadonlyGet
-  }
-)
+  })

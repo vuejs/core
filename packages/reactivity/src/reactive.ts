@@ -40,6 +40,10 @@ const enum TargetType {
   COLLECTION = 2
 }
 
+export interface StrictMode {
+  strict: boolean
+}
+
 function targetTypeMap(rawType: string) {
   switch (rawType) {
     case 'Object':
@@ -194,12 +198,13 @@ export type DeepReadonly<T> = T extends Builtin
  * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
 export function readonly<T extends object>(
-  target: T
+  target: T,
+  strictMode?: StrictMode
 ): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
     true,
-    readonlyHandlers,
+    readonlyHandlers(strictMode),
     readonlyCollectionHandlers,
     readonlyMap
   )
@@ -235,11 +240,14 @@ export function readonly<T extends object>(
  * @param target - The source object.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreadonly}
  */
-export function shallowReadonly<T extends object>(target: T): Readonly<T> {
+export function shallowReadonly<T extends object>(
+  target: T,
+  strictMode?: StrictMode
+): Readonly<T> {
   return createReactiveObject(
     target,
     true,
-    shallowReadonlyHandlers,
+    shallowReadonlyHandlers(strictMode),
     shallowReadonlyCollectionHandlers,
     shallowReadonlyMap
   )

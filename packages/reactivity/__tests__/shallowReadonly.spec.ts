@@ -37,6 +37,36 @@ describe('reactivity/shallowReadonly', () => {
     expect(isReadonly(reactiveProxy.foo)).toBe(true)
   })
 
+  describe('warn/error', () => {
+    it('should throw an error when strict mode is true and property is readonly', () => {
+      const original = shallowReadonly({ foo: 1 }, { strict: true })
+      expect(() => {
+        // @ts-expect-error
+        original.foo = 2
+      }).toThrowError(`Set operation on key "foo" failed: target is readonly.`)
+      expect(() => {
+        // @ts-expect-error
+        delete original.foo
+      }).toThrowError(
+        `Delete operation on key "foo" failed: target is readonly`
+      )
+    })
+    it('should warn error when strict mode is false and property is readonly', () => {
+      const original = shallowReadonly({ foo: 1 })
+      // @ts-expect-error
+      original.foo = 2
+      expect(original.foo).toBe(1)
+      expect(
+        `Set operation on key "foo" failed: target is readonly.`
+      ).toHaveBeenWarned()
+      // @ts-expect-error
+      delete original.foo
+      expect(
+        `Delete operation on key "foo" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+    })
+  })
+
   describe('collection/Map', () => {
     ;[Map, WeakMap].forEach(Collection => {
       test('should make the map/weak-map readonly', () => {

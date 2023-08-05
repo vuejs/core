@@ -90,6 +90,38 @@ describe('reactivity/readonly', () => {
       ).toHaveBeenWarnedLast()
     })
 
+    describe('warn/error', () => {
+      it('should throw an error when strict mode is true', () => {
+        const original = readonly({ foo: 1 }, { strict: true })
+        expect(() => {
+          // @ts-expect-error
+          original.foo = 2
+        }).toThrowError(
+          `Set operation on key "foo" failed: target is readonly.`
+        )
+        expect(() => {
+          // @ts-expect-error
+          delete original.foo
+        }).toThrowError(
+          `Delete operation on key "foo" failed: target is readonly`
+        )
+      })
+      it('should warn error when strict mode is false', () => {
+        const original = readonly({ foo: 1 })
+        // @ts-expect-error
+        original.foo = 2
+        expect(original.foo).toBe(1)
+        expect(
+          `Set operation on key "foo" failed: target is readonly.`
+        ).toHaveBeenWarned()
+        // @ts-expect-error
+        delete original.foo
+        expect(
+          `Delete operation on key "foo" failed: target is readonly.`
+        ).toHaveBeenWarnedLast()
+      })
+    })
+
     it('should not trigger effects', () => {
       const wrapped: any = readonly({ a: 1 })
       let dummy
