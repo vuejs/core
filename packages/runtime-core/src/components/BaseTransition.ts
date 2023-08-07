@@ -36,6 +36,8 @@ export interface BaseTransitionProps<HostElement = RendererElement> {
   // injected hooks (e.g. v-show).
   persisted?: boolean
 
+  key?: string | number | symbol
+
   // Hooks. Using camel case for easier usage in render functions & JSX.
   // In templates these can be written as @before-enter="xxx" as prop names
   // are camelized.
@@ -118,6 +120,7 @@ export const BaseTransitionPropsValidators = {
   mode: String,
   appear: Boolean,
   persisted: Boolean,
+  key: [String, Number, Symbol],
   // enter
   onBeforeEnter: TransitionHookValidator,
   onEnter: TransitionHookValidator,
