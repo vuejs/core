@@ -17,9 +17,22 @@ export function createSSRCompilerError(
 }
 
 export const enum SSRErrorCodes {
-  X_SSR_UNSAFE_ATTR_NAME = DOMErrorCodes.__EXTEND_POINT__,
+  X_SSR_UNSAFE_ATTR_NAME = 65 /* DOMErrorCodes.__EXTEND_POINT__ */,
   X_SSR_NO_TELEPORT_TARGET,
   X_SSR_INVALID_AST_NODE
+}
+
+if (__TEST__) {
+  // esbuild cannot infer const enum increments if first value is from another
+  // file, so we have to manually keep them in sync. this check ensures it
+  // errors out if there are collisions.
+  if (SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME < DOMErrorCodes.__EXTEND_POINT__) {
+    throw new Error(
+      `SSRErrorCodes need to be updated to ${
+        DOMErrorCodes.__EXTEND_POINT__ + 1
+      } to match extension point from core DOMErrorCodes.`
+    )
+  }
 }
 
 export const SSRErrorMessages: { [code: number]: string } = {

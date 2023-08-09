@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`scopeId compiler support should push scopeId for hoisted nodes 1`] = `
+exports[`scopeId compiler support > should push scopeId for hoisted nodes 1`] = `
 "import { createElementVNode as _createElementVNode, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, openBlock as _openBlock, createElementBlock as _createElementBlock, pushScopeId as _pushScopeId, popScopeId as _popScopeId } from \\"vue\\"
 
 const _withScopeId = n => (_pushScopeId(\\"test\\"),n=n(),_popScopeId(),n)
@@ -16,7 +16,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`scopeId compiler support should wrap default slot 1`] = `
+exports[`scopeId compiler support > should wrap default slot 1`] = `
 "import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -31,7 +31,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`scopeId compiler support should wrap dynamic slots 1`] = `
+exports[`scopeId compiler support > should wrap dynamic slots 1`] = `
 "import { createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, renderList as _renderList, createSlots as _createSlots, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -59,7 +59,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`scopeId compiler support should wrap named slots 1`] = `
+exports[`scopeId compiler support > should wrap named slots 1`] = `
 "import { toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, createElementVNode as _createElementVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, openBlock as _openBlock, createBlock as _createBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {

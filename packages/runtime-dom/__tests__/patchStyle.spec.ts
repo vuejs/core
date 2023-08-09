@@ -10,7 +10,7 @@ describe(`runtime-dom: style patching`, () => {
   // #1309
   it('should not patch same string style', () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const value = (el.style.cssText = 'color:red;')
     Object.defineProperty(el.style, 'cssText', {
       get(): any {
@@ -85,6 +85,37 @@ describe(`runtime-dom: style patching`, () => {
     patchProp(el as any, 'style', {}, null)
     expect(el.hasAttribute('style')).toBe(false)
     expect(el.style.cssText).toBe('')
+  })
+
+  it('should warn for trailing semicolons', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', null, { color: 'red;' })
+    expect(
+      `Unexpected semicolon at the end of 'color' style value: 'red;'`
+    ).toHaveBeenWarned()
+
+    patchProp(el, 'style', null, { '--custom': '100; ' })
+    expect(
+      `Unexpected semicolon at the end of '--custom' style value: '100; '`
+    ).toHaveBeenWarned()
+  })
+
+  it('should not warn for escaped trailing semicolons', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'style', null, { '--custom': '100\\;' })
+    expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
+  })
+
+  it('shorthand properties', () => {
+    const el = document.createElement('div')
+    patchProp(
+      el as any,
+      'style',
+      { borderBottom: '1px solid red' },
+      { border: '1px solid green' }
+    )
+    expect(el.style.border).toBe('1px solid green')
+    expect(el.style.borderBottom).toBe('1px solid green')
   })
 
   // JSDOM doesn't support custom properties on style object so we have to

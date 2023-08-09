@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`$ unwrapping 1`] = `
 "
@@ -21,6 +21,35 @@ exports[`$$ 1`] = `
     const b = (a)
     const c = ({ a })
     callExternal((a))
+    "
+`;
+
+exports[`$$ with some edge cases 1`] = `
+"import { ref as _ref } from 'vue'
+
+    ;(  /* 2 */ count /* 2 */   )
+    ;(   count /* 2 */, /**/ a   )
+    ;(   (count /* 2 */, /**/ a) /**/   )
+    {
+      a:(count,a)
+    }
+    ;((count) + 1)
+    ;([count])
+    ; (count )
+    console.log(((a)))
+    ;(a,b)
+    ;(((a++,b)))
+    count = ( a++ ,b)
+    count = ()=>(a++,b)
+    let r1 = _ref(a, (a++,b))
+    let r2 = { a:(a++,b),b: (a) }
+    switch((c)){
+      case d:
+        ;(a)
+        ;((h,f))
+        break
+    }
+    ((count++,(count),(count,a)))
     "
 `;
 
@@ -61,7 +90,7 @@ exports[`array destructure 1`] = `
 
     let n = _ref(1), __$temp_1 = (useFoo()),
   a = _toRef(__$temp_1, 0),
-  b = _toRef(__$temp_1, 1, 1)
+  b = _toRef(__$temp_1, 1, 1);
     console.log(n.value, a.value, b.value)
     "
 `;
@@ -90,7 +119,7 @@ exports[`macro import alias and removal 1`] = `
     let a = _ref(1)
     const __$temp_1 = (useMouse()),
   x = _toRef(__$temp_1, 'x'),
-  y = _toRef(__$temp_1, 'y')
+  y = _toRef(__$temp_1, 'y');
     "
 `;
 
@@ -130,10 +159,10 @@ exports[`nested destructure 1`] = `
 "import { toRef as _toRef } from 'vue'
 
     let __$temp_1 = (useFoo()),
-  b = _toRef(__$temp_1[0].a, 'b')
+  b = _toRef(__$temp_1[0].a, 'b');
     let __$temp_2 = (useBar()),
   d = _toRef(__$temp_2.c, 0),
-  e = _toRef(__$temp_2.c, 1)
+  e = _toRef(__$temp_2.c, 1);
     console.log(b.value, d.value, e.value)
     "
 `;
@@ -183,9 +212,9 @@ exports[`object destructure 1`] = `
   c = _toRef(__$temp_1, 'b'),
   d = _toRef(__$temp_1, 'd', 1),
   f = _toRef(__$temp_1, 'e', 2),
-  h = _toRef(__$temp_1, g)
+  h = _toRef(__$temp_1, g);
     let __$temp_2 = (useSomething(() => 1)),
-  foo = _toRef(__$temp_2, 'foo');
+  foo = _toRef(__$temp_2, 'foo');;
     console.log(n.value, a.value, c.value, d.value, f.value, h.value, foo.value)
     "
 `;
@@ -194,9 +223,30 @@ exports[`object destructure w/ mid-path default values 1`] = `
 "import { toRef as _toRef } from 'vue'
 
     const __$temp_1 = (useFoo()),
-  b = _toRef((__$temp_1.a || { b: 123 }), 'b')
+  b = _toRef((__$temp_1.a || { b: 123 }), 'b');
     console.log(b.value)
   "
+`;
+
+exports[`should not overwrite current scope 1`] = `
+"
+    const fn = () => {
+      const $ = () => 'foo'
+      const $ref = () => 'bar'
+      const $$ = () => 'baz'
+      console.log($())
+      console.log($ref())
+      console.log($$())
+    }
+    "
+`;
+
+exports[`should not overwrite importing 1`] = `
+"
+    import { $, $$ } from './foo'
+    $('foo')
+    $$('bar')
+    "
 `;
 
 exports[`should not rewrite scope variable 1`] = `

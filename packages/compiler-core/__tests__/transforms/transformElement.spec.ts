@@ -531,7 +531,7 @@ describe('compiler: element transform', () => {
   })
 
   test('error on v-bind with no argument', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
@@ -997,7 +997,7 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+      const root = baseCompile(`<div @vue:updated="foo" />`, {
         prefixIdentifiers: true,
         cacheHandlers: true
       }).ast
@@ -1056,6 +1056,32 @@ describe('compiler: element transform', () => {
             },
             value: {
               content: 'input',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
+        inline: true,
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'msg',
               isStatic: true
             }
           }
@@ -1157,6 +1183,7 @@ describe('compiler: element transform', () => {
       })
     })
 
+    // TODO remove in 3.4
     test('v-is', () => {
       const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
@@ -1174,6 +1201,7 @@ describe('compiler: element transform', () => {
         // should skip v-is runtime check
         directives: undefined
       })
+      expect('v-is="component-name" has been deprecated').toHaveBeenWarned()
     })
 
     // #3934

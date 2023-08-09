@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: transform component slots dynamically named slots 1`] = `
+exports[`compiler: transform component slots > dynamically named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -14,7 +14,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots implicit default slot 1`] = `
+exports[`compiler: transform component slots > implicit default slot 1`] = `
 "const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -29,7 +29,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots named slot with v-for w/ prefixIdentifiers: true 1`] = `
+exports[`compiler: transform component slots > named slot with v-for w/ prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -46,7 +46,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots named slot with v-if + prefixIdentifiers: true 1`] = `
+exports[`compiler: transform component slots > named slot with v-if + prefixIdentifiers: true 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -64,7 +64,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots named slot with v-if + v-else-if + v-else 1`] = `
+exports[`compiler: transform component slots > named slot with v-if + v-else-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -96,7 +96,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots named slot with v-if 1`] = `
+exports[`compiler: transform component slots > named slot with v-if 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -118,7 +118,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots named slots w/ implicit default slot 1`] = `
+exports[`compiler: transform component slots > named slots w/ implicit default slot 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -139,7 +139,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots nested slots scoping 1`] = `
+exports[`compiler: transform component slots > nested slots scoping 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -162,7 +162,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots on component dynamically named slot 1`] = `
+exports[`compiler: transform component slots > on component dynamically named slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -175,7 +175,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots on component named slot 1`] = `
+exports[`compiler: transform component slots > on component named slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -188,7 +188,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots on-component default slot 1`] = `
+exports[`compiler: transform component slots > on-component default slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -201,7 +201,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots template named slots 1`] = `
+exports[`compiler: transform component slots > template named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -215,7 +215,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots with whitespace: 'preserve' implicit default slot 1`] = `
+exports[`compiler: transform component slots > with whitespace: 'preserve' > implicit default slot 1`] = `
 "const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -232,7 +232,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots with whitespace: 'preserve' named default slot + implicit whitespace content 1`] = `
+exports[`compiler: transform component slots > with whitespace: 'preserve' > named default slot + implicit whitespace content 1`] = `
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
@@ -246,7 +246,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: transform component slots with whitespace: 'preserve' should not generate whitespace only default slot 1`] = `
+exports[`compiler: transform component slots > with whitespace: 'preserve' > should not generate whitespace only default slot 1`] = `
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {

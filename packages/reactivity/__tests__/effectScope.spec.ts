@@ -12,7 +12,7 @@ import {
 
 describe('reactivity/effect/scope', () => {
   it('should run', () => {
-    const fnSpy = jest.fn(() => {})
+    const fnSpy = vi.fn(() => {})
     new EffectScope().run(fnSpy)
     expect(fnSpy).toHaveBeenCalledTimes(1)
   })
@@ -24,6 +24,14 @@ describe('reactivity/effect/scope', () => {
 
   it('should return run value', () => {
     expect(new EffectScope().run(() => 1)).toBe(1)
+  })
+
+  it('should work w/ active property', () => {
+    const scope = new EffectScope()
+    scope.run(() => 1)
+    expect(scope.active).toBe(true)
+    scope.stop()
+    expect(scope.active).toBe(false)
   })
 
   it('should collect the effects', () => {
@@ -194,7 +202,7 @@ describe('reactivity/effect/scope', () => {
   })
 
   it('should warn onScopeDispose() is called when there is no active effect scope', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const scope = new EffectScope()
     scope.run(() => {
       onScopeDispose(spy)
@@ -223,9 +231,9 @@ describe('reactivity/effect/scope', () => {
   it('test with higher level APIs', async () => {
     const r = ref(1)
 
-    const computedSpy = jest.fn()
-    const watchSpy = jest.fn()
-    const watchEffectSpy = jest.fn()
+    const computedSpy = vi.fn()
+    const watchSpy = vi.fn()
+    const watchEffectSpy = vi.fn()
 
     let c: ComputedRef
     const scope = new EffectScope()
@@ -275,6 +283,17 @@ describe('reactivity/effect/scope', () => {
       detachedScope.run(() => {})
 
       expect(getCurrentScope()).toBe(currentScope)
+    })
+  })
+
+  it('calling .off() of a detached scope inside an active scope should not break currentScope', () => {
+    const parentScope = new EffectScope()
+
+    parentScope.run(() => {
+      const childScope = new EffectScope(true)
+      childScope.on()
+      childScope.off()
+      expect(getCurrentScope()).toBe(parentScope)
     })
   })
 })

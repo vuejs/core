@@ -11,7 +11,8 @@ import {
   VNodeCall,
   SlotsExpression,
   ObjectExpression,
-  SimpleExpressionNode
+  SimpleExpressionNode,
+  RenderSlotCall
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -788,11 +789,61 @@ describe('compiler: transform component slots', () => {
       const { slots } = parseWithSlots(`<Comp><Comp><slot/></Comp></Comp>`)
       expect(slots).toMatchObject(toMatch)
     })
+
+    // # fix: #6900
+    test('consistent behavior of @xxx:modelValue and @xxx:model-value', () => {
+      const { root: rootUpper } = parseWithSlots(
+        `<div><slot @foo:modelValue="handler" /></div>`
+      )
+      const slotNodeUpper = (rootUpper.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObjUpper = (
+        slotNodeUpper[0].codegenNode! as RenderSlotCall
+      ).arguments[2]
+      expect(propertiesObjUpper).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
+
+      const { root } = parseWithSlots(
+        `<div><slot @foo:model-Value="handler" /></div>`
+      )
+      const slotNode = (root.codegenNode! as VNodeCall)
+        .children as ElementNode[]
+      const propertiesObj = (slotNode[0].codegenNode! as RenderSlotCall)
+        .arguments[2]
+      expect(propertiesObj).toMatchObject({
+        properties: [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'onFoo:modelValue'
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `handler`,
+              isStatic: false
+            }
+          }
+        ]
+      })
+    })
   })
 
   describe('errors', () => {
     test('error on extraneous children w/ named default slot', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #default>foo</template>bar</Comp>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('bar')
@@ -815,7 +866,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on duplicated slot names', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp><template #foo></template><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
@@ -838,7 +889,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on invalid mixed slot usage', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<Comp v-slot="foo"><template #foo></template></Comp>`
       parseWithSlots(source, { onError })
       const index = source.lastIndexOf('#foo')
@@ -861,7 +912,7 @@ describe('compiler: transform component slots', () => {
     })
 
     test('error on v-slot usage on plain elements', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const source = `<div v-slot/>`
       parseWithSlots(source, { onError })
       const index = source.indexOf('v-slot')

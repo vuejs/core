@@ -83,7 +83,7 @@ describe('api: template refs', () => {
 
   it('function ref mount', () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = defineComponent(() => () => h('div', { ref: fn }))
     render(h(Comp), root)
@@ -92,8 +92,8 @@ describe('api: template refs', () => {
 
   it('function ref update', async () => {
     const root = nodeOps.createElement('div')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
     const fn = ref(fn1)
 
     const Comp = defineComponent(() => () => h('div', { ref: fn.value }))
@@ -112,7 +112,7 @@ describe('api: template refs', () => {
 
   it('function ref unmount', async () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const toggle = ref(true)
 
     const Comp = defineComponent(
@@ -181,7 +181,7 @@ describe('api: template refs', () => {
 
   test('string ref inside slots', async () => {
     const root = nodeOps.createElement('div')
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Child = {
       render(this: any) {
         return this.$slots.default()
@@ -273,7 +273,7 @@ describe('api: template refs', () => {
   // #1834
   test('exchange refs', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {
@@ -304,7 +304,7 @@ describe('api: template refs', () => {
   // #1789
   test('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {
@@ -492,5 +492,51 @@ describe('api: template refs', () => {
     show.value = !show.value
     await nextTick()
     expect(mapRefs()).toMatchObject(['2', '3', '4'])
+  })
+
+  // #6697 v-for ref behaves differently under production and development
+  test('named ref in v-for , should be responsive when rendering', async () => {
+    const list = ref([1, 2, 3])
+    const listRefs = ref([])
+    const App = {
+      setup() {
+        return { listRefs }
+      },
+      render() {
+        return h('div', null, [
+          h('div', null, String(listRefs.value)),
+          h(
+            'ul',
+            list.value.map(i =>
+              h(
+                'li',
+                {
+                  ref: 'listRefs',
+                  ref_for: true
+                },
+                i
+              )
+            )
+          )
+        ])
+      }
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    await nextTick()
+    expect(String(listRefs.value)).toBe(
+      '[object Object],[object Object],[object Object]'
+    )
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object],[object Object]</div><ul><li>1</li><li>2</li><li>3</li></ul></div>'
+    )
+
+    list.value.splice(0, 1)
+    await nextTick()
+    expect(String(listRefs.value)).toBe('[object Object],[object Object]')
+    expect(serializeInner(root)).toBe(
+      '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>'
+    )
   })
 })
