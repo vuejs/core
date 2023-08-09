@@ -60,7 +60,7 @@ export function isCoreComponent(tag: string): symbol | void {
   }
 }
 
-const nonIdentifierRE = /^\d|[^\$\w]/
+const nonIdentifierRE = /^\d|[^\$\w\u4e00-\u9fff]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
