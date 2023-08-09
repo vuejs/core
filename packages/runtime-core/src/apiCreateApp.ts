@@ -1,3 +1,4 @@
+import { effectScope } from '@vue/reactivity'
 import {
   ConcreteComponent,
   Data,
@@ -210,6 +211,7 @@ export function createAppAPI<HostElement>(
       rootProps = null
     }
 
+    const scope = effectScope(true)
     const context = createAppContext()
 
     // TODO remove in 3.4
@@ -370,6 +372,7 @@ export function createAppAPI<HostElement>(
 
       unmount() {
         if (isMounted) {
+          scope.stop()
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
@@ -397,7 +400,7 @@ export function createAppAPI<HostElement>(
       runWithContext(fn) {
         currentApp = app
         try {
-          return fn()
+          return scope.run(fn) as ReturnType<typeof fn>
         } finally {
           currentApp = null
         }
