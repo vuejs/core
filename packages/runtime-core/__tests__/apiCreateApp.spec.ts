@@ -11,7 +11,8 @@ import {
   Plugin,
   ref,
   getCurrentInstance,
-  defineComponent
+  defineComponent,
+  onScopeDispose
 } from '@vue/runtime-test'
 
 describe('api: createApp', () => {
@@ -549,6 +550,26 @@ describe('api: createApp', () => {
     expect(
       `TypeError: Cannot read property '__isScriptSetup' of undefined`
     ).not.toHaveBeenWarned()
+  })
+
+  test('should invoke onScopeDispose when the app unmount', () => {
+    const spy = vi.fn(() => {})
+    const root = nodeOps.createElement('div')
+
+    const app = createApp({
+      setup() {
+        return () => h('div')
+      }
+    })
+
+    app.runWithContext(() => {
+      onScopeDispose(spy)
+    })
+
+    app.mount(root)
+    app.unmount()
+
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   // config.compilerOptions is tested in packages/vue since it is only
