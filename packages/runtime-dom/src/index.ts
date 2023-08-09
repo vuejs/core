@@ -64,7 +64,7 @@ export const hydrate = ((...args) => {
 }) as RootHydrateFunction
 
 export const createApp = ((...args) => {
-  const scope = effectScope()
+  const scope = effectScope(true)
 
   const app = ensureRenderer().createApp(...args)
 
