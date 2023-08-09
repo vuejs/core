@@ -30,7 +30,7 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
-const ceChildStyleMap = new Map<string, Set<number>>()
+const ceChildStyleMap = new Map<string, Set<string>>()
 
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
@@ -446,16 +446,19 @@ export class VueElement extends BaseClass {
   ) {
     if (styles) {
       const styleContent = styles.join()
-      let cecStyle = new Set<number>()
+      const ceKey = `__${this._instance!.uid}`
+      let ceKeySet = new Set<string>()
       if (ceChildStyleMap.has(styleContent)) {
-        cecStyle = ceChildStyleMap.get(styleContent)!
-        cecStyle!.add(instance.uid)
-        ceChildStyleMap.set(styleContent, cecStyle)
-        return
+        ceKeySet = ceChildStyleMap.get(styleContent)!
+        if (ceKeySet.has(ceKey)) {
+          ceKeySet!.add(ceKey)
+          ceChildStyleMap.set(styleContent, ceKeySet)
+          return
+        }
       }
 
-      cecStyle!.add(instance.uid)
-      ceChildStyleMap.set(styleContent, cecStyle)
+      ceKeySet!.add(ceKey)
+      ceChildStyleMap.set(styleContent, ceKeySet)
 
       const ceStyleId = `data-v-ce-${instance.uid}`
       styles.forEach((css, index) => {
@@ -486,11 +489,12 @@ export class VueElement extends BaseClass {
   protected _removeChildStyles(styles: string[] | undefined, uid: number) {
     if (styles) {
       const styleContent = styles.join()
-      let cecStyle = new Set<number>()
+      let cecStyle = new Set<string>()
       if (ceChildStyleMap.has(styleContent)) {
+        const ceKey = `__${this._instance!.uid}`
         // update cecStyle
         cecStyle = ceChildStyleMap.get(styleContent)!
-        cecStyle.delete(uid)
+        cecStyle.delete(ceKey)
 
         if (cecStyle.size === 0) {
           // remove style tag

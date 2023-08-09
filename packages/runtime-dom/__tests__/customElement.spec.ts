@@ -764,19 +764,26 @@ describe('defineCustomElement', () => {
           return [
             h('p', { class: 'my-red' }, 'This should be red'),
             h(Child),
+            h(Child),
             h(Child)
           ]
         }
       })
       customElements.define('my-el-with-multiple-child', Foo)
-      container.innerHTML = `<my-el-with-multiple-child></my-el-with-multiple-child>`
+      container.innerHTML = `<my-el-with-multiple-child></my-el-with-multiple-child><my-el-with-multiple-child></my-el-with-multiple-child>`
       await nextTick()
 
-      const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelectorAll('style')!
+      const el1 = container.childNodes[0] as VueElement
+      const style = el1.shadowRoot?.querySelectorAll('style')!
       expect(style.length).toBe(2)
       expect(style[0].textContent).toBe(`.my-red { color: red; }`)
       expect(style[1].textContent).toBe(`.my-green { color: green; }`)
+
+      const el2 = container.childNodes[1] as VueElement
+      const style2 = el2.shadowRoot?.querySelectorAll('style')!
+      expect(style2.length).toBe(2)
+      expect(style2[0].textContent).toBe(`.my-red { color: red; }`)
+      expect(style2[1].textContent).toBe(`.my-green { color: green; }`)
     })
 
     test('When the component is unmounted, the style tag can be handled correctly', async () => {
