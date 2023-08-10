@@ -201,7 +201,7 @@ describe('compiler: transform', () => {
     expect((ast as any).children[1].props[0].exp.content).toBe(`_hoisted_2`)
   })
   
-  test('context.filename', () => {
+  test('context.filename and selfName', () => {
     const ast = baseParse(`<div />`)
     
     const calls: any[] = []
@@ -210,13 +210,14 @@ describe('compiler: transform', () => {
     }
     
     transform(ast, {
-      filename: '/the/filename.vue',
+      filename: '/the/fileName.vue',
       nodeTransforms: [plugin]
     })
     
     expect(calls.length).toBe(2)
     expect(calls[1]).toMatchObject({
-      filename: '/the/filename.vue'
+      filename: '/the/fileName.vue',
+      selfName: 'FileName'
     })
   })
 
