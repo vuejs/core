@@ -400,7 +400,7 @@ export function createAppAPI<HostElement>(
       runWithContext(fn) {
         currentApp = app
         try {
-          return scope.run(fn) as ReturnType<typeof fn>
+          return scope.run(fn)!
         } finally {
           currentApp = null
         }
