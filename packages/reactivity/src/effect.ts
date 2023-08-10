@@ -367,26 +367,19 @@ export function trigger(
     ? { target, type, key, newValue, oldValue, oldTarget }
     : undefined
 
-  if (deps.length === 1) {
-    if (deps[0]) {
-      if (__DEV__) {
-        triggerEffects(deps[0], eventInfo)
-      } else {
-        triggerEffects(deps[0])
-      }
+  const effects: ReactiveEffect[] = []
+  for (const dep of deps) {
+    if (dep) {
+      effects.push(...dep)
     }
+  }
+  if (__DEV__) {
+    triggerEffects(
+      effects.length === 1 ? effects : createDep(effects),
+      eventInfo
+    )
   } else {
-    const effects: ReactiveEffect[] = []
-    for (const dep of deps) {
-      if (dep) {
-        effects.push(...dep)
-      }
-    }
-    if (__DEV__) {
-      triggerEffects(createDep(effects), eventInfo)
-    } else {
-      triggerEffects(createDep(effects))
-    }
+    triggerEffects(effects.length === 1 ? effects : createDep(effects))
   }
 }
 
