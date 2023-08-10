@@ -1373,22 +1373,21 @@ function baseCreateRenderer(
 
           // add style tag when the component is a child
           // component of a custom element
-          if (
-            instance &&
-            // If the parent component is wrapped by an defineAsyncComponent function,
-            // it will not be processed
-            !(
-              instance.parent &&
-              (instance.parent.type as ComponentOptions).__asyncLoader
-            )
-          ) {
-            const styles =
-              (instance.isCEChild &&
-                (instance.type as ConcreteComponent & { styles?: string[] })
-                  .styles) ||
-              null
-            if (instance.addCEChildStyle && styles) {
-              instance.addCEChildStyle(styles, instance)
+          if (instance && instance.parent) {
+            if (
+              !(instance.parent.type as ComponentOptions).__asyncLoader ||
+              ((instance.parent.type as ComponentOptions).__asyncLoader &&
+                instance.parent.parent &&
+                instance.parent.parent.isCE)
+            ) {
+              const styles =
+                (instance.isCEChild &&
+                  (instance.type as ConcreteComponent & { styles?: string[] })
+                    .styles) ||
+                null
+              if (instance.addCEChildStyle && styles) {
+                instance.addCEChildStyle(styles, instance)
+              }
             }
           }
 

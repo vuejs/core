@@ -1,4 +1,5 @@
 import {
+  ComponentOptions,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
@@ -644,8 +645,38 @@ describe('defineCustomElement', () => {
           })
         })
       )
+
       customElements.define('my-el-with-child-styles-async', Foo)
       container.innerHTML = `<my-el-with-child-styles-async></my-el-with-child-styles-async>`
+      await new Promise(r => setTimeout(r))
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`div { color: red; }`)
+      expect(style[1].textContent).toBe(`.Child { color: blue; }`)
+    })
+
+    test('child components in shadow dom should have styles & async & descendants', async () => {
+      const Child = defineAsyncComponent(() => {
+        return Promise.resolve({
+          styles: [`.Child { color: blue; }`],
+          render() {
+            return h('div', { class: 'Child' }, 'hello')
+          }
+        } as ComponentOptions)
+      })
+      const Parent = {
+        components: { Child },
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', {}, ['hello', h(Child)])
+        }
+      }
+      const Foo = defineCustomElement(Parent)
+
+      customElements.define('my-el-with-child-styles-async-descendants', Foo)
+      container.innerHTML = `<my-el-with-child-styles-async-descendants></my-el-with-child-styles-async-descendants>`
       await new Promise(r => setTimeout(r))
 
       const el = container.childNodes[0] as VueElement
