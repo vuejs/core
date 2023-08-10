@@ -1,8 +1,8 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { hyphenate, isArray, isString, isFunction } from '@vue/shared'
 import {
   ErrorCodes,
   ComponentInternalInstance,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling, warn
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -81,7 +81,7 @@ const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
 function createInvoker(
-  initialValue: EventValue,
+  initialValue: EventValue | unknown,
   instance: ComponentInternalInstance | null
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
@@ -109,9 +109,20 @@ function createInvoker(
       [e]
     )
   }
-  invoker.value = initialValue
+  invoker.value = sanitizeEventValue(initialValue)
   invoker.attached = getNow()
   return invoker
+}
+
+function sanitizeEventValue(value: unknown): EventValue {
+  if (isFunction(value) || isArray(value)) {
+    return value as EventValue
+  }
+
+  if (__DEV__) {
+    warn('Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' + (isString(value) ? value : typeof value))
+  }
+  return () => {}
 }
 
 function patchStopImmediatePropagation(
@@ -124,7 +135,7 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
+    return (value as Function[]).map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
   } else {
     return value
   }
