@@ -200,6 +200,25 @@ describe('compiler: transform', () => {
     expect((ast as any).children[0].props[0].exp.content).toBe(`_hoisted_1`)
     expect((ast as any).children[1].props[0].exp.content).toBe(`_hoisted_2`)
   })
+  
+  test('context.filename', () => {
+    const ast = baseParse(`<div />`)
+    
+    const calls: any[] = []
+    const plugin: NodeTransform = (node, context) => {
+      calls.push({ ...context })
+    }
+    
+    transform(ast, {
+      filename: '/the/filename.vue',
+      nodeTransforms: [plugin]
+    })
+    
+    expect(calls.length).toBe(2)
+    expect(calls[1]).toMatchObject({
+      filename: '/the/filename.vue'
+    })
+  })
 
   test('onError option', () => {
     const ast = baseParse(`<div/>`)
