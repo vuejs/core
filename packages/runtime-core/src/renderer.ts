@@ -1375,10 +1375,10 @@ function baseCreateRenderer(
           // component of a custom element
           if (instance && instance.parent) {
             if (
-              !(instance.parent.type as ComponentOptions).__asyncLoader ||
-              ((instance.parent.type as ComponentOptions).__asyncLoader &&
-                instance.parent.parent &&
-                instance.parent.parent.isCE)
+              !(
+                (instance.parent.type as ComponentOptions).__asyncLoader &&
+                instance.parent.isCE
+              )
             ) {
               const styles =
                 (instance.isCEChild &&

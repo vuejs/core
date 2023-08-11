@@ -658,11 +658,21 @@ describe('defineCustomElement', () => {
     })
 
     test('child components in shadow dom should have styles & async & descendants', async () => {
+      const Child2 = defineAsyncComponent(() => {
+        return Promise.resolve({
+          styles: [`.Child2 { color: pink; }`],
+          render() {
+            return h('div', { class: 'Child2' }, 'pink')
+          }
+        } as ComponentOptions)
+      })
+
       const Child = defineAsyncComponent(() => {
         return Promise.resolve({
+          components: { Child2 },
           styles: [`.Child { color: blue; }`],
           render() {
-            return h('div', { class: 'Child' }, 'hello')
+            return h('div', { class: 'Child' }, ['hello', h(Child2)])
           }
         } as ComponentOptions)
       })
@@ -681,9 +691,10 @@ describe('defineCustomElement', () => {
 
       const el = container.childNodes[0] as VueElement
       const style = el.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(2)
+      expect(style.length).toBe(3)
       expect(style[0].textContent).toBe(`div { color: red; }`)
       expect(style[1].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[2].textContent).toBe(`.Child2 { color: pink; }`)
     })
 
     test('set DOM property before resolve', async () => {
