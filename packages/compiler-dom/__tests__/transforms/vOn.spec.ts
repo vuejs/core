@@ -292,4 +292,31 @@ describe('compiler-dom: transform v-on', () => {
       }
     })
   })
+
+  test('cache handler w/ modifiers (passed to a component)', () => {
+    const {
+      root,
+      props: [prop]
+    } = parseWithVOn(`<Comp @keyup.enter.capture="foo" />`, {
+      prefixIdentifiers: true,
+      cacheHandlers: true,
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST
+      }
+    })
+    expect(root.cached).toBe(1)
+    expect(prop).toMatchObject({
+      key: {
+        content: `onKeyupCapture`
+      },
+      value: {
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+        index: 0,
+        value: {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: V_ON_WITH_KEYS
+        }
+      }
+    })
+  })
 })

@@ -114,11 +114,15 @@ export const transformOn: DirectiveTransform = (
           modifiers.length === 0
         ) &&
         // #1541 bail if this is a member exp handler passed to a component -
-        // we need to use the original function to preserve arity,
+        // we need to use the original function to preserve arity if without modifiers,
         // e.g. <transition> relies on checking cb.length to determine
         // transition end handling. Inline function is ok since its arity
         // is preserved even when cached.
-        !(isMemberExp && node.tagType === ElementTypes.COMPONENT) &&
+        !(
+          isMemberExp &&
+          node.tagType === ElementTypes.COMPONENT &&
+          modifiers.length === 0
+        ) &&
         // bail if the function references closure variables (v-for, v-slot)
         // it must be passed fresh to avoid stale values.
         !hasScopeRef(exp, context.identifiers)
