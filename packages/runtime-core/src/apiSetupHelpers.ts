@@ -4,7 +4,8 @@ import {
   isFunction,
   Prettify,
   UnionToIntersection,
-  extend
+  extend,
+  LooseRequired
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -293,10 +294,6 @@ type InferDefault<P, T> =
   | ((props: P) => T & {})
   | (T extends NativeType ? T : never)
 
-type NonPartial<T> = {
-  [K in keyof Required<T>]: T[K]
-}
-
 type UndefinedDefault<T, Default> = Default extends undefined
   ? T
   : NotUndefined<T>
@@ -306,7 +303,7 @@ type PropsWithDefaults<
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T
 > = Readonly<
-  NonPartial<Omit<T, keyof (Defaults | BKeys)>> & {
+  LooseRequired<Omit<T, keyof (Defaults | BKeys)>> & {
     [K in keyof Defaults]-?: K extends keyof T
       ? UndefinedDefault<T[K], Defaults[K]>
       : never
