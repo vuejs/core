@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 
