@@ -69,6 +69,7 @@ async function run() {
     removeCache()
   }
 }
+
 /**
  * Builds all the targets in parallel.
  * @param {Array<string>} targets - An array of targets to build.
@@ -151,7 +152,6 @@ async function build(target) {
  * @param {string[]} targets - The targets to check sizes for.
  * @returns {void}
  */
-
 function checkAllSizes(targets) {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
