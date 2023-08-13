@@ -29,10 +29,7 @@ export function processDefineEmits(
     ctx.emitsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    ctx.emitIdentifier =
-      declId.type === 'Identifier' ? declId.name : ctx.getString(declId)
-  }
+  ctx.emitDecl = declId
 
   return true
 }
