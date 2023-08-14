@@ -40,7 +40,7 @@ export class ComputedRefImpl<T> {
   public _dirty = true
   public _scheduled = false
   public _deferredComputeds: ComputedRefImpl<any>[] = []
-  public _depIndexes = new Map<Dep, number>()
+  public _depIndexes = new Map<Dep | undefined, number>()
   public _cacheable: boolean
 
   constructor(
@@ -73,11 +73,10 @@ export class ComputedRefImpl<T> {
     if (!self._dirty && self._deferredComputeds.length) {
       if (self._deferredComputeds.length >= 2) {
         for (const { dep } of self._deferredComputeds) {
-          self._depIndexes.set(dep!, self.effect.deps.indexOf(dep!))
+          self._depIndexes.set(dep, self.effect.deps.indexOf(dep!))
         }
         self._deferredComputeds = self._deferredComputeds.sort(
-          (a, b) =>
-            self._depIndexes.get(a.dep!)! - self._depIndexes.get(b.dep!)!
+          (a, b) => self._depIndexes.get(a.dep)! - self._depIndexes.get(b.dep)!
         )
         self._depIndexes.clear()
       }
