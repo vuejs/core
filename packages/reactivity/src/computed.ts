@@ -56,10 +56,10 @@ export class ComputedRefImpl<T> {
         } else {
           this._dirty = true
         }
-        if (!this._scheduled) {
-          this._scheduled = true
-          triggerRefValue(this, this)
-        }
+      }
+      if (!this._scheduled) {
+        this._scheduled = true
+        triggerRefValue(this, this)
       }
     })
     this.effect.computed = this

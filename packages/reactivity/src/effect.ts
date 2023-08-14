@@ -200,10 +200,10 @@ export function effect<T = any>(
       } else {
         _dirty = true
       }
-      if (!_scheduled) {
-        _scheduled = true
-        pendingEffectRunners.push(run)
-      }
+    }
+    if (!_scheduled) {
+      _scheduled = true
+      pendingEffectRunners.push(run)
     }
   })
   if (options) {
