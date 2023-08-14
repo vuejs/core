@@ -1364,7 +1364,7 @@ describe('function syntax w/ runtime props', () => {
   )
 
   defineComponent(
-    (_props: { msg: string }) => {
+    (_props: { msg: number }) => {
       return () => {}
     },
     {

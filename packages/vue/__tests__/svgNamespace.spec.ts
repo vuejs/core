@@ -56,7 +56,6 @@ describe('SVG support', () => {
     // set a transition class on the <div> - which is only respected on non-svg
     // patches
     ;(f2 as any)[vtcKey] = ['baz']
-    console.log('我打印了f2', f2)
     cls.value = 'bar'
     await nextTick()
     expect(f1.getAttribute('class')).toBe('bar')
