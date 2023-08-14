@@ -72,7 +72,6 @@ export class ComputedRefImpl<T> {
     const self = toRaw(this)
     if (!self._dirty && self._deferredComputeds.length) {
       if (self._deferredComputeds.length >= 2) {
-        self._depIndexes.clear()
         for (const { dep } of self._deferredComputeds) {
           self._depIndexes.set(dep!, self.effect.deps.indexOf(dep!))
         }
@@ -80,6 +79,7 @@ export class ComputedRefImpl<T> {
           (a, b) =>
             self._depIndexes.get(a.dep!)! - self._depIndexes.get(b.dep!)!
         )
+        self._depIndexes.clear()
       }
       pauseTracking()
       for (const deferredComputed of self._deferredComputeds) {

@@ -220,13 +220,13 @@ export function effect<T = any>(
   function run() {
     if (!_dirty && _deferredComputeds.length) {
       if (_deferredComputeds.length >= 2) {
-        _depIndexes.clear()
         for (const { dep } of _deferredComputeds) {
           _depIndexes.set(dep!, _effect.deps.indexOf(dep!))
         }
         _deferredComputeds = _deferredComputeds.sort(
           (a, b) => _depIndexes.get(a.dep!)! - _depIndexes.get(b.dep!)!
         )
+        _depIndexes.clear()
       }
       for (const deferredComputed of _deferredComputeds) {
         deferredComputed.value
