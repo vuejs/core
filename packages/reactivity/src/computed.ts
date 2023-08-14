@@ -41,6 +41,7 @@ export class ComputedRefImpl<T> {
   public _scheduled = false
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   public _cacheable: boolean
+  public _depIndexes = new Map<Dep, number>()
 
   constructor(
     getter: ComputedGetter<T>,
@@ -70,12 +71,13 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     if (!self._dirty && self._deferredComputeds.length) {
-      if (self._deferredComputeds.length >= 2) {
-        self._deferredComputeds = self._deferredComputeds.sort(
-          (a, b) =>
-            self.effect.deps.indexOf(a.dep!) - self.effect.deps.indexOf(b.dep!)
-        )
+      self._depIndexes.clear()
+      for (const c of self._deferredComputeds) {
+        self._depIndexes.set(c.dep!, self.effect.deps.indexOf(c.dep!))
       }
+      self._deferredComputeds = self._deferredComputeds.sort(
+        (a, b) => self._depIndexes.get(a.dep!)! - self._depIndexes.get(b.dep!)!
+      )
       pauseTracking()
       for (const deferredComputed of self._deferredComputeds) {
         deferredComputed.value

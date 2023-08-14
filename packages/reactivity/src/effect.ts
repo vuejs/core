@@ -192,6 +192,7 @@ export function effect<T = any>(
   let _scheduled = false
   let _deferredComputeds: ComputedRefImpl<any>[] = []
 
+  const _depIndexes = new Map<Dep, number>()
   const _effect = new ReactiveEffect(fn, deferredComputed => {
     if (!_dirty) {
       if (deferredComputed) {
@@ -218,11 +219,13 @@ export function effect<T = any>(
 
   function run() {
     if (!_dirty && _deferredComputeds.length) {
-      if (_deferredComputeds.length >= 2) {
-        _deferredComputeds = _deferredComputeds.sort(
-          (a, b) => _effect.deps.indexOf(a.dep!) - _effect.deps.indexOf(b.dep!)
-        )
+      _depIndexes.clear()
+      for (const c of _deferredComputeds) {
+        _depIndexes.set(c.dep!, _effect.deps.indexOf(c.dep!))
       }
+      _deferredComputeds = _deferredComputeds.sort(
+        (a, b) => _depIndexes.get(a.dep!)! - _depIndexes.get(b.dep!)!
+      )
       for (const deferredComputed of _deferredComputeds) {
         deferredComputed.value
         if (_dirty) {
