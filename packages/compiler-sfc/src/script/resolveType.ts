@@ -197,21 +197,23 @@ function innerResolveTypeElements(
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        const typeParameters: Record<string, Node> = Object.create(null)
+        const typeParams: Record<string, Node> = Object.create(null)
         if (
           resolved.type === 'TSTypeAliasDeclaration' &&
           resolved.typeParameters &&
           node.typeParameters
         ) {
           resolved.typeParameters.params.forEach((p, i) => {
-            typeParameters[p.name] = node.typeParameters!.params[i]
+            let param = typeParameters && typeParameters[p.name]
+            if (!param) param = node.typeParameters!.params[i]
+            typeParams[p.name] = param
           })
         }
         return resolveTypeElements(
           ctx,
           resolved,
           resolved._ownerScope,
-          typeParameters
+          typeParams
         )
       } else {
         if (typeof typeName === 'string') {
@@ -219,7 +221,13 @@ function innerResolveTypeElements(
             // @ts-ignore
             SupportedBuiltinsSet.has(typeName)
           ) {
-            return resolveBuiltin(ctx, node, typeName as any, scope)
+            return resolveBuiltin(
+              ctx,
+              node,
+              typeName as any,
+              scope,
+              typeParameters
+            )
           } else if (typeName === 'ReturnType' && node.typeParameters) {
             // limited support, only reference types
             const ret = resolveReturnType(
@@ -578,9 +586,20 @@ function resolveBuiltin(
   ctx: TypeResolveContext,
   node: TSTypeReference | TSExpressionWithTypeArguments,
   name: GetSetType<typeof SupportedBuiltinsSet>,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>
 ): ResolvedElements {
-  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope)
+  let param: Node = node.typeParameters!.params[0]
+  if (
+    param.type === 'TSTypeReference' &&
+    param.typeName.type === 'Identifier' &&
+    typeParameters &&
+    typeParameters[param.typeName.name]
+  ) {
+    param = typeParameters[param.typeName.name]
+  }
+
+  const t = resolveTypeElements(ctx, param, scope, typeParameters)
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }

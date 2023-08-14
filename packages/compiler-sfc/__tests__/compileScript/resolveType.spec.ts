@@ -362,6 +362,19 @@ describe('resolveType', () => {
     })
   })
 
+  test('generic type /w type alias', () => {
+    expect(
+      resolve(`
+      type Aliased<T> = Readonly<Partial<T>>
+      type Props<T> = Aliased<T>
+      type Foo = { foo: string; }
+      defineProps<Props<Foo>>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
   test('namespace merging', () => {
     expect(
       resolve(`
