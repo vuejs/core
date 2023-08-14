@@ -12,8 +12,8 @@
     "size-baseline": "node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler && cd packages/size-check && vite build && node brotli",
     "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
-    "format": "prettier --write --cache --parser typescript \"**/*.[tj]s?(x)\"",
-    "format-check": "prettier --check --cache --parser typescript \"**/*.[tj]s?(x)\"",
+    "format": "prettier --write --cache \"**/*.[tj]s?(x)\"",
+    "format-check": "prettier --check --cache \"**/*.[tj]s?(x)\"",
     "test": "vitest",
     "test-unit": "vitest -c vitest.unit.config.ts",
     "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
@@ -35,7 +35,7 @@
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
     "build-ssr-esm": "node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages/sfc-playground && npm run build",
-    "preinstall": "node ./scripts/preinstall.js",
+    "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
@@ -85,10 +85,10 @@
     "marked": "^4.0.10",
     "minimist": "^1.2.0",
     "npm-run-all": "^4.1.5",
-    "prettier": "^2.7.1",
+    "prettier": "^3.0.1",
     "pug": "^3.0.1",
     "puppeteer": "~19.6.0",
-    "rollup": "^3.20.2",
+    "rollup": "^3.26.0",
     "rollup-plugin-dts": "^5.3.0",
     "rollup-plugin-esbuild": "^5.0.0",
     "rollup-plugin-polyfill-node": "^0.12.0",
@@ -98,7 +98,7 @@
     "terser": "^5.15.1",
     "todomvc-app-css": "^2.3.0",
     "tslib": "^2.5.0",
-    "typescript": "^5.0.0",
+    "typescript": "^5.1.6",
     "vite": "^4.3.0",
     "vitest": "^0.30.1"
   }

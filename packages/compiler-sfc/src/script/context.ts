@@ -1,4 +1,9 @@
-import { type Node, type ObjectPattern, type Program } from '@babel/types'
+import {
+  type Node,
+  type ObjectPattern,
+  type Program,
+  type CallExpression
+} from '@babel/types'
 import { type SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, type ParserPlugin } from '@babel/parser'
@@ -41,7 +46,8 @@ export class ScriptCompileContext {
   hasDefineModelCall = false
 
   // defineProps
-  propsIdentifier: string | undefined
+  propsCall: CallExpression | undefined
+  propsDecl: Node | undefined
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
@@ -52,7 +58,7 @@ export class ScriptCompileContext {
   // defineEmits
   emitsRuntimeDecl: Node | undefined
   emitsTypeDecl: Node | undefined
-  emitIdentifier: string | undefined
+  emitDecl: Node | undefined
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}
