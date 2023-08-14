@@ -8,6 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
+import { getEscapedCssVarName } from '../script/utils'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
@@ -26,14 +27,12 @@ export function genCssVarsFromList(
     .join(',\n  ')}\n}`
 }
 
-const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
-
 function genVarName(id: string, raw: string, isProd: boolean): string {
   if (isProd) {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(cssVarNameEscapeSymbolsRE, s => `\\${s}`)}`
+    return `${id}-${getEscapedCssVarName(raw)}`
   }
 }
 
