@@ -1,9 +1,6 @@
 name: Export Size
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
@@ -21,4 +18,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           comment_token: ${{ secrets.COMMENT_TOKEN }}
-          paths: packages/compiler-core,packages/compiler-dom,packages/compiler-sfc,packages/compiler-ssr,packages/reactivity,packages/reactivity-transform,packages/runtime-core,packages/runtime-dom,packages/runtime-test,packages/server-renderer,packages/sfc-playground,packages/size-check,packages/template-explorer,packages/vue,packages/vue-compat,packages/shared
+          paths: packages/compiler-core,packages/compiler-dom,packages/compiler-sfc,packages/compiler-ssr,packages/reactivity,packages/reactivity-transform,packages/runtime-core,packages/runtime-dom,packages/server-renderer,packages/vue,packages/vue-compat,packages/shared
