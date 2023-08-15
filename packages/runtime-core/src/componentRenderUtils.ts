@@ -135,7 +135,7 @@ export function renderComponentRoot(
 
   if (fallthroughAttrs && inheritAttrs !== false) {
     const { shapeFlag, type, props } = root
-
+    // fix #8969 should not fallthrough attr if it has been declared as a prop in the root component
     if (shapeFlag & ShapeFlags.COMPONENT && props) {
       Object.keys(fallthroughAttrs).forEach(key => {
         if (key in props) {
