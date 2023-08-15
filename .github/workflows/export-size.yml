@@ -17,5 +17,5 @@ jobs:
       - uses: antfu/export-size-action@main
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_token: ${{ secrets.COMMENT_TOKEN }}
+          comment_token: ${{ secrets.GITHUB_TOKEN }}
           paths: packages/compiler-core,packages/compiler-dom,packages/compiler-sfc,packages/compiler-ssr,packages/reactivity,packages/reactivity-transform,packages/runtime-core,packages/runtime-dom,packages/server-renderer,packages/vue,packages/vue-compat,packages/shared
