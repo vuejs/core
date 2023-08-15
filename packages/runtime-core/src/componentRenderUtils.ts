@@ -2,7 +2,8 @@ import {
   ComponentInternalInstance,
   FunctionalComponent,
   Data,
-  getComponentName
+  getComponentName,
+  ConcreteComponent
 } from './component'
 import {
   VNode,
@@ -133,8 +134,18 @@ export function renderComponentRoot(
   }
 
   if (fallthroughAttrs && inheritAttrs !== false) {
+    const { shapeFlag, type, props } = root
+
+    if (shapeFlag & ShapeFlags.COMPONENT && props) {
+      Object.keys(fallthroughAttrs).forEach(key => {
+        if (key in props) {
+          const propsDef = (type as ConcreteComponent).props
+          if (propsDef && key in propsDef) delete fallthroughAttrs![key]
+        }
+      })
+    }
+
     const keys = Object.keys(fallthroughAttrs)
-    const { shapeFlag } = root
     if (keys.length) {
       if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
         if (propsOptions && keys.some(isModelListener)) {
