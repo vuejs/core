@@ -92,20 +92,22 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
   ) {}
 
   get(target: Target, key: string | symbol, receiver: object) {
+    const isReadonly = this._isReadonly,
+      shallow = this._shallow
     if (key === ReactiveFlags.IS_REACTIVE) {
-      return !this._isReadonly
+      return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
-      return this._isReadonly
+      return isReadonly
     } else if (key === ReactiveFlags.IS_SHALLOW) {
-      return this._shallow
+      return shallow
     } else if (
       key === ReactiveFlags.RAW &&
       receiver ===
-        (this._isReadonly
-          ? this._shallow
+        (isReadonly
+          ? shallow
             ? shallowReadonlyMap
             : readonlyMap
-          : this._shallow
+          : shallow
           ? shallowReactiveMap
           : reactiveMap
         ).get(target)
@@ -115,7 +117,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     const targetIsArray = isArray(target)
 
-    if (!this._isReadonly) {
+    if (!isReadonly) {
       if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
         return Reflect.get(arrayInstrumentations, key, receiver)
       }
@@ -130,11 +132,11 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return res
     }
 
-    if (!this._isReadonly) {
+    if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
 
-    if (this._shallow) {
+    if (shallow) {
       return res
     }
 
@@ -147,7 +149,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
       // and reactive here to avoid circular dependency.
-      return this._isReadonly ? readonly(res) : reactive(res)
+      return isReadonly ? readonly(res) : reactive(res)
     }
 
     return res
