@@ -1,0 +1,24 @@
+name: Export Size
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    env:
+      CI_JOB_NUMBER: 1
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+      - uses: antfu/export-size-action@main
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment_token: ${{ secrets.COMMENT_TOKEN }}
+          paths: packages/compiler-core,packages/compiler-dom,packages/compiler-sfc,packages/compiler-ssr,packages/reactivity,packages/reactivity-transform,packages/runtime-core,packages/runtime-dom,packages/runtime-test,packages/server-renderer,packages/sfc-playground,packages/size-check,packages/template-explorer,packages/vue,packages/vue-compat,packages/shared
