@@ -248,8 +248,9 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
-  hidden?: Booleanish
+  hidden?: Booleanish | '' | 'hidden' | 'until-found'
   id?: string
+  inert?: Booleanish
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
