@@ -271,6 +271,7 @@ export function processFor(
 
   const { addIdentifiers, removeIdentifiers, scopes } = context
   const { source, value, key, index } = parseResult
+  const isTemplate = isTemplateNode(node)
 
   const forNode: ForNode = {
     type: NodeTypes.FOR,
@@ -280,7 +281,8 @@ export function processFor(
     keyAlias: key,
     objectIndexAlias: index,
     parseResult,
-    children: isTemplateNode(node) ? node.children : [node]
+    children: isTemplate ? node.children : [node],
+    isTemplateFor: isTemplate
   }
 
   context.replaceNode(forNode)
