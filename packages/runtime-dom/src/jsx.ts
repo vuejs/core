@@ -239,7 +239,7 @@ export type StyleValue = string | CSSProperties | Array<StyleValue>
 export type ClassValue =
   | undefined
   | string
-  | Record<string, unknown>
+  | Record<string | number, unknown>
   | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
