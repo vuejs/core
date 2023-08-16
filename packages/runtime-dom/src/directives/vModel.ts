@@ -41,7 +41,10 @@ type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
 const elementMap = new WeakMap<Element, Set<Function>>()
 
 function unmounted(el: HTMLElement) {
-  elementMap.get(el)?.forEach(off => off())
+  const offs = elementMap.get(el)
+  if (offs) {
+    offs.forEach(off => off())
+  }
 }
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
