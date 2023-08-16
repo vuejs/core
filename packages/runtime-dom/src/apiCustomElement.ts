@@ -255,7 +255,7 @@ export class VueElement extends BaseClass {
       if (props && !isArray(props)) {
         for (const key in props) {
           const opt = props[key]
-          if (opt === Number || (opt && opt.type === Number)) {
+          if (opt === Number || (opt && (opt.type === Number || typeof opt.default === 'number'))) {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }
@@ -360,6 +360,7 @@ export class VueElement extends BaseClass {
   }
 
   private _createVNode(): VNode<any, any> {
+    console.log('####', this._props)
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
       vnode.ce = instance => {
