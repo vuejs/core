@@ -574,5 +574,17 @@ describe('compiler: expression transform', () => {
         `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
       )
     })
+
+    test('should not prefix temp variable of for', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (let i = 0; i < 10; i++) {
+            log(i,arr[i])
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.i`)
+      expect(code).toMatchSnapshot()
+    })
   })
 })
