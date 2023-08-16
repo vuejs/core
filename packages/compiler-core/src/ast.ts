@@ -275,6 +275,7 @@ export interface ForNode extends Node {
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
   isTemplateFor?: boolean
+  templateProps?: Array<AttributeNode | DirectiveNode>
 }
 
 export interface TextCallNode extends Node {

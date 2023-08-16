@@ -282,7 +282,8 @@ export function processFor(
     objectIndexAlias: index,
     parseResult,
     children: isTemplate ? node.children : [node],
-    isTemplateFor: isTemplate
+    isTemplateFor: isTemplate,
+    templateProps: isTemplate ? node.props : undefined,
   }
 
   context.replaceNode(forNode)
