@@ -34,7 +34,7 @@ import {
 } from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { capitalize, extend, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -1158,7 +1158,7 @@ function recordTypes(
           scope,
           stmt.source.value
         )
-        Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
+        extend(scope.exportedTypes, sourceScope.exportedTypes)
       } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
         if (stmt.declaration.type !== 'Identifier') {
           recordType(stmt.declaration, types, declares, 'default')

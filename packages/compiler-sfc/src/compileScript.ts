@@ -6,7 +6,7 @@ import {
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
+import { extend, generateCodeFrame } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -735,7 +735,7 @@ export function compileScript(
   // 7. analyze binding metadata
   // `defineProps` & `defineModel` also register props bindings
   if (scriptAst) {
-    Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
+    extend(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   for (const [key, { isType, imported, source }] of Object.entries(
     ctx.userImports
