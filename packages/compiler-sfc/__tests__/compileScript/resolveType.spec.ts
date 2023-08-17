@@ -362,13 +362,25 @@ describe('resolveType', () => {
     })
   })
 
-  test('generic type /w type alias', () => {
+  test('generic type /w generic type alias', () => {
     expect(
       resolve(`
       type Aliased<T> = Readonly<Partial<T>>
       type Props<T> = Aliased<T>
       type Foo = { foo: string; }
       defineProps<Props<Foo>>()
+    `).props
+    ).toStrictEqual({
+      foo: ['String']
+    })
+  })
+
+  test('generic type /w simple type alias', () => {
+    expect(
+      resolve(`
+      type Aliased<T> = T
+      type Foo = { foo: string; }
+      defineProps<Aliased<Foo>>()
     `).props
     ).toStrictEqual({
       foo: ['String']

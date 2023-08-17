@@ -217,6 +217,14 @@ function innerResolveTypeElements(
         )
       } else {
         if (typeof typeName === 'string') {
+          if (typeParameters && typeParameters[typeName]) {
+            return resolveTypeElements(
+              ctx,
+              typeParameters[typeName],
+              scope,
+              typeParameters
+            )
+          }
           if (
             // @ts-ignore
             SupportedBuiltinsSet.has(typeName)
