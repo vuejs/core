@@ -363,7 +363,6 @@ export class VueElement extends BaseClass {
   }
 
   private _createVNode(): VNode<any, any> {
-    console.log('####', this._props)
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
       vnode.ce = instance => {
