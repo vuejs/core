@@ -597,17 +597,7 @@ function resolveBuiltin(
   scope: TypeScope,
   typeParameters?: Record<string, Node>
 ): ResolvedElements {
-  let param: Node = node.typeParameters!.params[0]
-  if (
-    param.type === 'TSTypeReference' &&
-    param.typeName.type === 'Identifier' &&
-    typeParameters &&
-    typeParameters[param.typeName.name]
-  ) {
-    param = typeParameters[param.typeName.name]
-  }
-
-  const t = resolveTypeElements(ctx, param, scope, typeParameters)
+  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope, typeParameters)
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
