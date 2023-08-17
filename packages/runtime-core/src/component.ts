@@ -1082,7 +1082,7 @@ export function formatComponentName(
 
   if (!name && instance && instance.parent) {
     // try to infer the name based on reverse resolution
-    const inferFromRegistry = (registry: Record<string, any> | undefined) => {
+    const inferFromRegistry = (registry?: Record<string, any>) => {
       for (const key in registry) {
         if (registry[key] === Component) {
           return key

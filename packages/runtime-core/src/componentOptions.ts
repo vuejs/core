@@ -1113,7 +1113,7 @@ function mergeInject(
 }
 
 function normalizeInject(
-  raw: ComponentInjectOptions | undefined
+  raw?: ComponentInjectOptions
 ): ObjectInjectOptions | undefined {
   if (isArray(raw)) {
     const res: ObjectInjectOptions = {}
@@ -1133,21 +1133,12 @@ function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
   return to ? extend(Object.create(null), to, from) : from
 }
 
-function mergeEmitsOrPropsOptions(
-  to: EmitsOptions | undefined,
-  from: EmitsOptions | undefined
-): EmitsOptions | undefined
-function mergeEmitsOrPropsOptions(
-  to: ComponentPropsOptions | undefined,
-  from: ComponentPropsOptions | undefined
-): ComponentPropsOptions | undefined
-function mergeEmitsOrPropsOptions(
-  to: ComponentPropsOptions | EmitsOptions | undefined,
-  from: ComponentPropsOptions | EmitsOptions | undefined
-) {
+function mergeEmitsOrPropsOptions<
+  T extends ComponentPropsOptions | EmitsOptions
+>(to?: T, from?: T): T | undefined {
   if (to) {
     if (isArray(to) && isArray(from)) {
-      return [...new Set([...to, ...from])]
+      return [...new Set([...to, ...from])] as T
     }
     return extend(
       Object.create(null),

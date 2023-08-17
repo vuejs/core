@@ -272,7 +272,7 @@ export const vModelDynamic: ObjectDirective<
   }
 }
 
-function resolveDynamicModel(tagName: string, type: string | undefined) {
+function resolveDynamicModel(tagName: string, type?: string) {
   switch (tagName) {
     case 'SELECT':
       return vModelSelect

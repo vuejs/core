@@ -414,7 +414,7 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(styles: string[] | undefined) {
+  private _applyStyles(styles?: string[]) {
     if (styles) {
       styles.forEach(css => {
         const s = document.createElement('style')

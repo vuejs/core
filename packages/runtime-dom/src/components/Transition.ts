@@ -83,10 +83,7 @@ export const TransitionPropsValidators = (Transition.props =
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
  * with custom HOCs.
  */
-const callHook = (
-  hook: Function | Function[] | undefined,
-  args: any[] = []
-) => {
+const callHook = (hook?: Function | Function[], args: any[] = []) => {
   if (isArray(hook)) {
     hook.forEach(h => h(...args))
   } else if (hook) {
@@ -98,9 +95,7 @@ const callHook = (
  * Check if a hook expects a callback (2nd arg), which means the user
  * intends to explicitly control the end of the transition.
  */
-const hasExplicitCallback = (
-  hook: Function | Function[] | undefined
-): boolean => {
+const hasExplicitCallback = (hook?: Function | Function[]): boolean => {
   return hook
     ? isArray(hook)
       ? hook.some(h => h.length > 1)
