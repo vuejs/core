@@ -1129,7 +1129,7 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
   return to ? [...new Set([].concat(to as any, from as any))] : from
 }
 
-function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
+function mergeObjectOptions(to?: Object, from?: Object) {
   return to ? extend(Object.create(null), to, from) : from
 }
 
@@ -1151,8 +1151,8 @@ function mergeEmitsOrPropsOptions<
 }
 
 function mergeWatchOptions(
-  to: ComponentWatchOptions | undefined,
-  from: ComponentWatchOptions | undefined
+  to?: ComponentWatchOptions,
+  from?: ComponentWatchOptions
 ) {
   if (!to) return from
   if (!from) return to

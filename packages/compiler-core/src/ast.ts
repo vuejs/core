@@ -291,16 +291,15 @@ export interface VNodeCall extends Node {
   type: NodeTypes.VNODE_CALL
   tag: string | symbol | CallExpression
   props: PropsExpression | undefined
-  children:
+  children?:
     | TemplateChildNode[] // multiple children
     | TemplateTextChildNode // single text child
     | SlotsExpression // component slots
     | ForRenderListExpression // v-for fragment call
     | SimpleExpressionNode // hoisted
-    | undefined
-  patchFlag: string | undefined
-  dynamicProps: string | SimpleExpressionNode | undefined
-  directives: DirectiveArguments | undefined
+  patchFlag?: string
+  dynamicProps?: string | SimpleExpressionNode
+  directives?: DirectiveArguments
   isBlock: boolean
   disableTracking: boolean
   isComponent: boolean

@@ -42,9 +42,7 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
   return ret
 }
 
-export function stringifyStyle(
-  styles: NormalizedStyle | string | undefined
-): string {
+export function stringifyStyle(styles?: NormalizedStyle | string): string {
   let ret = ''
   if (!styles || isString(styles)) {
     return ret

@@ -59,7 +59,7 @@ export function patchEvent(
 
 const optionsModifierRE = /(?:Once|Passive|Capture)$/
 
-function parseName(name: string): [string, EventListenerOptions | undefined] {
+function parseName(name: string): [string, EventListenerOptions?] {
   let options: EventListenerOptions | undefined
   if (optionsModifierRE.test(name)) {
     options = {}

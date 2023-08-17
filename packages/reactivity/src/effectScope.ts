@@ -21,18 +21,18 @@ export class EffectScope {
    * only assigned by undetached scope
    * @internal
    */
-  parent: EffectScope | undefined
+  parent?: EffectScope
   /**
    * record undetached scopes
    * @internal
    */
-  scopes: EffectScope[] | undefined
+  scopes?: EffectScope[]
   /**
    * track a child scope's index in its parent's scopes array for optimized
    * removal
    * @internal
    */
-  private index: number | undefined
+  private index?: number
 
   constructor(public detached = false) {
     this.parent = activeEffectScope

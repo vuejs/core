@@ -53,7 +53,7 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
-  parent: ReactiveEffect | undefined = undefined
+  parent?: ReactiveEffect
 
   /**
    * Can be attached after creation
