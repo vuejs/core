@@ -445,6 +445,8 @@ function getTimeout(delays: string[], durations: string[]): number {
 // If comma is not replaced with a dot, the input will be rounded down
 // (i.e. acting as a floor function) causing unexpected behaviors
 function toMs(s: string): number {
+  // #8409 default value for CSS durations can be 'auto'
+  if (s === 'auto') return 0
   return Number(s.slice(0, -1).replace(',', '.')) * 1000
 }
 

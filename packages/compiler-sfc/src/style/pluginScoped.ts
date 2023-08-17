@@ -130,9 +130,10 @@ function rewriteSelector(
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated. Use :deep(<inner-selector>) instead.`
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
           )
+
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)
