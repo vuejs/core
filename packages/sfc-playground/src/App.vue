@@ -4,12 +4,6 @@ import { Repl, ReplStore, SFCOptions } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
 import { ref, watchEffect, onMounted } from 'vue'
 
-const setVH = () => {
-  document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
-}
-window.addEventListener('resize', setVH)
-setVH()
-
 const useDevMode = ref(false)
 const useSSRMode = ref(false)
 
@@ -121,7 +115,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height)) !important;
+  height: calc(100vh - var(--nav-height)) !important;
 }
 
 button {
