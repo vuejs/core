@@ -10,7 +10,6 @@ import {
   renderSlot,
   VueElement
 } from '../src'
-import { expect } from 'vitest'
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
