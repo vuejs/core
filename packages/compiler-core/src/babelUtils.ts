@@ -167,10 +167,12 @@ export function walkBlockDeclarations(
       onIdent(stmt.id)
     } else if (
       stmt.type === 'ForOfStatement' ||
-      stmt.type === 'ForInStatement'
+      stmt.type === 'ForInStatement' ||
+      stmt.type === 'ForStatement'
     ) {
-      if (stmt.left.type === 'VariableDeclaration') {
-        for (const decl of stmt.left.declarations) {
+      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
+      if (variable && variable.type === 'VariableDeclaration') {
+        for (const decl of variable.declarations) {
           for (const id of extractIdentifiers(decl.id)) {
             onIdent(id)
           }

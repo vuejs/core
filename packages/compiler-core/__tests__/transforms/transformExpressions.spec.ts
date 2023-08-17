@@ -531,7 +531,7 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
       expect(code).toMatchSnapshot()
     })
-    
+
     test('should not prefix temp variable of for...in', () => {
       const { code } = compileWithBindingMetadata(
         `<div @click="() => {
@@ -555,7 +555,19 @@ describe('compiler: expression transform', () => {
       expect(code).not.toMatch(`_ctx.x`)
       expect(code).toMatchSnapshot()
     })
-    
+
+    test('should not prefix temp variable of for loop', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (let i = 0; i < list.length; i++) {
+            log(i)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.i`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
         `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
