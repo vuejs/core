@@ -597,7 +597,12 @@ function resolveBuiltin(
   scope: TypeScope,
   typeParameters?: Record<string, Node>
 ): ResolvedElements {
-  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope, typeParameters)
+  const t = resolveTypeElements(
+    ctx,
+    node.typeParameters!.params[0],
+    scope,
+    typeParameters
+  )
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
