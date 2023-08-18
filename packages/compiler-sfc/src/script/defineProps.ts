@@ -274,8 +274,16 @@ function genRuntimePropFromType(
       defaultString
     ])} }`
   } else {
-    // production: checks are useless
-    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
+    if(defaultString){
+      return `${finalKey}: ${`{ ${defaultString} }`}`
+    }else{
+      if(/\.ce\.vue$/.test(ctx.filename)){
+        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
+      }else{
+        // production: checks are useless
+        return `${finalKey}: {}`
+      }
+    }
   }
 }
 
