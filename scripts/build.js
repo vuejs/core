@@ -157,7 +157,7 @@ async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return
   }
-  const file = readFileSync(filePath)
+  const file = await fs.readFile(filePath)
   const fileName = path.basename(filePath)
 
   const gzipped = gzipSync(file)
