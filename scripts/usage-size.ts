@@ -11,16 +11,16 @@ const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 
 interface Preset {
   name: string
-  exports: string[]
+  imports: string[]
 }
 
 const presets: Preset[] = [
-  { name: 'createApp', exports: ['createApp'] },
-  { name: 'createSSRApp', exports: ['createSSRApp'] },
-  { name: 'defineCustomElement', exports: ['defineCustomElement'] },
+  { name: 'createApp', imports: ['createApp'] },
+  { name: 'createSSRApp', imports: ['createSSRApp'] },
+  { name: 'defineCustomElement', imports: ['defineCustomElement'] },
   {
     name: 'overall',
-    exports: [
+    imports: [
       'createApp',
       'ref',
       'watch',
@@ -45,21 +45,20 @@ async function main() {
 
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
-    path.resolve(sizeDir, '_exports.json'),
+    path.resolve(sizeDir, '_usages.json'),
     JSON.stringify(results),
     'utf-8'
   )
 }
 
 async function generateBundle(preset: Preset) {
-  const content = `export { ${preset.exports.join(', ')} } from '${entry}'`
-
-  const id = 'export-size-virtual'
+  const id = 'virtual:entry'
+  const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
   const result = await rollup({
     input: id,
     plugins: [
       {
-        name: 'export-size-plugin',
+        name: 'usage-size-plugin',
         resolveId(_id) {
           if (_id === id) return id
           return null

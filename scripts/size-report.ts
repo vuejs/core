@@ -14,7 +14,7 @@ interface BundleResult extends SizeResult {
   file: string
 }
 
-type ExportResult = Record<string, SizeResult & { name: string }>
+type UsageResult = Record<string, SizeResult & { name: string }>
 
 const currDir = path.resolve('temp/size')
 const prevDir = path.resolve('temp/size-prev')
@@ -25,7 +25,7 @@ run()
 
 async function run() {
   await renderFiles()
-  await processExports()
+  await renderUsages()
   await renderBaseline()
 
   process.stdout.write(output)
@@ -83,35 +83,32 @@ async function renderBaseline() {
   output += '\n\n'
 }
 
-async function processExports() {
-  const curr = (await importJSON<ExportResult>(
-    path.resolve(currDir, '_exports.json')
+async function renderUsages() {
+  const curr = (await importJSON<UsageResult>(
+    path.resolve(currDir, '_usages.json')
   ))!
-  const prev = await importJSON<ExportResult>(
-    path.resolve(prevDir, '_exports.json')
+  const prev = await importJSON<UsageResult>(
+    path.resolve(prevDir, '_usages.json')
   )
-  output += '\n### Exports\n\n'
-  output += `${renderExports(curr, prev)}\n\n`
-}
+  output += '\n### Usages\n\n'
 
-function renderExports(exports: ExportResult, prev?: ExportResult) {
-  const data = Object.values(exports)
-    .map(exp => {
-      const prevExport = prev?.[exp.name]
-      const diffSize = getDiff(exp.size, prevExport?.size)
-      const diffGzipped = getDiff(exp.gzip, prevExport?.gzip)
-      const diffBrotli = getDiff(exp.brotli, prevExport?.brotli)
+  const data = Object.values(curr)
+    .map(usage => {
+      const prevUsage = prev?.[usage.name]
+      const diffSize = getDiff(usage.size, prevUsage?.size)
+      const diffGzipped = getDiff(usage.gzip, prevUsage?.gzip)
+      const diffBrotli = getDiff(usage.brotli, prevUsage?.brotli)
 
       return [
-        exp.name,
-        `${prettyBytes(exp.size)}${diffSize}`,
-        `${prettyBytes(exp.gzip)}${diffGzipped}`,
-        `${prettyBytes(exp.brotli)}${diffBrotli}`
+        usage.name,
+        `${prettyBytes(usage.size)}${diffSize}`,
+        `${prettyBytes(usage.gzip)}${diffGzipped}`,
+        `${prettyBytes(usage.brotli)}${diffBrotli}`
       ]
     })
-    .filter((exp): exp is string[] => !!exp)
-  if (data.length === 0) return 'No changes'
-  return markdownTable([['Name', ...sizeHeaders], ...data])
+    .filter((usage): usage is string[] => !!usage)
+
+  output += `${markdownTable([['Name', ...sizeHeaders], ...data])}\n\n`
 }
 
 async function importJSON<T>(path: string): Promise<T | undefined> {
