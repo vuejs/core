@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { sizeReport } from './size-report'
 
 export default defineConfig({
   define: {
@@ -13,5 +14,11 @@ export default defineConfig({
       }
     },
     minify: 'terser'
-  }
+  },
+  plugins: [
+    {
+      name: 'size-report',
+      buildEnd: () => sizeReport()
+    }
+  ]
 })

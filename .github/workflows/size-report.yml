@@ -44,7 +44,7 @@ jobs:
           path: temp/size
 
       - name: Compare size
-        run: node scripts/size-report.js > size.md
+        run: pnpm tsx scripts/size-report.ts > size.md
 
       - name: Read Size Markdown
         id: size-markdown
