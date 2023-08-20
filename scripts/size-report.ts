@@ -19,6 +19,7 @@ type ExportResult = Record<string, SizeResult & { name: string }>
 const currDir = path.resolve('temp/size')
 const prevDir = path.resolve('temp/size-prev')
 let output = '## Size Report\n\n'
+const sizeHeaders = ['Size', 'Gzip', 'Brotli']
 
 run()
 
@@ -59,7 +60,7 @@ async function renderFiles() {
   }
 
   output += '### Bundles\n\n'
-  output += markdownTable([['File', 'Size', 'Gzip', 'Brotli'], ...rows])
+  output += markdownTable([['File', ...sizeHeaders], ...rows])
   output += '\n\n'
 }
 
@@ -72,7 +73,7 @@ async function renderBaseline() {
   )
   output += `### Baseline\n\n`
   output += markdownTable([
-    ['Size', 'Gzip', 'Brotli'],
+    sizeHeaders,
     [
       `${prettyBytes(curr.size)}${getDiff(curr.size, prev?.size)}`,
       `${prettyBytes(curr.gzip)}${getDiff(curr.gzip, prev?.gzip)}`,
@@ -110,7 +111,7 @@ function renderExports(exports: ExportResult, prev?: ExportResult) {
     })
     .filter((exp): exp is string[] => !!exp)
   if (data.length === 0) return 'No changes'
-  return markdownTable([['Name', 'Size', 'Minified', 'Brotli'], ...data])
+  return markdownTable([['Name', ...sizeHeaders], ...data])
 }
 
 async function importJSON<T>(path: string): Promise<T | undefined> {
