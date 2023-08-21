@@ -283,25 +283,6 @@ describe('defineCustomElement', () => {
       expect(el.maxAge).toBe(50)
       expect(el.shadowRoot.innerHTML).toBe('max age: 50/type: number')
     })
-
-    // #8987
-    test('Correctly handle number type props in prod', () => {
-      const E = defineCustomElement({
-        props: {
-          foo: {
-            default: 5
-          }
-        },
-        render() {
-          // @ts-ignore
-          return `foo: ${typeof this.foo}`
-        }
-      })
-      customElements.define('my-element-number-property-prod', E)
-      container.innerHTML = `<my-element-number-property-prod foo="5.5"></my-element-number-property-prod>`
-      const e = container.childNodes[0] as VueElement
-      expect(e.shadowRoot!.innerHTML).toBe('foo: number')
-    })
   })
 
   describe('attrs', () => {

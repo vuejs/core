@@ -608,4 +608,35 @@ const props = defineProps({ foo: String })
       }).toThrow(`cannot accept both type and non-type arguments`)
     })
   })
+
+  // #8989
+  test('custom element retains the props type & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const props = defineProps<{ foo: number}>()
+      </script>`,
+      { isProd: true },
+      { filename: 'app.ce.vue' }
+    )
+
+    expect(content).toMatch(`foo: {type: Number}`)
+    assertCode(content)
+  })
+
+  test('custom element retains the props type & default value & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      interface Props { 
+          foo?: number;
+      }
+      const props = withDefaults(defineProps<Props>(), {
+          foo: 5.5,
+      });
+      </script>`,
+      { isProd: true },
+      { filename: 'app.ce.vue' }
+    )
+    expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
+    assertCode(content)
+  })
 })
