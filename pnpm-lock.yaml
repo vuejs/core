@@ -363,12 +363,6 @@ importers:
 
   packages/shared: {}
 
-  packages/size-check:
-    dependencies:
-      vue:
-        specifier: workspace:*
-        version: link:../vue
-
   packages/template-explorer:
     dependencies:
       monaco-editor:
