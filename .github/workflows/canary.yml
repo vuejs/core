@@ -20,7 +20,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to the latest LTS release
+      - name: Set node version to LTS
         uses: actions/setup-node@v3
         with:
           node-version: ${{ env.NODE_VERSION }}
