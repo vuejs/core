@@ -255,10 +255,7 @@ export class VueElement extends BaseClass {
       if (props && !isArray(props)) {
         for (const key in props) {
           const opt = props[key]
-          if (
-            opt === Number ||
-            (opt && (opt.type === Number || typeof opt.default === 'number'))
-          ) {
+          if (opt === Number || (opt && opt.type === Number)) {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }

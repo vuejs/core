@@ -12,6 +12,7 @@ import { TypeScope } from './resolveType'
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
+  isCE: boolean
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
@@ -94,6 +95,8 @@ export class ScriptCompileContext {
       scriptLang === 'tsx' ||
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
+
+    this.isCE = /\.ce\.vue$/.test(this.descriptor.filename)
 
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(

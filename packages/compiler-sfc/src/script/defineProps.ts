@@ -274,16 +274,19 @@ function genRuntimePropFromType(
       defaultString
     ])} }`
   } else {
-    if (defaultString) {
-      return `${finalKey}: ${`{ ${defaultString} }`}`
-    } else {
-      if (/\.ce\.vue$/.test(ctx.filename)) {
-        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
+    // #8989 for custom element, should keep the type
+    if (ctx.isCE) {
+      if (defaultString) {
+        return `${finalKey}: ${`{ ${defaultString}, type: ${toRuntimeTypeString(
+          type
+        )} }`}`
       } else {
-        // production: checks are useless
-        return `${finalKey}: {}`
+        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
       }
     }
+
+    // production: checks are useless
+    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }
 }
 
