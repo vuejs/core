@@ -1,0 +1,61 @@
+name: size report
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to LTS
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - run: pnpm run size
+
+      - name: Download Previous Size Report
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          branch: main
+          name: size-report
+          path: temp/size-prev
+          if_no_artifact_found: warn
+
+      - name: Upload Size Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: size-report
+          path: temp/size
+
+      - name: Compare size
+        run: pnpm tsx scripts/size-report.ts > size.md
+
+      - name: Read Size Markdown
+        id: size-markdown
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./size.md
+
+      - name: Create Comment
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          body: |
+            ${{steps.size-markdown.outputs.content}}
+            <!-- VUE_CORE_SIZE -->
+          body-include: '<!-- VUE_CORE_SIZE -->'
