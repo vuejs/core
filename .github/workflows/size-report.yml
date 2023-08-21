@@ -56,6 +56,7 @@ jobs:
         with:
           branch: main
           workflow: size-data.yml
+          event: push
           name: size-data
           path: temp/size-prev
           if_no_artifact_found: warn
