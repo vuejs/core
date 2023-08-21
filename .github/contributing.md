@@ -248,8 +248,6 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
   - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
 
-  - `size-check`: Used for checking built bundle sizes on CI.
-
 ### Importing Packages
 
 The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
