@@ -1,18 +1,22 @@
 name: size report
 
 on:
-  pull_request:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['size data']
+    types:
+      - completed
 
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
-  size:
+  size-report:
     runs-on: ubuntu-latest
-
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
     steps:
       - uses: actions/checkout@v3
 
@@ -25,37 +29,52 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
-      - run: pnpm run size
+      - name: Install dependencies
+        run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
 
-      - name: Download Previous Size Report
-        id: download-artifact
+      - name: Download PR number
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: pr-number
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - name: Read PR Number
+        id: pr-number
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./pr.txt
+
+      - name: Download Size Data
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: size-data
+          run_id: ${{ github.event.workflow_run.id }}
+          path: temp/size
+
+      - name: Download Previous Size Data
         uses: dawidd6/action-download-artifact@v2
         with:
           branch: main
-          name: size-report
+          workflow: size-data.yml
+          name: size-data
           path: temp/size-prev
           if_no_artifact_found: warn
 
-      - name: Upload Size Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: size-report
-          path: temp/size
-
       - name: Compare size
-        run: pnpm tsx scripts/size-report.ts > size.md
+        run: pnpm tsx scripts/size-report.ts > size-report.md
 
-      - name: Read Size Markdown
-        id: size-markdown
+      - name: Read Size Report
+        id: size-report
         uses: juliangruber/read-file-action@v1
         with:
-          path: ./size.md
+          path: ./size-report.md
 
       - name: Create Comment
         uses: actions-cool/maintain-one-comment@v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.pr-number.outputs.content }}
           body: |
-            ${{steps.size-markdown.outputs.content}}
+            ${{ steps.size-report.outputs.content }}
             <!-- VUE_CORE_SIZE -->
           body-include: '<!-- VUE_CORE_SIZE -->'
