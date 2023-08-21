@@ -1,4 +1,10 @@
-import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
+import {
+  CallExpression,
+  Comment,
+  Node,
+  ObjectPattern,
+  Program
+} from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, ParserPlugin } from '@babel/parser'
@@ -56,6 +62,7 @@ export class ScriptCompileContext {
   modelDecls: Record<string, ModelDecl> = {}
 
   // defineOptions
+  optionsLeadingComments: Comment[] = []
   optionsRuntimeDecl: Node | undefined
 
   // codegen

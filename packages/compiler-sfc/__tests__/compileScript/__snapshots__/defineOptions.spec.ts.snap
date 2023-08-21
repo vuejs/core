@@ -25,3 +25,51 @@ return {  }
 
 }"
 `;
+
+exports[`defineOptions() > should hoist comments even when called with no arguments 1`] = `
+"/** Script docstring. */
+const __default__ = {}
+
+/** Script setup docstring 1 */
+// Script setup docstring 2
+/**
+ * Script setup docstring 3
+ */
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+
+
+
+
+
+return {  }
+}
+
+})"
+`;
+
+exports[`defineOptions() > should hoist leading comments up to export default 1`] = `
+"/** Script docstring. */
+const __default__ = {}
+
+/** Script setup docstring 1 */
+// Script setup docstring 2
+/**
+ * Script setup docstring 3
+ */
+export default /*#__PURE__*/Object.assign(__default__, {}, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+
+
+
+
+
+return {  }
+}
+
+})"
+`;

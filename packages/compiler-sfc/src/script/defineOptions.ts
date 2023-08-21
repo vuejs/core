@@ -1,4 +1,4 @@
-import { Node } from '@babel/types'
+import { Node, Comment } from '@babel/types'
 import { ScriptCompileContext } from './context'
 import { isCallOf, unwrapTSNode } from './utils'
 import { DEFINE_PROPS } from './defineProps'
@@ -10,7 +10,8 @@ export const DEFINE_OPTIONS = 'defineOptions'
 
 export function processDefineOptions(
   ctx: ScriptCompileContext,
-  node: Node
+  node: Node,
+  leadingComments: Comment[] = []
 ): boolean {
   if (!isCallOf(node, DEFINE_OPTIONS)) {
     return false
@@ -21,6 +22,10 @@ export function processDefineOptions(
   if (node.typeParameters) {
     ctx.error(`${DEFINE_OPTIONS}() cannot accept type arguments`, node)
   }
+
+  // Always setting leadingComments, even when called with no arguments.
+  ctx.optionsLeadingComments = leadingComments
+
   if (!node.arguments[0]) return true
 
   ctx.hasDefineOptionsCall = true

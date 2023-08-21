@@ -511,10 +511,14 @@ export function compileScript(
       if (
         processDefineProps(ctx, expr) ||
         processDefineEmits(ctx, expr) ||
-        processDefineOptions(ctx, expr) ||
         processDefineSlots(ctx, expr)
       ) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+      } else if (processDefineOptions(ctx, expr, node.leadingComments ?? [])) {
+        ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
+        for (const comment of node.leadingComments ?? []) {
+          ctx.s.remove(comment.start! + startOffset, comment.end! + startOffset)
+        }
       } else if (processDefineExpose(ctx, expr)) {
         // defineExpose({}) -> expose({})
         const callee = (expr as CallExpression).callee
@@ -948,9 +952,23 @@ export function compileScript(
   }
 
   // 11. finalize default export
-  const genDefaultAs = options.genDefaultAs
-    ? `const ${options.genDefaultAs} =`
-    : `export default`
+  const defaultLeadingComments = ctx.optionsLeadingComments
+    .map(c => {
+      switch (c.type) {
+        case 'CommentBlock':
+          return `/*${c.value}*/\n`
+        case 'CommentLine':
+          return `//${c.value}\n`
+        default:
+          c satisfies never
+      }
+    })
+    .join('')
+  const genDefaultAs =
+    defaultLeadingComments +
+    (options.genDefaultAs
+      ? `const ${options.genDefaultAs} =`
+      : `export default`)
 
   let runtimeOptions = ``
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {

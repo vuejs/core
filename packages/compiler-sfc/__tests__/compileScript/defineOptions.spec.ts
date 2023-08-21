@@ -28,6 +28,66 @@ describe('defineOptions()', () => {
     expect(content).not.toMatch('defineOptions')
   })
 
+  it('should hoist leading comments up to export default', () => {
+    const { content } = compile(
+      `<script>\n` +
+        `/** Script docstring. */\n` +
+        `export default {}\n` +
+        `</script>\n` +
+        `\n` +
+        `<script setup>\n` +
+        `/** Script setup docstring 1 */\n` +
+        `// Script setup docstring 2\n` +
+        `/**\n` +
+        ` * Script setup docstring 3\n` +
+        ` */\n` +
+        `defineOptions({})\n` +
+        `</script>\n`
+    )
+    assertCode(content)
+    // export default comments are set before __default__.
+    expect(content).toMatch(`/** Script docstring. */\nconst __default__ = {}`)
+    // defineOptions comments are set before export default.
+    expect(content).toMatch(
+      `/** Script setup docstring 1 */\n` +
+        `// Script setup docstring 2\n` +
+        `/**\n` +
+        ` * Script setup docstring 3\n` +
+        ` */\n` +
+        `export default /*#__PURE__*/Object.assign(__default__, {}, {`
+    )
+  })
+
+  it('should hoist comments even when called with no arguments', () => {
+    const { content } = compile(
+      `<script>\n` +
+        `/** Script docstring. */\n` +
+        `export default {}\n` +
+        `</script>\n` +
+        `\n` +
+        `<script setup>\n` +
+        `/** Script setup docstring 1 */\n` +
+        `// Script setup docstring 2\n` +
+        `/**\n` +
+        ` * Script setup docstring 3\n` +
+        ` */\n` +
+        `defineOptions()\n` +
+        `</script>\n`
+    )
+    assertCode(content)
+    // export default comments are set before __default__.
+    expect(content).toMatch(`/** Script docstring. */\nconst __default__ = {}`)
+    // defineOptions comments are set before export default.
+    expect(content).toMatch(
+      `/** Script setup docstring 1 */\n` +
+        `// Script setup docstring 2\n` +
+        `/**\n` +
+        ` * Script setup docstring 3\n` +
+        ` */\n` +
+        `export default /*#__PURE__*/Object.assign(__default__, {`
+    )
+  })
+
   it('should emit an error with two defineOptions', () => {
     expect(() =>
       compile(`
