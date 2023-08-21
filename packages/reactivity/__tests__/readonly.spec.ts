@@ -102,6 +102,50 @@ describe('reactivity/readonly', () => {
       expect(dummy).toBe(1)
       expect(`target is readonly`).toHaveBeenWarned()
     })
+
+    it('should not allow redefining', () => {
+      const original = { bar: 0, baz: 0 }
+      const foo = readonly(original)
+      const trigger = vi.fn(() => {
+        foo.bar
+        foo.baz
+      })
+
+      effect(trigger)
+      expect(trigger).toHaveBeenCalledTimes(1)
+
+      // using value
+      Object.defineProperty(foo, 'bar', {
+        value: 1
+      })
+
+      expect(
+        '[Vue warn] DefineProperty operation on key "bar" failed: target is readonly.'
+      ).toHaveBeenWarned()
+      expect(trigger).toHaveBeenCalledTimes(1)
+      expect(foo.bar).toBe(0)
+
+      // using setter
+      Object.defineProperty(foo, 'baz', {
+        set() {
+          original.baz = 2
+        }
+      })
+
+      expect(
+        '[Vue warn] DefineProperty operation on key "baz" failed: target is readonly.'
+      ).toHaveBeenWarned()
+      expect(trigger).toHaveBeenCalledTimes(1)
+      expect(foo.baz).toBe(0)
+
+      // should not define new property
+      Object.defineProperty(foo, 'qux', {
+        value: 1
+      })
+      expect(
+        '[Vue warn] DefineProperty operation on key "qux" failed: target is readonly.'
+      ).toHaveBeenWarned()
+    })
   })
 
   describe('Array', () => {
