@@ -26,7 +26,6 @@ run()
 async function run() {
   await renderFiles()
   await renderUsages()
-  await renderBaseline()
 
   process.stdout.write(output)
 }
@@ -61,25 +60,6 @@ async function renderFiles() {
 
   output += '### Bundles\n\n'
   output += markdownTable([['File', ...sizeHeaders], ...rows])
-  output += '\n\n'
-}
-
-async function renderBaseline() {
-  const curr = (await importJSON<SizeResult>(
-    path.resolve(currDir, '_baseline.json')
-  ))!
-  const prev = await importJSON<SizeResult>(
-    path.resolve(prevDir, '_baseline.json')
-  )
-  output += `### Baseline\n\n`
-  output += markdownTable([
-    sizeHeaders,
-    [
-      `${prettyBytes(curr.size)}${getDiff(curr.size, prev?.size)}`,
-      `${prettyBytes(curr.gzip)}${getDiff(curr.gzip, prev?.gzip)}`,
-      `${prettyBytes(curr.brotli)}${getDiff(curr.brotli, prev?.brotli)}`
-    ]
-  ])
   output += '\n\n'
 }
 
