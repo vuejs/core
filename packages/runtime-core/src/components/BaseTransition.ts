@@ -374,10 +374,10 @@ export function resolveTransitionHooks(
       if (
         leavingVNode &&
         isSameVNodeType(vnode, leavingVNode) &&
-        leavingVNode.el!._leaveCb
+        leavingVNode.el?._leaveCb
       ) {
         // force early removal (not cancelled)
-        leavingVNode.el!._leaveCb()
+        leavingVNode.el._leaveCb()
       }
       callHook(hook, [el])
     },
