@@ -28,7 +28,6 @@ export function processPropsDestructure(
   declId: ObjectPattern
 ) {
   if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
-    ctx.propsIdentifier = ctx.getString(declId)
     return
   }
 
@@ -238,7 +237,7 @@ export function transformDestructuredProps(
   // check root scope first
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 

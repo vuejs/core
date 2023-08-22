@@ -100,7 +100,8 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
   )
 })
 
-describe('defineProps w/ generic type declaration + withDefaults', <T extends number, TA extends {
+describe('defineProps w/ generic type declaration + withDefaults', <T extends
+  number, TA extends {
   a: string
 }, TString extends string>() => {
   const res = withDefaults(
@@ -117,10 +118,10 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
       n: 123,
 
       generic1: () => [123, 33] as T[],
-      generic2: () => ({ x: 123 } as { x: T }),
+      generic2: () => ({ x: 123 }) as { x: T },
 
       generic3: () => 'test' as TString,
-      generic4: () => ({ a: 'test' } as TA)
+      generic4: () => ({ a: 'test' }) as TA
     }
   )
 
@@ -132,6 +133,26 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
   expectType<TA>(res.generic4)
 
   expectType<boolean>(res.bool)
+})
+
+describe('withDefaults w/ boolean type', () => {
+  const res1 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    { bool: false }
+  )
+  expectType<boolean>(res1.bool)
+
+  const res2 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    {
+      bool: undefined
+    }
+  )
+  expectType<boolean | undefined>(res2.bool)
 })
 
 describe('defineProps w/ runtime declaration', () => {

@@ -248,8 +248,9 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
-  hidden?: Booleanish
+  hidden?: Booleanish | '' | 'hidden' | 'until-found'
   id?: string
+  inert?: Booleanish
   lang?: string
   placeholder?: string
   spellcheck?: Booleanish
@@ -457,12 +458,38 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   srcset?: string
   usemap?: string
   width?: Numberish
+  loading?: 'lazy' | 'eager'
 }
 
 export interface InsHTMLAttributes extends HTMLAttributes {
   cite?: string
   datetime?: string
 }
+
+export type InputTypeHTMLAttribute =
+  | 'button'
+  | 'checkbox'
+  | 'color'
+  | 'date'
+  | 'datetime-local'
+  | 'email'
+  | 'file'
+  | 'hidden'
+  | 'image'
+  | 'month'
+  | 'number'
+  | 'password'
+  | 'radio'
+  | 'range'
+  | 'reset'
+  | 'search'
+  | 'submit'
+  | 'tel'
+  | 'text'
+  | 'time'
+  | 'url'
+  | 'week'
+  | (string & {})
 
 export interface InputHTMLAttributes extends HTMLAttributes {
   accept?: string
@@ -495,7 +522,7 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   size?: Numberish
   src?: string
   step?: Numberish
-  type?: string
+  type?: InputTypeHTMLAttribute
   value?: any // we support :value to be bound to anything w/ v-model
   width?: Numberish
 }
@@ -677,7 +704,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   minlength?: Numberish
   name?: string
   placeholder?: string
-  readonly?: boolean
+  readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
   value?: string | string[] | number
@@ -749,7 +776,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
    * @see https://www.w3.org/TR/SVG/styling.html#ElementSpecificStyling
    */
   class?: any
-  style?: string | CSSProperties
+  style?: StyleValue
 
   color?: string
   height?: Numberish

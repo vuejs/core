@@ -691,7 +691,7 @@ export function cloneVNode<T, U>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**

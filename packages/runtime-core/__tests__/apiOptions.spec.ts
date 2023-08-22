@@ -382,7 +382,7 @@ describe('api: options', () => {
         render() {
           return this[injectedKey]
         }
-      } as any)
+      }) as any
 
     const ChildA = defineChild(['a'], 'a')
     const ChildB = defineChild({ b: 'a' })
