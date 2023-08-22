@@ -114,23 +114,3 @@ jobs:
 
       - name: Run type declaration tests
         run: pnpm run test-dts
-
-  size:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    env:
-      CI_JOB_NUMBER: 1
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: 'pnpm'
-
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
-      - run: pnpm run size
