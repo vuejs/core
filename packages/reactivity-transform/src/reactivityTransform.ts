@@ -766,7 +766,6 @@ export function transformAST(
 const hasWarned: Record<string, boolean> = {}
 
 function warnExperimental() {
-  // eslint-disable-next-line
   if (typeof window !== 'undefined') {
     return
   }

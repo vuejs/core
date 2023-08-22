@@ -125,7 +125,6 @@ describe('reactivity/collections', () => {
       const set = reactive(new Set<number>())
       effect(() => {
         dummy = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of set.entries()) {
           key
           dummy += num

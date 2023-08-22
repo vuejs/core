@@ -69,7 +69,6 @@ describe('reactivity/collections', () => {
       const map = reactive(new Map())
       effect(() => {
         dummy = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map) {
           key
           dummy += num
@@ -164,7 +163,6 @@ describe('reactivity/collections', () => {
       effect(() => {
         dummy = ''
         dummy2 = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map.entries()) {
           dummy += key
           dummy2 += num
