@@ -36,10 +36,32 @@ function onCompositionEnd(e: Event) {
   }
 }
 
-type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
+const assignKey = Symbol('_assign')
+
+type ModelDirective<T> = ObjectDirective<T & { [assignKey]: AssignerFn }>
 
 const elementMap = new WeakMap<Element, Set<Function>>()
 
+/**
+ * Bind an event listener to the given HTMLElement and add the function to remove the event listener to the `elementMap`, allowing for the removal of the event listener when `unmounted` is called.
+ */
+function bindEvent(
+  el: HTMLElement,
+  event: string,
+  handler: EventListener,
+  options?: AddEventListenerOptions
+) {
+  let offs = elementMap.get(el)
+  if (!offs) {
+    elementMap.set(el, (offs = new Set()))
+  }
+  offs.add(addEventListener(el, event, handler, options))
+}
+
+/**
+ * During unmount, remove the event listener bound to the `v-model` binding.
+ * @param {HTMLElement} el
+ */
 function unmounted(el: HTMLElement) {
   const offs = elementMap.get(el)
   if (offs) {
@@ -53,49 +75,43 @@ export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
-    const off = new Set<Function>()
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     const castToNumber =
       number || (vnode.props && vnode.props.type === 'number')
 
-    off.add(
-      addEventListener(el, lazy ? 'change' : 'input', e => {
-        if ((e.target as any).composing) return
-        let domValue: string | number = el.value
-        if (trim) {
-          domValue = domValue.trim()
-        }
-        if (castToNumber) {
-          domValue = looseToNumber(domValue)
-        }
-        el._assign(domValue)
-      })
-    )
+    bindEvent(el, lazy ? 'change' : 'input', e => {
+      if ((e.target as any).composing) return
+      let domValue: string | number = el.value
+      if (trim) {
+        domValue = domValue.trim()
+      }
+      if (castToNumber) {
+        domValue = looseToNumber(domValue)
+      }
+      el[assignKey](domValue)
+    })
 
     if (trim) {
-      off.add(
-        addEventListener(el, 'change', () => {
-          el.value = el.value.trim()
-        })
-      )
+      bindEvent(el, 'change', () => {
+        el.value = el.value.trim()
+      })
     }
     if (!lazy) {
-      off.add(addEventListener(el, 'compositionstart', onCompositionStart))
-      off.add(addEventListener(el, 'compositionend', onCompositionEnd))
+      bindEvent(el, 'compositionstart', onCompositionStart)
+      bindEvent(el, 'compositionend', onCompositionEnd)
       // Safari < 10.2 & UIWebView doesn't fire compositionend when
       // switching focus before confirming composition choice
       // this also fixes the issue where some browsers e.g. iOS Chrome
       // fires "change" instead of "input" on autocomplete.
-      off.add(addEventListener(el, 'change', onCompositionEnd))
+      bindEvent(el, 'change', onCompositionEnd)
     }
-    elementMap.set(el, off)
   },
   // set value on mounted so it's after min/max for type="range"
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
   beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
     if (document.activeElement === el && el.type !== 'range') {
@@ -124,12 +140,12 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   // #4096 array checkboxes need to be deep traversed
   deep: true,
   created(el, _, vnode) {
-    el._assign = getModelAssigner(vnode)
-    const off = addEventListener(el, 'change', () => {
+    el[assignKey] = getModelAssigner(vnode)
+    bindEvent(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
       const checked = el.checked
-      const assign = el._assign
+      const assign = el[assignKey]
       if (isArray(modelValue)) {
         const index = looseIndexOf(modelValue, elementValue)
         const found = index !== -1
@@ -152,13 +168,11 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
         assign(getCheckboxValue(el, checked))
       }
     })
-
-    elementMap.set(el, new Set([off]))
   },
   // set initial checked on mount to wait for true-value/false-value
   mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
   },
   unmounted
@@ -184,14 +198,13 @@ function setChecked(
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
   created(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
-    el._assign = getModelAssigner(vnode)
-    const off = addEventListener(el, 'change', () => {
-      el._assign(getValue(el))
+    el[assignKey] = getModelAssigner(vnode)
+    bindEvent(el, 'change', () => {
+      el[assignKey](getValue(el))
     })
-    elementMap.set(el, new Set([off]))
   },
   beforeUpdate(el, { value, oldValue }, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     if (value !== oldValue) {
       el.checked = looseEqual(value, vnode.props!.value)
     }
@@ -204,13 +217,13 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   deep: true,
   created(el, { value, modifiers: { number } }, vnode) {
     const isSetModel = isSet(value)
-    const off = addEventListener(el, 'change', () => {
+    bindEvent(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
           number ? looseToNumber(getValue(o)) : getValue(o)
         )
-      el._assign(
+      el[assignKey](
         el.multiple
           ? isSetModel
             ? new Set(selectedVal)
@@ -218,8 +231,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
           : selectedVal[0]
       )
     })
-    el._assign = getModelAssigner(vnode)
-    elementMap.set(el, new Set([off]))
+    el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
@@ -227,7 +239,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
     setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
     setSelected(el, value)
