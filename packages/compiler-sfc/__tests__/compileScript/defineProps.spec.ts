@@ -615,7 +615,7 @@ const props = defineProps({ foo: String })
       `<script setup lang="ts">
       const props = defineProps<{ foo: number}>()
       </script>`,
-      { isProd: true },
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
       { filename: 'app.ce.vue' }
     )
 
@@ -633,7 +633,7 @@ const props = defineProps({ foo: String })
           foo: 5.5,
       });
       </script>`,
-      { isProd: true },
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
       { filename: 'app.ce.vue' }
     )
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)

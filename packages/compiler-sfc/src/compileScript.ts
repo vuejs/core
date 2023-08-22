@@ -132,12 +132,8 @@ export interface SFCScriptCompileOptions {
   reactivityTransform?: boolean
   /**
    * Transform Vue SFCs into custom elements.
-   * - `true`: all `*.vue` imports are converted into custom elements
-   * - `RegExp`: matched files are converted into custom elements
-   *
-   * @default /\.ce\.vue$/
    */
-  customElement?: boolean | RegExp | RegExp[]
+  customElement?: boolean | ((filename: string) => boolean)
 }
 
 export interface ImportBinding {
