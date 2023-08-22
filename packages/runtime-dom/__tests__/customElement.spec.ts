@@ -134,10 +134,11 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe('<div>three</div><div>two</div>')
       expect(e.getAttribute('foo')).toBe('three')
 
-      e.foo = null
+      e.foo = undefined
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe('<div></div><div>two</div>')
       expect(e.hasAttribute('foo')).toBe(false)
+      expect(e.foo).toBe(undefined)
 
       e.bazQux = 'four'
       await nextTick()
