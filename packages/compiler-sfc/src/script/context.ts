@@ -1,6 +1,6 @@
 import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
-import { generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame, isArray, isRegExp } from '@vue/shared'
 import { parse as babelParse, ParserPlugin } from '@babel/parser'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import { PropsDestructureBindings } from './defineProps'
@@ -12,7 +12,7 @@ import { TypeScope } from './resolveType'
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
-  isCE: boolean
+  isCE = false
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
@@ -96,7 +96,23 @@ export class ScriptCompileContext {
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
 
-    this.isCE = /\.ce\.vue$/.test(this.descriptor.filename)
+    const customElement = options.customElement
+    const filename = this.descriptor.filename
+
+    let isCE = false
+    if (typeof customElement === 'boolean') {
+      isCE = customElement
+    } else if (isRegExp(customElement)) {
+      isCE = customElement.test(filename)
+    } else if (isArray(customElement)) {
+      isCE = customElement.some(
+        pattern => isRegExp(pattern) && pattern.test(filename)
+      )
+    } else {
+      isCE = /\.ce\.vue$/.test(filename)
+    }
+
+    this.isCE = isCE
 
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
