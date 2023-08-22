@@ -46,7 +46,7 @@ export default targetPackages.map(pkg => {
  *    and remove them from the big export {} declaration
  *    otherwise it gets weird in vitepress `defineComponent` call with
  *    "the inferred type cannot be named without a reference"
- * 3. Append custom agumentations (jsx, macros)
+ * 3. Append custom augmentations (jsx, macros)
  * @returns {import('rollup').Plugin}
  */
 function patchTypes(pkg) {
