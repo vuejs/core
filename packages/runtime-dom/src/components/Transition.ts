@@ -32,12 +32,14 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
+export const vtcKey = Symbol('_vtc')
+
 export interface ElementWithTransition extends HTMLElement {
   // _vtc = Vue Transition Classes.
   // Store the temporarily-added transition classes on the element
   // so that we can avoid overwriting them if the element's class is patched
   // during the transition.
-  _vtc?: Set<string>
+  [vtcKey]?: Set<string>
 }
 
 // DOM Transition is a higher-order-component based on the platform-agnostic
@@ -295,18 +297,18 @@ function NumberOf(val: unknown): number {
 export function addTransitionClass(el: Element, cls: string) {
   cls.split(/\s+/).forEach(c => c && el.classList.add(c))
   ;(
-    (el as ElementWithTransition)._vtc ||
-    ((el as ElementWithTransition)._vtc = new Set())
+    (el as ElementWithTransition)[vtcKey] ||
+    ((el as ElementWithTransition)[vtcKey] = new Set())
   ).add(cls)
 }
 
 export function removeTransitionClass(el: Element, cls: string) {
   cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
-  const { _vtc } = el as ElementWithTransition
+  const _vtc = (el as ElementWithTransition)[vtcKey]
   if (_vtc) {
     _vtc.delete(cls)
     if (!_vtc!.size) {
-      ;(el as ElementWithTransition)._vtc = undefined
+      ;(el as ElementWithTransition)[vtcKey] = undefined
     }
   }
 }
