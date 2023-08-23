@@ -70,6 +70,7 @@ module.exports = {
     {
       files: ['*.js'],
       rules: {
+        // We only do `no-unused-vars` checks for js files, TS files are checked by TypeScript itself.
         'no-unused-vars': ['error', { vars: 'all', args: 'none' }]
       }
     },
