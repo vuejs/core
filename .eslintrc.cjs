@@ -9,12 +9,6 @@ module.exports = {
   plugins: ['jest'],
   rules: {
     'no-debugger': 'error',
-    'no-unused-vars': [
-      'error',
-      // we are only using this rule to check for unused arguments since TS
-      // catches unused variables but not args.
-      { varsIgnorePattern: '.*', args: 'none' }
-    ],
     // most of the codebase are expected to be env agnostic
     'no-restricted-globals': ['error', ...DOMGlobals, ...NodeGlobals],
 
@@ -70,6 +64,13 @@ module.exports = {
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': 'off'
+      }
+    },
+    // JavaScript files
+    {
+      files: ['*.js'],
+      rules: {
+        'no-unused-vars': ['error', { vars: 'all', args: 'none' }]
       }
     },
     // Node scripts
