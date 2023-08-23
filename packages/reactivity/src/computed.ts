@@ -33,7 +33,6 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _dirty = true
-  public _cacheable: boolean
 
   constructor(
     getter: ComputedGetter<T>,
@@ -48,7 +47,7 @@ export class ComputedRefImpl<T> {
       }
     })
     this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
+    this.effect.active = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
@@ -56,7 +55,7 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (self._dirty || !self._cacheable) {
+    if (self._dirty) {
       self._dirty = false
       self._value = self.effect.run()!
     }
