@@ -198,7 +198,7 @@ function doWatch(
     }
     if (once !== undefined) {
       warn(
-        `watch() "deep" option is only respected when using the ` +
+        `watch() "once" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
       )
     }
