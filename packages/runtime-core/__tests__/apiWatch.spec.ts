@@ -32,7 +32,6 @@ import {
   effectScope,
   toRef
 } from '@vue/reactivity'
-import { expect } from 'vitest'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
@@ -1244,5 +1243,4 @@ describe('api: watch', () => {
     expect(count.value).toBe(2)
     expect(cb).toHaveBeenCalledTimes(1)
   })
-  // watch once with immediate
 })
