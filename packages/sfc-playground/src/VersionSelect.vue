@@ -74,8 +74,8 @@ onMounted(() => {
 
     <ul class="versions" :class="{ expanded }">
       <li v-if="!versions"><a>loading versions...</a></li>
-      <li v-for="version of versions">
-        <a @click="setVersion(version)">v{{ version }}</a>
+      <li v-for="ver of versions" :class="{ active:  (pkg === 'vue' ? 'v' + ver : ver) === version }">
+        <a @click="setVersion(ver)">v{{ ver }}</a>
       </li>
       <div @click="expanded = false">
         <slot />
@@ -110,5 +110,9 @@ onMounted(() => {
   border-right: 4px solid transparent;
   border-top: 6px solid #aaa;
   margin-left: 8px;
+}
+
+.versions .active a{
+  color: var(--green);
 }
 </style>
