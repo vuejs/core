@@ -759,11 +759,13 @@ export function cloneIfMounted(child: VNode): VNode {
 }
 
 export function normalizeChildren(vnode: VNode, children: unknown) {
+  if (children == null) {
+    vnode.children = null
+    return
+  }
   let type = 0
   const { shapeFlag } = vnode
-  if (children == null) {
-    children = null
-  } else if (isArray(children)) {
+  if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
     if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
