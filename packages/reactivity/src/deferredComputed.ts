@@ -28,7 +28,6 @@ class DeferredComputedRefImpl<T> {
   public dep?: Dep = undefined
 
   private _value!: T
-  private _dirty = true
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
@@ -37,45 +36,40 @@ class DeferredComputedRefImpl<T> {
   constructor(getter: ComputedGetter<T>) {
     let compareTarget: any
     let hasCompareTarget = false
-    let scheduled = false
-    this.effect = new ReactiveEffect(
-      getter,
-      (_deferredComputed, computedTrigger?: boolean) => {
-        if (this.dep) {
-          if (computedTrigger) {
-            compareTarget = this._value
-            hasCompareTarget = true
-          } else if (!scheduled) {
-            const valueToCompare = hasCompareTarget
-              ? compareTarget
-              : this._value
-            scheduled = true
-            hasCompareTarget = false
-            scheduler(() => {
-              if (this.effect.active && this._get() !== valueToCompare) {
-                triggerRefValue(this, undefined)
-              }
-              scheduled = false
-            })
-          }
-          // chained upstream computeds are notified synchronously to ensure
-          // value invalidation in case of sync access; normal effects are
-          // deferred to be triggered in scheduler.
-          for (const e of this.dep) {
-            if (e.computed instanceof DeferredComputedRefImpl) {
-              e.scheduler!(undefined, true /* computedTrigger */)
+    this.effect = new ReactiveEffect(getter, (computedTrigger?: boolean) => {
+      if (this.dep) {
+        if (computedTrigger) {
+          compareTarget = this._value
+          hasCompareTarget = true
+        } else if (!this.effect._scheduled) {
+          const valueToCompare = hasCompareTarget ? compareTarget : this._value
+          this.effect._scheduled = true
+          hasCompareTarget = false
+          scheduler(() => {
+            if (this.effect.active && this._get() !== valueToCompare) {
+              triggerRefValue(this, undefined)
             }
+            this.effect._scheduled = false
+          })
+        }
+        // chained upstream computeds are notified synchronously to ensure
+        // value invalidation in case of sync access; normal effects are
+        // deferred to be triggered in scheduler.
+        for (const e of this.dep) {
+          if (e.computed instanceof DeferredComputedRefImpl) {
+            e.scheduler!(true /* computedTrigger */)
           }
         }
-        this._dirty = true
+        this.effect._dirty = true
       }
-    )
+    })
+    this.effect._dirty = true
     this.effect.computed = this as any
   }
 
   private _get() {
-    if (this._dirty) {
-      this._dirty = false
+    if (this.effect.dirty) {
+      this.effect._dirty = false
       return (this._value = this.effect.run()!)
     }
     return this._value

@@ -30,10 +30,7 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export type EffectScheduler = (
-  deferredComputed: ComputedRefImpl<any> | undefined,
-  ...args: any[]
-) => any
+export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -77,6 +74,35 @@ export class ReactiveEffect<T = any> {
   onTrack?: (event: DebuggerEvent) => void
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
+
+  public _dirty = false
+  public _scheduled = false
+  public _deferredComputeds: ComputedRefImpl<any>[] = []
+  private _depIndexes = new Map<Dep | undefined, number>()
+
+  public get dirty() {
+    if (!this._dirty && this._deferredComputeds.length) {
+      if (this._deferredComputeds.length >= 2) {
+        for (const { dep } of this._deferredComputeds) {
+          this._depIndexes.set(dep, this.deps.indexOf(dep!))
+        }
+        this._deferredComputeds = this._deferredComputeds.sort(
+          (a, b) => this._depIndexes.get(a.dep)! - this._depIndexes.get(b.dep)!
+        )
+        this._depIndexes.clear()
+      }
+      pauseTracking()
+      for (const deferredComputed of this._deferredComputeds) {
+        deferredComputed.value
+        if (this._dirty) {
+          break
+        }
+      }
+      resetTracking()
+    }
+    this._deferredComputeds.length = 0
+    return this._dirty
+  }
 
   constructor(
     public fn: () => T,
@@ -188,23 +214,9 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  let _dirty = false
-  let _scheduled = false
-  let _deferredComputeds: ComputedRefImpl<any>[] = []
-
-  const _depIndexes = new Map<Dep | undefined, number>()
-  const _effect = new ReactiveEffect(fn, deferredComputed => {
-    if (!_dirty) {
-      if (deferredComputed) {
-        _deferredComputeds.push(deferredComputed)
-      } else {
-        _dirty = true
-      }
-    }
-    if (!_scheduled) {
-      _scheduled = true
-      pendingEffectRunners.push(run)
-    }
+  const _effect = new ReactiveEffect(fn, () => {
+    _effect._scheduled = true
+    pendingEffectRunners.push(run)
   })
   if (options) {
     extend(_effect, options)
@@ -218,29 +230,11 @@ export function effect<T = any>(
   return runner
 
   function run() {
-    if (!_dirty && _deferredComputeds.length) {
-      if (_deferredComputeds.length >= 2) {
-        for (const { dep } of _deferredComputeds) {
-          _depIndexes.set(dep, _effect.deps.indexOf(dep!))
-        }
-        _deferredComputeds = _deferredComputeds.sort(
-          (a, b) => _depIndexes.get(a.dep)! - _depIndexes.get(b.dep)!
-        )
-        _depIndexes.clear()
-      }
-      for (const deferredComputed of _deferredComputeds) {
-        deferredComputed.value
-        if (_dirty) {
-          break
-        }
-      }
-    }
-    if (_dirty) {
-      _dirty = false
+    if (_effect.dirty) {
       _effect.run()
+      _effect._dirty = false
     }
-    _deferredComputeds.length = 0
-    _scheduled = false
+    _effect._scheduled = false
   }
 }
 
@@ -468,7 +462,16 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect.scheduler) {
-      effect.scheduler(deferredComputed)
+      if (!effect._dirty) {
+        if (deferredComputed) {
+          effect._deferredComputeds.push(deferredComputed)
+        } else {
+          effect._dirty = true
+        }
+      }
+      if (!effect._scheduled) {
+        effect.scheduler()
+      }
     } else {
       effect.run()
     }

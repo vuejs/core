@@ -1,9 +1,4 @@
-import {
-  DebuggerOptions,
-  pauseTracking,
-  ReactiveEffect,
-  resetTracking
-} from './effect'
+import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -37,10 +32,6 @@ export class ComputedRefImpl<T> {
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _dirty = true
-  public _scheduled = false
-  public _deferredComputeds: ComputedRefImpl<any>[] = []
-  public _depIndexes = new Map<Dep | undefined, number>()
   public _cacheable: boolean
 
   constructor(
@@ -49,19 +40,11 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, deferredComputed => {
-      if (!this._dirty) {
-        if (deferredComputed) {
-          this._deferredComputeds.push(deferredComputed)
-        } else {
-          this._dirty = true
-        }
-      }
-      if (!this._scheduled) {
-        this._scheduled = true
-        triggerRefValue(this, this)
-      }
+    this.effect = new ReactiveEffect(getter, () => {
+      this.effect._scheduled = true
+      triggerRefValue(this, this)
     })
+    this.effect._dirty = true
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
@@ -70,36 +53,16 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (!self._dirty && self._deferredComputeds.length) {
-      if (self._deferredComputeds.length >= 2) {
-        for (const { dep } of self._deferredComputeds) {
-          self._depIndexes.set(dep, self.effect.deps.indexOf(dep!))
-        }
-        self._deferredComputeds = self._deferredComputeds.sort(
-          (a, b) => self._depIndexes.get(a.dep)! - self._depIndexes.get(b.dep)!
-        )
-        self._depIndexes.clear()
-      }
-      pauseTracking()
-      for (const deferredComputed of self._deferredComputeds) {
-        deferredComputed.value
-        if (self._dirty) {
-          break
-        }
-      }
-      resetTracking()
-    }
     trackRefValue(self)
-    if (self._dirty || !self._cacheable) {
+    if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
         triggerRefValue(self, undefined)
       }
       self._value = newValue
-      self._dirty = false
-      self._scheduled = false
+      self.effect._dirty = false
+      self.effect._scheduled = false
     }
-    self._deferredComputeds.length = 0
     return self._value
   }
 
