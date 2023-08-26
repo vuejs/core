@@ -163,7 +163,7 @@ export function resolveParserPlugins(
     userPlugins = userPlugins.filter(p => p !== 'jsx')
   }
   if (lang === 'ts' || lang === 'tsx') {
-    plugins.push(['typescript', { dts }])
+    plugins.push(['typescript', { dts }], 'explicitResourceManagement')
     if (!plugins.includes('importAssertions')) {
       plugins.push(['importAttributes', { deprecatedAssertSyntax: true }])
     }
