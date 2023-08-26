@@ -28,6 +28,7 @@ class DeferredComputedRefImpl<T> {
   public dep?: Dep = undefined
 
   private _value!: T
+  private _dirty = true
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
@@ -36,20 +37,21 @@ class DeferredComputedRefImpl<T> {
   constructor(getter: ComputedGetter<T>) {
     let compareTarget: any
     let hasCompareTarget = false
+    let scheduled = false
     this.effect = new ReactiveEffect(getter, (computedTrigger?: boolean) => {
       if (this.dep) {
         if (computedTrigger) {
           compareTarget = this._value
           hasCompareTarget = true
-        } else if (!this.effect._scheduled) {
+        } else if (!scheduled) {
           const valueToCompare = hasCompareTarget ? compareTarget : this._value
-          this.effect._scheduled = true
+          scheduled = true
           hasCompareTarget = false
           scheduler(() => {
             if (this.effect.active && this._get() !== valueToCompare) {
-              triggerRefValue(this, undefined)
+              triggerRefValue(this)
             }
-            this.effect._scheduled = false
+            scheduled = false
           })
         }
         // chained upstream computeds are notified synchronously to ensure
@@ -61,15 +63,14 @@ class DeferredComputedRefImpl<T> {
           }
         }
       }
-      this.effect._dirty = true
+      this._dirty = true
     })
-    this.effect._dirty = true
     this.effect.computed = this as any
   }
 
   private _get() {
-    if (this.effect.dirty) {
-      this.effect._dirty = false
+    if (this._dirty) {
+      this._dirty = false
       return (this._value = this.effect.run()!)
     }
     return this._value
