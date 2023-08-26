@@ -112,7 +112,7 @@ onMounted(() => {
   margin-left: 8px;
 }
 
-.versions .active a{
+.versions .active a {
   color: var(--green);
 }
 </style>
