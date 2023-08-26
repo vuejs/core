@@ -310,6 +310,11 @@ function doWatch(
     if (!effect.active) {
       return
     }
+    effect._scheduled = false
+    if (!effect.dirty) {
+      return
+    }
+    effect._dirty = false
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -361,7 +366,13 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, scheduler)
+  const effect = new ReactiveEffect(getter, () => {
+    effect._scheduled = true
+    scheduler()
+  })
+  if (immediate) {
+    effect._dirty = true
+  }
 
   if (__DEV__) {
     effect.onTrack = onTrack
