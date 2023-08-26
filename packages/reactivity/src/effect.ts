@@ -106,7 +106,7 @@ export class ReactiveEffect<T = any> {
 
   constructor(
     public fn: () => T,
-    public scheduler: EffectScheduler | null = null,
+    public scheduler: EffectScheduler,
     scope?: EffectScope
   ) {
     recordEffectScope(this, scope)
@@ -459,20 +459,16 @@ function triggerEffect(
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (effect.scheduler) {
-      if (!effect._dirty) {
-        if (deferredComputed) {
-          effect._deferredComputeds.push(deferredComputed)
-        } else {
-          effect._dirty = true
-          effect._deferredComputeds.length = 0
-        }
+    if (!effect._dirty) {
+      if (deferredComputed) {
+        effect._deferredComputeds.push(deferredComputed)
+      } else {
+        effect._dirty = true
+        effect._deferredComputeds.length = 0
       }
-      if (!effect._scheduled) {
-        effect.scheduler()
-      }
-    } else {
-      effect.run()
+    }
+    if (!effect._scheduled) {
+      effect.scheduler()
     }
   }
   if (isRootTrigger) {

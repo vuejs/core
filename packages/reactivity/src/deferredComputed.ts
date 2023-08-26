@@ -59,7 +59,7 @@ class DeferredComputedRefImpl<T> {
         // deferred to be triggered in scheduler.
         for (const e of this.dep) {
           if (e.computed instanceof DeferredComputedRefImpl) {
-            e.scheduler!(true /* computedTrigger */)
+            e.scheduler(true /* computedTrigger */)
           }
         }
       }
