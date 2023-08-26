@@ -66,7 +66,7 @@ const WITH_DEFAULTS = 'withDefaults'
 // constants
 const DEFAULT_VAR = `__default__`
 
-const isBuiltInDir = makeMap(
+const isBuiltInDir = /*#__PURE__*/ makeMap(
   `once,memo,if,for,else,else-if,slot,text,html,on,bind,model,show,cloak,is`
 )
 
