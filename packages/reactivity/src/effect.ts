@@ -216,7 +216,13 @@ export function effect<T = any>(
 
   const _effect = new ReactiveEffect(fn, () => {
     _effect._scheduled = true
-    pendingEffectRunners.push(run)
+    queueEffectCbs.push(() => {
+      if (_effect.dirty) {
+        _effect.run()
+        _effect._dirty = false
+      }
+      _effect._scheduled = false
+    })
   })
   if (options) {
     extend(_effect, options)
@@ -228,14 +234,6 @@ export function effect<T = any>(
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
   runner.effect = _effect
   return runner
-
-  function run() {
-    if (_effect.dirty) {
-      _effect.run()
-      _effect._dirty = false
-    }
-    _effect._scheduled = false
-  }
 }
 
 /**
@@ -449,7 +447,7 @@ export function triggerEffects(
   }
 }
 
-const pendingEffectRunners: (() => void)[] = []
+const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
   effect: ReactiveEffect,
@@ -477,8 +475,8 @@ function triggerEffect(
     }
   }
   if (isRootTrigger) {
-    while (pendingEffectRunners.length) {
-      pendingEffectRunners.shift()!()
+    while (queueEffectCbs.length) {
+      queueEffectCbs.shift()!()
     }
   }
 }
