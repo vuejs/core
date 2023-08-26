@@ -465,6 +465,7 @@ function triggerEffect(
           effect._deferredComputeds.push(deferredComputed)
         } else {
           effect._dirty = true
+          effect._deferredComputeds.length = 0
         }
       }
       if (!effect._scheduled) {
