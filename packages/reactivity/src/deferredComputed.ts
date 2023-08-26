@@ -60,8 +60,8 @@ class DeferredComputedRefImpl<T> {
             e.scheduler!(true /* computedTrigger */)
           }
         }
-        this.effect._dirty = true
       }
+      this.effect._dirty = true
     })
     this.effect._dirty = true
     this.effect.computed = this as any
