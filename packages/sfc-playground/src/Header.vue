@@ -24,7 +24,7 @@ const vueVersion = ref(`@${currentCommit}`)
 async function setVueVersion(v: string) {
   vueVersion.value = `loading...`
   await store.setVueVersion(v)
-  vueVersion.value = `v${v}`
+  vueVersion.value = `${v}`
 }
 
 function resetVueVersion() {
