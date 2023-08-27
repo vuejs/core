@@ -99,6 +99,20 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  test('shift on Array should only trigger dependency once', () => {
+    const arr = reactive([1, 2, 3])
+    const fn = vi.fn()
+    effect(() => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i]
+      }
+      fn()
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    arr.shift()
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
   test('add existing index on Array should not trigger length dependency', () => {
     const array = new Array(3)
     const observed = reactive(array)

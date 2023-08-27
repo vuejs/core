@@ -250,7 +250,10 @@ export function stop(runner: ReactiveEffectRunner) {
 }
 
 export let shouldTrack = true
+export let shouldSchedule = true
+
 const trackStack: boolean[] = []
+const scheduleStack: boolean[] = []
 
 /**
  * Temporarily pauses tracking.
@@ -274,6 +277,17 @@ export function enableTracking() {
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
+}
+
+export function pauseScheduling() {
+  scheduleStack.push(shouldSchedule)
+  shouldSchedule = false
+}
+
+export function resetScheduling() {
+  const last = scheduleStack.pop()
+  shouldSchedule = last === undefined ? true : last
+  scheduleEffectCallbacks()
 }
 
 /**
@@ -478,7 +492,7 @@ function triggerEffect(
 }
 
 function scheduleEffectCallbacks() {
-  if (effectTrackDepth === 0) {
+  if (effectTrackDepth === 0 && shouldSchedule) {
     while (queueEffectCbs.length) {
       queueEffectCbs.shift()!()
     }

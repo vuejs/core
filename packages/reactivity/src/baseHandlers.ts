@@ -17,7 +17,9 @@ import {
   trigger,
   ITERATE_KEY,
   pauseTracking,
-  resetTracking
+  resetTracking,
+  pauseScheduling,
+  resetScheduling
 } from './effect'
 import {
   isObject,
@@ -71,7 +73,9 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
+      pauseScheduling()
       const res = (toRaw(this) as any)[key].apply(this, args)
+      resetScheduling()
       resetTracking()
       return res
     }
