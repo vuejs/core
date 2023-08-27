@@ -75,13 +75,21 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public _dirty = false
-  public _scheduled = false
+  public dirty = false
+  public scheduled = false
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
-  public get dirty() {
-    if (!this._dirty && this._deferredComputeds.length) {
+  constructor(
+    public fn: () => T,
+    public scheduler: EffectScheduler,
+    scope?: EffectScope
+  ) {
+    recordEffectScope(this, scope)
+  }
+
+  public applyDirty() {
+    if (!this.dirty && this._deferredComputeds.length) {
       if (this._deferredComputeds.length >= 2) {
         for (const { dep } of this._deferredComputeds) {
           this._depIndexes.set(dep, this.deps.indexOf(dep!))
@@ -94,22 +102,14 @@ export class ReactiveEffect<T = any> {
       pauseTracking()
       for (const deferredComputed of this._deferredComputeds) {
         deferredComputed.value
-        if (this._dirty) {
+        if (this.dirty) {
           break
         }
       }
       resetTracking()
     }
     this._deferredComputeds.length = 0
-    return this._dirty
-  }
-
-  constructor(
-    public fn: () => T,
-    public scheduler: EffectScheduler,
-    scope?: EffectScope
-  ) {
-    recordEffectScope(this, scope)
+    return this.dirty
   }
 
   run() {
@@ -215,13 +215,13 @@ export function effect<T = any>(
   }
 
   const _effect = new ReactiveEffect(fn, () => {
-    _effect._scheduled = true
+    _effect.scheduled = true
     queueEffectCbs.push(() => {
-      if (_effect.dirty) {
+      if (_effect.applyDirty()) {
         _effect.run()
-        _effect._dirty = false
+        _effect.dirty = false
       }
-      _effect._scheduled = false
+      _effect.scheduled = false
     })
   })
   if (options) {
@@ -459,15 +459,15 @@ function triggerEffect(
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (!effect._dirty) {
+    if (!effect.dirty) {
       if (deferredComputed) {
         effect._deferredComputeds.push(deferredComputed)
       } else {
-        effect._dirty = true
+        effect.dirty = true
         effect._deferredComputeds.length = 0
       }
     }
-    if (!effect._scheduled) {
+    if (!effect.scheduled) {
       effect.scheduler()
     }
   }

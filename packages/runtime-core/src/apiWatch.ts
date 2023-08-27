@@ -310,11 +310,11 @@ function doWatch(
     if (!effect.active) {
       return
     }
-    effect._scheduled = false
-    if (!effect.dirty) {
+    effect.scheduled = false
+    if (!effect.applyDirty()) {
       return
     }
-    effect._dirty = false
+    effect.dirty = false
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -367,11 +367,11 @@ function doWatch(
   }
 
   const effect = new ReactiveEffect(getter, () => {
-    effect._scheduled = true
+    effect.scheduled = true
     scheduler()
   })
   if (immediate) {
-    effect._dirty = true
+    effect.dirty = true
   }
 
   if (__DEV__) {
