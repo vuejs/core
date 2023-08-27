@@ -458,7 +458,6 @@ function triggerEffect(
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  const isRootTrigger = effectTrackDepth === 0
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
@@ -475,7 +474,11 @@ function triggerEffect(
       effect.scheduler()
     }
   }
-  if (isRootTrigger) {
+  triggerEffectCallbacks()
+}
+
+function triggerEffectCallbacks() {
+  if (effectTrackDepth === 0) {
     while (queueEffectCbs.length) {
       queueEffectCbs.shift()!()
     }
