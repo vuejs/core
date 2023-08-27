@@ -54,7 +54,7 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (!self._cacheable || self.effect.applyDirty()) {
+    if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
         triggerRefValue(self, undefined)

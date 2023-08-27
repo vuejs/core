@@ -311,7 +311,7 @@ function doWatch(
       return
     }
     effect.scheduled = false
-    if (!effect.applyDirty()) {
+    if (!effect.dirty) {
       return
     }
     effect.dirty = false

@@ -75,7 +75,7 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public dirty = false
+  public _dirty = false
   public scheduled = false
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
@@ -88,8 +88,8 @@ export class ReactiveEffect<T = any> {
     recordEffectScope(this, scope)
   }
 
-  public applyDirty() {
-    if (!this.dirty && this._deferredComputeds.length) {
+  public get dirty() {
+    if (!this._dirty && this._deferredComputeds.length) {
       if (this._deferredComputeds.length >= 2) {
         for (const { dep } of this._deferredComputeds) {
           this._depIndexes.set(dep, this.deps.indexOf(dep!))
@@ -102,14 +102,18 @@ export class ReactiveEffect<T = any> {
       pauseTracking()
       for (const deferredComputed of this._deferredComputeds) {
         deferredComputed.value
-        if (this.dirty) {
+        if (this._dirty) {
           break
         }
       }
       resetTracking()
     }
     this._deferredComputeds.length = 0
-    return this.dirty
+    return this._dirty
+  }
+
+  public set dirty(value) {
+    this._dirty = value
   }
 
   run() {
@@ -217,7 +221,7 @@ export function effect<T = any>(
   const _effect = new ReactiveEffect(fn, () => {
     _effect.scheduled = true
     queueEffectCbs.push(() => {
-      if (_effect.applyDirty()) {
+      if (_effect.dirty) {
         _effect.run()
         _effect.dirty = false
       }
@@ -459,11 +463,11 @@ function triggerEffect(
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (!effect.dirty) {
+    if (!effect._dirty) {
       if (deferredComputed) {
         effect._deferredComputeds.push(deferredComputed)
       } else {
-        effect.dirty = true
+        effect._dirty = true
         effect._deferredComputeds.length = 0
       }
     }
