@@ -181,7 +181,7 @@ export function extractRuntimeProps(
   for (const prop of props) {
     propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
     // register bindings
-    if (!(prop.key in ctx.bindingMetadata)) {
+    if ('bindingMetadata' in ctx && !(prop.key in ctx.bindingMetadata)) {
       ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
     }
   }

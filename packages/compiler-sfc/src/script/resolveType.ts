@@ -42,6 +42,13 @@ import type TS from 'typescript'
 import { extname, dirname } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 
+export type SimpleTypeResolveOptions = Partial<
+  Pick<
+    SFCScriptCompileOptions,
+    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd'
+  >
+>
+
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
  * but also allows a simpler version of it with minimal required properties
@@ -62,8 +69,6 @@ export type SimpleTypeResolveContext = Pick<
   // file
   | 'source'
   | 'filename'
-  | 'options'
-  | 'bindingMetadata'
 
   // utils
   | 'error'
@@ -82,6 +87,7 @@ export type SimpleTypeResolveContext = Pick<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
   > & {
     ast: Statement[]
+    options: SimpleTypeResolveOptions
   }
 
 export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext

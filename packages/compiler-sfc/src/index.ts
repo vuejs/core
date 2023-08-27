@@ -60,6 +60,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type { ScriptCompileContext } from './script/context'
 export type {
   TypeResolveContext,
+  SimpleTypeResolveOptions,
   SimpleTypeResolveContext
 } from './script/resolveType'
 export type {
