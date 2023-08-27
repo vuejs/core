@@ -474,11 +474,11 @@ function triggerEffect(
       effect.scheduler()
     }
   }
-  triggerEffectCallbacks()
+  scheduleEffectCallbacks()
 }
 
-function triggerEffectCallbacks() {
   if (effectTrackDepth === 0) {
+function scheduleEffectCallbacks() {
     while (queueEffectCbs.length) {
       queueEffectCbs.shift()!()
     }
