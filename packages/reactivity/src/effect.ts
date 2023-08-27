@@ -16,7 +16,7 @@ import { ComputedRefImpl } from './computed'
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<any, KeyToDepMap>()
+const targetMap = new WeakMap<object, KeyToDepMap>()
 
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
@@ -181,7 +181,7 @@ export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
 ): ReactiveEffectRunner {
-  if ((fn as ReactiveEffectRunner).effect) {
+  if ((fn as ReactiveEffectRunner).effect instanceof ReactiveEffect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
