@@ -1,7 +1,11 @@
 import { Identifier, LVal, Node, RestElement } from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
-import { resolveTypeElements, resolveUnionType } from './resolveType'
+import {
+  TypeResolveContext,
+  resolveTypeElements,
+  resolveUnionType
+} from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
 
@@ -57,7 +61,7 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
   return emitsDecl
 }
 
-export function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
+export function extractRuntimeEmits(ctx: TypeResolveContext): Set<string> {
   const emits = new Set<string>()
   const node = ctx.emitsTypeDecl!
 
@@ -90,7 +94,7 @@ export function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
 }
 
 function extractEventNames(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   eventName: Identifier | RestElement,
   emits: Set<string>
 ) {

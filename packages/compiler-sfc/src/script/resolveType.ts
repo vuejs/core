@@ -59,8 +59,24 @@ import { minimatch as isMatch } from 'minimatch'
  */
 export type SimpleTypeResolveContext = Pick<
   ScriptCompileContext,
-  // required
-  'source' | 'filename' | 'error' | 'options'
+  // file
+  | 'source'
+  | 'filename'
+  | 'options'
+  | 'bindingMetadata'
+
+  // utils
+  | 'error'
+  | 'helper'
+  | 'getString'
+
+  // props
+  | 'propsTypeDecl'
+  | 'propsRuntimeDefaults'
+  | 'propsDestructuredBindings'
+
+  // emits
+  | 'emitsTypeDecl'
 > &
   Partial<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
