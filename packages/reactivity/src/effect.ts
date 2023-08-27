@@ -477,8 +477,8 @@ function triggerEffect(
   scheduleEffectCallbacks()
 }
 
-  if (effectTrackDepth === 0) {
 function scheduleEffectCallbacks() {
+  if (effectTrackDepth === 0) {
     while (queueEffectCbs.length) {
       queueEffectCbs.shift()!()
     }
