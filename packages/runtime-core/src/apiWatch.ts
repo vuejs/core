@@ -307,8 +307,7 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    scheduled = false
-    if (!effect.active || !effect.dirty) {
+    if (!effect.active) {
       return
     }
     if (cb) {
@@ -362,14 +361,7 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  let scheduled = false
-
-  const effect = new ReactiveEffect(getter, () => {
-    if (!scheduled) {
-      scheduled = true
-      scheduler()
-    }
-  })
+  const effect = new ReactiveEffect(getter, scheduler)
 
   if (__DEV__) {
     effect.onTrack = onTrack
