@@ -48,8 +48,7 @@ export class ComputedRefImpl<T> {
         this.scheduled = true
         if (!this.init) {
           triggerRefValue(this, undefined)
-        }
-        else {
+        } else {
           triggerRefValue(this, this)
         }
       }
@@ -67,8 +66,7 @@ export class ComputedRefImpl<T> {
       const newValue = self.effect.run()!
       if (!self.init) {
         self.init = true
-      }
-      else if (hasChanged(self._value, newValue)) {
+      } else if (hasChanged(self._value, newValue)) {
         triggerRefValue(self, undefined)
       }
       self._value = newValue
