@@ -269,10 +269,12 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $root: i => getPublicInstance(i.root),
     $emit: i => i.emit,
     $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-    $forceUpdate: i => i.f || (i.f = () => {
-      i.effect._dirty = true
-      queueJob(i.update)
-    }),
+    $forceUpdate: i =>
+      i.f ||
+      (i.f = () => {
+        i.effect._dirty = true
+        queueJob(i.update)
+      }),
     $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
     $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
   } as PublicPropertiesMap)
