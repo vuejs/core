@@ -16,7 +16,14 @@ import {
   blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isOn,
+  isModelListener,
+  isObject,
+  isArray
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
@@ -140,7 +147,12 @@ export function renderComponentRoot(
       Object.keys(fallthroughAttrs).forEach(key => {
         if (key in props) {
           const propsDef = (type as ConcreteComponent).props
-          if (propsDef && key in propsDef) delete fallthroughAttrs![key]
+          if (
+            propsDef &&
+            ((isObject(propsDef) && key in propsDef) ||
+              (isArray(propsDef) && propsDef.includes(key)))
+          )
+            delete fallthroughAttrs![key]
         }
       })
     }

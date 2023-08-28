@@ -729,4 +729,39 @@ describe('attribute fallthrough', () => {
     expect(textBar).toBe('from GrandChild')
     expect(textFoo).toBe('from Child')
   })
+
+  // #9039
+  it('should not fallthrough attr if it has been declared as a prop in the root component', () => {
+    const App = defineComponent({
+      setup() {
+        return () =>
+          h(Child, {
+            foo: '123'
+          })
+      }
+    })
+
+    const Child = defineComponent({
+      setup(_props) {
+        const foo = ref('456')
+        return () =>
+          h(GrandChild, {
+            foo: foo.value
+          })
+      }
+    })
+    const GrandChild = defineComponent({
+      props: ['foo'],
+      setup(_props) {
+        return () => h('span', null, _props.foo)
+      }
+    })
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(App), root)
+
+    const node = root.children[0] as HTMLElement
+    expect(node.innerHTML).toBe('456')
+  })
 })
