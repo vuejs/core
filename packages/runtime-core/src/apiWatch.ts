@@ -311,7 +311,6 @@ function doWatch(
     if (!effect.active || !effect.dirty) {
       return
     }
-    effect.dirty = false
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -371,9 +370,6 @@ function doWatch(
       scheduler()
     }
   })
-  if (immediate) {
-    effect.dirty = true
-  }
 
   if (__DEV__) {
     effect.onTrack = onTrack

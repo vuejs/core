@@ -75,7 +75,7 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public _dirty = false
+  public _dirty = true
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -111,11 +111,8 @@ export class ReactiveEffect<T = any> {
     return this._dirty
   }
 
-  public set dirty(value) {
-    this._dirty = value
-  }
-
   run() {
+    this._dirty = false
     if (!this.active) {
       return this.fn()
     }
@@ -225,7 +222,6 @@ export function effect<T = any>(
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
           _effect.run()
-          _effect.dirty = false
         }
         scheduled = false
       })
