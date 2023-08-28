@@ -34,6 +34,7 @@ export class ComputedRefImpl<T> {
 
   public _cacheable: boolean
 
+  private init = false
   private scheduled = false
 
   constructor(
@@ -45,7 +46,12 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this.scheduled) {
         this.scheduled = true
-        triggerRefValue(this, this)
+        if (!this.init) {
+          triggerRefValue(this, undefined)
+        }
+        else {
+          triggerRefValue(this, this)
+        }
       }
     })
     this.effect.computed = this
@@ -59,7 +65,10 @@ export class ComputedRefImpl<T> {
     trackRefValue(self)
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
-      if (hasChanged(self._value, newValue)) {
+      if (!self.init) {
+        self.init = true
+      }
+      else if (hasChanged(self._value, newValue)) {
         triggerRefValue(self, undefined)
       }
       self._value = newValue
