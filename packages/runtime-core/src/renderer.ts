@@ -1282,6 +1282,7 @@ function baseCreateRenderer(
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect.
+        instance.effect._dirty = true
         instance.update()
       }
     } else {
@@ -1550,7 +1551,11 @@ function baseCreateRenderer(
       instance.scope // track it in component's effect scope
     ))
 
-    const update: SchedulerJob = (instance.update = () => effect.run())
+    const update: SchedulerJob = (instance.update = () => {
+      if (effect.dirty) {
+        effect.run()
+      }
+    })
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
