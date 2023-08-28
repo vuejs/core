@@ -71,6 +71,16 @@ export class ComputedRefImpl<T> {
   set value(newValue: T) {
     this._setter(newValue)
   }
+
+  // #region polyfill _dirty to backward compatibility for Vue <= 3.3
+  get _dirty() {
+    return this.effect.dirty
+  }
+
+  set _dirty(v) {
+    this.effect._dirty = v
+  }
+  // #endregion
 }
 
 /**
