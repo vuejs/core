@@ -48,7 +48,6 @@ export class ComputedRefImpl<T> {
         triggerRefValue(this, this)
       }
     })
-    this.effect.dirty = true
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly

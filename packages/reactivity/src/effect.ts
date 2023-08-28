@@ -75,7 +75,7 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public _dirty = false
+  public _dirty = true
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -237,6 +237,7 @@ export function effect<T = any>(
   }
   if (!options || !options.lazy) {
     _effect.run()
+    _effect.dirty = false
   }
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
   runner.effect = _effect

@@ -371,9 +371,6 @@ function doWatch(
       scheduler()
     }
   })
-  if (immediate) {
-    effect.dirty = true
-  }
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -386,14 +383,19 @@ function doWatch(
       job()
     } else {
       oldValue = effect.run()
+      effect.dirty = false
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
-      effect.run.bind(effect),
+      () => {
+        effect.run()
+        effect.dirty = false
+      },
       instance && instance.suspense
     )
   } else {
     effect.run()
+    effect.dirty = false
   }
 
   const unwatch = () => {
