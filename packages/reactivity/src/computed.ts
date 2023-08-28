@@ -64,7 +64,6 @@ export class ComputedRefImpl<T> {
       }
       self._value = newValue
       self.scheduled = false
-      self.effect.dirty = false
     }
     return self._value
   }

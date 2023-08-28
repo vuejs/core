@@ -311,7 +311,6 @@ function doWatch(
     if (!effect.active || !effect.dirty) {
       return
     }
-    effect.dirty = false
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -383,19 +382,14 @@ function doWatch(
       job()
     } else {
       oldValue = effect.run()
-      effect.dirty = false
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
-      () => {
-        effect.run()
-        effect.dirty = false
-      },
+      effect.run.bind(effect),
       instance && instance.suspense
     )
   } else {
     effect.run()
-    effect.dirty = false
   }
 
   const unwatch = () => {

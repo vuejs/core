@@ -111,11 +111,8 @@ export class ReactiveEffect<T = any> {
     return this._dirty
   }
 
-  public set dirty(value) {
-    this._dirty = value
-  }
-
   run() {
+    this._dirty = false
     if (!this.active) {
       return this.fn()
     }
@@ -225,7 +222,6 @@ export function effect<T = any>(
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
           _effect.run()
-          _effect.dirty = false
         }
         scheduled = false
       })
@@ -237,7 +233,6 @@ export function effect<T = any>(
   }
   if (!options || !options.lazy) {
     _effect.run()
-    _effect.dirty = false
   }
   const runner = _effect.run.bind(_effect) as ReactiveEffectRunner
   runner.effect = _effect
