@@ -34,6 +34,8 @@ export class ComputedRefImpl<T> {
 
   public _cacheable: boolean
 
+  private scheduled = false
+
   constructor(
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
@@ -41,8 +43,10 @@ export class ComputedRefImpl<T> {
     isSSR: boolean
   ) {
     this.effect = new ReactiveEffect(getter, () => {
-      this.effect.scheduled = true
-      triggerRefValue(this, this)
+      if (!this.scheduled) {
+        this.scheduled = true
+        triggerRefValue(this, this)
+      }
     })
     this.effect.dirty = true
     this.effect.computed = this
@@ -60,8 +64,8 @@ export class ComputedRefImpl<T> {
         triggerRefValue(self, undefined)
       }
       self._value = newValue
+      self.scheduled = false
       self.effect.dirty = false
-      self.effect.scheduled = false
     }
     return self._value
   }
