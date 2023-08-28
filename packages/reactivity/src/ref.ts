@@ -290,7 +290,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this, undefined)
+      () => triggerRefValue(this)
     )
     this._get = get
     this._set = set
