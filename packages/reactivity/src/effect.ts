@@ -396,15 +396,20 @@ export function triggerEffects(
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
-  for (const effect of effects) {
+  const withoutComputedIndexs: number[] = []
+
+  for (let i = 0, l = effects.length; i < l; i++) {
+    const effect = effects[i]
     if (effect.computed) {
       triggerEffect(effect, debuggerEventExtraInfo)
+      continue
     }
+    withoutComputedIndexs.push(i)
   }
-  for (const effect of effects) {
-    if (!effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    }
+
+  for (let k = 0, l = withoutComputedIndexs.length; k < l; k++) {
+    const effect = effects[withoutComputedIndexs[k]]
+    triggerEffect(effect, debuggerEventExtraInfo)
   }
 }
 
