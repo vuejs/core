@@ -16,11 +16,11 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { callWithAsyncErrorHandling, ErrorCodes } from '../errorHandling'
-import { ShapeFlags, PatchFlags, isArray } from '@vue/shared'
+import { ShapeFlags, PatchFlags, isArray, type Arrayable } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import { RendererElement } from '../renderer'
 
-type Hook<T = () => void> = T | T[]
+type Hook<T = () => void> = Arrayable<T>
 
 const leaveCbKey = Symbol('_leaveCb')
 const enterCbKey = Symbol('_enterCb')

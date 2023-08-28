@@ -23,7 +23,8 @@ import {
   isMap,
   isSet,
   isPlainObject,
-  extend
+  extend,
+  type Arrayable
 } from '@vue/shared'
 import {
   currentInstance,
@@ -170,7 +171,7 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 }
 
 function doWatch(
-  source: WatchSource | WatchSource[] | WatchEffect | object,
+  source: Arrayable<WatchSource> | WatchEffect | object,
   cb: WatchCallback | null,
   { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {

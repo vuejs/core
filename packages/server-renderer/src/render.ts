@@ -23,7 +23,8 @@ import {
   isVoidTag,
   ShapeFlags,
   isArray,
-  NOOP
+  NOOP,
+  type Awaitable
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
@@ -38,7 +39,7 @@ const {
 } = ssrUtils
 
 export type SSRBuffer = SSRBufferItem[] & { hasAsync?: boolean }
-export type SSRBufferItem = string | SSRBuffer | Promise<SSRBuffer>
+export type SSRBufferItem = string | Awaitable<SSRBuffer>
 export type PushFn = (item: SSRBufferItem) => void
 export type Props = Record<string, unknown>
 
@@ -90,7 +91,7 @@ export function renderComponentVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string
-): SSRBuffer | Promise<SSRBuffer> {
+): Awaitable<SSRBuffer> {
   const instance = createComponentInstance(vnode, parentComponent, null)
   const res = setupComponent(instance, true /* isSSR */)
   const hasAsyncSetup = isPromise(res)
@@ -116,7 +117,7 @@ export function renderComponentVNode(
 function renderComponentSubTree(
   instance: ComponentInternalInstance,
   slotScopeId?: string
-): SSRBuffer | Promise<SSRBuffer> {
+): Awaitable<SSRBuffer> {
   const comp = instance.type as Component
   const { getBuffer, push } = createBuffer()
   if (isFunction(comp)) {

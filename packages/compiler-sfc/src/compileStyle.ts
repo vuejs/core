@@ -1,3 +1,4 @@
+import { Awaitable } from '@vue/shared'
 import postcss, {
   ProcessOptions,
   Result,
@@ -88,7 +89,7 @@ export function compileStyleAsync(
 
 export function doCompileStyle(
   options: SFCAsyncStyleCompileOptions
-): SFCStyleCompileResults | Promise<SFCStyleCompileResults> {
+): Awaitable<SFCStyleCompileResults> {
   const {
     filename,
     id,

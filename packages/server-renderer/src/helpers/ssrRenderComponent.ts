@@ -1,3 +1,4 @@
+import { type Awaitable } from '@vue/shared'
 import { Component, ComponentInternalInstance, createVNode, Slots } from 'vue'
 import { Props, renderComponentVNode, SSRBuffer } from '../render'
 import { SSRSlots } from './ssrRenderSlot'
@@ -8,7 +9,7 @@ export function ssrRenderComponent(
   children: Slots | SSRSlots | null = null,
   parentComponent: ComponentInternalInstance | null = null,
   slotScopeId?: string
-): SSRBuffer | Promise<SSRBuffer> {
+): Awaitable<SSRBuffer> {
   return renderComponentVNode(
     createVNode(comp, props, children),
     parentComponent,

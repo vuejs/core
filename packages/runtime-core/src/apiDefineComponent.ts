@@ -22,7 +22,7 @@ import {
   ComponentObjectPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
-import { extend, isFunction } from '@vue/shared'
+import { type Awaitable, extend, isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
@@ -103,10 +103,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {}
 >(
-  setup: (
-    props: Props,
-    ctx: SetupContext<E, S>
-  ) => RenderFunction | Promise<RenderFunction>,
+  setup: (props: Props, ctx: SetupContext<E, S>) => Awaitable<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
@@ -119,10 +116,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {}
 >(
-  setup: (
-    props: Props,
-    ctx: SetupContext<E, S>
-  ) => RenderFunction | Promise<RenderFunction>,
+  setup: (props: Props, ctx: SetupContext<E, S>) => Awaitable<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]

@@ -1,4 +1,4 @@
-import { isString } from '@vue/shared'
+import { type Arrayable, isString } from '@vue/shared'
 import { ForParseResult } from './transforms/vFor'
 import {
   RENDER_SLOT,
@@ -356,7 +356,7 @@ export interface ArrayExpression extends Node {
 export interface FunctionExpression extends Node {
   type: NodeTypes.JS_FUNCTION_EXPRESSION
   params: ExpressionNode | string | (ExpressionNode | string)[] | undefined
-  returns?: TemplateChildNode | TemplateChildNode[] | JSChildNode
+  returns?: Arrayable<TemplateChildNode> | JSChildNode
   body?: BlockStatement | IfStatement
   newline: boolean
   /**
@@ -435,7 +435,7 @@ export interface SequenceExpression extends Node {
 
 export interface ReturnStatement extends Node {
   type: NodeTypes.JS_RETURN_STATEMENT
-  returns: TemplateChildNode | TemplateChildNode[] | JSChildNode
+  returns: Arrayable<TemplateChildNode> | JSChildNode
 }
 
 // Codegen Node Types ----------------------------------------------------------

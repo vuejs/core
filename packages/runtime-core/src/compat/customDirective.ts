@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { type Arrayable, isArray } from '@vue/shared'
 import { ComponentInternalInstance } from '../component'
 import { ObjectDirective, DirectiveHook } from '../directives'
 import { softAssertCompatEnabled, DeprecationTypes } from './compatConfig'
@@ -27,7 +27,7 @@ export function mapCompatDirectiveHook(
   name: keyof ObjectDirective,
   dir: ObjectDirective & LegacyDirective,
   instance: ComponentInternalInstance | null
-): DirectiveHook | DirectiveHook[] | undefined {
+): Arrayable<DirectiveHook> | undefined {
   const mappedName = legacyDirectiveHookMap[name]
   if (mappedName) {
     if (isArray(mappedName)) {

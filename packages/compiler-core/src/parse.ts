@@ -1,5 +1,5 @@
 import { ErrorHandlingOptions, ParserOptions } from './options'
-import { NO, isArray, makeMap, extend } from '@vue/shared'
+import { NO, isArray, makeMap, extend, type Arrayable } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -152,7 +152,7 @@ function parseChildren(
   while (!isEnd(context, mode, ancestors)) {
     __TEST__ && assert(context.source.length > 0)
     const s = context.source
-    let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
+    let node: Arrayable<TemplateChildNode> | undefined = undefined
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
       if (!context.inVPre && startsWith(s, context.options.delimiters[0])) {

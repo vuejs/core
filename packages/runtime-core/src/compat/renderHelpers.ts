@@ -1,4 +1,5 @@
 import {
+  type Arrayable,
   camelize,
   extend,
   hyphenate,
@@ -155,7 +156,7 @@ export function legacyCheckKeyCodes(
   }
 }
 
-function isKeyNotMatch<T>(expect: T | T[], actual: T): boolean {
+function isKeyNotMatch<T>(expect: Arrayable<T>, actual: T): boolean {
   if (isArray(expect)) {
     return !expect.includes(actual)
   } else {

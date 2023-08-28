@@ -8,7 +8,13 @@ import {
   compatUtils,
   DeprecationTypes
 } from '@vue/runtime-core'
-import { isObject, toNumber, extend, isArray } from '@vue/shared'
+import {
+  isObject,
+  toNumber,
+  extend,
+  isArray,
+  type Arrayable
+} from '@vue/shared'
 
 const TRANSITION = 'transition'
 const ANIMATION = 'animation'
@@ -85,10 +91,7 @@ export const TransitionPropsValidators = (Transition.props =
  * #3227 Incoming hooks may be merged into arrays when wrapping Transition
  * with custom HOCs.
  */
-const callHook = (
-  hook: Function | Function[] | undefined,
-  args: any[] = []
-) => {
+const callHook = (hook: Arrayable<Function> | undefined, args: any[] = []) => {
   if (isArray(hook)) {
     hook.forEach(h => h(...args))
   } else if (hook) {
@@ -101,7 +104,7 @@ const callHook = (
  * intends to explicitly control the end of the transition.
  */
 const hasExplicitCallback = (
-  hook: Function | Function[] | undefined
+  hook: Arrayable<Function> | undefined
 ): boolean => {
   return hook
     ? isArray(hook)

@@ -16,7 +16,9 @@ import {
   NOOP,
   isPromise,
   LooseRequired,
-  Prettify
+  Prettify,
+  type Arrayable,
+  type Awaitable
 } from '@vue/shared'
 import { isRef, Ref } from '@vue/reactivity'
 import { computed } from './apiComputed'
@@ -127,7 +129,7 @@ export interface ComponentOptionsBase<
         >
     >,
     ctx: SetupContext<E, S>
-  ) => Promise<RawBindings> | RawBindings | RenderFunction | void
+  ) => Awaitable<RawBindings> | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
   // Note: we are intentionally using the signature-less `Function` type here
@@ -543,7 +545,7 @@ interface LegacyOptions<
   __differentiator?: keyof D | keyof C | keyof M
 }
 
-type MergedHook<T = () => void> = T | T[]
+type MergedHook<T = () => void> = Arrayable<T>
 
 export type MergedComponentOptions = ComponentOptions &
   MergedComponentOptionsOverride
@@ -1125,7 +1127,10 @@ function normalizeInject(
   return raw
 }
 
-function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
+function mergeAsArray<T = Function>(
+  to: Arrayable<T> | undefined,
+  from: Arrayable<T>
+) {
   return to ? [...new Set([].concat(to as any, from as any))] : from
 }
 
