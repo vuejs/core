@@ -307,11 +307,8 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!effect.active) {
-      return
-    }
-    effect.scheduled = false
-    if (!effect.dirty) {
+    scheduled = false
+    if (!effect.active || !effect.dirty) {
       return
     }
     effect.dirty = false
@@ -366,9 +363,13 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
+  let scheduled = false
+
   const effect = new ReactiveEffect(getter, () => {
-    effect.scheduled = true
-    scheduler()
+    if (!scheduled) {
+      scheduled = true
+      scheduler()
+    }
   })
   if (immediate) {
     effect.dirty = true

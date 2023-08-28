@@ -76,7 +76,6 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   public _dirty = false
-  public scheduled = false
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -218,15 +217,19 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
+  let scheduled = false
+
   const _effect = new ReactiveEffect(fn, () => {
-    _effect.scheduled = true
-    queueEffectCbs.push(() => {
-      if (_effect.dirty) {
-        _effect.run()
-        _effect.dirty = false
-      }
-      _effect.scheduled = false
-    })
+    if (!scheduled) {
+      scheduled = true
+      queueEffectCbs.push(() => {
+        if (_effect.dirty) {
+          _effect.run()
+          _effect.dirty = false
+        }
+        scheduled = false
+      })
+    }
   })
   if (options) {
     extend(_effect, options)
@@ -470,9 +473,7 @@ function triggerEffect(
         effect._deferredComputeds.length = 0
       }
     }
-    if (!effect.scheduled) {
-      effect.scheduler()
-    }
+    effect.scheduler()
   }
   scheduleEffectCallbacks()
 }
