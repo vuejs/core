@@ -442,4 +442,22 @@ describe('reactivity/ref', () => {
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
   })
+
+  test('should return ref when ref receiving a shallowRef', () => {
+    const a = shallowRef({ name: 'a' })
+    const shouldRef = ref(a)
+
+    expect(shouldRef.value.name).toBe('a')
+    expect(isRef(shouldRef)).toBe(true)
+    expect(isShallow(shouldRef)).toBe(false)
+  })
+
+  test('should return shallowRef when shallowRef receiving a ref', () => {
+    const a = ref({ name: 'a' })
+    const shouldShallow = shallowRef(a)
+
+    expect(shouldShallow.value.name).toBe('a')
+    expect(isRef(shouldShallow)).toBe(true)
+    expect(isShallow(shouldShallow)).toBe(true)
+  })
 })

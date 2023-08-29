@@ -126,8 +126,21 @@ export function shallowRef(value?: unknown) {
 
 function createRef(rawValue: unknown, shallow: boolean) {
   if (isRef(rawValue)) {
-    return rawValue
+    if (
+      (isShallow(rawValue) && shallow) ||
+      (!isShallow(rawValue) && !shallow)
+    ) {
+      return rawValue
+    }
+    // const a = ref({}), b = shallowRef({}), c = ref(b), d = shallowRef(a)
+    if (
+      (isShallow(rawValue) && !shallow) ||
+      (!isShallow(rawValue) && shallow)
+    ) {
+      rawValue = toRaw(rawValue.value)
+    }
   }
+
   return new RefImpl(rawValue, shallow)
 }
 
