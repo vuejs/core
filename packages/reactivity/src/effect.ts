@@ -121,8 +121,7 @@ export class ReactiveEffect<T = any> {
     this.resetDirty()
     const r = this._run()
     if (this._drityTriggerReason !== TriggerType.Operate) {
-      this._dirty = false
-      this._drityTriggerReason = TriggerType.Operate
+      this.resetDirty()
     }
     return r
   }
