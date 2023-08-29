@@ -105,9 +105,16 @@ describe('defineCustomElement', () => {
     )
     customElements.define('my-el-shadowroot-false', E)
 
-    test('should work', () => {
+    test('should work', async () => {
+      function raf() {
+        return new Promise(resolve => {
+          requestAnimationFrame(resolve)
+        })
+      }
+
       container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
       const e = container.childNodes[0] as VueElement
+      await raf()
       expect(e).toBeInstanceOf(E)
       expect(e._instance).toBeTruthy()
       expect(e.innerHTML).toBe(`<div>hello</div>`)
