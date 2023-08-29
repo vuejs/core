@@ -215,12 +215,7 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = [
-      'source-map-js',
-      '@babel/parser',
-      'estree-walker',
-      'html-parsed-element'
-    ]
+    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {
@@ -273,7 +268,7 @@ function createConfig(format, output, plugins = []) {
             ...(format === 'cjs' ? [] : [polyfillNode()]),
             nodeResolve()
           ]
-        : []
+        : [nodeResolve()]
 
     return nodePlugins
   }
