@@ -1,4 +1,5 @@
 import {
+  TriggerReason,
   activeEffect,
   getDepFromReactive,
   shouldTrack,
@@ -55,21 +56,22 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  deferredComputed?: ComputedRefImpl<any>,
+  triggerMode: TriggerReason,
+  deferredComputed: ComputedRefImpl<any> | undefined,
   newVal?: any
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, deferredComputed, {
+      triggerEffects(dep, triggerMode, deferredComputed, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, deferredComputed)
+      triggerEffects(dep, triggerMode, deferredComputed)
     }
   }
 }
@@ -163,7 +165,12 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, undefined, newVal)
+      triggerRefValue(
+        this,
+        TriggerReason.ValueUpdatedBySetter,
+        undefined,
+        newVal
+      )
     }
   }
 }
@@ -194,7 +201,12 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, undefined, __DEV__ ? ref.value : void 0)
+  triggerRefValue(
+    ref,
+    TriggerReason.ValueUpdatedBySetter,
+    undefined,
+    __DEV__ ? ref.value : void 0
+  )
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
@@ -290,7 +302,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this)
+      () => triggerRefValue(this, TriggerReason.ValueUpdatedBySetter, undefined)
     )
     this._get = get
     this._set = set

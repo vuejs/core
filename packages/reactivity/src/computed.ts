@@ -1,4 +1,4 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
+import { DebuggerOptions, ReactiveEffect, TriggerReason } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -47,9 +47,9 @@ export class ComputedRefImpl<T> {
       if (!this.scheduled) {
         this.scheduled = true
         if (!this.init) {
-          triggerRefValue(this, undefined)
+          triggerRefValue(this, TriggerReason.ComputedDepsUpdated, undefined)
         } else {
-          triggerRefValue(this, this)
+          triggerRefValue(this, TriggerReason.ValueUpdatedByGetter, this)
         }
       }
     })
@@ -67,7 +67,7 @@ export class ComputedRefImpl<T> {
       if (!self.init) {
         self.init = true
       } else if (hasChanged(self._value, newValue)) {
-        triggerRefValue(self, undefined)
+        triggerRefValue(self, TriggerReason.ValueUpdatedByGetter, undefined)
       }
       self._value = newValue
       self.scheduled = false
