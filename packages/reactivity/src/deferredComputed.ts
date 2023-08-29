@@ -40,7 +40,7 @@ class DeferredComputedRefImpl<T> {
     let scheduled = false
     this.effect = new ReactiveEffect(
       getter,
-      (_mode, computedTrigger?: boolean) => {
+      (_, computedTrigger?: boolean) => {
         if (this.dep) {
           if (computedTrigger) {
             compareTarget = this._value
