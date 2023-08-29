@@ -56,7 +56,7 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  triggerMode: TriggerType,
+  triggerType: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   newVal?: any
 ) {
@@ -64,14 +64,14 @@ export function triggerRefValue(
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, triggerMode, deferredComputed, {
+      triggerEffects(dep, triggerType, deferredComputed, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, triggerMode, deferredComputed)
+      triggerEffects(dep, triggerType, deferredComputed)
     }
   }
 }
@@ -165,7 +165,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, TriggerType.Operate, undefined, newVal)
+      triggerRefValue(this, TriggerType.ForceDirty, undefined, newVal)
     }
   }
 }
@@ -198,7 +198,7 @@ class RefImpl<T> {
 export function triggerRef(ref: Ref) {
   triggerRefValue(
     ref,
-    TriggerType.Operate,
+    TriggerType.ForceDirty,
     undefined,
     __DEV__ ? ref.value : void 0
   )
@@ -297,7 +297,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this, TriggerType.Operate, undefined)
+      () => triggerRefValue(this, TriggerType.ForceDirty, undefined)
     )
     this._get = get
     this._set = set

@@ -31,8 +31,9 @@ export let trackOpBit = 1
 const maxMarkerBits = 30
 
 export enum TriggerType {
-  Operate = 1,
-  SideEffect = 2
+  ForceDirty = 1,
+  ComputedDepsUpdated = 2,
+  ComputedValueUpdated = 3
 }
 
 export type EffectScheduler = (triggerType: TriggerType, ...args: any[]) => any
@@ -81,7 +82,6 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   public _dirty = true
-  public _drityTriggerType = TriggerType.Operate
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -119,7 +119,6 @@ export class ReactiveEffect<T = any> {
 
   resetDirty() {
     this._dirty = false
-    this._drityTriggerType = TriggerType.Operate
     this._deferredComputeds.length = 0
   }
 
@@ -229,14 +228,15 @@ export function effect<T = any>(
   let scheduled = false
 
   const _effect = new ReactiveEffect(fn, triggerType => {
-    if (triggerType === TriggerType.Operate || !scheduled) {
+    if (
+      triggerType === TriggerType.ForceDirty ||
+      triggerType === TriggerType.ComputedDepsUpdated ||
+      !scheduled
+    ) {
       scheduled = true
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
           _effect.run()
-        }
-        if (_effect._drityTriggerType !== TriggerType.Operate) {
-          _effect.resetDirty()
         }
         scheduled = false
       })
@@ -426,9 +426,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(deps[0], TriggerType.Operate, undefined, eventInfo)
+        triggerEffects(deps[0], TriggerType.ForceDirty, undefined, eventInfo)
       } else {
-        triggerEffects(deps[0], TriggerType.Operate, undefined)
+        triggerEffects(deps[0], TriggerType.ForceDirty, undefined)
       }
     }
   } else {
@@ -441,19 +441,19 @@ export function trigger(
     if (__DEV__) {
       triggerEffects(
         createDep(effects),
-        TriggerType.Operate,
+        TriggerType.ForceDirty,
         undefined,
         eventInfo
       )
     } else {
-      triggerEffects(createDep(effects), TriggerType.Operate, undefined)
+      triggerEffects(createDep(effects), TriggerType.ForceDirty, undefined)
     }
   }
 }
 
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
-  triggerMode: TriggerType,
+  triggerType: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -463,7 +463,7 @@ export function triggerEffects(
     if (effect.computed) {
       triggerEffect(
         effect,
-        triggerMode,
+        triggerType,
         deferredComputed,
         debuggerEventExtraInfo
       )
@@ -473,7 +473,7 @@ export function triggerEffects(
     if (!effect.computed) {
       triggerEffect(
         effect,
-        triggerMode,
+        triggerType,
         deferredComputed,
         debuggerEventExtraInfo
       )
@@ -485,7 +485,7 @@ const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
   effect: ReactiveEffect,
-  triggerMode: TriggerType,
+  triggerType: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -494,15 +494,21 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (!effect._dirty) {
-      if (deferredComputed) {
+      if (triggerType === TriggerType.ComputedDepsUpdated && deferredComputed) {
         effect._deferredComputeds.push(deferredComputed)
-      } else {
+      } else if (
+        triggerType === TriggerType.ComputedValueUpdated &&
+        deferredComputed &&
+        effect._deferredComputeds.includes(deferredComputed)
+      ) {
+        effect._dirty = true
+        effect._deferredComputeds.length = 0
+      } else if (triggerType === TriggerType.ForceDirty) {
         effect._dirty = true
         effect._deferredComputeds.length = 0
       }
-      effect._drityTriggerType = triggerMode
     }
-    effect.scheduler(triggerMode)
+    effect.scheduler(triggerType)
   }
   scheduleEffectCallbacks()
 }

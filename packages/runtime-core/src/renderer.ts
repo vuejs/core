@@ -1555,7 +1555,11 @@ function baseCreateRenderer(
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       triggerType => {
-        if (triggerType === TriggerType.Operate || !scheduled) {
+        if (
+          triggerType === TriggerType.ForceDirty ||
+          triggerType === TriggerType.ComputedDepsUpdated ||
+          !scheduled
+        ) {
           scheduled = true
           queueJob(update)
         }
@@ -1566,9 +1570,6 @@ function baseCreateRenderer(
     const update: SchedulerJob = (instance.update = () => {
       if (effect.dirty) {
         effect.run()
-      }
-      if (effect._drityTriggerType !== TriggerType.Operate) {
-        effect.resetDirty()
       }
       scheduled = false
     })
