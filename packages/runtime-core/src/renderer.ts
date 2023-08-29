@@ -1544,10 +1544,17 @@ function baseCreateRenderer(
       }
     }
 
+    let scheduled = false
+
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      () => queueJob(update),
+      () => {
+        if (!scheduled) {
+          scheduled = true
+          queueJob(update)
+        }
+      },
       instance.scope // track it in component's effect scope
     ))
 
@@ -1555,6 +1562,7 @@ function baseCreateRenderer(
       if (effect.dirty) {
         effect.run()
       }
+      scheduled = false
     })
     update.id = instance.uid
     // allowRecurse
