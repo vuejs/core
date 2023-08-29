@@ -317,9 +317,6 @@ importers:
       csstype:
         specifier: ^3.1.1
         version: 3.1.1
-      html-parsed-element:
-        specifier: ^0.4.1
-        version: 0.4.1
 
   packages/runtime-test:
     dependencies:
@@ -3343,10 +3340,6 @@ packages:
   /html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
     dev: true
-
-  /html-parsed-element@0.4.1:
-    resolution: {integrity: sha512-uRNt6oVAFAQ/PBS9JZiURMpR2Me0KR11mOG6sbamJl1PIX7qMX1h/ck2EhY11RPU4m39o9x9XvOs5KaLneaxGA==}
-    dev: false
 
   /http-proxy-agent@5.0.0:
     resolution: {integrity: sha512-n2hY8YdoRE1i7r6M0w9DIw5GgZN0G25P8zLCRQ8rjXtTU3vsNFBI/vWK/UIeE6g5MUUz6avwAPXmL6Fy9D/90w==}

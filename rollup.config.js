@@ -268,7 +268,7 @@ function createConfig(format, output, plugins = []) {
             ...(format === 'cjs' ? [] : [polyfillNode()]),
             nodeResolve()
           ]
-        : [nodeResolve()]
+        : []
 
     return nodePlugins
   }
