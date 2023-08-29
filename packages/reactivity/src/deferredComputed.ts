@@ -1,5 +1,5 @@
 import { Dep } from './dep'
-import { ReactiveEffect, TriggerReason } from './effect'
+import { ReactiveEffect, TriggerType } from './effect'
 import { ComputedGetter, ComputedRef } from './computed'
 import { ReactiveFlags, toRaw } from './reactive'
 import { trackRefValue, triggerRefValue } from './ref'
@@ -51,7 +51,7 @@ class DeferredComputedRefImpl<T> {
             if (this.effect.active && this._get() !== valueToCompare) {
               triggerRefValue(
                 this,
-                TriggerReason.ValueUpdatedByGetter,
+                TriggerType.SideEffect,
                 undefined
               )
             }
@@ -64,7 +64,7 @@ class DeferredComputedRefImpl<T> {
         for (const e of this.dep) {
           if (e.computed instanceof DeferredComputedRefImpl) {
             e.scheduler(
-              TriggerReason.ValueUpdatedByGetter,
+              TriggerType.SideEffect,
               true /* computedTrigger */
             )
           }

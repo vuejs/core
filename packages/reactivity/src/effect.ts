@@ -30,13 +30,12 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export enum TriggerReason {
-  ValueUpdatedBySetter = 1,
-  ValueUpdatedByGetter = 2,
-  ComputedDepsUpdated = 3
+export enum TriggerType {
+  Operate = 1,
+  SideEffect = 2
 }
 
-export type EffectScheduler = (reason: TriggerReason, ...args: any[]) => any
+export type EffectScheduler = (triggerType: TriggerType, ...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -82,7 +81,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   public _dirty = true
-  public _drityTriggerReason = TriggerReason.ValueUpdatedBySetter
+  public _drityTriggerReason = TriggerType.Operate
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -121,16 +120,16 @@ export class ReactiveEffect<T = any> {
   run() {
     this.resetDirty()
     const r = this._run()
-    if (this._drityTriggerReason !== TriggerReason.ValueUpdatedBySetter) {
+    if (this._drityTriggerReason !== TriggerType.Operate) {
       this._dirty = false
-      this._drityTriggerReason = TriggerReason.ValueUpdatedBySetter
+      this._drityTriggerReason = TriggerType.Operate
     }
     return r
   }
 
   resetDirty() {
     this._dirty = false
-    this._drityTriggerReason = TriggerReason.ValueUpdatedBySetter
+    this._drityTriggerReason = TriggerType.Operate
     this._deferredComputeds.length = 0
   }
 
@@ -238,8 +237,8 @@ export function effect<T = any>(
 
   let scheduled = false
 
-  const _effect = new ReactiveEffect(fn, reason => {
-    if (reason === TriggerReason.ValueUpdatedBySetter || !scheduled) {
+  const _effect = new ReactiveEffect(fn, triggerType => {
+    if (triggerType === TriggerType.Operate || !scheduled) {
       scheduled = true
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
@@ -433,14 +432,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(
-          deps[0],
-          TriggerReason.ValueUpdatedBySetter,
-          undefined,
-          eventInfo
-        )
+        triggerEffects(deps[0], TriggerType.Operate, undefined, eventInfo)
       } else {
-        triggerEffects(deps[0], TriggerReason.ValueUpdatedBySetter, undefined)
+        triggerEffects(deps[0], TriggerType.Operate, undefined)
       }
     }
   } else {
@@ -453,23 +447,19 @@ export function trigger(
     if (__DEV__) {
       triggerEffects(
         createDep(effects),
-        TriggerReason.ValueUpdatedBySetter,
+        TriggerType.Operate,
         undefined,
         eventInfo
       )
     } else {
-      triggerEffects(
-        createDep(effects),
-        TriggerReason.ValueUpdatedBySetter,
-        undefined
-      )
+      triggerEffects(createDep(effects), TriggerType.Operate, undefined)
     }
   }
 }
 
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
-  triggerMode: TriggerReason,
+  triggerMode: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -501,7 +491,7 @@ const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
   effect: ReactiveEffect,
-  triggerMode: TriggerReason,
+  triggerMode: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {

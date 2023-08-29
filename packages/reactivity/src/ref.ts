@@ -1,5 +1,5 @@
 import {
-  TriggerReason,
+  TriggerType,
   activeEffect,
   getDepFromReactive,
   shouldTrack,
@@ -56,7 +56,7 @@ export function trackRefValue(ref: RefBase<any>) {
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  triggerMode: TriggerReason,
+  triggerMode: TriggerType,
   deferredComputed: ComputedRefImpl<any> | undefined,
   newVal?: any
 ) {
@@ -167,7 +167,7 @@ class RefImpl<T> {
       this._value = useDirectValue ? newVal : toReactive(newVal)
       triggerRefValue(
         this,
-        TriggerReason.ValueUpdatedBySetter,
+        TriggerType.Operate,
         undefined,
         newVal
       )
@@ -203,7 +203,7 @@ class RefImpl<T> {
 export function triggerRef(ref: Ref) {
   triggerRefValue(
     ref,
-    TriggerReason.ValueUpdatedBySetter,
+    TriggerType.Operate,
     undefined,
     __DEV__ ? ref.value : void 0
   )
@@ -302,7 +302,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this, TriggerReason.ValueUpdatedBySetter, undefined)
+      () => triggerRefValue(this, TriggerType.Operate, undefined)
     )
     this._get = get
     this._set = set

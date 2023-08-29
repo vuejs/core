@@ -49,7 +49,7 @@ import {
   pauseTracking,
   resetTracking,
   ReactiveEffect,
-  TriggerReason
+  TriggerType
 } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
@@ -1554,8 +1554,8 @@ function baseCreateRenderer(
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      reason => {
-        if (reason === TriggerReason.ValueUpdatedBySetter || !scheduled) {
+      triggerType => {
+        if (triggerType === TriggerType.Operate || !scheduled) {
           scheduled = true
           queueJob(update)
         }
