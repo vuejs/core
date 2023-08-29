@@ -112,7 +112,7 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren = children.filter((c: VNode) => c.el?.getBoundingClientRect)
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
