@@ -519,7 +519,7 @@ export function withAsyncContext(getAwaitable: () => any) {
   let awaitable = getAwaitable()
   unsetCurrentInstance()
   if (isPromise(awaitable)) {
-    awaitable = awaitable.catch(e => {
+    awaitable = awaitable.then(null, e => {
       setCurrentInstance(ctx)
       throw e
     })

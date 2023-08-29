@@ -100,12 +100,14 @@ export function renderComponentVNode(
       ? (res as Promise<void>)
       : Promise.resolve()
     if (prefetches) {
-      p = p
-        .then(() =>
-          Promise.all(prefetches.map(prefetch => prefetch.call(instance.proxy)))
-        )
+      p = p.then(
+        () =>
+          Promise.all(
+            prefetches.map(prefetch => prefetch.call(instance.proxy))
+          ),
         // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(() => {})
+        NOOP
+      )
     }
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {

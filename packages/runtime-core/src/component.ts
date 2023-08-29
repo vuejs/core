@@ -392,7 +392,7 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
-  asyncDep: Promise<any> | null
+  asyncDep: PromiseLike<any> | null
   /**
    * @internal
    */
@@ -732,13 +732,14 @@ function setupStatefulComponent(
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
         // return the promise so server-renderer can wait on it
-        return setupResult
-          .then((resolvedResult: unknown) => {
+        return setupResult.then(
+          (resolvedResult: unknown) => {
             handleSetupResult(instance, resolvedResult, isSSR)
-          })
-          .catch(e => {
+          },
+          e => {
             handleError(e, instance, ErrorCodes.SETUP_FUNCTION)
-          })
+          }
+        )
       } else if (__FEATURE_SUSPENSE__) {
         // async setup returned Promise.
         // bail here and wait for re-entry.

@@ -630,7 +630,7 @@ function createSuspenseBoundary(
       }
       const hydratedEl = instance.vnode.el
       instance
-        .asyncDep!.catch(err => {
+        .asyncDep!.then(null, err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
         })
         .then(asyncSetupResult => {
