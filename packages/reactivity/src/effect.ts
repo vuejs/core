@@ -117,13 +117,13 @@ export class ReactiveEffect<T = any> {
     return this._dirty
   }
 
-  resetDirty() {
-    this._dirty = false
+  public set dirty(v) {
+    this._dirty = v
     this._deferredComputeds.length = 0
   }
 
   run() {
-    this.resetDirty()
+    this.dirty = false
     if (!this.active) {
       return this.fn()
     }
@@ -501,11 +501,9 @@ function triggerEffect(
         deferredComputed &&
         effect._deferredComputeds.includes(deferredComputed)
       ) {
-        effect._dirty = true
-        effect._deferredComputeds.length = 0
+        effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {
-        effect._dirty = true
-        effect._deferredComputeds.length = 0
+        effect.dirty = true
       }
     }
     effect.scheduler(triggerType)

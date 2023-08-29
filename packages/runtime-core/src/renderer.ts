@@ -1287,7 +1287,7 @@ function baseCreateRenderer(
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect.
-        instance.effect._dirty = true
+        instance.effect.dirty = true
         instance.update()
       }
     } else {

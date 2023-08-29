@@ -78,7 +78,7 @@ export class ComputedRefImpl<T> {
   }
 
   set _dirty(v) {
-    this.effect._dirty = v
+    this.effect.dirty = v
   }
   // #endregion
 }
