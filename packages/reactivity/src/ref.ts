@@ -165,12 +165,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(
-        this,
-        TriggerType.Operate,
-        undefined,
-        newVal
-      )
+      triggerRefValue(this, TriggerType.Operate, undefined, newVal)
     }
   }
 }
