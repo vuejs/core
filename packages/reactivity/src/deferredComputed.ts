@@ -49,11 +49,7 @@ class DeferredComputedRefImpl<T> {
           hasCompareTarget = false
           scheduler(() => {
             if (this.effect.active && this._get() !== valueToCompare) {
-              triggerRefValue(
-                this,
-                TriggerType.SideEffect,
-                undefined
-              )
+              triggerRefValue(this, TriggerType.SideEffect, undefined)
             }
             scheduled = false
           })
@@ -63,10 +59,7 @@ class DeferredComputedRefImpl<T> {
         // deferred to be triggered in scheduler.
         for (const e of this.dep) {
           if (e.computed instanceof DeferredComputedRefImpl) {
-            e.scheduler(
-              TriggerType.SideEffect,
-              true /* computedTrigger */
-            )
+            e.scheduler(TriggerType.SideEffect, true /* computedTrigger */)
           }
         }
       }
