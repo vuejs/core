@@ -38,45 +38,40 @@ class DeferredComputedRefImpl<T> {
     let compareTarget: any
     let hasCompareTarget = false
     let scheduled = false
-    this.effect = new ReactiveEffect(
-      getter,
-      (_, computedTrigger?: boolean) => {
-        if (this.dep) {
-          if (computedTrigger) {
-            compareTarget = this._value
-            hasCompareTarget = true
-          } else if (!scheduled) {
-            const valueToCompare = hasCompareTarget
-              ? compareTarget
-              : this._value
-            scheduled = true
-            hasCompareTarget = false
-            scheduler(() => {
-              if (this.effect.active && this._get() !== valueToCompare) {
-                triggerRefValue(
-                  this,
-                  TriggerReason.ValueUpdatedByGetter,
-                  undefined
-                )
-              }
-              scheduled = false
-            })
-          }
-          // chained upstream computeds are notified synchronously to ensure
-          // value invalidation in case of sync access; normal effects are
-          // deferred to be triggered in scheduler.
-          for (const e of this.dep) {
-            if (e.computed instanceof DeferredComputedRefImpl) {
-              e.scheduler(
+    this.effect = new ReactiveEffect(getter, (_, computedTrigger?: boolean) => {
+      if (this.dep) {
+        if (computedTrigger) {
+          compareTarget = this._value
+          hasCompareTarget = true
+        } else if (!scheduled) {
+          const valueToCompare = hasCompareTarget ? compareTarget : this._value
+          scheduled = true
+          hasCompareTarget = false
+          scheduler(() => {
+            if (this.effect.active && this._get() !== valueToCompare) {
+              triggerRefValue(
+                this,
                 TriggerReason.ValueUpdatedByGetter,
-                true /* computedTrigger */
+                undefined
               )
             }
+            scheduled = false
+          })
+        }
+        // chained upstream computeds are notified synchronously to ensure
+        // value invalidation in case of sync access; normal effects are
+        // deferred to be triggered in scheduler.
+        for (const e of this.dep) {
+          if (e.computed instanceof DeferredComputedRefImpl) {
+            e.scheduler(
+              TriggerReason.ValueUpdatedByGetter,
+              true /* computedTrigger */
+            )
           }
         }
-        this._dirty = true
       }
-    )
+      this._dirty = true
+    })
     this.effect.computed = this as any
   }
 
