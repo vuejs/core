@@ -7,13 +7,13 @@ import {
 import {
   transformSrcset,
   createSrcsetTransformWithOptions
-} from '../src/templateTransformSrcset'
+} from '../src/template/transformSrcset'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 import {
   AssetURLOptions,
   normalizeOptions
-} from '../src/templateTransformAssetUrl'
+} from '../src/template/transformAssetUrl'
 import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
 
 function compileWithSrcset(
@@ -26,6 +26,7 @@ function compileWithSrcset(
     ? createSrcsetTransformWithOptions(normalizeOptions(options))
     : transformSrcset
   transform(ast, {
+    hoistStatic: true,
     nodeTransforms: [srcsetTransform, transformElement],
     directiveTransforms: {
       bind: transformBind
@@ -83,6 +84,18 @@ describe('compiler sfc: transform srcset', () => {
       }
     ).code
     expect(code).toMatch(`_createStaticVNode`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('srcset w/ explicit base option', () => {
+    const code = compileWithSrcset(
+      `
+      <img srcset="@/logo.png, @/logo.png 2x"/>
+      <img srcset="@/logo.png 1x, ./logo.png 2x"/>
+    `,
+      { base: '/foo/' },
+      { hoistStatic: true }
+    ).code
     expect(code).toMatchSnapshot()
   })
 })

@@ -1,0 +1,81 @@
+name: size report
+
+on:
+  workflow_run:
+    workflows: ['size data']
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  size-report:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Set node version to LTS
+        uses: actions/setup-node@v3
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Install dependencies
+        run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+
+      - name: Download PR number
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: pr-number
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - name: Read PR Number
+        id: pr-number
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./pr.txt
+
+      - name: Download Size Data
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          name: size-data
+          run_id: ${{ github.event.workflow_run.id }}
+          path: temp/size
+
+      - name: Download Previous Size Data
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          branch: main
+          workflow: size-data.yml
+          event: push
+          name: size-data
+          path: temp/size-prev
+          if_no_artifact_found: warn
+
+      - name: Compare size
+        run: pnpm tsx scripts/size-report.ts > size-report.md
+
+      - name: Read Size Report
+        id: size-report
+        uses: juliangruber/read-file-action@v1
+        with:
+          path: ./size-report.md
+
+      - name: Create Comment
+        uses: actions-cool/maintain-one-comment@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.pr-number.outputs.content }}
+          body: |
+            ${{ steps.size-report.outputs.content }}
+            <!-- VUE_CORE_SIZE -->
+          body-include: '<!-- VUE_CORE_SIZE -->'

@@ -10,7 +10,8 @@ import {
   ComponentNode,
   NodeTypes,
   VNodeCall,
-  NORMALIZE_PROPS
+  NORMALIZE_PROPS,
+  BindingTypes
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
@@ -252,13 +253,13 @@ describe('compiler: transform v-model', () => {
   })
 
   test('with argument', () => {
-    const root = parseWithVModel('<input v-model:value="model" />')
+    const root = parseWithVModel('<input v-model:foo-value="model" />')
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
       .properties
     expect(props[0]).toMatchObject({
       key: {
-        content: 'value',
+        content: 'foo-value',
         isStatic: true
       },
       value: {
@@ -269,7 +270,7 @@ describe('compiler: transform v-model', () => {
 
     expect(props[1]).toMatchObject({
       key: {
-        content: 'onUpdate:value',
+        content: 'onUpdate:fooValue',
         isStatic: true
       },
       value: {
@@ -505,7 +506,7 @@ describe('compiler: transform v-model', () => {
 
   describe('errors', () => {
     test('missing expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -517,7 +518,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('empty expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -529,7 +530,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('mal-formed expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="a + b" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -541,14 +542,14 @@ describe('compiler: transform v-model', () => {
     })
 
     test('allow unicode', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="变.量" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(0)
     })
 
     test('used on scope variable', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-for="i in list" v-model="i" />', {
         onError,
         prefixIdentifiers: true
@@ -558,6 +559,23 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
           code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE
+        })
+      )
+    })
+
+    test('used on props', () => {
+      const onError = vi.fn()
+      parseWithVModel('<div v-model="p" />', {
+        onError,
+        bindingMetadata: {
+          p: BindingTypes.PROPS
+        }
+      })
+
+      expect(onError).toHaveBeenCalledTimes(1)
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: ErrorCodes.X_V_MODEL_ON_PROPS
         })
       )
     })

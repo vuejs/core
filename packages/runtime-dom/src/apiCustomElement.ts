@@ -19,7 +19,9 @@ import {
   nextTick,
   warn,
   ConcreteComponent,
-  ComponentOptions
+  ComponentOptions,
+  ComponentInjectOptions,
+  SlotsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import HTMLParsedElement from 'html-parsed-element'
@@ -59,7 +61,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = EmitsOptions,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -70,7 +75,10 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II,
+    S
   > & { styles?: string[] },
   config?: DefineCustomElementConfig
 ): VueElementConstructor<Props>
@@ -85,7 +93,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -96,7 +107,10 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II,
+    S
   > & { styles?: string[] },
   config?: DefineCustomElementConfig
 ): VueElementConstructor<{ [K in PropNames]: any }>
@@ -111,7 +125,10 @@ export function defineCustomElement<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = Record<string, any>,
-  EE extends string = string
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -122,7 +139,10 @@ export function defineCustomElement<
     Mixin,
     Extends,
     E,
-    EE
+    EE,
+    I,
+    II,
+    S
   > & { styles?: string[] },
   config?: DefineCustomElementConfig
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
@@ -136,12 +156,13 @@ export function defineCustomElement(
   config?: DefineCustomElementConfig
 ): VueElementConstructor
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
   config?: DefineCustomElementConfig,
   hydrate?: RootHydrateFunction
 ): VueElementConstructor {
-  const Comp = defineComponent(options as any)
+  const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
@@ -152,6 +173,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((
   options: any,
   config?: DefineCustomElementConfig
@@ -177,6 +199,7 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _slots: Node[]
+  private _ob?: MutationObserver | null = null
 
   constructor(
     private _def: InnerComponentDef,
@@ -203,6 +226,10 @@ export class VueElement extends BaseClass {
           )
         }
         this.attachShadow({ mode: 'open' })
+        if (!(this._def as ComponentOptions).__asyncLoader) {
+          // for sync component defs we can immediately resolve props
+          this._resolveProps(this._def)
+        }
       }
     } else {
       if (hydrate) {
@@ -235,12 +262,20 @@ export class VueElement extends BaseClass {
   _connect() {
     this._connected = true
     if (!this._instance) {
-      this._resolveDef()
+      if (this._resolved) {
+        this._update()
+      } else {
+        this._resolveDef()
+      }
     }
   }
 
   disconnectedCallback() {
     this._connected = false
+    if (this._ob) {
+      this._ob.disconnect()
+      this._ob = null
+    }
     nextTick(() => {
       if (!this._connected) {
         render(null, this._root!)
@@ -253,9 +288,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    if (this._resolved) {
-      return
-    }
     this._resolved = true
 
     // set initial attrs
@@ -264,48 +296,38 @@ export class VueElement extends BaseClass {
     }
 
     // watch future attr changes
-    new MutationObserver(mutations => {
+    this._ob = new MutationObserver(mutations => {
       for (const m of mutations) {
         this._setAttr(m.attributeName!)
       }
-    }).observe(this, { attributes: true })
+    })
 
-    const resolve = (def: InnerComponentDef) => {
+    this._ob.observe(this, { attributes: true })
+
+    const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
-      const hasOptions = !isArray(props)
-      const rawKeys = props ? (hasOptions ? Object.keys(props) : props) : []
 
       // cast Number-type props set before resolve
       let numberProps
-      // add props check to fix https://github.com/vuejs/core/issues/5326
-      if (hasOptions && props) {
-        for (const key in this._props) {
+      if (props && !isArray(props)) {
+        for (const key in props) {
           const opt = props[key]
           if (opt === Number || (opt && opt.type === Number)) {
-            this._props[key] = toNumber(this._props[key])
-            ;(numberProps || (numberProps = Object.create(null)))[key] = true
+            if (key in this._props) {
+              this._props[key] = toNumber(this._props[key])
+            }
+            ;(numberProps || (numberProps = Object.create(null)))[
+              camelize(key)
+            ] = true
           }
         }
       }
       this._numberProps = numberProps
 
-      // check if there are props set pre-upgrade or connect
-      for (const key of Object.keys(this)) {
-        if (key[0] !== '_') {
-          this._setProp(key, this[key as keyof this], true, false)
-        }
-      }
-
-      // defining getter/setters on prototype
-      for (const key of rawKeys.map(camelize)) {
-        Object.defineProperty(this, key, {
-          get() {
-            return this._getProp(key)
-          },
-          set(val) {
-            this._setProp(key, val)
-          }
-        })
+      if (isAsync) {
+        // defining getter/setters on prototype
+        // for sync defs, this already happened in the constructor
+        this._resolveProps(def)
       }
 
       // replace slot
@@ -323,18 +345,43 @@ export class VueElement extends BaseClass {
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(resolve)
+      asyncDef().then(def => resolve(def, true))
     } else {
       resolve(this._def)
     }
   }
 
+  private _resolveProps(def: InnerComponentDef) {
+    const { props } = def
+    const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
+
+    // check if there are props set pre-upgrade or connect
+    for (const key of Object.keys(this)) {
+      if (key[0] !== '_' && declaredPropKeys.includes(key)) {
+        this._setProp(key, this[key as keyof this], true, false)
+      }
+    }
+
+    // defining getter/setters on prototype
+    for (const key of declaredPropKeys.map(camelize)) {
+      Object.defineProperty(this, key, {
+        get() {
+          return this._getProp(key)
+        },
+        set(val) {
+          this._setProp(key, val)
+        }
+      })
+    }
+  }
+
   protected _setAttr(key: string) {
     let value = this.getAttribute(key)
-    if (this._numberProps && this._numberProps[key]) {
+    const camelKey = camelize(key)
+    if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
     }
-    this._setProp(camelize(key), value, false)
+    this._setProp(camelKey, value, false)
   }
 
   /**
@@ -413,23 +460,27 @@ export class VueElement extends BaseClass {
               this._styles.length = 0
             }
             this._applyStyles(newStyles)
-            // if this is an async component, ceReload is called from the inner
-            // component so no need to reload the async wrapper
-            if (!(this._def as ComponentOptions).__asyncLoader) {
-              // reload
-              this._instance = null
-              this._update()
-            }
+            this._instance = null
+            this._update()
           }
         }
 
-        // intercept emit
-        instance.emit = (event: string, ...args: any[]) => {
+        const dispatch = (event: string, args: any[]) => {
           this.dispatchEvent(
             new CustomEvent(event, {
               detail: args
             })
           )
+        }
+
+        // intercept emit
+        instance.emit = (event: string, ...args: any[]) => {
+          // dispatch both the raw and hyphenated versions of an event
+          // to match Vue behavior
+          dispatch(event, args)
+          if (hyphenate(event) !== event) {
+            dispatch(hyphenate(event), args)
+          }
         }
 
         // locate nearest Vue custom element parent for provide/inject
@@ -440,6 +491,7 @@ export class VueElement extends BaseClass {
         ) {
           if (parent instanceof VueElement) {
             instance.parent = parent._instance
+            instance.provides = parent._instance!.provides
             break
           }
         }
