@@ -413,5 +413,10 @@ export const toReactive = <T extends unknown>(value: T): T =>
  *
  * @param value - The value for which a readonly proxy shall be created.
  */
-export const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value) : value
+export function toReadonly<T extends object>(
+  value: T
+): DeepReadonly<UnwrapNestedRefs<T>>
+export function toReadonly<T extends unknown>(value: T): T
+export function toReadonly<T extends unknown>(value: T): T {
+  return isObject(value) ? readonly(value) : value
+}
