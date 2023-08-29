@@ -82,6 +82,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   public _dirty = true
+  public _drityTriggerReason = TriggerReason.ValueUpdatedBySetter
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -118,7 +119,22 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
+    this.resetDirty()
+    const r = this._run()
+    if (this._drityTriggerReason !== TriggerReason.ValueUpdatedBySetter) {
+      this._dirty = false
+      this._drityTriggerReason = TriggerReason.ValueUpdatedBySetter
+    }
+    return r
+  }
+
+  resetDirty() {
     this._dirty = false
+    this._drityTriggerReason = TriggerReason.ValueUpdatedBySetter
+    this._deferredComputeds.length = 0
+  }
+
+  _run() {
     if (!this.active) {
       return this.fn()
     }
@@ -500,6 +516,7 @@ function triggerEffect(
         effect._dirty = true
         effect._deferredComputeds.length = 0
       }
+      effect._drityTriggerReason = triggerMode
     }
     effect.scheduler(triggerMode)
   }
