@@ -61,6 +61,7 @@ export function triggerRefValue(
   newVal?: any
 ) {
   ref = toRaw(ref)
+  deferredComputed = toRaw(deferredComputed)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
