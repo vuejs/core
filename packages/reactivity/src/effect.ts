@@ -81,7 +81,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   public _dirty = true
-  public _drityTriggerReason = TriggerType.Operate
+  public _drityTriggerType = TriggerType.Operate
   public _deferredComputeds: ComputedRefImpl<any>[] = []
   private _depIndexes = new Map<Dep | undefined, number>()
 
@@ -117,22 +117,14 @@ export class ReactiveEffect<T = any> {
     return this._dirty
   }
 
-  run() {
-    this.resetDirty()
-    const r = this._run()
-    if (this._drityTriggerReason !== TriggerType.Operate) {
-      this.resetDirty()
-    }
-    return r
-  }
-
   resetDirty() {
     this._dirty = false
-    this._drityTriggerReason = TriggerType.Operate
+    this._drityTriggerType = TriggerType.Operate
     this._deferredComputeds.length = 0
   }
 
-  _run() {
+  run() {
+    this.resetDirty()
     if (!this.active) {
       return this.fn()
     }
@@ -242,6 +234,9 @@ export function effect<T = any>(
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
           _effect.run()
+        }
+        if (_effect._drityTriggerType !== TriggerType.Operate) {
+          _effect.resetDirty()
         }
         scheduled = false
       })
@@ -505,7 +500,7 @@ function triggerEffect(
         effect._dirty = true
         effect._deferredComputeds.length = 0
       }
-      effect._drityTriggerReason = triggerMode
+      effect._drityTriggerType = triggerMode
     }
     effect.scheduler(triggerMode)
   }

@@ -1567,6 +1567,9 @@ function baseCreateRenderer(
       if (effect.dirty) {
         effect.run()
       }
+      if (effect._drityTriggerType !== TriggerType.Operate) {
+        effect.resetDirty()
+      }
       scheduled = false
     })
     update.id = instance.uid
