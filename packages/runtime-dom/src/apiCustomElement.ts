@@ -198,7 +198,7 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
-  private _slots: Node[]
+  private _slots?: Element[]
   private _ob?: MutationObserver | null = null
 
   constructor(
@@ -246,6 +246,7 @@ export class VueElement extends BaseClass {
     if (this._config.shadowRoot) {
       this._connect()
     } else {
+      // @ts-expect-error
       super.connectedCallback()
     }
   }
@@ -332,7 +333,9 @@ export class VueElement extends BaseClass {
 
       // replace slot
       if (!this._config.shadowRoot) {
-        this._slots = Array.from(this.children).map(n => n.cloneNode(true))
+        this._slots = Array.from(this.children).map(
+          n => n.cloneNode(true) as Element
+        )
         this.replaceChildren()
       }
 
@@ -430,17 +433,17 @@ export class VueElement extends BaseClass {
     if (!this._config.shadowRoot) {
       childs = () => {
         const toObj = (a: NamedNodeMap) => {
-          const res = {}
+          const res: Record<string, string | null> = {}
           for (let i = 0, l = a.length; i < l; i++) {
             const attr = a[i]
             res[attr.nodeName] = attr.nodeValue
           }
           return res
         }
-        return this._slots.map(n => {
-          const attrs = n.attributes ? toObj(n.attributes) : {}
-          attrs.innerHTML = n.innerHTML
-          return createVNode(n.tagName, attrs, null)
+        return this._slots!.map(ele => {
+          const attrs = ele.attributes ? toObj(ele.attributes) : {}
+          attrs.innerHTML = ele.innerHTML
+          return createVNode(ele.tagName, attrs, null)
         })
       }
     }
