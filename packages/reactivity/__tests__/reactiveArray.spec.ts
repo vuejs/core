@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { reactive, isReactive, toRaw } from '../src/reactive'
 import { ref, isRef } from '../src/ref'
 import { effect } from '../src/effect'
