@@ -105,7 +105,7 @@ export class ReactiveEffect<T = any> {
       }
       pauseTracking()
       for (const deferredComputed of this._deferredComputeds) {
-        triggerComputedGetter(deferredComputed.value) // wrap with function to avoid tree shaking
+        triggerComputedGetter(deferredComputed) // wrap with function to avoid tree shaking
         if (this._dirty) {
           break
         }
