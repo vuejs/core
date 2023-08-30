@@ -16,7 +16,7 @@ const STRUCTURED_DATA = 'ArrayBuffer,SharedArrayBuffer,DataView,Atomics,JSON'
 const MANAGING_MEMORY = 'WeakRef,FinalizationRegistry'
 const CONTROL_ABSTRACTION_OBJECTS =
   'Iterator,AsyncIterator,Promise,GeneratorFunction,AsyncGeneratorFunction,Generator,AsyncGenerator,AsyncFunction'
-const Reflection = 'Reflect,Proxy'
+const REFLECTION = 'Reflect,Proxy'
 const INTERNATIONALIZATION = 'Intl'
 const OTHER_GLOBALS_ALLOWED = 'console'
 
@@ -32,7 +32,7 @@ const GLOBALS_ALLOWED = [
   STRUCTURED_DATA,
   MANAGING_MEMORY,
   CONTROL_ABSTRACTION_OBJECTS,
-  Reflection,
+  REFLECTION,
   INTERNATIONALIZATION,
   OTHER_GLOBALS_ALLOWED
 ].join(',')
