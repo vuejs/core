@@ -190,7 +190,7 @@ export type SetupContext<
   Attrs extends AttrsType = {}
 > = E extends any
   ? {
-      attrs: UnwrapAttrsType<Attrs>,
+      attrs: UnwrapAttrsType<Attrs>
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
