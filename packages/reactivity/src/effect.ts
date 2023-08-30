@@ -50,6 +50,12 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
+const _depIndexes = new Map<Dep | undefined, number>()
+
+function triggerComputedGetter(computed: ComputedRefImpl<any>) {
+  return computed.value
+}
+
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -75,9 +81,8 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public _dirty = true
-  public _deferredComputeds: ComputedRefImpl<any>[] = []
-  private _depIndexes = new Map<Dep | undefined, number>()
+  _dirty = true
+  _deferredComputeds: ComputedRefImpl<any>[] = []
 
   constructor(
     public fn: () => T,
@@ -91,16 +96,16 @@ export class ReactiveEffect<T = any> {
     if (!this._dirty && this._deferredComputeds.length) {
       if (this._deferredComputeds.length >= 2) {
         for (const { dep } of this._deferredComputeds) {
-          this._depIndexes.set(dep, this.deps.indexOf(dep!))
+          _depIndexes.set(dep, this.deps.indexOf(dep!))
         }
         this._deferredComputeds = this._deferredComputeds.sort(
-          (a, b) => this._depIndexes.get(a.dep)! - this._depIndexes.get(b.dep)!
+          (a, b) => _depIndexes.get(a.dep)! - _depIndexes.get(b.dep)!
         )
-        this._depIndexes.clear()
+        _depIndexes.clear()
       }
       pauseTracking()
       for (const deferredComputed of this._deferredComputeds) {
-        deferredComputed.value
+        triggerComputedGetter(deferredComputed.value) // wrap with function to avoid tree shaking
         if (this._dirty) {
           break
         }
