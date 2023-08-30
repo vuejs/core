@@ -406,8 +406,8 @@ export function createHydrationFunctions(
               `Hydration text content mismatch in <${
                 vnode.type as string
               }>:\n` +
-                `- Client: ${el.textContent}\n` +
-                `- Server: ${vnode.children as string}`
+                `- Server: ${el.textContent}\n` +
+                `- Client: ${vnode.children as string}`
             )
           el.textContent = vnode.children as string
         }
