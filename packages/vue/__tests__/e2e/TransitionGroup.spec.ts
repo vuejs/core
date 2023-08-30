@@ -521,7 +521,7 @@ describe('e2e: TransitionGroup', () => {
 								</transition-group>
 							</div>
               <button id="toggleBtn" @click="click">button</button>
-              <button id="pushwBtn" @click="change">button</button>
+              <button id="pushBtn" @click="change">button</button>
             `,
         components: {
           Comp: {
@@ -550,7 +550,7 @@ describe('e2e: TransitionGroup', () => {
     expect(await html('#container')).toBe(`<!--v-if-->`)
     // push back
     await page().evaluate(() => {
-      ;(document.querySelector('#pushwBtn') as any)!.click()
+      ;(document.querySelector('#pushBtn') as any)!.click()
     })
     await transitionFinish()
     expect(await html('#container')).toBe('<!--v-if--><!--v-if-->')
