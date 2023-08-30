@@ -173,7 +173,7 @@ export function defineCustomElement(
 /*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
-  return defineCustomElement(options, { hydrate })
+  return defineCustomElement(options, hydrate)
 }) as typeof defineCustomElement
 
 const BaseClass = (
