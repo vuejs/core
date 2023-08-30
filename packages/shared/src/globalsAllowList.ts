@@ -38,3 +38,6 @@ const GLOBALS_ALLOWED = [
 ].join(',')
 
 export const isGloballyAllowed = /*#__PURE__*/ makeMap(GLOBALS_ALLOWED)
+
+/** @deprecated use `isGloballyAllowed` instead */
+export const isGloballyWhitelisted = isGloballyAllowed
