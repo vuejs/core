@@ -18,7 +18,10 @@ import {
   createVNode,
   withDirectives,
   vModelCheckbox,
-  renderSlot
+  renderSlot,
+  createElementVNode,
+  openBlock,
+  createElementBlock
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
@@ -1082,6 +1085,31 @@ describe('SSR hydration', () => {
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    // #9033
+    test('force patch dynamic props when hydrating', () => {
+      const timestamp = Date.now()
+      let timestampCur = 0
+      const { container } = mountWithHydration(
+        `<div><div>${timestamp}</div></div>`,
+        () => {
+          timestampCur = Date.now()
+          return (
+            openBlock(),
+            createElementBlock('div', null, [
+              createElementVNode(
+                'div',
+                { innerHTML: timestampCur },
+                null,
+                8 /* PROPS */,
+                ['innerHTML']
+              )
+            ])
+          )
+        }
+      )
+      expect(container.innerHTML).toBe(`<div><div>${timestampCur}</div></div>`)
     })
   })
 })
