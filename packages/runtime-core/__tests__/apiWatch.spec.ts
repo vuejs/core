@@ -1205,4 +1205,42 @@ describe('api: watch', () => {
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
   })
+
+  const options = [
+    { name: 'only trigger once watch' },
+    {
+      deep: true,
+      name: 'only trigger once watch with deep'
+    },
+    {
+      flush: 'sync',
+      name: 'only trigger once watch with flush: sync'
+    },
+    {
+      flush: 'pre',
+      name: 'only trigger once watch with flush: pre'
+    },
+    {
+      immediate: true,
+      name: 'only trigger once watch with immediate'
+    }
+  ] as const
+  test.each(options)('$name', async option => {
+    const count = ref(0)
+    const cb = vi.fn()
+
+    watch(count, cb, { once: true, ...option })
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(2)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
 })
