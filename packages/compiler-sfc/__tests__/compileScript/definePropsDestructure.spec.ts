@@ -282,6 +282,58 @@ describe('sfc reactive props destructure', () => {
     })
   })
 
+  test('multi-variable declaration', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+      a = 1;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #6757
+  test('multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+      { item } = defineProps(['item']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #7422
+  test('multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
+  })
+
   describe('errors', () => {
     test('should error on deep destructure', () => {
       expect(() =>

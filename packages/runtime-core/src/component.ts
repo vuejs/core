@@ -256,7 +256,7 @@ export interface ComponentInternalInstance {
    */
   ssrRender?: Function | null
   /**
-   * Object containing values this component provides for its descendents
+   * Object containing values this component provides for its descendants
    * @internal
    */
   provides: Data
