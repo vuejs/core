@@ -508,4 +508,51 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test('TransitionGroup on child components with empty root node', async () => {
+    const pageTemp = await page()
+    pageTemp.evaluate(() => {
+      const { createApp, ref } = (window as any).Vue
+      createApp({
+        template: `
+              <div id="container">
+								<transition-group name="group">
+									<Comp v-for="item in items" :key="item"></Comp>
+								</transition-group>
+							</div>
+              <button id="toggleBtn" @click="click">button</button>
+              <button id="pushwBtn" @click="change">button</button>
+            `,
+        components: {
+          Comp: {
+            template: '<div v-if="false">one</div>'
+          }
+        },
+        setup: () => {
+          const items = ref(['1', '2'])
+          const click = () => {
+            setTimeout(() => {
+              items.value.splice(0, 1)
+            })
+          }
+          const change = () => {
+            items.value.push('3')
+          }
+          return { items, click, change }
+        }
+      }).mount('#app')
+    })
+
+    expect(await html('#container')).toBe('<!--v-if--><!--v-if-->')
+    // splice
+    await htmlWhenTransitionStart()
+    await transitionFinish()
+    expect(await html('#container')).toBe(`<!--v-if-->`)
+    // push back
+    await page().evaluate(() => {
+      ;(document.querySelector('#pushwBtn') as any)!.click()
+    })
+    await transitionFinish()
+    expect(await html('#container')).toBe('<!--v-if--><!--v-if-->')
+  })
 })
