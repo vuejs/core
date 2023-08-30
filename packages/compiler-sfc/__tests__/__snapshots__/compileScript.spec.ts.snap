@@ -1237,39 +1237,6 @@ return { get aa() { return aa }, set aa(v) { aa = v }, bb, cc, dd, get a() { ret
 }"
 `;
 
-exports[`SFC compile <script setup> > useAttrs w/ generic type 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { useAttrs, ref} from 'vue'
-      
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose }) {
-  expose();
-
-      const attrs = useAttrs<{ foo: number }>()
-      
-return { attrs, useAttrs, ref }
-}
-
-}, { attrs: {} as { foo: number }})"
-`;
-
-exports[`SFC compile <script setup> > useAttrs w/ type reference 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import { useAttrs, ref} from 'vue'
-      type CompAttrs = { foo: number }
-      
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose }) {
-  expose();
-
-      const attrs = useAttrs<CompAttrs>()
-      
-return { attrs, useAttrs, ref }
-}
-
-}, { attrs: {} as { foo: number }})"
-`;
-
 exports[`SFC compile <script setup> > with TypeScript > const Enum 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 const enum Foo { A = 123 }
