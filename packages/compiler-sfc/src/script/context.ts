@@ -1,4 +1,4 @@
-import { Node, ObjectPattern, Program } from '@babel/types'
+import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, ParserPlugin } from '@babel/parser'
@@ -38,7 +38,8 @@ export class ScriptCompileContext {
   hasDefineModelCall = false
 
   // defineProps
-  propsIdentifier: string | undefined
+  propsCall: CallExpression | undefined
+  propsDecl: Node | undefined
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
@@ -49,7 +50,7 @@ export class ScriptCompileContext {
   // defineEmits
   emitsRuntimeDecl: Node | undefined
   emitsTypeDecl: Node | undefined
-  emitIdentifier: string | undefined
+  emitDecl: Node | undefined
 
   // defineModel
   modelDecls: Record<string, ModelDecl> = {}
@@ -69,6 +70,11 @@ export class ScriptCompileContext {
    * to be exposed on compiled script block for HMR cache busting
    */
   deps?: Set<string>
+
+  /**
+   * cache for resolved fs
+   */
+  fs?: NonNullable<SFCScriptCompileOptions['fs']>
 
   constructor(
     public descriptor: SFCDescriptor,

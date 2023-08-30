@@ -16,8 +16,9 @@ const myEmit = defineEmits(['foo', 'bar'])
     expect(content).not.toMatch('defineEmits')
     // should generate correct setup signature
     expect(content).toMatch(
-      `setup(__props, { expose: __expose, emit: myEmit }) {`
+      `setup(__props, { expose: __expose, emit: __emit }) {`
     )
+    expect(content).toMatch('const myEmit = __emit')
     // should include context options in default export
     expect(content).toMatch(`export default {
   emits: ['foo', 'bar'],`)
@@ -32,7 +33,8 @@ const emit = defineEmits(['a', 'b'])
     assertCode(content)
     expect(content).toMatch(`export default /*#__PURE__*/_defineComponent({
   emits: ['a', 'b'],
-  setup(__props, { expose: __expose, emit }) {`)
+  setup(__props, { expose: __expose, emit: __emit }) {`)
+    expect(content).toMatch('const emit = __emit')
   })
 
   test('w/ type', () => {
@@ -176,6 +178,23 @@ const emit = defineEmits(['a', 'b'])
     </script>
     `)
     expect(content).toMatch(`emits: ["foo:bar"]`)
+    assertCode(content)
+  })
+
+  // #7943
+  test('w/ type (type references in union)', () => {
+    const { content } = compile(`
+    <script setup lang="ts">
+    type BaseEmit = "change"
+    type Emit = "some" | "emit" | BaseEmit
+    const emit = defineEmits<{
+      (e: Emit): void;
+      (e: "another", val: string): void;
+    }>();
+    </script>
+    `)
+
+    expect(content).toMatch(`emits: ["some", "emit", "change", "another"]`)
     assertCode(content)
   })
 

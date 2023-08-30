@@ -176,6 +176,61 @@ return () => {}
 })"
 `;
 
+exports[`sfc reactive props destructure > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
+"export default {
+  props: ['item'],
+  emits: ['a'],
+  setup(__props, { emit: __emit }) {
+
+    const props = __props,
+          emit = __emit;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration 1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 1;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration fix #6757  1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 1;
+    
+return () => {}
+}
+
+}"
+`;
+
+exports[`sfc reactive props destructure > multi-variable declaration fix #7422 1`] = `
+"export default {
+  props: ['item'],
+  setup(__props) {
+
+    const a = 0,
+          b = 0;
+    
+return () => {}
+}
+
+}"
+`;
+
 exports[`sfc reactive props destructure > multiple variable declarations 1`] = `
 "import { toDisplayString as _toDisplayString, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
@@ -237,9 +292,7 @@ export default {
   props: ['foo', 'bar', 'baz'],
   setup(__props) {
 
-const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"]);
-
-      
+      const rest = _createPropsRestProxy(__props, [\\"foo\\",\\"bar\\"])
       
 return () => {}
 }
