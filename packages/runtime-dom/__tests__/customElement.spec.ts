@@ -443,7 +443,7 @@ describe('defineCustomElement', () => {
     customElements.define('my-consumer', Consumer)
 
     // # 8127
-    test('bwsy before resolve', async () => {
+    test('correct injection of asynchronous custom elements', async () => {
       const comp = {
         setup() {
           provide('message', 'hello')
