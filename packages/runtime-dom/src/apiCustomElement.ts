@@ -21,7 +21,8 @@ import {
   ConcreteComponent,
   ComponentOptions,
   ComponentInjectOptions,
-  SlotsType
+  SlotsType,
+  AttrsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -34,11 +35,18 @@ export type VueElementConstructor<P = {}> = {
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
 // overload 1: direct setup function
-export function defineCustomElement<Props, RawBindings = object, Attrs = {}>(
+export function defineCustomElement<
+  Props,
+  RawBindings = object,
+  Attrs extends AttrsType = {}
+>(
   setup: (
     props: Readonly<Props>,
-    ctx: SetupContext<{}, Attrs>
-  ) => RawBindings | RenderFunction
+    ctx: SetupContext<{}, {}, Attrs>
+  ) => RawBindings | RenderFunction,
+  options?: {
+    attrs?: Attrs
+  }
 ): VueElementConstructor<Props>
 
 // overload 2: object format with no props
@@ -54,7 +62,8 @@ export function defineCustomElement<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 >(
   comp: ComponentOptionsWithoutProps<
     Props,
@@ -68,7 +77,8 @@ export function defineCustomElement<
     EE,
     I,
     II,
-    S
+    S,
+    Attrs
   > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
@@ -85,7 +95,8 @@ export function defineCustomElement<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 >(
   comp: ComponentOptionsWithArrayProps<
     PropNames,
@@ -99,7 +110,8 @@ export function defineCustomElement<
     EE,
     I,
     II,
-    S
+    S,
+    Attrs
   > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
@@ -116,7 +128,8 @@ export function defineCustomElement<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Attrs extends AttrsType = {}
 >(
   comp: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -130,7 +143,8 @@ export function defineCustomElement<
     EE,
     I,
     II,
-    S
+    S,
+    Attrs
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
@@ -142,17 +156,14 @@ export function defineCustomElement(options: {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
-  comp: any,
-  options?: {
-    hydrate?: RootHydrateFunction
-    attrs?: any
-  }
+  options: any,
+  hydrate?: any
 ): VueElementConstructor {
   const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
-      super(Comp, initialProps, options?.hydrate)
+      super(Comp, initialProps, hydrate)
     }
   }
 

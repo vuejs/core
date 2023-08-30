@@ -15,7 +15,8 @@ import {
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  Data
 } from './component'
 import {
   ExtractPropTypes,
@@ -28,7 +29,8 @@ import { extend, isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
+  ComponentPublicInstanceConstructor,
+  IsSameType
 } from './componentPublicInstance'
 import { SlotsType } from './componentSlots'
 
@@ -57,7 +59,7 @@ export type DefineComponent<
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType = {}
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -107,7 +109,10 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType = {},
+  PropsAttrs = IsSameType<Data, UnwrapAttrsType<Attrs>> extends true
+    ? {}
+    : UnwrapAttrsType<Attrs>
 >(
   setup: (
     props: Props,
@@ -116,10 +121,10 @@ export function defineComponent<
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
-    slots?: S,
+    slots?: S
     attrs?: Attrs
   }
-): (props: Props & EmitsToProps<E> & UnwrapAttrsType<Attrs>) => any
+): (props: Props & EmitsToProps<E> & PropsAttrs) => any
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -153,7 +158,7 @@ export function defineComponent<
   S extends SlotsType = {},
   Attrs extends AttrsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string,
+  II extends string = string
 >(
   comp: ComponentOptionsWithoutProps<
     Props,

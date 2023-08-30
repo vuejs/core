@@ -1,4 +1,5 @@
 import {
+  AllowedComponentProps,
   ComponentInternalInstance,
   Data,
   getExposeProxy,
@@ -193,6 +194,12 @@ export type CreateComponentPublicInstance<
   Attrs
 >
 
+export type IsSameType<T, U> = T extends U
+  ? U extends T
+    ? true
+    : false
+  : false
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -208,16 +215,20 @@ export type ComponentPublicInstance<
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType = {},
+  PropsAttrs = IsSameType<UnwrapAttrsType<Attrs>, Data> extends true
+    ? {}
+    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
 > = {
   $: ComponentInternalInstance
   $data: D
   $props: Prettify<
     MakeDefaultsOptional extends true
-      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
-      : P & PublicProps & Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & PropsAttrs
+      : P & PublicProps & PropsAttrs
   >
-  $attrs: Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> & AllowedComponentProps
+  $attrs: Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> &
+    AllowedComponentProps
   $refs: Data
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null

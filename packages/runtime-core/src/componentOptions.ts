@@ -428,9 +428,7 @@ export type UnwrapAttrsType<
   ? Data
   : Readonly<
       Prettify<{
-        [K in keyof T]: NonNullable<T[K]> extends (...args: any[]) => any
-          ? T[K]
-          : T[K]
+        [K in keyof T]: T[K]
       }>
     >
 

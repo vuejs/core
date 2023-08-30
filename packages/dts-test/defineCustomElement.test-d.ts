@@ -1,9 +1,5 @@
-import {
-  defineCustomElement,
-  expectType,
-  expectError,
-  SetupContext
-} from './index'
+import { defineCustomElement, AttrsType } from 'vue'
+import { describe, expectType, test } from './utils'
 
 describe('inject', () => {
   // with object inject
@@ -73,20 +69,16 @@ describe('define attrs', () => {
       bar: number
       baz?: string
     }
-    defineCustomElement(
-      {
-        props: {
-          foo: String
-        },
-        created() {
-          expectType<number>(this.$attrs.bar)
-          expectType<string | undefined>(this.$attrs.baz)
-        }
+    defineCustomElement({
+      props: {
+        foo: String
       },
-      {
-        attrs: {} as CompAttrs
+      attrs: Object as AttrsType<CompAttrs>,
+      created() {
+        expectType<number>(this.$attrs.bar)
+        expectType<string | undefined>(this.$attrs.baz)
       }
-    )
+    })
   })
 
   test('define attrs w/ array props', () => {
@@ -94,18 +86,14 @@ describe('define attrs', () => {
       bar: number
       baz?: string
     }
-    defineCustomElement(
-      {
-        props: ['foo'],
-        created() {
-          expectType<number>(this.$attrs.bar)
-          expectType<string | undefined>(this.$attrs.baz)
-        }
-      },
-      {
-        attrs: {} as CompAttrs
+    defineCustomElement({
+      props: ['foo'],
+      attrs: Object as AttrsType<CompAttrs>,
+      created() {
+        expectType<number>(this.$attrs.bar)
+        expectType<string | undefined>(this.$attrs.baz)
       }
-    )
+    })
   })
 
   test('define attrs w/ no props', () => {
@@ -113,17 +101,13 @@ describe('define attrs', () => {
       bar: number
       baz?: string
     }
-    defineCustomElement(
-      {
-        created() {
-          expectType<number>(this.$attrs.bar)
-          expectType<string | undefined>(this.$attrs.baz)
-        }
-      },
-      {
-        attrs: {} as CompAttrs
+    defineCustomElement({
+      attrs: Object as AttrsType<CompAttrs>,
+      created() {
+        expectType<number>(this.$attrs.bar)
+        expectType<string | undefined>(this.$attrs.baz)
       }
-    )
+    })
   })
 
   test('define attrs w/ function component', () => {
@@ -132,10 +116,13 @@ describe('define attrs', () => {
       baz?: string
     }
     defineCustomElement(
-      (_props: { foo: string }, ctx: SetupContext<{}, CompAttrs>) => {
+      (_props: { foo: string }, ctx) => {
         expectType<number>(ctx.attrs.bar)
         expectType<number>(ctx.attrs.bar)
         expectType<string | undefined>(ctx.attrs.baz)
+      },
+      {
+        attrs: Object as AttrsType<CompAttrs>
       }
     )
   })
@@ -144,19 +131,15 @@ describe('define attrs', () => {
     type CompAttrs = {
       foo: number
     }
-    defineCustomElement(
-      {
-        props: {
-          foo: String
-        },
-        created() {
-          // @ts-expect-error
-          console.log(this.$attrs.foo)
-        }
+    defineCustomElement({
+      props: {
+        foo: String
       },
-      {
-        attrs: {} as CompAttrs
+      attrs: Object as AttrsType<CompAttrs>,
+      created() {
+        // @ts-expect-error
+        console.log(this.$attrs.foo)
       }
-    )
+    })
   })
 })
