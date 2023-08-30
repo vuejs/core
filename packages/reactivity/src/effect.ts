@@ -50,6 +50,10 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
+function triggerComputedGetter(computed: ComputedRefImpl<any>) {
+  return computed.value
+}
+
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -100,7 +104,7 @@ export class ReactiveEffect<T = any> {
       }
       pauseTracking()
       for (const deferredComputed of this._deferredComputeds) {
-        deferredComputed.value
+        triggerComputedGetter(deferredComputed.value) // wrap with function to avoid tree shaking
         if (this._dirty) {
           break
         }
