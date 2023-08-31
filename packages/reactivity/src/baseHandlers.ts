@@ -168,7 +168,8 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
-    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
+    const isUnwrappingRef = isRef(oldValue) && !isRef(value)
+    if (isReadonly(oldValue) && isUnwrappingRef) {
       return false
     }
     if (!this._shallow) {
@@ -176,7 +177,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
-      if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
+      if (!isArray(target) && isUnwrappingRef) {
         oldValue.value = value
         return true
       }
