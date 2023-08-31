@@ -169,7 +169,7 @@ describe('compiler sfc: transform asset url', () => {
 
   test('transform with stringify with space in absolute filename', () => {
     const { code } = compileWithAssetUrls(
-      `<div>` + `<img src="/foo bar.png"/>` + `</div>`,
+      `<div><img src="/foo bar.png"/></div>`,
       {
         includeAbsolute: true
       },
