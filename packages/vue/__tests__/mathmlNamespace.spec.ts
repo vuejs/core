@@ -1,4 +1,4 @@
-// SVG logic is technically dom-specific, but the logic is placed in core
+// MathML logic is technically dom-specific, but the logic is placed in core
 // because splitting it out of core would lead to unnecessary complexity in both
 // the renderer and compiler implementations.
 // Related files:
