@@ -515,13 +515,13 @@ describe('e2e: TransitionGroup', () => {
       const { createApp, ref } = (window as any).Vue
       createApp({
         template: `
-              <div id="container">
-								<transition-group name="group">
-									<Comp v-for="item in items" :key="item"></Comp>
-								</transition-group>
-							</div>
-              <button id="toggleBtn" @click="click">button</button>
-              <button id="pushBtn" @click="change">button</button>
+        <div id="container">
+          <transition-group name="group">
+            <Comp v-for="item in items" :key="item"></Comp>
+          </transition-group>
+        </div>
+        <button id="toggleBtn" @click="click">button</button>
+        <button id="pushBtn" @click="change">button</button>
             `,
         components: {
           Comp: {
