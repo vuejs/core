@@ -436,8 +436,8 @@ export function toRef(
     return source
   } else if (isFunction(source)) {
     return new GetterRefImpl(source) as any
-  } else if (isObject(source) && arguments.length > 1) {
-    return propertyToRef(source, key!, defaultValue)
+  } else if (isObject(source) && key !== undefined) {
+    return propertyToRef(source, key, defaultValue)
   } else {
     return ref(source)
   }
