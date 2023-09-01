@@ -33,8 +33,7 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _cacheable: boolean
-
-  private scheduled = false
+  public _scheduled = false
 
   constructor(
     getter: ComputedGetter<T>,
@@ -43,9 +42,9 @@ export class ComputedRefImpl<T> {
     isSSR: boolean
   ) {
     this.effect = new ReactiveEffect(getter, () => {
-      if (!this.scheduled) {
-        this.scheduled = true
-        triggerRefValue(this, this)
+      if (!this._scheduled) {
+        this._scheduled = true
+        triggerRefValue(this, true)
       }
     })
     this.effect.computed = this
@@ -56,14 +55,14 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    trackRefValue(self)
+    trackRefValue(self, self)
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
-        triggerRefValue(self, undefined)
+        triggerRefValue(self, false)
       }
       self._value = newValue
-      self.scheduled = false
+      self._scheduled = false
     }
     return self._value
   }
