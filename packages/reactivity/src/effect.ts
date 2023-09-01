@@ -100,8 +100,9 @@ export class ReactiveEffect<T = any> {
     if (!this._dirty && this._depsMaybeDirty) {
       pauseTracking()
       for (const dep of this.deps) {
-        if (dep.computed?._scheduled) {
+        if (dep.computed?._valueMaybeDirty) {
           triggerComputedGetter(dep.computed) // wrap with function call to avoid tree shaking
+          dep.computed._valueMaybeDirty = false
           if (this._dirty) {
             break
           }
@@ -480,9 +481,7 @@ function triggerEffect(
       } else if (
         triggerType === TriggerType.ComputedValueUpdated &&
         (effect.computed ||
-          (effect._depsMaybeDirty &&
-            triggerDep.computed?._scheduled &&
-            effect.deps.includes(triggerDep)))
+          (effect._depsMaybeDirty && triggerDep.computed?._valueMaybeDirty))
       ) {
         effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {
