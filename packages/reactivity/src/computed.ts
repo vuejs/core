@@ -47,7 +47,6 @@ export class ComputedRefImpl<T> {
         triggerRefValue(this, TriggerType.ComputedDepsUpdated)
       }
     })
-    this.effect._alwaysAcceptComputedValueUpdated = true
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly

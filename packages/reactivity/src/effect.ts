@@ -88,7 +88,6 @@ export class ReactiveEffect<T = any> {
 
   _dirty = true
   _depsMaybeDirty = false
-  _alwaysAcceptComputedValueUpdated = false
 
   constructor(
     public fn: () => T,
@@ -481,7 +480,7 @@ function triggerEffect(
         effect._depsMaybeDirty = true
       } else if (
         triggerType === TriggerType.ComputedValueUpdated &&
-        (effect._alwaysAcceptComputedValueUpdated ||
+        (effect.computed ||
           (effect._depsMaybeDirty &&
             triggerDep.computed?._scheduled &&
             effect.deps.includes(triggerDep)))
