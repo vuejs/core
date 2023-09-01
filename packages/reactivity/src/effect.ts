@@ -471,7 +471,7 @@ function triggerEffect(
       }
     }
     if (effect._triggerFlags & triggerType) {
-      effect.scheduler(triggerType)
+      effect.scheduler()
     }
   }
   scheduleEffectCallbacks()
