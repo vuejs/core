@@ -45,12 +45,7 @@ import {
   flushPreFlushCbs,
   SchedulerJob
 } from './scheduler'
-import {
-  pauseTracking,
-  resetTracking,
-  ReactiveEffect,
-  TriggerType
-} from '@vue/reactivity'
+import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -1549,21 +1544,10 @@ function baseCreateRenderer(
       }
     }
 
-    let scheduled = false
-
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      triggerType => {
-        if (
-          triggerType === TriggerType.ForceDirty ||
-          triggerType === TriggerType.ComputedDepsUpdated ||
-          !scheduled
-        ) {
-          scheduled = true
-          queueJob(update)
-        }
-      },
+      () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
 
@@ -1571,7 +1555,6 @@ function baseCreateRenderer(
       if (effect.dirty) {
         effect.run()
       }
-      scheduled = false
     })
     update.id = instance.uid
     // allowRecurse

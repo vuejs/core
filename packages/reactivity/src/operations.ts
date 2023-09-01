@@ -13,3 +13,9 @@ export const enum TriggerOpTypes {
   DELETE = 'delete',
   CLEAR = 'clear'
 }
+
+export const enum TriggerTypes {
+  ForceDirty = 1 << 0,
+  ComputedDepsUpdated = 1 << 1,
+  ComputedValueUpdated = 1 << 2
+}

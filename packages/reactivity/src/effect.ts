@@ -1,4 +1,4 @@
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { TrackOpTypes, TriggerOpTypes, TriggerTypes } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
@@ -30,13 +30,7 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export enum TriggerType {
-  ForceDirty = 1,
-  ComputedDepsUpdated = 2,
-  ComputedValueUpdated = 3
-}
-
-export type EffectScheduler = (triggerType: TriggerType, ...args: any[]) => any
+export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -87,6 +81,7 @@ export class ReactiveEffect<T = any> {
 
   _dirty = true
   _depsMaybeDirty = false
+  _triggerFlags = TriggerTypes.ForceDirty | TriggerTypes.ComputedDepsUpdated
 
   constructor(
     public fn: () => T,
@@ -222,22 +217,12 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  let scheduled = false
-
-  const _effect = new ReactiveEffect(fn, triggerType => {
-    if (
-      triggerType === TriggerType.ForceDirty ||
-      triggerType === TriggerType.ComputedDepsUpdated ||
-      !scheduled
-    ) {
-      scheduled = true
-      queueEffectCbs.push(() => {
-        if (_effect.dirty) {
-          _effect.run()
-        }
-        scheduled = false
-      })
-    }
+  const _effect = new ReactiveEffect(fn, () => {
+    queueEffectCbs.push(() => {
+      if (_effect.dirty) {
+        _effect.run()
+      }
+    })
   })
   if (options) {
     extend(_effect, options)
@@ -423,9 +408,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(TriggerType.ForceDirty, deps[0], eventInfo)
+        triggerEffects(TriggerTypes.ForceDirty, deps[0], eventInfo)
       } else {
-        triggerEffects(TriggerType.ForceDirty, deps[0])
+        triggerEffects(TriggerTypes.ForceDirty, deps[0])
       }
     }
   } else {
@@ -436,15 +421,15 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(TriggerType.ForceDirty, createDep(effects), eventInfo)
+      triggerEffects(TriggerTypes.ForceDirty, createDep(effects), eventInfo)
     } else {
-      triggerEffects(TriggerType.ForceDirty, createDep(effects))
+      triggerEffects(TriggerTypes.ForceDirty, createDep(effects))
     }
   }
 }
 
 export function triggerEffects(
-  triggerType: TriggerType,
+  triggerType: TriggerTypes,
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -465,7 +450,7 @@ export function triggerEffects(
 const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
-  triggerType: TriggerType,
+  triggerType: TriggerTypes,
   effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -474,18 +459,20 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (!effect._dirty) {
-      if (triggerType === TriggerType.ComputedDepsUpdated) {
+      if (triggerType === TriggerTypes.ComputedDepsUpdated) {
         effect._depsMaybeDirty = true
       } else if (
-        triggerType === TriggerType.ComputedValueUpdated &&
+        triggerType === TriggerTypes.ComputedValueUpdated &&
         (effect.computed || effect._depsMaybeDirty)
       ) {
         effect.dirty = true
-      } else if (triggerType === TriggerType.ForceDirty) {
+      } else if (triggerType === TriggerTypes.ForceDirty) {
         effect.dirty = true
       }
     }
-    effect.scheduler(triggerType)
+    if (effect._triggerFlags & triggerType) {
+      effect.scheduler(triggerType)
+    }
   }
   scheduleEffectCallbacks()
 }
