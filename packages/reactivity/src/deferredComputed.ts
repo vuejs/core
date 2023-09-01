@@ -49,7 +49,7 @@ class DeferredComputedRefImpl<T> {
           hasCompareTarget = false
           scheduler(() => {
             if (this.effect.active && this._get() !== valueToCompare) {
-              triggerRefValue(this, TriggerType.ForceDirty, undefined)
+              triggerRefValue(this)
             }
             scheduled = false
           })

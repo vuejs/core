@@ -59,7 +59,7 @@ export function trackRefValue(
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  triggerType: TriggerType,
+  triggerType: TriggerType = TriggerType.ForceDirty,
   newVal?: any
 ) {
   ref = toRaw(ref)
@@ -294,7 +294,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this, TriggerType.ForceDirty)
+      () => triggerRefValue(this)
     )
     this._get = get
     this._set = set
