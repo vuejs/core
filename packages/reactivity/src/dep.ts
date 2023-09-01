@@ -20,7 +20,10 @@ type TrackedMarkers = {
   computed?: ComputedRefImpl<any>
 }
 
-export const createDep = (effects?: ReactiveEffect[], computed?: ComputedRefImpl<any>): Dep => {
+export const createDep = (
+  effects?: ReactiveEffect[],
+  computed?: ComputedRefImpl<any>
+): Dep => {
   const dep = new Set<ReactiveEffect>(effects) as Dep
   dep.w = 0
   dep.n = 0
