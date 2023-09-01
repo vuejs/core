@@ -466,12 +466,12 @@ export function triggerEffects(
   const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
-      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
+      triggerEffect(triggerType, effect, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
-      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
+      triggerEffect(triggerType, effect, debuggerEventExtraInfo)
     }
   }
 }
@@ -480,7 +480,6 @@ const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
   triggerType: TriggerType,
-  triggerDep: Dep,
   effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
@@ -493,10 +492,7 @@ function triggerEffect(
         effect._depsMaybeDirty = true
       } else if (
         triggerType === TriggerType.ComputedValueUpdated &&
-        (effect.computed ||
-          (effect._depsMaybeDirty &&
-            triggerDep.computed?._scheduled &&
-            effect.deps.includes(triggerDep)))
+        (effect.computed || effect._depsMaybeDirty)
       ) {
         effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {

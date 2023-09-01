@@ -32,8 +32,8 @@ export class ComputedRefImpl<T> {
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _cacheable: boolean
   public _scheduled = false
+  public _cacheable: boolean
 
   constructor(
     getter: ComputedGetter<T>,
