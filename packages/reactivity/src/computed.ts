@@ -44,7 +44,7 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._scheduled) {
         this._scheduled = true
-        triggerRefValue(this, TriggerType.ComputedDepsUpdated, this)
+        triggerRefValue(this, TriggerType.ComputedDepsUpdated)
       }
     })
     this.effect._alwaysAcceptComputedValueUpdated = true
@@ -60,7 +60,7 @@ export class ComputedRefImpl<T> {
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
-        triggerRefValue(self, TriggerType.ComputedValueUpdated, self)
+        triggerRefValue(self, TriggerType.ComputedValueUpdated)
       }
       self._value = newValue
       self._scheduled = false
