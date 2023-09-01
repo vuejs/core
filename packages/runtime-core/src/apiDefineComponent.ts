@@ -15,8 +15,7 @@ import {
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps,
-  Data
+  ComponentCustomProps
 } from './component'
 import {
   ExtractPropTypes,
@@ -59,7 +58,7 @@ export type DefineComponent<
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -109,10 +108,10 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
-  PropsAttrs = IsSameType<Data, UnwrapAttrsType<Attrs>> extends true
+  Attrs extends AttrsType | undefined = undefined,
+  PropsAttrs = IsSameType<undefined, Attrs> extends true
     ? {}
-    : UnwrapAttrsType<Attrs>
+    : UnwrapAttrsType<NonNullable<Attrs>>
 >(
   setup: (
     props: Props,
@@ -156,11 +155,11 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
-  comp: ComponentOptionsWithoutProps<
+  options: ComponentOptionsWithoutProps<
     Props,
     RawBindings,
     D,
@@ -206,12 +205,12 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
 >(
-  comp: ComponentOptionsWithArrayProps<
+  options: ComponentOptionsWithArrayProps<
     PropNames,
     RawBindings,
     D,
@@ -260,9 +259,9 @@ export function defineComponent<
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 >(
-  comp: ComponentOptionsWithObjectProps<
+  options: ComponentOptionsWithObjectProps<
     PropsOptions,
     RawBindings,
     D,

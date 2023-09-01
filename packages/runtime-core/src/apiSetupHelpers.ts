@@ -11,8 +11,7 @@ import {
   setCurrentInstance,
   SetupContext,
   createSetupContext,
-  unsetCurrentInstance,
-  Data
+  unsetCurrentInstance
 } from './component'
 import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import {
@@ -350,8 +349,8 @@ export function useSlots(): SetupContext['slots'] {
   return getContext().slots
 }
 
-export function useAttrs<T extends Data = {}>(): SetupContext['attrs'] {
-  return getContext().attrs as T
+export function useAttrs(): SetupContext['attrs'] {
+  return getContext().attrs
 }
 
 export function useModel<T extends Record<string, any>, K extends keyof T>(

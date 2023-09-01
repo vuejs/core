@@ -18,8 +18,7 @@ import {
   ConcreteComponent,
   ClassComponent,
   Component,
-  isClassComponent,
-  AllowedComponentProps
+  isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
@@ -817,7 +816,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   vnode.shapeFlag |= type
 }
 
-export function mergeProps(...args: (AllowedComponentProps | Data)[]) {
+export function mergeProps(...args: (Data & VNodeProps)[]) {
   const ret: Data = {}
   for (let i = 0; i < args.length; i++) {
     const toMerge = args[i]
@@ -830,7 +829,7 @@ export function mergeProps(...args: (AllowedComponentProps | Data)[]) {
         ret.style = normalizeStyle([ret.style, toMerge.style])
       } else if (isOn(key)) {
         const existing = ret[key]
-        const incoming = (toMerge as Data)[key]
+        const incoming = toMerge[key]
         if (
           incoming &&
           existing !== incoming &&
@@ -841,7 +840,7 @@ export function mergeProps(...args: (AllowedComponentProps | Data)[]) {
             : incoming
         }
       } else if (key !== '') {
-        ret[key] = (toMerge as Data)[key]
+        ret[key] = toMerge[key]
       }
     }
   }

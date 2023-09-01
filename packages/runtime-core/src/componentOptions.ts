@@ -112,7 +112,7 @@ export interface ComponentOptionsBase<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
@@ -226,7 +226,7 @@ export type ComponentOptionsWithoutProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -277,7 +277,7 @@ export type ComponentOptionsWithArrayProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
@@ -328,7 +328,7 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -421,17 +421,17 @@ declare const AttrSymbol: unique symbol
 export type AttrsType<T extends Record<string, any> = Record<string, any>> = {
   [AttrSymbol]?: T
 }
+
 export type UnwrapAttrsType<
-  S extends AttrsType,
-  T = NonNullable<S[typeof AttrSymbol]>
-> = [keyof S] extends [never]
+  Attrs extends AttrsType,
+  T = NonNullable<Attrs[typeof AttrSymbol]>
+> = [keyof Attrs] extends [never]
   ? Data
   : Readonly<
       Prettify<{
         [K in keyof T]: T[K]
       }>
     >
-
 export type ComputedOptions = Record<
   string,
   ComputedGetter<any> | WritableComputedOptions<any>

@@ -152,7 +152,7 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
+  Attrs extends AttrsType | undefined = undefined,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -215,10 +215,10 @@ export type ComponentPublicInstance<
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType = {},
-  PropsAttrs = IsSameType<UnwrapAttrsType<Attrs>, Data> extends true
+  Attrs extends AttrsType | undefined = undefined,
+  PropsAttrs = IsSameType<Attrs, undefined> extends true
     ? {}
-    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+    : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)>
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -227,8 +227,10 @@ export type ComponentPublicInstance<
       ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & PropsAttrs
       : P & PublicProps & PropsAttrs
   >
-  $attrs: Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> &
-    AllowedComponentProps
+  $attrs: IsSameType<Attrs, undefined> extends true
+    ? Data
+    : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)> &
+        AllowedComponentProps
   $refs: Data
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null

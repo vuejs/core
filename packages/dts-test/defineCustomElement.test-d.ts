@@ -15,7 +15,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -27,7 +27,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -47,7 +47,7 @@ describe('inject', () => {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
-      expectError((this.foobar = 1))
+      this.foobar = 1
     }
   })
 
@@ -56,89 +56,101 @@ describe('inject', () => {
     props: ['a', 'b'],
     created() {
       //  @ts-expect-error
-      expectError((this.foo = 1))
+      this.foo = 1
       //  @ts-expect-error
-      expectError((this.bar = 1))
+      this.bar = 1
     }
   })
 })
 
 describe('define attrs', () => {
   test('define attrs w/ object props', () => {
-    type CompAttrs = {
-      bar: number
-      baz?: string
-    }
     defineCustomElement({
       props: {
         foo: String
       },
-      attrs: Object as AttrsType<CompAttrs>,
+      attrs: Object as AttrsType<{
+        bar?: number
+      }>,
       created() {
-        expectType<number>(this.$attrs.bar)
-        expectType<string | undefined>(this.$attrs.baz)
+        expectType<number | undefined>(this.$attrs.bar)
       }
     })
   })
 
   test('define attrs w/ array props', () => {
-    type CompAttrs = {
-      bar: number
-      baz?: string
-    }
     defineCustomElement({
       props: ['foo'],
-      attrs: Object as AttrsType<CompAttrs>,
+      attrs: Object as AttrsType<{
+        bar?: number
+      }>,
       created() {
-        expectType<number>(this.$attrs.bar)
-        expectType<string | undefined>(this.$attrs.baz)
+        expectType<number | undefined>(this.$attrs.bar)
       }
     })
   })
 
   test('define attrs w/ no props', () => {
-    type CompAttrs = {
-      bar: number
-      baz?: string
-    }
     defineCustomElement({
-      attrs: Object as AttrsType<CompAttrs>,
+      attrs: Object as AttrsType<{
+        bar?: number
+      }>,
       created() {
-        expectType<number>(this.$attrs.bar)
-        expectType<string | undefined>(this.$attrs.baz)
+        expectType<number | undefined>(this.$attrs.bar)
       }
     })
   })
 
-  test('define attrs w/ function component', () => {
-    type CompAttrs = {
-      bar: number
-      baz?: string
-    }
-    defineCustomElement(
-      (_props: { foo: string }, ctx) => {
-        expectType<number>(ctx.attrs.bar)
-        expectType<number>(ctx.attrs.bar)
-        expectType<string | undefined>(ctx.attrs.baz)
-      },
-      {
-        attrs: Object as AttrsType<CompAttrs>
-      }
-    )
-  })
-
   test('define attrs as low priority', () => {
-    type CompAttrs = {
-      foo: number
-    }
     defineCustomElement({
       props: {
         foo: String
       },
-      attrs: Object as AttrsType<CompAttrs>,
+      attrs: Object as AttrsType<{
+        foo: number
+      }>,
       created() {
         // @ts-expect-error
-        console.log(this.$attrs.foo)
+        this.$attrs.foo
+        expectType<string | undefined>(this.foo)
+      }
+    })
+  })
+
+  test('define attrs w/ no attrs', () => {
+    defineCustomElement({
+      props: {
+        foo: String
+      },
+      created() {
+        expectType<unknown>(this.$attrs.bar)
+        expectType<unknown>(this.$attrs.baz)
+      }
+    })
+  })
+
+  test('default attrs like class, style', () => {
+    defineCustomElement({
+      props: {
+        foo: String
+      },
+      created() {
+        expectType<unknown>(this.$attrs.class)
+        expectType<unknown>(this.$attrs.style)
+      }
+    })
+  })
+
+  test('define required attrs', () => {
+    defineCustomElement({
+      props: {
+        foo: String
+      },
+      attrs: Object as AttrsType<{
+        bar: number
+      }>,
+      created() {
+        expectType<number>(this.$attrs.bar)
       }
     })
   })

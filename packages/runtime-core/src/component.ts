@@ -19,7 +19,8 @@ import {
   exposeSetupStateOnRenderContext,
   ComponentPublicInstanceConstructor,
   publicPropertiesMap,
-  RuntimeCompiledPublicInstanceProxyHandlers
+  RuntimeCompiledPublicInstanceProxyHandlers,
+  IsSameType
 } from './componentPublicInstance'
 import {
   ComponentPropsOptions,
@@ -187,10 +188,12 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 > = E extends any
   ? {
-      attrs: UnwrapAttrsType<Attrs>
+      attrs: IsSameType<Attrs, undefined> extends true
+        ? Data
+        : UnwrapAttrsType<NonNullable<Attrs>>
       slots: UnwrapSlotsType<S>
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void

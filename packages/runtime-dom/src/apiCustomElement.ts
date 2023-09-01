@@ -35,18 +35,11 @@ export type VueElementConstructor<P = {}> = {
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
 // overload 1: direct setup function
-export function defineCustomElement<
-  Props,
-  RawBindings = object,
-  Attrs extends AttrsType = {}
->(
+export function defineCustomElement<Props, RawBindings = object>(
   setup: (
     props: Readonly<Props>,
-    ctx: SetupContext<{}, {}, Attrs>
-  ) => RawBindings | RenderFunction,
-  options?: {
-    attrs?: Attrs
-  }
+    ctx: SetupContext
+  ) => RawBindings | RenderFunction
 ): VueElementConstructor<Props>
 
 // overload 2: object format with no props
@@ -63,9 +56,9 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 >(
-  comp: ComponentOptionsWithoutProps<
+  options: ComponentOptionsWithoutProps<
     Props,
     RawBindings,
     D,
@@ -96,9 +89,9 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 >(
-  comp: ComponentOptionsWithArrayProps<
+  options: ComponentOptionsWithArrayProps<
     PropNames,
     RawBindings,
     D,
@@ -129,9 +122,9 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType = {}
+  Attrs extends AttrsType | undefined = undefined
 >(
-  comp: ComponentOptionsWithObjectProps<
+  options: ComponentOptionsWithObjectProps<
     PropsOptions,
     RawBindings,
     D,
@@ -157,7 +150,7 @@ export function defineCustomElement(options: {
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
-  hydrate?: any
+  hydrate?: RootHydrateFunction
 ): VueElementConstructor {
   const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
