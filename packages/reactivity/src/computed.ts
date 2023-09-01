@@ -1,9 +1,4 @@
-import {
-  DebuggerOptions,
-  DeferredComputedAcceptMode,
-  ReactiveEffect,
-  TriggerType
-} from './effect'
+import { DebuggerOptions, ReactiveEffect, TriggerType } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
@@ -52,7 +47,7 @@ export class ComputedRefImpl<T> {
         triggerRefValue(this, TriggerType.ComputedDepsUpdated, this)
       }
     })
-    this.effect._deferredComputedAcceptMode = DeferredComputedAcceptMode.Always
+    this.effect._alwaysAcceptComputedValueUpdated = true
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly

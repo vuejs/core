@@ -37,11 +37,6 @@ export enum TriggerType {
   ComputedValueUpdated = 3
 }
 
-export enum DeferredComputedAcceptMode {
-  Always = 1,
-  OnlyWhenQuerying = 2
-}
-
 export type EffectScheduler = (triggerType: TriggerType, ...args: any[]) => any
 
 export type DebuggerEvent = {
@@ -93,7 +88,7 @@ export class ReactiveEffect<T = any> {
 
   _dirty = true
   _depsMaybeDirty = false
-  _deferredComputedAcceptMode = DeferredComputedAcceptMode.OnlyWhenQuerying
+  _alwaysAcceptComputedValueUpdated = false
 
   constructor(
     public fn: () => T,
@@ -486,9 +481,10 @@ function triggerEffect(
         effect._depsMaybeDirty = true
       } else if (
         triggerType === TriggerType.ComputedValueUpdated &&
-        (effect._deferredComputedAcceptMode ===
-          DeferredComputedAcceptMode.Always ||
-          effect.deps.includes(triggerDep))
+        (effect._alwaysAcceptComputedValueUpdated ||
+          (effect._depsMaybeDirty &&
+            triggerDep.computed?._scheduled &&
+            effect.deps.includes(triggerDep)))
       ) {
         effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {
