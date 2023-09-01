@@ -10,7 +10,6 @@ import {
   wasTracked
 } from './dep'
 import type { ComputedRefImpl } from './computed'
-import type { RefBase } from './ref'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -57,7 +56,7 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
-function triggerComputedGetter(computed: RefBase<any>) {
+function triggerComputedGetter(computed: ComputedRefImpl<any>) {
   return computed.value
 }
 

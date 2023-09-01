@@ -34,7 +34,7 @@ export interface Ref<T = any> {
   [RefSymbol]: true
 }
 
-export type RefBase<T> = {
+type RefBase<T> = {
   dep?: Dep
   value: T
 }
