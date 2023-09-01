@@ -16,9 +16,9 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import type { ComputedRefImpl } from './computed'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import type { ComputedRefImpl } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -33,43 +33,46 @@ export interface Ref<T = any> {
   [RefSymbol]: true
 }
 
-type RefBase<T> = {
+export type RefBase<T> = {
   dep?: Dep
   value: T
 }
 
-export function trackRefValue(ref: RefBase<any>) {
+export function trackRefValue(
+  ref: RefBase<any>,
+  computed?: ComputedRefImpl<any>
+) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
-      trackEffects(ref.dep || (ref.dep = createDep()), {
+      trackEffects(ref.dep || (ref.dep = createDep(undefined, computed)), {
         target: ref,
         type: TrackOpTypes.GET,
         key: 'value'
       })
     } else {
-      trackEffects(ref.dep || (ref.dep = createDep()))
+      trackEffects(ref.dep || (ref.dep = createDep(undefined, computed)))
     }
   }
 }
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  deferredComputed?: ComputedRefImpl<any>,
+  isDepMaybeDirtyTrigger: boolean = false,
   newVal?: any
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, deferredComputed, {
+      triggerEffects(dep, isDepMaybeDirtyTrigger, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, deferredComputed)
+      triggerEffects(dep, isDepMaybeDirtyTrigger)
     }
   }
 }
@@ -163,7 +166,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, undefined, newVal)
+      triggerRefValue(this, false, newVal)
     }
   }
 }
@@ -194,7 +197,7 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, undefined, __DEV__ ? ref.value : void 0)
+  triggerRefValue(ref, false, __DEV__ ? ref.value : void 0)
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
