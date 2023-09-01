@@ -9,7 +9,8 @@ import {
   newTracked,
   wasTracked
 } from './dep'
-import { ComputedRefImpl } from './computed'
+import type { ComputedRefImpl } from './computed'
+import type { RefBase } from './ref'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -61,9 +62,7 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
-const _depIndexes = new Map<Dep | undefined, number>()
-
-function triggerComputedGetter(computed: ComputedRefImpl<any>) {
+function triggerComputedGetter(computed: RefBase<any>) {
   return computed.value
 }
 
@@ -93,7 +92,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirty = true
-  _deferredComputeds: ComputedRefImpl<any>[] = []
+  _depsMaybeDirty = false
   _deferredComputedAcceptMode = DeferredComputedAcceptMode.OnlyWhenQuerying
 
   constructor(
@@ -105,36 +104,30 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (!this._dirty && this._deferredComputeds.length) {
-      if (this._deferredComputeds.length >= 2) {
-        for (const { dep } of this._deferredComputeds) {
-          _depIndexes.set(dep, this.deps.indexOf(dep!))
-        }
-        this._deferredComputeds = this._deferredComputeds.sort(
-          (a, b) => _depIndexes.get(a.dep)! - _depIndexes.get(b.dep)!
-        )
-        _depIndexes.clear()
-      }
+    if (!this._dirty && this._depsMaybeDirty) {
       pauseTracking()
-      for (const deferredComputed of this._deferredComputeds) {
-        triggerComputedGetter(deferredComputed) // wrap with function to avoid tree shaking
-        if (this._dirty) {
-          break
+      for (const dep of this.deps) {
+        if (dep.computed?._scheduled) {
+          triggerComputedGetter(dep.computed) // wrap with function call to avoid tree shaking
+          if (this._dirty) {
+            break
+          }
         }
       }
       resetTracking()
     }
-    this._deferredComputeds.length = 0
+    this._depsMaybeDirty = false
     return this._dirty
   }
 
   public set dirty(v) {
     this._dirty = v
-    this._deferredComputeds.length = 0
+    this._depsMaybeDirty = false
   }
 
   run() {
-    this.dirty = false
+    this._dirty = false
+    this._depsMaybeDirty = false
     if (!this.active) {
       return this.fn()
     }
@@ -505,14 +498,13 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (!effect._dirty) {
-      if (triggerType === TriggerType.ComputedDepsUpdated && deferredComputed) {
-        effect._deferredComputeds.push(deferredComputed)
+      if (triggerType === TriggerType.ComputedDepsUpdated) {
+        effect._depsMaybeDirty = true
       } else if (
         triggerType === TriggerType.ComputedValueUpdated &&
-        deferredComputed &&
         (effect._deferredComputedAcceptMode ===
           DeferredComputedAcceptMode.Always ||
-          effect._deferredComputeds.includes(deferredComputed))
+          effect.deps.some(dep => dep.computed === deferredComputed))
       ) {
         effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {

@@ -1,3 +1,4 @@
+import type { ComputedRefImpl } from './computed'
 import { ReactiveEffect, trackOpBit } from './effect'
 
 export type Dep = Set<ReactiveEffect> & TrackedMarkers
@@ -16,12 +17,17 @@ type TrackedMarkers = {
    * newTracked
    */
   n: number
+  computed?: ComputedRefImpl<any>
 }
 
-export const createDep = (effects?: ReactiveEffect[]): Dep => {
+export const createDep = (
+  effects?: ReactiveEffect[],
+  computed?: ComputedRefImpl<any>
+): Dep => {
   const dep = new Set<ReactiveEffect>(effects) as Dep
   dep.w = 0
   dep.n = 0
+  dep.computed = computed
   return dep
 }
 
