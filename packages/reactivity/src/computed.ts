@@ -33,7 +33,6 @@ export class ComputedRefImpl<T> {
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
   public _scheduled = false
-  public _valueMaybeDirty = false
   public _cacheable: boolean
 
   constructor(
@@ -45,7 +44,6 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._scheduled) {
         this._scheduled = true
-        this._valueMaybeDirty = true
         triggerRefValue(this, TriggerType.ComputedDepsUpdated)
       }
     })
