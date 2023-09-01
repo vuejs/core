@@ -1205,4 +1205,29 @@ describe('api: watch', () => {
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
   })
+
+  it('watch callback on-demand trigger', () => {
+    const effectSpy = vi.fn()
+
+    const sec = ref(0)
+    const min = computed(() => {
+      return Math.floor(sec.value / 60)
+    })
+    const hour = computed(() => {
+      return Math.floor(min.value / 60)
+    })
+
+    watchEffect(
+      () => {
+        effectSpy()
+        min.value
+        hour.value
+      },
+      { flush: 'sync' }
+    )
+
+    for (sec.value = 0; sec.value < 1000; sec.value++) {}
+
+    expect(effectSpy).toHaveBeenCalledTimes(17)
+  })
 })
