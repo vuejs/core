@@ -60,22 +60,20 @@ export function trackRefValue(
 export function triggerRefValue(
   ref: RefBase<any>,
   triggerType: TriggerType,
-  deferredComputed: ComputedRefImpl<any> | undefined,
   newVal?: any
 ) {
   ref = toRaw(ref)
-  deferredComputed = toRaw(deferredComputed)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, triggerType, deferredComputed, {
+      triggerEffects(triggerType, dep, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, triggerType, deferredComputed)
+      triggerEffects(triggerType, dep)
     }
   }
 }
@@ -169,7 +167,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, TriggerType.ForceDirty, undefined, newVal)
+      triggerRefValue(this, TriggerType.ForceDirty, newVal)
     }
   }
 }
@@ -200,12 +198,7 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(
-    ref,
-    TriggerType.ForceDirty,
-    undefined,
-    __DEV__ ? ref.value : void 0
-  )
+  triggerRefValue(ref, TriggerType.ForceDirty, __DEV__ ? ref.value : void 0)
 }
 
 export type MaybeRef<T = any> = T | Ref<T>

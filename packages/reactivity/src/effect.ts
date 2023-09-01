@@ -430,9 +430,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(deps[0], TriggerType.ForceDirty, undefined, eventInfo)
+        triggerEffects(TriggerType.ForceDirty, deps[0], eventInfo)
       } else {
-        triggerEffects(deps[0], TriggerType.ForceDirty, undefined)
+        triggerEffects(TriggerType.ForceDirty, deps[0])
       }
     }
   } else {
@@ -443,44 +443,28 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(
-        createDep(effects),
-        TriggerType.ForceDirty,
-        undefined,
-        eventInfo
-      )
+      triggerEffects(TriggerType.ForceDirty, createDep(effects), eventInfo)
     } else {
-      triggerEffects(createDep(effects), TriggerType.ForceDirty, undefined)
+      triggerEffects(TriggerType.ForceDirty, createDep(effects))
     }
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
   triggerType: TriggerType,
-  deferredComputed: ComputedRefImpl<any> | undefined,
+  dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
+  const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
-      triggerEffect(
-        effect,
-        triggerType,
-        deferredComputed,
-        debuggerEventExtraInfo
-      )
+      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
-      triggerEffect(
-        effect,
-        triggerType,
-        deferredComputed,
-        debuggerEventExtraInfo
-      )
+      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
     }
   }
 }
@@ -488,9 +472,9 @@ export function triggerEffects(
 const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
-  effect: ReactiveEffect,
   triggerType: TriggerType,
-  deferredComputed: ComputedRefImpl<any> | undefined,
+  triggerDep: Dep,
+  effect: ReactiveEffect,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
@@ -504,7 +488,7 @@ function triggerEffect(
         triggerType === TriggerType.ComputedValueUpdated &&
         (effect._deferredComputedAcceptMode ===
           DeferredComputedAcceptMode.Always ||
-          effect.deps.some(dep => dep.computed === deferredComputed))
+          effect.deps.includes(triggerDep))
       ) {
         effect.dirty = true
       } else if (triggerType === TriggerType.ForceDirty) {
