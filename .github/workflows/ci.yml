@@ -111,26 +111,3 @@ jobs:
 
       - name: Run type declaration tests
         run: pnpm run test-dts
-
-  autofix:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: 'pnpm'
-
-      - run: pnpm install
-
-      - run: pnpm run format
-
-      - uses: autofix-ci/action@8caa572fd27b0019a65e4c695447089c8d3138b9
