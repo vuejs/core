@@ -56,6 +56,7 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
+  TriggerType,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,

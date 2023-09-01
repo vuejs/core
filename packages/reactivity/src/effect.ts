@@ -10,7 +10,6 @@ import {
   wasTracked
 } from './dep'
 import type { ComputedRefImpl } from './computed'
-import type { RefBase } from './ref'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class
@@ -31,7 +30,13 @@ export let trackOpBit = 1
  */
 const maxMarkerBits = 30
 
-export type EffectScheduler = (...args: any[]) => any
+export enum TriggerType {
+  ForceDirty = 1,
+  ComputedDepsUpdated = 2,
+  ComputedValueUpdated = 3
+}
+
+export type EffectScheduler = (triggerType: TriggerType, ...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -51,7 +56,7 @@ export let activeEffect: ReactiveEffect | undefined
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
-function triggerComputedGetter(computed: RefBase<any>) {
+function triggerComputedGetter(computed: ComputedRefImpl<any>) {
   return computed.value
 }
 
@@ -106,6 +111,11 @@ export class ReactiveEffect<T = any> {
     }
     this._depsMaybeDirty = false
     return this._dirty
+  }
+
+  public set dirty(v) {
+    this._dirty = v
+    this._depsMaybeDirty = false
   }
 
   run() {
@@ -214,8 +224,12 @@ export function effect<T = any>(
 
   let scheduled = false
 
-  const _effect = new ReactiveEffect(fn, () => {
-    if (!scheduled) {
+  const _effect = new ReactiveEffect(fn, triggerType => {
+    if (
+      triggerType === TriggerType.ForceDirty ||
+      triggerType === TriggerType.ComputedDepsUpdated ||
+      !scheduled
+    ) {
       scheduled = true
       queueEffectCbs.push(() => {
         if (_effect.dirty) {
@@ -423,9 +437,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(deps[0], false, eventInfo)
+        triggerEffects(TriggerType.ForceDirty, deps[0], eventInfo)
       } else {
-        triggerEffects(deps[0], false)
+        triggerEffects(TriggerType.ForceDirty, deps[0])
       }
     }
   } else {
@@ -436,28 +450,28 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), false, eventInfo)
+      triggerEffects(TriggerType.ForceDirty, createDep(effects), eventInfo)
     } else {
-      triggerEffects(createDep(effects), false)
+      triggerEffects(TriggerType.ForceDirty, createDep(effects))
     }
   }
 }
 
 export function triggerEffects(
-  dep: Dep | ReactiveEffect[],
-  isDepMaybeDirtyTrigger: boolean,
+  triggerType: TriggerType,
+  dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
-  const effects = isArray(dep) ? dep : [...dep]
+  const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
-      triggerEffect(effect, isDepMaybeDirtyTrigger, debuggerEventExtraInfo)
+      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
-      triggerEffect(effect, isDepMaybeDirtyTrigger, debuggerEventExtraInfo)
+      triggerEffect(triggerType, dep, effect, debuggerEventExtraInfo)
     }
   }
 }
@@ -465,8 +479,9 @@ export function triggerEffects(
 const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
+  triggerType: TriggerType,
+  triggerDep: Dep,
   effect: ReactiveEffect,
-  isDepMaybeDirtyTrigger: boolean,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
@@ -474,14 +489,21 @@ function triggerEffect(
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
     if (!effect._dirty) {
-      if (isDepMaybeDirtyTrigger) {
+      if (triggerType === TriggerType.ComputedDepsUpdated) {
         effect._depsMaybeDirty = true
-      } else {
-        effect._dirty = true
-        effect._depsMaybeDirty = false
+      } else if (
+        triggerType === TriggerType.ComputedValueUpdated &&
+        (effect.computed ||
+          (effect._depsMaybeDirty &&
+            triggerDep.computed?._scheduled &&
+            effect.deps.includes(triggerDep)))
+      ) {
+        effect.dirty = true
+      } else if (triggerType === TriggerType.ForceDirty) {
+        effect.dirty = true
       }
     }
-    effect.scheduler()
+    effect.scheduler(triggerType)
   }
   scheduleEffectCallbacks()
 }

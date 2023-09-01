@@ -246,6 +246,7 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (instance.update.active !== false) {
+              instance.effect.dirty = true
               instance.update()
             }
           }

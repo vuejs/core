@@ -1,4 +1,5 @@
 import {
+  TriggerType,
   activeEffect,
   getDepFromReactive,
   shouldTrack,
@@ -33,7 +34,7 @@ export interface Ref<T = any> {
   [RefSymbol]: true
 }
 
-export type RefBase<T> = {
+type RefBase<T> = {
   dep?: Dep
   value: T
 }
@@ -58,21 +59,21 @@ export function trackRefValue(
 
 export function triggerRefValue(
   ref: RefBase<any>,
-  isDepMaybeDirtyTrigger: boolean = false,
+  triggerType: TriggerType = TriggerType.ForceDirty,
   newVal?: any
 ) {
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
-      triggerEffects(dep, isDepMaybeDirtyTrigger, {
+      triggerEffects(triggerType, dep, {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
         newValue: newVal
       })
     } else {
-      triggerEffects(dep, isDepMaybeDirtyTrigger)
+      triggerEffects(triggerType, dep)
     }
   }
 }
@@ -166,7 +167,7 @@ class RefImpl<T> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, false, newVal)
+      triggerRefValue(this, TriggerType.ForceDirty, newVal)
     }
   }
 }
@@ -197,7 +198,7 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, false, __DEV__ ? ref.value : void 0)
+  triggerRefValue(ref, TriggerType.ForceDirty, __DEV__ ? ref.value : void 0)
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
