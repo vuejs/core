@@ -14,8 +14,9 @@ export const enum TriggerOpTypes {
   CLEAR = 'clear'
 }
 
-export const enum TriggerTypes {
-  ForceDirty = 1 << 0,
-  ComputedDepsUpdated = 1 << 1,
-  ComputedValueUpdated = 1 << 2
+export const enum DirtyLevels {
+  NotDirty = 0,
+  DepsMaybeDirty = 1,
+  ComputedValueDirty = 2,
+  Dirty = 3
 }

@@ -1,4 +1,4 @@
-import { TrackOpTypes, TriggerOpTypes, TriggerTypes } from './operations'
+import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
@@ -79,9 +79,7 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  _dirty = true
-  _depsMaybeDirty = false
-  _triggerFlags = TriggerTypes.ForceDirty | TriggerTypes.ComputedDepsUpdated
+  _dirtyLevel = DirtyLevels.Dirty
 
   constructor(
     public fn: () => T,
@@ -92,30 +90,36 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (!this._dirty && this._depsMaybeDirty) {
+    if (this._dirtyLevel === DirtyLevels.DepsMaybeDirty) {
+      this._dirtyLevel = DirtyLevels.NotDirty
       pauseTracking()
       for (const dep of this.deps) {
         if (dep.computed?._scheduled) {
           triggerComputedGetter(dep.computed) // wrap with function call to avoid tree shaking
-          if (this._dirty) {
+          if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
             break
           }
         }
       }
       resetTracking()
     }
-    this._depsMaybeDirty = false
-    return this._dirty
+    return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
   }
 
   public set dirty(v) {
-    this._dirty = v
-    this._depsMaybeDirty = false
+    this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NotDirty
   }
 
   run() {
-    this._dirty = false
-    this._depsMaybeDirty = false
+    this._dirtyLevel = DirtyLevels.NotDirty
+    const result = this._run()
+    if ((this._dirtyLevel as DirtyLevels) === DirtyLevels.ComputedValueDirty) {
+      this._dirtyLevel = DirtyLevels.NotDirty
+    }
+    return result
+  }
+
+  _run() {
     if (!this.active) {
       return this.fn()
     }
@@ -408,9 +412,9 @@ export function trigger(
   if (deps.length === 1) {
     if (deps[0]) {
       if (__DEV__) {
-        triggerEffects(TriggerTypes.ForceDirty, deps[0], eventInfo)
+        triggerEffects(deps[0], DirtyLevels.Dirty, eventInfo)
       } else {
-        triggerEffects(TriggerTypes.ForceDirty, deps[0])
+        triggerEffects(deps[0], DirtyLevels.Dirty)
       }
     }
   } else {
@@ -421,28 +425,28 @@ export function trigger(
       }
     }
     if (__DEV__) {
-      triggerEffects(TriggerTypes.ForceDirty, createDep(effects), eventInfo)
+      triggerEffects(createDep(effects), DirtyLevels.Dirty, eventInfo)
     } else {
-      triggerEffects(TriggerTypes.ForceDirty, createDep(effects))
+      triggerEffects(createDep(effects), DirtyLevels.Dirty)
     }
   }
 }
 
 export function triggerEffects(
-  triggerType: TriggerTypes,
   dep: Dep,
+  dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   // spread into array for stabilization
   const effects = [...dep]
   for (const effect of effects) {
     if (effect.computed) {
-      triggerEffect(triggerType, effect, debuggerEventExtraInfo)
+      triggerEffect(effect, dirtyLevel, debuggerEventExtraInfo)
     }
   }
   for (const effect of effects) {
     if (!effect.computed) {
-      triggerEffect(triggerType, effect, debuggerEventExtraInfo)
+      triggerEffect(effect, dirtyLevel, debuggerEventExtraInfo)
     }
   }
 }
@@ -450,25 +454,21 @@ export function triggerEffects(
 const queueEffectCbs: (() => void)[] = []
 
 function triggerEffect(
-  triggerType: TriggerTypes,
   effect: ReactiveEffect,
+  dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {
       effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
     }
-    if (!effect._dirty) {
-      if (triggerType === TriggerTypes.ComputedDepsUpdated) {
-        effect._depsMaybeDirty = true
-      } else if (
-        triggerType === TriggerTypes.ComputedValueUpdated ||
-        triggerType === TriggerTypes.ForceDirty
-      ) {
-        effect.dirty = true
-      }
+    if (effect._dirtyLevel < dirtyLevel) {
+      effect._dirtyLevel = dirtyLevel
     }
-    if (effect._triggerFlags & triggerType) {
+    if (
+      dirtyLevel === DirtyLevels.DepsMaybeDirty ||
+      dirtyLevel === DirtyLevels.Dirty
+    ) {
       effect.scheduler()
     }
   }
