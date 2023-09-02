@@ -114,7 +114,7 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = DirtyLevels.NotDirty
     const result = this._run()
     if ((this._dirtyLevel as DirtyLevels) === DirtyLevels.ComputedValueDirty) {
-      this._dirtyLevel = DirtyLevels.NotDirty
+      this._dirtyLevel--
     }
     return result
   }
@@ -222,11 +222,9 @@ export function effect<T = any>(
   }
 
   const _effect = new ReactiveEffect(fn, () => {
-    queueEffectCbs.push(() => {
-      if (_effect.dirty) {
-        _effect.run()
-      }
-    })
+    if (_effect.dirty) {
+      _effect.run()
+    }
   })
   if (options) {
     extend(_effect, options)
@@ -451,8 +449,6 @@ export function triggerEffects(
   }
 }
 
-const queueEffectCbs: (() => void)[] = []
-
 function triggerEffect(
   effect: ReactiveEffect,
   dirtyLevel: DirtyLevels,
@@ -470,15 +466,6 @@ function triggerEffect(
       dirtyLevel === DirtyLevels.Dirty
     ) {
       effect.scheduler()
-    }
-  }
-  scheduleEffectCallbacks()
-}
-
-function scheduleEffectCallbacks() {
-  if (effectTrackDepth === 0) {
-    while (queueEffectCbs.length) {
-      queueEffectCbs.shift()!()
     }
   }
 }
