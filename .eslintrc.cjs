@@ -1,3 +1,5 @@
+/* eslint-disable no-restricted-globals */
+
 const DOMGlobals = ['window', 'document']
 const NodeGlobals = ['module', 'require']
 
@@ -68,7 +70,7 @@ module.exports = {
     },
     // JavaScript files
     {
-      files: ['*.js'],
+      files: ['*.js', '*.cjs'],
       rules: {
         // We only do `no-unused-vars` checks for js files, TS files are checked by TypeScript itself.
         'no-unused-vars': ['error', { vars: 'all', args: 'none' }]
