@@ -24,12 +24,11 @@ import {
   ComponentObjectPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
-import { extend, isFunction } from '@vue/shared'
+import { IsSameType, extend, isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor,
-  IsSameType
+  ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 import { SlotsType } from './componentSlots'
 
@@ -58,7 +57,7 @@ export type DefineComponent<
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -108,8 +107,8 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
-  PropsAttrs = IsSameType<undefined, Attrs> extends true
+  Attrs extends AttrsType = Record<string, unknown>,
+  PropsAttrs = IsSameType<string, keyof Attrs> extends true
     ? {}
     : UnwrapAttrsType<NonNullable<Attrs>>
 >(
@@ -155,7 +154,7 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   I extends ComponentInjectOptions = {},
   II extends string = string
 >(
@@ -205,7 +204,7 @@ export function defineComponent<
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   I extends ComponentInjectOptions = {},
   II extends string = string,
   Props = Readonly<{ [key in PropNames]?: any }>
@@ -259,7 +258,7 @@ export function defineComponent<
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,

@@ -56,7 +56,7 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -89,7 +89,7 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -122,7 +122,7 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,

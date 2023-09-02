@@ -112,7 +112,7 @@ export interface ComponentOptionsBase<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
@@ -226,7 +226,7 @@ export type ComponentOptionsWithoutProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -277,7 +277,7 @@ export type ComponentOptionsWithArrayProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
@@ -328,7 +328,7 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<

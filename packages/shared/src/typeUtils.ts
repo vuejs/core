@@ -21,3 +21,9 @@ export type Awaited<T> = T extends null | undefined
     ? Awaited<V> // recursively unwrap the value
     : never // the argument to `then` was not callable
   : T // non-object or non-thenable
+
+export type IsSameType<T, U> = T extends U
+  ? U extends T
+    ? true
+    : false
+  : false

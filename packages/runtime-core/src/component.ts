@@ -19,8 +19,7 @@ import {
   exposeSetupStateOnRenderContext,
   ComponentPublicInstanceConstructor,
   publicPropertiesMap,
-  RuntimeCompiledPublicInstanceProxyHandlers,
-  IsSameType
+  RuntimeCompiledPublicInstanceProxyHandlers
 } from './componentPublicInstance'
 import {
   ComponentPropsOptions,
@@ -67,7 +66,8 @@ import {
   ShapeFlags,
   extend,
   getGlobalThis,
-  IfAny
+  IfAny,
+  IsSameType
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -188,10 +188,10 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 export type SetupContext<
   E = EmitsOptions,
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined
+  Attrs extends AttrsType = Record<string, unknown>
 > = E extends any
   ? {
-      attrs: IsSameType<Attrs, undefined> extends true
+      attrs: IsSameType<keyof Attrs, string> extends true
         ? Data
         : UnwrapAttrsType<NonNullable<Attrs>>
       slots: UnwrapSlotsType<S>

@@ -16,7 +16,8 @@ import {
   isString,
   isFunction,
   UnionToIntersection,
-  Prettify
+  Prettify,
+  IsSameType
 } from '@vue/shared'
 import {
   toRaw,
@@ -152,7 +153,7 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
+  Attrs extends AttrsType = Record<string, unknown>,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -194,12 +195,6 @@ export type CreateComponentPublicInstance<
   Attrs
 >
 
-export type IsSameType<T, U> = T extends U
-  ? U extends T
-    ? true
-    : false
-  : false
-
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -215,8 +210,8 @@ export type ComponentPublicInstance<
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType | undefined = undefined,
-  PropsAttrs = IsSameType<Attrs, undefined> extends true
+  Attrs extends AttrsType = Record<string, unknown>,
+  PropsAttrs = IsSameType<keyof Attrs, string> extends true
     ? {}
     : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)>
 > = {
@@ -227,7 +222,7 @@ export type ComponentPublicInstance<
       ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & PropsAttrs
       : P & PublicProps & PropsAttrs
   >
-  $attrs: IsSameType<Attrs, undefined> extends true
+  $attrs: IsSameType<keyof Attrs, string> extends true
     ? Data
     : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)> &
         AllowedComponentProps

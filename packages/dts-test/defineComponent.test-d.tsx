@@ -1299,7 +1299,7 @@ describe('define attrs', () => {
     expectType<JSX.Element>(<MyComp />)
   })
 
-  test('define attrs w/ no attrs', () => {
+  test('define no attrs w/ object props', () => {
     const MyComp = defineComponent({
       props: {
         foo: String
@@ -1308,6 +1308,19 @@ describe('define attrs', () => {
         expectType<unknown>(this.$attrs.bar)
       }
     })
+    // @ts-expect-error
+    expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
+  })
+
+  test('define no attrs w/ functional component', () => {
+    const MyComp = defineComponent((props: { foo: string }, ctx) => {
+      expectType<unknown>(ctx.attrs.bar)
+      return () => (
+        // return a render function (both JSX and h() works)
+        <div>{props.foo}</div>
+      )
+    })
+    expectType<JSX.Element>(<MyComp foo={'1'} />)
     // @ts-expect-error
     expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
   })
