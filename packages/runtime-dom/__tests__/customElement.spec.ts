@@ -696,7 +696,7 @@ describe('defineCustomElement', () => {
   })
 
   describe('shadowRoot', () => {
-    // # 6113
+    // #6113
     test('shadowRoot accessible for css-in-js', () => {
       const Foo = defineCustomElement({
         setup() {
