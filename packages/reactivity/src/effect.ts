@@ -462,11 +462,9 @@ function triggerEffect(
       if (triggerType === TriggerTypes.ComputedDepsUpdated) {
         effect._depsMaybeDirty = true
       } else if (
-        triggerType === TriggerTypes.ComputedValueUpdated &&
-        (effect.computed || effect._depsMaybeDirty)
+        triggerType === TriggerTypes.ComputedValueUpdated ||
+        triggerType === TriggerTypes.ForceDirty
       ) {
-        effect.dirty = true
-      } else if (triggerType === TriggerTypes.ForceDirty) {
         effect.dirty = true
       }
     }
