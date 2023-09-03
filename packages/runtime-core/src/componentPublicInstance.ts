@@ -188,7 +188,7 @@ export type CreateComponentPublicInstance<
   S
 >
 
-type Override<T, U> = Omit<T, keyof U> & U;
+type Override<T, U> = Omit<T, keyof U> & U
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
