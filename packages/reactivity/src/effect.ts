@@ -80,6 +80,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirtyLevel = DirtyLevels.Dirty
+  _queryingDirty = false
 
   constructor(
     public fn: () => T,
@@ -92,6 +93,7 @@ export class ReactiveEffect<T = any> {
   public get dirty() {
     if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
       this._dirtyLevel = DirtyLevels.NotDirty
+      this._queryingDirty = true
       pauseTracking()
       for (const dep of this.deps) {
         if (dep.computed?._scheduled) {
@@ -102,6 +104,7 @@ export class ReactiveEffect<T = any> {
         }
       }
       resetTracking()
+      this._queryingDirty = false
     }
     return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
   }
@@ -464,8 +467,7 @@ function triggerEffect(
     if (
       dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
       dirtyLevel === DirtyLevels.Dirty ||
-      // computed scheduler should always trigger
-      effect.computed
+      (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
     ) {
       effect.scheduler()
     }
