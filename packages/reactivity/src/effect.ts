@@ -463,7 +463,9 @@ function triggerEffect(
     }
     if (
       dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
-      dirtyLevel === DirtyLevels.Dirty
+      dirtyLevel === DirtyLevels.Dirty ||
+      // computed scheduler should always trigger
+      effect.computed
     ) {
       effect.scheduler()
     }
