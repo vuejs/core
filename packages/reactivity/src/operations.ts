@@ -16,7 +16,7 @@ export const enum TriggerOpTypes {
 
 export const enum DirtyLevels {
   NotDirty = 0,
-  DepsMaybeDirty = 1,
+  ComputedValueMaybeDirty = 1,
   ComputedValueDirty = 2,
   Dirty = 3
 }

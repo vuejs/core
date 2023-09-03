@@ -45,7 +45,7 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._scheduled) {
         this._scheduled = true
-        triggerRefValue(this, DirtyLevels.DepsMaybeDirty)
+        triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
       }
     })
     this.effect.computed = this

@@ -90,7 +90,7 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (this._dirtyLevel === DirtyLevels.DepsMaybeDirty) {
+    if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
       this._dirtyLevel = DirtyLevels.NotDirty
       pauseTracking()
       for (const dep of this.deps) {
@@ -462,7 +462,7 @@ function triggerEffect(
       effect._dirtyLevel = dirtyLevel
     }
     if (
-      dirtyLevel === DirtyLevels.DepsMaybeDirty ||
+      dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
       dirtyLevel === DirtyLevels.Dirty
     ) {
       effect.scheduler()
