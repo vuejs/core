@@ -67,7 +67,7 @@ import {
   extend,
   getGlobalThis,
   IfAny,
-  IsSameType
+  Equal
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -84,7 +84,7 @@ import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
-
+export type HasDefineAttrs<T> = Equal<keyof T, string>
 /**
  * For extending allowed non-declared props on components in TSX
  */
@@ -191,7 +191,7 @@ export type SetupContext<
   Attrs extends AttrsType = Record<string, unknown>
 > = E extends any
   ? {
-      attrs: IsSameType<keyof Attrs, string> extends true
+      attrs: HasDefineAttrs<Attrs> extends true
         ? Data
         : UnwrapAttrsType<NonNullable<Attrs>>
       slots: UnwrapSlotsType<S>

@@ -22,8 +22,8 @@ export type Awaited<T> = T extends null | undefined
     : never // the argument to `then` was not callable
   : T // non-object or non-thenable
 
-export type IsSameType<T, U> = T extends U
-  ? U extends T
-    ? true
-    : false
-  : false
+// Conditional returns can enforce identical types.
+// See here: https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-421529650
+// prettier-ignore
+export type Equal<Left, Right> =
+(<U>() => U extends Left ? 1 : 0) extends (<U>() => U extends Right ? 1 : 0) ? true : false;

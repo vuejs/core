@@ -2,6 +2,7 @@ import {
   AllowedComponentProps,
   ComponentInternalInstance,
   Data,
+  HasDefineAttrs,
   getExposeProxy,
   isStatefulComponent
 } from './component'
@@ -16,8 +17,7 @@ import {
   isString,
   isFunction,
   UnionToIntersection,
-  Prettify,
-  IsSameType
+  Prettify
 } from '@vue/shared'
 import {
   toRaw,
@@ -211,9 +211,9 @@ export type ComponentPublicInstance<
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Attrs extends AttrsType = Record<string, unknown>,
-  PropsAttrs = IsSameType<keyof Attrs, string> extends true
+  PropsAttrs = HasDefineAttrs<Attrs> extends true
     ? {}
-    : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)>
+    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -222,9 +222,9 @@ export type ComponentPublicInstance<
       ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & PropsAttrs
       : P & PublicProps & PropsAttrs
   >
-  $attrs: IsSameType<keyof Attrs, string> extends true
+  $attrs: HasDefineAttrs<Attrs> extends true
     ? Data
-    : Omit<UnwrapAttrsType<NonNullable<Attrs>>, keyof (P & PublicProps)> &
+    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> &
         AllowedComponentProps
   $refs: Data
   $slots: UnwrapSlotsType<S>

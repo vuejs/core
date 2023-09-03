@@ -15,7 +15,8 @@ import {
 import {
   SetupContext,
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  HasDefineAttrs
 } from './component'
 import {
   ExtractPropTypes,
@@ -24,7 +25,7 @@ import {
   ComponentObjectPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
-import { IsSameType, extend, isFunction } from '@vue/shared'
+import { extend, isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
@@ -108,7 +109,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {},
   Attrs extends AttrsType = Record<string, unknown>,
-  PropsAttrs = IsSameType<string, keyof Attrs> extends true
+  PropsAttrs = HasDefineAttrs<Attrs> extends true
     ? {}
     : UnwrapAttrsType<NonNullable<Attrs>>
 >(
