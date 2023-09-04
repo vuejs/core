@@ -60,10 +60,10 @@ expectType<JSX.Element>(<Custom baz={1} />)
 expectType<JSX.Element>(<Custom custom={1} baz={1} />)
 expectType<JSX.Element>(<Custom bar="bar" baz={1} />)
 expectType<JSX.Element>(<Custom ref={''} bar="bar" baz={1} />)
-expectType<JSX.Element>(<Custom baz={1} onClick={e => e.toFixed()} />)
+expectType<JSX.Element>(<Custom baz={1} onClick={(e: number) => {}} />)
 expectType<JSX.Element>(<Empty />)
 expectType<JSX.Element>(<Empty custom={1} baz={''} />)
-expectType<JSX.Element>(<Empty onClick={e => e.target} />)
+expectType<JSX.Element>(<Empty onClick={(e: MouseEvent) => {}} />)
 
 // @ts-expect-error
 expectType<JSX.Element>(<Custom />)
@@ -76,8 +76,8 @@ expectType<JSX.Element>(<Custom />)
 // @ts-expect-error
 ;<Custom baz={1} custom="custom" />
 // @ts-expect-error
-;<Custom baz={1} onClick={e => e.target} />
+;<Custom baz={1} onClick={(e: MouseEvent) => {}} />
 // @ts-expect-error
 ;<Empty baz={1} />
 // @ts-expect-error
-;<Empty onClick={e => e.toFixed()} />
+;<Empty onClick={(e: number) => {}} />
