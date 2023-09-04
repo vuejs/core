@@ -492,6 +492,7 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
+  | Date
   | CollectionTypes
   | BaseTypes
   | Ref
