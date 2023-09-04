@@ -74,12 +74,7 @@ module.exports = {
     },
     // Node scripts
     {
-      files: [
-        'scripts/**',
-        '*.{js,ts}',
-        'packages/**/index.js',
-        'packages/size-check/**'
-      ],
+      files: ['scripts/**', '*.{js,ts}', 'packages/**/index.js'],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off'
