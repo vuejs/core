@@ -112,7 +112,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   }
-): (props: Props & EmitsToProps<E>) => any
+): (props: Props & EmitsToProps<E> & PublicProps) => any
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},

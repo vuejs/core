@@ -1389,6 +1389,15 @@ describe('function syntax w/ runtime props', () => {
   )
 })
 
+describe('function syntax w/ allowed props', () => {
+  const Foo = defineComponent((props: { msg: string }, ctx) => {
+    return () => {}
+  })
+  expectType<JSX.Element>(
+    <Foo msg="hi" class={'str'} style={'str'} custom={1} />
+  )
+})
+
 // check if defineComponent can be exported
 export default {
   // function components
