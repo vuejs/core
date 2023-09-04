@@ -8,7 +8,11 @@ import {
 } from '@babel/types'
 import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
-import { inferRuntimeType, resolveTypeElements } from './resolveType'
+import {
+  TypeResolveContext,
+  inferRuntimeType,
+  resolveTypeElements
+} from './resolveType'
 import {
   resolveObjectKey,
   UNKNOWN_TYPE,
@@ -150,7 +154,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       }
     }
   } else if (ctx.propsTypeDecl) {
-    propsDecls = genRuntimePropsFromTypes(ctx)
+    propsDecls = extractRuntimeProps(ctx)
   }
 
   const modelsDecls = genModelProps(ctx)
@@ -162,7 +166,9 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   }
 }
 
-function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
+export function extractRuntimeProps(
+  ctx: TypeResolveContext
+): string | undefined {
   // this is only called if propsTypeDecl exists
   const props = resolveRuntimePropsFromType(ctx, ctx.propsTypeDecl!)
   if (!props.length) {
@@ -175,7 +181,7 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
   for (const prop of props) {
     propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
     // register bindings
-    if (!(prop.key in ctx.bindingMetadata)) {
+    if ('bindingMetadata' in ctx && !(prop.key in ctx.bindingMetadata)) {
       ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
     }
   }
@@ -193,7 +199,7 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
 }
 
 function resolveRuntimePropsFromType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   node: Node
 ): PropTypeData[] {
   const props: PropTypeData[] = []
@@ -222,7 +228,7 @@ function resolveRuntimePropsFromType(
 }
 
 function genRuntimePropFromType(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   { key, required, type, skipCheck }: PropTypeData,
   hasStaticDefaults: boolean
 ): string {
@@ -284,7 +290,7 @@ function genRuntimePropFromType(
  * static properties, we can directly generate more optimized default
  * declarations. Otherwise we will have to fallback to runtime merging.
  */
-function hasStaticWithDefaults(ctx: ScriptCompileContext) {
+function hasStaticWithDefaults(ctx: TypeResolveContext) {
   return !!(
     ctx.propsRuntimeDefaults &&
     ctx.propsRuntimeDefaults.type === 'ObjectExpression' &&
@@ -297,7 +303,7 @@ function hasStaticWithDefaults(ctx: ScriptCompileContext) {
 }
 
 function genDestructuredDefaultValue(
-  ctx: ScriptCompileContext,
+  ctx: TypeResolveContext,
   key: string,
   inferredType?: string[]
 ):
