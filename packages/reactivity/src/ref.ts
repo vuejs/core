@@ -454,11 +454,6 @@ function propertyToRef(
     : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
-// corner case when use narrows type
-// Ex. type RelativePath = string & { __brand: unknown }
-// RelativePath extends object -> true
-type BaseTypes = string | number | boolean
-
 /**
  * This is a special exported interface for other packages to declare
  * additional types that should bail out for ref unwrapping. For example
@@ -493,7 +488,6 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
 export type UnwrapRefSimple<T> = T extends
   | Builtin
   | CollectionTypes
-  | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
