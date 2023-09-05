@@ -15,7 +15,7 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import type { ShallowReactiveMarker } from './reactive'
+import type { Builtin, ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
@@ -491,8 +491,7 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
   : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
-  | Function
-  | Date
+  | Builtin
   | CollectionTypes
   | BaseTypes
   | Ref
