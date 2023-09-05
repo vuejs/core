@@ -138,5 +138,30 @@ describe('reactivity/collections', () => {
       const result = map.set({}, 'a')
       expect(result).toBe(map)
     })
+
+    it('should allow custom property size, add, clear, forEach, keys, values, entries, Symbol.iterator', () => {
+      const o = reactive(new WeakMap()) as any
+      const fn = function* () {
+        yield 1
+        yield 2
+        yield 3
+      }
+      o.size = 1
+      o.add = 1
+      o.clear = 1
+      o.forEach = 1
+      o.keys = 1
+      o.values = 1
+      o.entries = 1
+      o[Symbol.iterator] = fn
+      expect(o.size).toBe(1)
+      expect(o.add).toBe(1)
+      expect(o.clear).toBe(1)
+      expect(o.forEach).toBe(1)
+      expect(o.keys).toBe(1)
+      expect(o.values).toBe(1)
+      expect(o.entries).toBe(1)
+      expect(o[Symbol.iterator]).toBe(fn)
+    })
   })
 })

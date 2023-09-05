@@ -69,7 +69,6 @@ describe('reactivity/collections', () => {
       const map = reactive(new Map())
       effect(() => {
         dummy = 0
-        // eslint-disable-next-line no-unused-vars
         for (let [key, num] of map) {
           key
           dummy += num
@@ -472,6 +471,14 @@ describe('reactivity/collections', () => {
       const map = reactive(new Map())
       const result = map.set('a', 'a')
       expect(result).toBe(map)
+    })
+
+    it('should allow custom property add', () => {
+      const o = reactive(new Map())
+      // @ts-expect-error
+      o.add = 1
+      // @ts-expect-error
+      expect(o.add).toBe(1)
     })
   })
 })

@@ -460,5 +460,17 @@ describe('reactivity/collections', () => {
       const result = set.add('a')
       expect(result).toBe(set)
     })
+
+    it('should allow custom property set get ', () => {
+      const o = reactive(new Set())
+      // @ts-expect-error
+      o.set = 1
+      // @ts-expect-error
+      o.get = 1
+      // @ts-expect-error
+      expect(o.set).toBe(1)
+      // @ts-expect-error
+      expect(o.get).toBe(1)
+    })
   })
 })
