@@ -86,6 +86,42 @@ describe('defineCustomElement', () => {
     })
   })
 
+  describe('shadowRoot: false', () => {
+    const E = defineCustomElement(
+      {
+        props: {
+          msg: {
+            type: String,
+            default: 'hello'
+          }
+        },
+        render() {
+          return h('div', this.msg)
+        }
+      },
+      {
+        shadowRoot: false
+      }
+    )
+    customElements.define('my-el-shadowroot-false', E)
+
+    test('should work', async () => {
+      function raf() {
+        return new Promise(resolve => {
+          requestAnimationFrame(resolve)
+        })
+      }
+
+      container.innerHTML = `<my-el-shadowroot-false></my-el-shadowroot-false>`
+      const e = container.childNodes[0] as VueElement
+      await raf()
+      expect(e).toBeInstanceOf(E)
+      expect(e._instance).toBeTruthy()
+      expect(e.innerHTML).toBe(`<div>hello</div>`)
+      expect(e.shadowRoot).toBe(null)
+    })
+  })
+
   describe('props', () => {
     const E = defineCustomElement({
       props: ['foo', 'bar', 'bazQux'],

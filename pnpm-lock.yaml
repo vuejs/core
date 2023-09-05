@@ -359,7 +359,7 @@ importers:
         version: 4.2.3(vite@4.4.2)(vue@packages+vue)
       vite:
         specifier: ^4.4.2
-        version: 4.4.2(@types/node@16.18.38)(terser@5.18.2)
+        version: 4.4.2(@types/node@16.18.38)(terser@5.19.2)
 
   packages/shared: {}
 
@@ -1508,7 +1508,7 @@ packages:
       vite: ^4.0.0
       vue: ^3.2.25
     dependencies:
-      vite: 4.4.2(@types/node@16.18.38)(terser@5.18.2)
+      vite: 4.4.2(@types/node@16.18.38)(terser@5.19.2)
       vue: link:packages/vue
     dev: true
 
@@ -5565,17 +5565,6 @@ packages:
       execa: 0.7.0
     dev: true
 
-  /terser@5.18.2:
-    resolution: {integrity: sha512-Ah19JS86ypbJzTzvUCX7KOsEIhDaRONungA4aYBjEP3JZRf4ocuDzTg4QWZnPn9DEMiMYGJPiSOy7aykoCc70w==}
-    engines: {node: '>=10'}
-    hasBin: true
-    dependencies:
-      '@jridgewell/source-map': 0.3.5
-      acorn: 8.8.2
-      commander: 2.20.3
-      source-map-support: 0.5.21
-    dev: true
-
   /terser@5.19.2:
     resolution: {integrity: sha512-qC5+dmecKJA4cpYxRa5aVkKehYsQKc+AHeKl0Oe62aYjBL8ZA33tTljktDHJSaxxMnbI5ZYw+o/S2DxxLu8OfA==}
     engines: {node: '>=10'}
@@ -5919,7 +5908,7 @@ packages:
       fsevents: 2.3.2
     dev: true
 
-  /vite@4.4.2(@types/node@16.18.38)(terser@5.18.2):
+  /vite@4.4.2(@types/node@16.18.38)(terser@5.19.2):
     resolution: {integrity: sha512-zUcsJN+UvdSyHhYa277UHhiJ3iq4hUBwHavOpsNUGsTgjBeoBlK8eDt+iT09pBq0h9/knhG/SPrZiM7cGmg7NA==}
     engines: {node: ^14.18.0 || >=16.0.0}
     hasBin: true
@@ -5951,7 +5940,7 @@ packages:
       esbuild: 0.18.11
       postcss: 8.4.25
       rollup: 3.26.2
-      terser: 5.18.2
+      terser: 5.19.2
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
