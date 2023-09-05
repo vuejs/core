@@ -1346,20 +1346,22 @@ describe('function syntax w/ runtime props', () => {
     <T extends string>(_props: { msg: T }) => {
       return () => {}
     },
-    setup(props) {
-      expectType<SizeType>(props.size)
-      return {
-        size: 1
+    {
+      props: {
+        msg: String
       }
     }
-  })
-  type CompInstance = InstanceType<typeof Comp>
+  )
 
-  const CompA = {} as CompInstance
-  expectType<ComponentPublicInstance>(CompA)
-  expectType<number>(CompA.size)
-  expectType<SizeType>(CompA.$props.size)
-})
+  // @ts-expect-error string prop names don't match
+  defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: ['bar']
+    }
+  )
 
   defineComponent(
     (_props: { msg: string }) => {
@@ -1370,20 +1372,21 @@ describe('function syntax w/ runtime props', () => {
         // @ts-expect-error prop type mismatch
         msg: Number
       }
+    }
+  )
+
+  // @ts-expect-error prop keys don't match
+  defineComponent(
+    (_props: { msg: string }, ctx) => {
+      return () => {}
     },
-    setup(props) {
-      expectType<SizeType>(props.size)
-      return {
-        size: 1
+    {
+      props: {
+        msg: String,
+        bar: String
       }
     }
-  })
-  type CompInstance = InstanceType<typeof Comp>
-
-  const CompA = {} as CompInstance
-  expectType<ComponentPublicInstance>(CompA)
-  expectType<number>(CompA.size)
-  expectType<SizeType>(CompA.$props.size)
+  )
 })
 
 // check if defineComponent can be exported
