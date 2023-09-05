@@ -22,6 +22,9 @@ import { RendererElement } from '../renderer'
 
 type Hook<T = () => void> = T | T[]
 
+const leaveCbKey = Symbol('_leaveCb')
+const enterCbKey = Symbol('_enterCb')
+
 export interface BaseTransitionProps<HostElement = RendererElement> {
   mode?: 'in-out' | 'out-in' | 'default'
   appear?: boolean
@@ -89,8 +92,8 @@ export interface TransitionElement {
   // in persisted mode (e.g. v-show), the same element is toggled, so the
   // pending enter/leave callbacks may need to be cancelled if the state is toggled
   // before it finishes.
-  _enterCb?: PendingCallback
-  _leaveCb?: PendingCallback
+  [enterCbKey]?: PendingCallback
+  [leaveCbKey]?: PendingCallback
 }
 
 export function useTransitionState(): TransitionState {
@@ -259,9 +262,9 @@ const BaseTransitionImpl: ComponentOptions = {
             )
             leavingVNodesCache[String(oldInnerChild.key)] = oldInnerChild
             // early removal callback
-            el._leaveCb = () => {
+            el[leaveCbKey] = () => {
               earlyRemove()
-              el._leaveCb = undefined
+              el[leaveCbKey] = undefined
               delete enterHooks.delayedLeave
             }
             enterHooks.delayedLeave = delayedLeave
@@ -366,18 +369,18 @@ export function resolveTransitionHooks(
         }
       }
       // for same element (v-show)
-      if (el._leaveCb) {
-        el._leaveCb(true /* cancelled */)
+      if (el[leaveCbKey]) {
+        el[leaveCbKey](true /* cancelled */)
       }
       // for toggled element with same key (v-if)
       const leavingVNode = leavingVNodesCache[key]
       if (
         leavingVNode &&
         isSameVNodeType(vnode, leavingVNode) &&
-        leavingVNode.el!._leaveCb
+        (leavingVNode.el as TransitionElement)[leaveCbKey]
       ) {
         // force early removal (not cancelled)
-        leavingVNode.el!._leaveCb()
+        ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
       }
       callHook(hook, [el])
     },
@@ -396,7 +399,7 @@ export function resolveTransitionHooks(
         }
       }
       let called = false
-      const done = (el._enterCb = (cancelled?) => {
+      const done = (el[enterCbKey] = (cancelled?) => {
         if (called) return
         called = true
         if (cancelled) {
@@ -407,7 +410,7 @@ export function resolveTransitionHooks(
         if (hooks.delayedLeave) {
           hooks.delayedLeave()
         }
-        el._enterCb = undefined
+        el[enterCbKey] = undefined
       })
       if (hook) {
         callAsyncHook(hook, [el, done])
@@ -418,15 +421,15 @@ export function resolveTransitionHooks(
 
     leave(el, remove) {
       const key = String(vnode.key)
-      if (el._enterCb) {
-        el._enterCb(true /* cancelled */)
+      if (el[enterCbKey]) {
+        el[enterCbKey](true /* cancelled */)
       }
       if (state.isUnmounting) {
         return remove()
       }
       callHook(onBeforeLeave, [el])
       let called = false
-      const done = (el._leaveCb = (cancelled?) => {
+      const done = (el[leaveCbKey] = (cancelled?) => {
         if (called) return
         called = true
         remove()
@@ -435,7 +438,7 @@ export function resolveTransitionHooks(
         } else {
           callHook(onAfterLeave, [el])
         }
-        el._leaveCb = undefined
+        el[leaveCbKey] = undefined
         if (leavingVNodesCache[key] === vnode) {
           delete leavingVNodesCache[key]
         }
