@@ -185,7 +185,7 @@ Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined u
 
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is useful when working on pure compiler issues.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:3000`. This is useful when working on pure compiler issues.
 
 ### `nr test`
 
