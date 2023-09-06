@@ -8,11 +8,9 @@ const templateContainer = doc && /*#__PURE__*/ doc.createElement('template')
 
 export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   insert: (child, parent, anchor) => {
-    if (anchor?.parentNode === parent) {
-      parent.insertBefore(child, anchor || null)
-    } else {
-      parent.appendChild(child)
-    }
+    // #9071
+    anchor = anchor && anchor.parentNode === parent ? anchor : null
+    parent.insertBefore(child, anchor)
   },
 
   remove: child => {
