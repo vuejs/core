@@ -67,7 +67,7 @@
     "@types/hash-sum": "^1.0.0",
     "@types/node": "^16.4.7",
     "@typescript-eslint/parser": "^6.6.0",
-    "@vitest/coverage-istanbul": "^0.29.7",
+    "@vitest/coverage-istanbul": "^0.34.3",
     "@vue/consolidate": "0.17.3",
     "chalk": "^4.1.0",
     "conventional-changelog-cli": "^2.0.31",
@@ -103,6 +103,6 @@
     "tsx": "^3.12.7",
     "typescript": "^5.1.6",
     "vite": "^4.3.0",
-    "vitest": "^0.30.1"
+    "vitest": "^0.34.3"
   }
 }
