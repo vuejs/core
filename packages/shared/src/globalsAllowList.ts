@@ -1,23 +1,29 @@
 import { makeMap } from './makeMap'
 
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
-const GLOBAL_SIMPLE_VALUE = 'globalThis,Infinity,NaN,undefined'
-const FUNCTION =
-  'eval,isFinite,isNaN,parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent'
-const FUNDAMENTAL = 'Object,Function,Boolean,Symbol'
+const GLOBAL_SIMPLE_VALUE = 'Infinity,NaN,undefined'
+
 const ERROR =
   'Error,AggregateError,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError'
-const NUMBER_AND_DATES = 'Math,BigInt,Number,Date'
+
+const FUNCTION =
+  'isFinite,isNaN,parseFloat,parseInt,decodeURI,' +
+  'decodeURIComponent,encodeURI,encodeURIComponent'
+
+const FUNDAMENTAL = 'Object,Boolean,Symbol'
+
+const NUMBER_AND_DATES = 'Math,Number,Date,BigInt'
+
 const TEXT = 'String,RegExp'
-const INDEXED_COLLECTIONS =
-  'Array,Int8Array,Uint8Array,Uint8ClampedArray,Int16Array,Uint16Array,Int32Array,Uint32Array,BigInt64Array,BigUint64Array,Float32Array,Float64Array'
-const KEYED_COLLECTIONS = 'Map,Set,WeakMap,WeakSet'
-const STRUCTURED_DATA = 'ArrayBuffer,SharedArrayBuffer,DataView,Atomics,JSON'
-const MANAGING_MEMORY = 'WeakRef,FinalizationRegistry'
-const CONTROL_ABSTRACTION_OBJECTS =
-  'Iterator,AsyncIterator,Promise,GeneratorFunction,AsyncGeneratorFunction,Generator,AsyncGenerator,AsyncFunction'
-const REFLECTION = 'Reflect,Proxy'
+
+const INDEXED_COLLECTIONS = 'Array'
+
+const KEYED_COLLECTIONS = 'Map,Set'
+
+const STRUCTURED_DATA = 'JSON'
+
 const INTERNATIONALIZATION = 'Intl'
+
 const OTHER_GLOBALS_ALLOWED = 'console'
 
 const GLOBALS_ALLOWED = [
@@ -30,9 +36,6 @@ const GLOBALS_ALLOWED = [
   INDEXED_COLLECTIONS,
   KEYED_COLLECTIONS,
   STRUCTURED_DATA,
-  MANAGING_MEMORY,
-  CONTROL_ABSTRACTION_OBJECTS,
-  REFLECTION,
   INTERNATIONALIZATION,
   OTHER_GLOBALS_ALLOWED
 ].join(',')
