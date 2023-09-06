@@ -342,13 +342,13 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^2.5.4
-        version: 2.5.4
+        specifier: ^2.5.8
+        version: 2.5.8
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
       jszip:
-        specifier: ^3.6.0
+        specifier: ^3.10.1
         version: 3.10.1
       vue:
         specifier: workspace:*
@@ -366,8 +366,8 @@ importers:
   packages/template-explorer:
     dependencies:
       monaco-editor:
-        specifier: ^0.20.0
-        version: 0.20.0
+        specifier: ^0.41.0
+        version: 0.41.0
       source-map-js:
         specifier: ^1.0.2
         version: 1.0.2
@@ -1614,9 +1614,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@2.5.4:
-    resolution: {integrity: sha512-rUcoebQQDG/T0oXkj+QGGuVHtWdvmT76CuPjZKgYMhXQiRkydnxPsW8iBdsZ5hHFuLRukuO83Crh5itByDOe5w==}
-    requiresBuild: true
+  /@vue/repl@2.5.8:
+    resolution: {integrity: sha512-IvOlNhka4VKDQZS9FIceFFWyPibzqAUHyjHOoe8cMZmeP7H3H7mfMqvzQ0l1wjMAqqeEcgpFhSzMWsTEL4XZeA==}
     dev: false
 
   /@zeit/schemas@2.29.0:
@@ -4309,8 +4308,8 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /monaco-editor@0.20.0:
-    resolution: {integrity: sha512-hkvf4EtPJRMQlPC3UbMoRs0vTAFAYdzFQ+gpMb8A+9znae1c43q8Mab9iVsgTcg/4PNiLGGn3SlDIa8uvK1FIQ==}
+  /monaco-editor@0.41.0:
+    resolution: {integrity: sha512-1o4olnZJsiLmv5pwLEAmzHTE/5geLKQ07BrGxlF4Ri/AXAc2yyDGZwHjiTqD8D/ROKUZmwMA28A+yEowLNOEcA==}
     dev: false
 
   /ms@2.0.0:
