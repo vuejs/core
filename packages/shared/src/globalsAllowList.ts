@@ -1,30 +1,9 @@
 import { makeMap } from './makeMap'
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
 const GLOBALS_ALLOWED =
-  // Simple Global Values
-  'Infinity,NaN,undefined,' +
-  // Error types
-  'Error,AggregateError,EvalError,RangeError,ReferenceError,SyntaxError,TypeError,URIError,' +
-  // Fundamental functions
-  'isFinite,isNaN,parseFloat,parseInt,decodeURI,' +
-  'decodeURIComponent,encodeURI,encodeURIComponent,' +
-  // Fundamental objects
-  'Object,Boolean,Symbol,' +
-  // Numbers and dates
-  'Math,Number,Date,BigInt,' +
-  // Text processing
-  'String,RegExp,' +
-  // Indexed collections
-  'Array,' +
-  // Keyed collections
-  'Map,Set,' +
-  // Structured data
-  'JSON,' +
-  // Internationalization & Localization
-  'Intl,' +
-  // Other globals
-  'console'
+  'Infinity,undefined,NaN,isFinite,isNaN,parseFloat,parseInt,decodeURI,' +
+  'decodeURIComponent,encodeURI,encodeURIComponent,Math,Number,Date,Array,' +
+  'Object,Boolean,String,RegExp,Map,Set,JSON,Intl,BigInt,console,Error,Symbol'
 
 export const isGloballyAllowed = /*#__PURE__*/ makeMap(GLOBALS_ALLOWED)
 
