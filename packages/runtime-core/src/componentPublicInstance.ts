@@ -2,7 +2,7 @@ import {
   AllowedComponentProps,
   ComponentInternalInstance,
   Data,
-  HasDefineAttrs,
+  noAttrsDefine,
   getExposeProxy,
   isStatefulComponent
 } from './component'
@@ -210,19 +210,20 @@ export type ComponentPublicInstance<
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
-  Attrs extends AttrsType = Record<string, unknown>,
-  PropsAttrs = HasDefineAttrs<Attrs> extends true
-    ? {}
-    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+  Attrs extends AttrsType = Record<string, unknown>, // Attrs type extracted from attrs option
+  // AttrsProps type used for JSX validation of attrs
+  AttrsProps = noAttrsDefine<Attrs> extends true // if attrs is not defined
+    ? {} // no JSX validation of attrs
+    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> // exclude props from attrs, for JSX validation
 > = {
   $: ComponentInternalInstance
   $data: D
   $props: Prettify<
     MakeDefaultsOptional extends true
-      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & PropsAttrs
-      : P & PublicProps & PropsAttrs
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & AttrsProps
+      : P & PublicProps & AttrsProps
   >
-  $attrs: HasDefineAttrs<Attrs> extends true
+  $attrs: noAttrsDefine<Attrs> extends true
     ? Data
     : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> &
         AllowedComponentProps

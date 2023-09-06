@@ -84,7 +84,8 @@ import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
-export type HasDefineAttrs<T> = Equal<keyof T, string>
+// Whether the attrs option is not defined
+export type noAttrsDefine<T> = Equal<keyof T, string>
 /**
  * For extending allowed non-declared props on components in TSX
  */
@@ -191,7 +192,7 @@ export type SetupContext<
   Attrs extends AttrsType = Record<string, unknown>
 > = E extends any
   ? {
-      attrs: HasDefineAttrs<Attrs> extends true
+      attrs: noAttrsDefine<Attrs> extends true
         ? Data
         : UnwrapAttrsType<NonNullable<Attrs>>
       slots: UnwrapSlotsType<S>

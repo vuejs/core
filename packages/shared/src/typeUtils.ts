@@ -24,6 +24,8 @@ export type Awaited<T> = T extends null | undefined
 
 // Conditional returns can enforce identical types.
 // See here: https://github.com/Microsoft/TypeScript/issues/27024#issuecomment-421529650
-// prettier-ignore
-export type Equal<Left, Right> =
-(<U>() => U extends Left ? 1 : 0) extends (<U>() => U extends Right ? 1 : 0) ? true : false;
+export type Equal<Left, Right> = (<U>() => U extends Left ? 1 : 0) extends <
+  U
+>() => U extends Right ? 1 : 0
+  ? true
+  : false

@@ -16,7 +16,7 @@ import {
   SetupContext,
   AllowedComponentProps,
   ComponentCustomProps,
-  HasDefineAttrs
+  noAttrsDefine
 } from './component'
 import {
   ExtractPropTypes,
@@ -109,7 +109,7 @@ export function defineComponent<
   EE extends string = string,
   S extends SlotsType = {},
   Attrs extends AttrsType = Record<string, unknown>,
-  PropsAttrs = HasDefineAttrs<Attrs> extends true
+  PropsAttrs = noAttrsDefine<Attrs> extends true
     ? {}
     : UnwrapAttrsType<NonNullable<Attrs>>
 >(
