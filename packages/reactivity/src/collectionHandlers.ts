@@ -331,6 +331,7 @@ const [
   shallowReadonlyInstrumentations
 ] = /* #__PURE__*/ createInstrumentations()
 
+/*! #__NO_SIDE_EFFECTS__ */
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   const instrumentations = shallow
     ? isReadonly
