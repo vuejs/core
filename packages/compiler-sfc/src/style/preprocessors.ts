@@ -22,7 +22,7 @@ export interface StylePreprocessorResults {
 }
 
 // .scss/.sass processor
-const scss: StylePreprocessor = (source, map, options, load = require) => {
+const scss: StylePreprocessor = async (source, map, options, load = require) => {
   const nodeSass = load('sass')
   const finalOptions = {
     ...options,
@@ -33,6 +33,15 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
   }
 
   try {
+    if（options.isAsync）{
+      result = await new Promise((resolve, reject) => {
+        nodeSass.render(finalOptions, (err, res) => {
+          resolve(res)
+        })
+      })
+    } else{
+      result =  nodeSass.renderSync(finalOptions)
+    }
     const result = nodeSass.renderSync(finalOptions)
     const dependencies = result.stats.includedFiles
     if (map) {
