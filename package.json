@@ -53,7 +53,7 @@
     ]
   },
   "engines": {
-    "node": ">=16.11.0"
+    "node": ">=16.14.0"
   },
   "devDependencies": {
     "@babel/parser": "^7.21.3",
