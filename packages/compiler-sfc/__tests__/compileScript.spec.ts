@@ -529,7 +529,6 @@ describe('SFC compile <script setup>', () => {
       // check snapshot and make sure helper imports and
       // hoists are placed correctly.
       assertCode(content)
-
     })
 
     test('with defineExpose()', () => {
