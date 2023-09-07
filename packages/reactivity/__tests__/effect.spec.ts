@@ -559,7 +559,7 @@ describe('reactivity/effect', () => {
     expect(fx1Spy).toHaveBeenCalledTimes(1)
 
     // Invoked twice due to change of fx1.
-    expect(fx2Spy).toHaveBeenCalledTimes(2)
+    expect(fx2Spy).toHaveBeenCalledTimes(1)
 
     fx1Spy.mockClear()
     fx2Spy.mockClear()

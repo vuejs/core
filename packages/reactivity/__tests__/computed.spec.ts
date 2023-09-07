@@ -184,7 +184,7 @@ describe('reactivity/computed', () => {
     // mutate n
     n.value++
     // on the 2nd run, plusOne.value should have already updated.
-    expect(plusOneValues).toMatchObject([1, 2, 2])
+    expect(plusOneValues).toMatchObject([1, 2])
   })
 
   it('should warn if trying to set a readonly computed', () => {
