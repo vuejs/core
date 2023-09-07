@@ -12,7 +12,7 @@ import {
   ImportDeclaration,
   ImportSpecifier,
   ImportDefaultSpecifier,
-  ImportNamespaceSpecifier
+  ImportNamespaceSpecifier,
 } from '@babel/types'
 import MagicString, { SourceMap } from 'magic-string'
 import { walk } from 'estree-walker'
@@ -22,7 +22,7 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  walkFunctionParams,
 } from '@vue/compiler-core'
 import { parse, ParserPlugin } from '@babel/parser'
 import { hasOwn, isArray, isString, genPropsAccessExp } from '@vue/shared'
@@ -76,8 +76,8 @@ export function transform(
     filename,
     sourceMap,
     parserPlugins,
-    importHelpersFrom = 'vue'
-  }: RefTransformOptions = {}
+    importHelpersFrom = 'vue',
+  }: RefTransformOptions = {},
 ): RefTransformResults {
   const plugins: ParserPlugin[] = parserPlugins || []
   if (filename) {
@@ -91,7 +91,7 @@ export function transform(
 
   const ast = parse(src, {
     sourceType: 'module',
-    plugins
+    plugins,
   })
   const s = new MagicString(src)
   const res = transformAST(ast.program, s, 0)
@@ -101,7 +101,7 @@ export function transform(
     s.prepend(
       `import { ${res.importedHelpers
         .map(h => `${h} as _${h}`)
-        .join(', ')} } from '${importHelpersFrom}'\n`
+        .join(', ')} } from '${importHelpersFrom}'\n`,
     )
   }
 
@@ -112,9 +112,9 @@ export function transform(
       ? s.generateMap({
           source: filename,
           hires: true,
-          includeContent: true
+          includeContent: true,
         })
-      : null
+      : null,
   }
 }
 
@@ -133,7 +133,7 @@ export function transformAST(
       default?: any
       isConst?: boolean
     }
-  >
+  >,
 ): {
   rootRefs: string[]
   importedHelpers: string[]
@@ -150,7 +150,7 @@ export function transformAST(
   let convertSymbol: string | undefined
   let escapeSymbol: string | undefined
   for (const { local, imported, source, specifier } of Object.values(
-    userImports
+    userImports,
   )) {
     if (source === IMPORT_SOURCE) {
       if (imported === ESCAPE_SYMBOL) {
@@ -160,7 +160,7 @@ export function transformAST(
       } else if (imported !== local) {
         error(
           `macro imports for ref-creating methods do not support aliasing.`,
-          specifier
+          specifier,
         )
       }
     }
@@ -193,7 +193,7 @@ export function transformAST(
       const { local, isConst } = knownProps[key]
       rootScope[local] = {
         isProp: true,
-        isConst: !!isConst
+        isConst: !!isConst,
       }
       propsLocalToPublicMap[local] = key
     }
@@ -216,7 +216,7 @@ export function transformAST(
         source,
         local,
         imported,
-        specifier
+        specifier,
       }
     }
   }
@@ -252,7 +252,7 @@ export function transformAST(
     } else {
       error(
         'registerBinding called without active scope, something is wrong.',
-        id
+        id,
       )
     }
   }
@@ -317,7 +317,7 @@ export function transformAST(
           refCall,
           decl.id,
           decl.init as CallExpression,
-          stmt.kind === 'const'
+          stmt.kind === 'const',
         )
       } else {
         const isProps =
@@ -339,7 +339,7 @@ export function transformAST(
     method: string,
     id: VariableDeclarator['id'],
     call: CallExpression,
-    isConst: boolean
+    isConst: boolean,
   ) {
     excludedIds.add(call.callee as Identifier)
     if (method === convertSymbol) {
@@ -362,7 +362,7 @@ export function transformAST(
         s.overwrite(
           call.start! + offset,
           call.start! + method.length + offset,
-          helper(method.slice(1))
+          helper(method.slice(1)),
         )
       } else {
         error(`${method}() cannot be used with destructure patterns.`, call)
@@ -375,7 +375,7 @@ export function transformAST(
     call: CallExpression,
     isConst: boolean,
     tempVar?: string,
-    path: PathSegment[] = []
+    path: PathSegment[] = [],
   ) {
     if (!tempVar) {
       tempVar = genTempVar()
@@ -410,12 +410,12 @@ export function transformAST(
           } else if (p.value.type === 'ObjectPattern') {
             processRefObjectPattern(p.value, call, isConst, tempVar, [
               ...path,
-              key
+              key,
             ])
           } else if (p.value.type === 'ArrayPattern') {
             processRefArrayPattern(p.value, call, isConst, tempVar, [
               ...path,
-              key
+              key,
             ])
           } else if (p.value.type === 'AssignmentPattern') {
             if (p.value.left.type === 'Identifier') {
@@ -425,12 +425,12 @@ export function transformAST(
             } else if (p.value.left.type === 'ObjectPattern') {
               processRefObjectPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
-                [key, p.value.right]
+                [key, p.value.right],
               ])
             } else if (p.value.left.type === 'ArrayPattern') {
               processRefArrayPattern(p.value.left, call, isConst, tempVar, [
                 ...path,
-                [key, p.value.right]
+                [key, p.value.right],
               ])
             } else {
               // MemberExpression case is not possible here, ignore
@@ -454,8 +454,8 @@ export function transformAST(
         s.appendLeft(
           call.end! + offset,
           `,\n  ${nameId.name} = ${helper(
-            'toRef'
-          )}(${source}, ${keyStr}${defaultStr})`
+            'toRef',
+          )}(${source}, ${keyStr}${defaultStr})`,
         )
       }
     }
@@ -469,7 +469,7 @@ export function transformAST(
     call: CallExpression,
     isConst: boolean,
     tempVar?: string,
-    path: PathSegment[] = []
+    path: PathSegment[] = [],
   ) {
     if (!tempVar) {
       // const [x] = $(useFoo()) --> const __$temp_1 = useFoo()
@@ -505,8 +505,8 @@ export function transformAST(
         s.appendLeft(
           call.end! + offset,
           `,\n  ${nameId.name} = ${helper(
-            'toRef'
-          )}(${source}, ${i}${defaultStr})`
+            'toRef',
+          )}(${source}, ${i}${defaultStr})`,
         )
       }
     }
@@ -548,7 +548,7 @@ export function transformAST(
     scope: Scope,
     id: Identifier,
     parent: Node,
-    parentStack: Node[]
+    parentStack: Node[],
   ): boolean {
     if (hasOwn(scope, id.name)) {
       const binding = scope[id.name]
@@ -577,13 +577,13 @@ export function transformAST(
                 registerEscapedPropBinding(id)
                 s.appendLeft(
                   id.end! + offset,
-                  `: __props_${propsLocalToPublicMap[id.name]}`
+                  `: __props_${propsLocalToPublicMap[id.name]}`,
                 )
               } else {
                 // { prop } -> { prop: __props.prop }
                 s.appendLeft(
                   id.end! + offset,
-                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
+                  `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`,
                 )
               }
             } else {
@@ -599,14 +599,14 @@ export function transformAST(
               s.overwrite(
                 id.start! + offset,
                 id.end! + offset,
-                `__props_${propsLocalToPublicMap[id.name]}`
+                `__props_${propsLocalToPublicMap[id.name]}`,
               )
             } else {
               // x --> __props.x
               s.overwrite(
                 id.start! + offset,
                 id.end! + offset,
-                genPropsAccessExp(propsLocalToPublicMap[id.name])
+                genPropsAccessExp(propsLocalToPublicMap[id.name]),
               )
             }
           } else {
@@ -628,8 +628,8 @@ export function transformAST(
       s.prependRight(
         offset,
         `const __props_${publicKey} = ${helper(
-          `toRef`
-        )}(__props, '${publicKey}');\n`
+          `toRef`,
+        )}(__props, '${publicKey}');\n`,
       )
     }
   }
@@ -704,7 +704,7 @@ export function transformAST(
           return error(
             `${refCall} can only be used as the initializer of ` +
               `a variable declaration.`,
-            node
+            node,
           )
         }
 
@@ -751,7 +751,7 @@ export function transformAST(
       if (node === escapeScope) {
         escapeScope = undefined
       }
-    }
+    },
   })
 
   return {
@@ -759,7 +759,7 @@ export function transformAST(
       const binding = rootScope[key]
       return binding && !binding.isProp
     }),
-    importedHelpers: [...importedHelpers]
+    importedHelpers: [...importedHelpers],
   }
 }
 
@@ -774,7 +774,7 @@ function warnExperimental() {
     `Reactivity Transform was an experimental feature and has now been deprecated. ` +
       `It will be removed from Vue core in 3.4. If you intend to continue using it, ` +
       `switch to https://vue-macros.sxzz.moe/features/reactivity-transform.html.\n` +
-      `See reason for deprecation here: https://github.com/vuejs/rfcs/discussions/369#discussioncomment-5059028`
+      `See reason for deprecation here: https://github.com/vuejs/rfcs/discussions/369#discussioncomment-5059028`,
   )
 }
 
@@ -789,6 +789,6 @@ function warnOnce(msg: string) {
 
 function warn(msg: string) {
   console.warn(
-    `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`
+    `\x1b[1m\x1b[33m[@vue/reactivity-transform]\x1b[0m\x1b[33m ${msg}\x1b[0m\n`,
   )
 }

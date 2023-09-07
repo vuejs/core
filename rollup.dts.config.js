@@ -7,7 +7,7 @@ import { walk } from 'estree-walker'
 
 if (!existsSync('temp/packages')) {
   console.warn(
-    'no temp dts files found. run `tsc -p tsconfig.build.json` first.'
+    'no temp dts files found. run `tsc -p tsconfig.build.json` first.',
   )
   process.exit(1)
 }
@@ -23,7 +23,7 @@ export default targetPackages.map(pkg => {
     input: `./temp/packages/${pkg}/src/index.d.ts`,
     output: {
       file: `packages/${pkg}/dist/${pkg}.d.ts`,
-      format: 'es'
+      format: 'es',
     },
     plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
     onwarn(warning, warn) {
@@ -35,7 +35,7 @@ export default targetPackages.map(pkg => {
         return
       }
       warn(warning)
-    }
+    },
   }
 })
 
@@ -56,7 +56,7 @@ function patchTypes(pkg) {
       const s = new MagicString(code)
       const ast = parse(code, {
         plugins: ['typescript'],
-        sourceType: 'module'
+        sourceType: 'module',
       })
 
       /**
@@ -90,7 +90,7 @@ function patchTypes(pkg) {
               enter(node) {
                 // @ts-ignore
                 if (removeInternal(node)) this.skip()
-              }
+              },
             })
           }
         }
@@ -120,7 +120,7 @@ function patchTypes(pkg) {
               // @ts-ignore
               node.leadingComments[0].start,
               node.end,
-              `/* removed internal: ${id} */`
+              `/* removed internal: ${id} */`,
             )
           } else {
             // @ts-ignore
@@ -155,8 +155,8 @@ function patchTypes(pkg) {
               `unhandled declare const with more than one declarators:\n${code.slice(
                 // @ts-ignore
                 node.start,
-                node.end
-              )}`
+                node.end,
+              )}`,
             )
           }
         } else if (
@@ -169,7 +169,7 @@ function patchTypes(pkg) {
           processDeclaration(node)
         } else if (removeInternal(node)) {
           throw new Error(
-            `unhandled export type marked as @internal: ${node.type}`
+            `unhandled export type marked as @internal: ${node.type}`,
           )
         }
       }
@@ -215,7 +215,7 @@ function patchTypes(pkg) {
 
       if (/@internal/.test(code)) {
         throw new Error(
-          `unhandled @internal declarations detected in ${chunk.fileName}.`
+          `unhandled @internal declarations detected in ${chunk.fileName}.`,
         )
       }
 
@@ -229,7 +229,7 @@ function patchTypes(pkg) {
             .join('\n')
       }
       return code
-    }
+    },
   }
 }
 
@@ -248,8 +248,8 @@ function copyMts() {
       writeFileSync(
         'packages/vue/dist/vue.d.mts',
         // @ts-ignore
-        bundle['vue.d.ts'].code
+        bundle['vue.d.ts'].code,
       )
-    }
+    },
   }
 }

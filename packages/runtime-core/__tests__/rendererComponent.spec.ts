@@ -10,7 +10,7 @@ import {
   inject,
   Ref,
   watch,
-  SetupContext
+  SetupContext,
 } from '@vue/runtime-test'
 
 describe('renderer: component', () => {
@@ -24,7 +24,7 @@ describe('renderer: component', () => {
       render: () => {
         // let Parent first rerender
         return (parentVnode = h(Child))
-      }
+      },
     }
 
     const Child = {
@@ -32,7 +32,7 @@ describe('renderer: component', () => {
         return value.value
           ? (childVnode1 = h('div'))
           : (childVnode2 = h('span'))
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -50,7 +50,7 @@ describe('renderer: component', () => {
     const Comp = {
       render: () => {
         return h('div')
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp, { id: 'foo', class: 'bar' }), root)
@@ -61,7 +61,7 @@ describe('renderer: component', () => {
     const Comp = {
       render: () => {
         return h('div', 'test')
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp, { id: 'foo', class: 'bar' }), root)
@@ -72,7 +72,7 @@ describe('renderer: component', () => {
     const Comp1 = {
       render: () => {
         return h('div', 'foo')
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp1), root)
@@ -81,7 +81,7 @@ describe('renderer: component', () => {
     const Comp2 = {
       render: () => {
         return h('span', 'foo')
-      }
+      },
     }
     render(h(Comp2), root)
     expect(serializeInner(root)).toBe('<span>foo</span>')
@@ -92,20 +92,20 @@ describe('renderer: component', () => {
     const Comp1 = {
       emits: ['foo'],
       updated: vi.fn(),
-      render: () => null
+      render: () => null,
     }
     const root = nodeOps.createElement('div')
     render(
       h(Comp1, {
-        onFoo: () => {}
+        onFoo: () => {},
       }),
-      root
+      root,
     )
     render(
       h(Comp1, {
-        onFoo: () => {}
+        onFoo: () => {},
       }),
-      root
+      root,
     )
     expect(Comp1.updated).not.toHaveBeenCalled()
   })
@@ -119,7 +119,7 @@ describe('renderer: component', () => {
         return () => {
           return [h('div', n.value), h(Child)]
         }
-      }
+      },
     }
 
     const Child = {
@@ -130,7 +130,7 @@ describe('renderer: component', () => {
         return () => {
           return h('div', n.value)
         }
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -150,12 +150,12 @@ describe('renderer: component', () => {
     let instance: any
     const Comp = {
       props: {
-        testProp: String
+        testProp: String,
       },
 
       data() {
         return {
-          testData: undefined
+          testData: undefined,
         }
       },
 
@@ -167,7 +167,7 @@ describe('renderer: component', () => {
         testData() {
           // @ts-ignore
           dataWatchSpy(this.$el)
-        }
+        },
       },
 
       created() {
@@ -176,7 +176,7 @@ describe('renderer: component', () => {
 
       render() {
         return h('div')
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -206,11 +206,11 @@ describe('renderer: component', () => {
             h('div', inner.value),
             h(Child, {
               value: outer.value,
-              onUpdate: (val: number) => (inner.value = val)
-            })
+              onUpdate: (val: number) => (inner.value = val),
+            }),
           ]
         }
-      }
+      },
     }
 
     const Child = {
@@ -218,13 +218,13 @@ describe('renderer: component', () => {
       setup(props: any, { emit }: SetupContext) {
         watch(
           () => props.value,
-          (val: number) => emit('update', val)
+          (val: number) => emit('update', val),
         )
 
         return () => {
           return h('div', props.value)
         }
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -243,7 +243,7 @@ describe('renderer: component', () => {
       props: ['foo'],
       data() {
         return {
-          count: 0
+          count: 0,
         }
       },
       watch: {
@@ -251,8 +251,8 @@ describe('renderer: component', () => {
           immediate: true,
           handler() {
             ;(this as any).count
-          }
-        }
+          },
+        },
       },
       created() {
         childInstance = this as any
@@ -260,14 +260,14 @@ describe('renderer: component', () => {
       },
       render() {
         return h('h1', (this as any).count)
-      }
+      },
     }
 
     const App = {
       setup() {
         return () => h(Child)
       },
-      updated: vi.fn()
+      updated: vi.fn(),
     }
 
     const root = nodeOps.createElement('div')
@@ -289,7 +289,7 @@ describe('renderer: component', () => {
         },
         render() {
           return h('h1', (this as any).foo)
-        }
+        },
       }
       const root = nodeOps.createElement('div')
 
@@ -305,7 +305,7 @@ describe('renderer: component', () => {
       render() {
         const c = [h(Comp)]
         return [c, c, c]
-      }
+      },
     }
 
     const ids: number[] = []
@@ -313,7 +313,7 @@ describe('renderer: component', () => {
       render: () => h('h1'),
       beforeUnmount() {
         ids.push((this as any).$.uid)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -332,7 +332,7 @@ describe('renderer: component', () => {
     const App = {
       render() {
         return h(Comp, { text: text.value })
-      }
+      },
     }
 
     const Comp = {
@@ -340,7 +340,7 @@ describe('renderer: component', () => {
       render(this: any) {
         spy()
         return h('h1', this.text)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')

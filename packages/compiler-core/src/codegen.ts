@@ -26,14 +26,14 @@ import {
   VNodeCall,
   SequenceExpression,
   getVNodeBlockHelper,
-  getVNodeHelper
+  getVNodeHelper,
 } from './ast'
 import { SourceMapGenerator, RawSourceMap } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
   isSimpleIdentifier,
-  toValidAssetId
+  toValidAssetId,
 } from './utils'
 import { isString, isArray, isSymbol } from '@vue/shared'
 import {
@@ -52,7 +52,7 @@ import {
   OPEN_BLOCK,
   CREATE_STATIC,
   WITH_CTX,
-  RESOLVE_FILTER
+  RESOLVE_FILTER,
 } from './runtimeHelpers'
 import { ImportItem } from './transform'
 
@@ -100,8 +100,8 @@ function createCodegenContext(
     ssrRuntimeModuleName = 'vue/server-renderer',
     ssr = false,
     isTS = false,
-    inSSR = false
-  }: CodegenOptions
+    inSSR = false,
+  }: CodegenOptions,
 ): CodegenContext {
   const context: CodegenContext = {
     mode,
@@ -158,7 +158,7 @@ function createCodegenContext(
     },
     newline() {
       newline(context.indentLevel)
-    }
+    },
   }
 
   function newline(n: number) {
@@ -171,12 +171,12 @@ function createCodegenContext(
       source: context.filename,
       original: {
         line: loc.line,
-        column: loc.column - 1 // source-map column is 0 based
+        column: loc.column - 1, // source-map column is 0 based
       },
       generated: {
         line: context.line,
-        column: context.column - 1
-      }
+        column: context.column - 1,
+      },
     })
   }
 
@@ -193,7 +193,7 @@ export function generate(
   ast: RootNode,
   options: CodegenOptions & {
     onContextCreated?: (context: CodegenContext) => void
-  } = {}
+  } = {},
 ): CodegenResult {
   const context = createCodegenContext(ast, options)
   if (options.onContextCreated) options.onContextCreated(context)
@@ -205,7 +205,7 @@ export function generate(
     deindent,
     newline,
     scopeId,
-    ssr
+    ssr,
   } = context
 
   const helpers = Array.from(ast.helpers)
@@ -309,7 +309,7 @@ export function generate(
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
     // SourceMapGenerator does have toJSON() method but it's not in the types
-    map: context.map ? (context.map as any).toJSON() : undefined
+    map: context.map ? (context.map as any).toJSON() : undefined,
   }
 }
 
@@ -321,7 +321,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     newline,
     runtimeModuleName,
     runtimeGlobalName,
-    ssrRuntimeModuleName
+    ssrRuntimeModuleName,
   } = context
   const VueBinding =
     !__BROWSER__ && ssr
@@ -348,7 +348,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
           CREATE_ELEMENT_VNODE,
           CREATE_COMMENT,
           CREATE_TEXT,
-          CREATE_STATIC
+          CREATE_STATIC,
         ]
           .filter(helper => helpers.includes(helper))
           .map(aliasHelper)
@@ -363,7 +363,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
-        .join(', ')} } = require("${ssrRuntimeModuleName}")\n`
+        .join(', ')} } = require("${ssrRuntimeModuleName}")\n`,
     )
   }
   genHoists(ast.hoists, context)
@@ -375,14 +375,14 @@ function genModulePreamble(
   ast: RootNode,
   context: CodegenContext,
   genScopeId: boolean,
-  inline?: boolean
+  inline?: boolean,
 ) {
   const {
     push,
     newline,
     optimizeImports,
     runtimeModuleName,
-    ssrRuntimeModuleName
+    ssrRuntimeModuleName,
   } = context
 
   if (genScopeId && ast.hoists.length) {
@@ -402,18 +402,18 @@ function genModulePreamble(
       push(
         `import { ${helpers
           .map(s => helperNameMap[s])
-          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`,
       )
       push(
         `\n// Binding optimization for webpack code-split\nconst ${helpers
           .map(s => `_${helperNameMap[s]} = ${helperNameMap[s]}`)
-          .join(', ')}\n`
+          .join(', ')}\n`,
       )
     } else {
       push(
         `import { ${helpers
           .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
+          .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`,
       )
     }
   }
@@ -422,7 +422,7 @@ function genModulePreamble(
     push(
       `import { ${ast.ssrHelpers
         .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-        .join(', ')} } from "${ssrRuntimeModuleName}"\n`
+        .join(', ')} } from "${ssrRuntimeModuleName}"\n`,
     )
   }
 
@@ -442,14 +442,14 @@ function genModulePreamble(
 function genAssets(
   assets: string[],
   type: 'component' | 'directive' | 'filter',
-  { helper, push, newline, isTS }: CodegenContext
+  { helper, push, newline, isTS }: CodegenContext,
 ) {
   const resolver = helper(
     __COMPAT__ && type === 'filter'
       ? RESOLVE_FILTER
       : type === 'component'
       ? RESOLVE_COMPONENT
-      : RESOLVE_DIRECTIVE
+      : RESOLVE_DIRECTIVE,
   )
   for (let i = 0; i < assets.length; i++) {
     let id = assets[i]
@@ -461,7 +461,7 @@ function genAssets(
     push(
       `const ${toValidAssetId(id, type)} = ${resolver}(${JSON.stringify(id)}${
         maybeSelfReference ? `, true` : ``
-      })${isTS ? `!` : ``}`
+      })${isTS ? `!` : ``}`,
     )
     if (i < assets.length - 1) {
       newline()
@@ -482,8 +482,8 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   if (genScopeId) {
     push(
       `const _withScopeId = n => (${helper(
-        PUSH_SCOPE_ID
-      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`
+        PUSH_SCOPE_ID,
+      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`,
     )
     newline()
   }
@@ -495,7 +495,7 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
       push(
         `const _hoisted_${i + 1} = ${
           needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
-        }`
+        }`,
       )
       genNode(exp, context)
       if (needScopeIdWrapper) {
@@ -532,7 +532,7 @@ function isText(n: string | CodegenNode) {
 
 function genNodeListAsArray(
   nodes: (string | CodegenNode | TemplateChildNode[])[],
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const multilines =
     nodes.length > 3 ||
@@ -548,7 +548,7 @@ function genNodeList(
   nodes: (string | symbol | CodegenNode | TemplateChildNode[])[],
   context: CodegenContext,
   multilines: boolean = false,
-  comma: boolean = true
+  comma: boolean = true,
 ) {
   const { push, newline } = context
   for (let i = 0; i < nodes.length; i++) {
@@ -588,7 +588,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
         assert(
           node.codegenNode != null,
           `Codegen node is missing for element/if/for node. ` +
-            `Apply appropriate transforms first.`
+            `Apply appropriate transforms first.`,
         )
       genNode(node.codegenNode!, context)
       break
@@ -669,7 +669,7 @@ function genNode(node: CodegenNode | symbol | string, context: CodegenContext) {
 
 function genText(
   node: TextNode | SimpleExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   context.push(JSON.stringify(node.content), node)
 }
@@ -689,7 +689,7 @@ function genInterpolation(node: InterpolationNode, context: CodegenContext) {
 
 function genCompoundExpression(
   node: CompoundExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   for (let i = 0; i < node.children!.length; i++) {
     const child = node.children![i]
@@ -703,7 +703,7 @@ function genCompoundExpression(
 
 function genExpressionAsPropertyKey(
   node: ExpressionNode,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const { push } = context
   if (node.type === NodeTypes.COMPOUND_EXPRESSION) {
@@ -740,7 +740,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
     directives,
     isBlock,
     disableTracking,
-    isComponent
+    isComponent,
   } = node
   if (directives) {
     push(helper(WITH_DIRECTIVES) + `(`)
@@ -757,7 +757,7 @@ function genVNodeCall(node: VNodeCall, context: CodegenContext) {
   push(helper(callHelper) + `(`, node)
   genNodeList(
     genNullableArgs([tag, props, children, patchFlag, dynamicProps]),
-    context
+    context,
   )
   push(`)`)
   if (isBlock) {
@@ -826,7 +826,7 @@ function genArrayExpression(node: ArrayExpression, context: CodegenContext) {
 
 function genFunctionExpression(
   node: FunctionExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const { push, indent, deindent } = context
   const { params, returns, body, newline, isSlot } = node
@@ -871,7 +871,7 @@ function genFunctionExpression(
 
 function genConditionalExpression(
   node: ConditionalExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   const { test, consequent, alternate, newline: needNewline } = node
   const { push, indent, deindent, newline } = context
@@ -972,7 +972,7 @@ function genIfStatement(node: IfStatement, context: CodegenContext) {
 
 function genAssignmentExpression(
   node: AssignmentExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   genNode(node.left, context)
   context.push(` = `)
@@ -981,7 +981,7 @@ function genAssignmentExpression(
 
 function genSequenceExpression(
   node: SequenceExpression,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   context.push(`(`)
   genNodeList(node.expressions, context)
@@ -990,7 +990,7 @@ function genSequenceExpression(
 
 function genReturnStatement(
   { returns }: ReturnStatement,
-  context: CodegenContext
+  context: CodegenContext,
 ) {
   context.push(`return `)
   if (isArray(returns)) {

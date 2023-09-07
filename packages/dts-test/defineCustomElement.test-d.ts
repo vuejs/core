@@ -5,18 +5,18 @@ describe('inject', () => {
   // with object inject
   defineCustomElement({
     props: {
-      a: String
+      a: String,
     },
     inject: {
       foo: 'foo',
-      bar: 'bar'
+      bar: 'bar',
     },
     created() {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
       this.foobar = 1
-    }
+    },
   })
 
   // with array inject
@@ -28,7 +28,7 @@ describe('inject', () => {
       expectType<unknown>(this.bar)
       //  @ts-expect-error
       this.foobar = 1
-    }
+    },
   })
 
   // with no props
@@ -36,19 +36,19 @@ describe('inject', () => {
     inject: {
       foo: {
         from: 'pbar',
-        default: 'foo'
+        default: 'foo',
       },
       bar: {
         from: 'pfoo',
-        default: 'bar'
-      }
+        default: 'bar',
+      },
     },
     created() {
       expectType<unknown>(this.foo)
       expectType<unknown>(this.bar)
       //  @ts-expect-error
       this.foobar = 1
-    }
+    },
   })
 
   // without inject
@@ -59,6 +59,6 @@ describe('inject', () => {
       this.foo = 1
       //  @ts-expect-error
       this.bar = 1
-    }
+    },
   })
 })

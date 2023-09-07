@@ -86,7 +86,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       // first
       before ? before.nextSibling! : parent.firstChild!,
       // last
-      anchor ? anchor.previousSibling! : parent.lastChild!
+      anchor ? anchor.previousSibling! : parent.lastChild!,
     ]
-  }
+  },
 }

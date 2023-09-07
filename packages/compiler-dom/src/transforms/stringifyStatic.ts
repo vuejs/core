@@ -15,7 +15,7 @@ import {
   PlainElementNode,
   JSChildNode,
   TextCallNode,
-  ConstantTypes
+  ConstantTypes,
 } from '@vue/compiler-core'
 import {
   isVoidTag,
@@ -29,13 +29,13 @@ import {
   stringifyStyle,
   makeMap,
   isKnownSvgAttr,
-  isBooleanAttr
+  isBooleanAttr,
 } from '@vue/shared'
 import { DOMNamespaces } from '../parserOptions'
 
 export const enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
-  NODE_COUNT = 20
+  NODE_COUNT = 20,
 }
 
 type StringifiableNode = PlainElementNode | TextCallNode
@@ -87,11 +87,11 @@ export const stringifyStatic: HoistTransform = (children, context, parent) => {
       // combine all currently eligible nodes into a single static vnode call
       const staticCall = createCallExpression(context.helper(CREATE_STATIC), [
         JSON.stringify(
-          currentChunk.map(node => stringifyNode(node, context)).join('')
+          currentChunk.map(node => stringifyNode(node, context)).join(''),
         ).replace(expReplaceRE, `" + $1 + "`),
         // the 2nd argument indicates the number of DOM nodes this static vnode
         // will insert / hydrate
-        String(currentChunk.length)
+        String(currentChunk.length),
       ])
       // replace the first node's hoisted expression with the static vnode call
       replaceHoist(currentChunk[0], staticCall, context)
@@ -161,14 +161,14 @@ const isStringifiableAttr = (name: string, ns: DOMNamespaces) => {
 const replaceHoist = (
   node: StringifiableNode,
   replacement: JSChildNode | null,
-  context: TransformContext
+  context: TransformContext,
 ) => {
   const hoistToReplace = (node.codegenNode as SimpleExpressionNode).hoisted!
   context.hoists[context.hoists.indexOf(hoistToReplace)] = replacement
 }
 
 const isNonStringifiable = /*#__PURE__*/ makeMap(
-  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`
+  `caption,thead,tr,th,tbody,td,tfoot,colgroup,col`,
 )
 
 /**
@@ -248,7 +248,7 @@ function analyzeNode(node: StringifiableNode): [number, number] | false {
 
 function stringifyNode(
   node: string | TemplateChildNode,
-  context: TransformContext
+  context: TransformContext,
 ): string {
   if (isString(node)) {
     return node
@@ -277,7 +277,7 @@ function stringifyNode(
 
 function stringifyElement(
   node: ElementNode,
-  context: TransformContext
+  context: TransformContext,
 ): string {
   let res = `<${node.tag}`
   let innerHTML = ''
@@ -316,7 +316,7 @@ function stringifyElement(
             evaluated = stringifyStyle(normalizeStyle(evaluated))
           }
           res += ` ${(p.arg as SimpleExpressionNode).content}="${escapeHtml(
-            evaluated
+            evaluated,
           )}"`
         }
       } else if (p.name === 'html') {
@@ -325,7 +325,7 @@ function stringifyElement(
         innerHTML = evaluateConstant(p.exp as SimpleExpressionNode)
       } else if (p.name === 'text') {
         innerHTML = escapeHtml(
-          toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode))
+          toDisplayString(evaluateConstant(p.exp as SimpleExpressionNode)),
         )
       }
     }

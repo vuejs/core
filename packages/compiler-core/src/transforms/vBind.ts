@@ -3,7 +3,7 @@ import {
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
-  NodeTypes
+  NodeTypes,
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
@@ -52,12 +52,12 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   ) {
     context.onError(createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc))
     return {
-      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))]
+      props: [createObjectProperty(arg, createSimpleExpression('', true, loc))],
     }
   }
 
   return {
-    props: [createObjectProperty(arg, exp)]
+    props: [createObjectProperty(arg, exp)],
   }
 }
 

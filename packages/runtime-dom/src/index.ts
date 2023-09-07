@@ -10,7 +10,7 @@ import {
   RootHydrateFunction,
   isRuntimeOnly,
   DeprecationTypes,
-  compatUtils
+  compatUtils,
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -21,7 +21,7 @@ import {
   isHTMLTag,
   isSVGTag,
   extend,
-  NOOP
+  NOOP,
 } from '@vue/shared'
 
 declare module '@vue/reactivity' {
@@ -89,7 +89,7 @@ export const createApp = ((...args) => {
           if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
-              null
+              null,
             )
             break
           }
@@ -134,7 +134,7 @@ function injectNativeTagCheck(app: App) {
   // this is used for component name validation (dev only)
   Object.defineProperty(app.config, 'isNativeTag', {
     value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
-    writable: false
+    writable: false,
   })
 }
 
@@ -149,9 +149,9 @@ function injectCompilerOptionsCheck(app: App) {
       set() {
         warn(
           `The \`isCustomElement\` config option is deprecated. Use ` +
-            `\`compilerOptions.isCustomElement\` instead.`
+            `\`compilerOptions.isCustomElement\` instead.`,
         )
-      }
+      },
     })
 
     const compilerOptions = app.config.compilerOptions
@@ -171,19 +171,19 @@ function injectCompilerOptionsCheck(app: App) {
       },
       set() {
         warn(msg)
-      }
+      },
     })
   }
 }
 
 function normalizeContainer(
-  container: Element | ShadowRoot | string
+  container: Element | ShadowRoot | string,
 ): Element | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
       warn(
-        `Failed to mount app: mount target selector "${container}" returned null.`
+        `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
     return res
@@ -195,7 +195,7 @@ function normalizeContainer(
     container.mode === 'closed'
   ) {
     warn(
-      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`,
     )
   }
   return container as any
@@ -206,7 +206,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   VueElement,
-  type VueElementConstructor
+  type VueElementConstructor,
 } from './apiCustomElement'
 
 // SFC CSS utilities
@@ -217,7 +217,7 @@ export { useCssVars } from './helpers/useCssVars'
 export { Transition, type TransitionProps } from './components/Transition'
 export {
   TransitionGroup,
-  type TransitionGroupProps
+  type TransitionGroupProps,
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers
@@ -226,7 +226,7 @@ export {
   vModelCheckbox,
   vModelRadio,
   vModelSelect,
-  vModelDynamic
+  vModelDynamic,
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'

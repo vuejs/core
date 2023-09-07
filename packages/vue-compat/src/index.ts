@@ -8,14 +8,14 @@ import { InternalRenderFunction } from 'packages/runtime-core/src/component'
 import * as runtimeDom from '@vue/runtime-dom'
 import {
   DeprecationTypes,
-  warnDeprecation
+  warnDeprecation,
 } from '../../runtime-core/src/compat/compatConfig'
 
 const compileCache: Record<string, RenderFunction> = Object.create(null)
 
 function compileToFunction(
   template: string | HTMLElement,
-  options?: CompilerOptions
+  options?: CompilerOptions,
 ): RenderFunction {
   if (!isString(template)) {
     if (template.nodeType) {
@@ -55,10 +55,10 @@ function compileToFunction(
         hoistStatic: true,
         whitespace: 'preserve',
         onError: __DEV__ ? onError : undefined,
-        onWarn: __DEV__ ? e => onError(e, true) : NOOP
+        onWarn: __DEV__ ? e => onError(e, true) : NOOP,
       } as CompilerOptions,
-      options
-    )
+      options,
+    ),
   )
 
   function onError(err: CompilerError, asWarning = false) {
@@ -70,7 +70,7 @@ function compileToFunction(
       generateCodeFrame(
         template as string,
         err.loc.start.offset,
-        err.loc.end.offset
+        err.loc.end.offset,
       )
     warn(codeFrame ? `${message}\n${codeFrame}` : message)
   }

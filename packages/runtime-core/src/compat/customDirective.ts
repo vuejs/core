@@ -20,13 +20,13 @@ const legacyDirectiveHookMap: Partial<
   beforeMount: 'bind',
   mounted: 'inserted',
   updated: ['update', 'componentUpdated'],
-  unmounted: 'unbind'
+  unmounted: 'unbind',
 }
 
 export function mapCompatDirectiveHook(
   name: keyof ObjectDirective,
   dir: ObjectDirective & LegacyDirective,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ): DirectiveHook | DirectiveHook[] | undefined {
   const mappedName = legacyDirectiveHookMap[name]
   if (mappedName) {
@@ -39,7 +39,7 @@ export function mapCompatDirectiveHook(
             DeprecationTypes.CUSTOM_DIR,
             instance,
             mapped,
-            name
+            name,
           )
           hook.push(mappedHook)
         }
@@ -51,7 +51,7 @@ export function mapCompatDirectiveHook(
           DeprecationTypes.CUSTOM_DIR,
           instance,
           mappedName,
-          name
+          name,
         )
       }
       return dir[mappedName]

@@ -4,17 +4,17 @@ import {
   looseIndexOf,
   looseToNumber,
   NOOP,
-  toDisplayString
+  toDisplayString,
 } from '@vue/shared'
 import {
   ComponentPublicInstance,
-  PublicPropertiesMap
+  PublicPropertiesMap,
 } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
   DeprecationTypes,
   assertCompatEnabled,
-  isCompatEnabled
+  isCompatEnabled,
 } from './compatConfig'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
@@ -32,7 +32,7 @@ import {
   legacyPrependModifier,
   legacyRenderSlot,
   legacyRenderStatic,
-  legacyresolveScopedSlots
+  legacyresolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
 import { InternalSlots, Slots } from '../componentSlots'
@@ -78,7 +78,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $mount: i => {
       assertCompatEnabled(
         DeprecationTypes.GLOBAL_MOUNT,
-        null /* this warning is global */
+        null /* this warning is global */,
       )
       // root mount override from ./global.ts in installCompatMount
       return i.ctx._compat_mount || NOOP
@@ -119,7 +119,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $off: i => off.bind(null, i),
 
     $children: getCompatChildren,
-    $listeners: getCompatListeners
+    $listeners: getCompatListeners,
   } as PublicPropertiesMap)
 
   /* istanbul ignore if */
@@ -163,7 +163,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       _u: () => legacyresolveScopedSlots,
       _g: () => legacyBindObjectListeners,
       _d: () => legacyBindDynamicKeys,
-      _p: () => legacyPrependModifier
+      _p: () => legacyPrependModifier,
     } as PublicPropertiesMap)
   }
 }

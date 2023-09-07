@@ -29,7 +29,7 @@ export const remove = <T>(arr: T[], el: T) => {
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
-  key: string | symbol
+  key: string | symbol,
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
@@ -80,11 +80,11 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
   ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
-    'onVnodeBeforeUnmount,onVnodeUnmounted'
+    'onVnodeBeforeUnmount,onVnodeUnmounted',
 )
 
 export const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -108,7 +108,7 @@ const hyphenateRE = /\B([A-Z])/g
  * @private
  */
 export const hyphenate = cacheStringFunction((str: string) =>
-  str.replace(hyphenateRE, '-$1').toLowerCase()
+  str.replace(hyphenateRE, '-$1').toLowerCase(),
 )
 
 /**
@@ -140,7 +140,7 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,
     enumerable: false,
-    value
+    value,
   })
 }
 

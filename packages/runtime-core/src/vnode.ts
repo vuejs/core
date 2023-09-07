@@ -10,7 +10,7 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
-  isOn
+  isOn,
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -18,7 +18,7 @@ import {
   ConcreteComponent,
   ClassComponent,
   Component,
-  isClassComponent
+  isClassComponent,
 } from './component'
 import { RawSlots } from './componentSlots'
 import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
@@ -27,7 +27,7 @@ import {
   Suspense,
   SuspenseImpl,
   isSuspense,
-  SuspenseBoundary
+  SuspenseBoundary,
 } from './components/Suspense'
 import { DirectiveBinding } from './directives'
 import { TransitionHooks } from './components/BaseTransition'
@@ -35,7 +35,7 @@ import { warn } from './warning'
 import { Teleport, TeleportImpl, isTeleport } from './components/Teleport'
 import {
   currentRenderingInstance,
-  currentScopeId
+  currentScopeId,
 } from './componentRenderContext'
 import { RendererNode, RendererElement } from './renderer'
 import { NULL_DYNAMIC_COMPONENT } from './helpers/resolveAssets'
@@ -74,7 +74,7 @@ export type VNodeRef =
   | Ref
   | ((
       ref: Element | ComponentPublicInstance | null,
-      refs: Record<string, any>
+      refs: Record<string, any>,
     ) => void)
 
 export type VNodeNormalizedRefAtom = {
@@ -134,7 +134,7 @@ export type VNodeNormalizedChildren =
 export interface VNode<
   HostNode = RendererNode,
   HostElement = RendererElement,
-  ExtraProps = { [key: string]: any }
+  ExtraProps = { [key: string]: any },
 > {
   /**
    * @internal
@@ -306,7 +306,7 @@ export function createElementBlock(
   children?: any,
   patchFlag?: number,
   dynamicProps?: string[],
-  shapeFlag?: number
+  shapeFlag?: number,
 ) {
   return setupBlock(
     createBaseVNode(
@@ -316,8 +316,8 @@ export function createElementBlock(
       patchFlag,
       dynamicProps,
       shapeFlag,
-      true /* isBlock */
-    )
+      true /* isBlock */,
+    ),
   )
 }
 
@@ -333,7 +333,7 @@ export function createBlock(
   props?: Record<string, any> | null,
   children?: any,
   patchFlag?: number,
-  dynamicProps?: string[]
+  dynamicProps?: string[],
 ): VNode {
   return setupBlock(
     createVNode(
@@ -342,8 +342,8 @@ export function createBlock(
       children,
       patchFlag,
       dynamicProps,
-      true /* isBlock: prevent a block from tracking itself */
-    )
+      true /* isBlock: prevent a block from tracking itself */,
+    ),
   )
 }
 
@@ -370,7 +370,7 @@ export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
 let vnodeArgsTransformer:
   | ((
       args: Parameters<typeof _createVNode>,
-      instance: ComponentInternalInstance | null
+      instance: ComponentInternalInstance | null,
     ) => Parameters<typeof _createVNode>)
   | undefined
 
@@ -390,7 +390,7 @@ const createVNodeWithArgsTransform = (
   return _createVNode(
     ...(vnodeArgsTransformer
       ? vnodeArgsTransformer(args, currentRenderingInstance)
-      : args)
+      : args),
   )
 }
 
@@ -402,7 +402,7 @@ const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
 const normalizeRef = ({
   ref,
   ref_key,
-  ref_for
+  ref_for,
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
   if (typeof ref === 'number') {
     ref = '' + ref
@@ -424,7 +424,7 @@ function createBaseVNode(
   dynamicProps: string[] | null = null,
   shapeFlag = type === Fragment ? 0 : ShapeFlags.ELEMENT,
   isBlockNode = false,
-  needFullChildrenNormalization = false
+  needFullChildrenNormalization = false,
 ) {
   const vnode = {
     __v_isVNode: true,
@@ -452,7 +452,7 @@ function createBaseVNode(
     dynamicProps,
     dynamicChildren: null,
     appContext: null,
-    ctx: currentRenderingInstance
+    ctx: currentRenderingInstance,
   } as VNode
 
   if (needFullChildrenNormalization) {
@@ -513,7 +513,7 @@ function _createVNode(
   children: unknown = null,
   patchFlag: number = 0,
   dynamicProps: string[] | null = null,
-  isBlockNode = false
+  isBlockNode = false,
 ): VNode {
   if (!type || type === NULL_DYNAMIC_COMPONENT) {
     if (__DEV__ && !type) {
@@ -590,7 +590,7 @@ function _createVNode(
         `marking the component with \`markRaw\` or using \`shallowRef\` ` +
         `instead of \`ref\`.`,
       `\nComponent that was made reactive: `,
-      type
+      type,
     )
   }
 
@@ -602,7 +602,7 @@ function _createVNode(
     dynamicProps,
     shapeFlag,
     isBlockNode,
-    true
+    true,
   )
 }
 
@@ -616,7 +616,7 @@ export function guardReactiveProps(props: (Data & VNodeProps) | null) {
 export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: (Data & VNodeProps) | null,
-  mergeRef = false
+  mergeRef = false,
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
@@ -676,7 +676,7 @@ export function cloneVNode<T, U>(
     el: vnode.el,
     anchor: vnode.anchor,
     ctx: vnode.ctx,
-    ce: vnode.ce
+    ce: vnode.ce,
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
@@ -708,7 +708,7 @@ export function createTextVNode(text: string = ' ', flag: number = 0): VNode {
  */
 export function createStaticVNode(
   content: string,
-  numberOfNodes: number
+  numberOfNodes: number,
 ): VNode {
   // A static vnode can contain multiple stringified elements, and the number
   // of elements is necessary for hydration.
@@ -724,7 +724,7 @@ export function createCommentVNode(
   text: string = '',
   // when used as the v-else branch, the comment node must be created as a
   // block to ensure correct updates.
-  asBlock: boolean = false
+  asBlock: boolean = false,
 ): VNode {
   return asBlock
     ? (openBlock(), createBlock(Comment, null, text))
@@ -741,7 +741,7 @@ export function normalizeVNode(child: VNodeChild): VNode {
       Fragment,
       null,
       // #3666, avoid reference pollution when reusing vnode
-      child.slice()
+      child.slice(),
     )
   } else if (typeof child === 'object') {
     // already vnode, this should be the most common since compiled templates
@@ -851,10 +851,10 @@ export function invokeVNodeHook(
   hook: VNodeHook,
   instance: ComponentInternalInstance | null,
   vnode: VNode,
-  prevVNode: VNode | null = null
+  prevVNode: VNode | null = null,
 ) {
   callWithAsyncErrorHandling(hook, instance, ErrorCodes.VNODE_HOOK, [
     vnode,
-    prevVNode
+    prevVNode,
   ])
 }

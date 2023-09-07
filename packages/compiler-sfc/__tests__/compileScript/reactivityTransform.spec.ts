@@ -35,7 +35,7 @@ describe('sfc ref transform', () => {
     expect(content).toMatch(`let d`)
     expect(content).toMatch(
       `return { foo, a, b, get c() { return c }, set c(v) { c = v }, ` +
-        `get d() { return d }, set d(v) { d = v }, ref, shallowRef }`
+        `get d() { return d }, set d(v) { d = v }, ref, shallowRef }`,
     )
     assertCode(content)
     expect(bindings).toStrictEqual({
@@ -45,7 +45,7 @@ describe('sfc ref transform', () => {
       c: BindingTypes.SETUP_LET,
       d: BindingTypes.SETUP_LET,
       ref: BindingTypes.SETUP_CONST,
-      shallowRef: BindingTypes.SETUP_CONST
+      shallowRef: BindingTypes.SETUP_CONST,
     })
   })
 
@@ -60,7 +60,7 @@ describe('sfc ref transform', () => {
     let d
     </script>`)
     expect(content).toMatch(
-      `import { ref as _ref, shallowRef as _shallowRef } from 'vue'`
+      `import { ref as _ref, shallowRef as _shallowRef } from 'vue'`,
     )
     expect(content).not.toMatch(`$ref()`)
     expect(content).not.toMatch(`$ref(1)`)
@@ -81,7 +81,7 @@ describe('sfc ref transform', () => {
       a: BindingTypes.SETUP_REF,
       b: BindingTypes.SETUP_REF,
       c: BindingTypes.SETUP_LET,
-      d: BindingTypes.SETUP_LET
+      d: BindingTypes.SETUP_LET,
     })
   })
 
@@ -146,7 +146,7 @@ describe('sfc ref transform', () => {
       a: BindingTypes.SETUP_REF,
       b: BindingTypes.SETUP_REF,
       c: BindingTypes.SETUP_REF,
-      change: BindingTypes.SETUP_CONST
+      change: BindingTypes.SETUP_CONST,
     })
   })
 
@@ -173,8 +173,8 @@ describe('sfc ref transform', () => {
           bar
         })
       </script>`,
-          { reactivityTransform: true }
-        )
+          { reactivityTransform: true },
+        ),
       ).toThrow(`cannot reference locally declared variables`)
 
       expect(() =>
@@ -185,8 +185,8 @@ describe('sfc ref transform', () => {
           bar
         })
       </script>`,
-          { reactivityTransform: true }
-        )
+          { reactivityTransform: true },
+        ),
       ).toThrow(`cannot reference locally declared variables`)
     })
   })

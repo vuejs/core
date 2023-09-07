@@ -4,7 +4,7 @@ import {
   createVNode,
   ssrContextKey,
   ssrUtils,
-  VNode
+  VNode,
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
 import { SSRContext, renderComponentVNode, SSRBuffer } from './render'
@@ -49,7 +49,7 @@ function unrollBufferSync(buffer: SSRBuffer): string {
 
 export async function renderToString(
   input: App | VNode,
-  context: SSRContext = {}
+  context: SSRContext = {},
 ): Promise<string> {
   if (isVNode(input)) {
     // raw vnode, wrap with app (for context)
@@ -83,7 +83,7 @@ export async function resolveTeleports(context: SSRContext) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
       context.teleports[key] = await unrollBuffer(
-        await Promise.all([context.__teleportBuffers[key]])
+        await Promise.all([context.__teleportBuffers[key]]),
       )
     }
   }

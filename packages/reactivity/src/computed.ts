@@ -39,7 +39,7 @@ export class ComputedRefImpl<T> {
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
-    isSSR: boolean
+    isSSR: boolean,
   ) {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._dirty) {
@@ -103,16 +103,16 @@ export class ComputedRefImpl<T> {
  */
 export function computed<T>(
   getter: ComputedGetter<T>,
-  debugOptions?: DebuggerOptions
+  debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
 export function computed<T>(
   options: WritableComputedOptions<T>,
-  debugOptions?: DebuggerOptions
+  debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
-  isSSR = false
+  isSSR = false,
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>

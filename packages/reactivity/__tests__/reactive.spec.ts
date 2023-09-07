@@ -35,9 +35,9 @@ describe('reactivity/reactive', () => {
   test('nested reactives', () => {
     const original = {
       nested: {
-        foo: 1
+        foo: 1,
       },
-      array: [{ bar: 2 }]
+      array: [{ bar: 2 }],
     }
     const observed = reactive(original)
     expect(isReactive(observed.nested)).toBe(true)
@@ -187,7 +187,7 @@ describe('reactivity/reactive', () => {
     // writable
     const b = computed({
       get: () => 1,
-      set: () => {}
+      set: () => {},
     })
     const obj = reactive({ a, b })
     // check type
@@ -216,7 +216,7 @@ describe('reactivity/reactive', () => {
     const assertValue = (value: any) => {
       reactive(value)
       expect(
-        `value cannot be made reactive: ${String(value)}`
+        `value cannot be made reactive: ${String(value)}`,
       ).toHaveBeenWarnedLast()
     }
 
@@ -249,7 +249,7 @@ describe('reactivity/reactive', () => {
   test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
-      bar: markRaw({ b: 2 })
+      bar: markRaw({ b: 2 }),
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
@@ -260,7 +260,7 @@ describe('reactivity/reactive', () => {
       foo: Object.preventExtensions({ a: 1 }),
       // sealed or frozen objects are considered non-extensible as well
       bar: Object.freeze({ a: 1 }),
-      baz: Object.seal({ a: 1 })
+      baz: Object.seal({ a: 1 }),
     })
     expect(isReactive(obj.foo)).toBe(false)
     expect(isReactive(obj.bar)).toBe(false)
@@ -270,7 +270,7 @@ describe('reactivity/reactive', () => {
   test('should not observe objects with __v_skip', () => {
     const original = {
       foo: 1,
-      __v_skip: true
+      __v_skip: true,
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)

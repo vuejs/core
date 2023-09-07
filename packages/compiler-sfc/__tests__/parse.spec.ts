@@ -8,7 +8,9 @@ describe('compiler:sfc', () => {
       // Padding determines how many blank lines will there be before the style block
       const padding = Math.round(Math.random() * 10)
       const style = parse(
-        `${'\n'.repeat(padding)}<style>\n.color {\n color: red;\n }\n</style>\n`
+        `${'\n'.repeat(
+          padding,
+        )}<style>\n.color {\n color: red;\n }\n</style>\n`,
       ).descriptor.styles[0]
 
       expect(style.map).not.toBeUndefined()
@@ -23,7 +25,7 @@ describe('compiler:sfc', () => {
       // Padding determines how many blank lines will there be before the style block
       const padding = Math.round(Math.random() * 10)
       const script = parse(
-        `${'\n'.repeat(padding)}<script>\nconsole.log(1)\n }\n</script>\n`
+        `${'\n'.repeat(padding)}<script>\nconsole.log(1)\n }\n</script>\n`,
       ).descriptor.script
 
       expect(script!.map).not.toBeUndefined()
@@ -37,7 +39,7 @@ describe('compiler:sfc', () => {
     test('custom block', () => {
       const padding = Math.round(Math.random() * 10)
       const custom = parse(
-        `${'\n'.repeat(padding)}<i18n>\n{\n  "greeting": "hello"\n}\n</i18n>\n`
+        `${'\n'.repeat(padding)}<i18n>\n{\n  "greeting": "hello"\n}\n</i18n>\n`,
       ).descriptor.customBlocks[0]
 
       expect(custom!.map).not.toBeUndefined()
@@ -72,42 +74,42 @@ h1 { color: red }
 
     const padTrue = parse(content.trim(), { pad: true }).descriptor
     expect(padTrue.script!.content).toBe(
-      Array(3 + 1).join('//\n') + '\nexport default {}\n'
+      Array(3 + 1).join('//\n') + '\nexport default {}\n',
     )
     expect(padTrue.styles[0].content).toBe(
-      Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
+      Array(6 + 1).join('\n') + '\nh1 { color: red }\n',
     )
     expect(padTrue.customBlocks[0].content).toBe(
-      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n'
+      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n',
     )
 
     const padLine = parse(content.trim(), { pad: 'line' }).descriptor
     expect(padLine.script!.content).toBe(
-      Array(3 + 1).join('//\n') + '\nexport default {}\n'
+      Array(3 + 1).join('//\n') + '\nexport default {}\n',
     )
     expect(padLine.styles[0].content).toBe(
-      Array(6 + 1).join('\n') + '\nh1 { color: red }\n'
+      Array(6 + 1).join('\n') + '\nh1 { color: red }\n',
     )
     expect(padLine.customBlocks[0].content).toBe(
-      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n'
+      Array(9 + 1).join('\n') + '\n{ "greeting": "hello" }\n',
     )
 
     const padSpace = parse(content.trim(), { pad: 'space' }).descriptor
     expect(padSpace.script!.content).toBe(
       `<template>\n<div></div>\n</template>\n<script>`.replace(/./g, ' ') +
-        '\nexport default {}\n'
+        '\nexport default {}\n',
     )
     expect(padSpace.styles[0].content).toBe(
       `<template>\n<div></div>\n</template>\n<script>\nexport default {}\n</script>\n<style>`.replace(
         /./g,
-        ' '
-      ) + '\nh1 { color: red }\n'
+        ' ',
+      ) + '\nh1 { color: red }\n',
     )
     expect(padSpace.customBlocks[0].content).toBe(
       `<template>\n<div></div>\n</template>\n<script>\nexport default {}\n</script>\n<style>\nh1 { color: red }\n</style>\n<i18n>`.replace(
         /./g,
-        ' '
-      ) + '\n{ "greeting": "hello" }\n'
+        ' ',
+      ) + '\n{ "greeting": "hello" }\n',
     )
   })
 
@@ -121,9 +123,9 @@ h1 { color: red }
       end: {
         line: 3,
         column: 1,
-        offset: 10 + content.length
+        offset: 10 + content.length,
       },
-      source: content
+      source: content,
     })
   })
 
@@ -134,7 +136,7 @@ h1 { color: red }
     expect(descriptor.template!.loc).toMatchObject({
       start: { line: 1, column: 1, offset: 0 },
       end: { line: 1, column: 1, offset: 0 },
-      source: ''
+      source: '',
     })
   })
 
@@ -145,7 +147,7 @@ h1 { color: red }
     expect(descriptor.template!.loc).toMatchObject({
       start: { line: 1, column: 11, offset: 10 },
       end: { line: 1, column: 11, offset: 10 },
-      source: ''
+      source: '',
     })
   })
 
@@ -156,7 +158,7 @@ h1 { color: red }
     expect(parse(`<style> \n\t </style>`).descriptor.styles.length).toBe(0)
     expect(parse(`<custom/>`).descriptor.customBlocks.length).toBe(0)
     expect(
-      parse(`<custom> \n\t </custom>`).descriptor.customBlocks.length
+      parse(`<custom> \n\t </custom>`).descriptor.customBlocks.length,
     ).toBe(0)
   })
 
@@ -171,21 +173,21 @@ h1 { color: red }
     const { descriptor } = parse(
       `<script></script>\n<script setup>\n</script>`,
       {
-        ignoreEmpty: false
-      }
+        ignoreEmpty: false,
+      },
     )
     expect(descriptor.script).toBeTruthy()
     expect(descriptor.script!.loc).toMatchObject({
       source: '',
       start: { line: 1, column: 9, offset: 8 },
-      end: { line: 1, column: 9, offset: 8 }
+      end: { line: 1, column: 9, offset: 8 },
     })
 
     expect(descriptor.scriptSetup).toBeTruthy()
     expect(descriptor.scriptSetup!.loc).toMatchObject({
       source: '\n',
       start: { line: 2, column: 15, offset: 32 },
-      end: { line: 3, column: 1, offset: 33 }
+      end: { line: 3, column: 1, offset: 33 },
     })
   })
 
@@ -201,7 +203,7 @@ h1 { color: red }
   test('treat empty lang attribute as the html', () => {
     const content = `<div><template v-if="ok">ok</template></div>`
     const { descriptor, errors } = parse(
-      `<template lang="">${content}</template>`
+      `<template lang="">${content}</template>`,
     )
     expect(descriptor.template!.content).toBe(content)
     expect(errors.length).toBe(0)
@@ -211,7 +213,7 @@ h1 { color: red }
   test('alternative template lang should be treated as plain text', () => {
     const content = `p(v-if="1 < 2") test`
     const { descriptor, errors } = parse(
-      `<template lang="pug">` + content + `</template>`
+      `<template lang="pug">` + content + `</template>`,
     )
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
@@ -233,17 +235,17 @@ h1 { color: red }
     expect(parse(`<template>hi</template>`).descriptor.slotted).toBe(false)
     expect(
       parse(`<template>hi</template><style>h1{color:red;}</style>`).descriptor
-        .slotted
+        .slotted,
     ).toBe(false)
     expect(
       parse(
-        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`
-      ).descriptor.slotted
+        `<template>hi</template><style scoped>:slotted(h1){color:red;}</style>`,
+      ).descriptor.slotted,
     ).toBe(true)
     expect(
       parse(
-        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`
-      ).descriptor.slotted
+        `<template>hi</template><style scoped>::v-slotted(h1){color:red;}</style>`,
+      ).descriptor.slotted,
     ).toBe(true)
   })
 
@@ -261,15 +263,15 @@ h1 { color: red }
     const { errors } = parse(`<template><input></template>`, {
       compiler: {
         parse: baseParse,
-        compile: baseCompile
-      }
+        compile: baseCompile,
+      },
     })
     expect(errors.length).toBe(1)
   })
 
   test('treat custom blocks as raw text', () => {
     const { errors, descriptor } = parse(
-      `<template><input></template><foo> <-& </foo>`
+      `<template><input></template><foo> <-& </foo>`,
     )
     expect(errors.length).toBe(0)
     expect(descriptor.customBlocks[0].content).toBe(` <-& `)
@@ -283,7 +285,7 @@ h1 { color: red }
     test('should only allow single template element', () => {
       assertWarning(
         parse(`<template><div/></template><template><div/></template>`).errors,
-        `Single file component can contain only one <template> element`
+        `Single file component can contain only one <template> element`,
       )
     })
 
@@ -291,24 +293,24 @@ h1 { color: red }
       assertWarning(
         parse(`<script>console.log(1)</script><script>console.log(1)</script>`)
           .errors,
-        `Single file component can contain only one <script> element`
+        `Single file component can contain only one <script> element`,
       )
     })
 
     test('should only allow single script setup element', () => {
       assertWarning(
         parse(
-          `<script setup>console.log(1)</script><script setup>console.log(1)</script>`
+          `<script setup>console.log(1)</script><script setup>console.log(1)</script>`,
         ).errors,
-        `Single file component can contain only one <script setup> element`
+        `Single file component can contain only one <script setup> element`,
       )
     })
 
     test('should not warn script & script setup', () => {
       expect(
         parse(
-          `<script setup>console.log(1)</script><script>console.log(1)</script>`
-        ).errors.length
+          `<script setup>console.log(1)</script><script>console.log(1)</script>`,
+        ).errors.length,
       ).toBe(0)
     })
 
@@ -316,7 +318,7 @@ h1 { color: red }
     test('should throw error if no <template> or <script> is present', () => {
       assertWarning(
         parse(`import { ref } from 'vue'`).errors,
-        `At least one <template> or <script> is required in a single file component`
+        `At least one <template> or <script> is required in a single file component`,
       )
     })
   })

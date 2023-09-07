@@ -11,7 +11,7 @@ describe('compiler sfc: rewriteDefault', () => {
 
   test('rewrite export default', () => {
     expect(
-      rewriteDefault(`export  default {}`, 'script')
+      rewriteDefault(`export  default {}`, 'script'),
     ).toMatchInlineSnapshot(`"const script = {}"`)
   })
 
@@ -27,8 +27,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `const a = 1 \n export { a as b, a as default, a as c}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const a = 1 
        export { a as b,  a as c}
@@ -38,8 +38,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `const a = 1 \n export { a as b, a as default    , a as c}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const a = 1 
        export { a as b,  a as c}
@@ -49,8 +49,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `const a = 1 \n export { a as b } \n export { a as default, a as c }`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const a = 1 
        export { a as b } 
@@ -69,7 +69,7 @@ describe('compiler sfc: rewriteDefault', () => {
 
   test('export named default multiline', () => {
     expect(
-      rewriteDefault(`let App = {}\n export {\nApp as default\n}`, '_sfc_main')
+      rewriteDefault(`let App = {}\n export {\nApp as default\n}`, '_sfc_main'),
     ).toMatchInlineSnapshot(`
       "let App = {}
        export {
@@ -84,8 +84,8 @@ describe('compiler sfc: rewriteDefault', () => {
       rewriteDefault(
         `const a = 1 \n export {\n a as b,\n a as default,\n a as c}\n` +
           `// export { myFunction as default }`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const a = 1 
        export {
@@ -100,8 +100,8 @@ describe('compiler sfc: rewriteDefault', () => {
       rewriteDefault(
         `const a = 1 \n export {\n a as b,\n a as default      ,\n a as c}\n` +
           `// export { myFunction as default }`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const a = 1 
        export {
@@ -115,7 +115,7 @@ describe('compiler sfc: rewriteDefault', () => {
 
   test(`export { default } from '...'`, async () => {
     expect(
-      rewriteDefault(`export { default, foo } from './index.js'`, 'script')
+      rewriteDefault(`export { default, foo } from './index.js'`, 'script'),
     ).toMatchInlineSnapshot(`
       "import { default as __VUE_DEFAULT__ } from './index.js'
       export {  foo } from './index.js'
@@ -123,7 +123,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
 
     expect(
-      rewriteDefault(`export { default    , foo } from './index.js'`, 'script')
+      rewriteDefault(`export { default    , foo } from './index.js'`, 'script'),
     ).toMatchInlineSnapshot(`
       "import { default as __VUE_DEFAULT__ } from './index.js'
       export {  foo } from './index.js'
@@ -131,7 +131,7 @@ describe('compiler sfc: rewriteDefault', () => {
     `)
 
     expect(
-      rewriteDefault(`export { foo,   default } from './index.js'`, 'script')
+      rewriteDefault(`export { foo,   default } from './index.js'`, 'script'),
     ).toMatchInlineSnapshot(`
       "import { default as __VUE_DEFAULT__ } from './index.js'
       export { foo,    } from './index.js'
@@ -141,8 +141,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export { foo as default, bar } from './index.js'`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "import { foo as __VUE_DEFAULT__ } from './index.js'
       export {  bar } from './index.js'
@@ -152,8 +152,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export { foo as default     , bar } from './index.js'`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "import { foo as __VUE_DEFAULT__ } from './index.js'
       export {  bar } from './index.js'
@@ -163,8 +163,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export { bar,   foo as default } from './index.js'`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "import { foo as __VUE_DEFAULT__ } from './index.js'
       export { bar,    } from './index.js'
@@ -174,8 +174,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export { foo as default } from './index.js' \n const foo = 1`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "import { foo as __VUE_DEFAULT__ } from './index.js'
       export {  } from './index.js' 
@@ -186,8 +186,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `const a = 1 \nexport { a as default } from 'xxx'`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "import { a as __VUE_DEFAULT__ } from 'xxx'
       const a = 1 
@@ -206,7 +206,10 @@ describe('compiler sfc: rewriteDefault', () => {
 
   test('export default class w/ comments', async () => {
     expect(
-      rewriteDefault(`// export default\nexport default class Foo {}`, 'script')
+      rewriteDefault(
+        `// export default\nexport default class Foo {}`,
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "// export default
        class Foo {}
@@ -218,8 +221,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export default {}\n` + `// export default class Foo {}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const script = {}
       // export default class Foo {}"
@@ -230,8 +233,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `/*\nexport default class Foo {}*/\n` + `export default class Bar {}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "/*
       export default class Foo {}*/
@@ -243,8 +246,8 @@ describe('compiler sfc: rewriteDefault', () => {
   test('@Component\nexport default class', async () => {
     expect(
       rewriteDefault(`@Component\nexport default class Foo {}`, 'script', [
-        'decorators-legacy'
-      ])
+        'decorators-legacy',
+      ]),
     ).toMatchInlineSnapshot(`
       "@Component class Foo {}
       const script = Foo"
@@ -256,8 +259,8 @@ describe('compiler sfc: rewriteDefault', () => {
       rewriteDefault(
         `// export default\n@Component\nexport default class Foo {}`,
         'script',
-        ['decorators-legacy']
-      )
+        ['decorators-legacy'],
+      ),
     ).toMatchInlineSnapshot(`
       "// export default
       @Component class Foo {}
@@ -269,8 +272,8 @@ describe('compiler sfc: rewriteDefault', () => {
     expect(
       rewriteDefault(
         `export default {}\n` + `// @Component\n// export default class Foo {}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "const script = {}
       // @Component
@@ -283,8 +286,8 @@ describe('compiler sfc: rewriteDefault', () => {
       rewriteDefault(
         `/*\n@Component\nexport default class Foo {}*/\n` +
           `export default class Bar {}`,
-        'script'
-      )
+        'script',
+      ),
     ).toMatchInlineSnapshot(`
       "/*
       @Component

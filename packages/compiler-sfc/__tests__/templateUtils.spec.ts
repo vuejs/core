@@ -1,7 +1,7 @@
 import {
   isRelativeUrl,
   isExternalUrl,
-  isDataUrl
+  isDataUrl,
 } from '../src/template/templateUtils'
 
 describe('compiler sfc:templateUtils isRelativeUrl', () => {

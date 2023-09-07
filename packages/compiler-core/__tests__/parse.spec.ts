@@ -11,7 +11,7 @@ import {
   TextNode,
   InterpolationNode,
   ConstantTypes,
-  DirectiveNode
+  DirectiveNode,
 } from '../src/ast'
 
 describe('compiler: parse', () => {
@@ -26,15 +26,15 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
-        }
+          source: 'some text',
+        },
       })
     })
 
     test('simple text with invalid end tag', () => {
       const onError = vi.fn()
       const ast = baseParse('some text</div>', {
-        onError
+        onError,
       })
       const text = ast.children[0] as TextNode
 
@@ -45,8 +45,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
-        }
+          source: 'some text',
+        },
       })
     })
 
@@ -61,8 +61,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -70,8 +70,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 20, line: 1, column: 21 },
           end: { offset: 25, line: 1, column: 26 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -86,8 +86,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -95,8 +95,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 21, line: 1, column: 22 },
           end: { offset: 26, line: 1, column: 27 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -111,8 +111,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
-        }
+          source: 'some ',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -120,8 +120,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 32, line: 1, column: 33 },
           end: { offset: 37, line: 1, column: 38 },
-          source: ' text'
-        }
+          source: ' text',
+        },
       })
     })
 
@@ -131,7 +131,7 @@ describe('compiler: parse', () => {
           if (err.code !== ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME) {
             throw err
           }
-        }
+        },
       })
       const text = ast.children[0] as TextNode
 
@@ -141,8 +141,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: 'a < b'
-        }
+          source: 'a < b',
+        },
       })
     })
 
@@ -152,7 +152,7 @@ describe('compiler: parse', () => {
           if (error.code !== ErrorCodes.X_MISSING_INTERPOLATION_END) {
             throw error
           }
-        }
+        },
       })
       const text = ast.children[0] as TextNode
 
@@ -162,8 +162,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
-          source: 'a {{ b'
-        }
+          source: 'a {{ b',
+        },
       })
     })
   })
@@ -183,14 +183,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 2, line: 1, column: 3 },
             end: { offset: 9, line: 1, column: 10 },
-            source: `message`
-          }
+            source: `message`,
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
-          source: '{{message}}'
-        }
+          source: '{{message}}',
+        },
       })
     })
 
@@ -208,14 +208,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
-          }
+            source: 'a<b',
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
-        }
+          source: '{{ a<b }}',
+        },
       })
     })
 
@@ -234,14 +234,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 3, line: 1, column: 4 },
             end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
-          }
+            source: 'a<b',
+          },
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
-        }
+          source: '{{ a<b }}',
+        },
       })
 
       expect(interpolation2).toStrictEqual({
@@ -254,14 +254,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 12, line: 1, column: 13 },
             end: { offset: 15, line: 1, column: 16 },
-            source: 'c>d'
-          }
+            source: 'c>d',
+          },
         },
         loc: {
           start: { offset: 9, line: 1, column: 10 },
           end: { offset: 18, line: 1, column: 19 },
-          source: '{{ c>d }}'
-        }
+          source: '{{ c>d }}',
+        },
       })
     })
 
@@ -281,20 +281,20 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 16, line: 1, column: 17 },
-            source: '"</div>"'
-          }
+            source: '"</div>"',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 19, line: 1, column: 20 },
-          source: '{{ "</div>" }}'
-        }
+          source: '{{ "</div>" }}',
+        },
       })
     })
 
     test('custom delimiters', () => {
       const ast = baseParse('<p>{msg}</p>', {
-        delimiters: ['{', '}']
+        delimiters: ['{', '}'],
       })
       const element = ast.children[0] as ElementNode
       const interpolation = element.children[0] as InterpolationNode
@@ -309,14 +309,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 4, line: 1, column: 5 },
             end: { offset: 7, line: 1, column: 8 },
-            source: 'msg'
-          }
+            source: 'msg',
+          },
         },
         loc: {
           start: { offset: 3, line: 1, column: 4 },
           end: { offset: 8, line: 1, column: 9 },
-          source: '{msg}'
-        }
+          source: '{msg}',
+        },
       })
     })
   })
@@ -332,8 +332,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 7, line: 1, column: 8 },
-          source: '<!---->'
-        }
+          source: '<!---->',
+        },
       })
     })
 
@@ -347,8 +347,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
-        }
+          source: '<!--abc-->',
+        },
       })
     })
 
@@ -363,8 +363,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
-        }
+          source: '<!--abc-->',
+        },
       })
       expect(comment2).toStrictEqual({
         type: NodeTypes.COMMENT,
@@ -372,8 +372,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 20, line: 1, column: 21 },
-          source: '<!--def-->'
-        }
+          source: '<!--def-->',
+        },
       })
     })
 
@@ -390,38 +390,38 @@ describe('compiler: parse', () => {
       const rawText = `<p/><!-- foo --><p/>`
 
       const astWithComments = baseParse(`<pre>${rawText}</pre>`, {
-        comments: true
+        comments: true,
       })
       expect(
-        (astWithComments.children[0] as ElementNode).children
+        (astWithComments.children[0] as ElementNode).children,
       ).toMatchObject([
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
+          tag: 'p',
         },
         {
-          type: NodeTypes.COMMENT
+          type: NodeTypes.COMMENT,
         },
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
-        }
+          tag: 'p',
+        },
       ])
 
       const astWithoutComments = baseParse(`<pre>${rawText}</pre>`, {
-        comments: false
+        comments: false,
       })
       expect(
-        (astWithoutComments.children[0] as ElementNode).children
+        (astWithoutComments.children[0] as ElementNode).children,
       ).toMatchObject([
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
+          tag: 'p',
         },
         {
           type: NodeTypes.ELEMENT,
-          tag: 'p'
-        }
+          tag: 'p',
+        },
       ])
     })
   })
@@ -446,15 +446,15 @@ describe('compiler: parse', () => {
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'hello'
-            }
-          }
+              source: 'hello',
+            },
+          },
         ],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 16, line: 1, column: 17 },
-          source: '<div>hello</div>'
-        }
+          source: '<div>hello</div>',
+        },
       })
     })
 
@@ -474,8 +474,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
-          source: '<div></div>'
-        }
+          source: '<div></div>',
+        },
       })
     })
 
@@ -496,14 +496,14 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
-          source: '<div/>'
-        }
+          source: '<div/>',
+        },
       })
     })
 
     test('void element', () => {
       const ast = baseParse('<img>after', {
-        isVoidTag: tag => tag === 'img'
+        isVoidTag: tag => tag === 'img',
       })
       const element = ast.children[0] as ElementNode
 
@@ -520,8 +520,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: '<img>'
-        }
+          source: '<img>',
+        },
       })
     })
 
@@ -530,7 +530,7 @@ describe('compiler: parse', () => {
       const element = ast.children[0]
       expect(element).toMatchObject({
         type: NodeTypes.ELEMENT,
-        tagType: ElementTypes.TEMPLATE
+        tagType: ElementTypes.TEMPLATE,
       })
     })
 
@@ -539,31 +539,31 @@ describe('compiler: parse', () => {
       const element = ast.children[0]
       expect(element).toMatchObject({
         type: NodeTypes.ELEMENT,
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
     })
 
     test('native element with `isNativeTag`', () => {
       const ast = baseParse('<div></div><comp></comp><Comp></Comp>', {
-        isNativeTag: tag => tag === 'div'
+        isNativeTag: tag => tag === 'div',
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -573,19 +573,19 @@ describe('compiler: parse', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -593,26 +593,26 @@ describe('compiler: parse', () => {
       const ast = baseParse(
         `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
         {
-          isNativeTag: tag => tag === 'div'
-        }
+          isNativeTag: tag => tag === 'div',
+        },
       )
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -622,56 +622,56 @@ describe('compiler: parse', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
     test('custom element', () => {
       const ast = baseParse('<div></div><comp></comp>', {
         isNativeTag: tag => tag === 'div',
-        isCustomElement: tag => tag === 'comp'
+        isCustomElement: tag => tag === 'comp',
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
     })
 
     test('built-in component', () => {
       const ast = baseParse('<div></div><comp></comp>', {
-        isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0)
+        isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0),
       })
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -681,13 +681,13 @@ describe('compiler: parse', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'slot',
-        tagType: ElementTypes.SLOT
+        tagType: ElementTypes.SLOT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
@@ -709,9 +709,9 @@ describe('compiler: parse', () => {
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 7, line: 1, column: 8 },
-              source: 'id'
-            }
-          }
+              source: 'id',
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -719,8 +719,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 14, line: 1, column: 15 },
-          source: '<div id></div>'
-        }
+          source: '<div id></div>',
+        },
       })
     })
 
@@ -744,15 +744,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: '""'
-              }
+                source: '""',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'id=""'
-            }
-          }
+              source: 'id=""',
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -760,8 +760,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=""></div>'
-        }
+          source: '<div id=""></div>',
+        },
       })
     })
 
@@ -785,15 +785,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: "''"
-              }
+                source: "''",
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: "id=''"
-            }
-          }
+              source: "id=''",
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -801,8 +801,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: "<div id=''></div>"
-        }
+          source: "<div id=''></div>",
+        },
       })
     })
 
@@ -826,15 +826,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
-                source: '">\'"'
-              }
+                source: '">\'"',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 12, line: 1, column: 13 },
-              source: 'id=">\'"'
-            }
-          }
+              source: 'id=">\'"',
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -842,8 +842,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 19, line: 1, column: 20 },
-          source: '<div id=">\'"></div>'
-        }
+          source: '<div id=">\'"></div>',
+        },
       })
     })
 
@@ -867,15 +867,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 12, line: 1, column: 13 },
-                source: "'>\"'"
-              }
+                source: "'>\"'",
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 12, line: 1, column: 13 },
-              source: "id='>\"'"
-            }
-          }
+              source: "id='>\"'",
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -883,8 +883,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 19, line: 1, column: 20 },
-          source: "<div id='>\"'></div>"
-        }
+          source: "<div id='>\"'></div>",
+        },
       })
     })
 
@@ -908,15 +908,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 10, line: 1, column: 11 },
-                source: 'a/'
-              }
+                source: 'a/',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 10, line: 1, column: 11 },
-              source: 'id=a/'
-            }
-          }
+              source: 'id=a/',
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -924,8 +924,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=a/></div>'
-        }
+          source: '<div id=a/></div>',
+        },
       })
     })
 
@@ -949,14 +949,14 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
                 end: { offset: 9, line: 1, column: 10 },
-                source: 'a'
-              }
+                source: 'a',
+              },
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
               end: { offset: 9, line: 1, column: 10 },
-              source: 'id=a'
-            }
+              source: 'id=a',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
@@ -967,14 +967,14 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 16, line: 1, column: 17 },
                 end: { offset: 19, line: 1, column: 20 },
-                source: '"c"'
-              }
+                source: '"c"',
+              },
             },
             loc: {
               start: { offset: 10, line: 1, column: 11 },
               end: { offset: 19, line: 1, column: 20 },
-              source: 'class="c"'
-            }
+              source: 'class="c"',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
@@ -983,8 +983,8 @@ describe('compiler: parse', () => {
             loc: {
               start: { offset: 20, line: 1, column: 21 },
               end: { offset: 25, line: 1, column: 26 },
-              source: 'inert'
-            }
+              source: 'inert',
+            },
           },
           {
             type: NodeTypes.ATTRIBUTE,
@@ -995,15 +995,15 @@ describe('compiler: parse', () => {
               loc: {
                 start: { offset: 32, line: 1, column: 33 },
                 end: { offset: 34, line: 1, column: 35 },
-                source: "''"
-              }
+                source: "''",
+              },
             },
             loc: {
               start: { offset: 26, line: 1, column: 27 },
               end: { offset: 34, line: 1, column: 35 },
-              source: "style=''"
-            }
-          }
+              source: "style=''",
+            },
+          },
         ],
 
         isSelfClosing: false,
@@ -1011,8 +1011,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 41, line: 1, column: 42 },
-          source: '<div id=a class="c" inert style=\'\'></div>'
-        }
+          source: '<div id=a class="c" inert style=\'\'></div>',
+        },
       })
     })
 
@@ -1029,14 +1029,14 @@ describe('compiler: parse', () => {
           end: {
             column: 10,
             line: 3,
-            offset: 29
+            offset: 29,
           },
           source: '<div class=" \n\t c \t\n "></div>',
           start: {
             column: 1,
             line: 1,
-            offset: 0
-          }
+            offset: 0,
+          },
         },
         ns: Namespaces.HTML,
         props: [
@@ -1045,14 +1045,14 @@ describe('compiler: parse', () => {
               end: {
                 column: 3,
                 line: 3,
-                offset: 22
+                offset: 22,
               },
               source: 'class=" \n\t c \t\n "',
               start: {
                 column: 6,
                 line: 1,
-                offset: 5
-              }
+                offset: 5,
+              },
             },
             name: 'class',
             type: NodeTypes.ATTRIBUTE,
@@ -1062,22 +1062,22 @@ describe('compiler: parse', () => {
                 end: {
                   column: 3,
                   line: 3,
-                  offset: 22
+                  offset: 22,
                 },
                 source: '" \n\t c \t\n "',
                 start: {
                   column: 12,
                   line: 1,
-                  offset: 11
-                }
+                  offset: 11,
+                },
               },
-              type: NodeTypes.TEXT
-            }
-          }
+              type: NodeTypes.TEXT,
+            },
+          },
         ],
         tag: 'div',
         tagType: ElementTypes.ELEMENT,
-        type: NodeTypes.ELEMENT
+        type: NodeTypes.ELEMENT,
       })
     })
 
@@ -1094,8 +1094,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: 'v-if'
-        }
+          source: 'v-if',
+        },
       })
     })
 
@@ -1116,14 +1116,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 11, line: 1, column: 12 },
             end: { offset: 12, line: 1, column: 13 },
-            source: 'a'
-          }
+            source: 'a',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 13, line: 1, column: 14 },
-          source: 'v-if="a"'
-        }
+          source: 'v-if="a"',
+        },
       })
     })
 
@@ -1145,22 +1145,22 @@ describe('compiler: parse', () => {
             start: {
               column: 11,
               line: 1,
-              offset: 10
+              offset: 10,
             },
             end: {
               column: 16,
               line: 1,
-              offset: 15
-            }
-          }
+              offset: 15,
+            },
+          },
         },
         modifiers: [],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on:click'
-        }
+          source: 'v-on:click',
+        },
       })
     })
 
@@ -1173,8 +1173,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 12, line: 1, column: 13 },
           end: { offset: 16, line: 1, column: 17 },
-          source: 'slot'
-        }
+          source: 'slot',
+        },
       })
     })
 
@@ -1187,8 +1187,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'item.item'
-        }
+          source: 'item.item',
+        },
       })
     })
 
@@ -1210,22 +1210,22 @@ describe('compiler: parse', () => {
             start: {
               column: 11,
               line: 1,
-              offset: 10
+              offset: 10,
             },
             end: {
               column: 18,
               line: 1,
-              offset: 17
-            }
-          }
+              offset: 17,
+            },
+          },
         },
         modifiers: [],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 17, line: 1, column: 18 },
-          source: 'v-on:[event]'
-        }
+          source: 'v-on:[event]',
+        },
       })
     })
 
@@ -1242,8 +1242,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on.enter'
-        }
+          source: 'v-on.enter',
+        },
       })
     })
 
@@ -1260,8 +1260,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on.enter.exact'
-        }
+          source: 'v-on.enter.exact',
+        },
       })
     })
 
@@ -1283,22 +1283,22 @@ describe('compiler: parse', () => {
             start: {
               column: 11,
               line: 1,
-              offset: 10
+              offset: 10,
             },
             end: {
               column: 16,
               line: 1,
-              offset: 15
-            }
-          }
+              offset: 15,
+            },
+          },
         },
         modifiers: ['enter', 'exact'],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 27, line: 1, column: 28 },
-          source: 'v-on:click.enter.exact'
-        }
+          source: 'v-on:click.enter.exact',
+        },
       })
     })
 
@@ -1320,22 +1320,22 @@ describe('compiler: parse', () => {
             start: {
               column: 11,
               line: 1,
-              offset: 10
+              offset: 10,
             },
             end: {
               column: 16,
               line: 1,
-              offset: 15
-            }
-          }
+              offset: 15,
+            },
+          },
         },
         modifiers: ['camel'],
         exp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on:[a.b].camel'
-        }
+          source: 'v-on:[a.b].camel',
+        },
       })
     })
     test('directive with no name', () => {
@@ -1343,7 +1343,7 @@ describe('compiler: parse', () => {
       const ast = baseParse('<div v-/>', {
         onError: err => {
           errorCode = err.code as number
-        }
+        },
       })
       const directive = (ast.children[0] as ElementNode).props[0]
 
@@ -1355,8 +1355,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 7, line: 1, column: 8 },
-          source: 'v-'
-        }
+          source: 'v-',
+        },
       })
     })
 
@@ -1378,14 +1378,14 @@ describe('compiler: parse', () => {
             start: {
               column: 7,
               line: 1,
-              offset: 6
+              offset: 6,
             },
             end: {
               column: 8,
               line: 1,
-              offset: 7
-            }
-          }
+              offset: 7,
+            },
+          },
         },
         modifiers: [],
         exp: {
@@ -1397,14 +1397,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: ':a=b'
-        }
+          source: ':a=b',
+        },
       })
     })
 
@@ -1426,14 +1426,14 @@ describe('compiler: parse', () => {
             start: {
               column: 7,
               line: 1,
-              offset: 6
+              offset: 6,
             },
             end: {
               column: 8,
               line: 1,
-              offset: 7
-            }
-          }
+              offset: 7,
+            },
+          },
         },
         modifiers: ['prop'],
         exp: {
@@ -1445,14 +1445,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '.a=b'
-        }
+          source: '.a=b',
+        },
       })
     })
 
@@ -1474,14 +1474,14 @@ describe('compiler: parse', () => {
             start: {
               column: 7,
               line: 1,
-              offset: 6
+              offset: 6,
             },
             end: {
               column: 8,
               line: 1,
-              offset: 7
-            }
-          }
+              offset: 7,
+            },
+          },
         },
         modifiers: ['sync'],
         exp: {
@@ -1493,14 +1493,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 13, line: 1, column: 14 },
             end: { offset: 14, line: 1, column: 15 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 14, line: 1, column: 15 },
-          source: ':a.sync=b'
-        }
+          source: ':a.sync=b',
+        },
       })
     })
 
@@ -1522,14 +1522,14 @@ describe('compiler: parse', () => {
             start: {
               column: 7,
               line: 1,
-              offset: 6
+              offset: 6,
             },
             end: {
               column: 8,
               line: 1,
-              offset: 7
-            }
-          }
+              offset: 7,
+            },
+          },
         },
         modifiers: [],
         exp: {
@@ -1541,14 +1541,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
-          source: '@a=b'
-        }
+          source: '@a=b',
+        },
       })
     })
 
@@ -1570,14 +1570,14 @@ describe('compiler: parse', () => {
             start: {
               column: 7,
               line: 1,
-              offset: 6
+              offset: 6,
             },
             end: {
               column: 8,
               line: 1,
-              offset: 7
-            }
-          }
+              offset: 7,
+            },
+          },
         },
         modifiers: ['enter'],
         exp: {
@@ -1589,14 +1589,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 14, line: 1, column: 15 },
             end: { offset: 15, line: 1, column: 16 },
-            source: 'b'
-          }
+            source: 'b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
-          source: '@a.enter=b'
-        }
+          source: '@a.enter=b',
+        },
       })
     })
 
@@ -1617,14 +1617,14 @@ describe('compiler: parse', () => {
             start: {
               column: 8,
               line: 1,
-              offset: 7
+              offset: 7,
             },
             end: {
               column: 9,
               line: 1,
-              offset: 8
-            }
-          }
+              offset: 8,
+            },
+          },
         },
         modifiers: [],
         exp: {
@@ -1636,14 +1636,14 @@ describe('compiler: parse', () => {
           loc: {
             start: { offset: 10, line: 1, column: 11 },
             end: { offset: 15, line: 1, column: 16 },
-            source: '{ b }'
-          }
+            source: '{ b }',
+          },
         },
         loc: {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
-          source: '#a="{ b }"'
-        }
+          source: '#a="{ b }"',
+        },
       })
     })
 
@@ -1665,22 +1665,22 @@ describe('compiler: parse', () => {
             start: {
               column: 14,
               line: 1,
-              offset: 13
+              offset: 13,
             },
             end: {
               column: 21,
               line: 1,
-              offset: 20
-            }
-          }
-        }
+              offset: 20,
+            },
+          },
+        },
       })
     })
 
     test('v-pre', () => {
       const ast = baseParse(
         `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
-          `<div :id="foo"><Comp/>{{ bar }}</div>`
+          `<div :id="foo"><Comp/>{{ bar }}</div>`,
       )
 
       const divWithPre = ast.children[0] as ElementNode
@@ -1690,29 +1690,29 @@ describe('compiler: parse', () => {
           name: `:id`,
           value: {
             type: NodeTypes.TEXT,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
             source: `:id="foo"`,
             start: {
               line: 1,
-              column: 12
+              column: 12,
             },
             end: {
               line: 1,
-              column: 21
-            }
-          }
-        }
+              column: 21,
+            },
+          },
+        },
       ])
       expect(divWithPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.ELEMENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithPre.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: `{{ bar }}`
+        content: `{{ bar }}`,
       })
 
       // should not affect siblings after it
@@ -1724,44 +1724,44 @@ describe('compiler: parse', () => {
           arg: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: true,
-            content: `id`
+            content: `id`,
           },
           exp: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: false,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
             source: `:id="foo"`,
             start: {
               line: 2,
-              column: 6
+              column: 6,
             },
             end: {
               line: 2,
-              column: 15
-            }
-          }
-        }
+              column: 15,
+            },
+          },
+        },
       ])
       expect(divWithoutPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.COMPONENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithoutPre.children[1]).toMatchObject({
         type: NodeTypes.INTERPOLATION,
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `bar`,
-          isStatic: false
-        }
+          isStatic: false,
+        },
       })
     })
 
     test('self-closing v-pre', () => {
       const ast = baseParse(
-        `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
+        `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`,
       )
       // should not affect siblings after it
       const divWithoutPre = ast.children[1] as ElementNode
@@ -1772,38 +1772,38 @@ describe('compiler: parse', () => {
           arg: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: true,
-            content: `id`
+            content: `id`,
           },
           exp: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: false,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
             source: `:id="foo"`,
             start: {
               line: 2,
-              column: 6
+              column: 6,
             },
             end: {
               line: 2,
-              column: 15
-            }
-          }
-        }
+              column: 15,
+            },
+          },
+        },
       ])
       expect(divWithoutPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.COMPONENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithoutPre.children[1]).toMatchObject({
         type: NodeTypes.INTERPOLATION,
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `bar`,
-          isStatic: false
-        }
+          isStatic: false,
+        },
       })
     })
 
@@ -1818,8 +1818,8 @@ describe('compiler: parse', () => {
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 10, line: 1, column: 11 },
-          source: 'hello'
-        }
+          source: 'hello',
+        },
       })
     })
   })
@@ -1834,7 +1834,7 @@ describe('compiler: parse', () => {
   test('self closing multiple tag', () => {
     const ast = baseParse(
       `<div :class="{ some: condition }" />\n` +
-        `<p v-bind:style="{ color: 'red' }"/>`
+        `<p v-bind:style="{ color: 'red' }"/>`,
     )
 
     expect(ast).toMatchSnapshot()
@@ -1849,7 +1849,7 @@ describe('compiler: parse', () => {
       `<div :class="{ some: condition }">\n` +
         `  <p v-bind:style="{ color: 'red' }"/>\n` +
         `  <!-- a comment with <html> inside it -->\n` +
-        `</div>`
+        `</div>`,
     )
 
     expect(ast).toMatchSnapshot()
@@ -1857,14 +1857,14 @@ describe('compiler: parse', () => {
     expect(ast.children).toHaveLength(1)
     const el = ast.children[0] as any
     expect(el).toMatchObject({
-      tag: 'div'
+      tag: 'div',
     })
     expect(el.children).toHaveLength(2)
     expect(el.children[0]).toMatchObject({
-      tag: 'p'
+      tag: 'p',
     })
     expect(el.children[1]).toMatchObject({
-      type: NodeTypes.COMMENT
+      type: NodeTypes.COMMENT,
     })
   })
 
@@ -1875,7 +1875,7 @@ describe('compiler: parse', () => {
 
     const spy = vi.fn()
     const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
-      onError: spy
+      onError: spy,
     })
 
     expect(spy.mock.calls).toMatchObject([
@@ -1886,10 +1886,10 @@ describe('compiler: parse', () => {
             start: {
               offset: 6,
               line: 2,
-              column: 1
-            }
-          }
-        }
+              column: 1,
+            },
+          },
+        },
       ],
       [
         {
@@ -1898,11 +1898,11 @@ describe('compiler: parse', () => {
             start: {
               offset: 20,
               line: 4,
-              column: 1
-            }
-          }
-        }
-      ]
+              column: 1,
+            },
+          },
+        },
+      ],
     ])
 
     expect(ast).toMatchSnapshot()
@@ -1912,7 +1912,7 @@ describe('compiler: parse', () => {
     const [foo, bar, but, baz] = baseParse(
       `
 foo
- is {{ bar }} but {{ baz }}`.trim()
+ is {{ bar }} but {{ baz }}`.trim(),
     ).children
 
     let offset = 0
@@ -1955,7 +1955,7 @@ foo
     test('use the given map', () => {
       const ast: any = baseParse('&amp;&cups;', {
         decodeEntities: text => text.replace('&cups;', '\u222A\uFE00'),
-        onError: () => {} // Ignore errors
+        onError: () => {}, // Ignore errors
       })
 
       expect(ast.children.length).toBe(1)
@@ -1968,7 +1968,7 @@ foo
     const parse = (content: string, options?: ParserOptions) =>
       baseParse(content, {
         whitespace: 'condense',
-        ...options
+        ...options,
       })
 
     it('should remove whitespaces at start/end inside an element', () => {
@@ -2004,7 +2004,7 @@ foo
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
@@ -2015,7 +2015,7 @@ foo
       expect(ast.children[0].type).toBe(NodeTypes.COMMENT)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
@@ -2028,7 +2028,7 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
@@ -2039,7 +2039,7 @@ foo
 
     it('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
-        isPreTag: tag => tag === 'pre'
+        isPreTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
       const preElement = ast.children[0] as ElementNode
@@ -2049,18 +2049,18 @@ foo
 
     it('should NOT remove leading newline character immediately following child-tag of pre element', () => {
       const ast = baseParse(`<pre><span></span>\n  foo  bar  </pre>`, {
-        isPreTag: tag => tag === 'pre'
+        isPreTag: tag => tag === 'pre',
       })
       const preElement = ast.children[0] as ElementNode
       expect(preElement.children).toHaveLength(2)
       expect((preElement.children[1] as TextNode).content).toBe(
-        `\n  foo  bar  `
+        `\n  foo  bar  `,
       )
     })
 
     it('self-closing pre tag', () => {
       const ast = baseParse(`<pre/><span>\n  foo   bar</span>`, {
-        isPreTag: tag => tag === 'pre'
+        isPreTag: tag => tag === 'pre',
       })
       const elementAfterPre = ast.children[1] as ElementNode
       // should not affect the <span> and condense its whitespace inside
@@ -2070,7 +2070,7 @@ foo
     it('should NOT condense whitespaces in RCDATA text mode', () => {
       const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
         getTextMode: ({ tag }) =>
-          tag === 'textarea' ? TextModes.RCDATA : TextModes.DATA
+          tag === 'textarea' ? TextModes.RCDATA : TextModes.DATA,
       })
       const preElement = ast.children[0] as ElementNode
       expect(preElement.children).toHaveLength(1)
@@ -2082,7 +2082,7 @@ foo
     const parse = (content: string, options?: ParserOptions) =>
       baseParse(content, {
         whitespace: 'preserve',
-        ...options
+        ...options,
       })
 
     it('should still remove whitespaces at start/end inside an element', () => {
@@ -2098,7 +2098,7 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
@@ -2110,7 +2110,7 @@ foo
         NodeTypes.TEXT,
         NodeTypes.COMMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
@@ -2122,7 +2122,7 @@ foo
         NodeTypes.TEXT,
         NodeTypes.COMMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
@@ -2132,7 +2132,7 @@ foo
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: ' '
+        content: ' ',
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
@@ -2145,7 +2145,7 @@ foo
         NodeTypes.TEXT,
         NodeTypes.ELEMENT,
         NodeTypes.TEXT,
-        NodeTypes.ELEMENT
+        NodeTypes.ELEMENT,
       ])
     })
 
@@ -2170,23 +2170,23 @@ foo
           errors: [
             {
               type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><!---></template>',
           errors: [
             {
               type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><!----></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       CDATA_IN_HTML_CONTENT: [
         {
@@ -2194,14 +2194,14 @@ foo
           errors: [
             {
               type: ErrorCodes.CDATA_IN_HTML_CONTENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><svg><![CDATA[cdata]]></svg></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       DUPLICATE_ATTRIBUTE: [
         {
@@ -2209,10 +2209,10 @@ foo
           errors: [
             {
               type: ErrorCodes.DUPLICATE_ATTRIBUTE,
-              loc: { offset: 21, line: 1, column: 22 }
-            }
-          ]
-        }
+              loc: { offset: 21, line: 1, column: 22 },
+            },
+          ],
+        },
       ],
       END_TAG_WITH_ATTRIBUTES: [
         {
@@ -2220,10 +2220,10 @@ foo
           errors: [
             {
               type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
-              loc: { offset: 21, line: 1, column: 22 }
-            }
-          ]
-        }
+              loc: { offset: 21, line: 1, column: 22 },
+            },
+          ],
+        },
       ],
       END_TAG_WITH_TRAILING_SOLIDUS: [
         {
@@ -2231,10 +2231,10 @@ foo
           errors: [
             {
               type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
-        }
+              loc: { offset: 20, line: 1, column: 21 },
+            },
+          ],
+        },
       ],
       EOF_BEFORE_TAG_NAME: [
         {
@@ -2242,27 +2242,27 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_BEFORE_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
+              loc: { offset: 11, line: 1, column: 12 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template></',
           errors: [
             {
               type: ErrorCodes.EOF_BEFORE_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
+              loc: { offset: 12, line: 1, column: 13 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_CDATA: [
         {
@@ -2270,35 +2270,35 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_IN_CDATA,
-              loc: { offset: 29, line: 1, column: 30 }
+              loc: { offset: 29, line: 1, column: 30 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><svg><![CDATA[',
           errors: [
             {
               type: ErrorCodes.EOF_IN_CDATA,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_COMMENT: [
         {
@@ -2306,26 +2306,26 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 21, line: 1, column: 22 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><!--',
           errors: [
             {
               type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 14, line: 1, column: 15 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         // Bogus comments don't throw eof-in-comment error.
         // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
@@ -2334,40 +2334,40 @@ foo
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><!-',
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><!abc',
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT: [
         {
@@ -2375,23 +2375,23 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
+              loc: { offset: 0, line: 1, column: 1 },
             },
             {
               type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
-              loc: { offset: 32, line: 1, column: 33 }
-            }
-          ]
+              loc: { offset: 32, line: 1, column: 33 },
+            },
+          ],
         },
         {
           code: "<script>console.log('hello')",
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       EOF_IN_TAG: [
         {
@@ -2399,247 +2399,247 @@ foo
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 14, line: 1, column: 15 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div ',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 15, line: 1, column: 16 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 17, line: 1, column: 18 }
+              loc: { offset: 17, line: 1, column: 18 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id ',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 18, line: 1, column: 19 }
+              loc: { offset: 18, line: 1, column: 19 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id =',
           errors: [
             {
               type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 19, line: 1, column: 20 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 19, line: 1, column: 20 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: "<template><div id='abc",
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id="abc',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: "<template><div id='abc'",
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id="abc"',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id=abc',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 21, line: 1, column: 22 }
+              loc: { offset: 21, line: 1, column: 22 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: "<template><div id='abc'/",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id="abc"/',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 24, line: 1, column: 25 }
+              loc: { offset: 24, line: 1, column: 25 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template><div id=abc /',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 22, line: 1, column: 23 }
+              loc: { offset: 22, line: 1, column: 23 },
             },
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 23, line: 1, column: 24 }
+              loc: { offset: 23, line: 1, column: 24 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<div></div',
           errors: [
             {
               type: ErrorCodes.EOF_IN_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
+        },
       ],
       INCORRECTLY_CLOSED_COMMENT: [
         {
@@ -2647,10 +2647,10 @@ foo
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
+        },
       ],
       INCORRECTLY_OPENED_COMMENT: [
         {
@@ -2658,33 +2658,33 @@ foo
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><!-></template>',
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><!ELEMENT br EMPTY></template>',
           errors: [
             {
               type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         // Just ignore doctype.
         {
           code: '<!DOCTYPE html>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       INVALID_FIRST_CHARACTER_OF_TAG_NAME: [
         {
@@ -2692,46 +2692,46 @@ foo
           errors: [
             {
               type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 13, line: 1, column: 14 }
-            }
-          ]
+              loc: { offset: 13, line: 1, column: 14 },
+            },
+          ],
         },
         {
           code: '<template><�></template>',
           errors: [
             {
               type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
-            }
-          ]
+              loc: { offset: 11, line: 1, column: 12 },
+            },
+          ],
         },
         {
           code: '<template>a </ b</template>',
           errors: [
             {
               type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 14, line: 1, column: 15 }
+              loc: { offset: 14, line: 1, column: 15 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '<template></�></template>',
           errors: [
             {
               type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
-            }
-          ]
+              loc: { offset: 12, line: 1, column: 13 },
+            },
+          ],
         },
         // Don't throw invalid-first-character-of-tag-name in interpolation
         {
           code: '<template>{{a < b}}</template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       MISSING_ATTRIBUTE_VALUE: [
         {
@@ -2739,23 +2739,23 @@ foo
           errors: [
             {
               type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 18, line: 1, column: 19 }
-            }
-          ]
+              loc: { offset: 18, line: 1, column: 19 },
+            },
+          ],
         },
         {
           code: '<template><div id= ></div></template>',
           errors: [
             {
               type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 19, line: 1, column: 20 }
-            }
-          ]
+              loc: { offset: 19, line: 1, column: 20 },
+            },
+          ],
         },
         {
           code: '<template><div id= /></div></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       MISSING_END_TAG_NAME: [
         {
@@ -2763,10 +2763,10 @@ foo
           errors: [
             {
               type: ErrorCodes.MISSING_END_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
-            }
-          ]
-        }
+              loc: { offset: 12, line: 1, column: 13 },
+            },
+          ],
+        },
       ],
       MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
         {
@@ -2774,16 +2774,16 @@ foo
           errors: [
             {
               type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
-              loc: { offset: 23, line: 1, column: 24 }
-            }
-          ]
+              loc: { offset: 23, line: 1, column: 24 },
+            },
+          ],
         },
         // CR doesn't appear in tokenization phase, but all CR are removed in preprocessing.
         // https://html.spec.whatwg.org/multipage/parsing.html#preprocessing-the-input-stream
         {
           code: '<template><div id="foo"\r\nclass="bar"></div></template>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       NESTED_COMMENT: [
         {
@@ -2791,49 +2791,49 @@ foo
           errors: [
             {
               type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
         },
         {
           code: '<template><!--a<!--b<!--c--></template>',
           errors: [
             {
               type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
+              loc: { offset: 15, line: 1, column: 16 },
             },
             {
               type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
+              loc: { offset: 20, line: 1, column: 21 },
+            },
+          ],
         },
         {
           code: '<template><!--a<!--b<!----></template>',
           errors: [
             {
               type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
         },
         {
           code: '<template><!--a<!--></template>',
-          errors: []
+          errors: [],
         },
         {
           code: '<template><!--a<!--',
           errors: [
             {
               type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 19, line: 1, column: 20 }
+              loc: { offset: 19, line: 1, column: 20 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME: [
         {
@@ -2841,28 +2841,28 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
         },
         {
           code: "<template><div a'bc=''></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
         },
         {
           code: "<template><div a<bc=''></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        }
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE: [
         {
@@ -2870,46 +2870,46 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: "<template><div foo=bar'></div></template>",
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar<div></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar=baz></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
         },
         {
           code: '<template><div foo=bar`></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-              loc: { offset: 22, line: 1, column: 23 }
-            }
-          ]
-        }
+              loc: { offset: 22, line: 1, column: 23 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME: [
         {
@@ -2917,19 +2917,19 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
         },
         {
           code: '<template><div =></div></template>',
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        }
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME: [
         {
@@ -2937,10 +2937,10 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
-            }
-          ]
-        }
+              loc: { offset: 11, line: 1, column: 12 },
+            },
+          ],
+        },
       ],
       UNEXPECTED_SOLIDUS_IN_TAG: [
         {
@@ -2948,10 +2948,10 @@ foo
           errors: [
             {
               type: ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
-        }
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
+        },
       ],
       X_INVALID_END_TAG: [
         {
@@ -2959,39 +2959,39 @@ foo
           errors: [
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template></div></div></template>',
           errors: [
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_INVALID_END_TAG,
-              loc: { offset: 16, line: 1, column: 17 }
-            }
-          ]
+              loc: { offset: 16, line: 1, column: 17 },
+            },
+          ],
         },
         {
           code: "<template>{{'</div>'}}</template>",
-          errors: []
+          errors: [],
         },
         {
           code: '<textarea></div></textarea>',
-          errors: []
+          errors: [],
         },
         {
           code: '<svg><![CDATA[</div>]]></svg>',
-          errors: []
+          errors: [],
         },
         {
           code: '<svg><!--</div>--></svg>',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       X_MISSING_END_TAG: [
         {
@@ -2999,23 +2999,23 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
+              loc: { offset: 10, line: 1, column: 11 },
+            },
+          ],
         },
         {
           code: '<template><div>',
           errors: [
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
+              loc: { offset: 10, line: 1, column: 11 },
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
+        },
       ],
       X_MISSING_INTERPOLATION_END: [
         {
@@ -3023,23 +3023,23 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_INTERPOLATION_END,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '{{',
           errors: [
             {
               type: ErrorCodes.X_MISSING_INTERPOLATION_END,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
+              loc: { offset: 0, line: 1, column: 1 },
+            },
+          ],
         },
         {
           code: '{{}}',
-          errors: []
-        }
+          errors: [],
+        },
       ],
       X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END: [
         {
@@ -3047,11 +3047,11 @@ foo
           errors: [
             {
               type: ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        }
-      ]
+              loc: { offset: 15, line: 1, column: 16 },
+            },
+          ],
+        },
+      ],
     }
 
     for (const key of Object.keys(patterns)) {
@@ -3060,7 +3060,7 @@ foo
           test(
             code.replace(
               /[\r\n]/g,
-              c => `\\x0${c.codePointAt(0)!.toString(16)};`
+              c => `\\x0${c.codePointAt(0)!.toString(16)};`,
             ),
             () => {
               const spy = vi.fn()
@@ -3084,17 +3084,17 @@ foo
                   return TextModes.DATA
                 },
                 ...options,
-                onError: spy
+                onError: spy,
               })
 
               expect(
                 spy.mock.calls.map(([err]) => ({
                   type: err.code,
-                  loc: err.loc.start
-                }))
+                  loc: err.loc.start,
+                })),
               ).toMatchObject(errors)
               expect(ast).toMatchSnapshot()
-            }
+            },
           )
         }
       })

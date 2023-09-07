@@ -16,7 +16,7 @@ export function patchDOMProp(
   prevChildren: any,
   parentComponent: any,
   parentSuspense: any,
-  unmountChildren: any
+  unmountChildren: any,
 ) {
   if (key === 'innerHTML' || key === 'textContent') {
     if (prevChildren) {
@@ -71,7 +71,7 @@ export function patchDOMProp(
       value === false &&
       compatUtils.isCompatEnabled(
         DeprecationTypes.ATTR_FALSE_VALUE,
-        parentComponent
+        parentComponent,
       )
     ) {
       const type = typeof el[key]
@@ -80,7 +80,7 @@ export function patchDOMProp(
           compatUtils.warnDeprecation(
             DeprecationTypes.ATTR_FALSE_VALUE,
             parentComponent,
-            key
+            key,
           )
         value = type === 'number' ? 0 : ''
         needRemove = true
@@ -99,7 +99,7 @@ export function patchDOMProp(
       warn(
         `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
           `value ${value} is invalid.`,
-        e
+        e,
       )
     }
   }

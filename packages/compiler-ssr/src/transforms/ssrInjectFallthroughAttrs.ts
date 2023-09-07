@@ -8,7 +8,7 @@ import {
   TemplateChildNode,
   ParentNode,
   findDir,
-  isBuiltInType
+  isBuiltInType,
 } from '@vue/compiler-dom'
 
 const filterChild = (node: ParentNode) =>
@@ -84,7 +84,7 @@ function injectFallthroughAttrs(node: RootNode | TemplateChildNode) {
       arg: undefined,
       exp: createSimpleExpression(`_attrs`, false),
       modifiers: [],
-      loc: locStub
+      loc: locStub,
     })
   }
 }

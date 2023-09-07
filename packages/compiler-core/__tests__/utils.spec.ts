@@ -5,7 +5,7 @@ import {
   advancePositionWithClone,
   isMemberExpressionNode,
   isMemberExpressionBrowser,
-  toValidAssetId
+  toValidAssetId,
 } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
@@ -45,7 +45,7 @@ describe('getInnerRange', () => {
   const loc1 = {
     source: 'foo\nbar\nbaz',
     start: p(1, 1, 0),
-    end: p(3, 3, 11)
+    end: p(3, 3, 11),
   }
 
   test('at start', () => {
@@ -131,6 +131,6 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('div', 'filter')).toBe('_filter_div')
   expect(toValidAssetId('foo-bar', 'component')).toBe('_component_foo_bar')
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
-    '_component_test_2797935797_1'
+    '_component_test_2797935797_1',
   )
 })

@@ -5,7 +5,7 @@ import { VNode } from '../vnode'
 import { assertCompatEnabled, DeprecationTypes } from './compatConfig'
 
 export function getCompatChildren(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): ComponentPublicInstance[] {
   assertCompatEnabled(DeprecationTypes.INSTANCE_CHILDREN, instance)
   const root = instance.subTree

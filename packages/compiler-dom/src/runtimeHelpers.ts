@@ -24,5 +24,5 @@ registerRuntimeHelpers({
   [V_ON_WITH_KEYS]: `withKeys`,
   [V_SHOW]: `vShow`,
   [TRANSITION]: `Transition`,
-  [TRANSITION_GROUP]: `TransitionGroup`
+  [TRANSITION_GROUP]: `TransitionGroup`,
 })

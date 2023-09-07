@@ -14,7 +14,7 @@ expectType<JSX.Element>(<input value="foo" />)
 // allow array styles and nested array styles
 expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
 expectType<JSX.Element>(
-  <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
+  <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />,
 )
 
 // @ts-expect-error unknown prop
@@ -30,7 +30,7 @@ expectType<JSX.Element>(
       // infer correct event type
       expectType<EventTarget | null>(e.target)
     }}
-  />
+  />,
 )
 
 // built-in types
@@ -55,7 +55,7 @@ expectType<JSX.Element>(<KeepAlive key="1" />)
 expectType<JSX.Element>(<Suspense />)
 expectType<JSX.Element>(<Suspense key="1" />)
 expectType<JSX.Element>(
-  <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />
+  <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />,
 )
 // @ts-expect-error
 ;<Suspense onResolve={123} />

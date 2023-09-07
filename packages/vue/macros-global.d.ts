@@ -5,7 +5,7 @@ import {
   $shallowRef as _$shallowRef,
   $computed as _$computed,
   $customRef as _$customRef,
-  $toRef as _$toRef
+  $toRef as _$toRef,
 } from './macros'
 
 declare global {

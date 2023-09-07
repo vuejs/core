@@ -15,7 +15,7 @@ type LegacyAsyncReturnValue = Promise<Component> | LegacyAsyncOptions
 
 type LegacyAsyncComponent = (
   resolve?: (res: LegacyAsyncReturnValue) => void,
-  reject?: (reason?: any) => void
+  reject?: (reason?: any) => void,
 ) => LegacyAsyncReturnValue | undefined
 
 const normalizedAsyncComponentMap = new Map<LegacyAsyncComponent, Component>()
@@ -44,7 +44,7 @@ export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
       loadingComponent: res.loading,
       errorComponent: res.error,
       delay: res.delay,
-      timeout: res.timeout
+      timeout: res.timeout,
     })
   } else if (res == null) {
     converted = defineAsyncComponent(() => fallbackPromise)

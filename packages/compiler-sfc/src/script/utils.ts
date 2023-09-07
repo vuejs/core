@@ -6,7 +6,7 @@ import {
   ImportNamespaceSpecifier,
   ImportSpecifier,
   Node,
-  StringLiteral
+  StringLiteral,
 } from '@babel/types'
 import path from 'path'
 import { TS_NODE_TYPES } from '@vue/compiler-dom'
@@ -42,7 +42,7 @@ export function unwrapTSNode(node: Node): Node {
 
 export function isCallOf(
   node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
+  test: string | ((id: string) => boolean) | null | undefined,
 ): node is CallExpression {
   return !!(
     node &&
@@ -60,7 +60,10 @@ export function toRuntimeTypeString(types: string[]) {
 }
 
 export function getImportedName(
-  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+  specifier:
+    | ImportSpecifier
+    | ImportDefaultSpecifier
+    | ImportNamespaceSpecifier,
 ) {
   if (specifier.type === 'ImportSpecifier')
     return specifier.imported.type === 'Identifier'

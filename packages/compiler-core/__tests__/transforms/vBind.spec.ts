@@ -7,31 +7,31 @@ import {
   ErrorCodes,
   VNodeCall,
   NodeTypes,
-  CallExpression
+  CallExpression,
 } from '../../src'
 import { transformBind } from '../../src/transforms/vBind'
 import { transformElement } from '../../src/transforms/transformElement'
 import {
   CAMELIZE,
   helperNameMap,
-  NORMALIZE_PROPS
+  NORMALIZE_PROPS,
 } from '../../src/runtimeHelpers'
 import { transformExpression } from '../../src/transforms/transformExpression'
 
 function parseWithVBind(
   template: string,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ): ElementNode {
   const ast = parse(template)
   transform(ast, {
     nodeTransforms: [
       ...(options.prefixIdentifiers ? [transformExpression] : []),
-      transformElement
+      transformElement,
     ],
     directiveTransforms: {
-      bind: transformBind
+      bind: transformBind,
     },
-    ...options
+    ...options,
   })
   return ast.children[0] as ElementNode
 }
@@ -47,13 +47,13 @@ describe('compiler: transform v-bind', () => {
         loc: {
           start: {
             line: 1,
-            column: 13
+            column: 13,
           },
           end: {
             line: 1,
-            column: 15
-          }
-        }
+            column: 15,
+          },
+        },
       },
       value: {
         content: `id`,
@@ -61,14 +61,14 @@ describe('compiler: transform v-bind', () => {
         loc: {
           start: {
             line: 1,
-            column: 17
+            column: 17,
           },
           end: {
             line: 1,
-            column: 19
-          }
-        }
-      }
+            column: 19,
+          },
+        },
+      },
     })
   })
 
@@ -85,16 +85,16 @@ describe('compiler: transform v-bind', () => {
             {
               key: {
                 content: `id || ""`,
-                isStatic: false
+                isStatic: false,
               },
               value: {
                 content: `id`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -107,23 +107,23 @@ describe('compiler: transform v-bind', () => {
       loc: {
         start: {
           line: 1,
-          column: 6
+          column: 6,
         },
         end: {
           line: 1,
-          column: 16
-        }
-      }
+          column: 16,
+        },
+      },
     })
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `arg`,
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: ``,
-        isStatic: true
-      }
+        isStatic: true,
+      },
     })
   })
 
@@ -133,12 +133,12 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `fooBar`,
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: `id`,
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
   })
 
@@ -155,22 +155,22 @@ describe('compiler: transform v-bind', () => {
             {
               key: {
                 content: `_${helperNameMap[CAMELIZE]}(foo || "")`,
-                isStatic: false
+                isStatic: false,
               },
               value: {
                 content: `id`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
   test('.camel modifier w/ dynamic arg + prefixIdentifiers', () => {
     const node = parseWithVBind(`<div v-bind:[foo(bar)].camel="id"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const props = (node.codegenNode as VNodeCall).props as CallExpression
     expect(props).toMatchObject({
@@ -190,17 +190,17 @@ describe('compiler: transform v-bind', () => {
                   { content: `_ctx.bar` },
                   `)`,
                   `) || ""`,
-                  `)`
-                ]
+                  `)`,
+                ],
               },
               value: {
                 content: `_ctx.id`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -210,12 +210,12 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `.fooBar`,
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: `id`,
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
   })
 
@@ -232,22 +232,22 @@ describe('compiler: transform v-bind', () => {
             {
               key: {
                 content: '`.${fooBar || ""}`',
-                isStatic: false
+                isStatic: false,
               },
               value: {
                 content: `id`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
   test('.prop modifier w/ dynamic arg + prefixIdentifiers', () => {
     const node = parseWithVBind(`<div v-bind:[foo(bar)].prop="id"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const props = (node.codegenNode as VNodeCall).props as CallExpression
     expect(props).toMatchObject({
@@ -267,17 +267,17 @@ describe('compiler: transform v-bind', () => {
                   { content: `_ctx.bar` },
                   `)`,
                   `) || ""`,
-                  `)`
-                ]
+                  `)`,
+                ],
               },
               value: {
                 content: `_ctx.id`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -287,12 +287,12 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `.fooBar`,
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: `id`,
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
   })
 
@@ -302,12 +302,12 @@ describe('compiler: transform v-bind', () => {
     expect(props.properties[0]).toMatchObject({
       key: {
         content: `^foo-bar`,
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: `id`,
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
   })
 })

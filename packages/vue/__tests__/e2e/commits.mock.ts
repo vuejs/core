@@ -8,17 +8,17 @@ export default {
         author: {
           name: 'Haoqun Jiang',
           email: 'haoqunjiang@gmail.com',
-          date: '2019-12-09T19:52:20Z'
+          date: '2019-12-09T19:52:20Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2019-12-09T19:52:20Z'
+          date: '2019-12-09T19:52:20Z',
         },
         message: 'test: add test for runtime-dom/modules/class (#75)',
         tree: {
           sha: 'f53f761827af281db86c31d113086c068c1d0789',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/f53f761827af281db86c31d113086c068c1d0789'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/f53f761827af281db86c31d113086c068c1d0789',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
         comment_count: 0,
@@ -26,8 +26,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/d1527fbee422c7170e56845e55b49c4fd6de72a7',
       html_url:
@@ -55,7 +55,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/sodatea/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -79,16 +79,16 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: '2383b45e322272ddc102d6914c149b284a25d04f',
           url: 'https://api.github.com/repos/vuejs/core/commits/2383b45e322272ddc102d6914c149b284a25d04f',
           html_url:
-            'https://github.com/vuejs/core/commit/2383b45e322272ddc102d6914c149b284a25d04f'
-        }
-      ]
+            'https://github.com/vuejs/core/commit/2383b45e322272ddc102d6914c149b284a25d04f',
+        },
+      ],
     },
     {
       sha: '2383b45e322272ddc102d6914c149b284a25d04f',
@@ -98,17 +98,17 @@ export default {
         author: {
           name: 'GCA',
           email: 'gcaaa31928@gmail.com',
-          date: '2019-12-09T19:23:57Z'
+          date: '2019-12-09T19:23:57Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2019-12-09T19:23:57Z'
+          date: '2019-12-09T19:23:57Z',
         },
         message: 'chore: fix typo (#530) [ci skip]',
         tree: {
           sha: '2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/2a5872ff8dc8ccb8121abd7e890ac3c0c9f1209f',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/2383b45e322272ddc102d6914c149b284a25d04f',
         comment_count: 0,
@@ -116,8 +116,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/2383b45e322272ddc102d6914c149b284a25d04f',
       html_url:
@@ -146,7 +146,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/gcaaa31928/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -170,16 +170,16 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: 'e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
           url: 'https://api.github.com/repos/vuejs/core/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
           html_url:
-            'https://github.com/vuejs/core/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad'
-        }
-      ]
+            'https://github.com/vuejs/core/commit/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
+        },
+      ],
     },
     {
       sha: 'e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
@@ -189,17 +189,17 @@ export default {
         author: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2019-12-09T19:23:01Z'
+          date: '2019-12-09T19:23:01Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2019-12-09T19:23:01Z'
+          date: '2019-12-09T19:23:01Z',
         },
         message: 'test: fix warning',
         tree: {
           sha: 'd942b17681e2e2fbbcd2ee04092390c7f2cf534d',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/d942b17681e2e2fbbcd2ee04092390c7f2cf534d'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/d942b17681e2e2fbbcd2ee04092390c7f2cf534d',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
         comment_count: 0,
@@ -207,8 +207,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/e7e1314cccd1a66fcf8b8526ec21350ec16cc3ad',
       html_url:
@@ -237,7 +237,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -261,17 +261,17 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: '12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
           url: 'https://api.github.com/repos/vuejs/core/commits/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
           html_url:
-            'https://github.com/vuejs/core/commit/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e'
-        }
-      ]
-    }
+            'https://github.com/vuejs/core/commit/12ec62e6881f83dfa6c7f8a3c3650ec2567e6b1e',
+        },
+      ],
+    },
   ],
   'v2-compat': [
     {
@@ -282,17 +282,17 @@ export default {
         author: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-13T03:42:34Z'
+          date: '2018-11-13T03:42:34Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-13T03:54:01Z'
+          date: '2018-11-13T03:54:01Z',
         },
         message: 'chore: fix tests',
         tree: {
           sha: '6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/6ac7bd078a6eb0ad32b5102e0c5d2c29f2b20a48',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
         comment_count: 0,
@@ -300,8 +300,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/ecf4da822eea97f5db5fa769d39f994755384a4b',
       html_url:
@@ -330,7 +330,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -354,16 +354,16 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: 'ca296812d54aff123472d7147b83fddfb634d9bc',
           url: 'https://api.github.com/repos/vuejs/core/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
           html_url:
-            'https://github.com/vuejs/core/commit/ca296812d54aff123472d7147b83fddfb634d9bc'
-        }
-      ]
+            'https://github.com/vuejs/core/commit/ca296812d54aff123472d7147b83fddfb634d9bc',
+        },
+      ],
     },
     {
       sha: 'ca296812d54aff123472d7147b83fddfb634d9bc',
@@ -373,17 +373,17 @@ export default {
         author: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-13T03:21:56Z'
+          date: '2018-11-13T03:21:56Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-13T03:46:06Z'
+          date: '2018-11-13T03:46:06Z',
         },
         message: 'refactor: bring back clone for reused nodes',
         tree: {
           sha: '2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/2cec32c97686e0ee9af1b87f0abdbbbdc18b6de6',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
         comment_count: 0,
@@ -391,8 +391,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/ca296812d54aff123472d7147b83fddfb634d9bc',
       html_url:
@@ -421,7 +421,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -445,16 +445,16 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: 'e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
           url: 'https://api.github.com/repos/vuejs/core/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
           html_url:
-            'https://github.com/vuejs/core/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b'
-        }
-      ]
+            'https://github.com/vuejs/core/commit/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
+        },
+      ],
     },
     {
       sha: 'e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
@@ -464,17 +464,17 @@ export default {
         author: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-02T20:59:45Z'
+          date: '2018-11-02T20:59:45Z',
         },
         committer: {
           name: 'Evan You',
           email: 'yyx990803@gmail.com',
-          date: '2018-11-02T20:59:45Z'
+          date: '2018-11-02T20:59:45Z',
         },
         message: 'chore: relax render type for tsx',
         tree: {
           sha: '7e2b3bb92ab91f755b2251e4a7903e6dd2042602',
-          url: 'https://api.github.com/repos/vuejs/core/git/trees/7e2b3bb92ab91f755b2251e4a7903e6dd2042602'
+          url: 'https://api.github.com/repos/vuejs/core/git/trees/7e2b3bb92ab91f755b2251e4a7903e6dd2042602',
         },
         url: 'https://api.github.com/repos/vuejs/core/git/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
         comment_count: 0,
@@ -482,8 +482,8 @@ export default {
           verified: false,
           reason: 'unsigned',
           signature: null,
-          payload: null
-        }
+          payload: null,
+        },
       },
       url: 'https://api.github.com/repos/vuejs/core/commits/e6be55a4989edb6f8750dbaa14eb693ec1f0d67b',
       html_url:
@@ -512,7 +512,7 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       committer: {
         login: 'yyx990803',
@@ -536,16 +536,16 @@ export default {
         received_events_url:
           'https://api.github.com/users/yyx990803/received_events',
         type: 'User',
-        site_admin: false
+        site_admin: false,
       },
       parents: [
         {
           sha: 'ccc835caff0344baad3c92ce786ad4f804bf667b',
           url: 'https://api.github.com/repos/vuejs/core/commits/ccc835caff0344baad3c92ce786ad4f804bf667b',
           html_url:
-            'https://github.com/vuejs/core/commit/ccc835caff0344baad3c92ce786ad4f804bf667b'
-        }
-      ]
-    }
-  ]
+            'https://github.com/vuejs/core/commit/ccc835caff0344baad3c92ce786ad4f804bf667b',
+        },
+      ],
+    },
+  ],
 }

@@ -7,7 +7,7 @@ import {
   finalizeDepMarkers,
   initDepMarkers,
   newTracked,
-  wasTracked
+  wasTracked,
 } from './dep'
 import { ComputedRefImpl } from './computed'
 
@@ -78,7 +78,7 @@ export class ReactiveEffect<T = any> {
   constructor(
     public fn: () => T,
     public scheduler: EffectScheduler | null = null,
-    scope?: EffectScope
+    scope?: EffectScope,
   ) {
     recordEffectScope(this, scope)
   }
@@ -179,7 +179,7 @@ export interface ReactiveEffectRunner<T = any> {
  */
 export function effect<T = any>(
   fn: () => T,
-  options?: ReactiveEffectOptions
+  options?: ReactiveEffectOptions,
 ): ReactiveEffectRunner {
   if ((fn as ReactiveEffectRunner).effect instanceof ReactiveEffect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
@@ -265,7 +265,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
 
 export function trackEffects(
   dep: Dep,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   let shouldTrack = false
   if (effectTrackDepth <= maxMarkerBits) {
@@ -285,10 +285,10 @@ export function trackEffects(
       activeEffect!.onTrack(
         extend(
           {
-            effect: activeEffect!
+            effect: activeEffect!,
           },
-          debuggerEventExtraInfo!
-        )
+          debuggerEventExtraInfo!,
+        ),
       )
     }
   }
@@ -308,7 +308,7 @@ export function trigger(
   key?: unknown,
   newValue?: unknown,
   oldValue?: unknown,
-  oldTarget?: Map<unknown, unknown> | Set<unknown>
+  oldTarget?: Map<unknown, unknown> | Set<unknown>,
 ) {
   const depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -392,7 +392,7 @@ export function trigger(
 
 export function triggerEffects(
   dep: Dep | ReactiveEffect[],
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
@@ -410,7 +410,7 @@ export function triggerEffects(
 
 function triggerEffect(
   effect: ReactiveEffect,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   if (effect !== activeEffect || effect.allowRecurse) {
     if (__DEV__ && effect.onTrigger) {

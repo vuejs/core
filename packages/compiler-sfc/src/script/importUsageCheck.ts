@@ -6,7 +6,7 @@ import {
   createRoot,
   parserOptions,
   transform,
-  walkIdentifiers
+  walkIdentifiers,
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
@@ -20,7 +20,7 @@ export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
   return new RegExp(
     // #4274 escape $ since it's a special char in regex
     // (and is the only regex special char that is valid in identifiers)
-    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`
+    `[^\\w$_]${local.replace(/\$/g, '\\$')}[^\\w$_]`,
   ).test(resolveTemplateUsageCheckString(sfc))
 }
 
@@ -53,13 +53,13 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
                 code += `,${processExp(
                   (prop.arg as SimpleExpressionNode).content,
-                  prop.name
+                  prop.name,
                 )}`
               }
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
-                  prop.name
+                  prop.name,
                 )}`
               }
             }
@@ -73,11 +73,11 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
           code += `,${processExp(
-            (node.content as SimpleExpressionNode).content
+            (node.content as SimpleExpressionNode).content,
           )}`
         }
-      }
-    ]
+      },
+    ],
   })
 
   code += ';'

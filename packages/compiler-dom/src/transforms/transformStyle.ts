@@ -4,7 +4,7 @@ import {
   createSimpleExpression,
   SimpleExpressionNode,
   SourceLocation,
-  ConstantTypes
+  ConstantTypes,
 } from '@vue/compiler-core'
 import { parseStringStyle } from '@vue/shared'
 
@@ -25,7 +25,7 @@ export const transformStyle: NodeTransform = node => {
           arg: createSimpleExpression(`style`, true, p.loc),
           exp: parseInlineCSS(p.value.content, p.loc),
           modifiers: [],
-          loc: p.loc
+          loc: p.loc,
         }
       }
     })
@@ -34,13 +34,13 @@ export const transformStyle: NodeTransform = node => {
 
 const parseInlineCSS = (
   cssText: string,
-  loc: SourceLocation
+  loc: SourceLocation,
 ): SimpleExpressionNode => {
   const normalized = parseStringStyle(cssText)
   return createSimpleExpression(
     JSON.stringify(normalized),
     false,
     loc,
-    ConstantTypes.CAN_STRINGIFY
+    ConstantTypes.CAN_STRINGIFY,
   )
 }

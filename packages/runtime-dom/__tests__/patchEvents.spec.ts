@@ -176,7 +176,7 @@ describe(`runtime-dom: events patching`, () => {
     }
     window.customElements.define('test-element', TestElement)
     const testElement = document.createElement('test-element', {
-      is: 'test-element'
+      is: 'test-element',
     })
     const fn1 = vi.fn()
     const fn2 = vi.fn()

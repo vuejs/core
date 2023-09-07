@@ -35,12 +35,12 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   el: T,
   binding: DirectiveBinding<V>,
   vnode: VNode<any, T>,
-  prevVNode: Prev
+  prevVNode: Prev,
 ) => void
 
 export type SSRDirectiveHook = (
   binding: DirectiveBinding,
-  vnode: VNode
+  vnode: VNode,
 ) => Data | undefined
 
 export interface ObjectDirective<T = any, V = any> {
@@ -82,7 +82,7 @@ export type DirectiveArguments = Array<
  */
 export function withDirectives<T extends VNode>(
   vnode: T,
-  directives: DirectiveArguments
+  directives: DirectiveArguments,
 ): T {
   const internalInstance = currentRenderingInstance
   if (internalInstance === null) {
@@ -99,7 +99,7 @@ export function withDirectives<T extends VNode>(
       if (isFunction(dir)) {
         dir = {
           mounted: dir,
-          updated: dir
+          updated: dir,
         } as ObjectDirective
       }
       if (dir.deep) {
@@ -111,7 +111,7 @@ export function withDirectives<T extends VNode>(
         value,
         oldValue: void 0,
         arg,
-        modifiers
+        modifiers,
       })
     }
   }
@@ -122,7 +122,7 @@ export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
-  name: keyof ObjectDirective
+  name: keyof ObjectDirective,
 ) {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
@@ -143,7 +143,7 @@ export function invokeDirectiveHook(
         vnode.el,
         binding,
         vnode,
-        prevVNode
+        prevVNode,
       ])
       resetTracking()
     }

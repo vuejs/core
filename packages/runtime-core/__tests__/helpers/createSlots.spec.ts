@@ -37,7 +37,7 @@ describe('createSlot', () => {
   it('should add all slots to the record', () => {
     const dynamicSlot = [
       { name: 'descriptor', fn: slot },
-      { name: 'descriptor2', fn: slot }
+      { name: 'descriptor2', fn: slot },
     ]
 
     const actual = createSlots(record, dynamicSlot)
@@ -48,7 +48,7 @@ describe('createSlot', () => {
   it('should add slot to the record when given slot is an array', () => {
     const dynamicSlot = [
       { name: 'descriptor', fn: slot },
-      [{ name: 'descriptor2', fn: slot }]
+      [{ name: 'descriptor2', fn: slot }],
     ]
 
     const actual = createSlots(record, dynamicSlot)
@@ -61,8 +61,8 @@ describe('createSlot', () => {
       { name: 'descriptor', fn: slot },
       [
         { name: 'descriptor2', fn: slot },
-        { name: 'descriptor3', fn: slot }
-      ]
+        { name: 'descriptor3', fn: slot },
+      ],
     ]
 
     const actual = createSlots(record, dynamicSlot)
@@ -70,7 +70,7 @@ describe('createSlot', () => {
     expect(actual).toEqual({
       descriptor: slot,
       descriptor2: slot,
-      descriptor3: slot
+      descriptor3: slot,
     })
   })
 })

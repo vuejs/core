@@ -21,18 +21,18 @@ describe('should support markRaw', () => {
   }
   const test = new Test<number>()
   const plain = {
-    ref: ref(1)
+    ref: ref(1),
   }
 
   const r = reactive({
     class: {
       raw: markRaw(test),
-      reactive: test
+      reactive: test,
     },
     plain: {
       raw: markRaw(plain),
-      reactive: plain
-    }
+      reactive: plain,
+    },
   })
 
   expectType<Test<number>>(r.class.raw)

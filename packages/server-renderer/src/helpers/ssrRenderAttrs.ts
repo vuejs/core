@@ -8,17 +8,17 @@ import {
   isSSRSafeAttrName,
   isBooleanAttr,
   includeBooleanAttr,
-  makeMap
+  makeMap,
 } from '@vue/shared'
 
 // leading comma for empty string ""
 const shouldIgnoreProp = makeMap(
-  `,key,ref,innerHTML,textContent,ref_key,ref_for`
+  `,key,ref,innerHTML,textContent,ref_key,ref_for`,
 )
 
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
-  tag?: string
+  tag?: string,
 ): string {
   let ret = ''
   for (const key in props) {
@@ -45,7 +45,7 @@ export function ssrRenderAttrs(
 export function ssrRenderDynamicAttr(
   key: string,
   value: unknown,
-  tag?: string
+  tag?: string,
 ): string {
   if (!isRenderableValue(value)) {
     return ``
@@ -60,7 +60,7 @@ export function ssrRenderDynamicAttr(
     return value === '' ? ` ${attrKey}` : ` ${attrKey}="${escapeHtml(value)}"`
   } else {
     console.warn(
-      `[@vue/server-renderer] Skipped rendering unsafe attribute name: ${attrKey}`
+      `[@vue/server-renderer] Skipped rendering unsafe attribute name: ${attrKey}`,
     )
     return ``
   }

@@ -3,7 +3,7 @@ import {
   VNode,
   DirectiveHook,
   DirectiveBinding,
-  warn
+  warn,
 } from '@vue/runtime-core'
 import { addEventListener } from '../modules/events'
 import {
@@ -12,7 +12,7 @@ import {
   looseIndexOf,
   invokeArrayFns,
   looseToNumber,
-  isSet
+  isSet,
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
@@ -101,7 +101,7 @@ export const vModelText: ModelDirective<
     if (el.value !== newValue) {
       el.value = newValue
     }
-  }
+  },
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
@@ -142,13 +142,13 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
   beforeUpdate(el, binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
-  }
+  },
 }
 
 function setChecked(
   el: HTMLInputElement,
   { value, oldValue }: DirectiveBinding,
-  vnode: VNode
+  vnode: VNode,
 ) {
   // store the v-model value on the element so it can be accessed by the
   // change listener.
@@ -175,7 +175,7 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
     if (value !== oldValue) {
       el.checked = looseEqual(value, vnode.props!.value)
     }
-  }
+  },
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
@@ -187,14 +187,14 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>
-          number ? looseToNumber(getValue(o)) : getValue(o)
+          number ? looseToNumber(getValue(o)) : getValue(o),
         )
       el[assignKey](
         el.multiple
           ? isSetModel
             ? new Set(selectedVal)
             : selectedVal
-          : selectedVal[0]
+          : selectedVal[0],
       )
     })
     el[assignKey] = getModelAssigner(vnode)
@@ -209,7 +209,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   },
   updated(el, { value }) {
     setSelected(el, value)
-  }
+  },
 }
 
 function setSelected(el: HTMLSelectElement, value: any) {
@@ -218,7 +218,7 @@ function setSelected(el: HTMLSelectElement, value: any) {
     __DEV__ &&
       warn(
         `<select multiple v-model> expects an Array or Set value for its binding, ` +
-          `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`
+          `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`,
       )
     return
   }
@@ -251,7 +251,7 @@ function getValue(el: HTMLOptionElement | HTMLInputElement) {
 // retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
 function getCheckboxValue(
   el: HTMLInputElement & { _trueValue?: any; _falseValue?: any },
-  checked: boolean
+  checked: boolean,
 ) {
   const key = checked ? '_trueValue' : '_falseValue'
   return key in el ? el[key] : checked
@@ -271,7 +271,7 @@ export const vModelDynamic: ObjectDirective<
   },
   updated(el, binding, vnode, prevVNode) {
     callModelHook(el, binding, vnode, prevVNode, 'updated')
-  }
+  },
 }
 
 function resolveDynamicModel(tagName: string, type: string | undefined) {
@@ -297,11 +297,11 @@ function callModelHook(
   binding: DirectiveBinding,
   vnode: VNode,
   prevVNode: VNode | null,
-  hook: keyof ObjectDirective
+  hook: keyof ObjectDirective,
 ) {
   const modelToUse = resolveDynamicModel(
     el.tagName,
-    vnode.props && vnode.props.type
+    vnode.props && vnode.props.type,
   )
   const fn = modelToUse[hook] as DirectiveHook
   fn && fn(el, binding, vnode, prevVNode)
@@ -339,7 +339,7 @@ export function initVModelForSSR() {
     const modelToUse = resolveDynamicModel(
       // resolveDynamicModel expects an uppercase tag name, but vnode.type is lowercase
       vnode.type.toUpperCase(),
-      vnode.props && vnode.props.type
+      vnode.props && vnode.props.type,
     )
     if (modelToUse.getSSRProps) {
       return modelToUse.getSSRProps(binding, vnode)

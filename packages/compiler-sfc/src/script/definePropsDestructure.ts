@@ -5,7 +5,7 @@ import {
   Program,
   VariableDeclaration,
   ObjectPattern,
-  Expression
+  Expression,
 } from '@babel/types'
 import { walk } from 'estree-walker'
 import {
@@ -15,7 +15,7 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  walkFunctionParams,
 } from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
 import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
@@ -25,7 +25,7 @@ import { warnOnce } from '../warn'
 
 export function processPropsDestructure(
   ctx: ScriptCompileContext,
-  declId: ObjectPattern
+  declId: ObjectPattern,
 ) {
   if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
@@ -35,7 +35,7 @@ export function processPropsDestructure(
     `This project is using reactive props destructure, which is an experimental ` +
       `feature. It may receive breaking changes or be removed in the future, so ` +
       `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`
+      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`,
   )
 
   ctx.propsDestructureDecl = declId
@@ -43,7 +43,7 @@ export function processPropsDestructure(
   const registerBinding = (
     key: string,
     local: string,
-    defaultValue?: Expression
+    defaultValue?: Expression,
   ) => {
     ctx.propsDestructuredBindings[key] = { local, default: defaultValue }
     if (local !== key) {
@@ -60,7 +60,7 @@ export function processPropsDestructure(
       if (!propKey) {
         ctx.error(
           `${DEFINE_PROPS}() destructure cannot use computed key.`,
-          prop.key
+          prop.key,
         )
       }
 
@@ -70,7 +70,7 @@ export function processPropsDestructure(
         if (left.type !== 'Identifier') {
           ctx.error(
             `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-            left
+            left,
           )
         }
         registerBinding(propKey, left.name, right)
@@ -80,7 +80,7 @@ export function processPropsDestructure(
       } else {
         ctx.error(
           `${DEFINE_PROPS}() destructure does not support nested patterns.`,
-          prop.value
+          prop.value,
         )
       }
     } else {
@@ -101,7 +101,7 @@ type Scope = Record<string, boolean>
 
 export function transformDestructuredProps(
   ctx: ScriptCompileContext,
-  vueImportAliases: Record<string, string>
+  vueImportAliases: Record<string, string>,
 ) {
   if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
@@ -136,7 +136,7 @@ export function transformDestructuredProps(
     } else {
       ctx.error(
         'registerBinding called without active scope, something is wrong.',
-        id
+        id,
       )
     }
   }
@@ -208,7 +208,7 @@ export function transformDestructuredProps(
         // { prop } -> { prop: __props.prop }
         ctx.s.appendLeft(
           id.end! + ctx.startOffset!,
-          `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`
+          `: ${genPropsAccessExp(propsLocalToPublicMap[id.name])}`,
         )
       }
     } else {
@@ -216,7 +216,7 @@ export function transformDestructuredProps(
       ctx.s.overwrite(
         id.start! + ctx.startOffset!,
         id.end! + ctx.startOffset!,
-        genPropsAccessExp(propsLocalToPublicMap[id.name])
+        genPropsAccessExp(propsLocalToPublicMap[id.name]),
       )
     }
   }
@@ -228,7 +228,7 @@ export function transformDestructuredProps(
         ctx.error(
           `"${arg.name}" is a destructured prop and should not be passed directly to ${method}(). ` +
             `Pass a getter () => ${arg.name} instead.`,
-          arg
+          arg,
         )
       }
     }
@@ -301,6 +301,6 @@ export function transformDestructuredProps(
       ) {
         popScope()
       }
-    }
+    },
   })
 }

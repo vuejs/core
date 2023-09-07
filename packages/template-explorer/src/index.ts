@@ -5,7 +5,7 @@ import {
   defaultOptions,
   compilerOptions,
   initOptions,
-  ssrMode
+  ssrMode,
 } from './options'
 import { toRaw, watchEffect } from '@vue/runtime-dom'
 import { SourceMapConsumer } from 'source-map-js'
@@ -30,8 +30,8 @@ const sharedEditorOptions: m.editor.IStandaloneEditorConstructionOptions = {
   scrollBeyondLastLine: false,
   renderWhitespace: 'selection',
   minimap: {
-    enabled: false
-  }
+    enabled: false,
+  },
 }
 
 window.init = () => {
@@ -48,13 +48,13 @@ window.init = () => {
       hash = escape(atob(hash))
     } catch (e) {}
     persistedState = JSON.parse(
-      decodeURIComponent(hash) || localStorage.getItem('state') || `{}`
+      decodeURIComponent(hash) || localStorage.getItem('state') || `{}`,
     )
   } catch (e: any) {
     // bad stored state, clear it
     console.warn(
       'Persisted state in localStorage seems to be corrupted, please reload.\n' +
-        e.message
+        e.message,
     )
     localStorage.clear()
   }
@@ -81,13 +81,13 @@ window.init = () => {
         sourceMap: true,
         onError: err => {
           errors.push(err)
-        }
+        },
       })
       console.log(`Compiled in ${(performance.now() - start).toFixed(2)}ms.`)
       monaco.editor.setModelMarkers(
         editor.getModel()!,
         `@vue/compiler-dom`,
-        errors.filter(e => e.loc).map(formatError)
+        errors.filter(e => e.loc).map(formatError),
       )
       console.log(`AST: `, ast)
       console.log(`Options: `, toRaw(compilerOptions))
@@ -110,7 +110,7 @@ window.init = () => {
       endLineNumber: loc.end.line,
       endColumn: loc.end.column,
       message: `Vue template compilation error: ${err.message}`,
-      code: String(err.code)
+      code: String(err.code),
     }
   }
 
@@ -131,7 +131,7 @@ window.init = () => {
     const state = JSON.stringify({
       src,
       ssr: ssrMode.value,
-      options: optionsToSave
+      options: optionsToSave,
     } as PersistedState)
     localStorage.setItem('state', state)
     window.location.hash = btoa(unescape(encodeURIComponent(state)))
@@ -145,21 +145,21 @@ window.init = () => {
     value: persistedState?.src || `<div>Hello World</div>`,
     language: 'html',
     ...sharedEditorOptions,
-    wordWrap: 'bounded'
+    wordWrap: 'bounded',
   })
 
   editor.getModel()!.updateOptions({
-    tabSize: 2
+    tabSize: 2,
   })
 
   const output = monaco.editor.create(document.getElementById('output')!, {
     value: '',
     language: 'javascript',
     readOnly: true,
-    ...sharedEditorOptions
+    ...sharedEditorOptions,
   })
   output.getModel()!.updateOptions({
-    tabSize: 2
+    tabSize: 2,
   })
 
   // handle resize
@@ -184,7 +184,7 @@ window.init = () => {
         const pos = lastSuccessfulMap.generatedPositionFor({
           source: 'ExampleTemplate.vue',
           line: e.position.lineNumber,
-          column: e.position.column - 1
+          column: e.position.column - 1,
         })
         if (pos.line != null && pos.column != null) {
           prevOutputDecos = output.deltaDecorations(prevOutputDecos, [
@@ -193,22 +193,22 @@ window.init = () => {
                 pos.line,
                 pos.column + 1,
                 pos.line,
-                pos.lastColumn ? pos.lastColumn + 2 : pos.column + 2
+                pos.lastColumn ? pos.lastColumn + 2 : pos.column + 2,
               ),
               options: {
-                inlineClassName: `highlight`
-              }
-            }
+                inlineClassName: `highlight`,
+              },
+            },
           ])
           output.revealPositionInCenter({
             lineNumber: pos.line,
-            column: pos.column + 1
+            column: pos.column + 1,
           })
         } else {
           clearOutputDecos()
         }
       }
-    }, 100)
+    }, 100),
   )
 
   let previousEditorDecos: string[] = []
@@ -222,7 +222,7 @@ window.init = () => {
       if (lastSuccessfulMap) {
         const pos = lastSuccessfulMap.originalPositionFor({
           line: e.position.lineNumber,
-          column: e.position.column - 1
+          column: e.position.column - 1,
         })
         if (
           pos.line != null &&
@@ -234,7 +234,7 @@ window.init = () => {
         ) {
           const translatedPos = {
             column: pos.column + 1,
-            lineNumber: pos.line
+            lineNumber: pos.line,
           }
           previousEditorDecos = editor.deltaDecorations(previousEditorDecos, [
             {
@@ -242,20 +242,20 @@ window.init = () => {
                 pos.line,
                 pos.column + 1,
                 pos.line,
-                pos.column + 1
+                pos.column + 1,
               ),
               options: {
                 isWholeLine: true,
-                className: `highlight`
-              }
-            }
+                className: `highlight`,
+              },
+            },
           ])
           editor.revealPositionInCenter(translatedPos)
         } else {
           clearEditorDecos()
         }
       }
-    }, 100)
+    }, 100),
   )
 
   initOptions()
@@ -264,7 +264,7 @@ window.init = () => {
 
 function debounce<T extends (...args: any[]) => any>(
   fn: T,
-  delay: number = 300
+  delay: number = 300,
 ): T {
   let prevTimer: number | null = null
   return ((...args: any[]) => {

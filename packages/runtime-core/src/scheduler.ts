@@ -52,7 +52,7 @@ type CountMap = Map<SchedulerJob, number>
 
 export function nextTick<T = void, R = void>(
   this: T,
-  fn?: (this: T) => R
+  fn?: (this: T) => R,
 ): Promise<Awaited<R>> {
   const p = currentFlushPromise || resolvedPromise
   return fn ? p.then(this ? fn.bind(this) : fn) : p
@@ -87,7 +87,7 @@ export function queueJob(job: SchedulerJob) {
     !queue.length ||
     !queue.includes(
       job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex
+      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex,
     )
   ) {
     if (job.id == null) {
@@ -119,7 +119,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
       !activePostFlushCbs ||
       !activePostFlushCbs.includes(
         cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex
+        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
       )
     ) {
       pendingPostFlushCbs.push(cb)
@@ -136,7 +136,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
 export function flushPreFlushCbs(
   seen?: CountMap,
   // if currently flushing, skip the current job itself
-  i = isFlushing ? flushIndex + 1 : 0
+  i = isFlushing ? flushIndex + 1 : 0,
 ) {
   if (__DEV__) {
     seen = seen || new Map()
@@ -269,7 +269,7 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
           `This means you have a reactive effect that is mutating its own ` +
           `dependencies and thus recursively triggering itself. Possible sources ` +
           `include component template, render function, updated hook or ` +
-          `watcher source function.`
+          `watcher source function.`,
       )
       return true
     } else {

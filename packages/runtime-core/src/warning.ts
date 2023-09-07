@@ -3,7 +3,7 @@ import {
   Data,
   ComponentInternalInstance,
   ConcreteComponent,
-  formatComponentName
+  formatComponentName,
 } from './component'
 import { isString, isFunction } from '@vue/shared'
 import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
@@ -51,11 +51,11 @@ export function warn(msg: string, ...args: any[]) {
         instance && instance.proxy,
         trace
           .map(
-            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`,
           )
           .join('\n'),
-        trace
-      ]
+        trace,
+      ],
     )
   } else {
     const warnArgs = [`[Vue warn]: ${msg}`, ...args]
@@ -91,7 +91,7 @@ export function getComponentTrace(): ComponentTraceStack {
     } else {
       normalizedStack.push({
         vnode: currentVNode as ComponentVNode,
-        recurseCount: 0
+        recurseCount: 0,
       })
     }
     const parentInstance: ComponentInternalInstance | null =
@@ -118,7 +118,7 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const open = ` at <${formatComponentName(
     vnode.component,
     vnode.type,
-    isRoot
+    isRoot,
   )}`
   const close = `>` + postfix
   return vnode.props

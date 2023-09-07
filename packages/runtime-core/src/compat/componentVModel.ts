@@ -6,7 +6,7 @@ import { popWarningContext, pushWarningContext } from '../warning'
 import {
   DeprecationTypes,
   warnDeprecation,
-  isCompatEnabled
+  isCompatEnabled,
 } from './compatConfig'
 
 export const compatModelEventPrefix = `onModelCompat:`
@@ -23,7 +23,7 @@ export function convertLegacyVModelProps(vnode: VNode) {
         // this is a special case where we want to use the vnode component's
         // compat config instead of the current rendering instance (which is the
         // parent of the component that exposes v-model)
-        { type } as any
+        { type } as any,
       )
     ) {
       return
@@ -67,7 +67,7 @@ function applyModelFromMixins(model: any, mixins?: ComponentOptions[]) {
 export function compatModelEmit(
   instance: ComponentInternalInstance,
   event: string,
-  args: any[]
+  args: any[],
 ) {
   if (!isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)) {
     return
@@ -79,7 +79,7 @@ export function compatModelEmit(
       modelHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
-      args
+      args,
     )
   }
 }

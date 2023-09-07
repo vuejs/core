@@ -23,7 +23,7 @@ import {
   VNodeCall,
   SimpleExpressionNode,
   BlockCodegenNode,
-  MemoExpression
+  MemoExpression,
 } from './ast'
 import { TransformContext } from './transform'
 import {
@@ -35,7 +35,7 @@ import {
   TO_HANDLERS,
   NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
-  WITH_MEMO
+  WITH_MEMO,
 } from './runtimeHelpers'
 import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
@@ -68,7 +68,7 @@ const enum MemberExpLexState {
   inMemberExp,
   inBrackets,
   inParens,
-  inString
+  inString,
 }
 
 const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
@@ -155,7 +155,7 @@ export const isMemberExpressionNode = __BROWSER__
   : (path: string, context: TransformContext): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
-          plugins: context.expressionPlugins
+          plugins: context.expressionPlugins,
         })
         if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
           ret = ret.expression
@@ -177,14 +177,14 @@ export const isMemberExpression = __BROWSER__
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,
-  length: number
+  length: number,
 ): SourceLocation {
   __TEST__ && assert(offset <= loc.source.length)
   const source = loc.source.slice(offset, offset + length)
   const newLoc: SourceLocation = {
     source,
     start: advancePositionWithClone(loc.start, loc.source, offset),
-    end: loc.end
+    end: loc.end,
   }
 
   if (length != null) {
@@ -192,7 +192,7 @@ export function getInnerRange(
     newLoc.end = advancePositionWithClone(
       loc.start,
       loc.source,
-      offset + length
+      offset + length,
     )
   }
 
@@ -202,12 +202,12 @@ export function getInnerRange(
 export function advancePositionWithClone(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   return advancePositionWithMutation(
     extend({}, pos),
     source,
-    numberOfCharacters
+    numberOfCharacters,
   )
 }
 
@@ -216,7 +216,7 @@ export function advancePositionWithClone(
 export function advancePositionWithMutation(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   let linesCount = 0
   let lastNewLinePos = -1
@@ -247,7 +247,7 @@ export function assert(condition: boolean, msg?: string) {
 export function findDir(
   node: ElementNode,
   name: string | RegExp,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): DirectiveNode | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -265,7 +265,7 @@ export function findProp(
   node: ElementNode,
   name: string,
   dynamicOnly: boolean = false,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -286,7 +286,7 @@ export function findProp(
 
 export function isStaticArgOf(
   arg: DirectiveNode['arg'],
-  name: string
+  name: string,
 ): boolean {
   return !!(arg && isStaticExp(arg) && arg.content === name)
 }
@@ -298,12 +298,12 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
       p.name === 'bind' &&
       (!p.arg || // v-bind="obj"
         p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
-        !p.arg.isStatic) // v-bind:[foo]
+        !p.arg.isStatic), // v-bind:[foo]
   )
 }
 
 export function isText(
-  node: TemplateChildNode
+  node: TemplateChildNode,
 ): node is TextNode | InterpolationNode {
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 }
@@ -313,7 +313,7 @@ export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
 }
 
 export function isTemplateNode(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is TemplateNode {
   return (
     node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
@@ -321,7 +321,7 @@ export function isTemplateNode(
 }
 
 export function isSlotOutlet(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is SlotOutletNode {
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
@@ -330,7 +330,7 @@ const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
   props: PropsExpression | '{}',
-  callPath: CallExpression[] = []
+  callPath: CallExpression[] = [],
 ): [PropsExpression | '{}', CallExpression[]] {
   if (
     props &&
@@ -341,7 +341,7 @@ function getUnnormalizedProps(
     if (!isString(callee) && propsHelperSet.has(callee)) {
       return getUnnormalizedProps(
         props.arguments[0] as PropsExpression,
-        callPath.concat(props)
+        callPath.concat(props),
       )
     }
   }
@@ -350,7 +350,7 @@ function getUnnormalizedProps(
 export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
-  context: TransformContext
+  context: TransformContext,
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
@@ -393,7 +393,7 @@ export function injectProp(
         // #2366
         propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
           createObjectExpression([prop]),
-          props
+          props,
         ])
       } else {
         props.arguments.unshift(createObjectExpression([prop]))
@@ -409,7 +409,7 @@ export function injectProp(
     // single v-bind with expression, return a merged replacement
     propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
       createObjectExpression([prop]),
-      props
+      props,
     ])
     // in the case of nested helper call, e.g. `normalizeProps(guardReactiveProps(props))`,
     // it will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
@@ -441,7 +441,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
     result = props.properties.some(
       p =>
         p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-        p.key.content === propKeyName
+        p.key.content === propKeyName,
     )
   }
   return result
@@ -449,7 +449,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive' | 'filter'
+  type: 'component' | 'directive' | 'filter',
 ): string {
   // see issue#4422, we need adding identifier on validAssetId if variable `name` has specific character
   return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
@@ -460,7 +460,7 @@ export function toValidAssetId(
 // Check if a node contains expressions that reference current context scope ids
 export function hasScopeRef(
   node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
-  ids: TransformContext['identifiers']
+  ids: TransformContext['identifiers'],
 ): boolean {
   if (!node || Object.keys(ids).length === 0) {
     return false

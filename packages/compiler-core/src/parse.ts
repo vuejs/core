@@ -4,14 +4,14 @@ import {
   ErrorCodes,
   createCompilerError,
   defaultOnError,
-  defaultOnWarn
+  defaultOnWarn,
 } from './errors'
 import {
   assert,
   advancePositionWithMutation,
   advancePositionWithClone,
   isCoreComponent,
-  isStaticArgOf
+  isStaticArgOf,
 } from './utils'
 import {
   Namespaces,
@@ -29,14 +29,14 @@ import {
   TemplateChildNode,
   InterpolationNode,
   createRoot,
-  ConstantTypes
+  ConstantTypes,
 } from './ast'
 import {
   checkCompatEnabled,
   CompilerCompatOptions,
   CompilerDeprecationTypes,
   isCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compat/compatConfig'
 
 type OptionalOptions =
@@ -63,7 +63,7 @@ const decodeMap: Record<string, string> = {
   lt: '<',
   amp: '&',
   apos: "'",
-  quot: '"'
+  quot: '"',
 }
 
 export const defaultParserOptions: MergedParserOptions = {
@@ -77,7 +77,7 @@ export const defaultParserOptions: MergedParserOptions = {
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
   onWarn: defaultOnWarn,
-  comments: __DEV__
+  comments: __DEV__,
 }
 
 export const enum TextModes {
@@ -86,7 +86,7 @@ export const enum TextModes {
   RCDATA, //  | ✘        | ✔        | End tag of the parent | <textarea>
   RAWTEXT, // | ✘        | ✘        | End tag of the parent | <style>,<script>
   CDATA,
-  ATTRIBUTE_VALUE
+  ATTRIBUTE_VALUE,
 }
 
 export interface ParserContext {
@@ -103,19 +103,19 @@ export interface ParserContext {
 
 export function baseParse(
   content: string,
-  options: ParserOptions = {}
+  options: ParserOptions = {},
 ): RootNode {
   const context = createParserContext(content, options)
   const start = getCursor(context)
   return createRoot(
     parseChildren(context, TextModes.DATA, []),
-    getSelection(context, start)
+    getSelection(context, start),
   )
 }
 
 function createParserContext(
   content: string,
-  rawOptions: ParserOptions
+  rawOptions: ParserOptions,
 ): ParserContext {
   const options = extend({}, defaultParserOptions)
 
@@ -136,14 +136,14 @@ function createParserContext(
     source: content,
     inPre: false,
     inVPre: false,
-    onWarn: options.onWarn
+    onWarn: options.onWarn,
   }
 }
 
 function parseChildren(
   context: ParserContext,
   mode: TextModes,
-  ancestors: ElementNode[]
+  ancestors: ElementNode[],
 ): TemplateChildNode[] {
   const parent = last(ancestors)
   const ns = parent ? parent.ns : Namespaces.HTML
@@ -196,7 +196,7 @@ function parseChildren(
             emitError(
               context,
               ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              2
+              2,
             )
             node = parseBogusComment(context)
           }
@@ -208,21 +208,21 @@ function parseChildren(
             __COMPAT__ &&
             isCompatEnabled(
               CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
-              context
+              context,
             ) &&
             node &&
             node.tag === 'template' &&
             !node.props.some(
               p =>
                 p.type === NodeTypes.DIRECTIVE &&
-                isSpecialTemplateDirective(p.name)
+                isSpecialTemplateDirective(p.name),
             )
           ) {
             __DEV__ &&
               warnDeprecation(
                 CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
                 context,
-                node.loc
+                node.loc,
               )
             node = node.children
           }
@@ -230,7 +230,7 @@ function parseChildren(
           emitError(
             context,
             ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-            1
+            1,
           )
           node = parseBogusComment(context)
         } else {
@@ -340,7 +340,7 @@ function pushNode(nodes: TemplateChildNode[], node: TemplateChildNode): void {
 
 function parseCDATA(
   context: ParserContext,
-  ancestors: ElementNode[]
+  ancestors: ElementNode[],
 ): TemplateChildNode[] {
   __TEST__ &&
     assert(last(ancestors) == null || last(ancestors)!.ns !== Namespaces.HTML)
@@ -396,7 +396,7 @@ function parseComment(context: ParserContext): CommentNode {
   return {
     type: NodeTypes.COMMENT,
     content,
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
   }
 }
 
@@ -419,13 +419,13 @@ function parseBogusComment(context: ParserContext): CommentNode | undefined {
   return {
     type: NodeTypes.COMMENT,
     content,
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
   }
 }
 
 function parseElement(
   context: ParserContext,
-  ancestors: ElementNode[]
+  ancestors: ElementNode[],
 ): ElementNode | undefined {
   __TEST__ && assert(/^<[a-z]/i.test(context.source))
 
@@ -457,21 +457,21 @@ function parseElement(
   // 2.x inline-template compat
   if (__COMPAT__) {
     const inlineTemplateProp = element.props.find(
-      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template'
+      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template',
     ) as AttributeNode
     if (
       inlineTemplateProp &&
       checkCompatEnabled(
         CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE,
         context,
-        inlineTemplateProp.loc
+        inlineTemplateProp.loc,
       )
     ) {
       const loc = getSelection(context, element.loc.end)
       inlineTemplateProp.value = {
         type: NodeTypes.TEXT,
         content: loc.source,
-        loc
+        loc,
       }
     }
   }
@@ -504,11 +504,11 @@ function parseElement(
 
 const enum TagType {
   Start,
-  End
+  End,
 }
 
 const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
-  `if,else,else-if,for,slot`
+  `if,else,else-if,for,slot`,
 )
 
 /**
@@ -517,22 +517,22 @@ const isSpecialTemplateDirective = /*#__PURE__*/ makeMap(
 function parseTag(
   context: ParserContext,
   type: TagType.Start,
-  parent: ElementNode | undefined
+  parent: ElementNode | undefined,
 ): ElementNode
 function parseTag(
   context: ParserContext,
   type: TagType.End,
-  parent: ElementNode | undefined
+  parent: ElementNode | undefined,
 ): void
 function parseTag(
   context: ParserContext,
   type: TagType,
-  parent: ElementNode | undefined
+  parent: ElementNode | undefined,
 ): ElementNode | undefined {
   __TEST__ && assert(/^<\/?[a-z]/i.test(context.source))
   __TEST__ &&
     assert(
-      type === (startsWith(context.source, '</') ? TagType.End : TagType.Start)
+      type === (startsWith(context.source, '</') ? TagType.End : TagType.Start),
     )
 
   // Tag open.
@@ -592,7 +592,7 @@ function parseTag(
     __DEV__ &&
     isCompatEnabled(
       CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
-      context
+      context,
     )
   ) {
     let hasIf = false
@@ -610,7 +610,7 @@ function parseTag(
         warnDeprecation(
           CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
           context,
-          getSelection(context, start)
+          getSelection(context, start),
         )
         break
       }
@@ -625,7 +625,8 @@ function parseTag(
       if (
         props.some(
           p =>
-            p.type === NodeTypes.DIRECTIVE && isSpecialTemplateDirective(p.name)
+            p.type === NodeTypes.DIRECTIVE &&
+            isSpecialTemplateDirective(p.name),
         )
       ) {
         tagType = ElementTypes.TEMPLATE
@@ -644,14 +645,14 @@ function parseTag(
     isSelfClosing,
     children: [],
     loc: getSelection(context, start),
-    codegenNode: undefined // to be created during transform phase
+    codegenNode: undefined, // to be created during transform phase
   }
 }
 
 function isComponent(
   tag: string,
   props: (AttributeNode | DirectiveNode)[],
-  context: ParserContext
+  context: ParserContext,
 ) {
   const options = context.options
   if (options.isCustomElement(tag)) {
@@ -679,7 +680,7 @@ function isComponent(
           checkCompatEnabled(
             CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
             context,
-            p.loc
+            p.loc,
           )
         ) {
           return true
@@ -698,7 +699,7 @@ function isComponent(
         checkCompatEnabled(
           CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
           context,
-          p.loc
+          p.loc,
         )
       ) {
         return true
@@ -709,7 +710,7 @@ function isComponent(
 
 function parseAttributes(
   context: ParserContext,
-  type: TagType
+  type: TagType,
 ): (AttributeNode | DirectiveNode)[] {
   const props = []
   const attributeNames = new Set<string>()
@@ -754,7 +755,7 @@ function parseAttributes(
 
 function parseAttribute(
   context: ParserContext,
-  nameSet: Set<string>
+  nameSet: Set<string>,
 ): AttributeNode | DirectiveNode {
   __TEST__ && assert(/^[^\t\r\n\f />]/.test(context.source))
 
@@ -778,7 +779,7 @@ function parseAttribute(
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-        m.index
+        m.index,
       )
     }
   }
@@ -802,7 +803,7 @@ function parseAttribute(
   if (!context.inVPre && /^(v-[A-Za-z0-9-]|:|\.|@|#)/.test(name)) {
     const match =
       /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i.exec(
-        name
+        name,
       )!
 
     let isPropShorthand = startsWith(name, '.')
@@ -819,7 +820,7 @@ function parseAttribute(
       const isSlot = dirName === 'slot'
       const startOffset = name.lastIndexOf(
         match[2],
-        name.length - (match[3]?.length || 0)
+        name.length - (match[3]?.length || 0),
       )
       const loc = getSelection(
         context,
@@ -827,8 +828,8 @@ function parseAttribute(
         getNewPosition(
           context,
           start,
-          startOffset + match[2].length + ((isSlot && match[3]) || '').length
-        )
+          startOffset + match[2].length + ((isSlot && match[3]) || '').length,
+        ),
       )
       let content = match[2]
       let isStatic = true
@@ -839,7 +840,7 @@ function parseAttribute(
         if (!content.endsWith(']')) {
           emitError(
             context,
-            ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
+            ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
           )
           content = content.slice(1)
         } else {
@@ -859,7 +860,7 @@ function parseAttribute(
         constType: isStatic
           ? ConstantTypes.CAN_STRINGIFY
           : ConstantTypes.NOT_CONSTANT,
-        loc
+        loc,
       }
     }
 
@@ -882,7 +883,7 @@ function parseAttribute(
           CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
           context,
           loc,
-          arg.loc.source
+          arg.loc.source,
         )
       ) {
         dirName = 'model'
@@ -893,7 +894,7 @@ function parseAttribute(
         checkCompatEnabled(
           CompilerDeprecationTypes.COMPILER_V_BIND_PROP,
           context,
-          loc
+          loc,
         )
       }
     }
@@ -908,11 +909,11 @@ function parseAttribute(
         // Treat as non-constant by default. This can be potentially set to
         // other values by `transformExpression` to make it eligible for hoisting.
         constType: ConstantTypes.NOT_CONSTANT,
-        loc: value.loc
+        loc: value.loc,
       },
       arg,
       modifiers,
-      loc
+      loc,
     }
   }
 
@@ -927,9 +928,9 @@ function parseAttribute(
     value: value && {
       type: NodeTypes.TEXT,
       content: value.content,
-      loc: value.loc
+      loc: value.loc,
     },
-    loc
+    loc,
   }
 }
 
@@ -948,7 +949,7 @@ function parseAttributeValue(context: ParserContext): AttributeValue {
       content = parseTextData(
         context,
         context.source.length,
-        TextModes.ATTRIBUTE_VALUE
+        TextModes.ATTRIBUTE_VALUE,
       )
     } else {
       content = parseTextData(context, endIndex, TextModes.ATTRIBUTE_VALUE)
@@ -966,7 +967,7 @@ function parseAttributeValue(context: ParserContext): AttributeValue {
       emitError(
         context,
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-        m.index
+        m.index,
       )
     }
     content = parseTextData(context, match[0].length, TextModes.ATTRIBUTE_VALUE)
@@ -977,7 +978,7 @@ function parseAttributeValue(context: ParserContext): AttributeValue {
 
 function parseInterpolation(
   context: ParserContext,
-  mode: TextModes
+  mode: TextModes,
 ): InterpolationNode | undefined {
   const [open, close] = context.options.delimiters
   __TEST__ && assert(startsWith(context.source, open))
@@ -1013,9 +1014,9 @@ function parseInterpolation(
       // Set `isConstant` to false by default and will decide in transformExpression
       constType: ConstantTypes.NOT_CONSTANT,
       content,
-      loc: getSelection(context, innerStart, innerEnd)
+      loc: getSelection(context, innerStart, innerEnd),
     },
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
   }
 }
 
@@ -1041,7 +1042,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
   return {
     type: NodeTypes.TEXT,
     content,
-    loc: getSelection(context, start)
+    loc: getSelection(context, start),
   }
 }
 
@@ -1052,7 +1053,7 @@ function parseText(context: ParserContext, mode: TextModes): TextNode {
 function parseTextData(
   context: ParserContext,
   length: number,
-  mode: TextModes
+  mode: TextModes,
 ): string {
   const rawText = context.source.slice(0, length)
   advanceBy(context, length)
@@ -1066,7 +1067,7 @@ function parseTextData(
     // DATA or RCDATA containing "&"". Entity decoding required.
     return context.options.decodeEntities(
       rawText,
-      mode === TextModes.ATTRIBUTE_VALUE
+      mode === TextModes.ATTRIBUTE_VALUE,
     )
   }
 }
@@ -1079,13 +1080,13 @@ function getCursor(context: ParserContext): Position {
 function getSelection(
   context: ParserContext,
   start: Position,
-  end?: Position
+  end?: Position,
 ): SourceLocation {
   end = end || getCursor(context)
   return {
     start,
     end,
-    source: context.originalSource.slice(start.offset, end.offset)
+    source: context.originalSource.slice(start.offset, end.offset),
   }
 }
 
@@ -1114,12 +1115,12 @@ function advanceSpaces(context: ParserContext): void {
 function getNewPosition(
   context: ParserContext,
   start: Position,
-  numberOfCharacters: number
+  numberOfCharacters: number,
 ): Position {
   return advancePositionWithClone(
     start,
     context.originalSource.slice(start.offset, numberOfCharacters),
-    numberOfCharacters
+    numberOfCharacters,
   )
 }
 
@@ -1127,7 +1128,7 @@ function emitError(
   context: ParserContext,
   code: ErrorCodes,
   offset?: number,
-  loc: Position = getCursor(context)
+  loc: Position = getCursor(context),
 ): void {
   if (offset) {
     loc.offset += offset
@@ -1137,15 +1138,15 @@ function emitError(
     createCompilerError(code, {
       start: loc,
       end: loc,
-      source: ''
-    })
+      source: '',
+    }),
   )
 }
 
 function isEnd(
   context: ParserContext,
   mode: TextModes,
-  ancestors: ElementNode[]
+  ancestors: ElementNode[],
 ): boolean {
   const s = context.source
 

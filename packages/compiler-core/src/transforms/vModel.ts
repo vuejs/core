@@ -7,14 +7,14 @@ import {
   Property,
   ElementTypes,
   ExpressionNode,
-  ConstantTypes
+  ConstantTypes,
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import {
   isMemberExpression,
   isSimpleIdentifier,
   hasScopeRef,
-  isStaticExp
+  isStaticExp,
 } from '../utils'
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
@@ -24,7 +24,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
   if (!exp) {
     context.onError(
-      createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc)
+      createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc),
     )
     return createTransformProps()
   }
@@ -58,7 +58,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     (!isMemberExpression(expString, context) && !maybeRef)
   ) {
     context.onError(
-      createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc)
+      createCompilerError(ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION, exp.loc),
     )
     return createTransformProps()
   }
@@ -70,7 +70,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     context.identifiers[expString]
   ) {
     context.onError(
-      createCompilerError(ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE, exp.loc)
+      createCompilerError(ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE, exp.loc),
     )
     return createTransformProps()
   }
@@ -90,7 +90,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       assignmentExp = createCompoundExpression([
         `${eventArg} => ((`,
         createSimpleExpression(rawExp, false, exp.loc),
-        `).value = $event)`
+        `).value = $event)`,
       ])
     } else {
       // v-model used on a potentially ref binding in <script setup> inline mode.
@@ -100,14 +100,14 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
       assignmentExp = createCompoundExpression([
         `${eventArg} => (${context.helperString(IS_REF)}(${rawExp}) ? (`,
         createSimpleExpression(rawExp, false, exp.loc),
-        `).value = $event : ${altAssignment})`
+        `).value = $event : ${altAssignment})`,
       ])
     }
   } else {
     assignmentExp = createCompoundExpression([
       `${eventArg} => ((`,
       exp,
-      `) = $event)`
+      `) = $event)`,
     ])
   }
 
@@ -115,7 +115,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     // modelValue: foo
     createObjectProperty(propName, dir.exp!),
     // "onUpdate:modelValue": $event => (foo = $event)
-    createObjectProperty(eventName, assignmentExp)
+    createObjectProperty(eventName, assignmentExp),
   ]
 
   // cache v-model handler if applicable (when it doesn't refer any scope vars)
@@ -146,9 +146,9 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
           `{ ${modifiers} }`,
           false,
           dir.loc,
-          ConstantTypes.CAN_HOIST
-        )
-      )
+          ConstantTypes.CAN_HOIST,
+        ),
+      ),
     )
   }
 

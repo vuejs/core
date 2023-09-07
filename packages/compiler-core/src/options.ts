@@ -4,7 +4,7 @@ import { CompilerError } from './errors'
 import {
   NodeTransform,
   DirectiveTransform,
-  TransformContext
+  TransformContext,
 } from './transform'
 import { CompilerCompatOptions } from './compat/compatConfig'
 import { ParserPlugin } from '@babel/parser'
@@ -46,7 +46,7 @@ export interface ParserOptions
    */
   getTextMode?: (
     node: ElementNode,
-    parent: ElementNode | undefined
+    parent: ElementNode | undefined,
   ) => TextModes
   /**
    * @default ['{{', '}}']
@@ -70,7 +70,7 @@ export interface ParserOptions
 export type HoistTransform = (
   children: TemplateChildNode[],
   context: TransformContext,
-  parent: ParentNode
+  parent: ParentNode,
 ) => void
 
 export const enum BindingTypes {
@@ -116,7 +116,7 @@ export const enum BindingTypes {
   /**
    * a literal constant, e.g. 'foo', 1, true
    */
-  LITERAL_CONST = 'literal-const'
+  LITERAL_CONST = 'literal-const',
 }
 
 export type BindingMetadata = {

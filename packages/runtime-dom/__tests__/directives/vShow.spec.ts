@@ -5,7 +5,7 @@ import {
   nextTick,
   VNode,
   ref,
-  watch
+  watch,
 } from '@vue/runtime-core'
 import { render, Transition, vShow } from '@vue/runtime-dom'
 
@@ -26,7 +26,7 @@ describe('runtime-dom: v-show directive', () => {
       },
       render() {
         return [withVShow(h('div'), this.value)]
-      }
+      },
     })
     render(h(component), root)
 
@@ -42,7 +42,7 @@ describe('runtime-dom: v-show directive', () => {
       },
       render() {
         return [withVShow(h('div'), this.value)]
-      }
+      },
     })
     render(h(component), root)
 
@@ -58,7 +58,7 @@ describe('runtime-dom: v-show directive', () => {
       },
       render() {
         return [withVShow(h('div'), this.value)]
-      }
+      },
     })
     render(h(component), root)
 
@@ -107,9 +107,9 @@ describe('runtime-dom: v-show directive', () => {
       },
       render() {
         return [
-          withVShow(h('div', { style: { display: 'block' } }), this.value)
+          withVShow(h('div', { style: { display: 'block' } }), this.value),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -134,7 +134,7 @@ describe('runtime-dom: v-show directive', () => {
     const component = defineComponent({
       render() {
         return withVShow(h('div', { style: style.value }), display.value)
-      }
+      },
     })
     render(h(component), root)
 
@@ -165,11 +165,11 @@ describe('runtime-dom: v-show directive', () => {
           return h(Transition, () =>
             withVShow(
               h('div', { style: style.value }, innerValue.value),
-              display.value
-            )
+              display.value,
+            ),
           )
         }
-      }
+      },
     })
     render(h(component), root)
 

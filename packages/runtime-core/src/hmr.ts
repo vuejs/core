@@ -5,7 +5,7 @@ import {
   ComponentOptions,
   InternalRenderFunction,
   ClassComponent,
-  isClassComponent
+  isClassComponent,
 } from './component'
 import { queueJob, queuePostFlushCb } from './scheduler'
 import { extend, getGlobalThis } from '@vue/shared'
@@ -31,7 +31,7 @@ if (__DEV__) {
   getGlobalThis().__VUE_HMR_RUNTIME__ = {
     createRecord: tryWrap(createRecord),
     rerender: tryWrap(rerender),
-    reload: tryWrap(reload)
+    reload: tryWrap(reload),
   } as HMRRuntime
 }
 
@@ -66,7 +66,7 @@ function createRecord(id: string, initialDef: HMRComponent): boolean {
   }
   map.set(id, {
     initialDef: normalizeClassComponent(initialDef),
-    instances: new Set()
+    instances: new Set(),
   })
   return true
 }
@@ -146,7 +146,7 @@ function reload(id: string, newComp: HMRComponent) {
       window.location.reload()
     } else {
       console.warn(
-        '[HMR] Root or manually mounted instance modified. Full reload required.'
+        '[HMR] Root or manually mounted instance modified. Full reload required.',
       )
     }
   }
@@ -155,7 +155,7 @@ function reload(id: string, newComp: HMRComponent) {
   queuePostFlushCb(() => {
     for (const instance of instances) {
       hmrDirtyComponents.delete(
-        normalizeClassComponent(instance.type as HMRComponent)
+        normalizeClassComponent(instance.type as HMRComponent),
       )
     }
   })
@@ -163,7 +163,7 @@ function reload(id: string, newComp: HMRComponent) {
 
 function updateComponentDef(
   oldComp: ComponentOptions,
-  newComp: ComponentOptions
+  newComp: ComponentOptions,
 ) {
   extend(oldComp, newComp)
   for (const key in oldComp) {
@@ -181,7 +181,7 @@ function tryWrap(fn: (id: string, arg: any) => any): Function {
       console.error(e)
       console.warn(
         `[HMR] Something went wrong during Vue component hot-reload. ` +
-          `Full reload required.`
+          `Full reload required.`,
       )
     }
   }

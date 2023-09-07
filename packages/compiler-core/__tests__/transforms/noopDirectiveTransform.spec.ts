@@ -3,7 +3,7 @@ import {
   transform,
   ElementNode,
   noopDirectiveTransform,
-  VNodeCall
+  VNodeCall,
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 
@@ -13,8 +13,8 @@ describe('compiler: noop directive transform', () => {
     transform(ast, {
       nodeTransforms: [transformElement],
       directiveTransforms: {
-        noop: noopDirectiveTransform
-      }
+        noop: noopDirectiveTransform,
+      },
     })
     const node = ast.children[0] as ElementNode
     // As v-noop adds no properties the codegen should be identical to

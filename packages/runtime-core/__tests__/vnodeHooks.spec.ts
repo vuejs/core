@@ -5,7 +5,7 @@ import {
   VNodeProps,
   TestElement,
   TestNodeTypes,
-  VNode
+  VNode,
 } from '@vue/runtime-test'
 
 describe('renderer: vnode hooks', () => {
@@ -45,17 +45,17 @@ describe('renderer: vnode hooks', () => {
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'foo'
+          text: 'foo',
         })
       }),
       onVnodeUpdated: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'bar'
+          text: 'bar',
         })
       }),
       onVnodeBeforeUnmount: vi.fn(),
-      onVnodeUnmounted: vi.fn()
+      onVnodeUnmounted: vi.fn(),
     }
 
     assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
@@ -70,29 +70,29 @@ describe('renderer: vnode hooks', () => {
       onVnodeBeforeUpdate: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'foo'
+          text: 'foo',
         })
       }),
       onVnodeUpdated: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
           type: TestNodeTypes.TEXT,
-          text: 'bar'
+          text: 'bar',
         })
       }),
       onVnodeBeforeUnmount: vi.fn(),
-      onVnodeUnmounted: vi.fn()
+      onVnodeUnmounted: vi.fn(),
     }
 
     assertHooks(
       hooks,
       h(Comp, {
         ...hooks,
-        msg: 'foo'
+        msg: 'foo',
       }),
       h(Comp, {
         ...hooks,
-        msg: 'bar'
-      })
+        msg: 'bar',
+      }),
     )
   })
 })

@@ -20,7 +20,7 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
-  writeFileSync
+  writeFileSync,
 } from 'node:fs'
 import { parse } from '@babel/parser'
 import path from 'node:path'
@@ -41,7 +41,7 @@ export function scanEnums() {
   const enumData = {
     ranges: {},
     defines: {},
-    ids: []
+    ids: [],
   }
 
   // 1. grep for files with exported const enum
@@ -54,7 +54,7 @@ export function scanEnums() {
     const content = readFileSync(file, 'utf-8')
     const ast = parse(content, {
       plugins: ['typescript'],
-      sourceType: 'module'
+      sourceType: 'module',
     })
 
     for (const node of ast.program.body) {
@@ -109,13 +109,13 @@ export function scanEnums() {
                   const exp = content.slice(node.start, node.end)
                   if (!(exp in enumData.defines)) {
                     throw new Error(
-                      `unhandled enum initialization expression ${exp} in ${file}`
+                      `unhandled enum initialization expression ${exp} in ${file}`,
                     )
                   }
                   return enumData.defines[exp]
                 } else {
                   throw new Error(
-                    `unhandled BinaryExpression operand type ${node.type} in ${file}`
+                    `unhandled BinaryExpression operand type ${node.type} in ${file}`,
                   )
                 }
               }
@@ -134,14 +134,14 @@ export function scanEnums() {
                 value = evaluate(exp)
               } else {
                 throw new Error(
-                  `unhandled UnaryExpression argument type ${init.argument.type} in ${file}`
+                  `unhandled UnaryExpression argument type ${init.argument.type} in ${file}`,
                 )
               }
             }
 
             if (value === undefined) {
               throw new Error(
-                `unhandled initializer type ${init.type} for ${fullKey} in ${file}`
+                `unhandled initializer type ${init.type} for ${fullKey} in ${file}`,
               )
             }
             saveValue(value)
@@ -185,7 +185,7 @@ export function constEnum() {
 
   // construct a regex for matching re-exports of known const enums
   const reExportsRE = new RegExp(
-    `export {[^}]*?\\b(${enumData.ids.join('|')})\\b[^]*?}`
+    `export {[^}]*?\\b(${enumData.ids.join('|')})\\b[^]*?}`,
   )
 
   // 3. during transform:
@@ -211,7 +211,7 @@ export function constEnum() {
         s = s || new MagicString(code)
         const ast = parse(code, {
           plugins: ['typescript'],
-          sourceType: 'module'
+          sourceType: 'module',
         })
         for (const node of ast.program.body) {
           if (
@@ -245,10 +245,10 @@ export function constEnum() {
       if (s) {
         return {
           code: s.toString(),
-          map: s.generateMap()
+          map: s.generateMap(),
         }
       }
-    }
+    },
   }
 
   return [plugin, enumData.defines]

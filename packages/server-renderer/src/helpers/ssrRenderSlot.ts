@@ -7,7 +7,7 @@ export type SSRSlot = (
   props: Props,
   push: PushFn,
   parentComponent: ComponentInternalInstance | null,
-  scopeId: string | null
+  scopeId: string | null,
 ) => void
 
 export function ssrRenderSlot(
@@ -17,7 +17,7 @@ export function ssrRenderSlot(
   fallbackRenderFn: (() => void) | null,
   push: PushFn,
   parentComponent: ComponentInternalInstance,
-  slotScopeId?: string
+  slotScopeId?: string,
 ) {
   // template-compiled slots are always rendered as fragments
   push(`<!--[-->`)
@@ -28,7 +28,7 @@ export function ssrRenderSlot(
     fallbackRenderFn,
     push,
     parentComponent,
-    slotScopeId
+    slotScopeId,
   )
   push(`<!--]-->`)
 }
@@ -41,7 +41,7 @@ export function ssrRenderSlotInner(
   push: PushFn,
   parentComponent: ComponentInternalInstance,
   slotScopeId?: string,
-  transition?: boolean
+  transition?: boolean,
 ) {
   const slotFn = slots[slotName]
   if (slotFn) {
@@ -53,7 +53,7 @@ export function ssrRenderSlotInner(
       slotProps,
       bufferedPush,
       parentComponent,
-      slotScopeId ? ' ' + slotScopeId : ''
+      slotScopeId ? ' ' + slotScopeId : '',
     )
     if (isArray(ret)) {
       // normal slot

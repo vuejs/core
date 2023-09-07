@@ -17,7 +17,7 @@ test('computed reactivity during SSR', async () => {
     // pretend to fetch some data from an api
     async fetchData() {
       this.state.items = ['hello', 'world']
-    }
+    },
   }
 
   const getterSpy = vi.fn()

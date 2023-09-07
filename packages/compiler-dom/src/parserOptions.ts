@@ -3,7 +3,7 @@ import {
   ParserOptions,
   ElementNode,
   NodeTypes,
-  isBuiltInType
+  isBuiltInType,
 } from '@vue/compiler-core'
 import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
@@ -12,13 +12,13 @@ import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
 const isRawTextContainer = /*#__PURE__*/ makeMap(
   'style,iframe,script,noscript',
-  true
+  true,
 )
 
 export const enum DOMNamespaces {
   HTML = 0 /* Namespaces.HTML */,
   SVG,
-  MATH_ML
+  MATH_ML,
 }
 
 export const parserOptions: ParserOptions = {
@@ -51,7 +51,7 @@ export const parserOptions: ParserOptions = {
               a.name === 'encoding' &&
               a.value != null &&
               (a.value.content === 'text/html' ||
-                a.value.content === 'application/xhtml+xml')
+                a.value.content === 'application/xhtml+xml'),
           )
         ) {
           ns = DOMNamespaces.HTML
@@ -95,5 +95,5 @@ export const parserOptions: ParserOptions = {
       }
     }
     return TextModes.DATA
-  }
+  },
 }

@@ -7,7 +7,7 @@ import {
   RootNode,
   noopDirectiveTransform,
   NodeTransform,
-  DirectiveTransform
+  DirectiveTransform,
 } from '@vue/compiler-core'
 import { parserOptions } from './parserOptions'
 import { transformStyle } from './transforms/transformStyle'
@@ -25,7 +25,7 @@ export { parserOptions }
 
 export const DOMNodeTransforms: NodeTransform[] = [
   transformStyle,
-  ...(__DEV__ ? [transformTransition] : [])
+  ...(__DEV__ ? [transformTransition] : []),
 ]
 
 export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
@@ -34,12 +34,12 @@ export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
   text: transformVText,
   model: transformModel, // override compiler-core
   on: transformOn, // override compiler-core
-  show: transformShow
+  show: transformShow,
 }
 
 export function compile(
   template: string,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ): CodegenResult {
   return baseCompile(
     template,
@@ -50,15 +50,15 @@ export function compile(
         // by compiler-ssr to generate vnode fallback branches
         ignoreSideEffectTags,
         ...DOMNodeTransforms,
-        ...(options.nodeTransforms || [])
+        ...(options.nodeTransforms || []),
       ],
       directiveTransforms: extend(
         {},
         DOMDirectiveTransforms,
-        options.directiveTransforms || {}
+        options.directiveTransforms || {},
       ),
-      transformHoist: __BROWSER__ ? null : stringifyStatic
-    })
+      transformHoist: __BROWSER__ ? null : stringifyStatic,
+    }),
   )
 }
 

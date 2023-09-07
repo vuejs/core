@@ -6,7 +6,7 @@ describe('compiler: ignore side effect tags', () => {
     const { code } = compile(`<script>console.log(1)</script>`, {
       onError(e) {
         err = e
-      }
+      },
     })
     expect(code).not.toMatch('script')
     expect(err).toBeDefined()
@@ -18,7 +18,7 @@ describe('compiler: ignore side effect tags', () => {
     const { code } = compile(`<style>h1 { color: red }</style>`, {
       onError(e) {
         err = e
-      }
+      },
     })
     expect(code).not.toMatch('style')
     expect(err).toBeDefined()

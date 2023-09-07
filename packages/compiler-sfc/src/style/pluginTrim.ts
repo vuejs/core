@@ -10,7 +10,7 @@ const trimPlugin: PluginCreator<{}> = () => {
           if ('after' in raws && raws.after) raws.after = '\n'
         }
       })
-    }
+    },
   }
 }
 

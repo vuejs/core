@@ -4,7 +4,7 @@ import {
   track,
   TrackOpTypes,
   trigger,
-  TriggerOpTypes
+  TriggerOpTypes,
 } from '@vue/reactivity'
 import {
   isFunction,
@@ -13,7 +13,7 @@ import {
   isArray,
   isObject,
   isString,
-  invokeArrayFns
+  invokeArrayFns,
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
@@ -23,7 +23,7 @@ import {
   AppConfig,
   AppContext,
   CreateAppFunction,
-  Plugin
+  Plugin,
 } from '../apiCreateApp'
 import {
   Component,
@@ -31,12 +31,12 @@ import {
   createComponentInstance,
   finishComponentSetup,
   isRuntimeOnly,
-  setupComponent
+  setupComponent,
 } from '../component'
 import {
   RenderFunction,
   mergeOptions,
-  internalOptionMergeStrats
+  internalOptionMergeStrats,
 } from '../componentOptions'
 import { ComponentPublicInstance } from '../componentPublicInstance'
 import { devtoolsInitApp, devtoolsUnmountApp } from '../devtools'
@@ -46,7 +46,7 @@ import { version } from '..'
 import {
   installLegacyConfigWarnings,
   installLegacyOptionMergeStrats,
-  LegacyConfig
+  LegacyConfig,
 } from './globalConfig'
 import { LegacyDirective } from './customDirective'
 import {
@@ -55,7 +55,7 @@ import {
   assertCompatEnabled,
   configureCompat,
   isCompatEnabled,
-  softAssertCompatEnabled
+  softAssertCompatEnabled,
 } from './compatConfig'
 import { LegacyPublicInstance } from './instance'
 
@@ -134,12 +134,12 @@ let singletonCtor: CompatVue
 // Legacy global Vue constructor
 export function createCompatVue(
   createApp: CreateAppFunction<Element>,
-  createSingletonApp: CreateAppFunction<Element>
+  createSingletonApp: CreateAppFunction<Element>,
 ): CompatVue {
   singletonApp = createSingletonApp({})
 
   const Vue: CompatVue = (singletonCtor = function Vue(
-    options: ComponentOptions = {}
+    options: ComponentOptions = {},
   ) {
     return createCompatApp(options, Vue)
   } as any)
@@ -233,9 +233,9 @@ export function createCompatVue(
           mergeOptions(
             extend({}, SubVue.options),
             inlineOptions,
-            internalOptionMergeStrats as any
+            internalOptionMergeStrats as any,
           ),
-          SubVue
+          SubVue,
         )
       }
     }
@@ -258,7 +258,7 @@ export function createCompatVue(
     SubVue.options = mergeOptions(
       mergeBase,
       extendOptions,
-      internalOptionMergeStrats as any
+      internalOptionMergeStrats as any,
     )
 
     SubVue.options._base = SubVue
@@ -305,15 +305,15 @@ export function createCompatVue(
       mergeOptions(
         parent,
         child,
-        vm ? undefined : (internalOptionMergeStrats as any)
+        vm ? undefined : (internalOptionMergeStrats as any),
       ),
-    defineReactive
+    defineReactive,
   }
   Object.defineProperty(Vue, 'util', {
     get() {
       assertCompatEnabled(DeprecationTypes.GLOBAL_PRIVATE_UTIL, null)
       return util
-    }
+    },
   })
 
   Vue.configureCompat = configureCompat
@@ -324,7 +324,7 @@ export function createCompatVue(
 export function installAppCompatProperties(
   app: App,
   context: AppContext,
-  render: RootRenderFunction<any>
+  render: RootRenderFunction<any>,
 ) {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)
@@ -364,7 +364,7 @@ function installLegacyAPIs(app: App) {
       get() {
         __DEV__ && warnDeprecation(DeprecationTypes.GLOBAL_PROTOTYPE, null)
         return app.config.globalProperties
-      }
+      },
     },
     nextTick: { value: nextTick },
     extend: { value: singletonCtor.extend },
@@ -374,8 +374,8 @@ function installLegacyAPIs(app: App) {
     util: {
       get() {
         return singletonCtor.util
-      }
-    }
+      },
+    },
   })
 }
 
@@ -432,7 +432,7 @@ function applySingletonPrototype(app: App, Ctor: Function) {
         Object.defineProperty(
           app.config.globalProperties,
           key,
-          descriptors[key]
+          descriptors[key],
         )
       }
     }
@@ -445,7 +445,7 @@ function applySingletonPrototype(app: App, Ctor: Function) {
 function installCompatMount(
   app: App,
   context: AppContext,
-  render: RootRenderFunction
+  render: RootRenderFunction,
 ) {
   let isMounted = false
 
@@ -493,7 +493,7 @@ function installCompatMount(
         if (!result) {
           __DEV__ &&
             warn(
-              `Failed to mount root instance: selector "${selectorOrEl}" returned null.`
+              `Failed to mount root instance: selector "${selectorOrEl}" returned null.`,
             )
           return
         }
@@ -597,7 +597,7 @@ const methodsToPatch = [
   'unshift',
   'splice',
   'sort',
-  'reverse'
+  'reverse',
 ]
 
 const patched = new WeakSet<object>()
@@ -649,6 +649,6 @@ function defineReactiveSimple(obj: any, key: string, val: any) {
     set(newVal) {
       val = isObject(newVal) ? reactive(newVal) : newVal
       trigger(obj, TriggerOpTypes.SET, key, newVal)
-    }
+    },
   })
 }

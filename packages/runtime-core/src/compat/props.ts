@@ -7,7 +7,7 @@ import { DeprecationTypes, warnDeprecation } from './compatConfig'
 export function createPropsDefaultThis(
   instance: ComponentInternalInstance,
   rawProps: Data,
-  propKey: string
+  propKey: string,
 ) {
   return new Proxy(
     {},
@@ -34,7 +34,7 @@ export function createPropsDefaultThis(
             return inject(key)
           }
         }
-      }
-    }
+      },
+    },
   )
 }

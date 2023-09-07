@@ -5,7 +5,7 @@ import {
   createRoot,
   NodeTypes,
   SimpleExpressionNode,
-  BindingMetadata
+  BindingMetadata,
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
 import { escapeSymbolsRE } from '../script/utils'
@@ -18,11 +18,11 @@ export function genCssVarsFromList(
   vars: string[],
   id: string,
   isProd: boolean,
-  isSSR = false
+  isSSR = false,
 ): string {
   return `{\n  ${vars
     .map(
-      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`
+      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`,
     )
     .join(',\n  ')}\n}`
 }
@@ -73,7 +73,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
 const enum LexerState {
   inParens,
   inSingleQuoteString,
-  inDoubleQuoteString
+  inDoubleQuoteString,
 }
 
 function lexBinding(content: string, start: number): number | null {
@@ -144,7 +144,7 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
         }
         decl.value = transformed + value.slice(lastIndex)
       }
-    }
+    },
   }
 }
 cssVarsPlugin.postcss = true
@@ -153,14 +153,14 @@ export function genCssVarsCode(
   vars: string[],
   bindings: BindingMetadata,
   id: string,
-  isProd: boolean
+  isProd: boolean,
 ) {
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings,
   })
   const transformed = processExpression(exp, context)
   const transformedString =
@@ -184,7 +184,7 @@ export function genNormalScriptCssVarsCode(
   bindings: BindingMetadata,
   id: string,
   isProd: boolean,
-  defaultVar: string
+  defaultVar: string,
 ): string {
   return (
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
@@ -192,7 +192,7 @@ export function genNormalScriptCssVarsCode(
       cssVars,
       bindings,
       id,
-      isProd
+      isProd,
     )}}\n` +
     `const __setup__ = ${defaultVar}.setup\n` +
     `${defaultVar}.setup = __setup__\n` +

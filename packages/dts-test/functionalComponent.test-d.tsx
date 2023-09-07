@@ -33,13 +33,13 @@ const Bar: FunctionalComponent<
 
 // assigning runtime options
 Bar.props = {
-  foo: Number
+  foo: Number,
 }
 //  @ts-expect-error
 Bar.props = { foo: String }
 
 Bar.emits = {
-  update: value => value > 1
+  update: value => value > 1,
 }
 //  @ts-expect-error
 Bar.emits = { baz: () => void 0 }

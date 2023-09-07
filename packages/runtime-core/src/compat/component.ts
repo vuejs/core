@@ -3,14 +3,14 @@ import { Component, ComponentInternalInstance } from '../component'
 import {
   checkCompatEnabled,
   DeprecationTypes,
-  softAssertCompatEnabled
+  softAssertCompatEnabled,
 } from './compatConfig'
 import { convertLegacyAsyncComponent } from './componentAsync'
 import { convertLegacyFunctionalComponent } from './componentFunctional'
 
 export function convertLegacyComponent(
   comp: any,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ): Component {
   if (comp.__isBuiltIn) {
     return comp
@@ -38,7 +38,7 @@ export function convertLegacyComponent(
     softAssertCompatEnabled(
       DeprecationTypes.COMPONENT_FUNCTIONAL,
       instance,
-      comp
+      comp,
     )
   ) {
     return convertLegacyFunctionalComponent(comp)

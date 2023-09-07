@@ -7,11 +7,11 @@ export function ssrRenderComponent(
   props: Props | null = null,
   children: Slots | SSRSlots | null = null,
   parentComponent: ComponentInternalInstance | null = null,
-  slotScopeId?: string
+  slotScopeId?: string,
 ): SSRBuffer | Promise<SSRBuffer> {
   return renderComponentVNode(
     createVNode(comp, props, children),
     parentComponent,
-    slotScopeId
+    slotScopeId,
   )
 }

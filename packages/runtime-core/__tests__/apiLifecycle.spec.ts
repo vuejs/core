@@ -14,7 +14,7 @@ import {
   onRenderTracked,
   reactive,
   TrackOpTypes,
-  onRenderTriggered
+  onRenderTriggered,
 } from '@vue/runtime-test'
 import { ITERATE_KEY, DebuggerEvent, TriggerOpTypes } from '@vue/reactivity'
 
@@ -32,7 +32,7 @@ describe('api: lifecycle hooks', () => {
       setup() {
         onBeforeMount(fn)
         return () => h('div')
-      }
+      },
     }
     render(h(Comp), root)
     expect(fn).toHaveBeenCalledTimes(1)
@@ -49,7 +49,7 @@ describe('api: lifecycle hooks', () => {
       setup() {
         onMounted(fn)
         return () => h('div')
-      }
+      },
     }
     render(h(Comp), root)
     expect(fn).toHaveBeenCalledTimes(1)
@@ -67,7 +67,7 @@ describe('api: lifecycle hooks', () => {
       setup() {
         onBeforeUpdate(fn)
         return () => h('div', count.value)
-      }
+      },
     }
     render(h(Comp), root)
 
@@ -94,7 +94,7 @@ describe('api: lifecycle hooks', () => {
           renderSpy()
           return h('div', count.value)
         }
-      }
+      },
     }
     render(h(Comp), root)
     expect(renderSpy).toHaveBeenCalledTimes(1)
@@ -118,7 +118,7 @@ describe('api: lifecycle hooks', () => {
       setup() {
         onUpdated(fn)
         return () => h('div', count.value)
-      }
+      },
     }
     render(h(Comp), root)
 
@@ -138,14 +138,14 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         return () => (toggle.value ? h(Child) : null)
-      }
+      },
     }
 
     const Child = {
       setup() {
         onBeforeUnmount(fn)
         return () => h('div')
-      }
+      },
     }
 
     render(h(Comp), root)
@@ -166,14 +166,14 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         return () => (toggle.value ? h(Child) : null)
-      }
+      },
     }
 
     const Child = {
       setup() {
         onUnmounted(fn)
         return () => h('div')
-      }
+      },
     }
 
     render(h(Comp), root)
@@ -194,7 +194,7 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         return () => (toggle.value ? h(Child) : null)
-      }
+      },
     }
 
     const Child = {
@@ -203,7 +203,7 @@ describe('api: lifecycle hooks', () => {
           onBeforeUnmount(fn)
         })
         return () => h('div')
-      }
+      },
     }
 
     render(h(Comp), root)
@@ -227,7 +227,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUnmount(() => calls.push('root onBeforeUnmount'))
         onUnmounted(() => calls.push('root onUnmounted'))
         return () => h(Mid, { count: count.value })
-      }
+      },
     }
 
     const Mid = {
@@ -240,7 +240,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUnmount(() => calls.push('mid onBeforeUnmount'))
         onUnmounted(() => calls.push('mid onUnmounted'))
         return () => h(Child, { count: props.count })
-      }
+      },
     }
 
     const Child = {
@@ -253,7 +253,7 @@ describe('api: lifecycle hooks', () => {
         onBeforeUnmount(() => calls.push('child onBeforeUnmount'))
         onUnmounted(() => calls.push('child onUnmounted'))
         return () => h('div', props.count)
-      }
+      },
     }
 
     // mount
@@ -264,7 +264,7 @@ describe('api: lifecycle hooks', () => {
       'child onBeforeMount',
       'child onMounted',
       'mid onMounted',
-      'root onMounted'
+      'root onMounted',
     ])
 
     calls.length = 0
@@ -278,7 +278,7 @@ describe('api: lifecycle hooks', () => {
       'child onBeforeUpdate',
       'child onUpdated',
       'mid onUpdated',
-      'root onUpdated'
+      'root onUpdated',
     ])
 
     calls.length = 0
@@ -291,7 +291,7 @@ describe('api: lifecycle hooks', () => {
       'child onBeforeUnmount',
       'child onUnmounted',
       'mid onUnmounted',
-      'root onUnmounted'
+      'root onUnmounted',
     ])
   })
 
@@ -307,7 +307,7 @@ describe('api: lifecycle hooks', () => {
         onRenderTracked(onTrack)
         return () =>
           h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -316,18 +316,18 @@ describe('api: lifecycle hooks', () => {
       {
         target: obj,
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         target: obj,
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         target: obj,
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -346,7 +346,7 @@ describe('api: lifecycle hooks', () => {
         onRenderTriggered(onTrigger)
         return () =>
           h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -358,7 +358,7 @@ describe('api: lifecycle hooks', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.bar
@@ -367,7 +367,7 @@ describe('api: lifecycle hooks', () => {
     expect(events[1]).toMatchObject({
       type: TriggerOpTypes.DELETE,
       key: 'bar',
-      oldValue: 2
+      oldValue: 2,
     })
     ;(obj as any).baz = 3
     await nextTick()
@@ -375,7 +375,7 @@ describe('api: lifecycle hooks', () => {
     expect(events[2]).toMatchObject({
       type: TriggerOpTypes.ADD,
       key: 'baz',
-      newValue: 3
+      newValue: 3,
     })
   })
 
@@ -385,14 +385,14 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         return () => (toggle.value ? [h(Child), h(Child)] : null)
-      }
+      },
     }
     const Child = {
       setup() {
         onMounted(fn)
         onBeforeUnmount(fn)
         return () => h('div')
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))

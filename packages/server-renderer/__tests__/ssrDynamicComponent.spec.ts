@@ -8,12 +8,12 @@ describe('ssr: dynamic component', () => {
         createApp({
           components: {
             one: {
-              template: `<div><slot/></div>`
-            }
+              template: `<div><slot/></div>`,
+            },
           },
-          template: `<component :is="'one'"><span>slot</span></component>`
-        })
-      )
+          template: `<component :is="'one'"><span>slot</span></component>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><span>slot</span><!--]--></div>`)
   })
 
@@ -21,28 +21,28 @@ describe('ssr: dynamic component', () => {
     expect(
       await renderToString(
         createApp({
-          template: `<component :is="'p'"><span>slot</span></component>`
-        })
-      )
+          template: `<component :is="'p'"><span>slot</span></component>`,
+        }),
+      ),
     ).toBe(`<p><span>slot</span></p>`)
   })
 
   test('resolve to component vnode', async () => {
     const Child = {
       props: ['id'],
-      template: `<div>{{ id }}<slot/></div>`
+      template: `<div>{{ id }}<slot/></div>`,
     }
     expect(
       await renderToString(
         createApp({
           setup() {
             return {
-              vnode: createVNode(Child, { id: 'test' })
+              vnode: createVNode(Child, { id: 'test' }),
             }
           },
-          template: `<component :is="vnode"><span>slot</span></component>`
-        })
-      )
+          template: `<component :is="vnode"><span>slot</span></component>`,
+        }),
+      ),
     ).toBe(`<div>test<!--[--><span>slot</span><!--]--></div>`)
   })
 
@@ -52,12 +52,12 @@ describe('ssr: dynamic component', () => {
         createApp({
           setup() {
             return {
-              vnode: createVNode('div', { id: 'test' })
+              vnode: createVNode('div', { id: 'test' }),
             }
           },
-          template: `<component :is="vnode"><span>slot</span></component>`
-        })
-      )
+          template: `<component :is="vnode"><span>slot</span></component>`,
+        }),
+      ),
     ).toBe(`<div id="test"><span>slot</span></div>`)
   })
 })

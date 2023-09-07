@@ -2,7 +2,7 @@ import {
   ComponentInternalInstance,
   FunctionalComponent,
   Data,
-  getComponentName
+  getComponentName,
 } from './component'
 import {
   VNode,
@@ -12,7 +12,7 @@ import {
   cloneVNode,
   VNodeArrayChildren,
   isVNode,
-  blockStack
+  blockStack,
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
 import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
@@ -24,7 +24,7 @@ import { setCurrentRenderingInstance } from './componentRenderContext'
 import {
   DeprecationTypes,
   isCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compat/compatConfig'
 
 /**
@@ -41,7 +41,7 @@ export function markAttrsAccessed() {
 type SetRootFn = ((root: VNode) => void) | undefined
 
 export function renderComponentRoot(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): VNode {
   const {
     type: Component,
@@ -58,7 +58,7 @@ export function renderComponentRoot(
     data,
     setupState,
     ctx,
-    inheritAttrs
+    inheritAttrs,
   } = instance
 
   let result
@@ -81,8 +81,8 @@ export function renderComponentRoot(
           props,
           setupState,
           data,
-          ctx
-        )
+          ctx,
+        ),
       )
       fallthroughAttrs = attrs
     } else {
@@ -103,11 +103,11 @@ export function renderComponentRoot(
                       return attrs
                     },
                     slots,
-                    emit
+                    emit,
                   }
-                : { attrs, slots, emit }
+                : { attrs, slots, emit },
             )
-          : render(props, null as any /* we know it doesn't need it */)
+          : render(props, null as any /* we know it doesn't need it */),
       )
       fallthroughAttrs = Component.props
         ? attrs
@@ -144,7 +144,7 @@ export function renderComponentRoot(
           // related: #1543, #1643, #1989
           fallthroughAttrs = filterModelListeners(
             fallthroughAttrs,
-            propsOptions
+            propsOptions,
           )
         }
         root = cloneVNode(root, fallthroughAttrs)
@@ -170,7 +170,7 @@ export function renderComponentRoot(
             `Extraneous non-props attributes (` +
               `${extraAttrs.join(', ')}) ` +
               `were passed to component but could not be automatically inherited ` +
-              `because component renders fragment or text root nodes.`
+              `because component renders fragment or text root nodes.`,
           )
         }
         if (eventAttrs.length) {
@@ -180,7 +180,7 @@ export function renderComponentRoot(
               `were passed to component but could not be automatically inherited ` +
               `because component renders fragment or text root nodes. ` +
               `If the listener is intended to be a component custom event listener only, ` +
-              `declare it using the "emits" option.`
+              `declare it using the "emits" option.`,
           )
         }
       }
@@ -199,12 +199,12 @@ export function renderComponentRoot(
         warnDeprecation(
           DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE,
           instance,
-          getComponentName(instance.type)
+          getComponentName(instance.type),
         )
       }
       root = cloneVNode(root, {
         class: cls,
-        style: style
+        style: style,
       })
     }
   }
@@ -214,7 +214,7 @@ export function renderComponentRoot(
     if (__DEV__ && !isElementRoot(root)) {
       warn(
         `Runtime directive used on component with non-element root node. ` +
-          `The directives will not function as intended.`
+          `The directives will not function as intended.`,
       )
     }
     // clone before mutating since the root may be a hoisted vnode
@@ -226,7 +226,7 @@ export function renderComponentRoot(
     if (__DEV__ && !isElementRoot(root)) {
       warn(
         `Component inside <Transition> renders non-element root node ` +
-          `that cannot be animated.`
+          `that cannot be animated.`,
       )
     }
     root.transition = vnode.transition
@@ -271,7 +271,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 }
 
 export function filterSingleRoot(
-  children: VNodeArrayChildren
+  children: VNodeArrayChildren,
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -323,7 +323,7 @@ const isElementRoot = (vnode: VNode) => {
 export function shouldUpdateComponent(
   prevVNode: VNode,
   nextVNode: VNode,
-  optimized?: boolean
+  optimized?: boolean,
 ): boolean {
   const { props: prevProps, children: prevChildren, component } = prevVNode
   const { props: nextProps, children: nextChildren, patchFlag } = nextVNode
@@ -391,7 +391,7 @@ export function shouldUpdateComponent(
 function hasPropsChanged(
   prevProps: Data,
   nextProps: Data,
-  emitsOptions: ComponentInternalInstance['emitsOptions']
+  emitsOptions: ComponentInternalInstance['emitsOptions'],
 ): boolean {
   const nextKeys = Object.keys(nextProps)
   if (nextKeys.length !== Object.keys(prevProps).length) {
@@ -411,7 +411,7 @@ function hasPropsChanged(
 
 export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
-  el: typeof vnode.el // HostNode
+  el: typeof vnode.el, // HostNode
 ) {
   while (parent && parent.subTree === vnode) {
     ;(vnode = parent.vnode).el = el

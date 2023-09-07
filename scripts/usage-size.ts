@@ -26,9 +26,9 @@ const presets: Preset[] = [
       'watch',
       'Transition',
       'KeepAlive',
-      'Suspense'
-    ]
-  }
+      'Suspense',
+    ],
+  },
 ]
 
 main()
@@ -40,14 +40,14 @@ async function main() {
   }
 
   const results = Object.fromEntries(
-    (await Promise.all(tasks)).map(r => [r.name, r])
+    (await Promise.all(tasks)).map(r => [r.name, r]),
   )
 
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
     path.resolve(sizeDir, '_usages.json'),
     JSON.stringify(results),
-    'utf-8'
+    'utf-8',
   )
 }
 
@@ -65,16 +65,16 @@ async function generateBundle(preset: Preset) {
         },
         load(_id) {
           if (_id === id) return content
-        }
+        },
       },
       nodeResolve(),
       replace({
         'process.env.NODE_ENV': '"production"',
         __VUE_PROD_DEVTOOLS__: 'false',
         __VUE_OPTIONS_API__: 'true',
-        preventAssignment: true
-      })
-    ]
+        preventAssignment: true,
+      }),
+    ],
   })
 
   const generated = await result.generate({})
@@ -82,7 +82,7 @@ async function generateBundle(preset: Preset) {
   const minified = (
     await minify(bundled, {
       module: true,
-      toplevel: true
+      toplevel: true,
     })
   ).code!
 
@@ -94,6 +94,6 @@ async function generateBundle(preset: Preset) {
     name: preset.name,
     size,
     gzip,
-    brotli
+    brotli,
   }
 }

@@ -7,7 +7,7 @@ import {
   ElementTypes,
   MemoExpression,
   NodeTypes,
-  PlainElementNode
+  PlainElementNode,
 } from '../ast'
 import { WITH_MEMO } from '../runtimeHelpers'
 
@@ -33,7 +33,7 @@ export const transformMemo: NodeTransform = (node, context) => {
           dir.exp!,
           createFunctionExpression(undefined, codegenNode),
           `_cache`,
-          String(context.cached++)
+          String(context.cached++),
         ]) as MemoExpression
       }
     }

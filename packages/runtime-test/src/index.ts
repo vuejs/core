@@ -2,7 +2,7 @@ import {
   createRenderer,
   VNode,
   RootRenderFunction,
-  CreateAppFunction
+  CreateAppFunction,
 } from '@vue/runtime-core'
 import { nodeOps, TestElement } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -10,7 +10,7 @@ import { serializeInner } from './serialize'
 import { extend } from '@vue/shared'
 
 const { render: baseRender, createApp: baseCreateApp } = createRenderer(
-  extend({ patchProp }, nodeOps)
+  extend({ patchProp }, nodeOps),
 )
 
 export const render = baseRender as RootRenderFunction<TestElement>

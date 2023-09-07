@@ -413,7 +413,7 @@ describe('reactivity/collections', () => {
       const set = reactive(raw)
       set.delete(key)
       expect(
-        `Reactive Set contains both the raw and reactive`
+        `Reactive Set contains both the raw and reactive`,
       ).toHaveBeenWarned()
     })
 

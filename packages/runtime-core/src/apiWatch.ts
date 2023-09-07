@@ -8,7 +8,7 @@ import {
   ReactiveFlags,
   EffectScheduler,
   DebuggerOptions,
-  getCurrentScope
+  getCurrentScope,
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -23,19 +23,19 @@ import {
   isMap,
   isSet,
   isPlainObject,
-  extend
+  extend,
 } from '@vue/shared'
 import {
   currentInstance,
   ComponentInternalInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance
+  unsetCurrentInstance,
 } from './component'
 import {
   ErrorCodes,
   callWithErrorHandling,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
@@ -51,7 +51,7 @@ export type WatchSource<T = any> = Ref<T> | ComputedRef<T> | (() => T)
 export type WatchCallback<V = any, OV = any> = (
   value: V,
   oldValue: OV,
-  onCleanup: OnCleanup
+  onCleanup: OnCleanup,
 ) => any
 
 type MapSources<T, Immediate> = {
@@ -82,30 +82,30 @@ export type WatchStopHandle = () => void
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
-  options?: WatchOptionsBase
+  options?: WatchOptionsBase,
 ): WatchStopHandle {
   return doWatch(effect, null, options)
 }
 
 export function watchPostEffect(
   effect: WatchEffect,
-  options?: DebuggerOptions
+  options?: DebuggerOptions,
 ) {
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' }
+    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' },
   )
 }
 
 export function watchSyncEffect(
   effect: WatchEffect,
-  options?: DebuggerOptions
+  options?: DebuggerOptions,
 ) {
   return doWatch(
     effect,
     null,
-    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' }
+    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' },
   )
 }
 
@@ -117,11 +117,11 @@ type MultiWatchSources = (WatchSource<unknown> | object)[]
 // overload: array of multiple sources + cb
 export function watch<
   T extends MultiWatchSources,
-  Immediate extends Readonly<boolean> = false
+  Immediate extends Readonly<boolean> = false,
 >(
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: multiple sources w/ `as const`
@@ -129,41 +129,41 @@ export function watch<
 // somehow [...T] breaks when the type is readonly
 export function watch<
   T extends Readonly<MultiWatchSources>,
-  Immediate extends Readonly<boolean> = false
+  Immediate extends Readonly<boolean> = false,
 >(
   source: T,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // overload: watching reactive object w/ cb
 export function watch<
   T extends object,
-  Immediate extends Readonly<boolean> = false
+  Immediate extends Readonly<boolean> = false,
 >(
   source: T,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
-  options?: WatchOptions<Immediate>
+  options?: WatchOptions<Immediate>,
 ): WatchStopHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
         `Use \`watchEffect(fn, options?)\` instead. \`watch\` now only ` +
-        `supports \`watch(source, cb, options?) signature.`
+        `supports \`watch(source, cb, options?) signature.`,
     )
   }
   return doWatch(source as any, cb, options)
@@ -172,19 +172,19 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ,
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
         `watch() "immediate" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
+          `watch(source, callback, options?) signature.`,
       )
     }
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
-          `watch(source, callback, options?) signature.`
+          `watch(source, callback, options?) signature.`,
       )
     }
   }
@@ -194,7 +194,7 @@ function doWatch(
       `Invalid watch source: `,
       s,
       `A watch source can only be a getter/effect function, a ref, ` +
-        `a reactive object, or an array of these types.`
+        `a reactive object, or an array of these types.`,
     )
   }
 
@@ -244,7 +244,7 @@ function doWatch(
           source,
           instance,
           ErrorCodes.WATCH_CALLBACK,
-          [onCleanup]
+          [onCleanup],
         )
       }
     }
@@ -292,7 +292,7 @@ function doWatch(
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
-        onCleanup
+        onCleanup,
       ])
     }
     if (flush === 'sync') {
@@ -335,7 +335,7 @@ function doWatch(
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
             ? []
             : oldValue,
-          onCleanup
+          onCleanup,
         ])
         oldValue = newValue
       }
@@ -378,7 +378,7 @@ function doWatch(
   } else if (flush === 'post') {
     queuePostRenderEffect(
       effect.run.bind(effect),
-      instance && instance.suspense
+      instance && instance.suspense,
     )
   } else {
     effect.run()
@@ -400,7 +400,7 @@ export function instanceWatch(
   this: ComponentInternalInstance,
   source: string | Function,
   value: WatchCallback | ObjectWatchOptionItem,
-  options?: WatchOptions
+  options?: WatchOptions,
 ): WatchStopHandle {
   const publicThis = this.proxy as any
   const getter = isString(source)

@@ -1,13 +1,13 @@
 import {
   compileTemplate,
-  SFCTemplateCompileOptions
+  SFCTemplateCompileOptions,
 } from '../src/compileTemplate'
 import { parse, SFCTemplateBlock } from '../src/parse'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
   return compileTemplate({
     ...opts,
-    id: ''
+    id: '',
   })
 }
 
@@ -48,13 +48,13 @@ body
     p Cool Pug example!
 </template>
 `,
-    { filename: 'example.vue', sourceMap: true }
+    { filename: 'example.vue', sourceMap: true },
   ).descriptor.template as SFCTemplateBlock
 
   const result = compile({
     filename: 'example.vue',
     source: template.content,
-    preprocessLang: template.lang
+    preprocessLang: template.lang,
   })
 
   expect(result.errors.length).toBe(0)
@@ -63,13 +63,13 @@ body
 test('warn missing preprocessor', () => {
   const template = parse(`<template lang="unknownLang">hi</template>\n`, {
     filename: 'example.vue',
-    sourceMap: true
+    sourceMap: true,
   }).descriptor.template as SFCTemplateBlock
 
   const result = compile({
     filename: 'example.vue',
     source: template.content,
-    preprocessLang: template.lang
+    preprocessLang: template.lang,
   })
 
   expect(result.errors.length).toBe(1)
@@ -81,8 +81,8 @@ test('transform asset url options', () => {
   const { code: code1 } = compile({
     ...input,
     transformAssetUrls: {
-      tags: { foo: ['bar'] }
-    }
+      tags: { foo: ['bar'] },
+    },
   })
   expect(code1).toMatch(`import _imports_0 from 'baz'\n`)
 
@@ -90,15 +90,15 @@ test('transform asset url options', () => {
   const { code: code2 } = compile({
     ...input,
     transformAssetUrls: {
-      foo: ['bar']
-    }
+      foo: ['bar'],
+    },
   })
   expect(code2).toMatch(`import _imports_0 from 'baz'\n`)
 
   // false option
   const { code: code3 } = compile({
     ...input,
-    transformAssetUrls: false
+    transformAssetUrls: false,
   })
   expect(code3).not.toMatch(`import _imports_0 from 'baz'\n`)
 })
@@ -110,12 +110,12 @@ test('source map', () => {
   <div><p>{{ render }}</p></div>
 </template>
 `,
-    { filename: 'example.vue', sourceMap: true }
+    { filename: 'example.vue', sourceMap: true },
   ).descriptor.template as SFCTemplateBlock
 
   const result = compile({
     filename: 'example.vue',
-    source: template.content
+    source: template.content,
   })
 
   expect(result.map).toMatchSnapshot()
@@ -125,7 +125,7 @@ test('template errors', () => {
   const result = compile({
     filename: 'example.vue',
     source: `<div :foo
-      :bar="a[" v-model="baz"/>`
+      :bar="a[" v-model="baz"/>`,
   })
   expect(result.errors).toMatchSnapshot()
 })
@@ -137,20 +137,20 @@ test('preprocessor errors', () => {
   div(class='class)
 </template>
 `,
-    { filename: 'example.vue', sourceMap: true }
+    { filename: 'example.vue', sourceMap: true },
   ).descriptor.template as SFCTemplateBlock
 
   const result = compile({
     filename: 'example.vue',
     source: template.content,
-    preprocessLang: template.lang
+    preprocessLang: template.lang,
   })
 
   expect(result.errors.length).toBe(1)
   const message = result.errors[0].toString()
   expect(message).toMatch(`Error: example.vue:3:1`)
   expect(message).toMatch(
-    `The end of the string reached with no closing bracket ) found.`
+    `The end of the string reached with no closing bracket ) found.`,
   )
 })
 
@@ -164,7 +164,7 @@ test('should generate the correct imports expression', () => {
         <img src="./bar.svg"/>
       </Comp>
     `,
-    ssr: true
+    ssr: true,
   })
   expect(code).toMatch(`_ssrRenderAttr(\"src\", _imports_1)`)
   expect(code).toMatch(`_createVNode(\"img\", { src: _imports_1 })`)
@@ -186,7 +186,7 @@ test('should not hoist srcset URLs in SSR mode', () => {
       </picture>
     </router-link>
     `,
-    ssr: true
+    ssr: true,
   })
   expect(code).toMatchSnapshot()
 })

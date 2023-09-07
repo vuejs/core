@@ -13,7 +13,7 @@ describe('customized built-in elements support', () => {
     render(h('button', { is: 'plastic-button' }), root)
     expect(createElement.mock.calls[0]).toMatchObject([
       'button',
-      { is: 'plastic-button' }
+      { is: 'plastic-button' },
     ])
     // should also render the attribute
     expect(root.innerHTML).toBe(`<button is="plastic-button"></button>`)

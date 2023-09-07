@@ -4,16 +4,16 @@ import {
   validateComponentName,
   Component,
   ComponentInternalInstance,
-  getExposeProxy
+  getExposeProxy,
 } from './component'
 import {
   ComponentOptions,
   MergedComponentOptions,
-  RuntimeCompilerOptions
+  RuntimeCompilerOptions,
 } from './componentOptions'
 import {
   ComponentCustomProperties,
-  ComponentPublicInstance
+  ComponentPublicInstance,
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
 import { RootRenderFunction } from './renderer'
@@ -46,7 +46,7 @@ export interface App<HostElement = any> {
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    isSVG?: boolean
+    isSVG?: boolean,
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -91,12 +91,12 @@ export interface AppConfig {
   errorHandler?: (
     err: unknown,
     instance: ComponentPublicInstance | null,
-    info: string
+    info: string,
   ) => void
   warnHandler?: (
     msg: string,
     instance: ComponentPublicInstance | null,
-    trace: string
+    trace: string,
   ) => void
 
   /**
@@ -177,7 +177,7 @@ export function createAppContext(): AppContext {
       optionMergeStrategies: {},
       errorHandler: undefined,
       warnHandler: undefined,
-      compilerOptions: {}
+      compilerOptions: {},
     },
     mixins: [],
     components: {},
@@ -185,20 +185,20 @@ export function createAppContext(): AppContext {
     provides: Object.create(null),
     optionsCache: new WeakMap(),
     propsCache: new WeakMap(),
-    emitsCache: new WeakMap()
+    emitsCache: new WeakMap(),
   }
 }
 
 export type CreateAppFunction<HostElement> = (
   rootComponent: Component,
-  rootProps?: Data | null
+  rootProps?: Data | null,
 ) => App<HostElement>
 
 let uid = 0
 
 export function createAppAPI<HostElement>(
   render: RootRenderFunction<HostElement>,
-  hydrate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction,
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
@@ -221,9 +221,9 @@ export function createAppAPI<HostElement>(
         set() {
           warn(
             `app.config.unwrapInjectedRef has been deprecated. ` +
-              `3.3 now always unwraps injected refs in Options API.`
+              `3.3 now always unwraps injected refs in Options API.`,
           )
-        }
+        },
       })
     }
 
@@ -248,7 +248,7 @@ export function createAppAPI<HostElement>(
       set config(v) {
         if (__DEV__) {
           warn(
-            `app.config cannot be replaced. Modify individual options instead.`
+            `app.config cannot be replaced. Modify individual options instead.`,
           )
         }
       },
@@ -265,7 +265,7 @@ export function createAppAPI<HostElement>(
         } else if (__DEV__) {
           warn(
             `A plugin must either be a function or an object with an "install" ` +
-              `function.`
+              `function.`,
           )
         }
         return app
@@ -278,7 +278,7 @@ export function createAppAPI<HostElement>(
           } else if (__DEV__) {
             warn(
               'Mixin has already been applied to target app' +
-                (mixin.name ? `: ${mixin.name}` : '')
+                (mixin.name ? `: ${mixin.name}` : ''),
             )
           }
         } else if (__DEV__) {
@@ -319,7 +319,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG?: boolean
+        isSVG?: boolean,
       ): any {
         if (!isMounted) {
           // #5571
@@ -327,7 +327,7 @@ export function createAppAPI<HostElement>(
             warn(
               `There is already an app instance mounted on the host container.\n` +
                 ` If you want to mount another app on the same host container,` +
-                ` you need to unmount the previous app by calling \`app.unmount()\` first.`
+                ` you need to unmount the previous app by calling \`app.unmount()\` first.`,
             )
           }
           const vnode = createVNode(rootComponent, rootProps)
@@ -363,7 +363,7 @@ export function createAppAPI<HostElement>(
             `App has already been mounted.\n` +
               `If you want to remount the same app, move your app creation logic ` +
               `into a factory function and create fresh app instances for each ` +
-              `mount - e.g. \`const createMyApp = () => createApp(App)\``
+              `mount - e.g. \`const createMyApp = () => createApp(App)\``,
           )
         }
       },
@@ -385,7 +385,7 @@ export function createAppAPI<HostElement>(
         if (__DEV__ && (key as string | symbol) in context.provides) {
           warn(
             `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`
+              `It will be overwritten with the new value.`,
           )
         }
 
@@ -401,7 +401,7 @@ export function createAppAPI<HostElement>(
         } finally {
           currentApp = null
         }
-      }
+      },
     })
 
     if (__COMPAT__) {

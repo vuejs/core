@@ -10,7 +10,7 @@ import {
   markRaw,
   shallowReactive,
   readonly,
-  ReactiveEffectRunner
+  ReactiveEffectRunner,
 } from '../src/index'
 import { ITERATE_KEY } from '../src/effect'
 
@@ -129,7 +129,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -261,7 +261,7 @@ describe('reactivity/effect', () => {
       a: 1,
       get b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -276,7 +276,7 @@ describe('reactivity/effect', () => {
       a: 1,
       b() {
         return this.a
-      }
+      },
     })
 
     let dummy
@@ -333,7 +333,7 @@ describe('reactivity/effect', () => {
       },
       get prop() {
         return hiddenValue
-      }
+      },
     })
     Object.setPrototypeOf(obj, parent)
     effect(() => (dummy = obj.prop))
@@ -696,7 +696,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { scheduler }
+      { scheduler },
     )
     expect(scheduler).not.toHaveBeenCalled()
     expect(dummy).toBe(1)
@@ -724,7 +724,7 @@ describe('reactivity/effect', () => {
         dummy = 'bar' in obj
         dummy = Object.keys(obj)
       },
-      { onTrack }
+      { onTrack },
     )
     expect(dummy).toEqual(['foo', 'bar'])
     expect(onTrack).toHaveBeenCalledTimes(3)
@@ -733,20 +733,20 @@ describe('reactivity/effect', () => {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -761,7 +761,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
       },
-      { onTrigger }
+      { onTrigger },
     )
 
     obj.foo!++
@@ -773,7 +773,7 @@ describe('reactivity/effect', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.foo
@@ -784,7 +784,7 @@ describe('reactivity/effect', () => {
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -828,7 +828,7 @@ describe('reactivity/effect', () => {
   it('events: onStop', () => {
     const onStop = vi.fn()
     const runner = effect(() => {}, {
-      onStop
+      onStop,
     })
 
     stop(runner)
@@ -860,8 +860,8 @@ describe('reactivity/effect', () => {
   it('markRaw', () => {
     const obj = reactive({
       foo: markRaw({
-        prop: 0
-      })
+        prop: 0,
+      }),
     })
     let dummy
     effect(() => {
@@ -876,7 +876,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered when the value and the old value both are NaN', () => {
     const obj = reactive({
-      foo: NaN
+      foo: NaN,
     })
     const fnSpy = vi.fn(() => obj.foo)
     effect(fnSpy)

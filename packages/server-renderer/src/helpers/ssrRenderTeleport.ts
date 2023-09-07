@@ -6,7 +6,7 @@ export function ssrRenderTeleport(
   contentRenderFn: (push: PushFn) => void,
   target: string,
   disabled: boolean,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
 ) {
   parentPush('<!--teleport start-->')
 

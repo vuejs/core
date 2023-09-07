@@ -17,7 +17,7 @@ import {
   inject,
   watch,
   toRefs,
-  SetupContext
+  SetupContext,
 } from '@vue/runtime-test'
 import { render as domRender, nextTick } from 'vue'
 
@@ -33,7 +33,7 @@ describe('component props', () => {
         props = this.$props
         attrs = this.$attrs
         proxy = this
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -74,7 +74,7 @@ describe('component props', () => {
           props = _props
           attrs = _attrs
         }
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -142,20 +142,20 @@ describe('component props', () => {
         foo: Boolean,
         bar: Boolean,
         baz: Boolean,
-        qux: Boolean
+        qux: Boolean,
       },
       render() {
         proxy = this
-      }
+      },
     }
     render(
       h(Comp, {
         // absent should cast to false
         bar: '', // empty string should cast to true
         baz: 'baz', // same string should cast to true
-        qux: 'ok' // other values should be left in-tact (but raise warning)
+        qux: 'ok', // other values should be left in-tact (but raise warning)
       }),
-      nodeOps.createElement('div')
+      nodeOps.createElement('div'),
     )
 
     expect(proxy.foo).toBe(false)
@@ -173,19 +173,19 @@ describe('component props', () => {
     const Comp = {
       props: {
         foo: {
-          default: 1
+          default: 1,
         },
         bar: {
-          default: defaultFn
+          default: defaultFn,
         },
         baz: {
           type: Function,
-          default: defaultBaz
-        }
+          default: defaultBaz,
+        },
       },
       render() {
         proxy = this
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -225,21 +225,21 @@ describe('component props', () => {
     const Child = defineComponent({
       props: {
         test: {
-          default: () => inject('test', 'default')
-        }
+          default: () => inject('test', 'default'),
+        },
       },
       setup(props) {
         return () => {
           return h('div', props.test)
         }
-      }
+      },
     })
 
     const Comp = {
       setup() {
         provide('test', 'injected')
         return () => h(Child)
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -250,7 +250,7 @@ describe('component props', () => {
   test('optimized props updates', async () => {
     const Child = defineComponent({
       props: ['foo'],
-      template: `<div>{{ foo }}</div>`
+      template: `<div>{{ foo }}</div>`,
     })
 
     const foo = ref(1)
@@ -260,11 +260,11 @@ describe('component props', () => {
       setup() {
         return {
           foo,
-          id
+          id,
         }
       },
       components: { Child },
-      template: `<Child :foo="foo" :id="id"/>`
+      template: `<Child :foo="foo" :id="id"/>`,
     })
 
     // Note this one is using the main Vue render so it can compile template
@@ -291,7 +291,7 @@ describe('component props', () => {
         instance = getCurrentInstance()!
         setupProps = props
         return () => null
-      }
+      },
     }
     render(h(Comp, { foo: 1 }), nodeOps.createElement('div'))
     expect(setupProps.foo).toBe(1)
@@ -313,11 +313,11 @@ describe('component props', () => {
       props: {
         bool: { type: Boolean, required: true },
         str: { type: String, required: true },
-        num: { type: Number, required: true }
+        num: { type: Number, required: true },
       },
       setup() {
         return () => null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(`Missing required prop: "bool"`).toHaveBeenWarned()
@@ -336,11 +336,11 @@ describe('component props', () => {
         obj: { type: Object },
         cls: { type: MyClass },
         fn: { type: Function },
-        skipCheck: { type: [Boolean, Function], skipCheck: true }
+        skipCheck: { type: [Boolean, Function], skipCheck: true },
       },
       setup() {
         return () => null
-      }
+      },
     }
     render(
       h(Comp, {
@@ -351,33 +351,33 @@ describe('component props', () => {
         obj: 'false',
         cls: {},
         fn: true,
-        skipCheck: 'foo'
+        skipCheck: 'foo',
       }),
-      nodeOps.createElement('div')
+      nodeOps.createElement('div'),
     )
     expect(
-      `Invalid prop: type check failed for prop "bool". Expected Boolean, got String`
+      `Invalid prop: type check failed for prop "bool". Expected Boolean, got String`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`
+      `Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`
+      `Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "arr". Expected Array, got Object`
+      `Invalid prop: type check failed for prop "arr". Expected Array, got Object`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`
+      `Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`
+      `Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`
+      `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`,
     ).toHaveBeenWarned()
     expect(
-      `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`
+      `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`,
     ).not.toHaveBeenWarned()
   })
 
@@ -385,17 +385,17 @@ describe('component props', () => {
   test('should not warn required props using kebab-case', async () => {
     const Comp = {
       props: {
-        fooBar: { type: String, required: true }
+        fooBar: { type: String, required: true },
       },
       setup() {
         return () => null
-      }
+      },
     }
     render(
       h(Comp, {
-        'foo-bar': 'hello'
+        'foo-bar': 'hello',
       }),
-      nodeOps.createElement('div')
+      nodeOps.createElement('div'),
     )
     expect(`Missing required prop: "fooBar"`).not.toHaveBeenWarned()
   })
@@ -405,13 +405,13 @@ describe('component props', () => {
     let renderProxy: any
 
     const E = {
-      props: ['base']
+      props: ['base'],
     }
     const M1 = {
-      props: ['m1']
+      props: ['m1'],
     }
     const M2 = {
-      props: { m2: null }
+      props: { m2: null },
     }
     const Comp = {
       props: ['self'],
@@ -423,7 +423,7 @@ describe('component props', () => {
       render(this: any) {
         renderProxy = this
         return h('div', [this.self, this.base, this.m1, this.m2])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -431,12 +431,12 @@ describe('component props', () => {
       self: 'from self, ',
       base: 'from base, ',
       m1: 'from mixin 1, ',
-      m2: 'from mixin 2'
+      m2: 'from mixin 2',
     }
     render(h(Comp, props), root)
 
     expect(serializeInner(root)).toMatch(
-      `from self, from base, from mixin 1, from mixin 2`
+      `from self, from base, from mixin 1, from mixin 2`,
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)
@@ -447,10 +447,10 @@ describe('component props', () => {
     let renderProxy: any
 
     const M1 = {
-      props: ['m1']
+      props: ['m1'],
     }
     const M2 = {
-      props: { m2: null }
+      props: { m2: null },
     }
     const Comp = {
       props: ['self'],
@@ -460,13 +460,13 @@ describe('component props', () => {
       render(this: any) {
         renderProxy = this
         return h('div', [this.self, this.m1, this.m2])
-      }
+      },
     }
 
     const props = {
       self: 'from self, ',
       m1: 'from mixin 1, ',
-      m2: 'from mixin 2'
+      m2: 'from mixin 2',
     }
     const app = createApp(Comp, props)
     app.mixin(M1)
@@ -476,7 +476,7 @@ describe('component props', () => {
     app.mount(root)
 
     expect(serializeInner(root)).toMatch(
-      `from self, from mixin 1, from mixin 2`
+      `from self, from mixin 1, from mixin 2`,
     )
     expect(setupProps).toMatchObject(props)
     expect(renderProxy.$props).toMatchObject(props)
@@ -485,19 +485,19 @@ describe('component props', () => {
   test('props type support BigInt', () => {
     const Comp = {
       props: {
-        foo: BigInt
+        foo: BigInt,
       },
       render(this: any) {
         return h('div', [this.foo])
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
     render(
       h(Comp, {
-        foo: BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000)
+        foo: BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000),
       }),
-      root
+      root,
     )
 
     expect(serializeInner(root)).toMatch('<div>60000000100000111</div>')
@@ -510,25 +510,25 @@ describe('component props', () => {
       props: {
         foo: {
           type: Object,
-          default: () => ({ val: 1 })
+          default: () => ({ val: 1 }),
         },
-        bar: Number
+        bar: Number,
       },
       setup(props: any) {
         watch(
           () => props.foo,
           () => {
             count++
-          }
+          },
         )
         return () => h('h1', [props.foo.val, props.bar])
-      }
+      },
     }
 
     const foo = ref()
     const bar = ref(0)
     const app = createApp({
-      render: () => h(Comp, { foo: foo.value, bar: bar.value })
+      render: () => h(Comp, { foo: foo.value, bar: bar.value }),
     })
 
     const root = nodeOps.createElement('div')
@@ -551,13 +551,13 @@ describe('component props', () => {
     const Comp = {
       render() {},
       props: {
-        foo: String
+        foo: String,
       },
       setup(props: any) {
         initialKeys = Object.keys(props)
         const { foo } = toRefs(props)
         watch(foo, changeSpy)
-      }
+      },
     }
 
     const Parent = () => (passFoo.value ? h(Comp, { foo: 'ok' }) : h(Comp))
@@ -585,15 +585,15 @@ describe('component props', () => {
           childProps.value && childProps.value.foo
           return slots.default!()
         }
-      }
+      },
     }
 
     const Child = {
       props: {
         foo: {
           type: Boolean,
-          required: false
-        }
+          required: false,
+        },
       },
       setup(props: { foo: boolean }) {
         const register = inject('register') as any
@@ -602,13 +602,13 @@ describe('component props', () => {
         register(props)
 
         return () => 'foo'
-      }
+      },
     }
 
     const App = {
       setup() {
         return () => h(Parent, () => h(Child as any, { foo: '' }, () => null))
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -620,9 +620,9 @@ describe('component props', () => {
   test('support null in required + multiple-type declarations', () => {
     const Comp = {
       props: {
-        foo: { type: [Function, null], required: true }
+        foo: { type: [Function, null], required: true },
       },
-      render() {}
+      render() {},
     }
     const root = nodeOps.createElement('div')
     expect(() => {
@@ -639,7 +639,7 @@ describe('component props', () => {
     const Comp = {
       render(this: any) {
         return JSON.stringify(this.$attrs) + Object.keys(this.$attrs)
-      }
+      },
     }
     const root = nodeOps.createElement('div')
 
@@ -647,12 +647,12 @@ describe('component props', () => {
 
     render(h(Comp, attrs), root)
     expect(serializeInner(root)).toBe(
-      JSON.stringify(attrs) + Object.keys(attrs)
+      JSON.stringify(attrs) + Object.keys(attrs),
     )
 
     render(h(Comp, (attrs = { foo: 'bar' })), root)
     expect(serializeInner(root)).toBe(
-      JSON.stringify(attrs) + Object.keys(attrs)
+      JSON.stringify(attrs) + Object.keys(attrs),
     )
   })
 
@@ -660,12 +660,12 @@ describe('component props', () => {
   test('should not mutate original props long-form definition object', () => {
     const props = {
       msg: {
-        type: String
-      }
+        type: String,
+      },
     }
     const Comp = defineComponent({
       props,
-      render() {}
+      render() {},
     })
 
     const root = nodeOps.createElement('div')

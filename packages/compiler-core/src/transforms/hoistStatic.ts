@@ -14,7 +14,7 @@ import {
   CallExpression,
   createArrayExpression,
   getVNodeBlockHelper,
-  getVNodeHelper
+  getVNodeHelper,
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
@@ -24,7 +24,7 @@ import {
   GUARD_REACTIVE_PROPS,
   NORMALIZE_CLASS,
   NORMALIZE_PROPS,
-  NORMALIZE_STYLE
+  NORMALIZE_STYLE,
 } from '../runtimeHelpers'
 
 export function hoistStatic(root: RootNode, context: TransformContext) {
@@ -33,13 +33,13 @@ export function hoistStatic(root: RootNode, context: TransformContext) {
     context,
     // Root node is unfortunately non-hoistable due to potential parent
     // fallthrough attributes.
-    isSingleElementRoot(root, root.children[0])
+    isSingleElementRoot(root, root.children[0]),
   )
 }
 
 export function isSingleElementRoot(
   root: RootNode,
-  child: TemplateChildNode
+  child: TemplateChildNode,
 ): child is PlainElementNode | ComponentNode | TemplateNode {
   const { children } = root
   return (
@@ -52,7 +52,7 @@ export function isSingleElementRoot(
 function walk(
   node: ParentNode,
   context: TransformContext,
-  doNotHoistNode: boolean = false
+  doNotHoistNode: boolean = false,
 ) {
   const { children } = node
   const originalCount = children.length
@@ -120,7 +120,7 @@ function walk(
         walk(
           child.branches[i],
           context,
-          child.branches[i].children.length === 1
+          child.branches[i].children.length === 1,
         )
       }
     }
@@ -141,14 +141,14 @@ function walk(
     isArray(node.codegenNode.children)
   ) {
     node.codegenNode.children = context.hoist(
-      createArrayExpression(node.codegenNode.children)
+      createArrayExpression(node.codegenNode.children),
     )
   }
 }
 
 export function getConstantType(
   node: TemplateChildNode | SimpleExpressionNode,
-  context: TransformContext
+  context: TransformContext,
 ): ConstantTypes {
   const { constantCache } = context
   switch (node.type) {
@@ -237,7 +237,7 @@ export function getConstantType(
 
           context.removeHelper(OPEN_BLOCK)
           context.removeHelper(
-            getVNodeBlockHelper(context.inSSR, codegenNode.isComponent)
+            getVNodeBlockHelper(context.inSSR, codegenNode.isComponent),
           )
           codegenNode.isBlock = false
           context.helper(getVNodeHelper(context.inSSR, codegenNode.isComponent))
@@ -289,12 +289,12 @@ const allowHoistedHelperSet = new Set([
   NORMALIZE_CLASS,
   NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  GUARD_REACTIVE_PROPS
+  GUARD_REACTIVE_PROPS,
 ])
 
 function getConstantTypeOfHelperCall(
   value: CallExpression,
-  context: TransformContext
+  context: TransformContext,
 ): ConstantTypes {
   if (
     value.type === NodeTypes.JS_CALL_EXPRESSION &&
@@ -314,7 +314,7 @@ function getConstantTypeOfHelperCall(
 
 function getGeneratedPropsConstantType(
   node: PlainElementNode,
-  context: TransformContext
+  context: TransformContext,
 ): ConstantTypes {
   let returnType = ConstantTypes.CAN_STRINGIFY
   const props = getNodeProps(node)

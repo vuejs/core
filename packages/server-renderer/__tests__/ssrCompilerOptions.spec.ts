@@ -4,7 +4,7 @@ import { renderToString } from '../src/renderToString'
 describe('ssr: compiler options', () => {
   test('config.isCustomElement (deprecated)', async () => {
     const app = createApp({
-      template: `<div><x-button/></div>`
+      template: `<div><x-button/></div>`,
     })
     app.config.isCustomElement = tag => tag.startsWith('x-')
     expect(await renderToString(app)).toBe(`<div><x-button></x-button></div>`)
@@ -12,7 +12,7 @@ describe('ssr: compiler options', () => {
 
   test('config.compilerOptions.isCustomElement', async () => {
     const app = createApp({
-      template: `<div><x-panel/></div>`
+      template: `<div><x-panel/></div>`,
     })
     app.config.compilerOptions.isCustomElement = tag => tag.startsWith('x-')
     expect(await renderToString(app)).toBe(`<div><x-panel></x-panel></div>`)
@@ -22,31 +22,31 @@ describe('ssr: compiler options', () => {
     const app = createApp({
       template: `<div><x-card/><y-child/></div>`,
       compilerOptions: {
-        isCustomElement: (tag: string) => tag.startsWith('x-')
+        isCustomElement: (tag: string) => tag.startsWith('x-'),
       },
       components: {
         YChild: {
-          template: `<div><y-button/></div>`
-        }
-      }
+          template: `<div><y-button/></div>`,
+        },
+      },
     })
     app.config.compilerOptions.isCustomElement = tag => tag.startsWith('y-')
     expect(await renderToString(app)).toBe(
-      `<div><x-card></x-card><div><y-button></y-button></div></div>`
+      `<div><x-card></x-card><div><y-button></y-button></div></div>`,
     )
   })
 
   test('component.delimiters (deprecated)', async () => {
     const app = createApp({
       template: `<div>[[ 1 + 1 ]]</div>`,
-      delimiters: ['[[', ']]']
+      delimiters: ['[[', ']]'],
     })
     expect(await renderToString(app)).toBe(`<div>2</div>`)
   })
 
   test('config.compilerOptions.delimiters', async () => {
     const app = createApp({
-      template: `<div>[( 1 + 1 )]</div>`
+      template: `<div>[( 1 + 1 )]</div>`,
     })
     app.config.compilerOptions.delimiters = ['[(', ')]']
     expect(await renderToString(app)).toBe(`<div>2</div>`)
@@ -56,13 +56,13 @@ describe('ssr: compiler options', () => {
     const app = createApp({
       template: `<div>[[ 1 + 1 ]]<ChildComponent/></div>`,
       compilerOptions: {
-        delimiters: ['[[', ']]']
+        delimiters: ['[[', ']]'],
       },
       components: {
         ChildComponent: {
-          template: `<div>(( 2 + 2 ))</div>`
-        }
-      }
+          template: `<div>(( 2 + 2 ))</div>`,
+        },
+      },
     })
     app.config.compilerOptions.delimiters = ['((', '))']
     expect(await renderToString(app)).toBe(`<div>2<div>4</div></div>`)
@@ -72,17 +72,17 @@ describe('ssr: compiler options', () => {
     const app = createApp({
       template: `<div><span>Hello   world</span><ChildComponent/></div>`,
       compilerOptions: {
-        whitespace: 'condense'
+        whitespace: 'condense',
       },
       components: {
         ChildComponent: {
-          template: `<span>Hello   world</span>`
-        }
-      }
+          template: `<span>Hello   world</span>`,
+        },
+      },
     })
     app.config.compilerOptions.whitespace = 'preserve'
     expect(await renderToString(app)).toBe(
-      `<div><span>Hello world</span><span>Hello   world</span></div>`
+      `<div><span>Hello world</span><span>Hello   world</span></div>`,
     )
   })
 
@@ -93,24 +93,24 @@ describe('ssr: compiler options', () => {
       template: `<div><ChildOne/><ChildTwo/><ChildThree/></div>`,
       components: {
         ChildOne: {
-          template
+          template,
         },
         ChildTwo: {
           template,
           compilerOptions: {
-            whitespace: 'preserve'
-          }
+            whitespace: 'preserve',
+          },
         },
         ChildThree: {
           template,
           compilerOptions: {
-            delimiters: ['[[', ']]']
-          }
-        }
-      }
+            delimiters: ['[[', ']]'],
+          },
+        },
+      },
     })
     expect(await renderToString(app)).toBe(
-      `<div><div>2 [[1 + 1]]</div><div>2   [[1 + 1]]</div><div>{{1 + 1}} 2</div></div>`
+      `<div><div>2 [[1 + 1]]</div><div>2   [[1 + 1]]</div><div>{{1 + 1}} 2</div></div>`,
     )
   })
 
@@ -124,21 +124,21 @@ describe('ssr: compiler options', () => {
         MyChild: {
           template,
           compilerOptions: {
-            isCustomElement: tag => tag.startsWith('x-')
+            isCustomElement: tag => tag.startsWith('x-'),
           },
           components: {
             MyChild: {
               template,
               compilerOptions: {
-                isCustomElement: tag => tag.startsWith('My')
-              }
-            }
-          }
-        }
-      }
+                isCustomElement: tag => tag.startsWith('My'),
+              },
+            },
+          },
+        },
+      },
     })
     expect(await renderToString(app)).toBe(
-      `<div><div><div><MyChild></MyChild></div></div></div>`
+      `<div><div><div><MyChild></MyChild></div></div></div>`,
     )
   })
 })

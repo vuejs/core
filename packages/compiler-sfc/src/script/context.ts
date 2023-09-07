@@ -78,7 +78,7 @@ export class ScriptCompileContext {
 
   constructor(
     public descriptor: SFCDescriptor,
-    public options: Partial<SFCScriptCompileOptions>
+    public options: Partial<SFCScriptCompileOptions>,
   ) {
     const { script, scriptSetup } = descriptor
     const scriptLang = script && script.lang
@@ -98,14 +98,14 @@ export class ScriptCompileContext {
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
       (scriptLang || scriptSetupLang)!,
-      options.babelParserPlugins
+      options.babelParserPlugins,
     )
 
     function parse(input: string, offset: number): Program {
       try {
         return babelParse(input, {
           plugins,
-          sourceType: 'module'
+          sourceType: 'module',
         }).program
       } catch (e: any) {
         e.message = `[vue/compiler-sfc] ${e.message}\n\n${
@@ -113,7 +113,7 @@ export class ScriptCompileContext {
         }\n${generateCodeFrame(
           descriptor.source,
           e.pos + offset,
-          e.pos + offset + 1
+          e.pos + offset + 1,
         )}`
         throw e
       }
@@ -143,8 +143,8 @@ export class ScriptCompileContext {
       }\n${generateCodeFrame(
         (scope || this.descriptor).source,
         node.start! + offset,
-        node.end! + offset
-      )}`
+        node.end! + offset,
+      )}`,
     )
   }
 }
@@ -152,7 +152,7 @@ export class ScriptCompileContext {
 export function resolveParserPlugins(
   lang: string,
   userPlugins?: ParserPlugin[],
-  dts = false
+  dts = false,
 ) {
   const plugins: ParserPlugin[] = []
   if (lang === 'jsx' || lang === 'tsx') {

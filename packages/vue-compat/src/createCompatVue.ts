@@ -9,7 +9,7 @@ import {
   KeepAlive,
   DeprecationTypes,
   vShow,
-  vModelDynamic
+  vModelDynamic,
 } from '@vue/runtime-dom'
 import { extend } from '@vue/shared'
 

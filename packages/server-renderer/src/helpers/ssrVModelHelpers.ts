@@ -11,7 +11,7 @@ export function ssrLooseContain(arr: unknown[], value: unknown): boolean {
 export function ssrRenderDynamicModel(
   type: unknown,
   model: unknown,
-  value: unknown
+  value: unknown,
 ) {
   switch (type) {
     case 'radio':
@@ -29,7 +29,7 @@ export function ssrRenderDynamicModel(
 // for <input v-bind="obj" v-model="model">
 export function ssrGetDynamicModelProps(
   existingProps: any = {},
-  model: unknown
+  model: unknown,
 ) {
   const { type, value } = existingProps
   switch (type) {

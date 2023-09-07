@@ -10,7 +10,7 @@ describe('defineModel()', () => {
       const c = defineModel('count')
       </script>
       `,
-      { defineModel: true }
+      { defineModel: true },
     )
     assertCode(content)
     expect(content).toMatch('props: {')
@@ -18,7 +18,7 @@ describe('defineModel()', () => {
     expect(content).toMatch('"count": {},')
     expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
     expect(content).toMatch(
-      `const modelValue = _useModel(__props, "modelValue")`
+      `const modelValue = _useModel(__props, "modelValue")`,
     )
     expect(content).toMatch(`const c = _useModel(__props, "count")`)
     expect(content).toMatch(`return { modelValue, c }`)
@@ -27,7 +27,7 @@ describe('defineModel()', () => {
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
       count: BindingTypes.PROPS,
-      c: BindingTypes.SETUP_REF
+      c: BindingTypes.SETUP_REF,
     })
   })
 
@@ -40,7 +40,7 @@ describe('defineModel()', () => {
       const count = defineModel({ default: 0 })
       </script>
     `,
-      { defineModel: true }
+      { defineModel: true },
     )
     assertCode(content)
     expect(content).toMatch(`props: _mergeModels({ foo: String }`)
@@ -50,7 +50,7 @@ describe('defineModel()', () => {
     expect(bindings).toStrictEqual({
       count: BindingTypes.SETUP_REF,
       foo: BindingTypes.PROPS,
-      modelValue: BindingTypes.PROPS
+      modelValue: BindingTypes.PROPS,
     })
   })
 
@@ -62,7 +62,7 @@ describe('defineModel()', () => {
       const count = defineModel('count')
       </script>
     `,
-      { defineModel: true }
+      { defineModel: true },
     )
     assertCode(content)
     expect(content).toMatch(`props: _mergeModels(['foo', 'bar'], {
@@ -73,7 +73,7 @@ describe('defineModel()', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
-      count: BindingTypes.SETUP_REF
+      count: BindingTypes.SETUP_REF,
     })
   })
 
@@ -90,7 +90,7 @@ describe('defineModel()', () => {
       const local = true
       const hoist = defineModel('hoist', { local })
       </script>`,
-      { defineModel: true }
+      { defineModel: true },
     )
     assertCode(content)
     expect(content).toMatch(`_useModel(__props, "modelValue", { local: true })`)
@@ -111,21 +111,21 @@ describe('defineModel()', () => {
       const any = defineModel<any | boolean>('any')
       </script>
       `,
-      { defineModel: true }
+      { defineModel: true },
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
     expect(content).toMatch('"count": { type: Number }')
     expect(content).toMatch(
-      '"disabled": { type: Number, ...{ required: false } }'
+      '"disabled": { type: Number, ...{ required: false } }',
     )
     expect(content).toMatch('"any": { type: Boolean, skipCheck: true }')
     expect(content).toMatch(
-      'emits: ["update:modelValue", "update:count", "update:disabled", "update:any"]'
+      'emits: ["update:modelValue", "update:count", "update:disabled", "update:any"]',
     )
 
     expect(content).toMatch(
-      `const modelValue = _useModel(__props, "modelValue")`
+      `const modelValue = _useModel(__props, "modelValue")`,
     )
     expect(content).toMatch(`const count = _useModel(__props, "count")`)
     expect(content).toMatch(`const disabled = _useModel(__props, "disabled")`)
@@ -135,7 +135,7 @@ describe('defineModel()', () => {
       modelValue: BindingTypes.SETUP_REF,
       count: BindingTypes.SETUP_REF,
       disabled: BindingTypes.SETUP_REF,
-      any: BindingTypes.SETUP_REF
+      any: BindingTypes.SETUP_REF,
     })
   })
 
@@ -150,21 +150,21 @@ describe('defineModel()', () => {
       const optional = defineModel<string>('optional', { required: false })
       </script>
       `,
-      { defineModel: true, isProd: true }
+      { defineModel: true, isProd: true },
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: Boolean }')
     expect(content).toMatch('"fn": {}')
     expect(content).toMatch(
-      '"fnWithDefault": { type: Function, ...{ default: () => null } },'
+      '"fnWithDefault": { type: Function, ...{ default: () => null } },',
     )
     expect(content).toMatch('"str": {}')
     expect(content).toMatch('"optional": { required: false }')
     expect(content).toMatch(
-      'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]'
+      'emits: ["update:modelValue", "update:fn", "update:fnWithDefault", "update:str", "update:optional"]',
     )
     expect(content).toMatch(
-      `const modelValue = _useModel(__props, "modelValue")`
+      `const modelValue = _useModel(__props, "modelValue")`,
     )
     expect(content).toMatch(`const fn = _useModel(__props, "fn")`)
     expect(content).toMatch(`const str = _useModel(__props, "str")`)
@@ -173,7 +173,7 @@ describe('defineModel()', () => {
       fn: BindingTypes.SETUP_REF,
       fnWithDefault: BindingTypes.SETUP_REF,
       str: BindingTypes.SETUP_REF,
-      optional: BindingTypes.SETUP_REF
+      optional: BindingTypes.SETUP_REF,
     })
   })
 })

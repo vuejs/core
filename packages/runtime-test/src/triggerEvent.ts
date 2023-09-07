@@ -4,7 +4,7 @@ import { TestElement } from './nodeOps'
 export function triggerEvent(
   el: TestElement,
   event: string,
-  payload: any[] = []
+  payload: any[] = [],
 ) {
   const { eventListeners } = el
   if (eventListeners) {
