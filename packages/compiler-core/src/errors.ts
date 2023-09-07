@@ -30,7 +30,7 @@ export function createCompilerError<T extends number>(
   const msg =
     __DEV__ || !__BROWSER__
       ? (messages || errorMessages)[code] + (additionalMessage || ``)
-      : code
+      : `https://vuejs.org/errors/#${code}`
   const error = new SyntaxError(String(msg)) as InferCompilerError<T>
   error.code = code
   error.loc = loc
