@@ -457,6 +457,7 @@ export function triggerEffects(
   dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  pauseScheduling()
   // spread into array for stabilization
   const effects = [...dep]
   for (const effect of effects) {
@@ -469,6 +470,8 @@ export function triggerEffects(
       triggerEffect(effect, dirtyLevel, debuggerEventExtraInfo)
     }
   }
+  resetScheduling()
+  scheduleEffectCallbacks()
 }
 
 const queueEffectCbs: (() => void)[] = []
@@ -494,11 +497,10 @@ function triggerEffect(
       effect.scheduler(pushEffectCb)
     }
   }
-  scheduleEffectCallbacks()
 }
 
 function scheduleEffectCallbacks() {
-  if (effectTrackDepth === 0 && shouldSchedule) {
+  if (shouldSchedule) {
     while (queueEffectCbs.length) {
       queueEffectCbs.shift()!()
     }
