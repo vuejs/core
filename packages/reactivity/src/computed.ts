@@ -1,8 +1,9 @@
-import { DebuggerOptions, ReactiveEffect, TriggerType } from './effect'
+import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
+import { DirtyLevels } from './operations'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -44,7 +45,7 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(getter, () => {
       if (!this._scheduled) {
         this._scheduled = true
-        triggerRefValue(this, TriggerType.ComputedDepsUpdated)
+        triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
       }
     })
     this.effect.computed = this
@@ -59,7 +60,7 @@ export class ComputedRefImpl<T> {
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       if (hasChanged(self._value, newValue)) {
-        triggerRefValue(self, TriggerType.ComputedValueUpdated)
+        triggerRefValue(self, DirtyLevels.ComputedValueDirty)
       }
       self._value = newValue
       self._scheduled = false

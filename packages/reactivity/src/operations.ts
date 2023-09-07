@@ -13,3 +13,10 @@ export const enum TriggerOpTypes {
   DELETE = 'delete',
   CLEAR = 'clear'
 }
+
+export const enum DirtyLevels {
+  NotDirty = 0,
+  ComputedValueMaybeDirty = 1,
+  ComputedValueDirty = 2,
+  Dirty = 3
+}

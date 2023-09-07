@@ -359,4 +359,22 @@ describe('reactivity/computed', () => {
     d.value
     expect(cSpy).toHaveBeenCalledTimes(1)
   })
+
+  test('should not continuous effects cause computed dirty race condition', () => {
+    const fnSpy = vi.fn()
+    const v = ref(1)
+    const c = computed(() => v.value)
+
+    effect(() => {
+      c.value
+    })
+    effect(() => {
+      c.value
+      fnSpy()
+    })
+
+    expect(fnSpy).toBeCalledTimes(1)
+    v.value = 2
+    expect(fnSpy).toBeCalledTimes(2)
+  })
 })
