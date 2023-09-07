@@ -1,5 +1,49 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`SFC analyze <script> bindings > auto name inference > basic 1`] = `
+"const a = 1
+export default {
+  __name: 'FooBar',
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC analyze <script> bindings > auto name inference > do not overwrite manual name (call) 1`] = `
+"import { defineComponent } from 'vue'
+        const __default__ = defineComponent({
+          name: 'Baz'
+        })
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+const a = 1
+return { a, defineComponent }
+}
+
+})"
+`;
+
+exports[`SFC analyze <script> bindings > auto name inference > do not overwrite manual name (object) 1`] = `
+"const __default__ = {
+          name: 'Baz'
+        }
+        
+export default /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+const a = 1
+return { a }
+}
+
+})"
+`;
+
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
 "function fn() {
         return \\"hello, world\\";
@@ -1280,4 +1324,103 @@ return { D, C, B, Foo }
 }
 
 })"
+`;
+
+exports[`SFC genDefaultAs > <script setup> only 1`] = `
+"const a = 1
+      
+const _sfc_ = {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+return { a }
+}
+
+}"
+`;
+
+exports[`SFC genDefaultAs > <script setup> only w/ ts 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+const a = 1
+      
+const _sfc_ = /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+return { a }
+}
+
+})"
+`;
+
+exports[`SFC genDefaultAs > <script> + <script setup> 1`] = `
+"const __default__ = {}
+      
+const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const a = 1
+      
+return { a }
+}
+
+})"
+`;
+
+exports[`SFC genDefaultAs > <script> + <script setup> 2`] = `
+"const __default__ = {}
+      
+const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const a = 1
+      
+return { a }
+}
+
+})"
+`;
+
+exports[`SFC genDefaultAs > <script> + <script setup> w/ ts 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+      const __default__ = {}
+      
+const _sfc_ = /*#__PURE__*/_defineComponent({
+  ...__default__,
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const a = 1
+      
+return { a }
+}
+
+})"
+`;
+
+exports[`SFC genDefaultAs > normal <script> only 1`] = `
+"
+      const _sfc_ = {}
+      "
+`;
+
+exports[`SFC genDefaultAs > normal <script> w/ cssVars 1`] = `
+"
+      const _sfc_ = {}
+      
+import { useCssVars as _useCssVars } from 'vue'
+const __injectCSSVars__ = () => {
+_useCssVars(_ctx => ({
+  \\"xxxxxxxx-x\\": (_ctx.x)
+}))}
+const __setup__ = _sfc_.setup
+_sfc_.setup = __setup__
+  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
+  : __injectCSSVars__
+"
 `;
