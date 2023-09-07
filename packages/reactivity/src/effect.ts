@@ -293,7 +293,11 @@ export function pauseScheduling() {
 export function resetScheduling() {
   const last = scheduleStack.pop()
   shouldSchedule = last === undefined ? true : last
-  scheduleEffectCallbacks()
+  if (shouldSchedule) {
+    while (queueEffectCbs.length) {
+      queueEffectCbs.shift()!()
+    }
+  }
 }
 
 /**
@@ -471,7 +475,6 @@ export function triggerEffects(
     }
   }
   resetScheduling()
-  scheduleEffectCallbacks()
 }
 
 const queueEffectCbs: (() => void)[] = []
@@ -495,14 +498,6 @@ function triggerEffect(
       (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
     ) {
       effect.scheduler(pushEffectCb)
-    }
-  }
-}
-
-function scheduleEffectCallbacks() {
-  if (shouldSchedule) {
-    while (queueEffectCbs.length) {
-      queueEffectCbs.shift()!()
     }
   }
 }
