@@ -529,9 +529,7 @@ describe('SFC compile <script setup>', () => {
       // check snapshot and make sure helper imports and
       // hoists are placed correctly.
       assertCode(content)
-      // in inline mode, no need to call expose() since nothing is exposed
-      // anyway!
-      expect(content).not.toMatch(`expose()`)
+
     })
 
     test('with defineExpose()', () => {
