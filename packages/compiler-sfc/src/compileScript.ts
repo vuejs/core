@@ -820,10 +820,7 @@ export function compileScript(
     ctx.s.prependLeft(startOffset, `\nlet __temp${any}, __restore${any}\n`)
   }
 
-  const destructureElements =
-    ctx.hasDefineExposeCall || !options.inlineTemplate
-      ? [`expose: __expose`]
-      : []
+  const destructureElements = [`expose: __expose`]
   if (ctx.emitDecl) {
     destructureElements.push(`emit: __emit`)
   }
@@ -979,7 +976,7 @@ export function compileScript(
   // <script setup> components are closed by default. If the user did not
   // explicitly call `defineExpose`, call expose() with no args.
   const exposeCall =
-    ctx.hasDefineExposeCall || options.inlineTemplate ? `` : `  __expose();\n`
+    ctx.hasDefineExposeCall ? `` : `  __expose();\n`
   // wrap setup code with function.
   if (ctx.isTS) {
     // for TS, make sure the exported type is still valid type with
