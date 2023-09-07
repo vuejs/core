@@ -25,6 +25,7 @@ import {
 import { parse } from '@babel/parser'
 import path from 'node:path'
 import MagicString from 'magic-string'
+import { locateTrailingComma } from 'ast-kit'
 
 const ENUM_CACHE_PATH = 'temp/enum.json'
 
@@ -227,15 +228,22 @@ export function constEnum() {
                 enumData.ids.includes(spec.local.name)
               ) {
                 const next = node.specifiers[i + 1]
-                if (next) {
-                  // @ts-ignore
-                  s.remove(spec.start, next.start)
-                } else {
-                  // last one
-                  const prev = node.specifiers[i - 1]
-                  // @ts-ignore
-                  s.remove(prev ? prev.end : spec.start, spec.end)
-                }
+                const trailingComma = locateTrailingComma(
+                  code,
+                  // @ts-expect-error
+                  spec.end,
+                  next
+                    ? next.start
+                    : node.source
+                    ? node.source.start
+                    : node.end,
+                )
+
+                s.remove(
+                  // @ts-expect-error
+                  spec.start,
+                  trailingComma !== -1 ? trailingComma + 1 : spec.end,
+                )
               }
             }
           }

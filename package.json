@@ -69,6 +69,7 @@
     "@typescript-eslint/parser": "^6.6.0",
     "@vitest/coverage-istanbul": "^0.34.3",
     "@vue/consolidate": "0.17.3",
+    "ast-kit": "^0.11.2",
     "chalk": "^4.1.0",
     "conventional-changelog-cli": "^2.0.31",
     "enquirer": "^2.3.2",
