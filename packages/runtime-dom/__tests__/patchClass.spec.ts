@@ -1,7 +1,7 @@
 import { patchProp } from '../src/patchProp'
 import {
   type ElementWithTransition,
-  vtcKey
+  vtcKey,
 } from '../src/components/Transition'
 import { svgNS } from '../src/nodeOps'
 
