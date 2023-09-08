@@ -6,7 +6,7 @@ let maxCRNameLength: number
 
 export const decodeHtml: ParserOptions['decodeEntities'] = (
   rawText,
-  asAttr
+  asAttr,
 ) => {
   let offset = 0
   const end = rawText.length
@@ -38,7 +38,7 @@ export const decodeHtml: ParserOptions['decodeEntities'] = (
         if (!maxCRNameLength) {
           maxCRNameLength = Object.keys(namedCharacterReferences).reduce(
             (max, name) => Math.max(max, name.length),
-            0
+            0,
           )
         }
         for (let length = maxCRNameLength; !value && length > 0; --length) {
@@ -129,5 +129,5 @@ const CCR_REPLACEMENTS: Record<number, number | undefined> = {
   0x9b: 0x203a,
   0x9c: 0x0153,
   0x9e: 0x017e,
-  0x9f: 0x0178
+  0x9f: 0x0178,
 }

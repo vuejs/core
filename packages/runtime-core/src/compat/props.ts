@@ -3,14 +3,14 @@ import { inject } from '../apiInject'
 import { type ComponentInternalInstance, type Data } from '../component'
 import {
   type ComponentOptions,
-  resolveMergedOptions
+  resolveMergedOptions,
 } from '../componentOptions'
 import { DeprecationTypes, warnDeprecation } from './compatConfig'
 
 export function createPropsDefaultThis(
   instance: ComponentInternalInstance,
   rawProps: Data,
-  propKey: string
+  propKey: string,
 ) {
   return new Proxy(
     {},
@@ -37,7 +37,7 @@ export function createPropsDefaultThis(
             return inject(key)
           }
         }
-      }
-    }
+      },
+    },
   )
 }

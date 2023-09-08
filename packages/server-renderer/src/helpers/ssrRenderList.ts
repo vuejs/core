@@ -3,7 +3,7 @@ import { warn } from '@vue/runtime-core'
 
 export function ssrRenderList(
   source: unknown,
-  renderItem: (value: unknown, key: string | number, index?: number) => void
+  renderItem: (value: unknown, key: string | number, index?: number) => void,
 ) {
   if (isArray(source) || isString(source)) {
     for (let i = 0, l = source.length; i < l; i++) {

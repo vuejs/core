@@ -3,7 +3,7 @@ import {
   render,
   nodeOps,
   type TestElement,
-  serializeInner as inner
+  serializeInner as inner,
 } from '@vue/runtime-test'
 
 describe('renderer: element', () => {

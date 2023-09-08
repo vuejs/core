@@ -7,7 +7,7 @@ describe('createApp for dom', () => {
     createApp({
       render() {
         return h('g')
-      }
+      },
     }).mount(root)
     expect(root.children.length).toBe(1)
     expect(root.children[0]).toBeInstanceOf(SVGElement)
@@ -18,9 +18,9 @@ describe('createApp for dom', () => {
     const originalObj = {
       data() {
         return {
-          counter: 0
+          counter: 0,
         }
-      }
+      },
     }
 
     const handler = vi.fn(msg => {

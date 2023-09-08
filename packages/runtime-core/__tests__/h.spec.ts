@@ -11,7 +11,7 @@ describe('renderer: h', () => {
 
   test('type + props', () => {
     expect(h('div', { id: 'foo' })).toMatchObject(
-      createVNode('div', { id: 'foo' })
+      createVNode('div', { id: 'foo' }),
     )
   })
 
@@ -37,12 +37,12 @@ describe('renderer: h', () => {
     expect(h('div', {}, slots)).toMatchObject(createVNode('div', {}, slots))
     const Component = { template: '<br />' }
     expect(h(Component, {}, slots)).toMatchObject(
-      createVNode(Component, {}, slots)
+      createVNode(Component, {}, slots),
     )
     // default slot
     const slot = () => {}
     expect(h(Component, {}, slot)).toMatchObject(
-      createVNode(Component, {}, slot)
+      createVNode(Component, {}, slot),
     )
     // single vnode
     const vnode = h('div')
@@ -56,12 +56,12 @@ describe('renderer: h', () => {
     const slot = () => {}
     expect(
       h(Component, null, {
-        foo: slot
-      })
+        foo: slot,
+      }),
     ).toMatchObject(
       createVNode(Component, null, {
-        foo: slot
-      })
+        foo: slot,
+      }),
     )
   })
 
@@ -73,11 +73,11 @@ describe('renderer: h', () => {
     const vnode = h('div', null, h('span'), h('span'))
     expect(vnode.children).toMatchObject([
       {
-        type: 'span'
+        type: 'span',
       },
       {
-        type: 'span'
-      }
+        type: 'span',
+      },
     ])
   })
 })

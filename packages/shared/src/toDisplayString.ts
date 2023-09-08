@@ -6,7 +6,7 @@ import {
   isPlainObject,
   isSet,
   objectToString,
-  isString
+  isString,
 } from './general'
 
 /**
@@ -34,11 +34,11 @@ const replacer = (_key: string, val: any): any => {
       [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val]) => {
         ;(entries as any)[`${key} =>`] = val
         return entries
-      }, {})
+      }, {}),
     }
   } else if (isSet(val)) {
     return {
-      [`Set(${val.size})`]: [...val.values()]
+      [`Set(${val.size})`]: [...val.values()],
     }
   } else if (isObject(val) && !isArray(val) && !isPlainObject(val)) {
     return String(val)

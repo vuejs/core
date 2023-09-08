@@ -5,7 +5,7 @@ export function withMemo(
   memo: any[],
   render: () => VNode<any, any>,
   cache: any[],
-  index: number
+  index: number,
 ) {
   const cached = cache[index] as VNode | undefined
   if (cached && isMemoSame(cached, memo)) {

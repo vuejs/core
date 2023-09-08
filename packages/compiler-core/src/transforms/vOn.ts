@@ -1,6 +1,6 @@
 import {
   type DirectiveTransform,
-  type DirectiveTransformResult
+  type DirectiveTransformResult,
 } from '../transform'
 import {
   createCompoundExpression,
@@ -10,7 +10,7 @@ import {
   ElementTypes,
   type ExpressionNode,
   NodeTypes,
-  type SimpleExpressionNode
+  type SimpleExpressionNode,
 } from '../ast'
 import { camelize, toHandlerKey } from '@vue/shared'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -36,7 +36,7 @@ export const transformOn: DirectiveTransform = (
   dir,
   node,
   context,
-  augmentor
+  augmentor,
 ) => {
   const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
@@ -48,7 +48,7 @@ export const transformOn: DirectiveTransform = (
       let rawName = arg.content
       if (__DEV__ && rawName.startsWith('vnode')) {
         context.onWarn(
-          createCompilerError(ErrorCodes.DEPRECATION_VNODE_HOOKS, arg.loc)
+          createCompilerError(ErrorCodes.DEPRECATION_VNODE_HOOKS, arg.loc),
         )
       }
       if (rawName.startsWith('vue:')) {
@@ -70,7 +70,7 @@ export const transformOn: DirectiveTransform = (
       eventName = createCompoundExpression([
         `${context.helperString(TO_HANDLER_KEY)}(`,
         arg,
-        `)`
+        `)`,
       ])
     }
   } else {
@@ -100,7 +100,7 @@ export const transformOn: DirectiveTransform = (
         exp,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
       isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
@@ -139,7 +139,7 @@ export const transformOn: DirectiveTransform = (
         exp as SimpleExpressionNode,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
     }
 
@@ -156,7 +156,7 @@ export const transformOn: DirectiveTransform = (
               }(...args)`
         } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
-        hasMultipleStatements ? `}` : `)`
+        hasMultipleStatements ? `}` : `)`,
       ])
     }
   }
@@ -165,9 +165,9 @@ export const transformOn: DirectiveTransform = (
     props: [
       createObjectProperty(
         eventName,
-        exp || createSimpleExpression(`() => {}`, false, loc)
-      )
-    ]
+        exp || createSimpleExpression(`() => {}`, false, loc),
+      ),
+    ],
   }
 
   // apply extended compiler augmentor

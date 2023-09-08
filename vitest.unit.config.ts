@@ -5,6 +5,6 @@ export default {
   ...config,
   test: {
     ...config.test,
-    exclude: [...configDefaults.exclude, '**/e2e/**']
-  }
+    exclude: [...configDefaults.exclude, '**/e2e/**'],
+  },
 } as UserConfig

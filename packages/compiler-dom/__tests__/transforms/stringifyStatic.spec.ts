@@ -3,11 +3,11 @@ import {
   NodeTypes,
   CREATE_STATIC,
   createSimpleExpression,
-  ConstantTypes
+  ConstantTypes,
 } from '../../src'
 import {
   stringifyStatic,
-  StringifyThresholds
+  StringifyThresholds,
 } from '../../src/transforms/stringifyStatic'
 
 describe('stringify static html', () => {
@@ -15,7 +15,7 @@ describe('stringify static html', () => {
     return compile(template, {
       hoistStatic: true,
       prefixIdentifiers: true,
-      transformHoist: stringifyStatic
+      transformHoist: stringifyStatic,
     })
   }
 
@@ -28,7 +28,7 @@ describe('stringify static html', () => {
 
   test('should bail on non-eligible static trees', () => {
     const { ast } = compileWithStringify(
-      `<div><div><div>hello</div><div>hello</div></div></div>`
+      `<div><div><div>hello</div><div>hello</div></div></div>`,
     )
     // should be a normal vnode call
     expect(ast.hoists[0]!.type).toBe(NodeTypes.VNODE_CALL)
@@ -38,8 +38,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div><div>${repeat(
         `<span class="foo"/>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
     )
     // should be optimized now
     expect(ast.hoists).toMatchObject([
@@ -50,15 +50,15 @@ describe('stringify static html', () => {
           JSON.stringify(
             `<div>${repeat(
               `<span class="foo"></span>`,
-              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-            )}</div>`
+              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+            )}</div>`,
           ),
-          '1'
-        ]
+          '1',
+        ],
       }, // the children array is hoisted as well
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -66,8 +66,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div><div>${repeat(
         `<span/>`,
-        StringifyThresholds.NODE_COUNT
-      )}</div></div>`
+        StringifyThresholds.NODE_COUNT,
+      )}</div></div>`,
     )
     // should be optimized now
     expect(ast.hoists).toMatchObject([
@@ -78,16 +78,16 @@ describe('stringify static html', () => {
           JSON.stringify(
             `<div>${repeat(
               `<span></span>`,
-              StringifyThresholds.NODE_COUNT
-            )}</div>`
+              StringifyThresholds.NODE_COUNT,
+            )}</div>`,
           ),
-          '1'
-        ]
+          '1',
+        ],
       },
       // the children array is hoisted as well
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -95,8 +95,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div>${repeat(
         `<span class="foo"/>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div>`,
     )
     // should have 6 hoisted nodes (including the entire array),
     // but 2~5 should be null because they are merged into 1
@@ -108,19 +108,19 @@ describe('stringify static html', () => {
           JSON.stringify(
             repeat(
               `<span class="foo"></span>`,
-              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-            )
+              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+            ),
           ),
-          '5'
-        ]
+          '5',
+        ],
       },
       null,
       null,
       null,
       null,
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -128,8 +128,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div><div :style="{ color: 'red' }">${repeat(
         `<span :class="[{ foo: true }, { bar: true }]">{{ 1 }} + {{ false }}</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
     )
     // should be optimized now
     expect(ast.hoists).toMatchObject([
@@ -140,15 +140,15 @@ describe('stringify static html', () => {
           JSON.stringify(
             `<div style="color:red;">${repeat(
               `<span class="foo bar">1 + false</span>`,
-              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-            )}</div>`
+              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+            )}</div>`,
           ),
-          '1'
-        ]
+          '1',
+        ],
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -157,8 +157,8 @@ describe('stringify static html', () => {
       `<div><div>${repeat(
         `<span :class="'foo' + '&gt;ar'">{{ 1 }} + {{ '<' }}</span>` +
           `<span>&amp;</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
     )
     // should be optimized now
     expect(ast.hoists).toMatchObject([
@@ -169,15 +169,15 @@ describe('stringify static html', () => {
           JSON.stringify(
             `<div>${repeat(
               `<span class="foo&gt;ar">1 + &lt;</span>` + `<span>&amp;</span>`,
-              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-            )}</div>`
+              StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+            )}</div>`,
           ),
-          '1'
-        ]
+          '1',
+        ],
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -185,7 +185,7 @@ describe('stringify static html', () => {
     const { ast, code } = compile(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
       )}<img src="./foo" /></div></div>`,
       {
         hoistStatic: true,
@@ -198,7 +198,7 @@ describe('stringify static html', () => {
                 '_imports_0_',
                 false,
                 node.loc,
-                ConstantTypes.CAN_HOIST
+                ConstantTypes.CAN_HOIST,
               )
               node.props[0] = {
                 type: NodeTypes.DIRECTIVE,
@@ -206,23 +206,23 @@ describe('stringify static html', () => {
                 arg: createSimpleExpression('src', true),
                 exp,
                 modifiers: [],
-                loc: node.loc
+                loc: node.loc,
               }
             }
-          }
-        ]
-      }
+          },
+        ],
+      },
     )
     expect(ast.hoists).toMatchObject([
       {
         // the expression and the tree are still hoistable
         // but should stay NodeTypes.VNODE_CALL
         // if it's stringified it will be NodeTypes.JS_CALL_EXPRESSION
-        type: NodeTypes.VNODE_CALL
+        type: NodeTypes.VNODE_CALL,
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
     expect(code).toMatchSnapshot()
   })
@@ -233,7 +233,7 @@ describe('stringify static html', () => {
     const { ast, code } = compile(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
       )}<img src="./foo" /></div></div>`,
       {
         hoistStatic: true,
@@ -246,7 +246,7 @@ describe('stringify static html', () => {
                 '_imports_0_',
                 false,
                 node.loc,
-                ConstantTypes.CAN_STRINGIFY
+                ConstantTypes.CAN_STRINGIFY,
               )
               node.props[0] = {
                 type: NodeTypes.DIRECTIVE,
@@ -254,22 +254,22 @@ describe('stringify static html', () => {
                 arg: createSimpleExpression('src', true),
                 exp,
                 modifiers: [],
-                loc: node.loc
+                loc: node.loc,
               }
             }
-          }
-        ]
-      }
+          },
+        ],
+      },
     )
     expect(ast.hoists).toMatchObject([
       {
         // the hoisted node should be NodeTypes.JS_CALL_EXPRESSION
         // of `createStaticVNode()` instead of dynamic NodeTypes.VNODE_CALL
-        type: NodeTypes.JS_CALL_EXPRESSION
+        type: NodeTypes.JS_CALL_EXPRESSION,
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
     expect(code).toMatchSnapshot()
   })
@@ -279,31 +279,31 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div><div><input indeterminate>${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
     )
     expect(ast.hoists).toMatchObject([
       {
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
 
     const { ast: ast2 } = compileWithStringify(
       `<div><div><input :indeterminate="true">${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div></div>`,
     )
     expect(ast2.hoists).toMatchObject([
       {
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -311,31 +311,31 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}<input indeterminate></div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}<input indeterminate></div></div>`,
     )
     expect(ast.hoists).toMatchObject([
       {
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
 
     const { ast: ast2 } = compileWithStringify(
       `<div><div>${repeat(
         `<span class="foo">foo</span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}<input :indeterminate="true"></div></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}<input :indeterminate="true"></div></div>`,
     )
     expect(ast2.hoists).toMatchObject([
       {
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -343,16 +343,16 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<table><tbody>${repeat(
         `<tr class="foo"><td>foo</td></tr>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</tbody></table>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</tbody></table>`,
     )
     expect(ast.hoists).toMatchObject([
       {
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       },
       {
-        type: NodeTypes.JS_ARRAY_EXPRESSION
-      }
+        type: NodeTypes.JS_ARRAY_EXPRESSION,
+      },
     ])
   })
 
@@ -360,30 +360,30 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<foo>${repeat(
         `<div class="foo"></div>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</foo>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</foo>`,
     )
     expect(ast.hoists.length).toBe(
-      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
     )
     ast.hoists.forEach(node => {
       expect(node).toMatchObject({
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       })
     })
 
     const { ast: ast2 } = compileWithStringify(
       `<foo><template #foo>${repeat(
         `<div class="foo"></div>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</template></foo>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</template></foo>`,
     )
     expect(ast2.hoists.length).toBe(
-      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
+      StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
     )
     ast2.hoists.forEach(node => {
       expect(node).toMatchObject({
-        type: NodeTypes.VNODE_CALL // not CALL_EXPRESSION
+        type: NodeTypes.VNODE_CALL, // not CALL_EXPRESSION
       })
     })
   })
@@ -392,8 +392,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div>${repeat(
         `<span :title="null"></span>`,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</div>`,
     )
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -402,11 +402,11 @@ describe('stringify static html', () => {
         JSON.stringify(
           `${repeat(
             `<span></span>`,
-            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-          )}`
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+          )}`,
         ),
-        '5'
-      ]
+        '5',
+      ],
     })
   })
 
@@ -415,8 +415,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<button :disabled="false">enable</button>${repeat(
         `<div></div>`,
-        StringifyThresholds.NODE_COUNT
-      )}`
+        StringifyThresholds.NODE_COUNT,
+      )}`,
     )
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -425,11 +425,11 @@ describe('stringify static html', () => {
         JSON.stringify(
           `<button>enable</button>${repeat(
             `<div></div>`,
-            StringifyThresholds.NODE_COUNT
-          )}`
+            StringifyThresholds.NODE_COUNT,
+          )}`,
         ),
-        '21'
-      ]
+        '21',
+      ],
     })
   })
 
@@ -439,8 +439,8 @@ describe('stringify static html', () => {
     const { ast } = compileWithStringify(
       `<div>${svg}${repeat(
         repeated,
-        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-      )}</svg></div>`
+        StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+      )}</svg></div>`,
     )
     expect(ast.hoists[0]).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -449,11 +449,11 @@ describe('stringify static html', () => {
         JSON.stringify(
           `${svg}${repeat(
             repeated,
-            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT
-          )}</svg>`
+            StringifyThresholds.ELEMENT_WITH_BINDING_COUNT,
+          )}</svg>`,
         ),
-        '1'
-      ]
+        '1',
+      ],
     })
   })
 

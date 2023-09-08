@@ -7,7 +7,7 @@ export const DEFINE_SLOTS = 'defineSlots'
 export function processDefineSlots(
   ctx: ScriptCompileContext,
   node: Node,
-  declId?: LVal
+  declId?: LVal,
 ): boolean {
   if (!isCallOf(node, DEFINE_SLOTS)) {
     return false
@@ -25,7 +25,7 @@ export function processDefineSlots(
     ctx.s.overwrite(
       ctx.startOffset! + node.start!,
       ctx.startOffset! + node.end!,
-      `${ctx.helper('useSlots')}()`
+      `${ctx.helper('useSlots')}()`,
     )
   }
 

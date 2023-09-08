@@ -75,7 +75,7 @@ attr
       const keyEnd =
         windowsNewLineSource.indexOf(endToken, keyStart) + endToken.length
       expect(
-        generateCodeFrame(windowsNewLineSource, keyStart, keyEnd)
+        generateCodeFrame(windowsNewLineSource, keyStart, keyEnd),
       ).toMatchSnapshot()
     })
 
@@ -84,7 +84,7 @@ attr
       const keyEnd =
         unixNewlineSource.indexOf(endToken, keyStart) + endToken.length
       expect(
-        generateCodeFrame(unixNewlineSource, keyStart, keyEnd)
+        generateCodeFrame(unixNewlineSource, keyStart, keyEnd),
       ).toMatchSnapshot()
     })
   }

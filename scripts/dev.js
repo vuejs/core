@@ -34,7 +34,7 @@ const outfile = resolve(
   __dirname,
   `../packages/${target}/dist/${
     target === 'vue-compat' ? `vue` : target
-  }.${postfix}.js`
+  }.${postfix}.js`,
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
@@ -51,7 +51,7 @@ if (!inlineDeps) {
       // for @vue/compiler-sfc / server-renderer
       'path',
       'url',
-      'stream'
+      'stream',
     ]
   }
 
@@ -59,11 +59,11 @@ if (!inlineDeps) {
     const consolidatePkgPath = require.resolve(
       '@vue/consolidate/package.json',
       {
-        paths: [resolve(__dirname, `../packages/${target}/`)]
-      }
+        paths: [resolve(__dirname, `../packages/${target}/`)],
+      },
     )
     const consolidateDeps = Object.keys(
-      require(consolidatePkgPath).devDependencies
+      require(consolidatePkgPath).devDependencies,
     )
     external = [
       ...external,
@@ -75,7 +75,7 @@ if (!inlineDeps) {
       'teacup/lib/express',
       'arc-templates/dist/es5',
       'then-pug',
-      'then-jade'
+      'then-jade',
     ]
   }
 }
@@ -87,8 +87,8 @@ const plugins = [
       build.onEnd(() => {
         console.log(`built: ${relativeOutfile}`)
       })
-    }
-  }
+    },
+  },
 ]
 
 if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
@@ -112,7 +112,7 @@ esbuild
       __DEV__: `true`,
       __TEST__: `false`,
       __BROWSER__: String(
-        format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches
+        format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
       ),
       __GLOBAL__: String(format === 'global'),
       __ESM_BUNDLER__: String(format.includes('esm-bundler')),
@@ -122,7 +122,7 @@ esbuild
       __COMPAT__: String(target === 'vue-compat'),
       __FEATURE_SUSPENSE__: `true`,
       __FEATURE_OPTIONS_API__: `true`,
-      __FEATURE_PROD_DEVTOOLS__: `false`
-    }
+      __FEATURE_PROD_DEVTOOLS__: `false`,
+    },
   })
   .then(ctx => ctx.watch())

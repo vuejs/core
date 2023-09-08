@@ -4,7 +4,7 @@ const app = createApp({})
 
 // Plugin without types accept anything
 const PluginWithoutType: Plugin = {
-  install(app: App) {}
+  install(app: App) {},
 }
 
 app.use(PluginWithoutType)
@@ -22,12 +22,12 @@ const PluginWithObjectOptions = {
     options.option1
     options.option2
     options.option3
-  }
+  },
 }
 
 for (const Plugin of [
   PluginWithObjectOptions,
-  PluginWithObjectOptions.install
+  PluginWithObjectOptions.install,
 ]) {
   // @ts-expect-error: no params
   app.use(Plugin)
@@ -42,7 +42,7 @@ for (const Plugin of [
 }
 
 const PluginNoOptions = {
-  install(app: App) {}
+  install(app: App) {},
 }
 
 for (const Plugin of [PluginNoOptions, PluginNoOptions.install]) {
@@ -55,7 +55,7 @@ for (const Plugin of [PluginNoOptions, PluginNoOptions.install]) {
 }
 
 const PluginMultipleArgs = {
-  install: (app: App, a: string, b: number) => {}
+  install: (app: App, a: string, b: number) => {},
 }
 
 for (const Plugin of [PluginMultipleArgs, PluginMultipleArgs.install]) {
@@ -67,12 +67,12 @@ for (const Plugin of [PluginMultipleArgs, PluginMultipleArgs.install]) {
 const PluginOptionalOptions = {
   install(
     app: App,
-    options: PluginOptions = { option2: 2, option3: true, option1: 'foo' }
+    options: PluginOptions = { option2: 2, option3: true, option1: 'foo' },
   ) {
     options.option1
     options.option2
     options.option3
-  }
+  },
 }
 
 for (const Plugin of [PluginOptionalOptions, PluginOptionalOptions.install]) {

@@ -13,19 +13,19 @@ export default defineConfig({
         defineModel: true,
         fs: {
           fileExists: fs.existsSync,
-          readFile: file => fs.readFileSync(file, 'utf-8')
-        }
-      }
+          readFile: file => fs.readFileSync(file, 'utf-8'),
+        },
+      },
     }),
-    copyVuePlugin()
+    copyVuePlugin(),
   ],
   define: {
     __COMMIT__: JSON.stringify(commit),
-    __VUE_PROD_DEVTOOLS__: JSON.stringify(true)
+    __VUE_PROD_DEVTOOLS__: JSON.stringify(true),
   },
   optimizeDeps: {
-    exclude: ['@vue/repl']
-  }
+    exclude: ['@vue/repl'],
+  },
 })
 
 function copyVuePlugin(): Plugin {
@@ -38,18 +38,18 @@ function copyVuePlugin(): Plugin {
         if (!fs.existsSync(filePath)) {
           throw new Error(
             `${basename} not built. ` +
-              `Run "nr build vue -f esm-browser" first.`
+              `Run "nr build vue -f esm-browser" first.`,
           )
         }
         this.emitFile({
           type: 'asset',
           fileName: basename,
-          source: fs.readFileSync(filePath, 'utf-8')
+          source: fs.readFileSync(filePath, 'utf-8'),
         })
       }
 
       copyFile(`../vue/dist/vue.runtime.esm-browser.js`)
       copyFile(`../server-renderer/dist/server-renderer.esm-browser.js`)
-    }
+    },
   }
 }

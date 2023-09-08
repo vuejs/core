@@ -3,7 +3,7 @@ import { baseParse } from './parse'
 import {
   transform,
   type NodeTransform,
-  type DirectiveTransform
+  type DirectiveTransform,
 } from './transform'
 import { generate, type CodegenResult } from './codegen'
 import { type RootNode } from './ast'
@@ -25,11 +25,11 @@ import { transformMemo } from './transforms/vMemo'
 
 export type TransformPreset = [
   NodeTransform[],
-  Record<string, DirectiveTransform>
+  Record<string, DirectiveTransform>,
 ]
 
 export function getBaseTransformPreset(
-  prefixIdentifiers?: boolean
+  prefixIdentifiers?: boolean,
 ): TransformPreset {
   return [
     [
@@ -42,7 +42,7 @@ export function getBaseTransformPreset(
         ? [
             // order is important
             trackVForSlotScopes,
-            transformExpression
+            transformExpression,
           ]
         : __BROWSER__ && __DEV__
         ? [transformExpression]
@@ -50,13 +50,13 @@ export function getBaseTransformPreset(
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
-      transformText
+      transformText,
     ],
     {
       on: transformOn,
       bind: transformBind,
-      model: transformModel
-    }
+      model: transformModel,
+    },
   ]
 }
 
@@ -64,7 +64,7 @@ export function getBaseTransformPreset(
 // @vue/compiler-dom can export `compile` while re-exporting everything else.
 export function baseCompile(
   template: string | RootNode,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ): CodegenResult {
   const onError = options.onError || defaultOnError
   const isModuleMode = options.mode === 'module'
@@ -103,20 +103,20 @@ export function baseCompile(
       prefixIdentifiers,
       nodeTransforms: [
         ...nodeTransforms,
-        ...(options.nodeTransforms || []) // user transforms
+        ...(options.nodeTransforms || []), // user transforms
       ],
       directiveTransforms: extend(
         {},
         directiveTransforms,
-        options.directiveTransforms || {} // user transforms
-      )
-    })
+        options.directiveTransforms || {}, // user transforms
+      ),
+    }),
   )
 
   return generate(
     ast,
     extend({}, options, {
-      prefixIdentifiers
-    })
+      prefixIdentifiers,
+    }),
   )
 }

@@ -7,7 +7,7 @@ import {
   Comment,
   Fragment,
   Suspense,
-  defineComponent
+  defineComponent,
 } from 'vue'
 import { expectType } from './utils'
 

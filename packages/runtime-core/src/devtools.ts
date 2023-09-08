@@ -18,7 +18,7 @@ const enum DevtoolsHooks {
   COMPONENT_REMOVED = 'component:removed',
   COMPONENT_EMIT = 'component:emit',
   PERFORMANCE_START = 'perf:start',
-  PERFORMANCE_END = 'perf:end'
+  PERFORMANCE_END = 'perf:end',
 }
 
 interface DevtoolsHook {
@@ -91,7 +91,7 @@ export function devtoolsInitApp(app: App, version: string) {
     Fragment,
     Text,
     Comment,
-    Static
+    Static,
   })
 }
 
@@ -100,18 +100,18 @@ export function devtoolsUnmountApp(app: App) {
 }
 
 export const devtoolsComponentAdded = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_ADDED
+  DevtoolsHooks.COMPONENT_ADDED,
 )
 
 export const devtoolsComponentUpdated =
   /*#__PURE__*/ createDevtoolsComponentHook(DevtoolsHooks.COMPONENT_UPDATED)
 
 const _devtoolsComponentRemoved = /*#__PURE__*/ createDevtoolsComponentHook(
-  DevtoolsHooks.COMPONENT_REMOVED
+  DevtoolsHooks.COMPONENT_REMOVED,
 )
 
 export const devtoolsComponentRemoved = (
-  component: ComponentInternalInstance
+  component: ComponentInternalInstance,
 ) => {
   if (
     devtools &&
@@ -130,17 +130,17 @@ function createDevtoolsComponentHook(hook: DevtoolsHooks) {
       component.appContext.app,
       component.uid,
       component.parent ? component.parent.uid : undefined,
-      component
+      component,
     )
   }
 }
 
 export const devtoolsPerfStart = /*#__PURE__*/ createDevtoolsPerformanceHook(
-  DevtoolsHooks.PERFORMANCE_START
+  DevtoolsHooks.PERFORMANCE_START,
 )
 
 export const devtoolsPerfEnd = /*#__PURE__*/ createDevtoolsPerformanceHook(
-  DevtoolsHooks.PERFORMANCE_END
+  DevtoolsHooks.PERFORMANCE_END,
 )
 
 function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
@@ -152,13 +152,13 @@ function createDevtoolsPerformanceHook(hook: DevtoolsHooks) {
 export function devtoolsComponentEmit(
   component: ComponentInternalInstance,
   event: string,
-  params: any[]
+  params: any[],
 ) {
   emit(
     DevtoolsHooks.COMPONENT_EMIT,
     component.appContext.app,
     component,
     event,
-    params
+    params,
   )
 }

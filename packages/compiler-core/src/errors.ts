@@ -25,7 +25,7 @@ export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
   messages?: { [code: number]: string },
-  additionalMessage?: string
+  additionalMessage?: string,
 ): InferCompilerError<T> {
   const msg =
     __DEV__ || !__BROWSER__
@@ -104,7 +104,7 @@ export const enum ErrorCodes {
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
-  __EXTEND_POINT__
+  __EXTEND_POINT__,
 }
 
 export const errorMessages: Record<ErrorCodes, string> = {
@@ -188,5 +188,5 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.DEPRECATION_V_IS]: `v-is="component-name" has been deprecated. Use is="vue:component-name" instead. v-is support will be removed in 3.4.`,
 
   // just to fulfill types
-  [ErrorCodes.__EXTEND_POINT__]: ``
+  [ErrorCodes.__EXTEND_POINT__]: ``,
 }

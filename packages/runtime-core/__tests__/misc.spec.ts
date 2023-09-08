@@ -7,7 +7,7 @@ describe('misc', () => {
       render() {},
       mounted() {
         instance = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instance).toBeDefined()

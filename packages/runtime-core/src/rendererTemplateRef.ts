@@ -2,7 +2,7 @@ import { type SuspenseBoundary } from './components/Suspense'
 import {
   type VNode,
   type VNodeNormalizedRef,
-  type VNodeNormalizedRefAtom
+  type VNodeNormalizedRefAtom,
 } from './vnode'
 import {
   EMPTY_OBJ,
@@ -11,7 +11,7 @@ import {
   isFunction,
   isString,
   remove,
-  ShapeFlags
+  ShapeFlags,
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { getExposeProxy } from './component'
@@ -29,7 +29,7 @@ export function setRef(
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
-  isUnmount = false
+  isUnmount = false,
 ) {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -38,8 +38,8 @@ export function setRef(
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
         parentSuspense,
         vnode,
-        isUnmount
-      )
+        isUnmount,
+      ),
     )
     return
   }
@@ -60,7 +60,7 @@ export function setRef(
   if (__DEV__ && !owner) {
     warn(
       `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
-        `A vnode with ref must be created inside the render function.`
+        `A vnode with ref must be created inside the render function.`,
     )
     return
   }

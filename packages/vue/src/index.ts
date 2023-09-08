@@ -4,12 +4,12 @@ import { initDev } from './dev'
 import {
   compile,
   type CompilerOptions,
-  type CompilerError
+  type CompilerError,
 } from '@vue/compiler-dom'
 import {
   registerRuntimeCompiler,
   type RenderFunction,
-  warn
+  warn,
 } from '@vue/runtime-dom'
 import * as runtimeDom from '@vue/runtime-dom'
 import { isString, NOOP, generateCodeFrame, extend } from '@vue/shared'
@@ -23,7 +23,7 @@ const compileCache: Record<string, RenderFunction> = Object.create(null)
 
 function compileToFunction(
   template: string | HTMLElement,
-  options?: CompilerOptions
+  options?: CompilerOptions,
 ): RenderFunction {
   if (!isString(template)) {
     if (template.nodeType) {
@@ -56,9 +56,9 @@ function compileToFunction(
     {
       hoistStatic: true,
       onError: __DEV__ ? onError : undefined,
-      onWarn: __DEV__ ? e => onError(e, true) : NOOP
+      onWarn: __DEV__ ? e => onError(e, true) : NOOP,
     } as CompilerOptions,
-    options
+    options,
   )
 
   if (!opts.isCustomElement && typeof customElements !== 'undefined') {
@@ -76,7 +76,7 @@ function compileToFunction(
       generateCodeFrame(
         template as string,
         err.loc.start.offset,
-        err.loc.end.offset
+        err.loc.end.offset,
       )
     warn(codeFrame ? `${message}\n${codeFrame}` : message)
   }

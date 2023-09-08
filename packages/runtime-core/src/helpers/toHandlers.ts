@@ -7,7 +7,7 @@ import { warn } from '../warning'
  */
 export function toHandlers(
   obj: Record<string, any>,
-  preserveCaseIfNecessary?: boolean
+  preserveCaseIfNecessary?: boolean,
 ): Record<string, any> {
   const ret: Record<string, any> = {}
   if (__DEV__ && !isObject(obj)) {

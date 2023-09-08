@@ -21,7 +21,7 @@ describe('SVG support', () => {
             </foreignObject>
           </svg>
         </div>
-      `
+      `,
     }
     render(h(App), root)
     const e0 = document.getElementById('e0')!
@@ -45,7 +45,7 @@ describe('SVG support', () => {
             </foreignObject>
           </svg>
         </div>
-      `
+      `,
     }
     render(h(App), root)
     const f1 = document.querySelector('#f1')!

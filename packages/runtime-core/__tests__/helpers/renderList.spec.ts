@@ -3,13 +3,13 @@ import { renderList } from '../../src/helpers/renderList'
 describe('renderList', () => {
   it('should render items in an array', () => {
     expect(
-      renderList(['1', '2', '3'], (item, index) => `node ${index}: ${item}`)
+      renderList(['1', '2', '3'], (item, index) => `node ${index}: ${item}`),
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
   it('should render characters of a string', () => {
     expect(
-      renderList('123', (item, index) => `node ${index}: ${item}`)
+      renderList('123', (item, index) => `node ${index}: ${item}`),
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
@@ -17,7 +17,7 @@ describe('renderList', () => {
     expect(renderList(3, (item, index) => `node ${index}: ${item}`)).toEqual([
       'node 0: 1',
       'node 1: 2',
-      'node 2: 3'
+      'node 2: 3',
     ])
   })
 
@@ -26,7 +26,7 @@ describe('renderList', () => {
       renderList(3.1, () => {})
     } catch (e) {}
     expect(
-      `The v-for range expect an integer value but got 3.1.`
+      `The v-for range expect an integer value but got 3.1.`,
     ).toHaveBeenWarned()
   })
 
@@ -34,8 +34,8 @@ describe('renderList', () => {
     expect(
       renderList(
         { a: 1, b: 2, c: 3 },
-        (item, key, index) => `node ${index}/${key}: ${item}`
-      )
+        (item, key, index) => `node ${index}/${key}: ${item}`,
+      ),
     ).toEqual(['node 0/a: 1', 'node 1/b: 2', 'node 2/c: 3'])
   })
 
@@ -47,13 +47,13 @@ describe('renderList', () => {
     }
 
     expect(
-      renderList(iterable(), (item, index) => `node ${index}: ${item}`)
+      renderList(iterable(), (item, index) => `node ${index}: ${item}`),
     ).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
   it('should return empty array when source is undefined', () => {
     expect(
-      renderList(undefined, (item, index) => `node ${index}: ${item}`)
+      renderList(undefined, (item, index) => `node ${index}: ${item}`),
     ).toEqual([])
   })
 })

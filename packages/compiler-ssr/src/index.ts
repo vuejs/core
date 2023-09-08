@@ -11,13 +11,13 @@ import {
   noopDirectiveTransform,
   transformBind,
   transformStyle,
-  transformOn
+  transformOn,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
 import {
   ssrTransformComponent,
-  rawOptionsMap
+  rawOptionsMap,
 } from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrTransformIf } from './transforms/ssrVIf'
@@ -29,7 +29,7 @@ import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
 export function compile(
   template: string,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ): CodegenResult {
   options = {
     ...options,
@@ -42,7 +42,7 @@ export function compile(
     prefixIdentifiers: true,
     // disable optimizations that are unnecessary for ssr
     cacheHandlers: false,
-    hoistStatic: false
+    hoistStatic: false,
   }
 
   const ast = baseParse(template, options)
@@ -66,7 +66,7 @@ export function compile(
       ssrTransformComponent,
       trackSlotScopes,
       transformStyle,
-      ...(options.nodeTransforms || []) // user transforms
+      ...(options.nodeTransforms || []), // user transforms
     ],
     directiveTransforms: {
       // reusing core v-bind
@@ -80,8 +80,8 @@ export function compile(
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
       memo: noopDirectiveTransform,
-      ...(options.directiveTransforms || {}) // user transforms
-    }
+      ...(options.directiveTransforms || {}), // user transforms
+    },
   })
 
   // traverse the template AST and convert into SSR codegen AST

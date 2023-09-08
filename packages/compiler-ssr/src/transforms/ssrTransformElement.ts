@@ -29,7 +29,7 @@ import {
   type AttributeNode,
   buildDirectiveArgs,
   type TransformContext,
-  type PropsExpression
+  type PropsExpression,
 } from '@vue/compiler-dom'
 import {
   escapeHtml,
@@ -37,7 +37,7 @@ import {
   isBuiltInDirective,
   isSSRSafeAttrName,
   NO,
-  propsToAttrMap
+  propsToAttrMap,
 } from '@vue/shared'
 import { createSSRCompilerError, SSRErrorCodes } from '../errors'
 import {
@@ -49,11 +49,11 @@ import {
   SSR_INTERPOLATE,
   SSR_GET_DYNAMIC_MODEL_PROPS,
   SSR_INCLUDE_BOOLEAN_ATTR,
-  SSR_GET_DIRECTIVE_PROPS
+  SSR_GET_DIRECTIVE_PROPS,
 } from '../runtimeHelpers'
 import {
   type SSRTransformContext,
-  processChildren
+  processChildren,
 } from '../ssrCodegenTransform'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
@@ -84,7 +84,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
     // so when they are present we need to bail out to full `renderAttrs`
     const hasDynamicVBind = hasDynamicKeyVBind(node)
     const hasCustomDir = node.props.some(
-      p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name)
+      p => p.type === NodeTypes.DIRECTIVE && !isBuiltInDirective(p.name),
     )
     const needMergeProps = hasDynamicVBind || hasCustomDir
     if (needMergeProps) {
@@ -94,13 +94,13 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         node.props,
         false /* isComponent */,
         false /* isDynamicComponent */,
-        true /* ssr */
+        true /* ssr */,
       )
       if (props || directives.length) {
         const mergedProps = buildSSRProps(props, directives, context)
         const propsExp = createCallExpression(
           context.helper(SSR_RENDER_ATTRS),
-          [mergedProps]
+          [mergedProps],
         )
 
         if (node.tag === 'textarea') {
@@ -119,8 +119,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             propsExp.arguments = [
               createAssignmentExpression(
                 createSimpleExpression(tempId, false),
-                mergedProps
-              )
+                mergedProps,
+              ),
             ]
             rawChildrenMap.set(
               node,
@@ -130,11 +130,11 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                   createSimpleExpression(`${tempId}.value`, false),
                   createSimpleExpression(
                     existingText ? existingText.content : ``,
-                    true
+                    true,
                   ),
-                  false
-                )
-              ])
+                  false,
+                ),
+              ]),
             )
           }
         } else if (node.tag === 'input') {
@@ -155,11 +155,11 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     context.helper(SSR_GET_DYNAMIC_MODEL_PROPS),
                     [
                       tempExp, // existing props
-                      vModel.exp! // model
-                    ]
-                  )
-                ])
-              ])
+                      vModel.exp!, // model
+                    ],
+                  ),
+                ]),
+              ]),
             ]
           }
         }
@@ -193,7 +193,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           node.children = [createInterpolation(prop.exp, prop.loc)]
         } else if (prop.name === 'slot') {
           context.onError(
-            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, prop.loc)
+            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, prop.loc),
           )
         } else if (isTextareaWithValue(node, prop) && prop.exp) {
           if (!needMergeProps) {
@@ -206,7 +206,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
             const { props, ssrTagParts } = directiveTransform(
               prop,
               node,
-              context
+              context,
             )
             if (ssrTagParts) {
               openTag.push(...ssrTagParts)
@@ -224,9 +224,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                     ` class="`,
                     (dynamicClassBinding = createCallExpression(
                       context.helper(SSR_RENDER_CLASS),
-                      [value]
+                      [value],
                     )),
-                    `"`
+                    `"`,
                   )
                 } else if (attrName === 'style') {
                   if (dynamicStyleBinding) {
@@ -237,9 +237,9 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                       ` style="`,
                       (dynamicStyleBinding = createCallExpression(
                         context.helper(SSR_RENDER_STYLE),
-                        [value]
+                        [value],
                       )),
-                      `"`
+                      `"`,
                     )
                   }
                 } else {
@@ -252,26 +252,26 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                       createConditionalExpression(
                         createCallExpression(
                           context.helper(SSR_INCLUDE_BOOLEAN_ATTR),
-                          [value]
+                          [value],
                         ),
                         createSimpleExpression(' ' + attrName, true),
                         createSimpleExpression('', true),
-                        false /* no newline */
-                      )
+                        false /* no newline */,
+                      ),
                     )
                   } else if (isSSRSafeAttrName(attrName)) {
                     openTag.push(
                       createCallExpression(context.helper(SSR_RENDER_ATTR), [
                         key,
-                        value
-                      ])
+                        value,
+                      ]),
                     )
                   } else {
                     context.onError(
                       createSSRCompilerError(
                         SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME,
-                        key.loc
-                      )
+                        key.loc,
+                      ),
                     )
                   }
                 }
@@ -286,8 +286,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
                 openTag.push(
                   createCallExpression(
                     context.helper(SSR_RENDER_DYNAMIC_ATTR),
-                    args
-                  )
+                    args,
+                  ),
                 )
               }
             }
@@ -307,7 +307,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           }
           openTag.push(
             ` ${prop.name}` +
-              (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``)
+              (prop.value ? `="${escapeHtml(prop.value.content)}"` : ``),
           )
         }
       }
@@ -330,7 +330,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
 export function buildSSRProps(
   props: PropsExpression | undefined,
   directives: DirectiveNode[],
-  context: TransformContext
+  context: TransformContext,
 ): JSChildNode {
   let mergePropsArgs: JSChildNode[] = []
   if (props) {
@@ -346,8 +346,8 @@ export function buildSSRProps(
       mergePropsArgs.push(
         createCallExpression(context.helper(SSR_GET_DIRECTIVE_PROPS), [
           `_ctx`,
-          ...buildDirectiveArgs(dir, context).elements
-        ] as JSChildNode[])
+          ...buildDirectiveArgs(dir, context).elements,
+        ] as JSChildNode[]),
       )
     }
   }
@@ -372,7 +372,7 @@ function isTrueFalseValue(prop: DirectiveNode | AttributeNode) {
 
 function isTextareaWithValue(
   node: PlainElementNode,
-  prop: DirectiveNode
+  prop: DirectiveNode,
 ): boolean {
   return !!(
     node.tag === 'textarea' &&
@@ -392,7 +392,7 @@ function mergeCall(call: CallExpression, arg: string | JSChildNode) {
 
 function removeStaticBinding(
   tag: TemplateLiteral['elements'],
-  binding: string
+  binding: string,
 ) {
   const regExp = new RegExp(`^ ${binding}=".+"$`)
 
@@ -405,13 +405,13 @@ function removeStaticBinding(
 
 function findVModel(node: PlainElementNode): DirectiveNode | undefined {
   return node.props.find(
-    p => p.type === NodeTypes.DIRECTIVE && p.name === 'model' && p.exp
+    p => p.type === NodeTypes.DIRECTIVE && p.name === 'model' && p.exp,
   ) as DirectiveNode | undefined
 }
 
 export function ssrProcessElement(
   node: PlainElementNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
 ) {
   const isVoidTag = context.options.isVoidTag || NO
   const elementsToAdd = node.ssrCodegenNode!.elements

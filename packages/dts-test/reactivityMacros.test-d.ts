@@ -3,7 +3,7 @@ import {
   computed,
   type Ref,
   type ComputedRef,
-  type WritableComputedRef
+  type WritableComputedRef,
 } from 'vue'
 import 'vue/macros-global'
 import { RefType, type RefTypes } from 'vue/macros'
@@ -34,8 +34,8 @@ expectType<RefTypes.ComputedRef | undefined>(m[RefType])
 let wc = $(
   computed({
     get: () => n + 1,
-    set: v => (n = v - 1)
-  })
+    set: v => (n = v - 1),
+  }),
 )
 wc = 2
 // @ts-expect-error
@@ -50,7 +50,7 @@ function useFoo() {
   return $$({
     x,
     y,
-    z: 123
+    z: 123,
   })
 }
 
@@ -74,16 +74,16 @@ expectType<number>($computed(() => 1))
 let b = $ref(1)
 expectType<number>(
   $computed(() => b, {
-    onTrack() {}
-  })
+    onTrack() {},
+  }),
 )
 
 // writable computed
 expectType<number>(
   $computed({
     get: () => 1,
-    set: () => {}
-  })
+    set: () => {},
+  }),
 )
 
 // $$
@@ -99,7 +99,7 @@ expectType<ComputedRef<number>>(cRef)
 
 const c2 = $computed({
   get: () => 1,
-  set: () => {}
+  set: () => {},
 })
 const c2Ref = $$(c2)
 expectType<WritableComputedRef<number>>(c2Ref)
@@ -108,7 +108,7 @@ expectType<WritableComputedRef<number>>(c2Ref)
 const obj = $$({
   n,
   m,
-  wc
+  wc,
 })
 
 expectType<Ref<number>>(obj.n)

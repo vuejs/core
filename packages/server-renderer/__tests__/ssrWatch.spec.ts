@@ -12,7 +12,7 @@ describe('ssr: watch', () => {
         () => {
           msg = 'hello world'
         },
-        { flush: 'sync' }
+        { flush: 'sync' },
       )
       count.value = 1
       expect(msg).toBe('hello world')

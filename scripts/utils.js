@@ -34,8 +34,8 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
     console.log()
     console.error(
       `  ${chalk.bgRed.white(' ERROR ')} ${chalk.red(
-        `Target ${chalk.underline(partialTargets)} not found!`
-      )}`
+        `Target ${chalk.underline(partialTargets)} not found!`,
+      )}`,
     )
     console.log()
 

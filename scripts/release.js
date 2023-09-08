@@ -58,7 +58,7 @@ const versionIncrements = [
   'patch',
   'minor',
   'major',
-  ...(preId ? ['prepatch', 'preminor', 'premajor', 'prerelease'] : [])
+  ...(preId ? ['prepatch', 'preminor', 'premajor', 'prerelease'] : []),
 ]
 
 const inc = i => semver.inc(currentVersion, i, preId)
@@ -93,7 +93,7 @@ async function main() {
       const { stdout } = await run(
         'pnpm',
         ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
-        { stdio: 'pipe' }
+        { stdio: 'pipe' },
       )
       let versions = JSON.parse(stdout)
       versions = Array.isArray(versions) ? versions : [versions]
@@ -121,7 +121,9 @@ async function main() {
       type: 'select',
       name: 'release',
       message: 'Select release type',
-      choices: versionIncrements.map(i => `${i} (${inc(i)})`).concat(['custom'])
+      choices: versionIncrements
+        .map(i => `${i} (${inc(i)})`)
+        .concat(['custom']),
     })
 
     if (release === 'custom') {
@@ -129,7 +131,7 @@ async function main() {
         type: 'input',
         name: 'version',
         message: 'Input custom version',
-        initial: currentVersion
+        initial: currentVersion,
       })
       // @ts-ignore
       targetVersion = result.version
@@ -146,14 +148,14 @@ async function main() {
     step(
       isCanary
         ? `Releasing canary version v${targetVersion}...`
-        : `Releasing v${targetVersion}...`
+        : `Releasing v${targetVersion}...`,
     )
   } else {
     // @ts-ignore
     const { yes: confirmRelease } = await prompt({
       type: 'confirm',
       name: 'yes',
-      message: `Releasing v${targetVersion}. Confirm?`
+      message: `Releasing v${targetVersion}. Confirm?`,
     })
 
     if (!confirmRelease) {
@@ -171,7 +173,7 @@ async function main() {
       const { yes: promptSkipTests } = await prompt({
         type: 'confirm',
         name: 'yes',
-        message: `CI for this commit passed. Skip local tests?`
+        message: `CI for this commit passed. Skip local tests?`,
       })
 
       skipTests = promptSkipTests
@@ -193,7 +195,7 @@ async function main() {
   step('\nUpdating cross dependencies...')
   updateVersions(
     targetVersion,
-    isCanary ? renamePackageToCanary : keepThePackageName
+    isCanary ? renamePackageToCanary : keepThePackageName,
   )
 
   // build all packages with types
@@ -215,7 +217,7 @@ async function main() {
     const { yes: changelogOk } = await prompt({
       type: 'confirm',
       name: 'yes',
-      message: `Changelog generated. Does it look good?`
+      message: `Changelog generated. Does it look good?`,
     })
 
     if (!changelogOk) {
@@ -263,9 +265,9 @@ async function main() {
     console.log(
       chalk.yellow(
         `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
-          '\n- '
-        )}`
-      )
+          '\n- ',
+        )}`,
+      ),
     )
   }
   console.log()
@@ -276,7 +278,7 @@ async function getCIResult() {
     const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
     const res = await fetch(
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
-        `&status=success&exclude_pull_requests=true`
+        `&status=success&exclude_pull_requests=true`,
     )
     const data = await res.json()
     return data.workflow_runs.length > 0
@@ -290,7 +292,7 @@ function updateVersions(version, getNewPackageName = keepThePackageName) {
   updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
   // 2. update all packages
   packages.forEach(p =>
-    updatePackage(getPkgRoot(p), version, getNewPackageName)
+    updatePackage(getPkgRoot(p), version, getNewPackageName),
   )
 }
 
@@ -315,7 +317,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
       console.log(
-        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
+        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`),
       )
       deps[dep] = newVersion
     }
@@ -354,12 +356,12 @@ async function publishPackage(pkgName, version) {
         '--access',
         'public',
         ...(isDryRun ? ['--dry-run'] : []),
-        ...(skipGit ? ['--no-git-checks'] : [])
+        ...(skipGit ? ['--no-git-checks'] : []),
       ],
       {
         cwd: pkgRoot,
-        stdio: 'pipe'
-      }
+        stdio: 'pipe',
+      },
     )
     console.log(chalk.green(`Successfully published ${pkgName}@${version}`))
   } catch (e) {

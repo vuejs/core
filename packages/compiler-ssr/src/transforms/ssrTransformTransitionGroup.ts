@@ -7,12 +7,12 @@ import {
   findProp,
   type JSChildNode,
   NodeTypes,
-  type TransformContext
+  type TransformContext,
 } from '@vue/compiler-dom'
 import { SSR_RENDER_ATTRS } from '../runtimeHelpers'
 import {
   processChildren,
-  type SSRTransformContext
+  type SSRTransformContext,
 } from '../ssrCodegenTransform'
 import { buildSSRProps } from './ssrTransformElement'
 
@@ -26,7 +26,7 @@ interface WIPEntry {
 // phase 1: build props
 export function ssrTransformTransitionGroup(
   node: ComponentNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
   return () => {
     const tag = findProp(node, 'tag')
@@ -38,17 +38,17 @@ export function ssrTransformTransitionGroup(
         otherProps,
         true /* isComponent */,
         false /* isDynamicComponent */,
-        true /* ssr (skip event listeners) */
+        true /* ssr (skip event listeners) */,
       )
       let propsExp = null
       if (props || directives.length) {
         propsExp = createCallExpression(context.helper(SSR_RENDER_ATTRS), [
-          buildSSRProps(props, directives, context)
+          buildSSRProps(props, directives, context),
         ])
       }
       wipMap.set(node, {
         tag,
-        propsExp
+        propsExp,
       })
     }
   }
@@ -57,7 +57,7 @@ export function ssrTransformTransitionGroup(
 // phase 2: process children
 export function ssrProcessTransitionGroup(
   node: ComponentNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
 ) {
   const entry = wipMap.get(node)
   if (entry) {
@@ -81,7 +81,7 @@ export function ssrProcessTransitionGroup(
          * be patched using the same key map) so we need to account for that here
          * by disabling nested fragment wrappers from being generated.
          */
-        true
+        true,
       )
       context.pushStringPart(`</`)
       context.pushStringPart(tag.exp!)

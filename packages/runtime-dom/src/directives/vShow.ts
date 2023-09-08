@@ -39,7 +39,7 @@ export const vShow: ObjectDirective<VShowElement> = {
   },
   beforeUnmount(el, { value }) {
     setDisplay(el, value)
-  }
+  },
 }
 
 function setDisplay(el: VShowElement, value: unknown): void {

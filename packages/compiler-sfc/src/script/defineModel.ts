@@ -2,7 +2,7 @@ import {
   type LVal,
   type Node,
   type ObjectProperty,
-  type TSType
+  type TSType,
 } from '@babel/types'
 import { type ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
@@ -11,7 +11,7 @@ import {
   concatStrings,
   isCallOf,
   toRuntimeTypeString,
-  unwrapTSNode
+  unwrapTSNode,
 } from './utils'
 import { BindingTypes } from '@vue/compiler-dom'
 import { warnOnce } from '../warn'
@@ -27,7 +27,7 @@ export interface ModelDecl {
 export function processDefineModel(
   ctx: ScriptCompileContext,
   node: Node,
-  declId?: LVal
+  declId?: LVal,
 ): boolean {
   if (!isCallOf(node, DEFINE_MODEL)) {
     return false
@@ -36,7 +36,7 @@ export function processDefineModel(
   if (!ctx.options.defineModel) {
     warnOnce(
       `defineModel() is an experimental feature and disabled by default.\n` +
-        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
+        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`,
     )
     return false
   }
@@ -45,7 +45,7 @@ export function processDefineModel(
     `This project is using defineModel(), which is an experimental ` +
       `feature. It may receive breaking changes or be removed in the future, so ` +
       `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
+      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`,
   )
 
   ctx.hasDefineModelCall = true
@@ -72,7 +72,8 @@ export function processDefineModel(
   ctx.modelDecls[modelName] = {
     type,
     options: optionsString,
-    identifier: declId && declId.type === 'Identifier' ? declId.name : undefined
+    identifier:
+      declId && declId.type === 'Identifier' ? declId.name : undefined,
   }
   // register binding type
   ctx.bindingMetadata[modelName] = BindingTypes.PROPS
@@ -84,7 +85,7 @@ export function processDefineModel(
         p =>
           p.type === 'ObjectProperty' &&
           ((p.key.type === 'Identifier' && p.key.name === 'local') ||
-            (p.key.type === 'StringLiteral' && p.key.value === 'local'))
+            (p.key.type === 'StringLiteral' && p.key.value === 'local')),
       ) as ObjectProperty
 
       if (local) {
@@ -107,7 +108,7 @@ export function processDefineModel(
     ctx.startOffset! + node.end!,
     `${ctx.helper('useModel')}(__props, ${JSON.stringify(modelName)}${
       runtimeOptions ? `, ${runtimeOptions}` : ``
-    })`
+    })`,
   )
 
   return true
@@ -142,7 +143,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
     const codegenOptions = concatStrings([
       runtimeType && `type: ${runtimeType}`,
-      skipCheck && 'skipCheck: true'
+      skipCheck && 'skipCheck: true',
     ])
 
     let decl: string

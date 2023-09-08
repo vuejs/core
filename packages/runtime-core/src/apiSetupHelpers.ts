@@ -4,32 +4,32 @@ import {
   isFunction,
   type Prettify,
   type UnionToIntersection,
-  extend
+  extend,
 } from '@vue/shared'
 import {
   getCurrentInstance,
   setCurrentInstance,
   type SetupContext,
   createSetupContext,
-  unsetCurrentInstance
+  unsetCurrentInstance,
 } from './component'
 import {
   type EmitFn,
   type EmitsOptions,
-  type ObjectEmitsOptions
+  type ObjectEmitsOptions,
 } from './componentEmits'
 import {
   type ComponentOptionsMixin,
   type ComponentOptionsWithoutProps,
   type ComputedOptions,
-  type MethodOptions
+  type MethodOptions,
 } from './componentOptions'
 import {
   type ComponentPropsOptions,
   type ComponentObjectPropsOptions,
   type ExtractPropTypes,
   type NormalizedProps,
-  type PropOptions
+  type PropOptions,
 } from './componentProps'
 import { warn } from './warning'
 import { type SlotsType, type StrictUnwrapSlotsType } from './componentSlots'
@@ -41,7 +41,7 @@ const warnRuntimeUsage = (method: string) =>
   warn(
     `${method}() is a compiler-hint helper that is only usable inside ` +
       `<script setup> of a single file component. Its arguments should be ` +
-      `compiled away and passing it at runtime has no effect.`
+      `compiled away and passing it at runtime has no effect.`,
   )
 
 /**
@@ -78,11 +78,11 @@ const warnRuntimeUsage = (method: string) =>
  */
 // overload 1: runtime props w/ array
 export function defineProps<PropNames extends string = string>(
-  props: PropNames[]
+  props: PropNames[],
 ): Prettify<Readonly<{ [key in PropNames]?: any }>>
 // overload 2: runtime props w/ object
 export function defineProps<
-  PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
+  PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions,
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
 export function defineProps<TypeProps>(): DefineProps<
@@ -134,13 +134,13 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  */
 // overload 1: runtime emits w/ array
 export function defineEmits<EE extends string = string>(
-  emitOptions: EE[]
+  emitOptions: EE[],
 ): EmitFn<EE[]>
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
-  emitOptions: E
+  emitOptions: E,
 ): EmitFn<E>
 export function defineEmits<
-  T extends ((...args: any[]) => any) | Record<string, any[]>
+  T extends ((...args: any[]) => any) | Record<string, any[]>,
 >(): T extends (...args: any[]) => any ? T : ShortEmits<T>
 // implementation
 export function defineEmits() {
@@ -173,7 +173,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineexpose}
  */
 export function defineExpose<
-  Exposed extends Record<string, any> = Record<string, any>
+  Exposed extends Record<string, any> = Record<string, any>,
 >(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
@@ -193,7 +193,7 @@ export function defineOptions<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
 >(
   options?: ComponentOptionsWithoutProps<
     {},
@@ -203,7 +203,7 @@ export function defineOptions<
     M,
     Mixin,
     Extends
-  > & { emits?: undefined; expose?: undefined; slots?: undefined }
+  > & { emits?: undefined; expose?: undefined; slots?: undefined },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
@@ -211,7 +211,7 @@ export function defineOptions<
 }
 
 export function defineSlots<
-  S extends Record<string, any> = Record<string, any>
+  S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
@@ -255,25 +255,25 @@ export function defineSlots<
  * ```
  */
 export function defineModel<T>(
-  options: { required: true } & PropOptions<T> & DefineModelOptions
+  options: { required: true } & PropOptions<T> & DefineModelOptions,
 ): Ref<T>
 export function defineModel<T>(
-  options: { default: any } & PropOptions<T> & DefineModelOptions
+  options: { default: any } & PropOptions<T> & DefineModelOptions,
 ): Ref<T>
 export function defineModel<T>(
-  options?: PropOptions<T> & DefineModelOptions
+  options?: PropOptions<T> & DefineModelOptions,
 ): Ref<T | undefined>
 export function defineModel<T>(
   name: string,
-  options: { required: true } & PropOptions<T> & DefineModelOptions
+  options: { required: true } & PropOptions<T> & DefineModelOptions,
 ): Ref<T>
 export function defineModel<T>(
   name: string,
-  options: { default: any } & PropOptions<T> & DefineModelOptions
+  options: { default: any } & PropOptions<T> & DefineModelOptions,
 ): Ref<T>
 export function defineModel<T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions
+  options?: PropOptions<T> & DefineModelOptions,
 ): Ref<T | undefined>
 export function defineModel(): any {
   if (__DEV__) {
@@ -300,7 +300,7 @@ type InferDefault<P, T> =
 type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
-  BKeys extends keyof T
+  BKeys extends keyof T,
 > = Omit<T, keyof Defaults> & {
   [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
@@ -338,10 +338,10 @@ type PropsWithDefaults<
 export function withDefaults<
   T,
   BKeys extends keyof T,
-  Defaults extends InferDefaults<T>
+  Defaults extends InferDefaults<T>,
 >(
   props: DefineProps<T, BKeys>,
-  defaults: Defaults
+  defaults: Defaults,
 ): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
@@ -360,12 +360,12 @@ export function useAttrs(): SetupContext['attrs'] {
 export function useModel<T extends Record<string, any>, K extends keyof T>(
   props: T,
   name: K,
-  options?: { local?: boolean }
+  options?: { local?: boolean },
 ): Ref<T[K]>
 export function useModel(
   props: Record<string, any>,
   name: string,
-  options?: { local?: boolean }
+  options?: { local?: boolean },
 ): Ref {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
@@ -383,7 +383,7 @@ export function useModel(
 
     watch(
       () => props[name],
-      v => (proxy.value = v)
+      v => (proxy.value = v),
     )
 
     watch(proxy, value => {
@@ -401,7 +401,7 @@ export function useModel(
       },
       set value(value) {
         i.emit(`update:${name}`, value)
-      }
+      },
     } as any
   }
 }
@@ -418,12 +418,12 @@ function getContext(): SetupContext {
  * @internal
  */
 export function normalizePropsOrEmits(
-  props: ComponentPropsOptions | EmitsOptions
+  props: ComponentPropsOptions | EmitsOptions,
 ) {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
-        {} as ComponentObjectPropsOptions | ObjectEmitsOptions
+        {} as ComponentObjectPropsOptions | ObjectEmitsOptions,
       )
     : props
 }
@@ -435,7 +435,7 @@ export function normalizePropsOrEmits(
  */
 export function mergeDefaults(
   raw: ComponentPropsOptions,
-  defaults: Record<string, any>
+  defaults: Record<string, any>,
 ): ComponentObjectPropsOptions {
   const props = normalizePropsOrEmits(raw)
   for (const key in defaults) {
@@ -466,7 +466,7 @@ export function mergeDefaults(
  */
 export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
-  b: ComponentPropsOptions | EmitsOptions
+  b: ComponentPropsOptions | EmitsOptions,
 ) {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
@@ -480,14 +480,14 @@ export function mergeModels(
  */
 export function createPropsRestProxy(
   props: any,
-  excludedKeys: string[]
+  excludedKeys: string[],
 ): Record<string, any> {
   const ret: Record<string, any> = {}
   for (const key in props) {
     if (!excludedKeys.includes(key)) {
       Object.defineProperty(ret, key, {
         enumerable: true,
-        get: () => props[key]
+        get: () => props[key],
       })
     }
   }
@@ -517,7 +517,7 @@ export function withAsyncContext(getAwaitable: () => any) {
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
-        `This is likely a bug.`
+        `This is likely a bug.`,
     )
   }
   let awaitable = getAwaitable()

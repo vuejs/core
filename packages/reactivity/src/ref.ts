@@ -3,7 +3,7 @@ import {
   getDepFromReactive,
   shouldTrack,
   trackEffects,
-  triggerEffects
+  triggerEffects,
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
@@ -11,7 +11,7 @@ import {
   hasChanged,
   type IfAny,
   isFunction,
-  isObject
+  isObject,
 } from '@vue/shared'
 import {
   isProxy,
@@ -19,7 +19,7 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow
+  isShallow,
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { type CollectionTypes } from './collectionHandlers'
@@ -50,7 +50,7 @@ export function trackRefValue(ref: RefBase<any>) {
       trackEffects(ref.dep || (ref.dep = createDep()), {
         target: ref,
         type: TrackOpTypes.GET,
-        key: 'value'
+        key: 'value',
       })
     } else {
       trackEffects(ref.dep || (ref.dep = createDep()))
@@ -67,7 +67,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
         target: ref,
         type: TriggerOpTypes.SET,
         key: 'value',
-        newValue: newVal
+        newValue: newVal,
       })
     } else {
       triggerEffects(dep)
@@ -122,7 +122,7 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
 export function shallowRef<T extends object>(
-  value: T
+  value: T,
 ): T extends Ref ? T : ShallowRef<T>
 export function shallowRef<T>(value: T): ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
@@ -146,7 +146,7 @@ class RefImpl<T> {
 
   constructor(
     value: T,
-    public readonly __v_isShallow: boolean
+    public readonly __v_isShallow: boolean,
   ) {
     this._rawValue = __v_isShallow ? value : toRaw(value)
     this._value = __v_isShallow ? value : toReactive(value)
@@ -251,7 +251,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
     } else {
       return Reflect.set(target, key, value, receiver)
     }
-  }
+  },
 }
 
 /**
@@ -265,7 +265,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
  * that contains refs.
  */
 export function proxyRefs<T extends object>(
-  objectWithRefs: T
+  objectWithRefs: T,
 ): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
     ? objectWithRefs
@@ -274,7 +274,7 @@ export function proxyRefs<T extends object>(
 
 export type CustomRefFactory<T> = (
   track: () => void,
-  trigger: () => void
+  trigger: () => void,
 ) => {
   get: () => T
   set: (value: T) => void
@@ -291,7 +291,7 @@ class CustomRefImpl<T> {
   constructor(factory: CustomRefFactory<T>) {
     const { get, set } = factory(
       () => trackRefValue(this),
-      () => triggerRefValue(this)
+      () => triggerRefValue(this),
     )
     this._get = get
     this._set = set
@@ -346,7 +346,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   constructor(
     private readonly _object: T,
     private readonly _key: K,
-    private readonly _defaultValue?: T[K]
+    private readonly _defaultValue?: T[K],
   ) {}
 
   get value() {
@@ -418,7 +418,7 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
 export function toRef<T>(
-  value: T
+  value: T,
 ): T extends () => infer R
   ? Readonly<Ref<R>>
   : T extends Ref
@@ -426,17 +426,17 @@ export function toRef<T>(
   : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
-  key: K
+  key: K,
 ): ToRef<T[K]>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K,
-  defaultValue: T[K]
+  defaultValue: T[K],
 ): ToRef<Exclude<T[K], undefined>>
 export function toRef(
   source: Record<string, any> | MaybeRef,
   key?: string,
-  defaultValue?: unknown
+  defaultValue?: unknown,
 ): Ref {
   if (isRef(source)) {
     return source
@@ -452,7 +452,7 @@ export function toRef(
 function propertyToRef(
   source: Record<string, any>,
   key: string,
-  defaultValue?: unknown
+  defaultValue?: unknown,
 ) {
   const val = source[key]
   return isRef(val)

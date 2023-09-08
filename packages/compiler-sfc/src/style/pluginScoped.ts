@@ -55,7 +55,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
           }
         })
       }
-    }
+    },
   }
 }
 
@@ -82,7 +82,7 @@ function rewriteSelector(
   id: string,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
-  slotted = false
+  slotted = false,
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = true
@@ -97,7 +97,7 @@ function rewriteSelector(
       n.spaces.before = n.spaces.after = ''
       warn(
         `the >>> and /deep/ combinators have been deprecated. ` +
-          `Use :deep() instead.`
+          `Use :deep() instead.`,
       )
       return false
     }
@@ -121,8 +121,8 @@ function rewriteSelector(
             selector.insertAfter(
               n,
               selectorParser.combinator({
-                value: ' '
-              })
+                value: ' ',
+              }),
             )
           }
           selector.removeChild(n)
@@ -131,7 +131,7 @@ function rewriteSelector(
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
             `${value} usage as a combinator has been deprecated. ` +
-              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`,
           )
 
           const prev = selector.at(selector.index(n) - 1)
@@ -194,8 +194,8 @@ function rewriteSelector(
         attribute: idToAdd,
         value: idToAdd,
         raws: {},
-        quoteMark: `"`
-      })
+        quoteMark: `"`,
+      }),
     )
   }
 }

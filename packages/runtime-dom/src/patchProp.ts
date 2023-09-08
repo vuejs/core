@@ -19,7 +19,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   prevChildren,
   parentComponent,
   parentSuspense,
-  unmountChildren
+  unmountChildren,
 ) => {
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
@@ -44,7 +44,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       prevChildren,
       parentComponent,
       parentSuspense,
-      unmountChildren
+      unmountChildren,
     )
   } else {
     // special case for <input v-model type="checkbox"> with
@@ -64,7 +64,7 @@ function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
-  isSVG: boolean
+  isSVG: boolean,
 ) {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work

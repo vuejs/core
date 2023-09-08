@@ -3,7 +3,7 @@ import { nodeOps, svgNS } from '../src/nodeOps'
 describe('runtime-dom: node-ops', () => {
   test("the <select>'s multiple attr should be set in createElement", () => {
     const el = nodeOps.createElement('select', false, undefined, {
-      multiple: ''
+      multiple: '',
     }) as HTMLSelectElement
     const option1 = nodeOps.createElement('option') as HTMLOptionElement
     const option2 = nodeOps.createElement('option') as HTMLOptionElement
@@ -46,7 +46,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         null,
-        true
+        true,
       )
       expect(parent.innerHTML).toBe(content)
       expect(first).toBe(parent.firstChild)
@@ -65,7 +65,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         anchor,
-        true
+        true,
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(first).toBe(parent.firstChild)
@@ -90,7 +90,7 @@ describe('runtime-dom: node-ops', () => {
         anchor,
         false,
         cached.firstChild,
-        cached.lastChild
+        cached.lastChild,
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)

@@ -10,7 +10,7 @@ export const normalScriptDefaultVar = `__default__`
 
 export function processNormalScript(
   ctx: ScriptCompileContext,
-  scopeId: string
+  scopeId: string,
 ) {
   const script = ctx.descriptor.script!
   if (script.lang && !ctx.isJS && !ctx.isTS) {
@@ -35,7 +35,7 @@ export function processNormalScript(
         s.prepend(
           `import { ${importedHelpers
             .map(h => `${h} as _${h}`)
-            .join(', ')} } from 'vue'\n`
+            .join(', ')} } from 'vue'\n`,
         )
       }
       s.remove(0, startOffset)
@@ -45,7 +45,7 @@ export function processNormalScript(
         map = s.generateMap({
           source: filename,
           hires: true,
-          includeContent: true
+          includeContent: true,
         }) as unknown as RawSourceMap
       }
     }
@@ -61,7 +61,7 @@ export function processNormalScript(
           bindings,
           scopeId,
           !!isProd,
-          defaultVar
+          defaultVar,
         )
       }
       if (!genDefaultAs) {
@@ -73,7 +73,7 @@ export function processNormalScript(
       content,
       map,
       bindings,
-      scriptAst: scriptAst.body
+      scriptAst: scriptAst.body,
     }
   } catch (e: any) {
     // silently fallback if parse fails since user may be using custom

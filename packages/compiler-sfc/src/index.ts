@@ -12,7 +12,7 @@ export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,
-  transformAST as transformRefAST
+  transformAST as transformRefAST,
 } from '@vue/reactivity-transform'
 
 // Utilities
@@ -28,7 +28,7 @@ export {
   walkIdentifiers,
   extractIdentifiers,
   isInDestructureAssignment,
-  isStaticProperty
+  isStaticProperty,
 } from '@vue/compiler-core'
 
 // Internals for type resolution
@@ -42,30 +42,30 @@ export type {
   SFCBlock,
   SFCTemplateBlock,
   SFCScriptBlock,
-  SFCStyleBlock
+  SFCStyleBlock,
 } from './parse'
 export type {
   TemplateCompiler,
   SFCTemplateCompileOptions,
-  SFCTemplateCompileResults
+  SFCTemplateCompileResults,
 } from './compileTemplate'
 export type {
   SFCStyleCompileOptions,
   SFCAsyncStyleCompileOptions,
-  SFCStyleCompileResults
+  SFCStyleCompileResults,
 } from './compileStyle'
 export type { SFCScriptCompileOptions } from './compileScript'
 export type { ScriptCompileContext } from './script/context'
 export type {
   TypeResolveContext,
-  SimpleTypeResolveContext
+  SimpleTypeResolveContext,
 } from './script/resolveType'
 export type {
   AssetURLOptions,
-  AssetURLTagConfig
+  AssetURLTagConfig,
 } from './template/transformAssetUrl'
 export type {
   CompilerOptions,
   CompilerError,
-  BindingMetadata
+  BindingMetadata,
 } from '@vue/compiler-core'

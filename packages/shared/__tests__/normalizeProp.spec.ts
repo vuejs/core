@@ -7,13 +7,13 @@ describe('normalizeClass', () => {
 
   test('handles array correctly', () => {
     expect(normalizeClass(['foo', undefined, true, false, 'bar'])).toEqual(
-      'foo bar'
+      'foo bar',
     )
   })
 
   test('handles object correctly', () => {
     expect(normalizeClass({ foo: true, bar: false, baz: true })).toEqual(
-      'foo baz'
+      'foo baz',
     )
   })
 
@@ -28,7 +28,7 @@ describe('normalizeClass', () => {
         #ccc 0.5em,
         white 0,
         white 0.75em
-      );`)
+      );`),
     ).toMatchInlineSnapshot(`
       {
         "background": "linear-gradient(white, white) padding-box,

@@ -20,7 +20,7 @@ export function createSlots(
     | CompiledSlotDescriptor
     | CompiledSlotDescriptor[]
     | undefined
-  )[]
+  )[],
 ): Record<string, SSRSlot> {
   for (let i = 0; i < dynamicSlots.length; i++) {
     const slot = dynamicSlots[i]

@@ -15,11 +15,11 @@ afterEach(() => {
 test('renderToWebStream', async () => {
   const Async = defineAsyncComponent(() =>
     Promise.resolve({
-      render: () => h('div', 'async')
-    })
+      render: () => h('div', 'async'),
+    }),
   )
   const App = {
-    render: () => [h('div', 'parent'), h(Async)]
+    render: () => [h('div', 'parent'), h(Async)],
   }
 
   const stream = renderToWebStream(createApp(App))
@@ -41,11 +41,11 @@ test('renderToWebStream', async () => {
 test('pipeToWebWritable', async () => {
   const Async = defineAsyncComponent(() =>
     Promise.resolve({
-      render: () => h('div', 'async')
-    })
+      render: () => h('div', 'async'),
+    }),
   )
   const App = {
-    render: () => [h('div', 'parent'), h(Async)]
+    render: () => [h('div', 'parent'), h(Async)],
   }
 
   const { readable, writable } = new TransformStream()

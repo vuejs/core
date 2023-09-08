@@ -11,8 +11,8 @@ export const ignoreSideEffectTags: NodeTransform = (node, context) => {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG,
-          node.loc
-        )
+          node.loc,
+        ),
       )
     context.removeNode()
   }

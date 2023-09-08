@@ -2,14 +2,14 @@ import type {
   ElementNode,
   Namespace,
   TemplateChildNode,
-  ParentNode
+  ParentNode,
 } from './ast'
 import type { TextModes } from './parse'
 import type { CompilerError } from './errors'
 import type {
   NodeTransform,
   DirectiveTransform,
-  TransformContext
+  TransformContext,
 } from './transform'
 import type { CompilerCompatOptions } from './compat/compatConfig'
 import type { ParserPlugin } from '@babel/parser'
@@ -51,7 +51,7 @@ export interface ParserOptions
    */
   getTextMode?: (
     node: ElementNode,
-    parent: ElementNode | undefined
+    parent: ElementNode | undefined,
   ) => TextModes
   /**
    * @default ['{{', '}}']
@@ -75,7 +75,7 @@ export interface ParserOptions
 export type HoistTransform = (
   children: TemplateChildNode[],
   context: TransformContext,
-  parent: ParentNode
+  parent: ParentNode,
 ) => void
 
 export const enum BindingTypes {
@@ -121,7 +121,7 @@ export const enum BindingTypes {
   /**
    * a literal constant, e.g. 'foo', 1, true
    */
-  LITERAL_CONST = 'literal-const'
+  LITERAL_CONST = 'literal-const',
 }
 
 export type BindingMetadata = {

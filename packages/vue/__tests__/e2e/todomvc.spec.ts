@@ -13,7 +13,7 @@ describe('e2e: todomvc', () => {
     isFocused,
     classList,
     enterValue,
-    clearValue
+    clearValue,
   } = setupPuppeteer()
 
   async function removeItemAt(n: number) {
@@ -26,7 +26,7 @@ describe('e2e: todomvc', () => {
   async function testTodomvc(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/todomvc.html`
+      `../../examples/${apiType}/todomvc.html`,
     )}`
 
     await page().goto(baseUrl)
@@ -174,7 +174,7 @@ describe('e2e: todomvc', () => {
     async () => {
       await testTodomvc('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -182,6 +182,6 @@ describe('e2e: todomvc', () => {
     async () => {
       await testTodomvc('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

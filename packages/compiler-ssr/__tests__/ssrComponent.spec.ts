@@ -114,7 +114,7 @@ describe('ssr: components', () => {
         compile(`<foo>
         <template v-slot>foo</template>
         <template v-slot:named>bar</template>
-      </foo>`).code
+      </foo>`).code,
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
@@ -151,7 +151,7 @@ describe('ssr: components', () => {
       expect(
         compile(`<foo>
         <template v-slot:named v-if="ok">foo</template>
-      </foo>`).code
+      </foo>`).code,
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createTextVNode: _createTextVNode, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
@@ -184,7 +184,7 @@ describe('ssr: components', () => {
       expect(
         compile(`<foo>
         <template v-for="key in names" v-slot:[key]="{ msg }">{{ msg + key + bar }}</template>
-      </foo>`).code
+      </foo>`).code,
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, renderList: _renderList, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
@@ -225,7 +225,7 @@ describe('ssr: components', () => {
             <span v-for="i in list"></span>
           </div>
         </template>
-      </foo>`).code
+      </foo>`).code,
       ).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
@@ -344,7 +344,7 @@ describe('ssr: components', () => {
       test('should push marker string if is slot root', () => {
         expect(
           compile(`<foo><transition><div v-if="false"/></transition></foo>`)
-            .code
+            .code,
         ).toMatchInlineSnapshot(`
           "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock, createCommentVNode: _createCommentVNode, Transition: _Transition, createVNode: _createVNode } = require(\\"vue\\")
           const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")

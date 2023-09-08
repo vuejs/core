@@ -4,7 +4,7 @@ import {
   queuePostFlushCb,
   invalidateJob,
   flushPostFlushCbs,
-  flushPreFlushCbs
+  flushPreFlushCbs,
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -445,7 +445,7 @@ describe('scheduler', () => {
       expect(e).toBe(err)
     }
     expect(
-      `Unhandled error during execution of scheduler flush`
+      `Unhandled error during execution of scheduler flush`,
     ).toHaveBeenWarned()
 
     // this one should no longer error
