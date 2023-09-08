@@ -293,10 +293,8 @@ export function pauseScheduling() {
 export function resetScheduling() {
   const last = scheduleStack.pop()
   shouldSchedule = last === undefined ? true : last
-  if (shouldSchedule) {
-    while (queueEffectCbs.length) {
-      queueEffectCbs.shift()!()
-    }
+  while (shouldSchedule && queueEffectCbs.length) {
+    queueEffectCbs.shift()!()
   }
 }
 
