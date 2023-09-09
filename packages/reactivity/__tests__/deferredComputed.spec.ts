@@ -1,7 +1,7 @@
 import { computed, effect, ref } from '../src'
 
 describe('deferred computed', () => {
-  test('should not trigger if value did not change', async () => {
+  test('should not trigger if value did not change', () => {
     const src = ref(0)
     const c = computed(() => src.value % 2)
     const spy = vi.fn()
@@ -19,7 +19,7 @@ describe('deferred computed', () => {
     expect(spy).toHaveBeenCalledTimes(2)
   })
 
-  test('chained computed trigger', async () => {
+  test('chained computed trigger', () => {
     const effectSpy = vi.fn()
     const c1Spy = vi.fn()
     const c2Spy = vi.fn()
@@ -48,7 +48,7 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
 
-  test('chained computed avoid re-compute', async () => {
+  test('chained computed avoid re-compute', () => {
     const effectSpy = vi.fn()
     const c1Spy = vi.fn()
     const c2Spy = vi.fn()
@@ -79,7 +79,7 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(1)
   })
 
-  test('chained computed value invalidation', async () => {
+  test('chained computed value invalidation', () => {
     const effectSpy = vi.fn()
     const c1Spy = vi.fn()
     const c2Spy = vi.fn()
@@ -111,7 +111,7 @@ describe('deferred computed', () => {
     expect(c2Spy).toHaveBeenCalledTimes(2)
   })
 
-  test('sync access of invalidated chained computed should not prevent final effect from running', async () => {
+  test('sync access of invalidated chained computed should not prevent final effect from running', () => {
     const effectSpy = vi.fn()
     const c1Spy = vi.fn()
     const c2Spy = vi.fn()
@@ -137,7 +137,7 @@ describe('deferred computed', () => {
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
 
-  test('should not compute if deactivated before scheduler is called', async () => {
+  test('should not compute if deactivated before scheduler is called', () => {
     const c1Spy = vi.fn()
     const src = ref(0)
     const c1 = computed(() => {
