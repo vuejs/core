@@ -5,7 +5,7 @@ import {
   trackEffects,
   triggerEffects
 } from './effect'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './operations'
+import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
 import {
   isProxy,
@@ -18,7 +18,7 @@ import {
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
-import type { ComputedRefImpl } from './computed'
+import { ComputedRefImpl } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -38,10 +38,7 @@ type RefBase<T> = {
   value: T
 }
 
-export function trackRefValue(
-  ref: RefBase<any>,
-  computed?: ComputedRefImpl<any>
-) {
+export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
@@ -49,7 +46,9 @@ export function trackRefValue(
         ref.dep ||
           (ref.dep = createDep(
             undefined,
-            computed ? () => computed._scheduled && computed.value : undefined
+            ref instanceof ComputedRefImpl
+              ? () => (ref as ComputedRefImpl<any>)._scheduled && ref.value
+              : undefined
           )),
         {
           target: ref,
@@ -62,7 +61,9 @@ export function trackRefValue(
         ref.dep ||
           (ref.dep = createDep(
             undefined,
-            computed ? () => computed._scheduled && computed.value : undefined
+            ref instanceof ComputedRefImpl
+              ? () => (ref as ComputedRefImpl<any>)._scheduled && ref.value
+              : undefined
           ))
       )
     }

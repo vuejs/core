@@ -2,7 +2,6 @@ import {
   reactive,
   readonly,
   toRaw,
-  ReactiveFlags,
   Target,
   readonlyMap,
   reactiveMap,
@@ -11,7 +10,7 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   track,
   trigger,

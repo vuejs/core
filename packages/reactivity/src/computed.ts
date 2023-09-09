@@ -1,9 +1,9 @@
 import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
-import { ReactiveFlags, toRaw } from './reactive'
+import { toRaw } from './reactive'
 import { Dep } from './dep'
-import { DirtyLevels } from './operations'
+import { DirtyLevels, ReactiveFlags } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -56,7 +56,7 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    trackRefValue(self, self)
+    trackRefValue(self)
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       const changed = hasChanged(self._value, newValue)

@@ -1,4 +1,4 @@
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './operations'
+import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
