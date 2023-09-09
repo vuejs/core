@@ -455,50 +455,34 @@ export function trigger(
   }
 }
 
+const queueEffectCbs: (() => void)[] = []
+const pushEffectCb = queueEffectCbs.push.bind(queueEffectCbs)
+
 export function triggerEffects(
   dep: Dep,
   dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   pauseScheduling()
-  // spread into array for stabilization
-  const effects = [...dep]
-  for (const effect of effects) {
-    if (effect.computed) {
-      triggerEffect(effect, dirtyLevel, debuggerEventExtraInfo)
-    }
-  }
-  for (const effect of effects) {
-    if (!effect.computed) {
-      triggerEffect(effect, dirtyLevel, debuggerEventExtraInfo)
+  for (const effect of dep) {
+    if (effect !== activeEffect || effect.allowRecurse) {
+      if (__DEV__ && effect.onTrigger) {
+        effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+      }
+      if (effect._dirtyLevel < dirtyLevel) {
+        effect._dirtyLevel = dirtyLevel
+      }
+      if (
+        dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
+        dirtyLevel === DirtyLevels.Dirty ||
+        (dirtyLevel === DirtyLevels.ComputedValueDirty &&
+          !effect._queryingDirty)
+      ) {
+        effect.scheduler(pushEffectCb)
+      }
     }
   }
   resetScheduling()
-}
-
-const queueEffectCbs: (() => void)[] = []
-const pushEffectCb = queueEffectCbs.push.bind(queueEffectCbs)
-
-function triggerEffect(
-  effect: ReactiveEffect,
-  dirtyLevel: DirtyLevels,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
-) {
-  if (effect !== activeEffect || effect.allowRecurse) {
-    if (__DEV__ && effect.onTrigger) {
-      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
-    }
-    if (effect._dirtyLevel < dirtyLevel) {
-      effect._dirtyLevel = dirtyLevel
-    }
-    if (
-      dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
-      dirtyLevel === DirtyLevels.Dirty ||
-      (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
-    ) {
-      effect.scheduler(pushEffectCb)
-    }
-  }
 }
 
 export function getDepFromReactive(object: any, key: string | number | symbol) {
