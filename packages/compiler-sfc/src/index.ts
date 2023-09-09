@@ -33,6 +33,8 @@ export {
 
 // Internals for type resolution
 export { invalidateTypeCache, registerTS } from './script/resolveType'
+export { extractRuntimeProps } from './script/defineProps'
+export { extractRuntimeEmits } from './script/defineEmits'
 
 // Types
 export type {
@@ -58,6 +60,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type { ScriptCompileContext } from './script/context'
 export type {
   TypeResolveContext,
+  SimpleTypeResolveOptions,
   SimpleTypeResolveContext
 } from './script/resolveType'
 export type {

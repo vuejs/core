@@ -75,6 +75,7 @@ export interface WatchOptionsBase extends DebuggerOptions {
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
   deep?: boolean
+  once?: boolean
 }
 
 export type WatchStopHandle = () => void
@@ -172,8 +173,16 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, once, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  if (cb && once) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      unwatch()
+    }
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -184,6 +193,12 @@ function doWatch(
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback, options?) signature.`
+      )
+    }
+    if (once !== undefined) {
+      warn(
+        `watch() "once" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
       )
     }
@@ -363,6 +378,13 @@ function doWatch(
 
   const effect = new ReactiveEffect(getter, scheduler)
 
+  const unwatch = () => {
+    effect.stop()
+    if (instance && instance.scope) {
+      remove(instance.scope.effects!, effect)
+    }
+  }
+
   if (__DEV__) {
     effect.onTrack = onTrack
     effect.onTrigger = onTrigger
@@ -382,13 +404,6 @@ function doWatch(
     )
   } else {
     effect.run()
-  }
-
-  const unwatch = () => {
-    effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
-    }
   }
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)

@@ -14,6 +14,8 @@ jobs:
   unit-test:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@v3
 
@@ -25,9 +27,6 @@ jobs:
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Skip Puppeteer download
-        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
 
       - run: pnpm install
 
@@ -37,6 +36,8 @@ jobs:
   unit-test-windows:
     runs-on: windows-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@v3
 
@@ -48,9 +49,6 @@ jobs:
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Skip Puppeteer download
-        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $env:GITHUB_ENV
 
       - run: pnpm install
 
@@ -89,6 +87,8 @@ jobs:
   lint-and-test-dts:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
       - uses: actions/checkout@v3
 
@@ -100,9 +100,6 @@ jobs:
         with:
           node-version: 18
           cache: 'pnpm'
-
-      - name: Skip Puppeteer download
-        run: echo "PUPPETEER_SKIP_DOWNLOAD=1" >> $GITHUB_ENV
 
       - run: pnpm install
 
