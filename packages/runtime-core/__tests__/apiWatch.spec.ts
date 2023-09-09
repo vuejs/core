@@ -1206,7 +1206,7 @@ describe('api: watch', () => {
     expect(countW).toBe(2)
   })
 
-  it('watch callback on-demand trigger', () => {
+  it('should not trigger if computed value did not change', () => {
     const effectSpy = vi.fn()
 
     const sec = ref(0)
