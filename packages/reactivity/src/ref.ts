@@ -18,6 +18,7 @@ import {
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
+import type { ComputedRefImpl } from './computed'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -37,7 +38,10 @@ type RefBase<T> = {
   value: T
 }
 
-export function trackRefValue(ref: RefBase<any>, isComputed?: boolean) {
+export function trackRefValue(
+  ref: RefBase<any>,
+  computed?: ComputedRefImpl<any>
+) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
@@ -45,7 +49,7 @@ export function trackRefValue(ref: RefBase<any>, isComputed?: boolean) {
         ref.dep ||
           (ref.dep = createDep(
             undefined,
-            isComputed ? () => ref.value : undefined
+            computed ? () => computed._scheduled && computed.value : undefined
           )),
         {
           target: ref,
@@ -58,7 +62,7 @@ export function trackRefValue(ref: RefBase<any>, isComputed?: boolean) {
         ref.dep ||
           (ref.dep = createDep(
             undefined,
-            isComputed ? () => ref.value : undefined
+            computed ? () => computed._scheduled && computed.value : undefined
           ))
       )
     }
