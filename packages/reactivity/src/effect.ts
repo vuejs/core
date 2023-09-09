@@ -100,7 +100,8 @@ export class ReactiveEffect<T = any> {
       pauseTracking()
       for (const dep of this.deps) {
         if (dep.computed?._scheduled) {
-          triggerComputedGetter(dep.computed) // wrap with function call to avoid tree shaking
+          // wrap with function call to avoid tree shaking
+          triggerComputedGetter(dep.computed)
           if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
             break
           }

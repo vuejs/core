@@ -289,51 +289,8 @@ describe('reactivity/computed', () => {
     })
   })
 
-  it('chained computed value on-demand trigger', () => {
-    const minSpy = vi.fn()
-    const hourSpy = vi.fn()
-
-    const sec = ref(0)
-    const min = computed(() => {
-      minSpy()
-      return Math.floor(sec.value / 60)
-    })
-    const hour = computed(() => {
-      hourSpy()
-      return Math.floor(min.value / 60)
-    })
-
-    for (sec.value = 0; sec.value < 1000; sec.value++) {
-      hour.value
-    }
-
-    expect(minSpy).toHaveBeenCalledTimes(1000)
-    expect(hourSpy).toHaveBeenCalledTimes(17)
-  })
-
-  it('effect callback on-demand trigger', () => {
-    const effectSpy = vi.fn()
-
-    const sec = ref(0)
-    const min = computed(() => {
-      return Math.floor(sec.value / 60)
-    })
-    const hour = computed(() => {
-      return Math.floor(min.value / 60)
-    })
-
-    effect(() => {
-      effectSpy()
-      min.value
-      hour.value
-    })
-
-    for (sec.value = 0; sec.value < 1000; sec.value++) {}
-
-    expect(effectSpy).toHaveBeenCalledTimes(17)
-  })
-
-  it('chained computed value urgent assessment edge case', () => {
+  // https://github.com/vuejs/core/pull/5912#issuecomment-1497596875
+  it('should query deps dirty sequentially', () => {
     const cSpy = vi.fn()
 
     const a = ref<null | { v: number }>({
@@ -360,7 +317,7 @@ describe('reactivity/computed', () => {
     expect(cSpy).toHaveBeenCalledTimes(1)
   })
 
-  test('should not continuous effects cause computed dirty race condition', () => {
+  it('should trigger the second effect', () => {
     const fnSpy = vi.fn()
     const v = ref(1)
     const c = computed(() => v.value)

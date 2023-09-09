@@ -99,7 +99,7 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  test('shift on Array should only trigger dependency once', () => {
+  test('shift on Array should trigger dependency once', () => {
     const arr = reactive([1, 2, 3])
     const fn = vi.fn()
     effect(() => {
