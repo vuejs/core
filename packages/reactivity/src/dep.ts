@@ -21,12 +21,12 @@ type TrackedMarkers = {
 
 export const createDep = (
   effects?: ReactiveEffect[],
-  triggerDirty?: () => void
+  queryDirty?: () => void
 ): Dep => {
   const dep = new Set<ReactiveEffect>(effects) as Dep
   dep.w = 0
   dep.n = 0
-  dep.queryDirty = triggerDirty
+  dep.queryDirty = queryDirty
   return dep
 }
 
