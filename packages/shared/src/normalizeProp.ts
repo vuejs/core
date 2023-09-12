@@ -60,7 +60,13 @@ export function stringifyStyle(
   return ret
 }
 
-export function normalizeClass(value: unknown): string {
+export function stringifyClass(klass: string | undefined): string {
+  return klass || ''
+}
+
+export function normalizeClass(value: unknown): string | undefined {
+  // #3173
+  if (value == null) return undefined
   let res = ''
   if (isString(value)) {
     res = value
