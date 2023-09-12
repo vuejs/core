@@ -622,7 +622,9 @@ function innerResolveTypeReference(
   onlyExported: boolean
 ): ScopeTypeNode | undefined {
   if (typeof name === 'string') {
-    if (scope.imports[name]) {
+    if (name === '*') {
+      return undefined
+    } else if (scope.imports[name]) {
       return resolveTypeFromImport(ctx, node, name, scope)
     } else {
       const lookupSource =
@@ -664,6 +666,21 @@ function innerResolveTypeReference(
           name.length > 2 ? name.slice(1) : name[name.length - 1],
           node,
           !ns.declare
+        )
+      }
+    } else {
+      let imoprtType: Import
+      if (
+        (imoprtType = scope.imports[name[0]]) &&
+        imoprtType.imported === '*'
+      ) {
+        const importPath = scope.resolvedImportSources[imoprtType.source]
+        return innerResolveTypeReference(
+          ctx,
+          fileToScope(ctx, normalizePath(importPath), true),
+          name.length > 2 ? name.slice(1) : name[name.length - 1],
+          node,
+          true
         )
       }
     }
