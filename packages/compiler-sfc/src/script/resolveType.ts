@@ -677,7 +677,7 @@ function innerResolveTypeReference(
         const importPath = scope.resolvedImportSources[imoprtType.source]
         return innerResolveTypeReference(
           ctx,
-          fileToScope(ctx, normalizePath(importPath), true),
+          fileToScope(ctx, normalizePath(importPath)),
           name.length > 2 ? name.slice(1) : name[name.length - 1],
           node,
           true
