@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 // using DOM renderer because this case is mostly DOM-specific
-import { vi } from 'vitest'
+
 import {
   h,
   render,

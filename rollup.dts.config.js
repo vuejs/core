@@ -1,6 +1,6 @@
 // @ts-check
 import { parse } from '@babel/parser'
-import { existsSync, readdirSync, readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs'
 import MagicString from 'magic-string'
 import dts from 'rollup-plugin-dts'
 import { walk } from 'estree-walker'
@@ -12,14 +12,20 @@ if (!existsSync('temp/packages')) {
   process.exit(1)
 }
 
-export default readdirSync('temp/packages').map(pkg => {
+const packages = readdirSync('temp/packages')
+const targets = process.env.TARGETS ? process.env.TARGETS.split(',') : null
+const targetPackages = targets
+  ? packages.filter(pkg => targets.includes(pkg))
+  : packages
+
+export default targetPackages.map(pkg => {
   return {
     input: `./temp/packages/${pkg}/src/index.d.ts`,
     output: {
       file: `packages/${pkg}/dist/${pkg}.d.ts`,
       format: 'es'
     },
-    plugins: [dts(), patchTypes(pkg)],
+    plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
     onwarn(warning, warn) {
       // during dts rollup, everything is externalized by default
       if (
@@ -40,18 +46,55 @@ export default readdirSync('temp/packages').map(pkg => {
  *    and remove them from the big export {} declaration
  *    otherwise it gets weird in vitepress `defineComponent` call with
  *    "the inferred type cannot be named without a reference"
- * 3. Append custom agumentations (jsx, macros)
+ * 3. Append custom augmentations (jsx, macros)
  * @returns {import('rollup').Plugin}
  */
 function patchTypes(pkg) {
   return {
     name: 'patch-types',
-    renderChunk(code) {
+    renderChunk(code, chunk) {
       const s = new MagicString(code)
       const ast = parse(code, {
         plugins: ['typescript'],
         sourceType: 'module'
       })
+
+      /**
+       * @param {import('@babel/types').VariableDeclarator | import('@babel/types').TSTypeAliasDeclaration | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSDeclareFunction | import('@babel/types').TSInterfaceDeclaration | import('@babel/types').TSEnumDeclaration | import('@babel/types').ClassDeclaration} node
+       * @param {import('@babel/types').VariableDeclaration} [parentDecl]
+       */
+      function processDeclaration(node, parentDecl) {
+        if (!node.id) {
+          return
+        }
+        // @ts-ignore
+        const name = node.id.name
+        if (name.startsWith('_')) {
+          return
+        }
+        shouldRemoveExport.add(name)
+        if (!removeInternal(parentDecl || node)) {
+          if (isExported.has(name)) {
+            // @ts-ignore
+            s.prependLeft((parentDecl || node).start, `export `)
+          }
+          // traverse further for internal properties
+          if (
+            node.type === 'TSInterfaceDeclaration' ||
+            node.type === 'ClassDeclaration'
+          ) {
+            node.body.body.forEach(removeInternal)
+          } else if (node.type === 'TSTypeAliasDeclaration') {
+            // @ts-ignore
+            walk(node.typeAnnotation, {
+              enter(node) {
+                // @ts-ignore
+                if (removeInternal(node)) this.skip()
+              }
+            })
+          }
+        }
+      }
 
       /**
        * @param {import('@babel/types').Node} node
@@ -88,55 +131,53 @@ function patchTypes(pkg) {
         return false
       }
 
+      const isExported = new Set()
       const shouldRemoveExport = new Set()
-      // pass 1: remove internals + add exports
+
+      // pass 0: check all exported types
       for (const node of ast.program.body) {
-        if (
-          (node.type === 'TSTypeAliasDeclaration' ||
-            node.type === 'TSInterfaceDeclaration') &&
-          !node.id.name.startsWith(`_`)
-        ) {
-          shouldRemoveExport.add(node.id.name)
-          if (!removeInternal(node)) {
-            // @ts-ignore
-            s.prependLeft(node.start, `export `)
-            // traverse further for internal properties
-            if (node.type === 'TSInterfaceDeclaration') {
-              node.body.body.forEach(removeInternal)
-            } else if (node.type === 'TSTypeAliasDeclaration') {
-              // @ts-ignore
-              walk(node.typeAnnotation, {
-                enter(node) {
-                  // @ts-ignore
-                  if (removeInternal(node)) this.skip()
-                }
-              })
+        if (node.type === 'ExportNamedDeclaration' && !node.source) {
+          for (let i = 0; i < node.specifiers.length; i++) {
+            const spec = node.specifiers[i]
+            if (spec.type === 'ExportSpecifier') {
+              isExported.add(spec.local.name)
             }
-          }
-        } else if (removeInternal(node)) {
-          if (node.type === 'VariableDeclaration') {
-            // declare const x
-            for (const decl of node.declarations) {
-              // @ts-ignore
-              shouldRemoveExport.add(decl.id.name)
-            }
-          } else if (
-            node.type === 'TSDeclareFunction' ||
-            node.type === 'TSEnumDeclaration'
-          ) {
-            // declare function
-            // @ts-ignore
-            shouldRemoveExport.add(node.id.name)
-          } else {
-            throw new Error(
-              `unhandled export type marked as @internal: ${node.type}`
-            )
           }
         }
       }
+
+      // pass 1: remove internals + add exports
+      for (const node of ast.program.body) {
+        if (node.type === 'VariableDeclaration') {
+          processDeclaration(node.declarations[0], node)
+          if (node.declarations.length > 1) {
+            throw new Error(
+              `unhandled declare const with more than one declarators:\n${code.slice(
+                // @ts-ignore
+                node.start,
+                node.end
+              )}`
+            )
+          }
+        } else if (
+          node.type === 'TSTypeAliasDeclaration' ||
+          node.type === 'TSInterfaceDeclaration' ||
+          node.type === 'TSDeclareFunction' ||
+          node.type === 'TSEnumDeclaration' ||
+          node.type === 'ClassDeclaration'
+        ) {
+          processDeclaration(node)
+        } else if (removeInternal(node)) {
+          throw new Error(
+            `unhandled export type marked as @internal: ${node.type}`
+          )
+        }
+      }
+
       // pass 2: remove exports
       for (const node of ast.program.body) {
         if (node.type === 'ExportNamedDeclaration' && !node.source) {
+          let removed = 0
           for (let i = 0; i < node.specifiers.length; i++) {
             const spec = node.specifiers[i]
             if (
@@ -149,10 +190,7 @@ function patchTypes(pkg) {
                 // this only happens if we have something like
                 //   type Foo
                 //   export { Foo as Bar }
-                // there are no such cases atm, so it is unhandled for now.
-                throw new Error(
-                  `removed export ${exported} has different local name: ${spec.local.name}`
-                )
+                continue
               }
               const next = node.specifiers[i + 1]
               if (next) {
@@ -164,11 +202,22 @@ function patchTypes(pkg) {
                 // @ts-ignore
                 s.remove(prev ? prev.end : spec.start, spec.end)
               }
+              removed++
             }
+          }
+          if (removed === node.specifiers.length) {
+            // @ts-ignore
+            s.remove(node.start, node.end)
           }
         }
       }
       code = s.toString()
+
+      if (/@internal/.test(code)) {
+        throw new Error(
+          `unhandled @internal declarations detected in ${chunk.fileName}.`
+        )
+      }
 
       // append pkg specific types
       const additionalTypeDir = `packages/${pkg}/types`
@@ -180,6 +229,27 @@ function patchTypes(pkg) {
             .join('\n')
       }
       return code
+    }
+  }
+}
+
+/**
+ * According to https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-7.html#packagejson-exports-imports-and-self-referencing
+ * the only way to correct provide types for both Node ESM and CJS is to have
+ * two separate declaration files, so we need to copy vue.d.ts to vue.d.mts
+ * upon build.
+ *
+ * @returns {import('rollup').Plugin}
+ */
+function copyMts() {
+  return {
+    name: 'copy-vue-mts',
+    writeBundle(_, bundle) {
+      writeFileSync(
+        'packages/vue/dist/vue.d.mts',
+        // @ts-ignore
+        bundle['vue.d.ts'].code
+      )
     }
   }
 }
