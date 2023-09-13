@@ -296,7 +296,6 @@ export function filterSingleRoot(
       return
     }
   }
-
   return singleRoot
 }
 
