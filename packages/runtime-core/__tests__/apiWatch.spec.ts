@@ -1205,4 +1205,20 @@ describe('api: watch', () => {
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
   })
+
+  test('circular reference', async () => {
+    const obj = { a: 1 }
+    // @ts-expect-error
+    obj.b = obj
+    const foo = ref(obj)
+    const spy = vi.fn()
+
+    watch(foo, spy, { deep: true })
+
+    // @ts-expect-error
+    foo.value.b.a = 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(foo.value.a).toBe(2)
+  })
 })
