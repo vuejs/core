@@ -68,6 +68,16 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   private deferStop?: boolean
+  /**
+   * Whether to pause
+   * @internal
+   */
+  private isPaused = false
+  /**
+   * Indicates whether the run method was called during the pause process
+   * @internal
+   */
+  private isCalled = false
 
   onStop?: () => void
   // dev only
@@ -83,7 +93,23 @@ export class ReactiveEffect<T = any> {
     recordEffectScope(this, scope)
   }
 
+  pause() {
+    this.isPaused = true
+  }
+
+  resume(runOnResume = false) {
+    this.isPaused = false
+    if (runOnResume && this.isCalled) {
+      this.run()
+    }
+    this.isCalled = false
+  }
+
   run() {
+    if (this.isPaused) {
+      this.isCalled = true
+      return
+    }
     if (!this.active) {
       return this.fn()
     }
@@ -126,6 +152,8 @@ export class ReactiveEffect<T = any> {
   }
 
   stop() {
+    // Reset the paused state first when stopping
+    this.resume()
     // stopped while running itself - defer the cleanup
     if (activeEffect === this) {
       this.deferStop = true
