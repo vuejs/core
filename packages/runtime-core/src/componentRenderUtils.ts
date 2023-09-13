@@ -284,19 +284,17 @@ export function filterSingleRoot(
           return
         } else {
           singleRoot = child
+          if (
+            singleRoot.patchFlag > 0 &&
+            singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+          ) {
+            return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
+          }
         }
       }
     } else {
       return
     }
-  }
-
-  if (
-    singleRoot &&
-    singleRoot.patchFlag > 0 &&
-    singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
-  ) {
-    return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
   }
 
   return singleRoot
