@@ -1100,7 +1100,7 @@ function baseCreateRenderer(
         // of renderSlot() with no valid children
         n1.dynamicChildren &&
         // #9200 in some case stable fragment in deep unstable slot
-        n1?.children?.length === n2?.children?.length
+        n1.dynamicChildren.length === dynamicChildren.length
       ) {
         // a stable fragment (template root or <template v-for>) doesn't need to
         // patch children order, but it may contain dynamicChildren.

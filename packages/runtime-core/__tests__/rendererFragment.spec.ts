@@ -13,9 +13,13 @@ import {
   createTextVNode,
   createBlock,
   openBlock,
-  createCommentVNode
+  createCommentVNode,
+  withCtx,
+  createElementBlock,
+  ref,
+  renderSlot
 } from '@vue/runtime-test'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags } from '@vue/shared'
 import { renderList } from '../src/helpers/renderList'
 
 describe('renderer: fragment', () => {
@@ -350,5 +354,122 @@ describe('renderer: fragment', () => {
 
     render(renderFn(['two', 'one']), root)
     expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
+  })
+
+  // #9200
+  test('stable fragment in unstable slot', () => {
+    const root = nodeOps.createElement('div')
+
+    const items = ref([{ field1: 'one', field2: 'two' as string | undefined }])
+
+    const textBlock = 'text-block'
+    const vIfBlock = 'v-if-block'
+
+    const Comp = {
+      render(ctx: any) {
+        return (
+          openBlock(true),
+          createElementBlock(
+            Fragment,
+            null,
+            renderList(items.value, (item, i) => {
+              return (
+                openBlock(),
+                createElementBlock('div', { key: i }, [
+                  (openBlock(true),
+                  createElementBlock(
+                    Fragment,
+                    null,
+                    renderList(['field1', 'field2'] as const, field => {
+                      return (
+                        openBlock(),
+                        createElementBlock('span', { key: field }, [
+                          renderSlot(
+                            ctx.$slots,
+                            'default',
+                            {
+                              value: item[field],
+                              field: field
+                            },
+                            () => [
+                              item[field]
+                                ? (openBlock(),
+                                  createElementBlock(
+                                    Fragment,
+                                    { key: 0 },
+                                    [createTextVNode('xxx')],
+                                    PatchFlags.STABLE_FRAGMENT
+                                  ))
+                                : (openBlock(),
+                                  createElementBlock(
+                                    Fragment,
+                                    { key: 1 },
+                                    [createTextVNode('yyy')],
+                                    PatchFlags.STABLE_FRAGMENT
+                                  ))
+                            ]
+                          )
+                        ])
+                      )
+                    }),
+                    PatchFlags.KEYED_FRAGMENT
+                  ))
+                ])
+              )
+            }),
+            PatchFlags.KEYED_FRAGMENT
+          )
+        )
+      }
+    }
+
+    const hoisted1 = { key: 0 }
+    const hoisted2 = { key: 0 }
+    const hoisted3 = { key: 1 }
+
+    const renderFn = () => {
+      return (
+        openBlock(true),
+        createVNode(Comp, null, {
+          default: withCtx(
+            ({ field, value }: { field: string; value: any }) => [
+              field === 'field1'
+                ? (openBlock(), createElementBlock('div', hoisted1, textBlock))
+                : field === 'field2'
+                ? (openBlock(),
+                  createElementBlock(
+                    Fragment,
+                    { key: 1 },
+                    [
+                      value
+                        ? (openBlock(),
+                          createElementBlock('div', hoisted2, vIfBlock))
+                        : createCommentVNode('v-if', true),
+                      value
+                        ? (openBlock(),
+                          createElementBlock('div', hoisted3, vIfBlock))
+                        : createCommentVNode('v-if', true)
+                    ],
+                    PatchFlags.STABLE_FRAGMENT
+                  ))
+                : createCommentVNode('v-if', true)
+            ]
+          ),
+          _: SlotFlags.STABLE
+        })
+      )
+    }
+
+    render(renderFn(), root)
+    expect(serializeInner(root)).toBe(
+      `<div><span><div>${textBlock}</div></span><span><div>${vIfBlock}</div><div>${vIfBlock}</div></span></div>`
+    )
+
+    items.value = [{ field1: 'one', field2: undefined }]
+
+    render(renderFn(), root)
+    expect(serializeInner(root)).toBe(
+      `<div><span><div>${textBlock}</div></span><span>yyy</span></div>`
+    )
   })
 })
