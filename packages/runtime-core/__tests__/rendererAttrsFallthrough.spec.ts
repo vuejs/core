@@ -15,11 +15,12 @@ import {
   createBlock,
   FunctionalComponent,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   Fragment,
   withModifiers
 } from '@vue/runtime-dom'
 import { PatchFlags } from '@vue/shared'
-import { createElementBlock, createElementVNode } from '../src'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
