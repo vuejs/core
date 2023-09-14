@@ -38,7 +38,14 @@ export function renderSlot(
       currentRenderingInstance!.parent.isCE)
   ) {
     if (name !== 'default') props.name = name
-    return createVNode('slot', props, fallback && fallback())
+    let renderFallback = false
+    const node = createVNode(
+      'slot',
+      props,
+      fallback && ((renderFallback = true), fallback())
+    )
+    if (renderFallback) node.patchFlag = PatchFlags.BAIL
+    return node
   }
 
   let slot = slots[name]
@@ -59,6 +66,7 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = false
   }
+  let renderFallback = false
   openBlock()
   const validSlotContent = slot && ensureValidVNode(slot(props))
   const rendered = createBlock(
@@ -71,7 +79,7 @@ export function renderSlot(
         (validSlotContent && (validSlotContent as any).key) ||
         `_${name}`
     },
-    validSlotContent || (fallback ? fallback() : []),
+    validSlotContent || (fallback ? ((renderFallback = true), fallback()) : []),
     validSlotContent && (slots as RawSlots)._ === SlotFlags.STABLE
       ? PatchFlags.STABLE_FRAGMENT
       : PatchFlags.BAIL
@@ -82,6 +90,7 @@ export function renderSlot(
   if (slot && (slot as ContextualRenderFn)._c) {
     ;(slot as ContextualRenderFn)._d = true
   }
+  if (renderFallback) rendered.patchFlag = PatchFlags.BAIL
   return rendered
 }
 

@@ -825,7 +825,7 @@ function baseCreateRenderer(
     }
 
     const areChildrenSVG = isSVG && n2.type !== 'foreignObject'
-    if (dynamicChildren) {
+    if (optimized && dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,
@@ -1058,9 +1058,10 @@ function baseCreateRenderer(
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
 
     if (
-      __DEV__ &&
-      // #5523 dev root fragment may inherit directives
-      (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)
+      (__DEV__ &&
+        // #5523 dev root fragment may inherit directives
+        (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)) ||
+      (n1 || n2).patchFlag === PatchFlags.BAIL
     ) {
       // HMR updated / Dev root fragment (w/ comments), force full diff
       patchFlag = 0
@@ -1093,6 +1094,7 @@ function baseCreateRenderer(
       )
     } else {
       if (
+        optimized &&
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
         dynamicChildren &&
