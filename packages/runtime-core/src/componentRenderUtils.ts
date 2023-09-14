@@ -251,10 +251,16 @@ export function renderComponentRoot(
 const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren
-  const childRoot = filterSingleRoot(rawChildren)
+  const childRoot = filterSingleRoot(rawChildren, false)
   if (!childRoot) {
     return [vnode, undefined]
+  } else if (
+    childRoot.patchFlag > 0 &&
+    childRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    return getChildRoot(childRoot)
   }
+
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot: SetRootFn = (updatedRoot: VNode) => {
@@ -271,7 +277,8 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 }
 
 export function filterSingleRoot(
-  children: VNodeArrayChildren
+  children: VNodeArrayChildren,
+  recursion: boolean = true
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -285,6 +292,7 @@ export function filterSingleRoot(
         } else {
           singleRoot = child
           if (
+            recursion &&
             singleRoot.patchFlag > 0 &&
             singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
           ) {

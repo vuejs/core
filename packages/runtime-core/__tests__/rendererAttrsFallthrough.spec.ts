@@ -19,6 +19,7 @@ import {
   withModifiers
 } from '@vue/runtime-dom'
 import { PatchFlags } from '@vue/shared'
+import { createElementBlock, createElementVNode } from '../src'
 
 describe('attribute fallthrough', () => {
   it('should allow attrs to fallthrough', async () => {
@@ -671,6 +672,58 @@ describe('attribute fallthrough', () => {
     const button = root.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
     expect(click).toHaveBeenCalled()
+  })
+
+  it('should support fallthrough for nested fragments', async () => {
+    const toggle = ref(false)
+
+    const Child = {
+      setup() {
+        return () => (
+          openBlock(),
+          createElementBlock(
+            Fragment,
+            null,
+            [
+              createCommentVNode(' comment A '),
+              toggle.value
+                ? (openBlock(), createElementBlock('span', { key: 0 }, 'Foo'))
+                : (openBlock(),
+                  createElementBlock(
+                    Fragment,
+                    { key: 1 },
+                    [
+                      createCommentVNode(' comment B '),
+                      createElementVNode('div', null, 'Bar')
+                    ],
+                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+                  ))
+            ],
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+          )
+        )
+      }
+    }
+
+    const Root = {
+      setup() {
+        return () => (openBlock(), createBlock(Child, { class: 'red' }))
+      }
+    }
+
+    const root = document.createElement('div')
+    document.body.appendChild(root)
+    render(h(Root), root)
+
+    expect(root.innerHTML).toBe(
+      `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`
+    )
+
+    toggle.value = true
+    await nextTick()
+    expect(root.innerHTML).toBe(
+      `<!-- comment A --><span class=\"red\">Foo</span>`
+    )
   })
 
   // #1989
