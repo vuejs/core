@@ -207,8 +207,11 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   beforeUpdate(el, _binding, vnode) {
     el._assign = getModelAssigner(vnode)
   },
-  updated(el, { value }) {
-    setSelected(el, value)
+  updated(el, { value, oldValue }) {
+    // #8579
+    if (value !== oldValue) {
+      setSelected(el, value)
+    }
   }
 }
 
