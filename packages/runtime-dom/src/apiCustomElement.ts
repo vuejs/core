@@ -140,6 +140,7 @@ export function defineCustomElement(options: {
   new (...args: any[]): ComponentPublicInstance
 }): VueElementConstructor
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
@@ -155,6 +156,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
   return defineCustomElement(options, hydrate)
@@ -176,7 +178,7 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
-
+  private _ob?: MutationObserver | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -213,6 +215,10 @@ export class VueElement extends BaseClass {
 
   disconnectedCallback() {
     this._connected = false
+    if (this._ob) {
+      this._ob.disconnect()
+      this._ob = null
+    }
     nextTick(() => {
       if (!this._connected) {
         render(null, this.shadowRoot!)
@@ -233,11 +239,13 @@ export class VueElement extends BaseClass {
     }
 
     // watch future attr changes
-    new MutationObserver(mutations => {
+    this._ob = new MutationObserver(mutations => {
       for (const m of mutations) {
         this._setAttr(m.attributeName!)
       }
-    }).observe(this, { attributes: true })
+    })
+
+    this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
