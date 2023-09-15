@@ -136,10 +136,12 @@ export function createHydrationFunctions(
           }
         } else {
           if ((node as Text).data !== vnode.children) {
-            if (
-              decodeHtml((node as Text).data) !==
-              decodeHtml(vnode.children as string)
-            ) {
+            let dataContent = (node as Text).data.replace(/[\t\r\n\f ]+/g, '')
+            let vnodeChildren = (vnode.children as string).replace(
+              /[\t\r\n\f ]+/g,
+              ''
+            )
+            if (decodeHtml(dataContent) !== decodeHtml(vnodeChildren)) {
               hasMismatch = true
               __DEV__ &&
                 warn(
@@ -413,10 +415,15 @@ export function createHydrationFunctions(
         }
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
-          if (
-            decodeHtml(el.textContent as string) !==
-            decodeHtml(vnode.children as string)
-          ) {
+          let textContent = (el.textContent as string).replace(
+            /[\t\r\n\f ]+/g,
+            ''
+          )
+          let vnodeChildren = (vnode.children as string).replace(
+            /[\t\r\n\f ]+/g,
+            ''
+          )
+          if (decodeHtml(textContent) !== decodeHtml(vnodeChildren)) {
             hasMismatch = true
             __DEV__ &&
               warn(
