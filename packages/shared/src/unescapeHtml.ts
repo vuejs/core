@@ -1,15 +1,15 @@
-const decodeHtmlRE = /&\w+;|&#(\d+);/g
-const DECODE_HTML = {
+const unescapeHtmlRE = /&\w+;|&#(\d+);/g
+const UNESCAPE_HTML = {
   '&lt;': '<',
   '&gt;': '>',
   '&amp;': '&',
   '&quot;': '"',
   '&#39;': "'"
 }
-export function decodeHtml(s: string | null) {
+export function unescapeHtml(s: string | null) {
   if (!s) return s
-  return s.replace(decodeHtmlRE, function ($0: string, $1: number) {
-    let c = DECODE_HTML[$0 as keyof typeof DECODE_HTML]
+  return s.replace(unescapeHtmlRE, function ($0: string, $1: number) {
+    let c = UNESCAPE_HTML[$0 as keyof typeof UNESCAPE_HTML]
     if (c === undefined) {
       // Maybe is Entity Number
       if (!isNaN($1)) {

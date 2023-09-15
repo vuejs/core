@@ -19,7 +19,7 @@ import {
   ShapeFlags,
   isReservedProp,
   isOn,
-  decodeHtml
+  unescapeHtml
 } from '@vue/shared'
 import { RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
@@ -141,7 +141,7 @@ export function createHydrationFunctions(
               /[\t\r\n\f ]+/g,
               ''
             )
-            if (decodeHtml(dataContent) !== decodeHtml(vnodeChildren)) {
+            if (unescapeHtml(dataContent) !== unescapeHtml(vnodeChildren)) {
               hasMismatch = true
               __DEV__ &&
                 warn(
@@ -423,7 +423,7 @@ export function createHydrationFunctions(
             /[\t\r\n\f ]+/g,
             ''
           )
-          if (decodeHtml(textContent) !== decodeHtml(vnodeChildren)) {
+          if (unescapeHtml(textContent) !== unescapeHtml(vnodeChildren)) {
             hasMismatch = true
             __DEV__ &&
               warn(

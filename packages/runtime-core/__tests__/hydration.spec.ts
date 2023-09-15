@@ -1010,7 +1010,7 @@ describe('SSR hydration', () => {
     })
 
     // #7775
-    test('use decodeHTML when vnode is of text type', () => {
+    test('use unescapeHtml when vnode is of text type', () => {
       const { container: styleContainer } = mountWithHydration(
         `<style>&quot;test&quot;\n\r\f\t</style>`,
         () => h('style', '"test"')
