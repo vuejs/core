@@ -1012,14 +1012,14 @@ describe('SSR hydration', () => {
     // #7775
     test('use decodeHTML when vnode is of text type', () => {
       const { container: styleContainer } = mountWithHydration(
-        `<style>&quot;test&quot;</style>`,
+        `<style>&quot;test&quot;\n\r\f\t</style>`,
         () => h('style', '"test"')
       )
       expect(styleContainer.innerHTML).toBe('<style>"test"</style>')
       expect(`Hydration text content mismatch`).not.toHaveBeenWarned()
 
       const { container: pContainer } = mountWithHydration(
-        `<p>&quot;test&quot;</p>`,
+        `<p>&quot;test&quot;\n\r\f\t</p>`,
         () => h('p', '"test"')
       )
       expect(pContainer.innerHTML).toBe('<p>"test"</p>')
