@@ -621,7 +621,7 @@ function baseCreateRenderer(
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
-    const { type, props, shapeFlag, transition, dirs } = vnode
+    const { type, props, shapeFlag, patchFlag, transition, dirs } = vnode
 
     el = vnode.el = hostCreateElement(
       vnode.type as string,
@@ -629,6 +629,14 @@ function baseCreateRenderer(
       props && props.is,
       props
     )
+
+    if (patchFlag === PatchFlags.HOISTED && parentComponent) {
+      ;(
+        parentComponent.hoistedCleanup || (parentComponent.hoistedCleanup = [])
+      ).push(() => {
+        vnode.el = null
+      })
+    }
 
     // mount children first, since some props may rely on child content
     // being already rendered, e.g. `<select value>`
@@ -2268,6 +2276,10 @@ function baseCreateRenderer(
       )
     }
     queuePostRenderEffect(() => {
+      if (instance.hoistedCleanup) {
+        instance.hoistedCleanup.forEach(cleanup => cleanup())
+        instance.hoistedCleanup = null
+      }
       instance.isUnmounted = true
     }, parentSuspense)
 
