@@ -114,6 +114,7 @@ export type VNodeProps = {
 
 type VNodeChildAtom =
   | VNode
+  | Ref
   | string
   | number
   | boolean
@@ -732,6 +733,9 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
+  if(isRef(child)) {
+    return normalizeVNode(child.value as any);
+  }
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
     return createVNode(Comment)

@@ -20,6 +20,7 @@ import {
 } from './component'
 import { EmitsOptions } from './componentEmits'
 import { DefineComponent } from './apiDefineComponent'
+import { Ref, isRef } from '@vue/reactivity'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -63,6 +64,7 @@ type RawChildren =
   | string
   | number
   | boolean
+  | Ref
   | VNode
   | VNodeArrayChildren
   | (() => any)
@@ -192,7 +194,7 @@ export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   } else {
     if (l > 3) {
       children = Array.prototype.slice.call(arguments, 2)
-    } else if (l === 3 && isVNode(children)) {
+    } else if (l === 3 && (isVNode(children) || isRef(children))) {
       children = [children]
     }
     return createVNode(type, propsOrChildren, children)
