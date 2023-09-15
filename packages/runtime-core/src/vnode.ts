@@ -733,8 +733,8 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if(isRef(child)) {
-    return normalizeVNode(child.value as any);
+  if (isRef(child)) {
+    return normalizeVNode(child.value as any)
   }
   if (child == null || typeof child === 'boolean') {
     // empty placeholder
