@@ -12,9 +12,9 @@
     "vite": "^4.4.2"
   },
   "dependencies": {
-    "@vue/repl": "^2.5.4",
+    "@vue/repl": "^2.5.8",
     "file-saver": "^2.0.5",
-    "jszip": "^3.6.0",
+    "jszip": "^3.10.1",
     "vue": "workspace:*"
   }
 }
