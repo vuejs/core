@@ -1,4 +1,4 @@
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { TrackOpTypesUnion, TriggerOpTypesUnion } from './operations'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
@@ -38,7 +38,7 @@ export type DebuggerEvent = {
 
 export type DebuggerEventExtraInfo = {
   target: object
-  type: TrackOpTypes | TriggerOpTypes
+  type: TrackOpTypesUnion | TriggerOpTypesUnion
   key: any
   newValue?: any
   oldValue?: any
@@ -244,7 +244,7 @@ export function resetTracking() {
  * @param type - Defines the type of access to the reactive property.
  * @param key - Identifier of the reactive property to track.
  */
-export function track(target: object, type: TrackOpTypes, key: unknown) {
+export function track(target: object, type: TrackOpTypesUnion, key: unknown) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
     if (!depsMap) {
@@ -304,7 +304,7 @@ export function trackEffects(
  */
 export function trigger(
   target: object,
-  type: TriggerOpTypes,
+  type: TriggerOpTypesUnion,
   key?: unknown,
   newValue?: unknown,
   oldValue?: unknown,
@@ -317,7 +317,7 @@ export function trigger(
   }
 
   let deps: (Dep | undefined)[] = []
-  if (type === TriggerOpTypes.CLEAR) {
+  if (type === 'clear') {
     // collection being cleared
     // trigger all effects for target
     deps = [...depsMap.values()]
@@ -336,7 +336,7 @@ export function trigger(
 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
-      case TriggerOpTypes.ADD:
+      case 'add':
         if (!isArray(target)) {
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
@@ -347,7 +347,7 @@ export function trigger(
           deps.push(depsMap.get('length'))
         }
         break
-      case TriggerOpTypes.DELETE:
+      case 'delete':
         if (!isArray(target)) {
           deps.push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
@@ -355,7 +355,7 @@ export function trigger(
           }
         }
         break
-      case TriggerOpTypes.SET:
+      case 'set':
         if (isMap(target)) {
           deps.push(depsMap.get(ITERATE_KEY))
         }

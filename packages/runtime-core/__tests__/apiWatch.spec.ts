@@ -24,8 +24,6 @@ import {
 import {
   ITERATE_KEY,
   DebuggerEvent,
-  TrackOpTypes,
-  TriggerOpTypes,
   triggerRef,
   shallowRef,
   Ref,
@@ -815,17 +813,17 @@ describe('api: watch', () => {
     expect(events).toMatchObject([
       {
         target: obj,
-        type: TrackOpTypes.GET,
+        type: 'get',
         key: 'foo'
       },
       {
         target: obj,
-        type: TrackOpTypes.HAS,
+        type: 'has',
         key: 'bar'
       },
       {
         target: obj,
-        type: TrackOpTypes.ITERATE,
+        type: 'iterate',
         key: ITERATE_KEY
       }
     ])
@@ -852,7 +850,7 @@ describe('api: watch', () => {
     expect(dummy).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toMatchObject({
-      type: TriggerOpTypes.SET,
+      type: 'set',
       key: 'foo',
       oldValue: 1,
       newValue: 2
@@ -863,7 +861,7 @@ describe('api: watch', () => {
     expect(dummy).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toMatchObject({
-      type: TriggerOpTypes.DELETE,
+      type: 'delete',
       key: 'foo',
       oldValue: 2
     })

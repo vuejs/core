@@ -13,10 +13,9 @@ import {
   onUnmounted,
   onRenderTracked,
   reactive,
-  TrackOpTypes,
   onRenderTriggered
 } from '@vue/runtime-test'
-import { ITERATE_KEY, DebuggerEvent, TriggerOpTypes } from '@vue/reactivity'
+import { ITERATE_KEY, DebuggerEvent } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#lifecycle-hooks
 
@@ -315,17 +314,17 @@ describe('api: lifecycle hooks', () => {
     expect(events).toMatchObject([
       {
         target: obj,
-        type: TrackOpTypes.GET,
+        type: 'get',
         key: 'foo'
       },
       {
         target: obj,
-        type: TrackOpTypes.HAS,
+        type: 'has',
         key: 'bar'
       },
       {
         target: obj,
-        type: TrackOpTypes.ITERATE,
+        type: 'iterate',
         key: ITERATE_KEY
       }
     ])
@@ -355,7 +354,7 @@ describe('api: lifecycle hooks', () => {
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toMatchObject({
-      type: TriggerOpTypes.SET,
+      type: 'set',
       key: 'foo',
       oldValue: 1,
       newValue: 2
@@ -365,7 +364,7 @@ describe('api: lifecycle hooks', () => {
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toMatchObject({
-      type: TriggerOpTypes.DELETE,
+      type: 'delete',
       key: 'bar',
       oldValue: 2
     })
@@ -373,7 +372,7 @@ describe('api: lifecycle hooks', () => {
     await nextTick()
     expect(onTrigger).toHaveBeenCalledTimes(3)
     expect(events[2]).toMatchObject({
-      type: TriggerOpTypes.ADD,
+      type: 'add',
       key: 'baz',
       newValue: 3
     })

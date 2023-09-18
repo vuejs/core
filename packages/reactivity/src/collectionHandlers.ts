@@ -1,6 +1,6 @@
-import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
+import { toRaw, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { TriggerOpTypesUnion } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
@@ -23,14 +23,14 @@ function get(
 ) {
   // #1772: readonly(reactive(Map)) should return readonly + reactive version
   // of the value
-  target = (target as any)[ReactiveFlags.RAW]
+  target = (target as any).__v_raw
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
     if (hasChanged(key, rawKey)) {
-      track(rawTarget, TrackOpTypes.GET, key)
+      track(rawTarget, 'get', key)
     }
-    track(rawTarget, TrackOpTypes.GET, rawKey)
+    track(rawTarget, 'get', rawKey)
   }
   const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
@@ -46,14 +46,14 @@ function get(
 }
 
 function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
-  const target = (this as any)[ReactiveFlags.RAW]
+  const target = (this as any).__v_raw
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
     if (hasChanged(key, rawKey)) {
-      track(rawTarget, TrackOpTypes.HAS, key)
+      track(rawTarget, 'has', key)
     }
-    track(rawTarget, TrackOpTypes.HAS, rawKey)
+    track(rawTarget, 'has', rawKey)
   }
   return key === rawKey
     ? target.has(key)
@@ -61,8 +61,8 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
 }
 
 function size(target: IterableCollections, isReadonly = false) {
-  target = (target as any)[ReactiveFlags.RAW]
-  !isReadonly && track(toRaw(target), TrackOpTypes.ITERATE, ITERATE_KEY)
+  target = (target as any).__v_raw
+  !isReadonly && track(toRaw(target), 'iterate', ITERATE_KEY)
   return Reflect.get(target, 'size', target)
 }
 
@@ -73,7 +73,7 @@ function add(this: SetTypes, value: unknown) {
   const hadKey = proto.has.call(target, value)
   if (!hadKey) {
     target.add(value)
-    trigger(target, TriggerOpTypes.ADD, value, value)
+    trigger(target, 'add', value, value)
   }
   return this
 }
@@ -94,9 +94,9 @@ function set(this: MapTypes, key: unknown, value: unknown) {
   const oldValue = get.call(target, key)
   target.set(key, value)
   if (!hadKey) {
-    trigger(target, TriggerOpTypes.ADD, key, value)
+    trigger(target, 'add', key, value)
   } else if (hasChanged(value, oldValue)) {
-    trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+    trigger(target, 'set', key, value, oldValue)
   }
   return this
 }
@@ -116,7 +116,7 @@ function deleteEntry(this: CollectionTypes, key: unknown) {
   // forward the operation before queueing reactions
   const result = target.delete(key)
   if (hadKey) {
-    trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+    trigger(target, 'delete', key, undefined, oldValue)
   }
   return result
 }
@@ -132,7 +132,7 @@ function clear(this: IterableCollections) {
   // forward the operation before queueing reactions
   const result = target.clear()
   if (hadItems) {
-    trigger(target, TriggerOpTypes.CLEAR, undefined, undefined, oldTarget)
+    trigger(target, 'clear', undefined, undefined, oldTarget)
   }
   return result
 }
@@ -144,10 +144,10 @@ function createForEach(isReadonly: boolean, isShallow: boolean) {
     thisArg?: unknown
   ) {
     const observed = this as any
-    const target = observed[ReactiveFlags.RAW]
+    const target = observed.__v_raw
     const rawTarget = toRaw(target)
     const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
-    !isReadonly && track(rawTarget, TrackOpTypes.ITERATE, ITERATE_KEY)
+    !isReadonly && track(rawTarget, 'iterate', ITERATE_KEY)
     return target.forEach((value: unknown, key: unknown) => {
       // important: make sure the callback is
       // 1. invoked with the reactive map as `this` and 3rd arg
@@ -179,7 +179,7 @@ function createIterableMethod(
     this: IterableCollections,
     ...args: unknown[]
   ): Iterable & Iterator {
-    const target = (this as any)[ReactiveFlags.RAW]
+    const target = (this as any).__v_raw
     const rawTarget = toRaw(target)
     const targetIsMap = isMap(rawTarget)
     const isPair =
@@ -188,11 +188,7 @@ function createIterableMethod(
     const innerIterator = target[method](...args)
     const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
     !isReadonly &&
-      track(
-        rawTarget,
-        TrackOpTypes.ITERATE,
-        isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY
-      )
+      track(rawTarget, 'iterate', isKeyOnly ? MAP_KEY_ITERATE_KEY : ITERATE_KEY)
     // return a wrapped iterator which returns observed versions of the
     // values emitted from the real iterator
     return {
@@ -214,7 +210,7 @@ function createIterableMethod(
   }
 }
 
-function createReadonlyMethod(type: TriggerOpTypes): Function {
+function createReadonlyMethod(type: TriggerOpTypesUnion): Function {
   return function (this: CollectionTypes, ...args: unknown[]) {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
@@ -223,7 +219,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
         toRaw(this)
       )
     }
-    return type === TriggerOpTypes.DELETE ? false : this
+    return type === 'delete' ? false : this
   }
 }
 
@@ -268,10 +264,10 @@ function createInstrumentations() {
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
     },
-    add: createReadonlyMethod(TriggerOpTypes.ADD),
-    set: createReadonlyMethod(TriggerOpTypes.SET),
-    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+    add: createReadonlyMethod('add'),
+    set: createReadonlyMethod('set'),
+    delete: createReadonlyMethod('delete'),
+    clear: createReadonlyMethod('clear'),
     forEach: createForEach(true, false)
   }
 
@@ -285,10 +281,10 @@ function createInstrumentations() {
     has(this: MapTypes, key: unknown) {
       return has.call(this, key, true)
     },
-    add: createReadonlyMethod(TriggerOpTypes.ADD),
-    set: createReadonlyMethod(TriggerOpTypes.SET),
-    delete: createReadonlyMethod(TriggerOpTypes.DELETE),
-    clear: createReadonlyMethod(TriggerOpTypes.CLEAR),
+    add: createReadonlyMethod('add'),
+    set: createReadonlyMethod('set'),
+    delete: createReadonlyMethod('delete'),
+    clear: createReadonlyMethod('clear'),
     forEach: createForEach(true, true)
   }
 
@@ -345,11 +341,11 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
     key: string | symbol,
     receiver: CollectionTypes
   ) => {
-    if (key === ReactiveFlags.IS_REACTIVE) {
+    if (key === '__v_isReactive') {
       return !isReadonly
-    } else if (key === ReactiveFlags.IS_READONLY) {
+    } else if (key === '__v_isReadonly') {
       return isReadonly
-    } else if (key === ReactiveFlags.RAW) {
+    } else if (key === '__v_raw') {
       return target
     }
 

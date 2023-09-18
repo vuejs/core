@@ -2,7 +2,6 @@ import {
   reactive,
   readonly,
   toRaw,
-  ReactiveFlags,
   Target,
   readonlyMap,
   reactiveMap,
@@ -11,7 +10,6 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
 import {
   track,
   trigger,
@@ -54,7 +52,7 @@ function createArrayInstrumentations() {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
       for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
+        track(arr, 'get', i + '')
       }
       // we run the method using the original args first (which may be reactive)
       const res = arr[key](...args)
@@ -81,7 +79,7 @@ function createArrayInstrumentations() {
 
 function hasOwnProperty(this: object, key: string) {
   const obj = toRaw(this)
-  track(obj, TrackOpTypes.HAS, key)
+  track(obj, 'has', key)
   return obj.hasOwnProperty(key)
 }
 
@@ -94,14 +92,14 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
   get(target: Target, key: string | symbol, receiver: object) {
     const isReadonly = this._isReadonly,
       shallow = this._shallow
-    if (key === ReactiveFlags.IS_REACTIVE) {
+    if (key === '__v_isReactive') {
       return !isReadonly
-    } else if (key === ReactiveFlags.IS_READONLY) {
+    } else if (key === '__v_isReadonly') {
       return isReadonly
-    } else if (key === ReactiveFlags.IS_SHALLOW) {
+    } else if (key === '__v_isShallow') {
       return shallow
     } else if (
-      key === ReactiveFlags.RAW &&
+      key === '__v_raw' &&
       receiver ===
         (isReadonly
           ? shallow
@@ -133,7 +131,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     }
 
     if (!isReadonly) {
-      track(target, TrackOpTypes.GET, key)
+      track(target, 'get', key)
     }
 
     if (shallow) {
@@ -192,9 +190,9 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     // don't trigger if target is something up in the prototype chain of original
     if (target === toRaw(receiver)) {
       if (!hadKey) {
-        trigger(target, TriggerOpTypes.ADD, key, value)
+        trigger(target, 'add', key, value)
       } else if (hasChanged(value, oldValue)) {
-        trigger(target, TriggerOpTypes.SET, key, value, oldValue)
+        trigger(target, 'set', key, value, oldValue)
       }
     }
     return result
@@ -205,7 +203,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     const oldValue = (target as any)[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
-      trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
+      trigger(target, 'delete', key, undefined, oldValue)
     }
     return result
   }
@@ -213,16 +211,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
   has(target: object, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
-      track(target, TrackOpTypes.HAS, key)
+      track(target, 'has', key)
     }
     return result
   }
   ownKeys(target: object): (string | symbol)[] {
-    track(
-      target,
-      TrackOpTypes.ITERATE,
-      isArray(target) ? 'length' : ITERATE_KEY
-    )
+    track(target, 'iterate', isArray(target) ? 'length' : ITERATE_KEY)
     return Reflect.ownKeys(target)
   }
 }

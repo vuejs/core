@@ -1,11 +1,4 @@
-import {
-  isReactive,
-  reactive,
-  track,
-  TrackOpTypes,
-  trigger,
-  TriggerOpTypes
-} from '@vue/reactivity'
+import { isReactive, reactive, track, trigger } from '@vue/reactivity'
 import {
   isFunction,
   extend,
@@ -643,12 +636,12 @@ function defineReactiveSimple(obj: any, key: string, val: any) {
     enumerable: true,
     configurable: true,
     get() {
-      track(obj, TrackOpTypes.GET, key)
+      track(obj, 'get', key)
       return val
     },
     set(newVal) {
       val = isObject(newVal) ? reactive(newVal) : newVal
-      trigger(obj, TriggerOpTypes.SET, key, newVal)
+      trigger(obj, 'set', key, newVal)
     }
   })
 }

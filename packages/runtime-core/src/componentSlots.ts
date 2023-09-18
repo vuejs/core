@@ -24,7 +24,6 @@ import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 import { trigger } from '@vue/reactivity'
-import { TriggerOpTypes } from '@vue/reactivity'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
@@ -203,7 +202,7 @@ export const updateSlots = (
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
-        trigger(instance, TriggerOpTypes.SET, '$slots')
+        trigger(instance, 'set', '$slots')
       } else if (optimized && type === SlotFlags.STABLE) {
         // compiled AND stable.
         // no need to update, and skip stale slots removal.

@@ -8,7 +8,6 @@ import {
   EffectScope,
   markRaw,
   track,
-  TrackOpTypes,
   ReactiveEffect
 } from '@vue/reactivity'
 import {
@@ -942,7 +941,7 @@ function getAttrsProxy(instance: ComponentInternalInstance): Data {
         ? {
             get(target, key: string) {
               markAttrsAccessed()
-              track(instance, TrackOpTypes.GET, '$attrs')
+              track(instance, 'get', '$attrs')
               return target[key]
             },
             set() {
@@ -956,7 +955,7 @@ function getAttrsProxy(instance: ComponentInternalInstance): Data {
           }
         : {
             get(target, key: string) {
-              track(instance, TrackOpTypes.GET, '$attrs')
+              track(instance, 'get', '$attrs')
               return target[key]
             }
           }
@@ -972,7 +971,7 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
     instance.slotsProxy ||
     (instance.slotsProxy = new Proxy(instance.slots, {
       get(target, key: string) {
-        track(instance, TrackOpTypes.GET, '$slots')
+        track(instance, 'get', '$slots')
         return target[key]
       }
     }))

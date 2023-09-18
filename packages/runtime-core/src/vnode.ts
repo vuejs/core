@@ -21,7 +21,7 @@ import {
   isClassComponent
 } from './component'
 import { RawSlots } from './componentSlots'
-import { isProxy, Ref, toRaw, ReactiveFlags, isRef } from '@vue/reactivity'
+import { isProxy, Ref, toRaw, isRef } from '@vue/reactivity'
 import { AppContext } from './apiCreateApp'
 import {
   Suspense,
@@ -144,7 +144,7 @@ export interface VNode<
   /**
    * @internal
    */
-  [ReactiveFlags.SKIP]: true
+  __v_skip: true
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null

@@ -7,9 +7,7 @@ import {
   isReadonly,
   DebuggerEvent,
   toRaw,
-  TrackOpTypes,
-  ITERATE_KEY,
-  TriggerOpTypes
+  ITERATE_KEY
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -236,19 +234,19 @@ describe('reactivity/computed', () => {
       {
         effect: c.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.GET,
+        type: 'get',
         key: 'foo'
       },
       {
         effect: c.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.HAS,
+        type: 'has',
         key: 'bar'
       },
       {
         effect: c.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.ITERATE,
+        type: 'iterate',
         key: ITERATE_KEY
       }
     ])
@@ -271,7 +269,7 @@ describe('reactivity/computed', () => {
     expect(events[0]).toEqual({
       effect: c.effect,
       target: toRaw(obj),
-      type: TriggerOpTypes.SET,
+      type: 'set',
       key: 'foo',
       oldValue: 1,
       newValue: 2
@@ -283,7 +281,7 @@ describe('reactivity/computed', () => {
     expect(events[1]).toEqual({
       effect: c.effect,
       target: toRaw(obj),
-      type: TriggerOpTypes.DELETE,
+      type: 'delete',
       key: 'foo',
       oldValue: 2
     })

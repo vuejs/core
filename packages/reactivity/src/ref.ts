@@ -5,7 +5,6 @@ import {
   trackEffects,
   triggerEffects
 } from './effect'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
 import {
   isProxy,
@@ -43,7 +42,7 @@ export function trackRefValue(ref: RefBase<any>) {
     if (__DEV__) {
       trackEffects(ref.dep || (ref.dep = createDep()), {
         target: ref,
-        type: TrackOpTypes.GET,
+        type: 'get',
         key: 'value'
       })
     } else {
@@ -59,7 +58,7 @@ export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
     if (__DEV__) {
       triggerEffects(dep, {
         target: ref,
-        type: TriggerOpTypes.SET,
+        type: 'set',
         key: 'value',
         newValue: newVal
       })

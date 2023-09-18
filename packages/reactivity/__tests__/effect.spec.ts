@@ -4,8 +4,6 @@ import {
   effect,
   stop,
   toRaw,
-  TrackOpTypes,
-  TriggerOpTypes,
   DebuggerEvent,
   markRaw,
   shallowReactive,
@@ -732,19 +730,19 @@ describe('reactivity/effect', () => {
       {
         effect: runner.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.GET,
+        type: 'get',
         key: 'foo'
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.HAS,
+        type: 'has',
         key: 'bar'
       },
       {
         effect: runner.effect,
         target: toRaw(obj),
-        type: TrackOpTypes.ITERATE,
+        type: 'iterate',
         key: ITERATE_KEY
       }
     ])
@@ -770,7 +768,7 @@ describe('reactivity/effect', () => {
     expect(events[0]).toEqual({
       effect: runner.effect,
       target: toRaw(obj),
-      type: TriggerOpTypes.SET,
+      type: 'set',
       key: 'foo',
       oldValue: 1,
       newValue: 2
@@ -782,7 +780,7 @@ describe('reactivity/effect', () => {
     expect(events[1]).toEqual({
       effect: runner.effect,
       target: toRaw(obj),
-      type: TriggerOpTypes.DELETE,
+      type: 'delete',
       key: 'foo',
       oldValue: 2
     })

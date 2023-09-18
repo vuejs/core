@@ -1,7 +1,7 @@
 import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
-import { ReactiveFlags, toRaw } from './reactive'
+import { toRaw } from './reactive'
 import { Dep } from './dep'
 
 declare const ComputedRefSymbol: unique symbol
@@ -30,7 +30,7 @@ export class ComputedRefImpl<T> {
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean = false
+  public readonly __v_isReadonly: boolean = false
 
   public _dirty = true
   public _cacheable: boolean
@@ -49,7 +49,7 @@ export class ComputedRefImpl<T> {
     })
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
-    this[ReactiveFlags.IS_READONLY] = isReadonly
+    this.__v_isReadonly = isReadonly
   }
 
   get value() {

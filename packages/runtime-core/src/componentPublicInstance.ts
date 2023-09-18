@@ -21,7 +21,6 @@ import {
   toRaw,
   shallowReadonly,
   track,
-  TrackOpTypes,
   ShallowUnwrapRef,
   UnwrapNestedRefs
 } from '@vue/reactivity'
@@ -354,10 +353,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // public $xxx properties
     if (publicGetter) {
       if (key === '$attrs') {
-        track(instance, TrackOpTypes.GET, key)
+        track(instance, 'get', key)
         __DEV__ && markAttrsAccessed()
       } else if (__DEV__ && key === '$slots') {
-        track(instance, TrackOpTypes.GET, key)
+        track(instance, 'get', key)
       }
       return publicGetter(instance)
     } else if (

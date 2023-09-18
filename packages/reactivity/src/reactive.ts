@@ -13,6 +13,9 @@ import {
 } from './collectionHandlers'
 import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
 
+/**
+ * @deprecated use string literal instead.
+ */
 export const enum ReactiveFlags {
   SKIP = '__v_skip',
   IS_REACTIVE = '__v_isReactive',
@@ -22,11 +25,11 @@ export const enum ReactiveFlags {
 }
 
 export interface Target {
-  [ReactiveFlags.SKIP]?: boolean
-  [ReactiveFlags.IS_REACTIVE]?: boolean
-  [ReactiveFlags.IS_READONLY]?: boolean
-  [ReactiveFlags.IS_SHALLOW]?: boolean
-  [ReactiveFlags.RAW]?: any
+  __v_skip?: boolean
+  __v_isReactive?: boolean
+  __v_isReadonly?: boolean
+  __v_isShallow?: boolean
+  __v_raw?: boolean
 }
 
 export const reactiveMap = new WeakMap<Target, any>()
@@ -34,30 +37,29 @@ export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 export const shallowReadonlyMap = new WeakMap<Target, any>()
 
-const enum TargetType {
-  INVALID = 0,
-  COMMON = 1,
-  COLLECTION = 2
-}
+type TargetTypeUnion =
+  | 0 // INVALID
+  | 1 // COMMON
+  | 2 // COLLECTION
 
-function targetTypeMap(rawType: string) {
+function targetTypeMap(rawType: string): TargetTypeUnion {
   switch (rawType) {
     case 'Object':
     case 'Array':
-      return TargetType.COMMON
+      return 1
     case 'Map':
     case 'Set':
     case 'WeakMap':
     case 'WeakSet':
-      return TargetType.COLLECTION
+      return 2
     default:
-      return TargetType.INVALID
+      return 0
   }
 }
 
 function getTargetType(value: Target) {
-  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
-    ? TargetType.INVALID
+  return value.__v_skip || !Object.isExtensible(value)
+    ? 0
     : targetTypeMap(toRawType(value))
 }
 
@@ -260,10 +262,7 @@ function createReactiveObject(
   }
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
+  if (target.__v_raw && !(isReadonly && target.__v_isReactive)) {
     return target
   }
   // target already has corresponding Proxy
@@ -273,12 +272,12 @@ function createReactiveObject(
   }
   // only specific value types can be observed.
   const targetType = getTargetType(target)
-  if (targetType === TargetType.INVALID) {
+  if (targetType === 0) {
     return target
   }
   const proxy = new Proxy(
     target,
-    targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
+    targetType === 2 ? collectionHandlers : baseHandlers
   )
   proxyMap.set(target, proxy)
   return proxy
@@ -304,9 +303,9 @@ function createReactiveObject(
  */
 export function isReactive(value: unknown): boolean {
   if (isReadonly(value)) {
-    return isReactive((value as Target)[ReactiveFlags.RAW])
+    return isReactive((value as Target).__v_raw)
   }
-  return !!(value && (value as Target)[ReactiveFlags.IS_REACTIVE])
+  return !!(value && (value as Target).__v_isReactive)
 }
 
 /**
@@ -321,11 +320,11 @@ export function isReactive(value: unknown): boolean {
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isreadonly}
  */
 export function isReadonly(value: unknown): boolean {
-  return !!(value && (value as Target)[ReactiveFlags.IS_READONLY])
+  return !!(value && (value as Target).__v_isReadonly)
 }
 
 export function isShallow(value: unknown): boolean {
-  return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW])
+  return !!(value && (value as Target).__v_isShallow)
 }
 
 /**
@@ -363,7 +362,7 @@ export function isProxy(value: unknown): boolean {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#toraw}
  */
 export function toRaw<T>(observed: T): T {
-  const raw = observed && (observed as Target)[ReactiveFlags.RAW]
+  const raw: any = observed && (observed as Target).__v_raw
   return raw ? toRaw(raw) : observed
 }
 
@@ -392,7 +391,7 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  def(value, ReactiveFlags.SKIP, true)
+  def(value, '__v_skip', true)
   return value
 }
 

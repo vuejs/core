@@ -5,7 +5,6 @@ import {
   ComputedRef,
   ReactiveEffect,
   isReactive,
-  ReactiveFlags,
   EffectScheduler,
   DebuggerOptions,
   getCurrentScope
@@ -438,7 +437,7 @@ export function createPathGetter(ctx: any, path: string) {
 }
 
 export function traverse(value: unknown, seen?: Set<unknown>) {
-  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+  if (!isObject(value) || (value as any).__v_skip) {
     return value
   }
   seen = seen || new Set()
