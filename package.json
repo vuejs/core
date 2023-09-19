@@ -67,7 +67,7 @@
     "@types/hash-sum": "^1.0.0",
     "@types/node": "^16.18.52",
     "@typescript-eslint/parser": "^6.6.0",
-    "@vitest/coverage-istanbul": "^0.34.3",
+    "@vitest/coverage-istanbul": "^0.34.4",
     "@vue/consolidate": "0.17.3",
     "chalk": "^4.1.0",
     "conventional-changelog-cli": "^2.2.2",
@@ -89,7 +89,7 @@
     "prettier": "^3.0.3",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.2",
-    "puppeteer": "~21.1.1",
+    "puppeteer": "~21.2.1",
     "rollup": "^3.29.2",
     "rollup-plugin-dts": "^5.3.1",
     "rollup-plugin-esbuild": "^5.0.0",
@@ -103,6 +103,6 @@
     "tsx": "^3.12.10",
     "typescript": "^5.1.6",
     "vite": "^4.3.0",
-    "vitest": "^0.34.3"
+    "vitest": "^0.34.4"
   }
 }
