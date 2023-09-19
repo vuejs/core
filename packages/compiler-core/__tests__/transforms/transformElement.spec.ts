@@ -991,6 +991,14 @@ describe('compiler: element transform', () => {
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
     })
 
+    // #9239
+    test('NEED_PATCH (vfor ref)', () => {
+      const { node } = parseWithBind(
+        `<div v-for="item in 3" :key="3" ref="foo" />`
+      )
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
+    })
+
     test('NEED_PATCH (custom directives)', () => {
       const { node } = parseWithBind(`<div v-foo />`)
       expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_PATCH))
