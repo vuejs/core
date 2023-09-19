@@ -12,7 +12,7 @@ import {
   readonly,
   ReactiveEffectRunner
 } from '../src/index'
-import { ITERATE_KEY } from '../src/effect'
+import { ITERATE_KEY, pauseScheduling, resetScheduling } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -998,5 +998,20 @@ describe('reactivity/effect', () => {
       expect(fnSpy).toHaveBeenCalledTimes(3)
       expect(has).toBe(false)
     })
+  })
+
+  it('should be triggered once when with pauseScheduling', () => {
+    const counter = reactive({ num: 0 })
+
+    const counterSpy = vi.fn(() => counter.num)
+    effect(counterSpy)
+
+    counterSpy.mockClear()
+
+    pauseScheduling()
+    counter.num++
+    counter.num++
+    resetScheduling()
+    expect(counterSpy).toHaveBeenCalledTimes(1)
   })
 })
