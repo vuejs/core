@@ -1000,7 +1000,7 @@ describe('reactivity/effect', () => {
     })
   })
 
-  it('should be triggered once when with pauseScheduling', () => {
+  it('should be triggered once with pauseScheduling', () => {
     const counter = reactive({ num: 0 })
 
     const counterSpy = vi.fn(() => counter.num)
