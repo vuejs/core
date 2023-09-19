@@ -180,8 +180,8 @@ describe('renderer: teleport', () => {
       render() {
         return [h('p'), h('p')]
       },
-      beforeUnmount: jest.fn(),
-      unmounted: jest.fn()
+      beforeUnmount: vi.fn(),
+      unmounted: vi.fn()
     }
 
     render(
