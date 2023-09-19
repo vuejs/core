@@ -23,7 +23,7 @@ describe('directives', () => {
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
-    const beforeMount = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeMount = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should not be inserted yet
       expect(el.parentNode).toBe(null)
@@ -35,7 +35,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const mounted = jest.fn(((el, binding, vnode, prevVNode) => {
+    const mounted = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should be inserted now
       expect(el.parentNode).toBe(root)
@@ -47,7 +47,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const beforeUpdate = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeUpdate = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       expect(el.parentNode).toBe(root)
       expect(root.children[0]).toBe(el)
@@ -61,7 +61,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(_prevVnode)
     }) as DirectiveHook)
 
-    const updated = jest.fn(((el, binding, vnode, prevVNode) => {
+    const updated = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       expect(el.parentNode).toBe(root)
       expect(root.children[0]).toBe(el)
@@ -75,7 +75,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(_prevVnode)
     }) as DirectiveHook)
 
-    const beforeUnmount = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeUnmount = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should be removed now
       expect(el.parentNode).toBe(root)
@@ -87,7 +87,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const unmounted = jest.fn(((el, binding, vnode, prevVNode) => {
+    const unmounted = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should have been removed
       expect(el.parentNode).toBe(null)
@@ -158,7 +158,7 @@ describe('directives', () => {
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
-    const fn = jest.fn(((el, binding, vnode, prevVNode) => {
+    const fn = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       expect(el.parentNode).toBe(root)
 
@@ -212,7 +212,7 @@ describe('directives', () => {
       expect(binding.modifiers && binding.modifiers.ok).toBe(true)
     }
 
-    const beforeMount = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeMount = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should not be inserted yet
       expect(el.parentNode).toBe(null)
@@ -224,7 +224,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const mounted = jest.fn(((el, binding, vnode, prevVNode) => {
+    const mounted = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should be inserted now
       expect(el.parentNode).toBe(root)
@@ -236,13 +236,13 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const beforeUpdate = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeUpdate = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       expect(el.parentNode).toBe(root)
       expect(root.children[0]).toBe(el)
 
       // node should not have been updated yet
-      // expect(el.children[0].text).toBe(`${count.value - 1}`)
+      expect(el.children[0].text).toBe(`${count.value - 1}`)
 
       assertBindings(binding)
 
@@ -250,7 +250,7 @@ describe('directives', () => {
       expect(prevVNode!.type).toBe(_prevVnode!.type)
     }) as DirectiveHook)
 
-    const updated = jest.fn(((el, binding, vnode, prevVNode) => {
+    const updated = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       expect(el.parentNode).toBe(root)
       expect(root.children[0]).toBe(el)
@@ -264,7 +264,7 @@ describe('directives', () => {
       expect(prevVNode!.type).toBe(_prevVnode!.type)
     }) as DirectiveHook)
 
-    const beforeUnmount = jest.fn(((el, binding, vnode, prevVNode) => {
+    const beforeUnmount = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should be removed now
       expect(el.parentNode).toBe(root)
@@ -276,7 +276,7 @@ describe('directives', () => {
       expect(prevVNode).toBe(null)
     }) as DirectiveHook)
 
-    const unmounted = jest.fn(((el, binding, vnode, prevVNode) => {
+    const unmounted = vi.fn(((el, binding, vnode, prevVNode) => {
       expect(el.tag).toBe('div')
       // should have been removed
       expect(el.parentNode).toBe(null)
@@ -345,10 +345,10 @@ describe('directives', () => {
   // #2298
   it('directive merging on component root', () => {
     const d1 = {
-      mounted: jest.fn()
+      mounted: vi.fn()
     }
     const d2 = {
-      mounted: jest.fn()
+      mounted: vi.fn()
     }
     const Comp = {
       render() {
@@ -372,7 +372,7 @@ describe('directives', () => {
   test('should disable tracking inside directive lifecycle hooks', async () => {
     const count = ref(0)
     const text = ref('')
-    const beforeUpdate = jest.fn(() => count.value++)
+    const beforeUpdate = vi.fn(() => count.value++)
 
     const App = {
       render() {
@@ -420,5 +420,22 @@ describe('directives', () => {
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(res!).toBe('Test')
+  })
+
+  test('should not throw with unknown directive', async () => {
+    const d1 = {
+      mounted: vi.fn()
+    }
+    const App = {
+      name: 'App',
+      render() {
+        // simulates the code generated on an unknown directive
+        return withDirectives(h('div'), [[undefined], [d1]])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(d1.mounted).toHaveBeenCalled()
   })
 })

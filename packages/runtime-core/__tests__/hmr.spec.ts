@@ -117,8 +117,8 @@ describe('hot module replacement', () => {
   test('reload', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test3-child'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
@@ -151,11 +151,78 @@ describe('hot module replacement', () => {
     expect(mountSpy).toHaveBeenCalledTimes(1)
   })
 
+  // #7042
+  test('reload KeepAlive slot', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-child-keep-alive'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactiveSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      components: { Child },
+      data() {
+        return { toggle: true }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle"></button><KeepAlive><Child v-if="toggle" /></KeepAlive>`
+      )
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      unmounted: unmountSpy,
+      activated: activeSpy,
+      deactivated: deactiveSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(0)
+
+    // should not unmount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+
+    // should not mount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+  })
+
   test('reload class component', async () => {
     const root = nodeOps.createElement('div')
     const childId = 'test4-child'
-    const unmountSpy = jest.fn()
-    const mountSpy = jest.fn()
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
 
     class Child {
       static __vccOpts: ComponentOptions = {
@@ -400,8 +467,8 @@ describe('hot module replacement', () => {
   // #4174
   test('with global mixins', async () => {
     const childId = 'hmr-global-mixin'
-    const createSpy1 = jest.fn()
-    const createSpy2 = jest.fn()
+    const createSpy1 = vi.fn()
+    const createSpy2 = vi.fn()
 
     const Child: ComponentOptions = {
       __hmrId: childId,
@@ -468,5 +535,36 @@ describe('hot module replacement', () => {
     const root = nodeOps.createElement('div')
     render(h(Foo), root)
     expect(serializeInner(root)).toBe('bar')
+  })
+
+  // #7155 - force HMR on slots content update
+  test('force update slot content change', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-computed-parent'
+    const childId = 'test-force-computed-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      computed: {
+        slotContent() {
+          return this.$slots.default?.()
+        }
+      },
+      render: compileToFunction(`<component :is="() => slotContent" />`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child>1</Child>`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    rerender(parentId, compileToFunction(`<Child>2</Child>`))
+    expect(serializeInner(root)).toBe(`2`)
   })
 })

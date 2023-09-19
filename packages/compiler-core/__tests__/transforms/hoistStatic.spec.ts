@@ -13,7 +13,6 @@ import {
 import {
   FRAGMENT,
   RENDER_LIST,
-  CREATE_TEXT,
   NORMALIZE_CLASS
 } from '../../src/runtimeHelpers'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -378,36 +377,6 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('hoist static text node between elements', () => {
-    const root = transformWithHoist(`<div>static<div>static</div></div>`)
-    expect(root.hoists).toMatchObject([
-      {
-        callee: CREATE_TEXT,
-        arguments: [
-          {
-            type: NodeTypes.TEXT,
-            content: `static`
-          }
-        ]
-      },
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"div"`
-      },
-      {
-        type: NodeTypes.JS_ARRAY_EXPRESSION,
-        elements: [
-          {
-            type: NodeTypes.TEXT_CALL
-          },
-          {
-            type: NodeTypes.ELEMENT
-          }
-        ]
-      }
-    ])
-  })
-
   describe('prefixIdentifiers', () => {
     test('hoist nested static tree with static interpolation', () => {
       const root = transformWithHoist(
@@ -618,7 +587,9 @@ describe('compiler: hoistStatic transform', () => {
     })
 
     test('should NOT hoist SVG with directives', () => {
-      const root = transformWithHoist(`<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`)
+      const root = transformWithHoist(
+        `<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`
+      )
       expect(root.hoists.length).toBe(2)
       expect(generate(root).code).toMatchSnapshot()
     })

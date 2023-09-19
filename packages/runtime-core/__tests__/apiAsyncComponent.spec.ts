@@ -137,7 +137,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => (toggle.value ? h(Foo) : null)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -182,7 +182,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => (toggle.value ? h(Foo) : null)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -273,7 +273,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => (toggle.value ? h(Foo) : null)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
 
@@ -324,7 +324,8 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -358,7 +359,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
 
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
@@ -390,7 +391,7 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () => h(Foo)
     })
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
@@ -421,7 +422,8 @@ describe('api: defineAsyncComponent', () => {
     const app = createApp({
       render: () => h(Foo)
     })
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = vi.fn()
+    app.config.errorHandler = handler
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     await timeout(1)
@@ -512,7 +514,7 @@ describe('api: defineAsyncComponent', () => {
         })
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('loading')
 
@@ -549,7 +551,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -593,7 +595,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -633,7 +635,7 @@ describe('api: defineAsyncComponent', () => {
       render: () => h(Foo)
     })
 
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(root)
     expect(serializeInner(root)).toBe('<!---->')
     expect(loaderCallCount).toBe(1)
@@ -758,12 +760,12 @@ describe('api: defineAsyncComponent', () => {
     const updater = ref(0)
 
     const vnodeHooks = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(),
-      onVnodeUpdated: jest.fn(),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(),
+      onVnodeUpdated: vi.fn(),
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn()
     }
 
     const toggle = ref(true)
@@ -803,7 +805,7 @@ describe('api: defineAsyncComponent', () => {
   })
 
   test('with KeepAlive', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     let resolve: (comp: Component) => void
 
     const Foo = defineAsyncComponent(

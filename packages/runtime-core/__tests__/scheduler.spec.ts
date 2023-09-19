@@ -187,7 +187,7 @@ describe('scheduler', () => {
 
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
-      const spy = jest.fn()
+      const spy = vi.fn()
       const cb = () => spy()
       cb.pre = true
       queuePostFlushCb(() => {
@@ -515,7 +515,7 @@ describe('scheduler', () => {
 
   // #910
   test('should not run stopped reactive effects', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     // simulate parent component that toggles child
     const job1 = () => {
@@ -533,5 +533,29 @@ describe('scheduler', () => {
 
     // should not be called
     expect(spy).toHaveBeenCalledTimes(0)
+  })
+
+  it('flushPreFlushCbs inside a pre job', async () => {
+    const spy = vi.fn()
+    const job = () => {
+      spy()
+      flushPreFlushCbs()
+    }
+    job.pre = true
+    queueJob(job)
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('nextTick should return promise', async () => {
+    const fn = vi.fn(() => {
+      return 1
+    })
+
+    const p = nextTick(fn)
+
+    expect(p).toBeInstanceOf(Promise)
+    expect(await p).toBe(1)
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })
