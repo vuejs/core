@@ -1,0 +1,147 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineModel() > basic usage 1`] = `
+"import { useModel as _useModel } from 'vue'
+
+export default {
+  props: {
+    \\"modelValue\\": { required: true },
+    \\"count\\": {},
+  },
+  emits: [\\"update:modelValue\\", \\"update:count\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, \\"modelValue\\")
+      const c = _useModel(__props, \\"count\\")
+      
+return { modelValue, c }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ array props 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+
+export default {
+  props: _mergeModels(['foo', 'bar'], {
+    \\"count\\": {},
+  }),
+  emits: [\\"update:count\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      const count = _useModel(__props, \\"count\\")
+      
+return { count }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ defineProps and defineEmits 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
+
+export default {
+  props: _mergeModels({ foo: String }, {
+    \\"modelValue\\": { default: 0 },
+  }),
+  emits: _mergeModels(['change'], [\\"update:modelValue\\"]),
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+      const count = _useModel(__props, \\"modelValue\\")
+      
+return { count }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ local flag 1`] = `
+"import { useModel as _useModel } from 'vue'
+const local = true
+      
+export default {
+  props: {
+    \\"modelValue\\": { local: true, default: 1 },
+    \\"bar\\": { [key]: true },
+    \\"baz\\": { ...x },
+    \\"qux\\": x,
+    \\"foo2\\": { local: true, ...x },
+    \\"hoist\\": { local },
+  },
+  emits: [\\"update:modelValue\\", \\"update:bar\\", \\"update:baz\\", \\"update:qux\\", \\"update:foo2\\", \\"update:hoist\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const foo = _useModel(__props, \\"modelValue\\", { local: true })
+      const bar = _useModel(__props, \\"bar\\", { [key]: true })
+      const baz = _useModel(__props, \\"baz\\", { ...x })
+      const qux = _useModel(__props, \\"qux\\", x)
+
+      const foo2 = _useModel(__props, \\"foo2\\", { local: true })
+
+      const hoist = _useModel(__props, \\"hoist\\", { local })
+      
+return { foo, bar, baz, qux, foo2, local, hoist }
+}
+
+}"
+`;
+
+exports[`defineModel() > w/ types, basic usage 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    \\"modelValue\\": { type: [Boolean, String] },
+    \\"count\\": { type: Number },
+    \\"disabled\\": { type: Number, ...{ required: false } },
+    \\"any\\": { type: Boolean, skipCheck: true },
+  },
+  emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:disabled\\", \\"update:any\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, \\"modelValue\\")
+      const count = _useModel(__props, \\"count\\")
+      const disabled = _useModel(__props, \\"disabled\\")
+      const any = _useModel(__props, \\"any\\")
+      
+return { modelValue, count, disabled, any }
+}
+
+})"
+`;
+
+exports[`defineModel() > w/ types, production mode 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    \\"modelValue\\": { type: Boolean },
+    \\"fn\\": {},
+    \\"fnWithDefault\\": { type: Function, ...{ default: () => null } },
+    \\"str\\": {},
+    \\"optional\\": { required: false },
+  },
+  emits: [\\"update:modelValue\\", \\"update:fn\\", \\"update:fnWithDefault\\", \\"update:str\\", \\"update:optional\\"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel(__props, \\"modelValue\\")
+      const fn = _useModel(__props, \\"fn\\")
+      const fnWithDefault = _useModel(__props, \\"fnWithDefault\\")
+      const str = _useModel(__props, \\"str\\")
+      const optional = _useModel(__props, \\"optional\\")
+      
+return { modelValue, fn, fnWithDefault, str, optional }
+}
+
+})"
+`;

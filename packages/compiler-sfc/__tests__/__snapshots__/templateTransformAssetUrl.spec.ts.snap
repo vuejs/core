@@ -1,4 +1,4 @@
-// Vitest Snapshot v1
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler sfc: transform asset url > should allow for full base URLs, with paths 1`] = `
 "import { openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
