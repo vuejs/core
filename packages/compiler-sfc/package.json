@@ -45,16 +45,16 @@
   },
   "devDependencies": {
     "@babel/types": "^7.21.3",
-    "@types/estree": "^0.0.48",
-    "@types/lru-cache": "^5.1.0",
+    "@types/estree": "^0.0.52",
+    "@types/lru-cache": "^5.1.1",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
-    "minimatch": "^9.0.0",
+    "minimatch": "^9.0.3",
     "postcss-modules": "^4.0.0",
     "postcss-selector-parser": "^6.0.4",
-    "pug": "^3.0.1",
-    "sass": "^1.26.9"
+    "pug": "^3.0.2",
+    "sass": "^1.67.0"
   }
 }
