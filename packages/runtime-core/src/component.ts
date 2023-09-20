@@ -8,8 +8,7 @@ import {
   EffectScope,
   markRaw,
   track,
-  TrackOpTypes,
-  ReactiveEffect
+  TrackOpTypes
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -79,6 +78,7 @@ import {
 } from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
+import { RenderEffect } from './renderEffect'
 
 export type Data = Record<string, unknown>
 
@@ -240,7 +240,7 @@ export interface ComponentInternalInstance {
   /**
    * Render effect instance
    */
-  effect: ReactiveEffect
+  effect: RenderEffect
   /**
    * Bound effect runner to be passed to schedulers
    */

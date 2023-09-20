@@ -45,7 +45,7 @@ import {
   flushPreFlushCbs,
   SchedulerJob
 } from './scheduler'
-import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -72,6 +72,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { RenderEffect } from './renderEffect'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -1543,14 +1544,14 @@ function baseCreateRenderer(
       }
     }
 
-    // create reactive effect for rendering
-    const effect = (instance.effect = new ReactiveEffect(
+    // create render effect for rendering
+    const effect = (instance.effect = new RenderEffect(
       componentUpdateFn,
       () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
 
-    const update: SchedulerJob = (instance.update = () => effect.run())
+    const update: SchedulerJob = (instance.update = () => effect.update())
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates

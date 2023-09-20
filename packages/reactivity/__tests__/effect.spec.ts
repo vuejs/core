@@ -990,44 +990,5 @@ describe('reactivity/effect', () => {
       expect(fnSpy).toHaveBeenCalledTimes(3)
       expect(has).toBe(false)
     })
-
-    test('pause execution of side effect functions', () => {
-      const obj = reactive({ foo: 1 })
-      const fnSpy = vi.fn(() => obj.foo)
-
-      const runner = effect(fnSpy)
-
-      expect(fnSpy).toHaveBeenCalledTimes(1)
-      obj.foo++
-      expect(fnSpy).toHaveBeenCalledTimes(2)
-
-      runner.effect.pause()
-      obj.foo++
-      expect(fnSpy).toHaveBeenCalledTimes(2)
-
-      runner.effect.resume()
-
-      obj.foo++
-      expect(fnSpy).toHaveBeenCalledTimes(3)
-    })
-
-    test('immediately execute the calls during the pause when resuming', () => {
-      const obj = reactive({ bar: 1 })
-      const fnSpy = vi.fn(() => obj.bar)
-
-      const runner = effect(fnSpy)
-
-      expect(fnSpy).toHaveBeenCalledTimes(1)
-      obj.bar++
-      expect(fnSpy).toHaveBeenCalledTimes(2)
-
-      runner.effect.pause()
-      obj.bar++
-      expect(fnSpy).toHaveBeenCalledTimes(2)
-
-      runner.effect.resume(true)
-
-      expect(fnSpy).toHaveBeenCalledTimes(3)
-    })
   })
 })

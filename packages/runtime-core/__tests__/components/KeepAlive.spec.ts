@@ -977,4 +977,49 @@ describe('KeepAlive', () => {
     expect(mountedB).toHaveBeenCalledTimes(1)
     expect(unmountedB).toHaveBeenCalledTimes(0)
   })
+
+  test('should resume/pause update in activated/deactivated', async () => {
+    const renderA = vi.fn(() => 'A')
+    const msg = ref('hello')
+    const A = {
+      render: () => h('div', [renderA(), msg.value])
+    }
+    const B = {
+      render: () => 'B'
+    }
+
+    const current = shallowRef(A)
+    const app = createApp({
+      setup() {
+        return () => {
+          return [h(KeepAlive, h(current.value))]
+        }
+      }
+    })
+
+    app.mount(root)
+
+    expect(serializeInner(root)).toBe(`<div>Ahello</div>`)
+    expect(renderA).toHaveBeenCalledTimes(1)
+    msg.value = 'world'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>Aworld</div>`)
+    expect(renderA).toHaveBeenCalledTimes(2)
+
+    // @ts-expect-error
+    current.value = B
+    await nextTick()
+    expect(serializeInner(root)).toBe(`B`)
+    expect(renderA).toHaveBeenCalledTimes(2)
+
+    msg.value = 'hello world'
+    await nextTick()
+    expect(serializeInner(root)).toBe(`B`)
+    expect(renderA).toHaveBeenCalledTimes(2)
+
+    current.value = A
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>Ahello world</div>`)
+    expect(renderA).toHaveBeenCalledTimes(3)
+  })
 })
