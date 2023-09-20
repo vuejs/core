@@ -56,8 +56,8 @@
     "node": ">=16.14.0"
   },
   "devDependencies": {
-    "@babel/parser": "^7.21.3",
-    "@babel/types": "^7.21.3",
+    "@babel/parser": "^7.22.16",
+    "@babel/types": "^7.22.19",
     "@rollup/plugin-alias": "^5.0.0",
     "@rollup/plugin-commonjs": "^25.0.4",
     "@rollup/plugin-json": "^6.0.0",
@@ -81,7 +81,7 @@
     "jsdom": "^22.1.0",
     "lint-staged": "^14.0.1",
     "lodash": "^4.17.21",
-    "magic-string": "^0.30.0",
+    "magic-string": "^0.30.3",
     "markdown-table": "^3.0.3",
     "marked": "^4.3.0",
     "minimist": "^1.2.8",
