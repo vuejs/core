@@ -98,11 +98,13 @@ export class ReactiveEffect<T = any> {
   }
 
   resume(runOnResume = false) {
-    this.isPaused = false
-    if (runOnResume && this.isCalled) {
-      this.run()
+    if (this.isPaused) {
+      this.isPaused = false
+      if (runOnResume && this.isCalled) {
+        this.run()
+      }
+      this.isCalled = false
     }
-    this.isCalled = false
   }
 
   run() {
