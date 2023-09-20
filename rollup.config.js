@@ -273,13 +273,6 @@ function createConfig(format, output, plugins = []) {
     return nodePlugins
   }
 
-  /** @satisfies {import('esbuild').TsconfigRaw} */
-  const tsconfigRaw = {
-    compilerOptions: {
-      useDefineForClassFields: false
-    }
-  }
-
   return {
     input: resolve(entryFile),
     // Global and Browser ESM builds inlines everything so that they can be
@@ -299,9 +292,7 @@ function createConfig(format, output, plugins = []) {
         sourceMap: output.sourcemap,
         minify: false,
         target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
-        define: resolveDefine(),
-        // @ts-expect-error
-        tsconfigRaw
+        define: resolveDefine()
       }),
       ...resolveNodePlugins(),
       ...plugins
