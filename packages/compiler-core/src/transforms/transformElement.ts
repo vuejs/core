@@ -597,6 +597,7 @@ export function buildProps(
       }
 
       if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
+        hasRef = true
         properties.push(
           createObjectProperty(
             createSimpleExpression('ref_for', true),
