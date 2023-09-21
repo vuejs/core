@@ -5,9 +5,6 @@ on:
     - cron: 0 1 * * MON
   workflow_dispatch:
 
-env:
-  NODE_VERSION: lts/* # use the latest LTS release
-
 jobs:
   canary:
     # prevents this action from running on forks
@@ -20,10 +17,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to LTS
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 
