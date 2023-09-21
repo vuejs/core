@@ -12,7 +12,16 @@ import { fileURLToPath } from 'node:url'
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2))
+const args = minimist(process.argv.slice(2), {
+  alias: {
+    skipBuild: 'skip-build',
+    skipTests: 'skip-tests',
+    skipGit: 'skip-git',
+    skipPrompts: 'skip-prompts',
+    distTag: 'dist-tag'
+  }
+})
+
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 let skipTests = args.skipTests
