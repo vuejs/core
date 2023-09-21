@@ -220,9 +220,6 @@ importers:
       '@types/estree':
         specifier: ^0.0.52
         version: 0.0.52
-      '@types/lru-cache':
-        specifier: ^5.1.1
-        version: 5.1.1
       '@vue/consolidate':
         specifier: ^0.17.3
         version: 0.17.3
@@ -1560,10 +1557,6 @@ packages:
 
   /@types/json-schema@7.0.11:
     resolution: {integrity: sha512-wOuvG1SN4Us4rez+tylwwwCV1psiNVOkJeM3AUWUNWg/jDQY2+HE/444y5gc+jBmRqASOm2Oeh5c1axHobwRKQ==}
-    dev: true
-
-  /@types/lru-cache@5.1.1:
-    resolution: {integrity: sha512-ssE3Vlrys7sdIzs5LOxCzTVMsU7i9oa/IaW92wF32JFb3CVczqOkru2xspuKczHEbG3nvmPY7IFqVmGGHdNbYw==}
     dev: true
 
   /@types/node@16.18.52:
