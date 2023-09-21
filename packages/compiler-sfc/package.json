@@ -32,29 +32,29 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.20.15",
+    "@babel/parser": "^7.22.16",
     "@vue/compiler-core": "3.3.4",
     "@vue/compiler-dom": "3.3.4",
     "@vue/compiler-ssr": "3.3.4",
     "@vue/reactivity-transform": "3.3.4",
     "@vue/shared": "3.3.4",
     "estree-walker": "^2.0.2",
-    "magic-string": "^0.30.0",
-    "postcss": "^8.1.10",
+    "magic-string": "^0.30.3",
+    "postcss": "^8.4.30",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.21.3",
-    "@types/estree": "^0.0.48",
-    "@types/lru-cache": "^5.1.0",
+    "@babel/types": "^7.22.19",
+    "@types/estree": "^0.0.52",
+    "@types/lru-cache": "^5.1.1",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^5.1.1",
     "merge-source-map": "^1.1.0",
-    "minimatch": "^9.0.0",
-    "postcss-modules": "^4.0.0",
-    "postcss-selector-parser": "^6.0.4",
-    "pug": "^3.0.1",
-    "sass": "^1.26.9"
+    "minimatch": "^9.0.3",
+    "postcss-modules": "^4.3.1",
+    "postcss-selector-parser": "^6.0.13",
+    "pug": "^3.0.2",
+    "sass": "^1.67.0"
   }
 }
