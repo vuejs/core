@@ -7,9 +7,13 @@ export const ignoreSideEffectTags: NodeTransform = (node, context) => {
     node.tagType === ElementTypes.ELEMENT &&
     (node.tag === 'script' || node.tag === 'style')
   ) {
-    context.onError(
-      createDOMCompilerError(DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG, node.loc)
-    )
+    __DEV__ &&
+      context.onError(
+        createDOMCompilerError(
+          DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG,
+          node.loc
+        )
+      )
     context.removeNode()
   }
 }

@@ -2,7 +2,7 @@ import {
   h,
   render,
   nodeOps,
-  NodeTypes,
+  TestNodeTypes,
   TestElement,
   TestText,
   ref,
@@ -32,12 +32,12 @@ describe('test renderer', () => {
     expect(root.children.length).toBe(1)
 
     const el = root.children[0] as TestElement
-    expect(el.type).toBe(NodeTypes.ELEMENT)
+    expect(el.type).toBe(TestNodeTypes.ELEMENT)
     expect(el.props.id).toBe('test')
     expect(el.children.length).toBe(1)
 
     const text = el.children[0] as TestText
-    expect(text.type).toBe(NodeTypes.TEXT)
+    expect(text.type).toBe(TestNodeTypes.TEXT)
     expect(text.text).toBe('hello')
   })
 
@@ -68,7 +68,7 @@ describe('test renderer', () => {
 
     expect(ops[0]).toEqual({
       type: NodeOpTypes.CREATE,
-      nodeType: NodeTypes.ELEMENT,
+      nodeType: TestNodeTypes.ELEMENT,
       tag: 'div',
       targetNode: root.children[0]
     })

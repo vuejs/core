@@ -9,7 +9,7 @@ import {
   createAssetUrlTransformWithOptions,
   AssetURLOptions,
   normalizeOptions
-} from '../src/templateTransformAssetUrl'
+} from '../src/template/transformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'

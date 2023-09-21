@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { decodeHtmlBrowser } from '../src/decodeHtmlBrowser'
 
 describe('decodeHtmlBrowser', () => {

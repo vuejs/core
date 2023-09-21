@@ -45,7 +45,14 @@ export type Props = Record<string, unknown>
 export type SSRContext = {
   [key: string]: any
   teleports?: Record<string, string>
+  /**
+   * @internal
+   */
   __teleportBuffers?: Record<string, SSRBuffer>
+  /**
+   * @internal
+   */
+  __watcherHandles?: (() => void)[]
 }
 
 // Each component has a buffer array.
@@ -174,18 +181,21 @@ function renderComponentSubTree(
 
       // set current rendering instance for asset resolution
       const prev = setCurrentRenderingInstance(instance)
-      ssrRender(
-        instance.proxy,
-        push,
-        instance,
-        attrs,
-        // compiler-optimized bindings
-        instance.props,
-        instance.setupState,
-        instance.data,
-        instance.ctx
-      )
-      setCurrentRenderingInstance(prev)
+      try {
+        ssrRender(
+          instance.proxy,
+          push,
+          instance,
+          attrs,
+          // compiler-optimized bindings
+          instance.props,
+          instance.setupState,
+          instance.data,
+          instance.ctx
+        )
+      } finally {
+        setCurrentRenderingInstance(prev)
+      }
     } else if (instance.render && instance.render !== NOOP) {
       renderVNode(
         push,

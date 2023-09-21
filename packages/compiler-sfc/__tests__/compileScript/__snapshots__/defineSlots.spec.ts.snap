@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineSlots() > basic usage 1`] = `
+"import { useSlots as _useSlots, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const slots = _useSlots()
+      
+return { slots }
+}
+
+})"
+`;
+
+exports[`defineSlots() > w/o generic params 1`] = `
+"import { useSlots as _useSlots } from 'vue'
+
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const slots = _useSlots()
+      
+return { slots }
+}
+
+}"
+`;
+
+exports[`defineSlots() > w/o return value 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return {  }
+}
+
+})"
+`;

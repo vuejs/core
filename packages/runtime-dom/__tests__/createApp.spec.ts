@@ -10,7 +10,7 @@ describe('createApp for dom', () => {
       }
     }).mount(root)
     expect(root.children.length).toBe(1)
-    expect(root.children[0] instanceof SVGElement).toBe(true)
+    expect(root.children[0]).toBeInstanceOf(SVGElement)
   })
 
   // #4398
@@ -23,7 +23,7 @@ describe('createApp for dom', () => {
       }
     }
 
-    const handler = jest.fn(msg => {
+    const handler = vi.fn(msg => {
       expect(msg).toMatch(`Component is missing template or render function`)
     })
 

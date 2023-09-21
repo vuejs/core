@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import {
   createApp,
   h,
@@ -20,7 +16,8 @@ import {
   resolveDynamicComponent,
   renderSlot,
   onErrorCaptured,
-  onServerPrefetch
+  onServerPrefetch,
+  getCurrentInstance
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -779,6 +776,67 @@ function testRender(type: string, render: typeof renderToString) {
         ).toHaveBeenWarned()
         expect(`Element is missing end tag`).toHaveBeenWarned()
       })
+
+      // #6110
+      test('reset current instance after rendering error', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                return { msg: null }
+              },
+              template: `<div>{{ msg.text }}</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(prev)
+      })
+
+      // #7733
+      test('reset current instance after error in data', async () => {
+        const prev = getCurrentInstance()
+        expect(prev).toBe(null)
+        try {
+          await render(
+            createApp({
+              data() {
+                throw new Error()
+              },
+              template: `<div>hello</div>`
+            })
+          )
+        } catch {}
+        expect(getCurrentInstance()).toBe(null)
+      })
+    })
+
+    // #7733
+    test('reset current instance after error in errorCaptured', async () => {
+      const prev = getCurrentInstance()
+
+      expect(prev).toBe(null)
+
+      const Child = {
+        created() {
+          throw new Error()
+        }
+      }
+      try {
+        await render(
+          createApp({
+            errorCaptured() {
+              throw new Error()
+            },
+            render: () => h(Child)
+          })
+        )
+      } catch {}
+      expect(
+        'Unhandled error during execution of errorCaptured hook'
+      ).toHaveBeenWarned()
+      expect(getCurrentInstance()).toBe(null)
     })
 
     test('serverPrefetch', async () => {
@@ -802,8 +860,8 @@ function testRender(type: string, render: typeof renderToString) {
 
     // #2763
     test('error handling w/ async setup', async () => {
-      const fn = jest.fn()
-      const fn2 = jest.fn()
+      const fn = vi.fn()
+      const fn2 = vi.fn()
 
       const asyncChildren = defineComponent({
         async setup() {
@@ -930,8 +988,8 @@ function testRender(type: string, render: typeof renderToString) {
     })
 
     test('onServerPrefetch are run in parallel', async () => {
-      const first = jest.fn(() => Promise.resolve())
-      const second = jest.fn(() => Promise.resolve())
+      const first = vi.fn(() => Promise.resolve())
+      const second = vi.fn(() => Promise.resolve())
       let checkOther = [false, false]
       let done = [false, false]
       const app = createApp({

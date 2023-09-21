@@ -28,7 +28,8 @@ import {
   normalizeStyle,
   stringifyStyle,
   makeMap,
-  isKnownSvgAttr
+  isKnownSvgAttr,
+  isBooleanAttr
 } from '@vue/shared'
 import { DOMNamespaces } from '../parserOptions'
 
@@ -298,6 +299,13 @@ function stringifyElement(
           }="__VUE_EXP_START__${exp.content}__VUE_EXP_END__"`
           continue
         }
+        // #6568
+        if (
+          isBooleanAttr((p.arg as SimpleExpressionNode).content) &&
+          exp.content === 'false'
+        ) {
+          continue
+        }
         // constant v-bind, e.g. :foo="1"
         let evaluated = evaluateConstant(exp)
         if (evaluated != null) {
@@ -348,7 +356,7 @@ function stringifyElement(
 // (see compiler-core/src/transforms/transformExpression)
 function evaluateConstant(exp: ExpressionNode): string {
   if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    return new Function(`return ${exp.content}`)()
+    return new Function(`return (${exp.content})`)()
   } else {
     // compound
     let res = ``

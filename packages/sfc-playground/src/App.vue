@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore } from '@vue/repl'
-import { ref, watchEffect } from 'vue'
+import { Repl, ReplStore, SFCOptions } from '@vue/repl'
+import Monaco from '@vue/repl/monaco-editor'
+import { ref, watchEffect, onMounted } from 'vue'
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -33,10 +34,18 @@ const store = new ReplStore({
 })
 
 // enable experimental features
-const sfcOptions = {
+const sfcOptions: SFCOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
-    reactivityTransform: true
+    isProd: !useDevMode.value,
+    reactivityTransform: true,
+    defineModel: true
+  },
+  style: {
+    isProd: !useDevMode.value
+  },
+  template: {
+    isProd: !useDevMode.value
   }
 }
 
@@ -51,7 +60,11 @@ watchEffect(() => {
 
 function toggleDevMode() {
   const dev = (useDevMode.value = !useDevMode.value)
-  sfcOptions.script.inlineTemplate = !dev
+  sfcOptions.script!.inlineTemplate =
+    sfcOptions.script!.isProd =
+    sfcOptions.template!.isProd =
+    sfcOptions.style!.isProd =
+      !dev
   store.setFiles(store.getFiles())
 }
 
@@ -59,6 +72,15 @@ function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
   store.setFiles(store.getFiles())
 }
+
+const theme = ref<'dark' | 'light'>('dark')
+function toggleTheme(isDark: boolean) {
+  theme.value = isDark ? 'dark' : 'light'
+}
+onMounted(() => {
+  const cls = document.documentElement.classList
+  toggleTheme(cls.contains('dark'))
+})
 </script>
 
 <template>
@@ -66,10 +88,13 @@ function toggleSSR() {
     :store="store"
     :dev="useDevMode"
     :ssr="useSSRMode"
+    @toggle-theme="toggleTheme"
     @toggle-dev="toggleDevMode"
     @toggle-ssr="toggleSSR"
   />
   <Repl
+    :theme="theme"
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
@@ -96,7 +121,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height));
+  height: calc(var(--vh) - var(--nav-height)) !important;
 }
 
 button {

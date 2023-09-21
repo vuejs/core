@@ -207,8 +207,8 @@ export const deprecationData: Record<DeprecationTypes, DeprecationData> = {
   [DeprecationTypes.INSTANCE_EVENT_HOOKS]: {
     message: event =>
       `"${event}" lifecycle events are no longer supported. From templates, ` +
-      `use the "vnode" prefix instead of "hook:". For example, @${event} ` +
-      `should be changed to @vnode-${event.slice(5)}. ` +
+      `use the "vue:" prefix instead of "hook:". For example, @${event} ` +
+      `should be changed to @vue:${event.slice(5)}. ` +
       `From JavaScript, use Composition API to dynamically register lifecycle ` +
       `hooks.`,
     link: `https://v3-migration.vuejs.org/breaking-changes/vnode-lifecycle-events.html`

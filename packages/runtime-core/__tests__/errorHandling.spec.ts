@@ -15,7 +15,7 @@ import {
 describe('error handling', () => {
   test('propagation', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -53,7 +53,7 @@ describe('error handling', () => {
 
   test('propagation stoppage', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -91,7 +91,7 @@ describe('error handling', () => {
 
   test('async error handling', async () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -121,7 +121,7 @@ describe('error handling', () => {
   test('error thrown in onErrorCaptured', () => {
     const err = new Error('foo')
     const err2 = new Error('bar')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -159,7 +159,7 @@ describe('error handling', () => {
 
   test('setup function', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -186,7 +186,7 @@ describe('error handling', () => {
   // the options API initialization process instead of by the renderer.
   test('in created/beforeCreate hook', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -219,7 +219,7 @@ describe('error handling', () => {
 
   test('in render function', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -248,7 +248,7 @@ describe('error handling', () => {
     const ref = () => {
       throw err
     }
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -268,7 +268,7 @@ describe('error handling', () => {
 
   test('in effect', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -295,7 +295,7 @@ describe('error handling', () => {
 
   test('in watch getter', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -325,7 +325,7 @@ describe('error handling', () => {
 
   test('in watch callback', async () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -360,7 +360,7 @@ describe('error handling', () => {
   test('in effect cleanup', async () => {
     const err = new Error('foo')
     const count = ref(0)
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -393,7 +393,7 @@ describe('error handling', () => {
 
   test('in component event handler via emit', () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -423,7 +423,7 @@ describe('error handling', () => {
 
   test('in component event handler via emit (async)', async () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -455,7 +455,7 @@ describe('error handling', () => {
 
   test('in component event handler via emit (async + array)', async () => {
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const res: Promise<any>[] = []
     const createAsyncHandler = (p: Promise<any>) => () => {
@@ -497,13 +497,13 @@ describe('error handling', () => {
   })
 
   it('should warn unhandled', () => {
-    const groupCollapsed = jest.spyOn(console, 'groupCollapsed')
+    const groupCollapsed = vi.spyOn(console, 'groupCollapsed')
     groupCollapsed.mockImplementation(() => {})
-    const log = jest.spyOn(console, 'log')
+    const log = vi.spyOn(console, 'log')
     log.mockImplementation(() => {})
 
     const err = new Error('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = {
       setup() {
@@ -543,7 +543,7 @@ describe('error handling', () => {
     const error2 = new Error('error2')
     const error3 = new Error('error3')
     const error4 = new Error('error4')
-    const handler = jest.fn()
+    const handler = vi.fn()
 
     const app = createApp({
       setup() {

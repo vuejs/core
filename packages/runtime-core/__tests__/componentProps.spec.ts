@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import {
   ComponentInternalInstance,
   getCurrentInstance,
@@ -163,8 +167,8 @@ describe('component props', () => {
 
   test('default value', () => {
     let proxy: any
-    const defaultFn = jest.fn(() => ({ a: 1 }))
-    const defaultBaz = jest.fn(() => ({ b: 1 }))
+    const defaultFn = vi.fn(() => ({ a: 1 }))
+    const defaultBaz = vi.fn(() => ({ b: 1 }))
 
     const Comp = {
       props: {
@@ -319,6 +323,62 @@ describe('component props', () => {
     expect(`Missing required prop: "bool"`).toHaveBeenWarned()
     expect(`Missing required prop: "str"`).toHaveBeenWarned()
     expect(`Missing required prop: "num"`).toHaveBeenWarned()
+  })
+
+  test('warn on type mismatch', () => {
+    class MyClass {}
+    const Comp = {
+      props: {
+        bool: { type: Boolean },
+        str: { type: String },
+        num: { type: Number },
+        arr: { type: Array },
+        obj: { type: Object },
+        cls: { type: MyClass },
+        fn: { type: Function },
+        skipCheck: { type: [Boolean, Function], skipCheck: true }
+      },
+      setup() {
+        return () => null
+      }
+    }
+    render(
+      h(Comp, {
+        bool: 'true',
+        str: 100,
+        num: '100',
+        arr: {},
+        obj: 'false',
+        cls: {},
+        fn: true,
+        skipCheck: 'foo'
+      }),
+      nodeOps.createElement('div')
+    )
+    expect(
+      `Invalid prop: type check failed for prop "bool". Expected Boolean, got String`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "arr". Expected Array, got Object`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "obj". Expected Object, got String with value "false"`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "fn". Expected Function, got Boolean with value true.`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`
+    ).not.toHaveBeenWarned()
   })
 
   // #3495
@@ -485,7 +545,7 @@ describe('component props', () => {
   // #3288
   test('declared prop key should be present even if not passed', async () => {
     let initialKeys: string[] = []
-    const changeSpy = jest.fn()
+    const changeSpy = vi.fn()
     const passFoo = ref(false)
 
     const Comp = {
@@ -594,5 +654,24 @@ describe('component props', () => {
     expect(serializeInner(root)).toBe(
       JSON.stringify(attrs) + Object.keys(attrs)
     )
+  })
+
+  // #691ef
+  test('should not mutate original props long-form definition object', () => {
+    const props = {
+      msg: {
+        type: String
+      }
+    }
+    const Comp = defineComponent({
+      props,
+      render() {}
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(Object.keys(props.msg).length).toBe(1)
   })
 })

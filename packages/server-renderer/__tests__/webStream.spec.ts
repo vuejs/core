@@ -1,12 +1,9 @@
-/**
- * @jest-environment node
- */
-
 import { createApp, h, defineAsyncComponent } from 'vue'
 import { ReadableStream, TransformStream } from 'stream/web'
 import { pipeToWebWritable, renderToWebStream } from '../src'
 
 beforeEach(() => {
+  // @ts-ignore
   global.ReadableStream = ReadableStream
 })
 

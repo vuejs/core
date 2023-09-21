@@ -3,7 +3,7 @@ import {
   h,
   render,
   nodeOps,
-  NodeTypes,
+  TestNodeTypes,
   TestElement,
   serialize,
   serializeInner
@@ -487,7 +487,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
 
@@ -495,7 +495,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
   })
@@ -505,7 +505,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
 
@@ -513,7 +513,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text2'
     })
   })

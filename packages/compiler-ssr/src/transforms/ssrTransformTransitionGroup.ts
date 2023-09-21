@@ -33,8 +33,8 @@ export function ssrTransformTransitionGroup(
         node,
         context,
         otherProps,
-        true, /* isComponent */
-        false, /* isDynamicComponent */
+        true /* isComponent */,
+        false /* isDynamicComponent */,
         true /* ssr (skip event listeners) */
       )
       let propsExp = null

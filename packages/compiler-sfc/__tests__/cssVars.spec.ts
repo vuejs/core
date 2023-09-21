@@ -12,7 +12,7 @@ describe('CSS vars injection', () => {
     )
     expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-color": (_ctx.color),
-  "${mockId}-font_size": (_ctx.font.size)
+  "${mockId}-font\\.size": (_ctx.font.size)
 })`)
     assertCode(content)
   })
@@ -79,6 +79,10 @@ describe('CSS vars injection', () => {
       source: `.foo {
         color: v-bind(color);
         font-size: v-bind('font.size');
+
+        font-weight: v-bind(_φ);
+        font-size: v-bind(1-字号);
+        font-family: v-bind(フォント);
       }`,
       filename: 'test.css',
       id: 'data-v-test'
@@ -86,7 +90,11 @@ describe('CSS vars injection', () => {
     expect(code).toMatchInlineSnapshot(`
       ".foo {
               color: var(--test-color);
-              font-size: var(--test-font_size);
+              font-size: var(--test-font\\\\.size);
+
+              font-weight: var(--test-_φ);
+              font-size: var(--test-1-字号);
+              font-family: var(--test-フォント);
       }"
     `)
   })
@@ -225,10 +233,10 @@ describe('CSS vars injection', () => {
       )
       expect(content).toMatch(`_useCssVars(_ctx => ({
   "${mockId}-foo": (_unref(foo)),
-  "${mockId}-foo____px_": (_unref(foo) + 'px'),
-  "${mockId}-_a___b____2____px_": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  "${mockId}-__a___b______2___a_": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
-})`)
+  "${mockId}-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
+  "${mockId}-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
+  "${mockId}-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
+}))`)
       assertCode(content)
     })
 
@@ -246,6 +254,23 @@ describe('CSS vars injection', () => {
         </style>`
       )
       expect(cssVars).toMatchObject([`count.toString(`, `xxx`])
+    })
+
+    // #7759
+    test('It should correctly parse the case where there is no space after the script tag', () => {
+      const { content } = compileSFCScript(
+        `<script setup>import { ref as _ref } from 'vue';
+                let background = _ref('red')
+             </script>
+             <style>
+             label {
+               background: v-bind(background);
+             }
+             </style>`
+      )
+      expect(content).toMatch(
+        `export default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
+      )
     })
   })
 })

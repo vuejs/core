@@ -43,11 +43,11 @@ describe('KeepAlive', () => {
       render(this: any) {
         return h('div', this.msg)
       },
-      created: jest.fn(),
-      mounted: jest.fn(),
-      activated: jest.fn(),
-      deactivated: jest.fn(),
-      unmounted: jest.fn()
+      created: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn()
     }
     two = {
       name: 'two',
@@ -55,11 +55,11 @@ describe('KeepAlive', () => {
       render(this: any) {
         return h('div', this.msg)
       },
-      created: jest.fn(),
-      mounted: jest.fn(),
-      activated: jest.fn(),
-      deactivated: jest.fn(),
-      unmounted: jest.fn()
+      created: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn()
     }
     views = {
       one,
@@ -225,7 +225,7 @@ describe('KeepAlive', () => {
       render(this: any) {
         return h('div', this.msg)
       },
-      activated: jest.fn()
+      activated: vi.fn()
     }
     const one = {
       name: 'one',
@@ -399,18 +399,18 @@ describe('KeepAlive', () => {
     })
 
     test('max', async () => {
-      const spyAC = jest.fn()
-      const spyBC = jest.fn()
-      const spyCC = jest.fn()
-      const spyAA = jest.fn()
-      const spyBA = jest.fn()
-      const spyCA = jest.fn()
-      const spyADA = jest.fn()
-      const spyBDA = jest.fn()
-      const spyCDA = jest.fn()
-      const spyAUM = jest.fn()
-      const spyBUM = jest.fn()
-      const spyCUM = jest.fn()
+      const spyAC = vi.fn()
+      const spyBC = vi.fn()
+      const spyCC = vi.fn()
+      const spyAA = vi.fn()
+      const spyBA = vi.fn()
+      const spyCA = vi.fn()
+      const spyADA = vi.fn()
+      const spyBDA = vi.fn()
+      const spyCDA = vi.fn()
+      const spyAUM = vi.fn()
+      const spyBUM = vi.fn()
+      const spyCUM = vi.fn()
 
       function assertCount(calls: number[]) {
         expect([
@@ -609,13 +609,13 @@ describe('KeepAlive', () => {
     async function assertAnonymous(include: boolean) {
       const one = {
         name: 'one',
-        created: jest.fn(),
+        created: vi.fn(),
         render: () => 'one'
       }
 
       const two = {
         // anonymous
-        created: jest.fn(),
+        created: vi.fn(),
         render: () => 'two'
       }
 
@@ -670,7 +670,7 @@ describe('KeepAlive', () => {
     test('should not destroy active instance when pruning cache', async () => {
       const Foo = {
         render: () => 'foo',
-        unmounted: jest.fn()
+        unmounted: vi.fn()
       }
       const includeRef = ref(['foo'])
       const App = {
@@ -735,8 +735,8 @@ describe('KeepAlive', () => {
       }
     })
 
-    const spyMounted = jest.fn()
-    const spyUnmounted = jest.fn()
+    const spyMounted = vi.fn()
+    const spyUnmounted = vi.fn()
 
     const RouterView = defineComponent({
       setup(_, { slots }) {
@@ -885,7 +885,7 @@ describe('KeepAlive', () => {
   // #4976
   test('handle error in async onActivated', async () => {
     const err = new Error('foo')
-    const handler = jest.fn()
+    const handler = vi.fn()
 
     const app = createApp({
       setup() {
@@ -911,12 +911,12 @@ describe('KeepAlive', () => {
 
   // #3648
   test('should avoid unmount later included components', async () => {
-    const unmountedA = jest.fn()
-    const mountedA = jest.fn()
-    const activatedA = jest.fn()
-    const deactivatedA = jest.fn()
-    const unmountedB = jest.fn()
-    const mountedB = jest.fn()
+    const unmountedA = vi.fn()
+    const mountedA = vi.fn()
+    const activatedA = vi.fn()
+    const deactivatedA = vi.fn()
+    const unmountedB = vi.fn()
+    const mountedB = vi.fn()
 
     const A = {
       name: 'A',

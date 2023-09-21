@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: hoistStatic transform hoist element with static key 1`] = `
+exports[`compiler: hoistStatic transform > hoist element with static key 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -18,7 +18,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist nested static tree 1`] = `
+exports[`compiler: hoistStatic transform > hoist nested static tree 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -39,7 +39,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist nested static tree with comments 1`] = `
+exports[`compiler: hoistStatic transform > hoist nested static tree with comments 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
 
@@ -59,7 +59,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist siblings with common non-hoistable parent 1`] = `
+exports[`compiler: hoistStatic transform > hoist siblings with common non-hoistable parent 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -79,7 +79,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist simple element 1`] = `
+exports[`compiler: hoistStatic transform > hoist simple element 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -97,7 +97,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist static props for elements with directives 1`] = `
+exports[`compiler: hoistStatic transform > hoist static props for elements with directives 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -118,7 +118,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist static props for elements with dynamic text children 1`] = `
+exports[`compiler: hoistStatic transform > hoist static props for elements with dynamic text children 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -135,7 +135,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform hoist static props for elements with unhoistable children 1`] = `
+exports[`compiler: hoistStatic transform > hoist static props for elements with unhoistable children 1`] = `
 "const _Vue = Vue
 const { createVNode: _createVNode, createElementVNode: _createElementVNode } = _Vue
 
@@ -156,7 +156,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers hoist class with static object value 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist class with static object value 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -175,7 +175,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static interpolation 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist nested static tree with static interpolation 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -193,7 +193,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers hoist nested static tree with static prop value 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > hoist nested static tree with static prop value 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -211,7 +211,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist SVG with directives 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist SVG with directives 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -235,7 +235,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers + other bindings 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist elements with cached handlers + other bindings 1`] = `
 "import { normalizeClass as _normalizeClass, createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -250,7 +250,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist elements with cached handlers 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist elements with cached handlers 1`] = `
 "import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -264,7 +264,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (2) 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist expressions that refer scope variables (2) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -282,7 +282,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables (v-slot) 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist expressions that refer scope variables (v-slot) 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -301,7 +301,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist expressions that refer scope variables 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist expressions that refer scope variables 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -319,7 +319,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform prefixIdentifiers should NOT hoist keyed template v-for with plain element child 1`] = `
+exports[`compiler: hoistStatic transform > prefixIdentifiers > should NOT hoist keyed template v-for with plain element child 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -335,7 +335,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist components 1`] = `
+exports[`compiler: hoistStatic transform > should NOT hoist components 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -351,7 +351,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist element with dynamic key 1`] = `
+exports[`compiler: hoistStatic transform > should NOT hoist element with dynamic key 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -365,7 +365,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist element with dynamic props (but hoist the props list) 1`] = `
+exports[`compiler: hoistStatic transform > should NOT hoist element with dynamic props (but hoist the props list) 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -382,7 +382,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist element with dynamic ref 1`] = `
+exports[`compiler: hoistStatic transform > should NOT hoist element with dynamic ref 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -396,7 +396,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should NOT hoist root node 1`] = `
+exports[`compiler: hoistStatic transform > should NOT hoist root node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -408,7 +408,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should hoist v-for children if static 1`] = `
+exports[`compiler: hoistStatic transform > should hoist v-for children if static 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode } = _Vue
 
@@ -431,7 +431,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: hoistStatic transform should hoist v-if props/children if static 1`] = `
+exports[`compiler: hoistStatic transform > should hoist v-if props/children if static 1`] = `
 "const _Vue = Vue
 const { createElementVNode: _createElementVNode, createCommentVNode: _createCommentVNode } = _Vue
 

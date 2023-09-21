@@ -9,12 +9,13 @@ import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   NOOP,
   extend,
   isString,
   isFunction,
-  UnionToIntersection
+  UnionToIntersection,
+  Prettify
 } from '@vue/shared'
 import {
   toRaw,
@@ -34,10 +35,12 @@ import {
   OptionTypesKeys,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride
+  MergedComponentOptionsOverride,
+  InjectToObject,
+  ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
-import { Slots } from './componentSlots'
+import { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -86,7 +89,10 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
-  infer Defaults
+  infer Defaults,
+  any,
+  any,
+  any
 >
   ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
       IntersectionMixin<Mixin> &
@@ -98,11 +104,11 @@ type ExtractMixin<T> = {
   Mixin: MixinToOptionTypes<T>
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
-type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}>
+export type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
+  ? OptionTypesType
   : UnionToIntersection<ExtractMixin<T>>
 
-type UnwrapMixinsType<
+export type UnwrapMixinsType<
   T,
   Type extends OptionTypesKeys
 > = T extends OptionTypesType ? T[Type] : never
@@ -141,6 +147,8 @@ export type CreateComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -161,7 +169,23 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
+  I,
+  S
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -176,16 +200,20 @@ export type ComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-    : P & PublicProps
+  $props: Prettify<
+    MakeDefaultsOptional extends true
+      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
+      : P & PublicProps
+  >
   $attrs: Data
   $refs: Data
-  $slots: Slots
+  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
@@ -193,9 +221,11 @@ export type ComponentPublicInstance<
   $options: Options & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
-  $watch(
-    source: string | Function,
-    cb: Function,
+  $watch<T extends string | ((...args: any) => any)>(
+    source: T,
+    cb: T extends (...args: any) => infer R
+      ? (...args: [R, R]) => any
+      : (...args: any) => any,
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
@@ -203,7 +233,8 @@ export type ComponentPublicInstance<
   UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
   M &
-  ComponentCustomProperties
+  ComponentCustomProperties &
+  InjectToObject<I>
 
 export type PublicPropertiesMap = Record<
   string,
@@ -262,6 +293,9 @@ export interface ComponentRenderContext {
 
 export const isReservedPrefix = (key: string) => key === '_' || key === '$'
 
+const hasSetupBinding = (state: Data, key: string) =>
+  state !== EMPTY_OBJ && !state.__isScriptSetup && hasOwn(state, key)
+
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
     const { ctx, setupState, data, props, accessCache, type, appContext } =
@@ -270,19 +304,6 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // for internal formatters to know that this is a Vue instance
     if (__DEV__ && key === '__isVue') {
       return true
-    }
-
-    // prioritize <script setup> bindings during dev.
-    // this allows even properties that start with _ or $ to be used - so that
-    // it aligns with the production behavior where the render fn is inlined and
-    // indeed has access to all declared variables.
-    if (
-      __DEV__ &&
-      setupState !== EMPTY_OBJ &&
-      setupState.__isScriptSetup &&
-      hasOwn(setupState, key)
-    ) {
-      return setupState[key]
     }
 
     // data / props / ctx
@@ -306,7 +327,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
             return props![key]
           // default: just fallthrough
         }
-      } else if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+      } else if (hasSetupBinding(setupState, key)) {
         accessCache![key] = AccessTypes.SETUP
         return setupState[key]
       } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
@@ -335,6 +356,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
+      } else if (__DEV__ && key === '$slots') {
+        track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
     } else if (
@@ -395,26 +418,28 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     value: any
   ): boolean {
     const { data, setupState, ctx } = instance
-    if (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) {
+    if (hasSetupBinding(setupState, key)) {
       setupState[key] = value
       return true
+    } else if (
+      __DEV__ &&
+      setupState.__isScriptSetup &&
+      hasOwn(setupState, key)
+    ) {
+      warn(`Cannot mutate <script setup> binding "${key}" from Options API.`)
+      return false
     } else if (data !== EMPTY_OBJ && hasOwn(data, key)) {
       data[key] = value
       return true
     } else if (hasOwn(instance.props, key)) {
-      __DEV__ &&
-        warn(
-          `Attempting to mutate prop "${key}". Props are readonly.`,
-          instance
-        )
+      __DEV__ && warn(`Attempting to mutate prop "${key}". Props are readonly.`)
       return false
     }
     if (key[0] === '$' && key.slice(1) in instance) {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}". ` +
-            `Properties starting with $ are reserved and readonly.`,
-          instance
+            `Properties starting with $ are reserved and readonly.`
         )
       return false
     } else {
@@ -441,7 +466,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     return (
       !!accessCache![key] ||
       (data !== EMPTY_OBJ && hasOwn(data, key)) ||
-      (setupState !== EMPTY_OBJ && hasOwn(setupState, key)) ||
+      hasSetupBinding(setupState, key) ||
       ((normalizedProps = propsOptions[0]) && hasOwn(normalizedProps, key)) ||
       hasOwn(ctx, key) ||
       hasOwn(publicPropertiesMap, key) ||
@@ -486,7 +511,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       return PublicInstanceProxyHandlers.get!(target, key, target)
     },
     has(_: ComponentRenderContext, key: string) {
-      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      const has = key[0] !== '_' && !isGloballyAllowed(key)
       if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
         warn(
           `Property ${JSON.stringify(

@@ -26,7 +26,6 @@ import {
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
-    // Note: if updating this, also update `types/refBail.d.ts`.
     runtimeDOMBailTypes: Node | Window
   }
 }
@@ -163,7 +162,7 @@ function injectCompilerOptionsCheck(app: App) {
       `must be passed to \`@vue/compiler-dom\` in the build setup instead.\n` +
       `- For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.\n` +
       `- For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader\n` +
-      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-dom`
+      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-sfc`
 
     Object.defineProperty(app.config, 'compilerOptions', {
       get() {
@@ -207,7 +206,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   VueElement,
-  VueElementConstructor
+  type VueElementConstructor
 } from './apiCustomElement'
 
 // SFC CSS utilities
@@ -215,10 +214,10 @@ export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
 // DOM-only components
-export { Transition, TransitionProps } from './components/Transition'
+export { Transition, type TransitionProps } from './components/Transition'
 export {
   TransitionGroup,
-  TransitionGroupProps
+  type TransitionGroupProps
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers
@@ -253,3 +252,5 @@ export const initDirectivesForSSR = __SSR__
 // re-export everything from core
 // h, Component, reactivity API, nextTick, flags & types
 export * from '@vue/runtime-core'
+
+export * from './jsx'

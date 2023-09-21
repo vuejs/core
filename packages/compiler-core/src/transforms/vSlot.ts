@@ -160,6 +160,7 @@ export function buildSlots(
   let hasNamedDefaultSlot = false
   const implicitDefaultChildren: TemplateChildNode[] = []
   const seenSlotNames = new Set<string>()
+  let conditionalBranchIndex = 0
 
   for (let i = 0; i < children.length; i++) {
     const slotElement = children[i]
@@ -210,7 +211,7 @@ export function buildSlots(
       dynamicSlots.push(
         createConditionalExpression(
           vIf.exp!,
-          buildDynamicSlot(slotName, slotFunction),
+          buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++),
           defaultFallback
         )
       )
@@ -243,10 +244,14 @@ export function buildSlots(
         conditional.alternate = vElse.exp
           ? createConditionalExpression(
               vElse.exp,
-              buildDynamicSlot(slotName, slotFunction),
+              buildDynamicSlot(
+                slotName,
+                slotFunction,
+                conditionalBranchIndex++
+              ),
               defaultFallback
             )
-          : buildDynamicSlot(slotName, slotFunction)
+          : buildDynamicSlot(slotName, slotFunction, conditionalBranchIndex++)
       } else {
         context.onError(
           createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
@@ -369,12 +374,19 @@ export function buildSlots(
 
 function buildDynamicSlot(
   name: ExpressionNode,
-  fn: FunctionExpression
+  fn: FunctionExpression,
+  index?: number
 ): ObjectExpression {
-  return createObjectExpression([
+  const props = [
     createObjectProperty(`name`, name),
     createObjectProperty(`fn`, fn)
-  ])
+  ]
+  if (index != null) {
+    props.push(
+      createObjectProperty(`key`, createSimpleExpression(String(index), true))
+    )
+  }
+  return createObjectExpression(props)
 }
 
 function hasForwardedSlots(children: TemplateChildNode[]): boolean {

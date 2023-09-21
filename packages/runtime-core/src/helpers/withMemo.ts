@@ -23,7 +23,7 @@ export function isMemoSame(cached: VNode, memo: any[]) {
   if (prev.length != memo.length) {
     return false
   }
-  
+
   for (let i = 0; i < prev.length; i++) {
     if (hasChanged(prev[i], memo[i])) {
       return false

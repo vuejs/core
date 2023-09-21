@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: codegen ArrayExpression 1`] = `
+exports[`compiler: codegen > ArrayExpression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -12,14 +12,14 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen CacheExpression 1`] = `
+exports[`compiler: codegen > CacheExpression 1`] = `
 "
 export function render(_ctx, _cache) {
   return _cache[1] || (_cache[1] = foo)
 }"
 `;
 
-exports[`compiler: codegen CacheExpression w/ isVNode: true 1`] = `
+exports[`compiler: codegen > CacheExpression w/ isVNode: true 1`] = `
 "
 export function render(_ctx, _cache) {
   return _cache[1] || (
@@ -31,7 +31,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen ConditionalExpression 1`] = `
+exports[`compiler: codegen > ConditionalExpression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -44,7 +44,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen Element (callExpression + objectExpression + TemplateChildNode[]) 1`] = `
+exports[`compiler: codegen > Element (callExpression + objectExpression + TemplateChildNode[]) 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -59,7 +59,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen assets + temps 1`] = `
+exports[`compiler: codegen > assets + temps 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -76,7 +76,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen comment 1`] = `
+exports[`compiler: codegen > comment 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -85,7 +85,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen compound expression 1`] = `
+exports[`compiler: codegen > compound expression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -94,7 +94,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen forNode 1`] = `
+exports[`compiler: codegen > forNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -103,7 +103,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen forNode with constant expression 1`] = `
+exports[`compiler: codegen > forNode with constant expression 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -112,7 +112,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen function mode preamble 1`] = `
+exports[`compiler: codegen > function mode preamble 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -124,7 +124,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen function mode preamble w/ prefixIdentifiers: true 1`] = `
+exports[`compiler: codegen > function mode preamble w/ prefixIdentifiers: true 1`] = `
 "const { createVNode: _createVNode, resolveDirective: _resolveDirective } = Vue
 
 return function render(_ctx, _cache) {
@@ -132,7 +132,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen hoists 1`] = `
+exports[`compiler: codegen > hoists 1`] = `
 "
 const _hoisted_1 = hello
 const _hoisted_2 = { id: \\"foo\\" }
@@ -144,7 +144,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen ifNode 1`] = `
+exports[`compiler: codegen > ifNode 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -155,7 +155,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen interpolation 1`] = `
+exports[`compiler: codegen > interpolation 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -164,7 +164,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen module mode preamble 1`] = `
+exports[`compiler: codegen > module mode preamble 1`] = `
 "import { createVNode as _createVNode, resolveDirective as _resolveDirective } from \\"vue\\"
 
 export function render(_ctx, _cache) {
@@ -172,7 +172,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen module mode preamble w/ optimizeImports: true 1`] = `
+exports[`compiler: codegen > module mode preamble w/ optimizeImports: true 1`] = `
 "import { createVNode, resolveDirective } from \\"vue\\"
 
 // Binding optimization for webpack code-split
@@ -183,7 +183,7 @@ export function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen static text 1`] = `
+exports[`compiler: codegen > static text 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {
@@ -192,7 +192,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: codegen temps 1`] = `
+exports[`compiler: codegen > temps 1`] = `
 "
 return function render(_ctx, _cache) {
   with (_ctx) {

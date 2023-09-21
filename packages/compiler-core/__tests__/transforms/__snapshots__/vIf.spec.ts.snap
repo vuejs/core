@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: v-if codegen basic v-if 1`] = `
+exports[`compiler: v-if > codegen > basic v-if 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -14,7 +14,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen increasing key: v-if + v-else-if + v-else 1`] = `
+exports[`compiler: v-if > codegen > increasing key: v-if + v-else-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -35,7 +35,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen multiple v-if that are sibling nodes should have different keys 1`] = `
+exports[`compiler: v-if > codegen > multiple v-if that are sibling nodes should have different keys 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -54,7 +54,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen template v-if 1`] = `
+exports[`compiler: v-if > codegen > template v-if 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -72,7 +72,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen template v-if w/ single <slot/> child 1`] = `
+exports[`compiler: v-if > codegen > template v-if w/ single <slot/> child 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -86,7 +86,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen v-if + v-else 1`] = `
+exports[`compiler: v-if > codegen > v-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -100,7 +100,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen v-if + v-else-if + v-else 1`] = `
+exports[`compiler: v-if > codegen > v-if + v-else-if + v-else 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -116,7 +116,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen v-if + v-else-if 1`] = `
+exports[`compiler: v-if > codegen > v-if + v-else-if 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -132,7 +132,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-if codegen v-if on <slot/> 1`] = `
+exports[`compiler: v-if > codegen > v-if on <slot/> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

@@ -4,7 +4,8 @@ import {
   getCurrentInstance,
   nodeOps,
   createApp,
-  shallowReadonly
+  shallowReadonly,
+  defineComponent
 } from '@vue/runtime-test'
 import { ComponentInternalInstance, ComponentOptions } from '../src/component'
 
@@ -257,7 +258,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.isDisplayed).toBe(true)
   })
 
-  test('allow jest spying on proxy methods with Object.defineProperty', () => {
+  test('allow test runner spying on proxy methods with Object.defineProperty', () => {
     // #5417
     let instanceProxy: any
     const Comp = {
@@ -303,16 +304,16 @@ describe('component: proxy', () => {
     instanceProxy.toggle()
     expect(getCalledTimes).toEqual(2)
 
-    // attaching jest spy, triggers the getter once, cache it and override the property.
+    // attaching spy, triggers the getter once, and override the property.
     // also uses Object.defineProperty
-    const spy = jest.spyOn(instanceProxy, 'toggle')
+    const spy = vi.spyOn(instanceProxy, 'toggle')
     expect(getCalledTimes).toEqual(3)
 
-    // expect getter to not evaluate the jest spy caches its value
+    // vitest does not cache the spy like jest do
     const v3 = instanceProxy.toggle()
     expect(v3).toEqual('b')
     expect(spy).toHaveBeenCalled()
-    expect(getCalledTimes).toEqual(3)
+    expect(getCalledTimes).toEqual(4)
   })
 
   test('defineProperty on proxy property with value descriptor', () => {
@@ -457,5 +458,25 @@ describe('component: proxy', () => {
         Symbol.unscopables
       )} was accessed during render ` + `but is not defined on instance.`
     ).toHaveBeenWarned()
+  })
+
+  test('should prevent mutating script setup bindings', () => {
+    const Comp = defineComponent({
+      render() {},
+      setup() {
+        return {
+          __isScriptSetup: true,
+          foo: 1
+        }
+      },
+      mounted() {
+        expect('foo' in this).toBe(false)
+        try {
+          this.foo = 123
+        } catch (e) {}
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(`Cannot mutate <script setup> binding "foo"`).toHaveBeenWarned()
   })
 })

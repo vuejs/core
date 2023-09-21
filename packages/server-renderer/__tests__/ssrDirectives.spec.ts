@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { renderToString } from '../src/renderToString'
 import {
   createApp,
@@ -109,6 +105,30 @@ describe('ssr: directives', () => {
           })
         )
       ).toBe(`<input type="radio">`)
+    })
+
+    test('select', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: 1 }),
+            template: `<select v-model="model"><option value="0"></option><option value="1"></option></select>`
+          })
+        )
+      ).toBe(
+        `<select><option value="0"></option><option value="1" selected></option></select>`
+      )
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: [0, 1] }),
+            template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`
+          })
+        )
+      ).toBe(
+        `<select multiple><option value="0" selected></option><option value="1" selected></option></select>`
+      )
     })
 
     test('checkbox', async () => {

@@ -7,11 +7,14 @@ import {
   OPEN_BLOCK,
   FRAGMENT,
   WITH_DIRECTIVES,
-  WITH_MEMO
+  WITH_MEMO,
+  CREATE_VNODE,
+  CREATE_ELEMENT_VNODE,
+  CREATE_BLOCK,
+  CREATE_ELEMENT_BLOCK
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
-import { getVNodeBlockHelper, getVNodeHelper } from './utils'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces like SVG and MathML are declared by platform specific
@@ -100,7 +103,7 @@ export type TemplateChildNode =
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
   children: TemplateChildNode[]
-  helpers: symbol[]
+  helpers: Set<symbol>
   components: string[]
   directives: string[]
   hoists: (JSChildNode | null)[]
@@ -556,7 +559,7 @@ export function createRoot(
   return {
     type: NodeTypes.ROOT,
     children,
-    helpers: [],
+    helpers: new Set(),
     components: [],
     directives: [],
     hoists: [],
@@ -808,5 +811,25 @@ export function createReturnStatement(
     type: NodeTypes.JS_RETURN_STATEMENT,
     returns,
     loc: locStub
+  }
+}
+
+export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
+  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
+}
+
+export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
+  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
+}
+
+export function convertToBlock(
+  node: VNodeCall,
+  { helper, removeHelper, inSSR }: TransformContext
+) {
+  if (!node.isBlock) {
+    node.isBlock = true
+    removeHelper(getVNodeHelper(inSSR, node.isComponent))
+    helper(OPEN_BLOCK)
+    helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }

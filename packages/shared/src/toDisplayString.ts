@@ -7,7 +7,7 @@ import {
   isSet,
   objectToString,
   isString
-} from './index'
+} from './general'
 
 /**
  * For converting {{ interpolation }} values to displayed strings.

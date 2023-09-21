@@ -12,11 +12,13 @@ import {
   ParentNode,
   JSChildNode,
   CallExpression,
-  createArrayExpression
+  createArrayExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
-import { getVNodeBlockHelper, getVNodeHelper, isSlotOutlet } from '../utils'
+import { isSlotOutlet } from '../utils'
 import {
   OPEN_BLOCK,
   GUARD_REACTIVE_PROPS,
@@ -97,12 +99,6 @@ function walk(
           }
         }
       }
-    } else if (
-      child.type === NodeTypes.TEXT_CALL &&
-      getConstantType(child.content, context) >= ConstantTypes.CAN_HOIST
-    ) {
-      child.codegenNode = context.hoist(child.codegenNode)
-      hoistedCount++
     }
 
     // walk further

@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: v-for codegen basic v-for 1`] = `
+exports[`compiler: v-for > codegen > basic v-for 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -14,7 +14,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen keyed template v-for 1`] = `
+exports[`compiler: v-for > codegen > keyed template v-for 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -31,7 +31,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen keyed v-for 1`] = `
+exports[`compiler: v-for > codegen > keyed v-for 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -45,7 +45,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen skipped key 1`] = `
+exports[`compiler: v-for > codegen > skipped key 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -59,7 +59,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen skipped value & key 1`] = `
+exports[`compiler: v-for > codegen > skipped value & key 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -73,7 +73,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen skipped value 1`] = `
+exports[`compiler: v-for > codegen > skipped value 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -87,7 +87,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen template v-for 1`] = `
+exports[`compiler: v-for > codegen > template v-for 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -104,7 +104,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen template v-for key injection with single child 1`] = `
+exports[`compiler: v-for > codegen > template v-for key injection with single child 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -121,7 +121,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen template v-for w/ <slot/> 1`] = `
+exports[`compiler: v-for > codegen > template v-for w/ <slot/> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -135,7 +135,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen v-for on <slot/> 1`] = `
+exports[`compiler: v-for > codegen > v-for on <slot/> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -149,7 +149,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen v-for on element with custom directive 1`] = `
+exports[`compiler: v-for > codegen > v-for on element with custom directive 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -167,7 +167,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen v-for with constant expression 1`] = `
+exports[`compiler: v-for > codegen > v-for with constant expression 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -181,7 +181,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen v-if + v-for 1`] = `
+exports[`compiler: v-for > codegen > v-if + v-for 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -197,7 +197,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen v-if + v-for on <template> 1`] = `
+exports[`compiler: v-for > codegen > v-if + v-for on <template> 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -213,7 +213,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-for codegen value + key + index 1`] = `
+exports[`compiler: v-for > codegen > value + key + index 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

@@ -1,3 +1,4 @@
+import { vi, Mock } from 'vitest'
 import Vue from '@vue/compat'
 import { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
@@ -49,18 +50,18 @@ test('INSTANCE_DESTROY', () => {
 // https://github.com/vuejs/vue/blob/dev/test/unit/features/instance/methods-events.spec.js
 describe('INSTANCE_EVENT_EMITTER', () => {
   let vm: LegacyPublicInstance
-  let spy: jest.Mock
+  let spy: Mock
 
   beforeEach(() => {
     vm = new Vue()
-    spy = jest.fn()
+    spy = vi.fn()
   })
 
   it('$on', () => {
     vm.$on('test', function (this: any) {
       // expect correct context
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
@@ -73,7 +74,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   it('$on multi event', () => {
     vm.$on(['test1', 'test2'], function (this: any) {
       expect(this).toBe(vm)
-      spy.apply(this, arguments)
+      spy.apply(this, arguments as unknown as any[])
     })
     vm.$emit('test1', 1, 2, 3, 4)
     expect(spy).toHaveBeenCalledTimes(1)
@@ -157,7 +158,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
   })
 
   it('$off event + fn', () => {
-    const spy2 = jest.fn()
+    const spy2 = vi.fn()
     vm.$on('test', spy)
     vm.$on('test', spy2)
     vm.$off('test', spy)
@@ -173,7 +174,7 @@ describe('INSTANCE_EVENT_EMITTER', () => {
 
 describe('INSTANCE_EVENT_HOOKS', () => {
   test('instance API', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const vm = new Vue({ template: 'foo' })
     vm.$on('hook:mounted', spy)
     vm.$mount()
@@ -187,7 +188,7 @@ describe('INSTANCE_EVENT_HOOKS', () => {
   })
 
   test('via template', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     new Vue({
       template: `<child @hook:mounted="spy"/>`,
       methods: { spy },
@@ -318,6 +319,7 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(
     `<div class="foo" style="color: red;"><div id="ok"></div></div>`
   )
