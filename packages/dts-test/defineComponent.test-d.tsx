@@ -12,7 +12,9 @@ import {
   SlotsType,
   AttrsType,
   Slots,
-  VNode
+  VNode,
+  ImgHTMLAttributes,
+  StyleValue
 } from 'vue'
 import { describe, expectType, IsUnion, test } from './utils'
 
@@ -1325,22 +1327,45 @@ describe('define attrs', () => {
     expectType<JSX.Element>(<MyComp foo="1" bar={1} />)
   })
 
-  test('default attrs like class, style', () => {
-    const MyComp = defineComponent({
+  test('wrap elements, such as img element (Keep the volar plugin open)', () => {
+    const MyImg = defineComponent({
       props: {
         foo: String
       },
-      attrs: Object as AttrsType<{
-        bar?: number
-      }>,
+      attrs: Object as AttrsType<ImgHTMLAttributes>,
       created() {
-        expectType<number | undefined>(this.$attrs.bar)
-        expectType<unknown>(this.$attrs.class)
-        expectType<unknown>(this.$attrs.style)
+        expectType<any>(this.$attrs.class)
+        expectType<StyleValue | undefined>(this.$attrs.style)
+      },
+      render() {
+        return <img {...this.$attrs} />
+      }
+    })
+    expectType<JSX.Element>(<MyImg class={'str'} style={'str'} src={'str'} />)
+  })
+
+  test('secondary packaging of components', () => {
+    const childProps = {
+      foo: String
+    }
+    type ChildProps = ExtractPropTypes<typeof childProps>
+    const Child = defineComponent({
+      props: childProps,
+      render() {
+        return <div>{this.foo}</div>
+      }
+    })
+    const Comp = defineComponent({
+      props: {
+        bar: Number
+      },
+      attrs: Object as AttrsType<ChildProps>,
+      render() {
+        return <Child {...this.$attrs} />
       }
     })
     expectType<JSX.Element>(
-      <MyComp class={'str'} style={'str'} foo="1" bar={1} />
+      <Comp class={'str'} style={'str'} bar={1} foo={'str'} />
     )
   })
 })

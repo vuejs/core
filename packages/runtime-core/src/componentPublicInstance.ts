@@ -1,5 +1,4 @@
 import {
-  AllowedComponentProps,
   ComponentInternalInstance,
   Data,
   noAttrsDefine,
@@ -225,8 +224,7 @@ export type ComponentPublicInstance<
   >
   $attrs: noAttrsDefine<Attrs> extends true
     ? Data
-    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> &
-        AllowedComponentProps
+    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
   $refs: Data
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
