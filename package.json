@@ -70,7 +70,7 @@
     "@vitest/coverage-istanbul": "^0.34.4",
     "@vue/consolidate": "0.17.3",
     "chalk": "^4.1.0",
-    "conventional-changelog-cli": "^2.2.2",
+    "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
     "esbuild": "^0.19.3",
     "esbuild-plugin-polyfill-node": "^0.3.0",
