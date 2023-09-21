@@ -64,7 +64,7 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const enum MemberExpLexState {
+enum MemberExpLexState {
   inMemberExp,
   inBrackets,
   inParens,

@@ -264,7 +264,7 @@ export type SetupRenderEffectFn = (
   optimized: boolean
 ) => void
 
-export const enum MoveType {
+export enum MoveType {
   ENTER,
   LEAVE,
   REORDER

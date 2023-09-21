@@ -10,7 +10,7 @@ import {
 } from '../component'
 import { warn } from '../warning'
 
-export const enum DeprecationTypes {
+export enum DeprecationTypes {
   GLOBAL_MOUNT = 'GLOBAL_MOUNT',
   GLOBAL_MOUNT_CONTAINER = 'GLOBAL_MOUNT_CONTAINER',
   GLOBAL_EXTEND = 'GLOBAL_EXTEND',

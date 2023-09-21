@@ -17,7 +17,7 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
@@ -26,7 +26,7 @@ import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './enum.js'
 import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)

@@ -30,7 +30,7 @@ export type RootHydrateFunction = (
   container: (Element | ShadowRoot) & { _vnode?: VNode }
 ) => void
 
-const enum DOMNodeTypes {
+enum DOMNodeTypes {
   ELEMENT = 1,
   TEXT = 3,
   COMMENT = 8

@@ -164,7 +164,7 @@ export type ExtractPublicPropTypes<O> = {
   [K in keyof Pick<O, PublicOptionalKeys<O>>]?: InferPropType<O[K]>
 }
 
-const enum BooleanFlags {
+enum BooleanFlags {
   shouldCast,
   shouldCastTrue
 }

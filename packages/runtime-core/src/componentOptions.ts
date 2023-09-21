@@ -586,7 +586,7 @@ export type OptionTypesType<
   Defaults: Defaults
 }
 
-const enum OptionTypes {
+enum OptionTypes {
   PROPS = 'Props',
   DATA = 'Data',
   COMPUTED = 'Computed',

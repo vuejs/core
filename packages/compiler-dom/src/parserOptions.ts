@@ -15,7 +15,7 @@ const isRawTextContainer = /*#__PURE__*/ makeMap(
   true
 )
 
-export const enum DOMNamespaces {
+export enum DOMNamespaces {
   HTML = 0 /* Namespaces.HTML */,
   SVG,
   MATH_ML

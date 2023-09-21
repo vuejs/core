@@ -6,7 +6,7 @@ import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
-export const enum ErrorCodes {
+export enum ErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
   WATCH_GETTER,

@@ -1,15 +1,12 @@
 // @ts-check
 
 /**
- * We use rollup-plugin-esbuild for faster builds, but esbuild in isolation
- * mode compiles const enums into runtime enums, bloating bundle size.
+ * We used const enums before, but it caused some issues: #1228, so we
+ * switched to regular enums. But we still want to keep the zero-cost
+ * benefit of const enums.
  *
- * Here we pre-process all the const enums in the project and turn them into
- * global replacements, and remove the original declarations and re-exports.
- *
- * This erases the const enums before the esbuild transform so that we can
- * leverage esbuild's speed while retaining the DX and bundle size benefits
- * of const enums.
+ * Here we pre-process all the enums in the project and turn them into
+ * global replacements.
  *
  * This file is expected to be executed with project root as cwd.
  */
@@ -24,7 +21,6 @@ import {
 } from 'node:fs'
 import { parse } from '@babel/parser'
 import path from 'node:path'
-import MagicString from 'magic-string'
 
 const ENUM_CACHE_PATH = 'temp/enum.json'
 
@@ -36,16 +32,12 @@ function evaluate(exp) {
 // so the data can be shared across concurrent Rollup processes
 export function scanEnums() {
   /**
-   * @type {{ ranges: Record<string, [number, number][]>, defines: Record<string, string>, ids: string[] }}
+   * @type {Record<string, string>}
    */
-  const enumData = {
-    ranges: {},
-    defines: {},
-    ids: []
-  }
+  const enumDefines = {}
 
-  // 1. grep for files with exported const enum
-  const { stdout } = execaSync('git', ['grep', `export const enum`])
+  // 1. grep for files with exported enum
+  const { stdout } = execaSync('git', ['grep', `export enum`])
   const files = [...new Set(stdout.split('\n').map(line => line.split(':')[0]))]
 
   // 2. parse matched files to collect enum info
@@ -63,29 +55,18 @@ export function scanEnums() {
         node.declaration &&
         node.declaration.type === 'TSEnumDeclaration'
       ) {
-        if (file in enumData.ranges) {
-          // @ts-ignore
-          enumData.ranges[file].push([node.start, node.end])
-        } else {
-          // @ts-ignore
-          enumData.ranges[file] = [[node.start, node.end]]
-        }
-
         const decl = node.declaration
         let lastInitialized
         for (let i = 0; i < decl.members.length; i++) {
           const e = decl.members[i]
           const id = decl.id.name
-          if (!enumData.ids.includes(id)) {
-            enumData.ids.push(id)
-          }
           const key = e.id.type === 'Identifier' ? e.id.name : e.id.value
           const fullKey = `${id}.${key}`
           const saveValue = value => {
-            if (fullKey in enumData.defines) {
+            if (fullKey in enumDefines) {
               throw new Error(`name conflict for enum ${id} in ${file}`)
             }
-            enumData.defines[fullKey] = JSON.stringify(value)
+            enumDefines[fullKey] = JSON.stringify(value)
           }
           const init = e.initializer
           if (init) {
@@ -107,12 +88,12 @@ export function scanEnums() {
                   return node.value
                 } else if (node.type === 'MemberExpression') {
                   const exp = content.slice(node.start, node.end)
-                  if (!(exp in enumData.defines)) {
+                  if (!(exp in enumDefines)) {
                     throw new Error(
                       `unhandled enum initialization expression ${exp} in ${file}`
                     )
                   }
-                  return enumData.defines[exp]
+                  return enumDefines[exp]
                 } else {
                   throw new Error(
                     `unhandled BinaryExpression operand type ${node.type} in ${file}`
@@ -164,7 +145,7 @@ export function scanEnums() {
 
   // 3. save cache
   if (!existsSync('temp')) mkdirSync('temp')
-  writeFileSync(ENUM_CACHE_PATH, JSON.stringify(enumData))
+  writeFileSync(ENUM_CACHE_PATH, JSON.stringify(enumDefines))
 
   return () => {
     rmSync(ENUM_CACHE_PATH, { force: true })
@@ -172,84 +153,16 @@ export function scanEnums() {
 }
 
 /**
- * @returns {[import('rollup').Plugin, Record<string, string>]}
+ * @returns {Record<string, string>}
  */
-export function constEnum() {
+export function enums() {
   if (!existsSync(ENUM_CACHE_PATH)) {
     throw new Error('enum cache needs to be initialized before creating plugin')
   }
   /**
-   * @type {{ ranges: Record<string, [number, number][]>, defines: Record<string, string>, ids: string[] }}
+   * @type {Record<string, string>}
    */
-  const enumData = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
+  const enumDefines = JSON.parse(readFileSync(ENUM_CACHE_PATH, 'utf-8'))
 
-  // construct a regex for matching re-exports of known const enums
-  const reExportsRE = new RegExp(
-    `export {[^}]*?\\b(${enumData.ids.join('|')})\\b[^]*?}`
-  )
-
-  // 3. during transform:
-  //    3.1 files w/ const enum declaration: remove declaration
-  //    3.2 files using const enum: inject into esbuild define
-  /**
-   * @type {import('rollup').Plugin}
-   */
-  const plugin = {
-    name: 'remove-const-enum',
-    transform(code, id) {
-      let s
-
-      if (id in enumData.ranges) {
-        s = s || new MagicString(code)
-        for (const [start, end] of enumData.ranges[id]) {
-          s.remove(start, end)
-        }
-      }
-
-      // check for const enum re-exports that must be removed
-      if (reExportsRE.test(code)) {
-        s = s || new MagicString(code)
-        const ast = parse(code, {
-          plugins: ['typescript'],
-          sourceType: 'module'
-        })
-        for (const node of ast.program.body) {
-          if (
-            node.type === 'ExportNamedDeclaration' &&
-            node.exportKind !== 'type' &&
-            node.source
-          ) {
-            for (let i = 0; i < node.specifiers.length; i++) {
-              const spec = node.specifiers[i]
-              if (
-                spec.type === 'ExportSpecifier' &&
-                spec.exportKind !== 'type' &&
-                enumData.ids.includes(spec.local.name)
-              ) {
-                const next = node.specifiers[i + 1]
-                if (next) {
-                  // @ts-ignore
-                  s.remove(spec.start, next.start)
-                } else {
-                  // last one
-                  const prev = node.specifiers[i - 1]
-                  // @ts-ignore
-                  s.remove(prev ? prev.end : spec.start, spec.end)
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (s) {
-        return {
-          code: s.toString(),
-          map: s.generateMap()
-        }
-      }
-    }
-  }
-
-  return [plugin, enumData.defines]
+  return enumDefines
 }

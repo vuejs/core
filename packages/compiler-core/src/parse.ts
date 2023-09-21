@@ -80,7 +80,7 @@ export const defaultParserOptions: MergedParserOptions = {
   comments: __DEV__
 }
 
-export const enum TextModes {
+export enum TextModes {
   //          | Elements | Entities | End sign              | Inside of
   DATA, //    | ✔        | ✔        | End tags of ancestors |
   RCDATA, //  | ✘        | ✔        | End tag of the parent | <textarea>
@@ -502,7 +502,7 @@ function parseElement(
   return element
 }
 
-const enum TagType {
+enum TagType {
   Start,
   End
 }

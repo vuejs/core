@@ -21,11 +21,11 @@ import { ImportItem, TransformContext } from './transform'
 // compilers.
 export type Namespace = number
 
-export const enum Namespaces {
+export enum Namespaces {
   HTML
 }
 
-export const enum NodeTypes {
+export enum NodeTypes {
   ROOT,
   ELEMENT,
   TEXT,
@@ -59,7 +59,7 @@ export const enum NodeTypes {
   JS_RETURN_STATEMENT
 }
 
-export const enum ElementTypes {
+export enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
@@ -202,7 +202,7 @@ export interface DirectiveNode extends Node {
  * Higher levels implies lower levels. e.g. a node that can be stringified
  * can always be hoisted and skipped for patch.
  */
-export const enum ConstantTypes {
+export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
   CAN_HOIST,
