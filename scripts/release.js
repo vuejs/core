@@ -5,7 +5,7 @@ import path from 'node:path'
 import chalk from 'chalk'
 import semver from 'semver'
 import enquirer from 'enquirer'
-import execa from 'execa'
+import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
