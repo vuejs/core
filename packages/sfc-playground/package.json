@@ -1,6 +1,7 @@
 {
   "name": "@vue/sfc-playground",
   "version": "3.3.4",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
