@@ -279,11 +279,17 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+/**
+ * @internal
+ */
 export function pauseScheduling() {
   scheduleStack.push(shouldSchedule)
   shouldSchedule = false
 }
 
+/**
+ * @internal
+ */
 export function resetScheduling() {
   const last = scheduleStack.pop()
   shouldSchedule = last === undefined ? true : last
