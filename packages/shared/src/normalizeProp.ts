@@ -19,9 +19,7 @@ export function normalizeStyle(
       }
     }
     return res
-  } else if (isString(value)) {
-    return value
-  } else if (isObject(value)) {
+  } else if (isString(value) || isObject(value)) {
     return value
   }
 }

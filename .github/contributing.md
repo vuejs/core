@@ -57,7 +57,7 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Development Setup
 
-You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 7+**.
+You will need [Node.js](https://nodejs.org) **version 16+**, and [PNPM](https://pnpm.io) **version 8+**.
 
 We also recommend installing [ni](https://github.com/antfu/ni) to help switching between repos using different package managers. `ni` also provides the handy `nr` command which running npm scripts easier.
 
@@ -185,7 +185,7 @@ Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined u
 
 ### `nr dev-compiler`
 
-The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:5000`. This is useful when working on pure compiler issues.
+The `dev-compiler` script builds, watches and serves the [Template Explorer](https://github.com/vuejs/core/tree/main/packages/template-explorer) at `http://localhost:3000`. This is useful when working on pure compiler issues.
 
 ### `nr test`
 
@@ -248,8 +248,6 @@ This repository employs a [monorepo](https://en.wikipedia.org/wiki/Monorepo) set
 
   - `template-explorer`: A development tool for debugging compiler output, continuously deployed at https://template-explorer.vuejs.org/. To run it locally, run [`nr dev-compiler`](#nr-dev-compiler).
 
-  - `size-check`: Used for checking built bundle sizes on CI.
-
 ### Importing Packages
 
 The packages can import each other directly using their package names. Note that when importing a package, the name listed in its `package.json` should be used. Most of the time the `@vue/` prefix is needed:
@@ -261,7 +259,7 @@ import { h } from '@vue/runtime-core'
 This is made possible via several configurations:
 
 - For TypeScript, `compilerOptions.paths` in `tsconfig.json`
-- Vitest and Rollup share the sae set of aliases from `scripts/aliases.js`
+- Vitest and Rollup share the same set of aliases from `scripts/aliases.js`
 - For plain Node.js, they are linked using [PNPM Workspaces](https://pnpm.io/workspaces).
 
 ### Package Dependencies
@@ -330,4 +328,4 @@ Funds donated via Patreon go directly to support Evan You's full-time work on Vu
 
 Thank you to all the people who have already contributed to Vue.js!
 
-<a href="https://github.com/vuejs/vue/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
+<a href="https://github.com/vuejs/core/graphs/contributors"><img src="https://opencollective.com/vuejs/contributors.svg?width=890" /></a>
