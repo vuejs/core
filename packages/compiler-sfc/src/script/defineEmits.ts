@@ -1,4 +1,11 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import {
+  ArrayPattern,
+  Identifier,
+  LVal,
+  Node,
+  ObjectPattern,
+  RestElement
+} from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
 import {
@@ -95,7 +102,7 @@ export function extractRuntimeEmits(ctx: TypeResolveContext): Set<string> {
 
 function extractEventNames(
   ctx: TypeResolveContext,
-  eventName: Identifier | RestElement,
+  eventName: ArrayPattern | Identifier | ObjectPattern | RestElement,
   emits: Set<string>
 ) {
   if (

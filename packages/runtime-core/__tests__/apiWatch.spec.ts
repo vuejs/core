@@ -1206,29 +1206,25 @@ describe('api: watch', () => {
     expect(countW).toBe(2)
   })
 
-  it('should not trigger if computed value did not change', () => {
-    const effectSpy = vi.fn()
-
-    const sec = ref(0)
-    const min = computed(() => {
-      return Math.floor(sec.value / 60)
-    })
-    const hour = computed(() => {
-      return Math.floor(min.value / 60)
-    })
-
+  test('should not trigger if computed value did not change', () => {
+    const src = ref(0)
+    const c = computed(() => src.value % 2)
+    const spy = vi.fn()
     watchEffect(
       () => {
-        effectSpy()
-        min.value
-        hour.value
+        spy(c.value)
       },
       { flush: 'sync' }
     )
+    expect(spy).toHaveBeenCalledTimes(1)
+    src.value = 2
 
-    for (sec.value = 0; sec.value < 1000; sec.value++) {}
+    // should not trigger
+    expect(spy).toHaveBeenCalledTimes(1)
 
-    expect(effectSpy).toHaveBeenCalledTimes(17)
+    src.value = 3
+    // should trigger because latest value changes
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 
   const options = [
