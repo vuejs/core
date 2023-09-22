@@ -14,8 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # TODO: maybe we can have a "next-minor" branch so that we don't need to update this every time
-          ref: 3.4
+          ref: minor
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
