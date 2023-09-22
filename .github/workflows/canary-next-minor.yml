@@ -1,4 +1,4 @@
-name: canary release
+name: canary minor release
 on:
   # Runs every Monday at 1 AM UTC (9:00 AM in Singapore)
   schedule:
