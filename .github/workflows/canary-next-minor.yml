@@ -29,6 +29,6 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm release --canary --tag next-minor
+      - run: pnpm release --canary --tag minor
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
