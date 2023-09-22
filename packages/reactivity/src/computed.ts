@@ -60,7 +60,8 @@ export class ComputedRefImpl<T> {
     if (!self._cacheable || self.effect.dirty) {
       const newValue = self.effect.run()!
       const changed = hasChanged(self._value, newValue)
-      self._value = newValue
+if(changed) {
+  self._value = newValue
       if (changed) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
       }
