@@ -82,7 +82,7 @@ async function main() {
   let targetVersion = args._[0]
 
   if (isCanary) {
-    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for next-minor)
+    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
     // Use UTC date so that it's consistent across CI and maintainers' machines
     const date = new Date()
     const yyyy = date.getUTCFullYear()
