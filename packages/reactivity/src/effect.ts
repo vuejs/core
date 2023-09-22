@@ -464,21 +464,21 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep) {
-    if (effect !== activeEffect || effect.allowRecurse) {
-      if (__DEV__ && effect.onTrigger) {
-        effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
-      }
-      if (effect._dirtyLevel < dirtyLevel) {
-        effect._dirtyLevel = dirtyLevel
-      }
-      if (
-        dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
-        dirtyLevel === DirtyLevels.Dirty ||
-        (dirtyLevel === DirtyLevels.ComputedValueDirty &&
-          !effect._queryingDirty)
-      ) {
-        effect.scheduler(pushEffectCb)
-      }
+    if (effect === activeEffect && !effect.allowRecurse) {
+      continue
+    }
+    if (__DEV__ && effect.onTrigger) {
+      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+    }
+    if (effect._dirtyLevel < dirtyLevel) {
+      effect._dirtyLevel = dirtyLevel
+    }
+    if (
+      dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
+      dirtyLevel === DirtyLevels.Dirty ||
+      (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
+    ) {
+      effect.scheduler(pushEffectCb)
     }
   }
   resetScheduling()
