@@ -58,9 +58,7 @@ export class ComputedRefImpl<T> {
     const self = toRaw(this)
     trackRefValue(self)
     if (!self._cacheable || self.effect.dirty) {
-      const newValue = self.effect.run()!
-      if (hasChanged(self._value, newValue)) {
-        self._value = newValue
+      if (hasChanged(self._value, (self._value = self.effect.run()!))) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
       }
       self._scheduled = false
