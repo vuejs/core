@@ -1201,7 +1201,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense
       ))
-    instance.container = container
+    instance.isCE && (instance.container = container as ShadowRoot)
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)

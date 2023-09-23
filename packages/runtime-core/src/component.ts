@@ -225,9 +225,9 @@ export interface ComponentInternalInstance {
   root: ComponentInternalInstance
   appContext: AppContext
   /**
-   * The DOM element that app is mounted to, or shadowRoot of custom element.
+   * ShadowRoot of custom element if it is
    */
-  container: any
+  container: ShadowRoot | null
   /**
    * Vnode representing this component in its parent's vdom tree
    */

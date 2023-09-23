@@ -703,7 +703,7 @@ describe('defineCustomElement', () => {
           const ins = getCurrentInstance()!
           const style = document.createElement('style')
           style.innerHTML = `div { color: red; }`
-          ins.container.appendChild(style)
+          ins.container!.appendChild(style)
           return () => h('div', 'hello')
         }
       })
