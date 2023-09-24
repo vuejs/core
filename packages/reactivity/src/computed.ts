@@ -3,6 +3,7 @@ import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { isFunction, NOOP } from '@vue/shared'
 import { ReactiveFlags, toRaw } from './reactive'
 import { Dep } from './dep'
+import { warn } from './warning'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -59,6 +60,11 @@ export class ComputedRefImpl<T> {
     if (self._dirty || !self._cacheable) {
       self._dirty = false
       self._value = self.effect.run()!
+    }
+    if (__DEV__ && self._cacheable) {
+      warn(
+        'computed getters cached during render, cannot be state mutations during render'
+      )
     }
     return self._value
   }
