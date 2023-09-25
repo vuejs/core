@@ -2,7 +2,8 @@ import { hyphenate, isArray, isString, isFunction } from '@vue/shared'
 import {
   ErrorCodes,
   ComponentInternalInstance,
-  callWithAsyncErrorHandling, warn
+  callWithAsyncErrorHandling,
+  warn
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -34,7 +35,7 @@ export function patchEvent(
   el: Element & { _vei?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  nextValue: EventValue | unknown,
   instance: ComponentInternalInstance | null = null
 ) {
   // vei = vue event invokers
@@ -42,12 +43,15 @@ export function patchEvent(
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = nextValue
+    existingInvoker.value = sanitizeEventValue(nextValue, rawName)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
-      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      const invoker = (invokers[rawName] = createInvoker(
+        sanitizeEventValue(nextValue, rawName),
+        instance
+      ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -81,7 +85,7 @@ const getNow = () =>
   cachedNow || (p.then(() => (cachedNow = 0)), (cachedNow = Date.now()))
 
 function createInvoker(
-  initialValue: EventValue | unknown,
+  initialValue: EventValue,
   instance: ComponentInternalInstance | null
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
@@ -109,18 +113,23 @@ function createInvoker(
       [e]
     )
   }
-  invoker.value = sanitizeEventValue(initialValue)
+  invoker.value = initialValue
   invoker.attached = getNow()
   return invoker
 }
 
-function sanitizeEventValue(value: unknown): EventValue {
+function sanitizeEventValue(value: unknown, propName: string): EventValue {
   if (isFunction(value) || isArray(value)) {
     return value as EventValue
   }
 
   if (__DEV__) {
-    warn('Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' + (isString(value) ? value : typeof value))
+    warn(
+      'Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' +
+        propName +
+        '=' +
+        (isString(value) ? value : typeof value)
+    )
   }
   return () => {}
 }
@@ -135,7 +144,9 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return (value as Function[]).map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
+    return (value as Function[]).map(
+      fn => (e: Event) => !(e as any)._stopped && fn && fn(e)
+    )
   } else {
     return value
   }
