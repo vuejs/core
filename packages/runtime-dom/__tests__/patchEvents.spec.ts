@@ -197,6 +197,8 @@ describe(`runtime-dom: events patching`, () => {
     const el = document.createElement('div')
     patchProp(el, 'onClick', null, 'test')
     el.dispatchEvent(new Event('click'))
-    expect('[Vue warn]: Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received test').toHaveBeenWarned()
+    expect(
+      '[Vue warn]: Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received onClick=test'
+    ).toHaveBeenWarned()
   })
 })
