@@ -1,7 +1,8 @@
 import {
+  AllowedComponentProps,
   ComponentInternalInstance,
   Data,
-  noAttrsDefine,
+  HasDefinedAttrs,
   getExposeProxy,
   isStatefulComponent
 } from './component'
@@ -211,9 +212,9 @@ export type ComponentPublicInstance<
   S extends SlotsType = {},
   Attrs extends AttrsType = Record<string, unknown>, // Attrs type extracted from attrs option
   // AttrsProps type used for JSX validation of attrs
-  AttrsProps = noAttrsDefine<Attrs> extends true // if attrs is not defined
-    ? {} // no JSX validation of attrs
-    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> // exclude props from attrs, for JSX validation
+  AttrsProps = HasDefinedAttrs<Attrs> extends true // if attrs is defined
+    ? Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)> // exclude props from attrs, for JSX validation
+    : {} // no JSX validation of attrs
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -222,9 +223,9 @@ export type ComponentPublicInstance<
       ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & AttrsProps
       : P & PublicProps & AttrsProps
   >
-  $attrs: noAttrsDefine<Attrs> extends true
-    ? Data
-    : Omit<UnwrapAttrsType<Attrs>, keyof (P & PublicProps)>
+  $attrs: HasDefinedAttrs<Attrs> extends true
+    ? AttrsProps & AllowedComponentProps
+    : Data
   $refs: Data
   $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
