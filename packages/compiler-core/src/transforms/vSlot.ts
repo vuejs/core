@@ -19,8 +19,8 @@ import {
   CallExpression,
   createCallExpression,
   createArrayExpression,
-  SlotsExpression, 
-  RenderSlotCall,
+  SlotsExpression,
+  RenderSlotCall
 } from '../ast'
 import { TransformContext, NodeTransform } from '../transform'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -430,10 +430,11 @@ function isNonWhitespaceContent(node: TemplateChildNode): boolean {
 
 function injectRefFor(
   children: TemplateChildNode[],
-  context: TransformContext){
+  context: TransformContext
+) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
-    if(child.type === NodeTypes.ELEMENT && findProp(child, 'ref') ){
+    if (child.type === NodeTypes.ELEMENT && findProp(child, 'ref')) {
       const Property = createObjectProperty(
         createSimpleExpression('ref_for', true),
         createSimpleExpression('true')
