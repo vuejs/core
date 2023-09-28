@@ -2314,7 +2314,13 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.anchor || vnode.el)!)
+    let node = hostNextSibling((vnode.anchor || vnode.el)!)
+
+    // avoid using teleported node as anchor
+    while (node && node.__teleported) {
+      node = hostNextSibling(node)
+    }
+    return node
   }
 
   const render: RootRenderFunction = (vnode, container, isSVG) => {

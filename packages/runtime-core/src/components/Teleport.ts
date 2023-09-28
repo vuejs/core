@@ -231,6 +231,7 @@ export const TeleportImpl = {
     }
 
     updateCssVars(n2)
+    markTeleportedNode(n2)
   },
 
   remove(
@@ -348,8 +349,9 @@ function hydrateTeleport(
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
+    const disabled = isTeleportDisabled(vnode.props)
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (isTeleportDisabled(vnode.props)) {
+      if (disabled) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
@@ -393,6 +395,7 @@ function hydrateTeleport(
       }
     }
     updateCssVars(vnode)
+    markTeleportedNode(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
@@ -420,4 +423,17 @@ function updateCssVars(vnode: VNode) {
     }
     ctx.ut()
   }
+}
+
+function markTeleportedNode(vnode: VNode) {
+  const children = vnode.children as VNode[]
+  if (!children.length) return
+
+  let node = (vnode.children as VNode[])[0].el!
+  while (node && node !== vnode.targetAnchor) {
+    if (node.nodeType === 1) node.__teleported = true
+    node = node.nextSibling
+  }
+
+  if (vnode.targetAnchor) vnode.targetAnchor.__teleported = true
 }

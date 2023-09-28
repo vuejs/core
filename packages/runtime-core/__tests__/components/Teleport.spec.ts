@@ -528,4 +528,34 @@ describe('renderer: teleport', () => {
       `"<div>teleported</div>"`
     )
   })
+
+  //#9071
+  test('avoid using teleported node as anchor', async () => {
+    const root = document.createElement('div')
+    const show = ref(false)
+    const App = defineComponent({
+      setup() {
+        return () => {
+          return show.value
+            ? h(Teleport, { to: root }, [h('div', 'teleported')])
+            : h('div', 'foo')
+        }
+      }
+    })
+
+    domRender(h(App), root)
+    expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+
+    show.value = true
+    await nextTick()
+
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      '"<!--teleport start--><!--teleport end--><div>teleported</div>"'
+    )
+
+    show.value = false
+    await nextTick()
+
+    expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+  })
 })
