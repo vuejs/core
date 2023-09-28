@@ -47,7 +47,7 @@ export function trackRefValue(ref: RefBase<any>) {
           (ref.dep = createDep(
             undefined,
             ref instanceof ComputedRefImpl
-              ? () => (ref as ComputedRefImpl<any>)._scheduled && ref.value
+              ? ref.queryDirty.bind(ref)
               : undefined
           )),
         {
@@ -62,7 +62,7 @@ export function trackRefValue(ref: RefBase<any>) {
           (ref.dep = createDep(
             undefined,
             ref instanceof ComputedRefImpl
-              ? () => (ref as ComputedRefImpl<any>)._scheduled && ref.value
+              ? ref.queryDirty.bind(ref)
               : undefined
           ))
       )

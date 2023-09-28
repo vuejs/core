@@ -317,6 +317,33 @@ describe('reactivity/computed', () => {
     expect(cSpy).toHaveBeenCalledTimes(1)
   })
 
+  // https://github.com/vuejs/core/pull/5912#issuecomment-1738257692
+  it('chained computed dirty reallocation after querying dirty', () => {
+    let _msg: string | undefined
+
+    const items = ref<number[]>()
+    const isLoaded = computed(() => {
+      return !!items.value
+    })
+    const msg = computed(() => {
+      if (isLoaded.value) {
+        return 'The items are loaded'
+      } else {
+        return 'The items are not loaded'
+      }
+    })
+
+    effect(() => {
+      _msg = msg.value
+    })
+
+    items.value = [1, 2, 3]
+    items.value = [1, 2, 3]
+    items.value = undefined
+
+    expect(_msg).toBe('The items are not loaded')
+  })
+
   it('should trigger the second effect', () => {
     const fnSpy = vi.fn()
     const v = ref(1)

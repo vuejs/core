@@ -71,8 +71,7 @@ describe('deferred computed', () => {
     src.value = 2
     src.value = 4
     src.value = 6
-    // c1 should re-compute once.
-    expect(c1Spy).toHaveBeenCalledTimes(2)
+    expect(c1Spy).toHaveBeenCalledTimes(4)
     // c2 should not have to re-compute because c1 did not change.
     expect(c2Spy).toHaveBeenCalledTimes(1)
     // effect should not trigger because c2 did not change.

@@ -53,6 +53,13 @@ export class ComputedRefImpl<T> {
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
+  queryDirty() {
+    if (this._scheduled) {
+      this._scheduled = false
+      return this.value
+    }
+  }
+
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
@@ -61,7 +68,6 @@ export class ComputedRefImpl<T> {
       if (hasChanged(self._value, (self._value = self.effect.run()!))) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
       }
-      self._scheduled = false
     }
     return self._value
   }
@@ -70,7 +76,7 @@ export class ComputedRefImpl<T> {
     this._setter(newValue)
   }
 
-  // #region polyfill _dirty for backward compatibility with version <= 3.3.x
+  // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
   get _dirty() {
     return this.effect.dirty
   }
