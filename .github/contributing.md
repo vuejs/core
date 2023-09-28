@@ -181,7 +181,7 @@ Shortcut for starting the SFC Playground in local dev mode. This provides the fa
 
 ### `nr dev-esm`
 
-Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproductions that require real build setups: link `packages/vue` globally, then link it into the project being debugged.
+Builds and watches `vue/dist/vue-runtime.esm-bundler.js` with all deps inlined using esbuild. This is useful when debugging the ESM build in a reproduction that requires real build setups: link `packages/vue` globally, then link it into the project being debugged.
 
 ### `nr dev-compiler`
 
