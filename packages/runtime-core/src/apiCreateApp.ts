@@ -221,7 +221,7 @@ export function createAppAPI<HostElement>(
         set() {
           warn(
             `app.config.unwrapInjectedRef has been deprecated. ` +
-              `3.3 now alawys unwraps injected refs in Options API.`
+              `3.3 now always unwraps injected refs in Options API.`
           )
         }
       })
