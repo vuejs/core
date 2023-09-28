@@ -61,7 +61,8 @@ import {
   ComponentPublicInstance,
   isReservedPrefix,
   IntersectionMixin,
-  UnwrapMixinsType
+  UnwrapMixinsType,
+  ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 import { warn } from './warning'
 import { VNodeChild } from './vnode'
@@ -419,12 +420,10 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
 
 declare const AttrSymbol: unique symbol
 export type AttrsType<T extends Record<string, any> = Record<string, any>> = {
-  [AttrSymbol]?: T
+  [AttrSymbol]?: T extends ComponentPublicInstanceConstructor
+    ? InstanceType<T>['$props']
+    : T
 }
-// extract props and event types from components
-export type ExtractPropsAndEvents<
-  T extends abstract new (...args: any) => any
-> = InstanceType<T>['$props']
 
 export type UnwrapAttrsType<
   Attrs extends AttrsType,

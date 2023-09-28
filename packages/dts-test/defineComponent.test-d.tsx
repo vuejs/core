@@ -14,8 +14,7 @@ import {
   Slots,
   VNode,
   ImgHTMLAttributes,
-  StyleValue,
-  ExtractPropsAndEvents
+  StyleValue
 } from 'vue'
 import { describe, expectType, IsUnion, test } from './utils'
 
@@ -1360,7 +1359,7 @@ describe('define attrs', () => {
       props: {
         bar: Number
       },
-      attrs: Object as AttrsType<ExtractPropsAndEvents<typeof Child>>,
+      attrs: Object as AttrsType<typeof Child>,
       created() {
         expectType<unknown>(this.$attrs.class)
         expectType<unknown>(this.$attrs.style)

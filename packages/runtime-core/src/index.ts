@@ -247,8 +247,7 @@ export type {
   ComputedOptions,
   RuntimeCompilerOptions,
   ComponentInjectOptions,
-  AttrsType,
-  ExtractPropsAndEvents
+  AttrsType
 } from './componentOptions'
 export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 export type {
