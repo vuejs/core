@@ -349,9 +349,8 @@ function hydrateTeleport(
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
-    const disabled = isTeleportDisabled(vnode.props)
     if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      if (disabled) {
+      if (isTeleportDisabled(vnode.props)) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),
           vnode,
