@@ -274,6 +274,7 @@ export function defineComponent<
 >
 
 // implementation, close to no-op
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions
