@@ -5,7 +5,6 @@ import {
   createDep,
   Dep,
   finalizeDepMarkers,
-  initDepMarkers,
   newTracked,
   wasTracked
 } from './dep'
@@ -138,11 +137,7 @@ export class ReactiveEffect<T = any> {
 
       trackOpBit = 1 << ++effectTrackDepth
 
-      if (effectTrackDepth <= maxMarkerBits) {
-        initDepMarkers(this)
-      } else {
-        cleanupEffect(this)
-      }
+      cleanupEffect(this)
       return this.fn()
     } finally {
       if (effectTrackDepth <= maxMarkerBits) {
