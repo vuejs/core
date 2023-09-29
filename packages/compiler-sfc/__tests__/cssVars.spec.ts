@@ -63,7 +63,7 @@ describe('CSS vars injection', () => {
         }
       }
     )
-    expect(content).not.toMatch(`__injectCSSVars__`)
+    expect(content).not.toMatch(`_useCssVars`)
     assertCode(content)
   })
 
