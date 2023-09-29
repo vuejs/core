@@ -1,8 +1,6 @@
 import {
   Node,
   LVal,
-  TSTypeLiteral,
-  TSInterfaceBody,
   ObjectProperty,
   ObjectMethod,
   ObjectExpression,
@@ -10,16 +8,16 @@ import {
 } from '@babel/types'
 import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
-import { inferRuntimeType, resolveQualifiedType } from './resolveType'
+import { inferRuntimeType, resolveTypeElements } from './resolveType'
 import {
-  FromNormalScript,
   resolveObjectKey,
   UNKNOWN_TYPE,
   concatStrings,
   isLiteralNode,
   isCallOf,
   unwrapTSNode,
-  toRuntimeTypeString
+  toRuntimeTypeString,
+  getEscapedKey
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -27,8 +25,6 @@ import { processPropsDestructure } from './definePropsDestructure'
 
 export const DEFINE_PROPS = 'defineProps'
 export const WITH_DEFAULTS = 'withDefaults'
-
-export type PropsDeclType = FromNormalScript<TSTypeLiteral | TSInterfaceBody>
 
 export interface PropTypeData {
   key: string
@@ -63,7 +59,9 @@ export function processDefineProps(
   // register bindings
   if (ctx.propsRuntimeDecl) {
     for (const key of getObjectOrArrayExpressionKeys(ctx.propsRuntimeDecl)) {
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
+      if (!(key in ctx.bindingMetadata)) {
+        ctx.bindingMetadata[key] = BindingTypes.PROPS
+      }
     }
   }
 
@@ -76,30 +74,16 @@ export function processDefineProps(
         node
       )
     }
-
-    const rawDecl = node.typeParameters.params[0]
-    ctx.propsTypeDecl = resolveQualifiedType(
-      ctx,
-      rawDecl,
-      node => node.type === 'TSTypeLiteral'
-    ) as PropsDeclType | undefined
-    if (!ctx.propsTypeDecl) {
-      ctx.error(
-        `type argument passed to ${DEFINE_PROPS}() must be a literal type, ` +
-          `or a reference to an interface or literal type.`,
-        rawDecl
-      )
-    }
+    ctx.propsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    // handle props destructure
-    if (declId.type === 'ObjectPattern') {
-      processPropsDestructure(ctx, declId)
-    } else {
-      ctx.propsIdentifier = ctx.getString(declId)
-    }
+  // handle props destructure
+  if (declId && declId.type === 'ObjectPattern') {
+    processPropsDestructure(ctx, declId)
   }
+
+  ctx.propsCall = node
+  ctx.propsDecl = declId
 
   return true
 }
@@ -112,31 +96,33 @@ function processWithDefaults(
   if (!isCallOf(node, WITH_DEFAULTS)) {
     return false
   }
-  if (processDefineProps(ctx, node.arguments[0], declId)) {
-    if (ctx.propsRuntimeDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS} can only be used with type-based ` +
-          `${DEFINE_PROPS} declaration.`,
-        node
-      )
-    }
-    if (ctx.propsDestructureDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
-          `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
-        node.callee
-      )
-    }
-    ctx.propsRuntimeDefaults = node.arguments[1]
-    if (!ctx.propsRuntimeDefaults) {
-      ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
-    }
-  } else {
+  if (!processDefineProps(ctx, node.arguments[0], declId)) {
     ctx.error(
       `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
       node.arguments[0] || node
     )
   }
+
+  if (ctx.propsRuntimeDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS} can only be used with type-based ` +
+        `${DEFINE_PROPS} declaration.`,
+      node
+    )
+  }
+  if (ctx.propsDestructureDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
+        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+      node.callee
+    )
+  }
+  ctx.propsRuntimeDefaults = node.arguments[1]
+  if (!ctx.propsRuntimeDefaults) {
+    ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
+  }
+  ctx.propsCall = node
+
   return true
 }
 
@@ -149,10 +135,11 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       const defaults: string[] = []
       for (const key in ctx.propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(ctx, key)
+        const finalKey = getEscapedKey(key)
         if (d)
           defaults.push(
-            `${key}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${key}: true` : ``
+            `${finalKey}: ${d.valueString}${
+              d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
             }`
           )
       }
@@ -176,56 +163,21 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
 }
 
 function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
+  // this is only called if propsTypeDecl exists
+  const props = resolveRuntimePropsFromType(ctx, ctx.propsTypeDecl!)
+  if (!props.length) {
+    return
+  }
+
   const propStrings: string[] = []
   const hasStaticDefaults = hasStaticWithDefaults(ctx)
 
-  // this is only called if propsTypeDecl exists
-  const node = ctx.propsTypeDecl!
-  const members = node.type === 'TSTypeLiteral' ? node.members : node.body
-  for (const m of members) {
-    if (
-      (m.type === 'TSPropertySignature' || m.type === 'TSMethodSignature') &&
-      m.key.type === 'Identifier'
-    ) {
-      const key = m.key.name
-      let type: string[] | undefined
-      let skipCheck = false
-      if (m.type === 'TSMethodSignature') {
-        type = ['Function']
-      } else if (m.typeAnnotation) {
-        type = inferRuntimeType(
-          m.typeAnnotation.typeAnnotation,
-          ctx.declaredTypes
-        )
-        // skip check for result containing unknown types
-        if (type.includes(UNKNOWN_TYPE)) {
-          if (type.includes('Boolean') || type.includes('Function')) {
-            type = type.filter(t => t !== UNKNOWN_TYPE)
-            skipCheck = true
-          } else {
-            type = ['null']
-          }
-        }
-      }
-
-      propStrings.push(
-        genRuntimePropFromType(
-          ctx,
-          key,
-          !m.optional,
-          type || [`null`],
-          skipCheck,
-          hasStaticDefaults
-        )
-      )
-
-      // register bindings
-      ctx.bindingMetadata[key] = BindingTypes.PROPS
+  for (const prop of props) {
+    propStrings.push(genRuntimePropFromType(ctx, prop, hasStaticDefaults))
+    // register bindings
+    if (!(prop.key in ctx.bindingMetadata)) {
+      ctx.bindingMetadata[prop.key] = BindingTypes.PROPS
     }
-  }
-
-  if (!propStrings.length) {
-    return
   }
 
   let propsDecls = `{
@@ -240,12 +192,38 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
   return propsDecls
 }
 
+function resolveRuntimePropsFromType(
+  ctx: ScriptCompileContext,
+  node: Node
+): PropTypeData[] {
+  const props: PropTypeData[] = []
+  const elements = resolveTypeElements(ctx, node)
+  for (const key in elements.props) {
+    const e = elements.props[key]
+    let type = inferRuntimeType(ctx, e)
+    let skipCheck = false
+    // skip check for result containing unknown types
+    if (type.includes(UNKNOWN_TYPE)) {
+      if (type.includes('Boolean') || type.includes('Function')) {
+        type = type.filter(t => t !== UNKNOWN_TYPE)
+        skipCheck = true
+      } else {
+        type = ['null']
+      }
+    }
+    props.push({
+      key,
+      required: !e.optional,
+      type: type || [`null`],
+      skipCheck
+    })
+  }
+  return props
+}
+
 function genRuntimePropFromType(
   ctx: ScriptCompileContext,
-  key: string,
-  required: boolean,
-  type: string[],
-  skipCheck: boolean,
+  { key, required, type, skipCheck }: PropTypeData,
   hasStaticDefaults: boolean
 ): string {
   let defaultString: string | undefined
@@ -273,8 +251,9 @@ function genRuntimePropFromType(
     }
   }
 
+  const finalKey = getEscapedKey(key)
   if (!ctx.options.isProd) {
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       `required: ${required}`,
       skipCheck && 'skipCheck: true',
@@ -290,13 +269,13 @@ function genRuntimePropFromType(
     // #4783 for boolean, should keep the type
     // #7111 for function, if default value exists or it's not static, should keep it
     // in production
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       defaultString
     ])} }`
   } else {
     // production: checks are useless
-    return `${key}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
+    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }
 }
 
@@ -333,11 +312,7 @@ function genDestructuredDefaultValue(
     const value = ctx.getString(defaultVal)
     const unwrapped = unwrapTSNode(defaultVal)
 
-    if (
-      inferredType &&
-      inferredType.length &&
-      !inferredType.includes(UNKNOWN_TYPE)
-    ) {
+    if (inferredType && inferredType.length && !inferredType.includes('null')) {
       const valueType = inferValueType(unwrapped)
       if (valueType && !inferredType.includes(valueType)) {
         ctx.error(
@@ -350,7 +325,7 @@ function genDestructuredDefaultValue(
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
-    // whether tje expected runtime prop type is `Function`.
+    // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
       !inferredType &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')

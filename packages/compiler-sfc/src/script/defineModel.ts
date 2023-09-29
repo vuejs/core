@@ -9,6 +9,7 @@ import {
   unwrapTSNode
 } from './utils'
 import { BindingTypes } from '@vue/compiler-dom'
+import { warnOnce } from '../warn'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -23,9 +24,25 @@ export function processDefineModel(
   node: Node,
   declId?: LVal
 ): boolean {
-  if (!ctx.options.defineModel || !isCallOf(node, DEFINE_MODEL)) {
+  if (!isCallOf(node, DEFINE_MODEL)) {
     return false
   }
+
+  if (!ctx.options.defineModel) {
+    warnOnce(
+      `defineModel() is an experimental feature and disabled by default.\n` +
+        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
+    )
+    return false
+  }
+
+  warnOnce(
+    `This project is using defineModel(), which is an experimental ` +
+      `feature. It may receive breaking changes or be removed in the future, so ` +
+      `use at your own risk.\n` +
+      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
+  )
+
   ctx.hasDefineModelCall = true
 
   const type =
@@ -99,7 +116,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
   for (const [name, { type, options }] of Object.entries(ctx.modelDecls)) {
     let skipCheck = false
 
-    let runtimeTypes = type && inferRuntimeType(type, ctx.declaredTypes)
+    let runtimeTypes = type && inferRuntimeType(ctx, type)
     if (runtimeTypes) {
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
