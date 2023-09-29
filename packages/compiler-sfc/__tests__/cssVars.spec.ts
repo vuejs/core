@@ -41,6 +41,32 @@ describe('CSS vars injection', () => {
     assertCode(content)
   })
 
+  test('w/ normal <script> binding analysis (SSR)', () => {
+    const { content } = compileSFCScript(
+      `<script>
+      export default {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      </script>\n` +
+        `<style>
+          div {
+            font-size: v-bind(size);
+          }
+        </style>`,
+      {
+        templateOptions: {
+          ssr: true
+        }
+      }
+    )
+    expect(content).not.toMatch(`__injectCSSVars__`)
+    assertCode(content)
+  })
+
   test('w/ <script setup> binding analysis', () => {
     const { content } = compileSFCScript(
       `<script setup>

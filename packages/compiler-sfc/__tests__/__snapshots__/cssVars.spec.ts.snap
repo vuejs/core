@@ -170,6 +170,19 @@ return { color, size, ref }
 }"
 `;
 
+exports[`CSS vars injection > w/ normal <script> binding analysis (SSR) 1`] = `
+"
+      const __default__ = {
+        setup() {
+          return {
+            size: ref('100px')
+          }
+        }
+      }
+      
+export default __default__"
+`;
+
 exports[`CSS vars injection > w/ normal <script> binding analysis 1`] = `
 "
       const __default__ = {
