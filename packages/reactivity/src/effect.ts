@@ -58,6 +58,7 @@ export class ReactiveEffect<T = any> {
   _queryingDirty = false
   _trackId = 0
   _runnings = 0
+  _depsWriteIndex = 0
 
   constructor(
     public fn: () => T,
@@ -107,9 +108,13 @@ export class ReactiveEffect<T = any> {
       shouldTrack = true
       activeEffect = this
       this._runnings++
-      cleanupEffect(this)
+      this._trackId++
+      this._depsWriteIndex = 0
       return this.fn()
     } finally {
+      if (this.deps.length > this._depsWriteIndex) {
+        this.deps.length = this._depsWriteIndex
+      }
       this._runnings--
       activeEffect = lastEffect
       shouldTrack = lastShouldTrack
@@ -118,16 +123,13 @@ export class ReactiveEffect<T = any> {
 
   stop() {
     if (this.active) {
-      cleanupEffect(this)
+      this._trackId++
+      this._depsWriteIndex = 0
+      this.deps.length = 0
       this.onStop?.()
       this.active = false
     }
   }
-}
-
-function cleanupEffect(effect: ReactiveEffect) {
-  effect._trackId++
-  effect.deps.length = 0
 }
 
 export interface DebuggerOptions {
@@ -282,7 +284,7 @@ export function trackEffect(
 ) {
   if (dep.get(effect) !== effect._trackId) {
     dep.set(effect, effect._trackId)
-    effect.deps.push(dep)
+    effect.deps[effect._depsWriteIndex++] = dep
     if (__DEV__) {
       effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
