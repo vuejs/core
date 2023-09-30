@@ -2,7 +2,7 @@ import {
   activeEffect,
   getDepFromReactive,
   shouldTrack,
-  trackEffects,
+  trackEffect,
   triggerEffects
 } from './effect'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
@@ -42,10 +42,10 @@ export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
     if (__DEV__) {
-      trackEffects(
+      trackEffect(
+        activeEffect,
         ref.dep ||
           (ref.dep = createDep(
-            undefined,
             ref instanceof ComputedRefImpl
               ? ref.queryDirty.bind(ref)
               : undefined
@@ -57,10 +57,10 @@ export function trackRefValue(ref: RefBase<any>) {
         }
       )
     } else {
-      trackEffects(
+      trackEffect(
+        activeEffect,
         ref.dep ||
           (ref.dep = createDep(
-            undefined,
             ref instanceof ComputedRefImpl
               ? ref.queryDirty.bind(ref)
               : undefined

@@ -1,13 +1,7 @@
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
-import {
-  createDep,
-  Dep,
-  finalizeDepMarkers,
-  newTracked,
-  wasTracked
-} from './dep'
+import { createDep, Dep } from './dep'
 import type { ComputedRefImpl } from './computed'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -16,18 +10,6 @@ import type { ComputedRefImpl } from './computed'
 // raw Sets to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
-
-// The number of effects currently being tracked recursively.
-let effectTrackDepth = 0
-
-export let trackOpBit = 1
-
-/**
- * The bitwise track markers support at most 30 levels of recursion.
- * This value is chosen to enable modern JS engines to use a SMI on all platforms.
- * When recursion depth is greater, fall back to using a full cleanup.
- */
-const maxMarkerBits = 30
 
 export type EffectScheduler = (
   onScheduled: (cb: () => void) => void,
@@ -55,7 +37,6 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
-  parent: ReactiveEffect | undefined = undefined
 
   /**
    * Can be attached after creation
@@ -66,10 +47,6 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   allowRecurse?: boolean
-  /**
-   * @internal
-   */
-  private deferStop?: boolean
 
   onStop?: () => void
   // dev only
@@ -79,6 +56,8 @@ export class ReactiveEffect<T = any> {
 
   _dirtyLevel = DirtyLevels.Dirty
   _queryingDirty = false
+  _trackId = 0
+  _runnings = 0
 
   constructor(
     public fn: () => T,
@@ -122,62 +101,33 @@ export class ReactiveEffect<T = any> {
     if (!this.active) {
       return this.fn()
     }
-    let parent: ReactiveEffect | undefined = activeEffect
     let lastShouldTrack = shouldTrack
-    while (parent) {
-      if (parent === this) {
-        return
-      }
-      parent = parent.parent
-    }
+    let lastEffect = activeEffect
     try {
-      this.parent = activeEffect
-      activeEffect = this
       shouldTrack = true
-
-      trackOpBit = 1 << ++effectTrackDepth
-
+      activeEffect = this
+      this._runnings++
       cleanupEffect(this)
       return this.fn()
     } finally {
-      if (effectTrackDepth <= maxMarkerBits) {
-        finalizeDepMarkers(this)
-      }
-
-      trackOpBit = 1 << --effectTrackDepth
-
-      activeEffect = this.parent
+      this._runnings--
+      activeEffect = lastEffect
       shouldTrack = lastShouldTrack
-      this.parent = undefined
-
-      if (this.deferStop) {
-        this.stop()
-      }
     }
   }
 
   stop() {
-    // stopped while running itself - defer the cleanup
-    if (activeEffect === this) {
-      this.deferStop = true
-    } else if (this.active) {
+    if (this.active) {
       cleanupEffect(this)
-      if (this.onStop) {
-        this.onStop()
-      }
+      this.onStop?.()
       this.active = false
     }
   }
 }
 
 function cleanupEffect(effect: ReactiveEffect) {
-  const { deps } = effect
-  if (deps.length) {
-    for (let i = 0; i < deps.length; i++) {
-      deps[i].delete(effect)
-    }
-    deps.length = 0
-  }
+  effect._trackId++
+  effect.deps.length = 0
 }
 
 export interface DebuggerOptions {
@@ -313,42 +263,28 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     if (!dep) {
       depsMap.set(key, (dep = createDep()))
     }
-
-    const eventInfo = __DEV__
-      ? { effect: activeEffect, target, type, key }
-      : undefined
-
-    trackEffects(dep, eventInfo)
+    if (__DEV__) {
+      trackEffect(activeEffect, dep, {
+        target,
+        type,
+        key
+      })
+    } else {
+      trackEffect(activeEffect, dep)
+    }
   }
 }
 
-export function trackEffects(
+export function trackEffect(
+  effect: ReactiveEffect,
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  let shouldTrack = false
-  if (effectTrackDepth <= maxMarkerBits) {
-    if (!newTracked(dep)) {
-      dep.n |= trackOpBit // set newly tracked
-      shouldTrack = !wasTracked(dep)
-    }
-  } else {
-    // Full cleanup mode.
-    shouldTrack = !dep.has(activeEffect!)
-  }
-
-  if (shouldTrack) {
-    dep.add(activeEffect!)
-    activeEffect!.deps.push(dep)
-    if (__DEV__ && activeEffect!.onTrack) {
-      activeEffect!.onTrack(
-        extend(
-          {
-            effect: activeEffect!
-          },
-          debuggerEventExtraInfo!
-        )
-      )
+  if (dep.get(effect) !== effect._trackId) {
+    dep.set(effect, effect._trackId)
+    effect.deps.push(dep)
+    if (__DEV__) {
+      effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
   }
 }
@@ -435,16 +371,20 @@ export function trigger(
       }
     }
   } else {
-    const effects: ReactiveEffect[] = []
+    const newDep = createDep()
     for (const dep of deps) {
       if (dep) {
-        effects.push(...dep)
+        for (const [effect, trackId] of dep) {
+          if (effect._trackId === trackId) {
+            newDep.set(effect, effect._trackId)
+          }
+        }
       }
     }
     if (__DEV__) {
-      triggerEffects(createDep(effects), DirtyLevels.Dirty, eventInfo)
+      triggerEffects(newDep, DirtyLevels.Dirty, eventInfo)
     } else {
-      triggerEffects(createDep(effects), DirtyLevels.Dirty)
+      triggerEffects(newDep, DirtyLevels.Dirty)
     }
   }
 }
@@ -457,13 +397,20 @@ export function triggerEffects(
   dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  let invalidEffects: ReactiveEffect[] | undefined
+
   pauseScheduling()
-  for (const effect of dep) {
-    if (effect === activeEffect && !effect.allowRecurse) {
+  for (const [effect, trackId] of dep) {
+    if (effect._trackId !== trackId) {
+      invalidEffects ??= []
+      invalidEffects.push(effect)
       continue
     }
-    if (__DEV__ && effect.onTrigger) {
-      effect.onTrigger(extend({ effect }, debuggerEventExtraInfo))
+    if (!effect.allowRecurse && effect._runnings) {
+      continue
+    }
+    if (__DEV__) {
+      effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
     }
     if (effect._dirtyLevel < dirtyLevel) {
       effect._dirtyLevel = dirtyLevel
@@ -477,6 +424,14 @@ export function triggerEffects(
     }
   }
   resetScheduling()
+
+  if (invalidEffects) {
+    for (const effect of invalidEffects) {
+      if (effect._trackId !== dep.get(effect)) {
+        dep.delete(effect)
+      }
+    }
+  }
 }
 
 export function getDepFromReactive(object: any, key: string | number | symbol) {
