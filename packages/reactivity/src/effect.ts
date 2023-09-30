@@ -376,9 +376,22 @@ export function trigger(
     const newDep = createDep()
     for (const dep of deps) {
       if (dep) {
+        let invalidEffects: ReactiveEffect[] | undefined
+
         for (const [effect, trackId] of dep) {
           if (effect._trackId === trackId) {
             newDep.set(effect, effect._trackId)
+          } else {
+            invalidEffects ??= []
+            invalidEffects.push(effect)
+          }
+        }
+
+        if (invalidEffects) {
+          for (const effect of invalidEffects) {
+            if (effect._trackId !== dep.get(effect)) {
+              dep.delete(effect)
+            }
           }
         }
       }
