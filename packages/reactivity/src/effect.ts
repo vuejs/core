@@ -389,9 +389,7 @@ export function trigger(
 
         if (invalidEffects) {
           for (const effect of invalidEffects) {
-            if (effect._trackId !== dep.get(effect)) {
-              dep.delete(effect)
-            }
+            dep.delete(effect)
           }
         }
       }
@@ -442,9 +440,7 @@ export function triggerEffects(
 
   if (invalidEffects) {
     for (const effect of invalidEffects) {
-      if (effect._trackId !== dep.get(effect)) {
-        dep.delete(effect)
-      }
+      dep.delete(effect)
     }
   }
 }
