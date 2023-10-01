@@ -52,9 +52,7 @@ module.exports = {
     },
     // Packages targeting Node
     {
-      files: [
-        'packages/{compiler-sfc,compiler-ssr,server-renderer,reactivity-transform}/**'
-      ],
+      files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
       rules: {
         'no-restricted-globals': ['error', ...DOMGlobals],
         'no-restricted-syntax': 'off'

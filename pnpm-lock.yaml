@@ -284,31 +284,6 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/reactivity-transform:
-    dependencies:
-      '@babel/parser':
-        specifier: ^7.23.3
-        version: 7.23.3
-      '@vue/compiler-core':
-        specifier: workspace:*
-        version: link:../compiler-core
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-      estree-walker:
-        specifier: ^2.0.2
-        version: 2.0.2
-      magic-string:
-        specifier: ^0.30.5
-        version: 0.30.5
-    devDependencies:
-      '@babel/core':
-        specifier: ^7.23.3
-        version: 7.23.3
-      '@babel/types':
-        specifier: ^7.23.3
-        version: 7.23.3
-
   packages/runtime-core:
     dependencies:
       '@vue/reactivity':
@@ -1760,6 +1735,15 @@ packages:
       pretty-format: 29.7.0
     dev: true
 
+  /@vue/compiler-core@3.4.0-alpha.1:
+    resolution: {integrity: sha512-a8+bRu5WLM5zQzU0Z9uGjJqyllBiMYftPjm6NU1oqrFF2s9xMSCLGTNgtTbdmKA+98H9NmfCEFLRC2BO6vyaXg==}
+    dependencies:
+      '@babel/parser': 7.23.0
+      '@vue/shared': 3.4.0-alpha.1
+      estree-walker: 2.0.2
+      source-map-js: 1.0.2
+    dev: false
+
   /@vue/consolidate@0.17.3:
     resolution: {integrity: sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==}
     engines: {node: '>= 0.12.0'}
@@ -1767,6 +1751,10 @@ packages:
 
   /@vue/repl@2.7.0:
     resolution: {integrity: sha512-zzyb+tVvzmOePv8Gp4sefP/7CKidx4WiJDfKPP698b9bN5jSFtmSOg4nvPoJEE1ICKeAEgdRKVneYJ8Mp7C/WA==}
+    dev: false
+
+  /@vue/shared@3.4.0-alpha.1:
+    resolution: {integrity: sha512-0GMCNskHdNKCnvsQLP7pdwA4OsnFfQkSplbqFu1SiZC7HfCJystK27yUx59wxcSqho40bYRS+17S0UFVb1B48g==}
     dev: false
 
   /@zeit/schemas@2.29.0:

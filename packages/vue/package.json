@@ -14,10 +14,7 @@
     "compiler-sfc",
     "server-renderer",
     "jsx-runtime",
-    "jsx.d.ts",
-    "macros.d.ts",
-    "macros-global.d.ts",
-    "ref-macros.d.ts"
+    "jsx.d.ts"
   ],
   "exports": {
     ".": {
@@ -65,10 +62,7 @@
     },
     "./jsx": "./jsx.d.ts",
     "./dist/*": "./dist/*",
-    "./package.json": "./package.json",
-    "./macros": "./macros.d.ts",
-    "./macros-global": "./macros-global.d.ts",
-    "./ref-macros": "./ref-macros.d.ts"
+    "./package.json": "./package.json"
   },
   "buildOptions": {
     "name": "Vue",
