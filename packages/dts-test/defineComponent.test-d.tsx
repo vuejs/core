@@ -1380,6 +1380,28 @@ describe('define attrs', () => {
       />
     )
   })
+
+  test('wrap components w/ functional component', () => {
+    const Child = defineComponent((props: { foo: string }, ctx) => {
+      return () => <div>{props.foo}</div>
+    })
+    const Comp = defineComponent({
+      props: {
+        bar: Number
+      },
+      attrs: Object as AttrsType<typeof Child>,
+      created() {
+        expectType<unknown>(this.$attrs.class)
+        expectType<unknown>(this.$attrs.style)
+      },
+      render() {
+        return <Child {...this.$attrs} />
+      }
+    })
+    expectType<JSX.Element>(
+      <Comp class={'str'} style={'str'} bar={1} foo={'str'} />
+    )
+  })
 })
 
 // #5948
