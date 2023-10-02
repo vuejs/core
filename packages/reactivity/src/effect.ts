@@ -114,13 +114,10 @@ export class ReactiveEffect<T = any> {
       shouldTrack = true
       activeEffect = this
       this._runnings++
-      this._trackId++
-      this._depsWriteIndex = 0
+      cleanupEffect(this)
       return this.fn()
     } finally {
-      if (this.deps.length > this._depsWriteIndex) {
-        this.deps.length = this._depsWriteIndex
-      }
+      postCleanupEffect(this)
       this._runnings--
       activeEffect = lastEffect
       shouldTrack = lastShouldTrack
@@ -129,12 +126,22 @@ export class ReactiveEffect<T = any> {
 
   stop() {
     if (this.active) {
-      this._trackId++
-      this._depsWriteIndex = 0
-      this.deps.length = 0
+      cleanupEffect(this)
+      postCleanupEffect(this)
       this.onStop?.()
       this.active = false
     }
+  }
+}
+
+function cleanupEffect(effect: ReactiveEffect) {
+  effect._trackId++
+  effect._depsWriteIndex = 0
+}
+
+function postCleanupEffect(effect: ReactiveEffect) {
+  if (effect.deps.length > effect._depsWriteIndex) {
+    effect.deps.length = effect._depsWriteIndex
   }
 }
 
