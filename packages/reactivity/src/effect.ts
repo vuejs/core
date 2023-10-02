@@ -413,10 +413,8 @@ export function triggerEffects(
     if (effect._dirtyLevel < dirtyLevel) {
       effect._dirtyLevel = dirtyLevel
       if (
-        dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
-        dirtyLevel === DirtyLevels.Dirty ||
-        (dirtyLevel === DirtyLevels.ComputedValueDirty &&
-          !effect._queryingDirty)
+        !effect._queryingDirty ||
+        dirtyLevel !== DirtyLevels.ComputedValueDirty
       ) {
         if (__DEV__) {
           effect.debuggerEventExtraInfo = debuggerEventExtraInfo
