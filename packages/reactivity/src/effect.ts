@@ -53,6 +53,8 @@ export class ReactiveEffect<T = any> {
   onTrack?: (event: DebuggerEvent) => void
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
+  // dev only
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo
 
   _dirtyLevel = DirtyLevels.Dirty
   _queryingDirty = false
@@ -90,6 +92,10 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
+    if (__DEV__ && this.debuggerEventExtraInfo) {
+      this.onTrigger?.(extend({ effect: this }, this.debuggerEventExtraInfo))
+      this.debuggerEventExtraInfo = undefined
+    }
     this._dirtyLevel = DirtyLevels.NotDirty
     const result = this._run()
     if ((this._dirtyLevel as DirtyLevels) === DirtyLevels.ComputedValueDirty) {
@@ -364,42 +370,17 @@ export function trigger(
     ? { target, type, key, newValue, oldValue, oldTarget }
     : undefined
 
-  if (deps.length === 1) {
-    if (deps[0]) {
+  pauseScheduling()
+  for (const dep of deps) {
+    if (dep) {
       if (__DEV__) {
-        triggerEffects(deps[0], DirtyLevels.Dirty, eventInfo)
+        triggerEffects(dep, DirtyLevels.Dirty, eventInfo)
       } else {
-        triggerEffects(deps[0], DirtyLevels.Dirty)
+        triggerEffects(dep, DirtyLevels.Dirty)
       }
-    }
-  } else {
-    const newDep = createDep()
-    for (const dep of deps) {
-      if (dep) {
-        let invalidEffects: ReactiveEffect[] | undefined
-
-        for (const [effect, trackId] of dep) {
-          if (effect._trackId === trackId) {
-            newDep.set(effect, effect._trackId)
-          } else {
-            invalidEffects ??= []
-            invalidEffects.push(effect)
-          }
-        }
-
-        if (invalidEffects) {
-          for (const effect of invalidEffects) {
-            dep.delete(effect)
-          }
-        }
-      }
-    }
-    if (__DEV__) {
-      triggerEffects(newDep, DirtyLevels.Dirty, eventInfo)
-    } else {
-      triggerEffects(newDep, DirtyLevels.Dirty)
     }
   }
+  resetScheduling()
 }
 
 const queueEffectCbs: (() => void)[] = []
@@ -422,9 +403,6 @@ export function triggerEffects(
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
-    if (__DEV__) {
-      effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
-    }
     if (effect._dirtyLevel < dirtyLevel) {
       effect._dirtyLevel = dirtyLevel
     }
@@ -433,6 +411,9 @@ export function triggerEffects(
       dirtyLevel === DirtyLevels.Dirty ||
       (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
     ) {
+      if (__DEV__) {
+        effect.debuggerEventExtraInfo = debuggerEventExtraInfo
+      }
       effect.scheduler(pushEffectCb)
     }
   }
