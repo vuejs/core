@@ -366,15 +366,18 @@ export function trigger(
     }
   }
 
-  const eventInfo = __DEV__
-    ? { target, type, key, newValue, oldValue, oldTarget }
-    : undefined
-
   pauseScheduling()
   for (const dep of deps) {
     if (dep) {
       if (__DEV__) {
-        triggerEffects(dep, DirtyLevels.Dirty, eventInfo)
+        triggerEffects(dep, DirtyLevels.Dirty, {
+          target,
+          type,
+          key,
+          newValue,
+          oldValue,
+          oldTarget
+        })
       } else {
         triggerEffects(dep, DirtyLevels.Dirty)
       }
