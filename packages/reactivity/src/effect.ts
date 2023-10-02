@@ -415,16 +415,17 @@ export function triggerEffects(
     }
     if (effect._dirtyLevel < dirtyLevel) {
       effect._dirtyLevel = dirtyLevel
-    }
-    if (
-      dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
-      dirtyLevel === DirtyLevels.Dirty ||
-      (dirtyLevel === DirtyLevels.ComputedValueDirty && !effect._queryingDirty)
-    ) {
-      if (__DEV__) {
-        effect.debuggerEventExtraInfo = debuggerEventExtraInfo
+      if (
+        dirtyLevel === DirtyLevels.ComputedValueMaybeDirty ||
+        dirtyLevel === DirtyLevels.Dirty ||
+        (dirtyLevel === DirtyLevels.ComputedValueDirty &&
+          !effect._queryingDirty)
+      ) {
+        if (__DEV__) {
+          effect.debuggerEventExtraInfo = debuggerEventExtraInfo
+        }
+        effect.scheduler(pushEffectCb)
       }
-      effect.scheduler(pushEffectCb)
     }
   }
   resetScheduling()
