@@ -210,10 +210,9 @@ export function stop(runner: ReactiveEffectRunner) {
 }
 
 export let shouldTrack = true
-export let shouldSchedule = true
+export let pauseScheduleStack = 0
 
 const trackStack: boolean[] = []
-const scheduleStack: boolean[] = []
 
 /**
  * Temporarily pauses tracking.
@@ -243,17 +242,15 @@ export function resetTracking() {
  * @internal
  */
 export function pauseScheduling() {
-  scheduleStack.push(shouldSchedule)
-  shouldSchedule = false
+  pauseScheduleStack++
 }
 
 /**
  * @internal
  */
 export function resetScheduling() {
-  const last = scheduleStack.pop()
-  shouldSchedule = last === undefined ? true : last
-  while (shouldSchedule && queueEffectCbs.length) {
+  pauseScheduleStack--
+  while (!pauseScheduleStack && queueEffectCbs.length) {
     queueEffectCbs.shift()!()
   }
 }
