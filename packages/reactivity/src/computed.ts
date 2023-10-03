@@ -55,8 +55,9 @@ export class ComputedRefImpl<T> {
 
   queryDirty() {
     if (this._scheduled) {
+      const res = this.value
       this._scheduled = false
-      return this.value
+      return res
     }
   }
 
