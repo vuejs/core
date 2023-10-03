@@ -398,9 +398,9 @@ export function triggerEffects(
   dirtyLevel: DirtyLevels,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
+  pauseScheduling()
   let invalidEffects: ReactiveEffect[] | undefined
 
-  pauseScheduling()
   for (const [effect, trackId] of dep) {
     if (effect._trackId !== trackId) {
       invalidEffects ??= []
@@ -423,13 +423,13 @@ export function triggerEffects(
       }
     }
   }
-  resetScheduling()
 
   if (invalidEffects) {
     for (const effect of invalidEffects) {
       dep.delete(effect)
     }
   }
+  resetScheduling()
 }
 
 export function getDepFromReactive(object: any, key: string | number | symbol) {
