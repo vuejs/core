@@ -112,14 +112,18 @@ export function createHydrationFunctions(
     vnode.el = node
 
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-      Object.defineProperty(node, '__vnode', {
-        value: vnode,
-        enumerable: false
-      })
-      Object.defineProperty(node, '__vueParentComponent', {
-        value: parentComponent,
-        enumerable: false
-      })
+      if (!('__vnode' in node)) {
+        Object.defineProperty(node, '__vnode', {
+          value: vnode,
+          enumerable: false
+        })
+      }
+      if (!('__vueParentComponent' in node)) {
+        Object.defineProperty(node, '__vueParentComponent', {
+          value: parentComponent,
+          enumerable: false
+        })
+      }
     }
 
     if (patchFlag === PatchFlags.BAIL) {
