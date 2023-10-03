@@ -53,8 +53,6 @@ export class ReactiveEffect<T = any> {
   onTrack?: (event: DebuggerEvent) => void
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
-  // dev only
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
 
   _dirtyLevel = DirtyLevels.Dirty
   _queryingDirty = false
@@ -92,19 +90,7 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
-    if (__DEV__ && this.debuggerEventExtraInfo) {
-      this.onTrigger?.(extend({ effect: this }, this.debuggerEventExtraInfo))
-      this.debuggerEventExtraInfo = undefined
-    }
     this._dirtyLevel = DirtyLevels.NotDirty
-    const result = this._run()
-    if ((this._dirtyLevel as DirtyLevels) === DirtyLevels.ComputedValueDirty) {
-      this._dirtyLevel--
-    }
-    return result
-  }
-
-  _run() {
     if (!this.active) {
       return this.fn()
     }
@@ -410,14 +396,19 @@ export function triggerEffects(
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
-    if (effect._dirtyLevel < dirtyLevel) {
+    if (
+      effect._dirtyLevel < dirtyLevel &&
+      (!effect._runnings || dirtyLevel !== DirtyLevels.ComputedValueDirty)
+    ) {
+      const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
       if (
-        !effect._queryingDirty ||
-        dirtyLevel !== DirtyLevels.ComputedValueDirty
+        lastDirtyLevel === DirtyLevels.NotDirty &&
+        (!effect._queryingDirty ||
+          dirtyLevel !== DirtyLevels.ComputedValueDirty)
       ) {
         if (__DEV__) {
-          effect.debuggerEventExtraInfo = debuggerEventExtraInfo
+          effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
         }
         effect.scheduler(pushEffectCb)
       }
