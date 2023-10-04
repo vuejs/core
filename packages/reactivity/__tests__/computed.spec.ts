@@ -344,6 +344,31 @@ describe('reactivity/computed', () => {
     expect(_msg).toBe('The items are not loaded')
   })
 
+  it('chained computed dirty reallocation after trigger computed getter', () => {
+    let _msg: string | undefined
+
+    const items = ref<number[]>()
+    const isLoaded = computed(() => {
+      return !!items.value
+    })
+    const msg = computed(() => {
+      if (isLoaded.value) {
+        return 'The items are loaded'
+      } else {
+        return 'The items are not loaded'
+      }
+    })
+
+    _msg = msg.value
+    items.value = [1, 2, 3]
+    isLoaded.value // <- trigger computed getter
+    _msg = msg.value
+    items.value = undefined
+    _msg = msg.value
+
+    expect(_msg).toBe('The items are not loaded')
+  })
+
   // https://github.com/vuejs/core/pull/5912#issuecomment-1739159832
   it('deps order should be consistent with the last time get value', () => {
     const cSpy = vi.fn()
