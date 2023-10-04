@@ -5,14 +5,22 @@ import path from 'node:path'
 import chalk from 'chalk'
 import semver from 'semver'
 import enquirer from 'enquirer'
-import execa from 'execa'
+import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2))
+const args = minimist(process.argv.slice(2), {
+  alias: {
+    skipBuild: 'skip-build',
+    skipTests: 'skip-tests',
+    skipGit: 'skip-git',
+    skipPrompts: 'skip-prompts'
+  }
+})
+
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 let skipTests = args.skipTests
@@ -74,7 +82,7 @@ async function main() {
   let targetVersion = args._[0]
 
   if (isCanary) {
-    // The canary version string format is `3.yyyyMMdd.0`.
+    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
     // Use UTC date so that it's consistent across CI and maintainers' machines
     const date = new Date()
     const yyyy = date.getUTCFullYear()
@@ -82,9 +90,13 @@ async function main() {
     const dd = date.getUTCDate().toString().padStart(2, '0')
 
     const major = semver.major(currentVersion)
-    const minor = `${yyyy}${MM}${dd}`
-    const patch = 0
-    let canaryVersion = `${major}.${minor}.${patch}`
+    const datestamp = `${yyyy}${MM}${dd}`
+    let canaryVersion
+
+    canaryVersion = `${major}.${datestamp}.0`
+    if (args.tag && args.tag !== 'latest') {
+      canaryVersion = `${major}.${datestamp}.0-${args.tag}.0`
+    }
 
     // check the registry to avoid version collision
     // in case we need to publish more than one canary versions in a day
@@ -100,9 +112,15 @@ async function main() {
       const latestSameDayPatch = /** @type {string} */ (
         semver.maxSatisfying(versions, `~${canaryVersion}`)
       )
+
       canaryVersion = /** @type {string} */ (
         semver.inc(latestSameDayPatch, 'patch')
       )
+      if (args.tag && args.tag !== 'latest') {
+        canaryVersion = /** @type {string} */ (
+          semver.inc(latestSameDayPatch, 'prerelease', args.tag)
+        )
+      }
     } catch (e) {
       if (/E404/.test(e.message)) {
         // the first patch version on that day
