@@ -412,6 +412,28 @@ describe('reactivity/computed', () => {
     expect(cSpy).toHaveBeenCalledTimes(2)
   })
 
+  it('should trigger by the second computed that maybe dirty', () => {
+    const cSpy = vi.fn()
+
+    const src1 = ref(0)
+    const src2 = ref(0)
+    const c1 = computed(() => src1.value)
+    const c2 = computed(() => (src1.value % 2) + src2.value)
+    const c3 = computed(() => {
+      cSpy()
+      c1.value
+      c2.value
+    })
+
+    c3.value
+    src1.value = 2
+    c3.value
+    expect(cSpy).toHaveBeenCalledTimes(2)
+    src2.value = 1
+    c3.value
+    expect(cSpy).toHaveBeenCalledTimes(3)
+  })
+
   it('should trigger the second effect', () => {
     const fnSpy = vi.fn()
     const v = ref(1)
