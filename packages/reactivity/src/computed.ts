@@ -68,8 +68,8 @@ export class ComputedRefImpl<T> {
     if (!self._cacheable || self.effect.dirty) {
       if (hasChanged(self._value, (self._value = self.effect.run()!))) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
+        self._scheduled = false
       }
-      self._scheduled = false
     }
     return self._value
   }
