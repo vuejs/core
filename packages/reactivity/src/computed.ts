@@ -33,7 +33,6 @@ export class ComputedRefImpl<T> {
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _scheduled = false
   public _cacheable: boolean
 
   constructor(
@@ -43,10 +42,7 @@ export class ComputedRefImpl<T> {
     isSSR: boolean
   ) {
     this.effect = new ReactiveEffect(getter, () => {
-      if (!this._scheduled) {
-        this._scheduled = true
-        triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
-      }
+      triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
     })
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
@@ -54,11 +50,7 @@ export class ComputedRefImpl<T> {
   }
 
   queryDirty() {
-    if (this._scheduled) {
-      const res = this.value
-      this._scheduled = false
-      return res
-    }
+    return this.value
   }
 
   get value() {
@@ -68,7 +60,6 @@ export class ComputedRefImpl<T> {
     if (!self._cacheable || self.effect.dirty) {
       if (hasChanged(self._value, (self._value = self.effect.run()!))) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
-        self._scheduled = false
       }
     }
     return self._value
