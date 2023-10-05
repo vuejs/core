@@ -58,7 +58,7 @@ export class ReactiveEffect<T = any> {
   _queryingDirty = false
   _trackId = 0
   _runnings = 0
-  _depsWriteIndex = 0
+  _depsLength = 0
 
   constructor(
     public fn: () => T,
@@ -122,12 +122,22 @@ export class ReactiveEffect<T = any> {
 
 function cleanupEffect(effect: ReactiveEffect) {
   effect._trackId++
-  effect._depsWriteIndex = 0
+  effect._depsLength = 0
 }
 
 function postCleanupEffect(effect: ReactiveEffect) {
-  if (effect.deps.length > effect._depsWriteIndex) {
-    effect.deps.length = effect._depsWriteIndex
+  if (effect.deps.length > effect._depsLength) {
+    for (let i = effect._depsLength; i < effect.deps.length; i++) {
+      cleanupDepEffect(effect.deps[i], effect)
+    }
+    effect.deps.length = effect._depsLength
+  }
+}
+
+function cleanupDepEffect(dep: Dep, effect: ReactiveEffect) {
+  const trackId = dep.get(effect)
+  if (trackId !== undefined && effect._trackId !== trackId) {
+    dep.delete(effect)
   }
 }
 
@@ -280,7 +290,15 @@ export function trackEffect(
 ) {
   if (dep.get(effect) !== effect._trackId) {
     dep.set(effect, effect._trackId)
-    effect.deps[effect._depsWriteIndex++] = dep
+    const oldDep = effect.deps[effect._depsLength]
+    if (oldDep !== dep) {
+      if (oldDep) {
+        cleanupDepEffect(oldDep, effect)
+      }
+      effect.deps[effect._depsLength++] = dep
+    } else {
+      effect._depsLength++
+    }
     if (__DEV__) {
       effect.onTrack?.(extend({ effect }, debuggerEventExtraInfo!))
     }
@@ -385,14 +403,7 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   pauseScheduling()
-  let invalidEffects: ReactiveEffect[] | undefined
-
-  for (const [effect, trackId] of dep) {
-    if (effect._trackId !== trackId) {
-      invalidEffects ??= []
-      invalidEffects.push(effect)
-      continue
-    }
+  for (const effect of dep.keys()) {
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
@@ -412,12 +423,6 @@ export function triggerEffects(
         }
         effect.scheduler(pushEffectCb)
       }
-    }
-  }
-
-  if (invalidEffects) {
-    for (const effect of invalidEffects) {
-      dep.delete(effect)
     }
   }
   resetScheduling()
