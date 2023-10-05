@@ -74,9 +74,11 @@ export class ReactiveEffect<T = any> {
       this._queryingDirty = true
       pauseTracking()
       for (const dep of this.deps) {
-        dep.queryDirty?.()
-        if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
-          break
+        if (dep.computed) {
+          triggerComputed(dep.computed)
+          if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
+            break
+          }
         }
       }
       resetTracking()
@@ -118,6 +120,10 @@ export class ReactiveEffect<T = any> {
       this.active = false
     }
   }
+}
+
+function triggerComputed(computed: ComputedRefImpl<any>) {
+  return computed.value
 }
 
 function cleanupEffect(effect: ReactiveEffect) {

@@ -46,9 +46,7 @@ export function trackRefValue(ref: RefBase<any>) {
         activeEffect,
         ref.dep ||
           (ref.dep = createDep(
-            ref instanceof ComputedRefImpl
-              ? ref.queryDirty.bind(ref)
-              : undefined
+            ref instanceof ComputedRefImpl ? ref : undefined
           )),
         {
           target: ref,
@@ -61,9 +59,7 @@ export function trackRefValue(ref: RefBase<any>) {
         activeEffect,
         ref.dep ||
           (ref.dep = createDep(
-            ref instanceof ComputedRefImpl
-              ? ref.queryDirty.bind(ref)
-              : undefined
+            ref instanceof ComputedRefImpl ? ref : undefined
           ))
       )
     }

@@ -49,10 +49,6 @@ export class ComputedRefImpl<T> {
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
-  queryDirty() {
-    return this.value
-  }
-
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
