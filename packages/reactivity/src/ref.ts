@@ -490,14 +490,25 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
   ? UnwrapRefSimple<V>
   : UnwrapRefSimple<T>
 
+type UnwrapRefCollection<T extends CollectionTypes> = T extends Set<infer V>
+  ? Set<UnwrapRefSimple<V>>
+  : T extends Map<infer K, infer V>
+  ? Map<K, UnwrapRefSimple<V>>
+  : T extends WeakSet<infer V>
+  ? WeakSet<UnwrapRefSimple<V>>
+  : T extends WeakMap<infer K, infer V>
+  ? WeakMap<K, UnwrapRefSimple<V>>
+  : T
+
 export type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
+  : T extends CollectionTypes
+  ? UnwrapRefCollection<T>
   : T extends ReadonlyArray<any>
   ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
   : T extends object & { [ShallowReactiveMarker]?: never }

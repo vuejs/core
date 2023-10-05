@@ -388,3 +388,24 @@ describe('toRef <-> toValue', () => {
     )
   )
 })
+
+// #9314
+describe('Ref Unwrapping', () => {
+  const num = ref(0)
+  expectType<Ref<number>>(num)
+
+  const obj1 = ref({ count: ref(0) })
+  const obj2 = reactive({ count: ref(0) })
+  expectType<number>(obj1.value.count)
+  expectType<number>(obj2.count)
+
+  const map1 = ref(new Map([['count', ref(0)]]))
+  const map2 = reactive(new Map([['count', ref(0)]]))
+  expectType<Ref<number>>(map1.value.get('count')!)
+  expectType<Ref<number>>(map2.get('count')!)
+
+  const map3 = ref(new Map([['count', { foo: ref(0) }]]))
+  const map4 = reactive(new Map([['count', { foo: ref(0) }]]))
+  expectType<{ foo: number }>(map3.value.get('count')!)
+  expectType<{ foo: number }>(map4.get('count')!)
+})
