@@ -1,7 +1,7 @@
-import { DefineComponent } from '@vue/runtime-core'
 import {
   h,
   defineComponent,
+  DefineComponent,
   ref,
   Fragment,
   Teleport,
