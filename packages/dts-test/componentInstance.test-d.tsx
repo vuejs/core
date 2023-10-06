@@ -2,106 +2,138 @@ import {
   defineComponent,
   FunctionalComponent,
   ComponentPublicInstance,
-  ComponentInstance
+  ComponentInstance,
+  ref
 } from 'vue'
-import { expectType } from './utils'
+import { expectType, describe } from './utils'
 
-const CompSetup = defineComponent({
-  props: {
-    test: String
-  },
-  setup() {
-    return {
-      a: 1
+describe('defineComponent', () => {
+  const CompSetup = defineComponent({
+    props: {
+      test: String
+    },
+    setup() {
+      return {
+        a: 1
+      }
     }
-  }
+  })
+  const compSetup: ComponentInstance<typeof CompSetup> = {} as any
+
+  expectType<string | undefined>(compSetup.test)
+  expectType<number>(compSetup.a)
+  expectType<ComponentPublicInstance>(compSetup)
 })
-declare const compSetup: ComponentInstance<typeof CompSetup>
+describe('functional component', () => {
+  // Functional
+  const CompFunctional: FunctionalComponent<{ test?: string }> = {} as any
+  const compFunctional: ComponentInstance<typeof CompFunctional> = {} as any
 
-expectType<string | undefined>(compSetup.test)
-expectType<number>(compSetup.a)
-expectType<ComponentPublicInstance>(compSetup)
+  expectType<string | undefined>(compFunctional.test)
+  expectType<ComponentPublicInstance>(compFunctional)
 
-// Functional
-declare const CompFunctional: FunctionalComponent<{ test?: string }>
-declare const compFunctional: ComponentInstance<typeof CompFunctional>
+  const CompFunction: (props: { test?: string }) => any = {} as any
+  const compFunction: ComponentInstance<typeof CompFunction> = {} as any
 
-expectType<string | undefined>(compFunctional.test)
-expectType<ComponentPublicInstance>(compFunctional)
-
-declare const CompFunction: (props: { test?: string }) => any
-declare const compFunction: ComponentInstance<typeof CompFunction>
-
-expectType<string | undefined>(compFunction.test)
-expectType<ComponentPublicInstance>(compFunction)
-
-// Options
-const CompOptions = defineComponent({
-  props: {
-    test: String
-  },
-  data() {
-    return {
-      a: 1
-    }
-  },
-  computed: {
-    b() {
-      return 'test'
-    }
-  },
-  methods: {
-    func(a: string) {
-      return true
-    }
-  }
+  expectType<string | undefined>(compFunction.test)
+  expectType<ComponentPublicInstance>(compFunction)
 })
-declare const compOptions: ComponentInstance<typeof CompOptions>
-expectType<string | undefined>(compOptions.test)
-expectType<number>(compOptions.a)
-expectType<(a: string) => boolean>(compOptions.func)
-expectType<ComponentPublicInstance>(compOptions)
 
-// object - no defineComponent
+describe('options component', () => {
+  // Options
+  const CompOptions = defineComponent({
+    props: {
+      test: String
+    },
+    data() {
+      return {
+        a: 1
+      }
+    },
+    computed: {
+      b() {
+        return 'test'
+      }
+    },
+    methods: {
+      func(a: string) {
+        return true
+      }
+    }
+  })
+  const compOptions: ComponentInstance<typeof CompOptions> = {} as any
+  expectType<string | undefined>(compOptions.test)
+  expectType<number>(compOptions.a)
+  expectType<(a: string) => boolean>(compOptions.func)
+  expectType<ComponentPublicInstance>(compOptions)
+})
 
-const CompObjectSetup = {
-  props: {
-    test: String
-  },
-  setup() {
-    return {
-      a: 1
+describe('object no defineComponent', () => {
+  // object - no defineComponent
+
+  const CompObjectSetup = {
+    props: {
+      test: String
+    },
+    setup() {
+      return {
+        a: 1
+      }
     }
   }
-}
-declare const compObjectSetup: ComponentInstance<typeof CompObjectSetup>
-expectType<string | undefined>(compObjectSetup.test)
-expectType<number>(compObjectSetup.a)
-expectType<ComponentPublicInstance>(compObjectSetup)
+  const compObjectSetup: ComponentInstance<typeof CompObjectSetup> = {} as any
+  expectType<string | undefined>(compObjectSetup.test)
+  expectType<number>(compObjectSetup.a)
+  expectType<ComponentPublicInstance>(compObjectSetup)
 
-const CompObjectData = {
-  props: {
-    test: String
-  },
-  data() {
-    return {
-      a: 1
+  const CompObjectData = {
+    props: {
+      test: String
+    },
+    data() {
+      return {
+        a: 1
+      }
     }
   }
-}
-declare const compObjectData: ComponentInstance<typeof CompObjectData>
-expectType<string | undefined>(compObjectData.test)
-expectType<number>(compObjectData.a)
-expectType<ComponentPublicInstance>(compObjectData)
+  const compObjectData: ComponentInstance<typeof CompObjectData> = {} as any
+  expectType<string | undefined>(compObjectData.test)
+  expectType<number>(compObjectData.a)
+  expectType<ComponentPublicInstance>(compObjectData)
 
-const CompObjectNoProps = {
-  data() {
-    return {
-      a: 1
+  const CompObjectNoProps = {
+    data() {
+      return {
+        a: 1
+      }
     }
   }
-}
-declare const compObjectNoProps: ComponentInstance<typeof CompObjectNoProps>
-expectType<string | undefined>(compObjectNoProps.test)
-expectType<number>(compObjectNoProps.a)
-expectType<ComponentPublicInstance>(compObjectNoProps)
+  const compObjectNoProps: ComponentInstance<typeof CompObjectNoProps> =
+    {} as any
+  expectType<string | undefined>(compObjectNoProps.test)
+  expectType<number>(compObjectNoProps.a)
+  expectType<ComponentPublicInstance>(compObjectNoProps)
+})
+
+describe('Generic component', () => {
+  const Comp = defineComponent(
+    // TODO: babel plugin to auto infer runtime props options from type
+    // similar to defineProps<{...}>()
+    <T extends string | number>(props: { msg: T; list: T[] }) => {
+      // use Composition API here like in <script setup>
+      const count = ref(0)
+
+      return () => (
+        // return a render function (both JSX and h() works)
+        <div>
+          {props.msg} {count.value}
+        </div>
+      )
+    }
+  )
+
+  // defaults to known types since types are resolved on instantiation
+  const comp: ComponentInstance<typeof Comp> = {} as any
+  expectType<string | number>(comp.msg)
+  expectType<Array<string | number>>(comp.list)
+})
