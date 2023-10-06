@@ -295,12 +295,12 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy"
-                @before-leave="beforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="afterLeaveSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -496,7 +496,7 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @enter-cancelled="enterCancelledSpy">
+                @enter-cancelled="enterCancelledSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -666,15 +666,15 @@ describe('e2e: Transition', () => {
                   appear-from-class="test-appear-from"
                   appear-to-class="test-appear-to"
                   appear-active-class="test-appear-active"
-                  @before-enter="beforeEnterSpy"
-                  @enter="onEnterSpy"
-                  @after-enter="afterEnterSpy"
-                  @before-leave="beforeLeaveSpy"
-                  @leave="onLeaveSpy"
-                  @after-leave="afterLeaveSpy"
-                  @before-appear="beforeAppearSpy"
-                  @appear="onAppearSpy"
-                  @after-appear="afterAppearSpy">
+                  @before-enter="beforeEnterSpy()"
+                  @enter="onEnterSpy()"
+                  @after-enter="afterEnterSpy()"
+                  @before-leave="beforeLeaveSpy()"
+                  @leave="onLeaveSpy()"
+                  @after-leave="afterLeaveSpy()"
+                  @before-appear="beforeAppearSpy()"
+                  @appear="onAppearSpy()"
+                  @after-appear="afterAppearSpy()">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -802,12 +802,12 @@ describe('e2e: Transition', () => {
               <transition
                 :css="false"
                 name="test"
-                @before-enter="onBeforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="onAfterEnterSpy"
-                @before-leave="onBeforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="onAfterLeaveSpy">
+                @before-enter="onBeforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="onAfterEnterSpy()"
+                @before-leave="onBeforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="onAfterLeaveSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1233,7 +1233,7 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <transition @enter="onEnterSpy" @leave="onLeaveSpy">
+              <transition @enter="onEnterSpy()" @leave="onLeaveSpy()">
                 <Suspense>
                   <Comp v-if="toggle" class="test">content</Comp>
                 </Suspense>
@@ -1592,12 +1592,12 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy"
-                @before-leave="beforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="afterLeaveSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1678,7 +1678,7 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <transition name="test" @leave-cancelled="onLeaveCancelledSpy">
+              <transition name="test" @leave-cancelled="onLeaveCancelledSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1750,9 +1750,9 @@ describe('e2e: Transition', () => {
                             appear-from-class="test-appear-from"
                             appear-to-class="test-appear-to"
                             appear-active-class="test-appear-active"
-                            @before-enter="beforeEnterSpy"
-                            @enter="onEnterSpy"
-                            @after-enter="afterEnterSpy">
+                            @before-enter="beforeEnterSpy()"
+                            @enter="onEnterSpy()"
+                            @after-enter="afterEnterSpy()">
                   <div v-show="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1854,9 +1854,9 @@ describe('e2e: Transition', () => {
               <transition
                 name="test"
                 appear
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
