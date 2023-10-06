@@ -27,7 +27,7 @@ import { isAsyncWrapper } from './apiAsyncComponent'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
-  container: Element | ShadowRoot
+  container: (Element | ShadowRoot) & { _vnode?: VNode }
 ) => void
 
 const enum DOMNodeTypes {
@@ -55,7 +55,15 @@ export function createHydrationFunctions(
   const {
     mt: mountComponent,
     p: patch,
-    o: { patchProp, nextSibling, parentNode, remove, insert, createComment }
+    o: {
+      patchProp,
+      createText,
+      nextSibling,
+      parentNode,
+      remove,
+      insert,
+      createComment
+    }
   } = rendererInternals
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
@@ -67,11 +75,13 @@ export function createHydrationFunctions(
         )
       patch(null, vnode, container)
       flushPostFlushCbs()
+      container._vnode = vnode
       return
     }
     hasMismatch = false
     hydrateNode(container.firstChild!, vnode, null, null, null)
     flushPostFlushCbs()
+    container._vnode = vnode
     if (hasMismatch && !__TEST__) {
       // this error should show up in production
       console.error(`Hydration completed but contains mismatches.`)
@@ -97,23 +107,37 @@ export function createHydrationFunctions(
         isFragmentStart
       )
 
-    const { type, ref, shapeFlag } = vnode
-    const domType = node.nodeType
+    const { type, ref, shapeFlag, patchFlag } = vnode
+    let domType = node.nodeType
     vnode.el = node
+
+    if (patchFlag === PatchFlags.BAIL) {
+      optimized = false
+      vnode.dynamicChildren = null
+    }
 
     let nextNode: Node | null = null
     switch (type) {
       case Text:
         if (domType !== DOMNodeTypes.TEXT) {
-          nextNode = onMismatch()
+          // #5728 empty text node inside a slot can cause hydration failure
+          // because the server rendered HTML won't contain a text node
+          if (vnode.children === '') {
+            insert((vnode.el = createText('')), parentNode(node)!, node)
+            nextNode = node
+          } else {
+            nextNode = onMismatch()
+          }
         } else {
           if ((node as Text).data !== vnode.children) {
             hasMismatch = true
             __DEV__ &&
               warn(
                 `Hydration text mismatch:` +
-                  `\n- Client: ${JSON.stringify((node as Text).data)}` +
-                  `\n- Server: ${JSON.stringify(vnode.children)}`
+                  `\n- Server rendered: ${JSON.stringify(
+                    (node as Text).data
+                  )}` +
+                  `\n- Client rendered: ${JSON.stringify(vnode.children)}`
               )
             ;(node as Text).data = vnode.children as string
           }
@@ -128,9 +152,12 @@ export function createHydrationFunctions(
         }
         break
       case Static:
-        if (domType !== DOMNodeTypes.ELEMENT) {
-          nextNode = onMismatch()
-        } else {
+        if (isFragmentStart) {
+          // entire template is static but SSRed as a fragment
+          node = nextSibling(node)!
+          domType = node.nodeType
+        }
+        if (domType === DOMNodeTypes.ELEMENT || domType === DOMNodeTypes.TEXT) {
           // determine anchor, adopt content
           nextNode = node
           // if the static vnode has its content stripped during build,
@@ -138,13 +165,18 @@ export function createHydrationFunctions(
           const needToAdoptContent = !(vnode.children as string).length
           for (let i = 0; i < vnode.staticCount!; i++) {
             if (needToAdoptContent)
-              vnode.children += (nextNode as Element).outerHTML
+              vnode.children +=
+                nextNode.nodeType === DOMNodeTypes.ELEMENT
+                  ? (nextNode as Element).outerHTML
+                  : (nextNode as Text).data
             if (i === vnode.staticCount! - 1) {
               vnode.anchor = nextNode
             }
             nextNode = nextSibling(nextNode)!
           }
-          return nextNode
+          return isFragmentStart ? nextSibling(nextNode) : nextNode
+        } else {
+          onMismatch()
         }
         break
       case Fragment:
@@ -201,6 +233,15 @@ export function createHydrationFunctions(
           nextNode = isFragmentStart
             ? locateClosingAsyncAnchor(node)
             : nextSibling(node)
+
+          // #4293 teleport as component root
+          if (
+            nextNode &&
+            isComment(nextNode) &&
+            nextNode.data === 'teleport end'
+          ) {
+            nextNode = nextSibling(nextNode)
+          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -367,8 +408,8 @@ export function createHydrationFunctions(
               `Hydration text content mismatch in <${
                 vnode.type as string
               }>:\n` +
-                `- Client: ${el.textContent}\n` +
-                `- Server: ${vnode.children as string}`
+                `- Server rendered: ${el.textContent}\n` +
+                `- Client rendered: ${vnode.children as string}`
             )
           el.textContent = vnode.children as string
         }

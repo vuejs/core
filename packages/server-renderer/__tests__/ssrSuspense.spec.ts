@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { createApp, h, Suspense } from 'vue'
 import { renderToString } from '../src/renderToString'
 
@@ -33,7 +29,7 @@ describe('SSR Suspense', () => {
 
   test('reject', async () => {
     const Comp = {
-      errorCaptured: jest.fn(() => false),
+      errorCaptured: vi.fn(() => false),
       render() {
         return h(Suspense, null, {
           default: h(RejectingAsync),
@@ -65,7 +61,7 @@ describe('SSR Suspense', () => {
 
   test('resolving component + rejecting component', async () => {
     const Comp = {
-      errorCaptured: jest.fn(() => false),
+      errorCaptured: vi.fn(() => false),
       render() {
         return h(Suspense, null, {
           default: h('div', [h(ResolvingAsync), h(RejectingAsync)]),
@@ -84,7 +80,7 @@ describe('SSR Suspense', () => {
 
   test('failing suspense in passing suspense', async () => {
     const Comp = {
-      errorCaptured: jest.fn(() => false),
+      errorCaptured: vi.fn(() => false),
       render() {
         return h(Suspense, null, {
           default: h('div', [
@@ -109,7 +105,7 @@ describe('SSR Suspense', () => {
 
   test('passing suspense in failing suspense', async () => {
     const Comp = {
-      errorCaptured: jest.fn(() => false),
+      errorCaptured: vi.fn(() => false),
       render() {
         return h(Suspense, null, {
           default: h('div', [

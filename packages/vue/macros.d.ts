@@ -16,17 +16,21 @@ export declare const enum RefTypes {
   WritableComputedRef = 3
 }
 
-type RefValue<T> = T extends null | undefined
-  ? T
-  : T & { [RefType]?: RefTypes.Ref }
+type RefValue<T> = T extends null | undefined ? T : ReactiveVariable<T>
 
-type ComputedRefValue<T> = T extends null | undefined
-  ? T
-  : T & { [RefType]?: RefTypes.ComputedRef }
+type ReactiveVariable<T> = T & { [RefType]?: RefTypes.Ref }
+
+type ComputedRefValue<T> = T extends null | undefined ? T : ComputedVariable<T>
+
+type ComputedVariable<T> = T & { [RefType]?: RefTypes.ComputedRef }
 
 type WritableComputedRefValue<T> = T extends null | undefined
   ? T
-  : T & { [RefType]?: RefTypes.WritableComputedRef }
+  : WritableComputedVariable<T>
+
+type WritableComputedVariable<T> = T & {
+  [RefType]?: RefTypes.WritableComputedRef
+}
 
 type NormalObject<T extends object> = T & { [RefType]?: never }
 
@@ -51,7 +55,7 @@ type DestructureRefs<T extends object> = {
 }
 
 /**
- * Vue ref transform macro for accessing underlying refs of reactive varaibles.
+ * Vue ref transform macro for accessing underlying refs of reactive variables.
  */
 export declare function $$<T extends object>(arg: NormalObject<T>): ToRawRefs<T>
 export declare function $$<T>(value: RefValue<T>): Ref<T>
@@ -79,9 +83,11 @@ type ToRawRefs<T extends object> = {
     : T[K]
 }
 
-export declare function $ref<T>(arg?: T | Ref<T>): RefValue<UnwrapRef<T>>
+export declare function $ref<T>(): RefValue<T | undefined>
+export declare function $ref<T>(arg: T | Ref<T>): RefValue<UnwrapRef<T>>
 
-export declare function $shallowRef<T>(arg?: T): RefValue<T>
+export declare function $shallowRef<T>(): RefValue<T | undefined>
+export declare function $shallowRef<T>(arg: T): RefValue<T>
 
 export declare function $toRef<T extends object, K extends keyof T>(
   object: T,

@@ -1,5 +1,6 @@
 import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
-import { camelize } from '@vue/runtime-core'
+import { camelize, warn } from '@vue/runtime-core'
+import { vShowOldKey } from '../directives/vShow'
 
 type Style = string | Record<string, string | string[]> | null
 
@@ -7,15 +8,15 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
   const isCssString = isString(next)
   if (next && !isCssString) {
-    for (const key in next) {
-      setStyle(style, key, next[key])
-    }
     if (prev && !isString(prev)) {
       for (const key in prev) {
         if (next[key] == null) {
           setStyle(style, key, '')
         }
       }
+    }
+    for (const key in next) {
+      setStyle(style, key, next[key])
     }
   } else {
     const currentDisplay = style.display
@@ -29,12 +30,13 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     // indicates that the `display` of the element is controlled by `v-show`,
     // so we always keep the current `display` value regardless of the `style`
     // value, thus handing over control to `v-show`.
-    if ('_vod' in el) {
+    if (vShowOldKey in el) {
       style.display = currentDisplay
     }
   }
 }
 
+const semicolonRE = /[^\\];\s*$/
 const importantRE = /\s*!important$/
 
 function setStyle(
@@ -45,6 +47,14 @@ function setStyle(
   if (isArray(val)) {
     val.forEach(v => setStyle(style, name, v))
   } else {
+    if (val == null) val = ''
+    if (__DEV__) {
+      if (semicolonRE.test(val)) {
+        warn(
+          `Unexpected semicolon at the end of '${name}' style value: '${val}'`
+        )
+      }
+    }
     if (name.startsWith('--')) {
       // custom property definition
       style.setProperty(name, val)
