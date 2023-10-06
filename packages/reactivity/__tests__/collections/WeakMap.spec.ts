@@ -6,8 +6,8 @@ describe('reactivity/collections', () => {
       const original = new WeakMap()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof WeakMap).toBe(true)
-      expect(observed instanceof WeakMap).toBe(true)
+      expect(original).toBeInstanceOf(WeakMap)
+      expect(observed).toBeInstanceOf(WeakMap)
     })
 
     it('should observe mutations', () => {
@@ -57,7 +57,7 @@ describe('reactivity/collections', () => {
       let dummy
       const key = {}
       const map = reactive(new WeakMap())
-      const mapSpy = jest.fn(() => (dummy = map.get(key)))
+      const mapSpy = vi.fn(() => (dummy = map.get(key)))
       effect(mapSpy)
 
       expect(dummy).toBe(undefined)
@@ -128,7 +128,7 @@ describe('reactivity/collections', () => {
       const map = new WeakMap()
       const key = {}
       map.set(key, NaN)
-      const mapSpy = jest.fn(() => map.get(key))
+      const mapSpy = vi.fn(() => map.get(key))
       effect(mapSpy)
       map.set(key, NaN)
       expect(mapSpy).toHaveBeenCalledTimes(1)

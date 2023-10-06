@@ -4,7 +4,7 @@ import { ComputedGetter, ComputedRef } from './computed'
 import { ReactiveFlags, toRaw } from './reactive'
 import { trackRefValue, triggerRefValue } from './ref'
 
-const tick = Promise.resolve()
+const tick = /*#__PURE__*/ Promise.resolve()
 const queue: any[] = []
 let queued = false
 

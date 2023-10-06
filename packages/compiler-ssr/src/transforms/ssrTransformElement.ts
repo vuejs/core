@@ -89,6 +89,8 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         node,
         context,
         node.props,
+        false /* isComponent */,
+        false /* isDynamicComponent */,
         true /* ssr */
       )
       if (props || directives.length) {
@@ -194,7 +196,7 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
           if (!needMergeProps) {
             node.children = [createInterpolation(prop.exp, prop.loc)]
           }
-        } else if (!needMergeProps) {
+        } else if (!needMergeProps && prop.name !== 'on') {
           // Directive transforms.
           const directiveTransform = context.directiveTransforms[prop.name]
           if (directiveTransform) {
@@ -338,7 +340,6 @@ export function buildSSRProps(
   }
   if (directives.length) {
     for (const dir of directives) {
-      context.directives.add(dir.name)
       mergePropsArgs.push(
         createCallExpression(context.helper(SSR_GET_DIRECTIVE_PROPS), [
           `_ctx`,
@@ -427,7 +428,7 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    processChildren(node.children, context)
+    processChildren(node, context)
   }
 
   if (!isVoidTag(node.tag)) {

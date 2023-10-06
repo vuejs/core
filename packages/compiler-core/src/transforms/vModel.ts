@@ -18,6 +18,7 @@ import {
 } from '../utils'
 import { IS_REF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
+import { camelize } from '@vue/shared'
 
 export const transformModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg } = dir
@@ -35,11 +36,22 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   // im SFC <script setup> inline mode, the exp may have been transformed into
   // _unref(exp)
   const bindingType = context.bindingMetadata[rawExp]
+
+  // check props
+  if (
+    bindingType === BindingTypes.PROPS ||
+    bindingType === BindingTypes.PROPS_ALIASED
+  ) {
+    context.onError(createCompilerError(ErrorCodes.X_V_MODEL_ON_PROPS, exp.loc))
+    return createTransformProps()
+  }
+
   const maybeRef =
     !__BROWSER__ &&
     context.inline &&
-    bindingType &&
-    bindingType !== BindingTypes.SETUP_CONST
+    (bindingType === BindingTypes.SETUP_LET ||
+      bindingType === BindingTypes.SETUP_REF ||
+      bindingType === BindingTypes.SETUP_MAYBE_REF)
 
   if (
     !expString.trim() ||
@@ -66,7 +78,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   const propName = arg ? arg : createSimpleExpression('modelValue', true)
   const eventName = arg
     ? isStaticExp(arg)
-      ? `onUpdate:${arg.content}`
+      ? `onUpdate:${camelize(arg.content)}`
       : createCompoundExpression(['"onUpdate:" + ', arg])
     : `onUpdate:modelValue`
 

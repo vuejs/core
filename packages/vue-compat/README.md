@@ -281,7 +281,7 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 
 | ID                 | Type | Description                           | Docs                                     |
 | ------------------ | ---- | ------------------------------------- | ---------------------------------------- |
-| TRANSITION_CLASSES | ⭘    | Transtion enter/leave classes changed | [link](https://v3-migration.vuejs.org/breaking-changes/transition.html) |
+| TRANSITION_CLASSES | ⭘    | Transition enter/leave classes changed | [link](https://v3-migration.vuejs.org/breaking-changes/transition.html) |
 
 ### Fully Compatible
 
@@ -308,11 +308,10 @@ Features that start with `COMPILER_` are compiler-specific: if you are using the
 | OPTIONS_BEFORE_DESTROY       | ✔    | `beforeDestroy` -> `beforeUnmount`                                    |                                                                                            |
 | OPTIONS_DESTROYED            | ✔    | `destroyed` -> `unmounted`                                            |                                                                                            |
 | WATCH_ARRAY                  | ✔    | watching an array no longer triggers on mutation unless deep          | [link](https://v3-migration.vuejs.org/breaking-changes/watch.html)                                                        |
-| V_FOR_REF                    | ✔    | `ref` inside `v-for` no longer registers array of refs                | [link](https://v3-migration.vuejs.org/breaking-changes/array-refs.html)                                                   |
 | V_ON_KEYCODE_MODIFIER        | ✔    | `v-on` no longer supports keyCode modifiers                           | [link](https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html)                                            |
 | CUSTOM_DIR                   | ✔    | Custom directive hook names changed                                   | [link](https://v3-migration.vuejs.org/breaking-changes/custom-directives.html)                                            |
 | ATTR_FALSE_VALUE             | ✔    | No longer removes attribute if binding value is boolean `false`       | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
-| ATTR_ENUMERATED_COERSION     | ✔    | No longer special case enumerated attributes                          | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
+| ATTR_ENUMERATED_COERCION     | ✔    | No longer special case enumerated attributes                          | [link](https://v3-migration.vuejs.org/breaking-changes/attribute-coercion.html)                                           |
 | TRANSITION_GROUP_ROOT        | ✔    | `<transition-group>` no longer renders a root element by default      | [link](https://v3-migration.vuejs.org/breaking-changes/transition-group.html)                                             |
 | COMPONENT_ASYNC              | ✔    | Async component API changed (now requires `defineAsyncComponent`)     | [link](https://v3-migration.vuejs.org/breaking-changes/async-components.html)                                             |
 | COMPONENT_FUNCTIONAL         | ✔    | Functional component API changed (now must be plain functions)        | [link](https://v3-migration.vuejs.org/breaking-changes/functional-components.html)                                        |
