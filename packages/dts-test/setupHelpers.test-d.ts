@@ -8,7 +8,8 @@ import {
   defineSlots,
   VNode,
   Ref,
-  defineModel
+  defineModel,
+  toRefs
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -20,6 +21,7 @@ describe('defineProps w/ type declaration', () => {
     foo: string
     bool?: boolean
     boolAndUndefined: boolean | undefined
+    file?: File | File[]
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
@@ -327,4 +329,22 @@ describe('useAttrs', () => {
 describe('useSlots', () => {
   const slots = useSlots()
   expectType<Slots>(slots)
+})
+
+describe('toRefs w/ type declaration', () => {
+  // type declaration
+  const props = defineProps<{
+    foo: string
+    bool?: boolean
+    boolAndUndefined: boolean | undefined
+    file?: File | File[]
+  }>()
+
+  // #6420
+  expectType<{
+    foo: Ref<string>
+    bool: Ref<boolean | undefined>
+    boolAndUndefined: Ref<boolean | undefined>
+    file: Ref<File | File[] | undefined>
+  }>(toRefs(props))
 })
