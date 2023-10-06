@@ -324,7 +324,7 @@ export function createCompatVue(
 export function installAppCompatProperties(
   app: App,
   context: AppContext,
-  render: RootRenderFunction
+  render: RootRenderFunction<any>
 ) {
   installFilterMethod(app, context)
   installLegacyOptionMergeStrats(app.config)

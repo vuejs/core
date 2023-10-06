@@ -23,7 +23,7 @@ describe('reactivity/computed', () => {
 
   it('should compute lazily', () => {
     const value = reactive<{ foo?: number }>({})
-    const getter = jest.fn(() => value.foo)
+    const getter = vi.fn(() => value.foo)
     const cValue = computed(getter)
 
     // lazy
@@ -74,8 +74,8 @@ describe('reactivity/computed', () => {
 
   it('should trigger effect when chained', () => {
     const value = reactive({ foo: 0 })
-    const getter1 = jest.fn(() => value.foo)
-    const getter2 = jest.fn(() => {
+    const getter1 = vi.fn(() => value.foo)
+    const getter2 = vi.fn(() => {
       return c1.value + 1
     })
     const c1 = computed(getter1)
@@ -97,8 +97,8 @@ describe('reactivity/computed', () => {
 
   it('should trigger effect when chained (mixed invocations)', () => {
     const value = reactive({ foo: 0 })
-    const getter1 = jest.fn(() => value.foo)
-    const getter2 = jest.fn(() => {
+    const getter1 = vi.fn(() => value.foo)
+    const getter2 = vi.fn(() => {
       return c1.value + 1
     })
     const c1 = computed(getter1)
@@ -223,7 +223,7 @@ describe('reactivity/computed', () => {
 
   it('debug: onTrack', () => {
     let events: DebuggerEvent[] = []
-    const onTrack = jest.fn((e: DebuggerEvent) => {
+    const onTrack = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
@@ -256,16 +256,16 @@ describe('reactivity/computed', () => {
 
   it('debug: onTrigger', () => {
     let events: DebuggerEvent[] = []
-    const onTrigger = jest.fn((e: DebuggerEvent) => {
+    const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed
     c.value
 
-    obj.foo++
+    obj.foo!++
     expect(c.value).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
@@ -277,7 +277,6 @@ describe('reactivity/computed', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.foo
     expect(c.value).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)

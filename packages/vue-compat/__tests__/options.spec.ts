@@ -84,8 +84,8 @@ test('data deep merge w/ extended constructor', () => {
 })
 
 test('beforeDestroy/destroyed', async () => {
-  const beforeDestroy = jest.fn()
-  const destroyed = jest.fn()
+  const beforeDestroy = vi.fn()
+  const destroyed = vi.fn()
 
   const child = {
     template: `foo`,
@@ -116,8 +116,8 @@ test('beforeDestroy/destroyed', async () => {
 })
 
 test('beforeDestroy/destroyed in Vue.extend components', async () => {
-  const beforeDestroy = jest.fn()
-  const destroyed = jest.fn()
+  const beforeDestroy = vi.fn()
+  const destroyed = vi.fn()
 
   const child = Vue.extend({
     template: `foo`,
