@@ -80,7 +80,7 @@ describe('compiler: element transform', () => {
     expect(root.components).toContain(`Foo`)
   })
 
-  test('resolve implcitly self-referencing component', () => {
+  test('resolve implicitly self-referencing component', () => {
     const { root } = parseWithElementTransform(`<Example/>`, {
       filename: `/foo/bar/Example.vue?vue&type=template`
     })
@@ -328,6 +328,37 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `obj`
+            },
+            `true`
+          ]
+        },
+        createObjectMatcher({
+          class: 'bar'
+        })
+      ]
+    })
+  })
+
+  test('v-on="obj" on component', () => {
+    const { root, node } = parseWithElementTransform(
+      `<Foo id="foo" v-on="obj" class="bar" />`
+    )
+    expect(root.helpers).toContain(MERGE_PROPS)
+
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createObjectMatcher({
+          id: 'foo'
+        }),
+        {
+          type: NodeTypes.JS_CALL_EXPRESSION,
+          callee: TO_HANDLERS,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: `obj`
             }
           ]
         },
@@ -358,7 +389,8 @@ describe('compiler: element transform', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `handlers`
-            }
+            },
+            `true`
           ]
         },
         {
@@ -499,7 +531,7 @@ describe('compiler: element transform', () => {
   })
 
   test('error on v-bind with no argument', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithElementTransform(`<div v-bind/>`, { onError })
     expect(onError.mock.calls[0]).toMatchObject([
       {
@@ -807,6 +839,37 @@ describe('compiler: element transform', () => {
     })
   })
 
+  test(':style with array literal', () => {
+    const { node, root } = parseWithElementTransform(
+      `<div :style="[{ color: 'red' }]" />`,
+      {
+        nodeTransforms: [transformExpression, transformStyle, transformElement],
+        directiveTransforms: {
+          bind: transformBind
+        },
+        prefixIdentifiers: true
+      }
+    )
+    expect(root.helpers).toContain(NORMALIZE_STYLE)
+    expect(node.props).toMatchObject({
+      type: NodeTypes.JS_OBJECT_EXPRESSION,
+      properties: [
+        {
+          type: NodeTypes.JS_PROPERTY,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `style`,
+            isStatic: true
+          },
+          value: {
+            type: NodeTypes.JS_CALL_EXPRESSION,
+            callee: NORMALIZE_STYLE
+          }
+        }
+      ]
+    })
+  })
+
   test(`props merging: class`, () => {
     const { node, root } = parseWithElementTransform(
       `<div class="foo" :class="{ bar: isBar }" />`,
@@ -934,7 +997,7 @@ describe('compiler: element transform', () => {
     })
 
     test('NEED_PATCH (vnode hooks)', () => {
-      const root = baseCompile(`<div @vnodeUpdated="foo" />`, {
+      const root = baseCompile(`<div @vue:updated="foo" />`, {
         prefixIdentifiers: true,
         cacheHandlers: true
       }).ast
@@ -1000,6 +1063,32 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('script setup inline mode template ref (binding does not exist but props with the same name exist)', () => {
+      const { node } = parseWithElementTransform(`<input ref="msg"/>`, {
+        inline: true,
+        bindingMetadata: {
+          msg: BindingTypes.PROPS,
+          ref: BindingTypes.SETUP_CONST
+        }
+      })
+      expect(node.props).toMatchObject({
+        type: NodeTypes.JS_OBJECT_EXPRESSION,
+        properties: [
+          {
+            type: NodeTypes.JS_PROPERTY,
+            key: {
+              content: 'ref',
+              isStatic: true
+            },
+            value: {
+              content: 'msg',
+              isStatic: true
+            }
+          }
+        ]
+      })
+    })
+
     test('HYDRATE_EVENTS', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
@@ -1019,6 +1108,21 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+      )
+    })
+
+    // #5870
+    test('HYDRATE_EVENTS on dynamic component', () => {
+      const { node } = parseWithElementTransform(
+        `<component :is="foo" @input="foo" />`,
+        {
+          directiveTransforms: {
+            on: transformOn
+          }
+        }
+      )
+      expect(node.patchFlag).toBe(
         genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
       )
     })
@@ -1079,6 +1183,7 @@ describe('compiler: element transform', () => {
       })
     })
 
+    // TODO remove in 3.4
     test('v-is', () => {
       const { node, root } = parseWithBind(`<div v-is="'foo'" />`)
       expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
@@ -1096,6 +1201,7 @@ describe('compiler: element transform', () => {
         // should skip v-is runtime check
         directives: undefined
       })
+      expect('v-is="component-name" has been deprecated').toHaveBeenWarned()
     })
 
     // #3934

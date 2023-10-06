@@ -222,19 +222,25 @@ test('should not rewrite scope variable', () => {
         console.log(d)
         console.log(e)
       }
+      let err = $ref(null)
+      try {
+      } catch (err) {
+        console.log(err)
+      }
     `)
   expect(code).toMatch('console.log(a)')
   expect(code).toMatch('console.log(b.value)')
   expect(code).toMatch('console.log(c)')
   expect(code).toMatch('console.log(d.value)')
   expect(code).toMatch('console.log(e)')
+  expect(code).toMatch('console.log(err)')
   assertCode(code)
 })
 
 test('object destructure', () => {
   const { code, rootRefs } = transform(`
     let n = $ref(1), { a, b: c, d = 1, e: f = 2, [g]: h } = $(useFoo())
-    let { foo } = $(useSomthing(() => 1));
+    let { foo } = $(useSomething(() => 1));
     console.log(n, a, c, d, f, h, foo)
     `)
   expect(code).toMatch(`a = _toRef(__$temp_1, 'a')`)
@@ -296,6 +302,50 @@ test('$$', () => {
   expect(code).toMatch(`const b = (a)`)
   expect(code).toMatch(`const c = ({ a })`)
   expect(code).toMatch(`callExternal((a))`)
+  assertCode(code)
+})
+
+test('$$ with some edge cases', () => {
+  const { code } = transform(`
+    $$(  /* 2 */ count /* 2 */   )
+    $$(   count /* 2 */, /**/ a   )
+    $$(   (count /* 2 */, /**/ a) /**/   )
+    {
+      a:$$(count,a)
+    }
+    $$((count) + 1)
+    $$([count])
+    $$ (count )
+    console.log($$($$(a)))
+    $$(a,b)
+    $$($$((a++,b)))
+    count = $$( a++ ,b)
+    count = ()=>$$(a++,b)
+    let r1 = $ref(a, $$(a++,b))
+    let r2 = { a:$$(a++,b),b:$$ (a) }
+    switch($$(c)){
+      case d:
+        $$(a)
+        $$($$(h,f))
+        break
+    }
+    ($$(count++,$$(count),$$(count,a)))
+    `)
+  expect(code).toMatch(`/* 2 */ count /* 2 */`)
+  expect(code).toMatch(`;(   count /* 2 */, /**/ a   )`)
+  expect(code).toMatch(`;(   (count /* 2 */, /**/ a) /**/   )`)
+  expect(code).toMatch(`a:(count,a)`)
+  expect(code).toMatch(`;((count) + 1)`)
+  expect(code).toMatch(`;([count])`)
+  expect(code).toMatch(`;(a,b)`)
+  expect(code).toMatch(`log(((a)))`)
+  expect(code).toMatch(`count = ( a++ ,b)`)
+  expect(code).toMatch(`()=>(a++,b)`)
+  expect(code).toMatch(`_ref(a, (a++,b))`)
+  expect(code).toMatch(`{ a:(a++,b),b: (a) }`)
+  expect(code).toMatch(`switch((c))`)
+  expect(code).toMatch(`;((h,f))`)
+  expect(code).toMatch(`((count++,(count),(count,a)))`)
   assertCode(code)
 })
 
@@ -410,6 +460,35 @@ test('macro import alias and removal', () => {
   assertCode(code)
 })
 
+// #6838
+test('should not overwrite importing', () => {
+  const { code } = transform(
+    `
+    import { $, $$ } from './foo'
+    $('foo')
+    $$('bar')
+    `
+  )
+  assertCode(code)
+})
+
+// #6838
+test('should not overwrite current scope', () => {
+  const { code } = transform(
+    `
+    const fn = () => {
+      const $ = () => 'foo'
+      const $ref = () => 'bar'
+      const $$ = () => 'baz'
+      console.log($())
+      console.log($ref())
+      console.log($$())
+    }
+    `
+  )
+  assertCode(code)
+})
+
 describe('errors', () => {
   test('$ref w/ destructure', () => {
     expect(() => transform(`let { a } = $ref(1)`)).toThrow(
@@ -451,5 +530,35 @@ describe('errors', () => {
     expect(() => transform(`let [a, ...b] = $(foo())`)).toThrow(
       `does not support rest element`
     )
+  })
+
+  test('assignment to constant variable', () => {
+    expect(() =>
+      transform(`
+        const foo = $ref(0)
+        foo = 1
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+        const [a, b] = $([1, 2])
+        a = 1
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+        const foo = $ref(0)
+        foo++
+      `)
+    ).toThrow(`Assignment to constant variable.`)
+
+    expect(() =>
+      transform(`
+      const foo = $ref(0)
+      bar = foo
+      `)
+    ).not.toThrow()
   })
 })

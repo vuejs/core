@@ -8,6 +8,7 @@ import {
   nextTick,
   ComponentOptions,
   Suspense,
+  Teleport,
   FunctionalComponent
 } from '@vue/runtime-dom'
 
@@ -193,6 +194,84 @@ describe('useCssVars', () => {
     render(h(App), root)
     await nextTick()
     for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [h(Teleport, { to: target }, [h('div')])]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport in child slot', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const Child: FunctionalComponent = (_, { slots }) => {
+      return h('div', slots.default && slots.default())
+    }
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => h(Child, () => [h(Teleport, { to: target }, [h('div')])])
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(change subTree)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(Teleport, { to: target }, [
+            h('div'),
+            toggle.value ? h('div') : null
+          ])
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })

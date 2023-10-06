@@ -21,11 +21,11 @@ describe('compiler + runtime integration', () => {
     const one = {
       name: 'one',
       template: 'one',
-      created: jest.fn(),
-      mounted: jest.fn(),
-      activated: jest.fn(),
-      deactivated: jest.fn(),
-      unmounted: jest.fn()
+      created: vi.fn(),
+      mounted: vi.fn(),
+      activated: vi.fn(),
+      deactivated: vi.fn(),
+      unmounted: vi.fn()
     }
 
     const toggle = ref(true)
@@ -166,7 +166,7 @@ describe('compiler + runtime integration', () => {
   it('should support selector of rootContainer', () => {
     const container = document.createElement('div')
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(container)
+    document.querySelector = vi.fn().mockReturnValue(container)
 
     const App = {
       template: `{{ count }}`,
@@ -203,7 +203,7 @@ describe('compiler + runtime integration', () => {
 
   it('should warn when container is not found', () => {
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(null)
+    document.querySelector = vi.fn().mockReturnValue(null)
     const App = {
       template: `{{ count }}`,
       data() {
@@ -226,7 +226,7 @@ describe('compiler + runtime integration', () => {
     const target = document.createElement('div')
     const count = ref(0)
     const origin = document.querySelector
-    document.querySelector = jest.fn().mockReturnValue(target)
+    document.querySelector = vi.fn().mockReturnValue(target)
 
     const App = {
       template: `

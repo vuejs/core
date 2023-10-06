@@ -2,7 +2,6 @@ import {
   TextModes,
   ParserOptions,
   ElementNode,
-  Namespaces,
   NodeTypes,
   isBuiltInType
 } from '@vue/compiler-core'
@@ -17,7 +16,7 @@ const isRawTextContainer = /*#__PURE__*/ makeMap(
 )
 
 export const enum DOMNamespaces {
-  HTML = Namespaces.HTML,
+  HTML = 0 /* Namespaces.HTML */,
   SVG,
   MATH_ML
 }

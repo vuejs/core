@@ -3,19 +3,22 @@ export {
   shallowRef,
   isRef,
   toRef,
+  toValue,
   toRefs,
   unref,
   proxyRefs,
   customRef,
   triggerRef,
-  Ref,
-  ToRef,
-  ToRefs,
-  UnwrapRef,
-  ShallowRef,
-  ShallowUnwrapRef,
-  RefUnwrapBailTypes,
-  CustomRefFactory
+  type Ref,
+  type MaybeRef,
+  type MaybeRefOrGetter,
+  type ToRef,
+  type ToRefs,
+  type UnwrapRef,
+  type ShallowRef,
+  type ShallowUnwrapRef,
+  type RefUnwrapBailTypes,
+  type CustomRefFactory
 } from './ref'
 export {
   reactive,
@@ -28,18 +31,19 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags,
-  DeepReadonly,
-  ShallowReactive,
-  UnwrapNestedRefs
+  ReactiveFlags /* @remove */,
+  type Raw,
+  type DeepReadonly,
+  type ShallowReactive,
+  type UnwrapNestedRefs
 } from './reactive'
 export {
   computed,
-  ComputedRef,
-  WritableComputedRef,
-  WritableComputedOptions,
-  ComputedGetter,
-  ComputedSetter
+  type ComputedRef,
+  type WritableComputedRef,
+  type WritableComputedOptions,
+  type ComputedGetter,
+  type ComputedSetter
 } from './computed'
 export { deferredComputed } from './deferredComputed'
 export {
@@ -52,12 +56,12 @@ export {
   resetTracking,
   ITERATE_KEY,
   ReactiveEffect,
-  ReactiveEffectRunner,
-  ReactiveEffectOptions,
-  EffectScheduler,
-  DebuggerOptions,
-  DebuggerEvent,
-  DebuggerEventExtraInfo
+  type ReactiveEffectRunner,
+  type ReactiveEffectOptions,
+  type EffectScheduler,
+  type DebuggerOptions,
+  type DebuggerEvent,
+  type DebuggerEventExtraInfo
 } from './effect'
 export {
   effectScope,
@@ -65,4 +69,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from './effectScope'
-export { TrackOpTypes, TriggerOpTypes } from './operations'
+export {
+  TrackOpTypes /* @remove */,
+  TriggerOpTypes /* @remove */
+} from './operations'
