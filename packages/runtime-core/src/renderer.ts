@@ -632,10 +632,8 @@ function baseCreateRenderer(
 
     if (patchFlag === PatchFlags.HOISTED && parentComponent) {
       ;(
-        parentComponent.hoistedCleanup || (parentComponent.hoistedCleanup = [])
-      ).push(() => {
-        vnode.el = null
-      })
+        parentComponent.hoistedVNodes || (parentComponent.hoistedVNodes = [])
+      ).push(vnode)
     }
 
     // mount children first, since some props may rely on child content
@@ -2276,9 +2274,9 @@ function baseCreateRenderer(
       )
     }
     queuePostRenderEffect(() => {
-      if (instance.hoistedCleanup) {
-        instance.hoistedCleanup.forEach(cleanup => cleanup())
-        instance.hoistedCleanup = null
+      if (instance.hoistedVNodes) {
+        instance.hoistedVNodes.forEach(vnode => (vnode.el = null))
+        instance.hoistedVNodes = null
       }
       instance.isUnmounted = true
     }, parentSuspense)
