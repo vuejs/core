@@ -179,7 +179,8 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
-  private _childResolve: Array<() => void> = []
+  private _childResolve: Array<(parent: typeof this) => void> = []
+  private _isCE: boolean = true
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -248,7 +249,11 @@ export class VueElement extends BaseClass {
 
     this._ob.observe(this, { attributes: true })
 
-    const resolve = (def: InnerComponentDef, isAsync = false) => {
+    const resolve = (
+      def: InnerComponentDef,
+      isAsync = false,
+      parentCE?: typeof this
+    ) => {
       const { props, styles } = def
 
       // cast Number-type props set before resolve
@@ -278,7 +283,7 @@ export class VueElement extends BaseClass {
       this._applyStyles(styles)
 
       // initial render
-      this._update()
+      this._update(parentCE)
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -286,22 +291,35 @@ export class VueElement extends BaseClass {
       asyncDef().then(def => {
         resolve(def, true)
         if (this._childResolve.length > 0) {
-          this._childResolve.forEach((childResolveFn: () => void) => {
-            childResolveFn()
-          })
+          this._childResolve.forEach(
+            (childResolveFn: (parent: typeof this) => void) => {
+              childResolveFn(this)
+            }
+          )
         }
       })
     } else {
       // When parentNode is a custom element rendered by an asynchronous component,
       // it is collected and waits for the asynchronous
       // completion before executing the resolve function.
-      const parentNode = this.parentNode as typeof this
-      if (
-        parentNode &&
-        parentNode._def &&
-        (parentNode._def as ComponentOptions).__asyncLoader
-      ) {
-        parentNode._childResolve.push(() => resolve(this._def))
+      const getParentAsyncCE = (el: typeof this): typeof this | null => {
+        if (
+          el._isCE &&
+          el._def &&
+          (el._def as ComponentOptions).__asyncLoader
+        ) {
+          return el
+        } else if (el.parentNode) {
+          return getParentAsyncCE(el.parentNode as typeof this)
+        } else {
+          return null
+        }
+      }
+      const parentNode = getParentAsyncCE(this)
+      if (parentNode) {
+        parentNode._childResolve.push((parent: typeof this) =>
+          resolve(this._def, false, parent)
+        )
       } else {
         resolve(this._def)
       }
@@ -375,11 +393,11 @@ export class VueElement extends BaseClass {
     }
   }
 
-  private _update() {
-    render(this._createVNode(), this.shadowRoot!)
+  private _update(parentCE?: typeof this) {
+    render(this._createVNode(parentCE), this.shadowRoot!)
   }
 
-  private _createVNode(): VNode<any, any> {
+  private _createVNode(parentCE?: typeof this): VNode<any, any> {
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
       vnode.ce = instance => {
@@ -418,16 +436,21 @@ export class VueElement extends BaseClass {
         }
 
         // locate nearest Vue custom element parent for provide/inject
-        let parent: Node | null = this
-        while (
-          (parent =
-            parent && (parent.parentNode || (parent as ShadowRoot).host))
-        ) {
-          if (parent instanceof VueElement) {
-            instance.parent = parent._instance
-            instance.provides = parent._instance!.provides
-            break
+        if (!parentCE) {
+          let parent: Node | null = this
+          while (
+            (parent =
+              parent && (parent.parentNode || (parent as ShadowRoot).host))
+          ) {
+            if (parent instanceof VueElement) {
+              instance.parent = parent._instance
+              instance.provides = parent._instance!.provides
+              break
+            }
           }
+        } else {
+          instance.parent = parentCE._instance
+          instance.provides = parentCE._instance!.provides
         }
       }
     }

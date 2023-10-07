@@ -719,7 +719,7 @@ describe('defineCustomElement', () => {
       })
       customElements.define('my-el-async-nested-ce', E)
       customElements.define('slotted-child', EChild)
-      container.innerHTML = `<my-el-async-nested-ce><slotted-child></slotted-child></my-el-async-nested-ce>`
+      container.innerHTML = `<my-el-async-nested-ce><div><slotted-child></slotted-child></div></my-el-async-nested-ce>`
 
       await new Promise(r => setTimeout(r))
       const e = container.childNodes[0] as VueElement
