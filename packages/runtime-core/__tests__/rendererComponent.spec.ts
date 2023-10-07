@@ -91,7 +91,7 @@ describe('renderer: component', () => {
   it('should not update Component if only changed props are declared emit listeners', () => {
     const Comp1 = {
       emits: ['foo'],
-      updated: jest.fn(),
+      updated: vi.fn(),
       render: () => null
     }
     const root = nodeOps.createElement('div')
@@ -145,8 +145,8 @@ describe('renderer: component', () => {
     function returnThis(this: any, _arg: any) {
       return this
     }
-    const propWatchSpy = jest.fn(returnThis)
-    const dataWatchSpy = jest.fn(returnThis)
+    const propWatchSpy = vi.fn(returnThis)
+    const dataWatchSpy = vi.fn(returnThis)
     let instance: any
     const Comp = {
       props: {
@@ -267,7 +267,7 @@ describe('renderer: component', () => {
       setup() {
         return () => h(Child)
       },
-      updated: jest.fn()
+      updated: vi.fn()
     }
 
     const root = nodeOps.createElement('div')
@@ -327,7 +327,7 @@ describe('renderer: component', () => {
 
   test('child component props update should not lead to double update', async () => {
     const text = ref(0)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const App = {
       render() {

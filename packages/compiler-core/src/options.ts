@@ -98,6 +98,10 @@ export const enum BindingTypes {
    */
   SETUP_CONST = 'setup-const',
   /**
+   * a const binding that does not need `unref()`, but may be mutated.
+   */
+  SETUP_REACTIVE_CONST = 'setup-reactive-const',
+  /**
    * a const binding that may be a ref.
    */
   SETUP_MAYBE_REF = 'setup-maybe-ref',
@@ -108,7 +112,11 @@ export const enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const'
 }
 
 export type BindingMetadata = {

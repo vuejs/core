@@ -1,7 +1,3 @@
-/**
- * @jest-environment node
- */
-
 import { renderToString } from '../src/renderToString'
 import {
   createApp,
@@ -10,8 +6,11 @@ import {
   vShow,
   vModelText,
   vModelRadio,
-  vModelCheckbox
+  vModelCheckbox,
+  vModelDynamic,
+  resolveDirective
 } from 'vue'
+import { ssrGetDirectiveProps, ssrRenderAttrs } from '../src'
 
 describe('ssr: directives', () => {
   describe('template v-show', () => {
@@ -106,6 +105,30 @@ describe('ssr: directives', () => {
           })
         )
       ).toBe(`<input type="radio">`)
+    })
+
+    test('select', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: 1 }),
+            template: `<select v-model="model"><option value="0"></option><option value="1"></option></select>`
+          })
+        )
+      ).toBe(
+        `<select><option value="0"></option><option value="1" selected></option></select>`
+      )
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: [0, 1] }),
+            template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`
+          })
+        )
+      ).toBe(
+        `<select multiple><option value="0" selected></option><option value="1" selected></option></select>`
+      )
     })
 
     test('checkbox', async () => {
@@ -374,7 +397,101 @@ describe('ssr: directives', () => {
     })
   })
 
-  test('custom directive w/ getSSRProps', async () => {
+  describe('vnode v-model dynamic', () => {
+    test('text', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input'), [[vModelDynamic, 'hello']])
+            }
+          })
+        )
+      ).toBe(`<input value="hello">`)
+    })
+
+    test('radio', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'radio', value: 'hello' }),
+                [[vModelDynamic, 'hello']]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="radio" value="hello" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'radio', value: 'hello' }),
+                [[vModelDynamic, 'foo']]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="radio" value="hello">`)
+    })
+
+    test('checkbox', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input', { type: 'checkbox' }), [
+                [vModelDynamic, true]
+              ])
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(h('input', { type: 'checkbox' }), [
+                [vModelDynamic, false]
+              ])
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox">`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'checkbox', value: 'foo' }),
+                [[vModelDynamic, ['foo']]]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" value="foo" checked>`)
+
+      expect(
+        await renderToString(
+          createApp({
+            render() {
+              return withDirectives(
+                h('input', { type: 'checkbox', value: 'foo' }),
+                [[vModelDynamic, []]]
+              )
+            }
+          })
+        )
+      ).toBe(`<input type="checkbox" value="foo">`)
+    })
+  })
+
+  test('custom directive w/ getSSRProps (vdom)', async () => {
     expect(
       await renderToString(
         createApp({
@@ -393,5 +510,36 @@ describe('ssr: directives', () => {
         })
       )
     ).toBe(`<div id="foo"></div>`)
+  })
+
+  test('custom directive w/ getSSRProps (optimized)', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          data() {
+            return {
+              x: 'foo'
+            }
+          },
+          directives: {
+            xxx: {
+              getSSRProps({ value, arg, modifiers }) {
+                return { id: [value, arg, modifiers.ok].join('-') }
+              }
+            }
+          },
+          ssrRender(_ctx, _push, _parent, _attrs) {
+            const _directive_xxx = resolveDirective('xxx')!
+            _push(
+              `<div${ssrRenderAttrs(
+                ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.x, 'arg', {
+                  ok: true
+                })
+              )}></div>`
+            )
+          }
+        })
+      )
+    ).toBe(`<div id="foo-arg-true"></div>`)
   })
 })
