@@ -5,11 +5,13 @@ import {
   h,
   inject,
   nextTick,
+  provide,
   Ref,
   ref,
   renderSlot,
   VueElement
 } from '../src'
+import { expect } from 'vitest'
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -691,6 +693,39 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`
       )
+    })
+
+    test('async & nested custom elements', async () => {
+      let fooVal: string | undefined = ''
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            setup(props) {
+              provide('foo', 'foo')
+            },
+            render(this: any) {
+              return h('div', null, [renderSlot(this.$slots, 'default')])
+            }
+          })
+        })
+      )
+
+      const EChild = defineCustomElement({
+        setup(props) {
+          fooVal = inject('foo')
+        },
+        render(this: any) {
+          return h('div', null, 'child')
+        }
+      })
+      customElements.define('my-el-async-nested-ce', E)
+      customElements.define('slotted-child', EChild)
+      container.innerHTML = `<my-el-async-nested-ce><slotted-child></slotted-child></my-el-async-nested-ce>`
+
+      await new Promise(r => setTimeout(r))
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+      expect(fooVal).toBe('foo')
     })
   })
 })

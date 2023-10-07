@@ -179,6 +179,7 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
+  private _childResolve: Array<() => void> = []
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -275,16 +276,34 @@ export class VueElement extends BaseClass {
 
       // apply CSS
       this._applyStyles(styles)
-
       // initial render
       this._update()
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(def => resolve(def, true))
+      asyncDef().then(def => {
+        resolve(def, true)
+        if (this._childResolve.length > 0) {
+          this._childResolve.forEach((resolve: () => void) => {
+            resolve()
+          })
+        }
+      })
     } else {
-      resolve(this._def)
+      // When parentNode is a custom element rendered by an asynchronous component,
+      // it is collected and waits for the asynchronous
+      // completion before executing the resolve function.
+      const parentNode = this.parentNode as typeof this
+      if (
+        parentNode &&
+        parentNode._def &&
+        (parentNode._def as ComponentOptions).__asyncLoader
+      ) {
+        parentNode._childResolve.push(() => resolve(this._def))
+      } else {
+        resolve(this._def)
+      }
     }
   }
 
