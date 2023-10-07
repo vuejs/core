@@ -276,6 +276,7 @@ export class VueElement extends BaseClass {
 
       // apply CSS
       this._applyStyles(styles)
+
       // initial render
       this._update()
     }
@@ -285,8 +286,8 @@ export class VueElement extends BaseClass {
       asyncDef().then(def => {
         resolve(def, true)
         if (this._childResolve.length > 0) {
-          this._childResolve.forEach((resolve: () => void) => {
-            resolve()
+          this._childResolve.forEach((childResolveFn: () => void) => {
+            childResolveFn()
           })
         }
       })
