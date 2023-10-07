@@ -1061,7 +1061,8 @@ function baseCreateRenderer(
       (__DEV__ &&
         // #5523 dev root fragment may inherit directives
         // HMR updated / Dev root fragment (w/ comments), force full diff
-        (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)) ||
+        (isHmrUpdating ||
+          (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))) ||
       // #9200 slot and fallback node has different patchFlag, force full diff
       (n1 && n1.patchFlag !== n2.patchFlag)
     ) {
