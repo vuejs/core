@@ -726,5 +726,44 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
       expect(fooVal).toBe('foo')
     })
+    test('async & multiple levels of nested custom elements', async () => {
+      let fooVal: string | undefined = ''
+      const E = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            setup(props) {
+              provide('foo', 'foo')
+            },
+            render(this: any) {
+              return h('div', null, [renderSlot(this.$slots, 'default')])
+            }
+          })
+        })
+      )
+
+      const EChild = defineCustomElement({
+        render(this: any) {
+          return h('div', null, [renderSlot(this.$slots, 'default')])
+        }
+      })
+
+      const EChild2 = defineCustomElement({
+        setup(props) {
+          fooVal = inject('foo')
+        },
+        render(this: any) {
+          return h('div', null, 'child')
+        }
+      })
+      customElements.define('my-el-async-nested-m-ce', E)
+      customElements.define('slotted-child-m', EChild)
+      customElements.define('slotted-child2-m', EChild2)
+      container.innerHTML = `<my-el-async-nested-m-ce><div><slotted-child-m><slotted-child2-m></slotted-child2-m></slotted-child-m></div></my-el-async-nested-m-ce>`
+
+      await new Promise(r => setTimeout(r))
+      const e = container.childNodes[0] as VueElement
+      expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
+      expect(fooVal).toBe('foo')
+    })
   })
 })

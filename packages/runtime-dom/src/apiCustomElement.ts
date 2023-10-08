@@ -179,8 +179,8 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
-  private _childResolve: Array<(parent: typeof this) => void> = []
-  private _isCE: boolean = true
+  private _ce_parent?: VueElement | null = null
+  private _ce_children?: VueElement[] | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -210,7 +210,32 @@ export class VueElement extends BaseClass {
       if (this._resolved) {
         this._update()
       } else {
-        this._resolveDef()
+        let parent: Node | null = this
+        let isParentResolved = true
+        // Recursively find the parent's custom element and set it to '_ce_parent‘
+        while (
+          (parent =
+            parent && (parent.parentNode || (parent as ShadowRoot).host))
+        ) {
+          if (parent instanceof VueElement) {
+            this._ce_parent = parent as VueElement
+            // If the parent's custom element is asynchronous or not yet resolved
+            if (
+              (parent._def as ComponentOptions).__asyncLoader ||
+              !parent._resolved
+            ) {
+              // Store the current custom element in the parent's _ce_children
+              // and wait for the parent to be resolved before executing
+              ;(parent._ce_children || (parent._ce_children = [])).push(this)
+              isParentResolved = false
+            }
+            break
+          }
+        }
+
+        if (isParentResolved) {
+          this._resolveDef()
+        }
       }
     }
   }
@@ -233,8 +258,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    this._resolved = true
-
     // set initial attrs
     for (let i = 0; i < this.attributes.length; i++) {
       this._setAttr(this.attributes[i].name)
@@ -249,11 +272,8 @@ export class VueElement extends BaseClass {
 
     this._ob.observe(this, { attributes: true })
 
-    const resolve = (
-      def: InnerComponentDef,
-      isAsync = false,
-      parentCE?: typeof this
-    ) => {
+    const resolve = (def: InnerComponentDef, isAsync = false) => {
+      this._resolved = true
       const { props, styles } = def
 
       // cast Number-type props set before resolve
@@ -283,46 +303,20 @@ export class VueElement extends BaseClass {
       this._applyStyles(styles)
 
       // initial render
-      this._update(parentCE)
+      this._update()
+
+      // The asynchronous custom element needs to call
+      // the resolveDef function of the descendant custom element at the end.
+      if (this._ce_children) {
+        this._ce_children.forEach(child => child._resolveDef())
+      }
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
     if (asyncDef) {
-      asyncDef().then(def => {
-        resolve(def, true)
-        if (this._childResolve.length > 0) {
-          this._childResolve.forEach(
-            (childResolveFn: (parent: typeof this) => void) => {
-              childResolveFn(this)
-            }
-          )
-        }
-      })
+      asyncDef().then(def => resolve(def, true))
     } else {
-      // When parentNode is a custom element rendered by an asynchronous component,
-      // it is collected and waits for the asynchronous
-      // completion before executing the resolve function.
-      const getParentAsyncCE = (el: typeof this): typeof this | null => {
-        if (
-          el._isCE &&
-          el._def &&
-          (el._def as ComponentOptions).__asyncLoader
-        ) {
-          return el
-        } else if (el.parentNode) {
-          return getParentAsyncCE(el.parentNode as typeof this)
-        } else {
-          return null
-        }
-      }
-      const parentNode = getParentAsyncCE(this)
-      if (parentNode) {
-        parentNode._childResolve.push((parent: typeof this) =>
-          resolve(this._def, false, parent)
-        )
-      } else {
-        resolve(this._def)
-      }
+      resolve(this._def)
     }
   }
 
@@ -393,11 +387,11 @@ export class VueElement extends BaseClass {
     }
   }
 
-  private _update(parentCE?: typeof this) {
-    render(this._createVNode(parentCE), this.shadowRoot!)
+  private _update() {
+    render(this._createVNode(), this.shadowRoot!)
   }
 
-  private _createVNode(parentCE?: typeof this): VNode<any, any> {
+  private _createVNode(): VNode<any, any> {
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
       vnode.ce = instance => {
@@ -435,22 +429,9 @@ export class VueElement extends BaseClass {
           }
         }
 
-        // locate nearest Vue custom element parent for provide/inject
-        if (!parentCE) {
-          let parent: Node | null = this
-          while (
-            (parent =
-              parent && (parent.parentNode || (parent as ShadowRoot).host))
-          ) {
-            if (parent instanceof VueElement) {
-              instance.parent = parent._instance
-              instance.provides = parent._instance!.provides
-              break
-            }
-          }
-        } else {
-          instance.parent = parentCE._instance
-          instance.provides = parentCE._instance!.provides
+        if (this._ce_parent) {
+          instance.parent = this._ce_parent._instance
+          instance.provides = this._ce_parent._instance!.provides
         }
       }
     }
