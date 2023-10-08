@@ -232,7 +232,6 @@ export class VueElement extends BaseClass {
             break
           }
         }
-
         if (isParentResolved) {
           this._resolveDef()
         }
