@@ -1217,7 +1217,7 @@ function baseCreateRenderer(
     }
 
     // resolve props and slots for setup context
-    if (!(__COMPAT__ && compatMountInstance)) {
+    if (!compatMountInstance) {
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
