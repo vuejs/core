@@ -212,7 +212,7 @@ export class VueElement extends BaseClass {
       } else {
         let parent: Node | null = this
         let isParentResolved = true
-        // Recursively find the parent's custom element and set it to '_ce_parent‘
+        // locate nearest Vue custom element parent and set it to '_ce_parent‘
         while (
           (parent =
             parent && (parent.parentNode || (parent as ShadowRoot).host))
