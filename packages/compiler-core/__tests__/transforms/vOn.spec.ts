@@ -159,6 +159,23 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should wrap as typescript function if expression is inline statement & isTS: true', () => {
+    const { node } = parseWithVOn(`<div @click="i++"/>`, {
+      isTS: true
+    })
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [`($event: any): any => (`, { content: `i++` }, `)`]
+          }
+        }
+      ]
+    })
+  })
+
   test('should handle multiple inline statement', () => {
     const { node } = parseWithVOn(`<div @click="foo();bar()"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
