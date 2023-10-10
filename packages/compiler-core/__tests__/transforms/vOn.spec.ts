@@ -414,6 +414,36 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('function typescript expression w/ prefixIdentifiers: true & isTS: true', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(val: number): any => foo(true, val)"/>`,
+      {
+        isTS: true,
+        prefixIdentifiers: true,
+        expressionPlugins: ['typescript']
+      }
+    )
+    expect((node.codegenNode as VNodeCall).props).toMatchObject({
+      properties: [
+        {
+          key: { content: `onClick` },
+          value: {
+            type: NodeTypes.COMPOUND_EXPRESSION,
+            children: [
+              `(`,
+              { content: 'val: number' },
+              `): any => `,
+              { content: `_ctx.foo` },
+              `(true, `,
+              { content: `val` },
+              `)`
+            ]
+          }
+        }
+      ]
+    })
+  })
+
   test('should error if no expression AND no modifier', () => {
     const onError = vi.fn()
     parseWithVOn(`<div v-on:click />`, { onError })
