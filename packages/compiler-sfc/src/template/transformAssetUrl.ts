@@ -168,12 +168,12 @@ function getImportsExpressionExp(
         loc,
         ConstantTypes.CAN_STRINGIFY
       )
-      // When path starts with /, for example, /foo/bar.png, it is an absolute file path
-      // In this case we need to ensure the path is not encoded (to %2F),
+
+      // We need to ensure the path is not encoded (to %2F),
       // so we decode it back in case it is encoded
       context.imports.push({
         exp,
-        path: isRelativeUrl(path) ? path : decodeURIComponent(path)
+        path: decodeURIComponent(path)
       })
     }
 
