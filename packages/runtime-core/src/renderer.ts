@@ -43,7 +43,8 @@ import {
   flushPostFlushCbs,
   invalidateJob,
   flushPreFlushCbs,
-  SchedulerJob
+  SchedulerJob,
+  invalidatePostJob
 } from './scheduler'
 import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { updateProps } from './componentProps'
@@ -2230,7 +2231,11 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, u } = instance
+
+    // #9264 invalidate queued lifecycle hooks
+    if (m) m.forEach(invalidatePostJob)
+    if (u) u.forEach(invalidatePostJob)
 
     // beforeUnmount hook
     if (bum) {

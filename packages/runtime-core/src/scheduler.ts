@@ -113,6 +113,13 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
+export function invalidatePostJob(job: SchedulerJob) {
+  const i = pendingPostFlushCbs.indexOf(job)
+  if (i > postFlushIndex) {
+    pendingPostFlushCbs.splice(i, 1)
+  }
+}
+
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
     if (
