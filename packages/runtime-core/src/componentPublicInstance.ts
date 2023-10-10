@@ -5,7 +5,12 @@ import {
   isStatefulComponent
 } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
+import {
+  instanceWatch,
+  OnCleanup,
+  WatchOptions,
+  WatchStopHandle
+} from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
@@ -224,8 +229,8 @@ export type ComponentPublicInstance<
   $watch<T extends string | ((...args: any) => any)>(
     source: T,
     cb: T extends (...args: any) => infer R
-      ? (...args: [R, R]) => any
-      : (...args: any) => any,
+      ? (...args: [R, R, OnCleanup]) => any
+      : (...args: [any, any, OnCleanup]) => any,
     options?: WatchOptions
   ): WatchStopHandle
 } & P &
