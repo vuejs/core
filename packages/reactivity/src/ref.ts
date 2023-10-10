@@ -488,19 +488,21 @@ export type ToShallowRef<T> = IfAny<
  * @example
  * ```js
  * const state = reactive({
- *   foo: 1,
- *   bar: 2
+ *   nested: {
+ *    foo: 1
+ *   }
  * })
  *
- * const fooRef = toRef(state, 'foo')
+ * const nestedShallowRef = toShallowRef(state, 'nested')
+ * const doubleFoo = computed(() => nestedShallowRef.value.foo * 2)
  *
- * // mutating the ref updates the original
- * fooRef.value++
- * console.log(state.foo) // 2
+ * // mutating the shallow ref does NOT update the original state
+ * nestedShallowRef.value.nested.foo = 4
+ * console.log(doubleFoo.value) // 2
  *
- * // mutating the original also updates the ref
- * state.foo++
- * console.log(fooRef.value) // 3
+ * // manual trigger is needed to "sync" the ref
+ * triggerRef(nestedShallowRef)
+ * console.log(doubleFoo.value) // 8
  * ```
  *
  * @param source - A getter, an existing ref, a non-function value, or a
