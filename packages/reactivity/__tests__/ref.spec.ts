@@ -9,7 +9,13 @@ import {
   isReactive
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import {
+  shallowRef,
+  unref,
+  customRef,
+  triggerRef,
+  toShallowRef
+} from '../src/ref'
 import {
   isReadonly,
   isShallow,
@@ -441,5 +447,93 @@ describe('reactivity/ref', () => {
     a.value = rr
     expect(a.value).toBe(rr)
     expect(a.value).not.toBe(r)
+  })
+
+  test('toShallowRef should behave like shallowRef', () => {
+    const sref = toShallowRef({ a: 1 })
+    expect(isReactive(sref.value)).toBe(false)
+
+    let dummy
+    effect(() => {
+      dummy = sref.value.a
+    })
+    expect(dummy).toBe(1)
+
+    sref.value = { a: 2 }
+    expect(isReactive(sref.value)).toBe(false)
+    expect(dummy).toBe(2)
+  })
+
+  test('toShallowRef', () => {
+    const original = {
+      x: 1,
+      nested: {
+        y: 2
+      }
+    }
+    const nested = toShallowRef({ ...original }, 'nested')
+    expect(isRef(nested)).toBe(true)
+    expect(isShallow(nested)).toBe(true)
+
+    const sref = toShallowRef(ref({ ...original }))
+    expect(isRef(sref)).toBe(true)
+    expect(isShallow(sref)).toBe(true)
+
+    const ss = toShallowRef(sref)
+    expect(ss).toBe(sref)
+
+    const sr = toShallowRef(reactive({ ...original }))
+    expect(isRef(sr)).toBe(true)
+    expect(isReactive(sr)).toBe(false)
+    expect(isShallow(sr)).toBe(true)
+
+    // reactivity nested
+    let dummyNested
+    effect(() => {
+      dummyNested = nested.value.y
+    })
+    expect(dummyNested).toBe(nested.value.y)
+
+    // mutating source should not trigger effect using the proxy refs
+    nested.value.y = 4
+    expect(dummyNested).toBe(2)
+
+    // force trigger
+    triggerRef(nested)
+    expect(dummyNested).toBe(4)
+
+    // reactivity ref
+    let dummyRef
+    effect(() => {
+      dummyRef = sref.value.x
+    })
+    expect(dummyRef).toBe(sref.value.x)
+
+    // mutating source should not trigger effect using the proxy refs
+    sref.value.x = 4
+    expect(dummyRef).toBe(1)
+
+    // force trigger
+    triggerRef(sref)
+    expect(dummyRef).toBe(4)
+
+    // reactivity
+    let dummyR
+    effect(() => {
+      dummyR = sr.value.x
+    })
+    expect(dummyR).toBe(sr.value.x)
+
+    // mutating source should not trigger effect using the proxy refs
+    sr.value.x = 4
+    expect(dummyR).toBe(1)
+
+    // force trigger
+    triggerRef(sr)
+    expect(dummyR).toBe(4)
+
+    // should keep ref
+    const r = { x: shallowRef(1) }
+    expect(toShallowRef(r, 'x')).toBe(r.x)
   })
 })

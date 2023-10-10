@@ -13,7 +13,8 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow
+  isShallow,
+  shallowReactive
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -340,7 +341,8 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   constructor(
     private readonly _object: T,
     private readonly _key: K,
-    private readonly _defaultValue?: T[K]
+    private readonly _defaultValue?: T[K],
+    public readonly __v_isShallow = false
   ) {}
 
   get value() {
@@ -452,6 +454,109 @@ function propertyToRef(
   return isRef(val)
     ? val
     : (new ObjectRefImpl(source, key, defaultValue) as any)
+}
+
+export type ToShallowRef<T> = IfAny<
+  T,
+  ShallowRef<T>,
+  [T] extends [ShallowRef] ? T : ShallowRef<T>
+>
+
+/**
+ * Used to normalize values / refs / getters into shallow refs.
+ *
+ * @example
+ * ```js
+ * // returns existing shallow refs as-is
+ * toShallowRef(existingShallowRef)
+ *
+ * // convert refs to shallow refs
+ * toShallowRef(existingRef)
+ *
+ * // creates a ref that calls the getter on .value access
+ * toShallowRef(() => props.foo)
+ *
+ * // creates shadow refs from non-function values
+ * // equivalent to shallowRef(1)
+ * toShallowRef(1)
+ * ```
+ *
+ * Can also be used to create a shallow ref for a property on a source reactive object.
+ * The created ref is synced with its source property: mutating the source
+ * property will update the ref, and vice-versa.
+ *
+ * @example
+ * ```js
+ * const state = reactive({
+ *   foo: 1,
+ *   bar: 2
+ * })
+ *
+ * const fooRef = toRef(state, 'foo')
+ *
+ * // mutating the ref updates the original
+ * fooRef.value++
+ * console.log(state.foo) // 2
+ *
+ * // mutating the original also updates the ref
+ * state.foo++
+ * console.log(fooRef.value) // 3
+ * ```
+ *
+ * @param source - A getter, an existing ref, a non-function value, or a
+ *                 reactive object to create a property shallow ref from.
+ * @param [key] - (optional) Name of the property in the reactive object.
+ * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
+ */
+export function toShallowRef<T>(
+  value: T
+): T extends () => infer R
+  ? Readonly<ShallowRef<R>>
+  : T extends ShallowRef
+  ? T
+  : ShallowRef<ShallowUnwrapRef<T>>
+export function toShallowRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K
+): ToShallowRef<T[K]>
+export function toShallowRef<T extends object, K extends keyof T>(
+  object: T,
+  key: K,
+  defaultValue: T[K]
+): ToShallowRef<Exclude<T[K], undefined>>
+export function toShallowRef(
+  source: Record<string, any> | MaybeRef,
+  key?: string,
+  defaultValue?: unknown
+): ShallowRef {
+  if (isRef(source)) {
+    if (isShallow(source)) {
+      return source
+    }
+    return shallowRef(toRaw(source.value))
+  } else if (isFunction(source)) {
+    return new GetterRefImpl(source) as any
+  } else if (isObject(source) && arguments.length > 1) {
+    return propertyToShallowRef(source, key!, defaultValue)
+  } else {
+    return shallowRef(toRaw(source))
+  }
+}
+
+function propertyToShallowRef(
+  source: Record<string, any>,
+  key: string,
+  defaultValue?: unknown
+) {
+  const val = source[key]
+  return isRef(val) && isShallow(val)
+    ? val
+    : (new ObjectRefImpl(
+        shallowReactive(toRaw(source)),
+        key,
+        defaultValue,
+        true
+      ) as any)
 }
 
 // corner case when use narrows type

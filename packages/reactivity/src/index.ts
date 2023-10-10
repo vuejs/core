@@ -9,6 +9,7 @@ export {
   proxyRefs,
   customRef,
   triggerRef,
+  toShallowRef,
   type Ref,
   type MaybeRef,
   type MaybeRefOrGetter,
@@ -18,7 +19,8 @@ export {
   type ShallowRef,
   type ShallowUnwrapRef,
   type RefUnwrapBailTypes,
-  type CustomRefFactory
+  type CustomRefFactory,
+  type ToShallowRef
 } from './ref'
 export {
   reactive,
