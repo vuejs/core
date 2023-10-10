@@ -40,9 +40,11 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   watchPostEffect(setVars)
 
   onMounted(() => {
-    const ob = new MutationObserver(setVars)
-    ob.observe(instance.subTree.el!.parentNode, { childList: true })
-    onUnmounted(() => ob.disconnect())
+    if (instance.subTree.el?.parentNode) {
+      const ob = new MutationObserver(setVars)
+      ob.observe(instance.subTree.el!.parentNode, { childList: true })
+      onUnmounted(() => ob.disconnect())
+    }
   })
 }
 
