@@ -401,4 +401,29 @@ describe('api: lifecycle hooks', () => {
     await nextTick()
     expect(fn).toHaveBeenCalledTimes(4)
   })
+
+  it('avoid fire mounted lifecycle hooks during unmounting', async () => {
+    const fn = vi.fn()
+    const toggle = ref(false)
+
+    const Child = {
+      setup() {
+        onMounted(fn)
+        onMounted(fn)
+        return () => h('div')
+      }
+    }
+
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? [h(Child), (toggle.value = false)] : null)
+      }
+    }
+
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(fn).toHaveBeenCalledTimes(0)
+    toggle.value = true
+    await nextTick()
+    expect(fn).toHaveBeenCalledTimes(0)
+  })
 })
