@@ -25,12 +25,10 @@ export const remove = <T>(arr: T[], el: T) => {
     arr.splice(i, 1)
   }
 }
-
-const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
   key: string | symbol
-): key is keyof typeof val => hasOwnProperty.call(val, key)
+): key is keyof typeof val => Object.hasOwn(val, key)
 
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
