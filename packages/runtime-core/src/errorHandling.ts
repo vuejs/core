@@ -110,7 +110,9 @@ export function handleError(
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.proxy
     // in production the hook receives only the error code
-    const errorInfo = __DEV__ ? ErrorTypeStrings[type] : type
+    const errorInfo = __DEV__
+      ? ErrorTypeStrings[type]
+      : `https://vuejs.org/errors/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
       if (errorCapturedHooks) {
