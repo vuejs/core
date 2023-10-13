@@ -43,6 +43,7 @@ export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
 
 export interface LegacyPublicProperties {
+  $root: LegacyPublicInstance
   $set(target: object, key: string, value: any): void
   $delete(target: object, key: string): void
   $mount(el?: string | Element): this
