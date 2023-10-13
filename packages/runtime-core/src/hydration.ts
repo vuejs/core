@@ -231,10 +231,10 @@ export function createHydrationFunctions(
           // on component's rendered output to determine the end of the fragment
           // instead, we do a lookahead to find the end anchor node.
           nextNode = isFragmentStart
-            ? locateClosingAsyncAnchor(node)
+            ? locateClosingAnchor(node, '[', ']')
             : // #4293 #6152 if teleport start look ahead for teleport end.
             isComment(node) && node.data === 'teleport start'
-            ? locateClosingTeleportAnchor(node)
+            ? locateClosingAnchor(node, 'teleport start', 'teleport end')
             : nextSibling(node)
 
           // #3787
@@ -527,7 +527,7 @@ export function createHydrationFunctions(
 
     if (isFragment) {
       // remove excessive fragment nodes
-      const end = locateClosingAsyncAnchor(node)
+      const end = locateClosingAnchor(node, '[', ']')
       while (true) {
         const next = nextSibling(node)
         if (next && next !== end) {
@@ -555,31 +555,18 @@ export function createHydrationFunctions(
     return next
   }
 
-  const locateClosingAsyncAnchor = (node: Node | null): Node | null => {
+  // looks ahead for a start and closing comment node
+  const locateClosingAnchor = (
+    node: Node | null,
+    startData: string,
+    endData: string
+  ): Node | null => {
     let match = 0
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === '[') match++
-        if (node.data === ']') {
-          if (match === 0) {
-            return nextSibling(node)
-          } else {
-            match--
-          }
-        }
-      }
-    }
-    return node
-  }
-
-  const locateClosingTeleportAnchor = (node: Node | null): Node | null => {
-    let match = 0
-    while (node) {
-      node = nextSibling(node)
-      if (node && isComment(node)) {
-        if (node.data === 'teleport start') match++
-        if (node.data === 'teleport end') {
+        if (node.data === startData) match++
+        if (node.data === endData) {
           if (match === 0) {
             return nextSibling(node)
           } else {
