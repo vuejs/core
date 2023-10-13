@@ -379,7 +379,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
-  activeBranch: VNode | null
+  activeBranch: (VNode & { __isUnmounted?: boolean }) | null
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -508,7 +508,10 @@ function createSuspenseBoundary(
         // this is initial anchor on mount
         let { anchor } = suspense
         // unmount current active tree
-        if (activeBranch) {
+        // #7966 if suspense is wrapped in Transition, the Transition's afterLeave may not have been
+        // performed (this means the fallbackVNode not mounted) when suspense resolves.
+        // so avoid unmount activeBranch again
+        if (activeBranch && !activeBranch.__isUnmounted) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           anchor = next(activeBranch)
@@ -607,6 +610,8 @@ function createSuspenseBoundary(
         null, // no suspense so unmount hooks fire now
         true // shouldRemove
       )
+
+      activeBranch!.__isUnmounted = true
 
       if (!delayEnter) {
         mountFallback()
