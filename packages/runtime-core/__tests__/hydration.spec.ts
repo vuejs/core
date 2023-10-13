@@ -1083,5 +1083,29 @@ describe('SSR hydration', () => {
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
+    // #6152
+    test('Teleport is disabled', () => {
+      const { container } = mountWithHydration(
+        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+        () => [
+          h('div', 'Parent fragment'),
+          h(
+            defineComponent(
+              () => () =>
+                h(Teleport, { to: 'body', disabled: true }, [
+                  h('div', 'Teleport content')
+                ])
+            )
+          )
+        ]
+      )
+      expect(document.body.innerHTML).toBe('')
+      expect(container.innerHTML).toBe(
+        '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->'
+      )
+      expect(
+        `Hydration completed but contains mismatches.`
+      ).not.toHaveBeenWarned()
+    })
   })
 })

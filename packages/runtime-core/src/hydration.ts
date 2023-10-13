@@ -232,16 +232,10 @@ export function createHydrationFunctions(
           // instead, we do a lookahead to find the end anchor node.
           nextNode = isFragmentStart
             ? locateClosingAsyncAnchor(node)
+            : // #4293 #6152 if teleport start look ahead for teleport end.
+            isComment(node) && node.data === 'teleport start'
+            ? locateClosingTeleportAnchor(node)
             : nextSibling(node)
-
-          // #4293 teleport as component root
-          if (
-            nextNode &&
-            isComment(nextNode) &&
-            nextNode.data === 'teleport end'
-          ) {
-            nextNode = nextSibling(nextNode)
-          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -568,6 +562,24 @@ export function createHydrationFunctions(
       if (node && isComment(node)) {
         if (node.data === '[') match++
         if (node.data === ']') {
+          if (match === 0) {
+            return nextSibling(node)
+          } else {
+            match--
+          }
+        }
+      }
+    }
+    return node
+  }
+
+  const locateClosingTeleportAnchor = (node: Node | null): Node | null => {
+    let match = 0
+    while (node) {
+      node = nextSibling(node)
+      if (node && isComment(node)) {
+        if (node.data === 'teleport start') match++
+        if (node.data === 'teleport end') {
           if (match === 0) {
             return nextSibling(node)
           } else {
