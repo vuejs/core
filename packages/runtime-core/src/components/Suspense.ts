@@ -379,7 +379,8 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
-  activeBranch: (VNode & { __isUnmounted?: boolean }) | null
+  activeBranch: VNode | null
+  initialContent: VNode | null
   pendingBranch: VNode | null
   deps: number
   pendingId: number
@@ -462,6 +463,7 @@ function createSuspenseBoundary(
     pendingId: 0,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
+    initialContent: null,
     pendingBranch: null,
     isInFallback: true,
     isHydrating,
@@ -506,12 +508,13 @@ function createSuspenseBoundary(
           }
         }
         // this is initial anchor on mount
-        let { anchor } = suspense
+        let { anchor, initialContent } = suspense
         // unmount current active tree
-        // #7966 if suspense is wrapped in Transition, the Transition's afterLeave may not have been
-        // performed (this means the fallbackVNode not mounted) when suspense resolves.
-        // so avoid unmount activeBranch again
-        if (activeBranch && !activeBranch.__isUnmounted) {
+        // #7966 when Suspense is wrapped in Transition, the fallback node will be mounted
+        // in the afterLeave of Transition. This means that when Suspense is resolved,
+        // the activeBranch is not the fallback node but the initialContent.
+        // so avoid unmounting the activateBranch again.
+        if (activeBranch && activeBranch !== initialContent) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
           anchor = next(activeBranch)
@@ -578,6 +581,7 @@ function createSuspenseBoundary(
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
+        suspense.initialContent = null
         if (!suspense.isInFallback) {
           return
         }
@@ -599,6 +603,7 @@ function createSuspenseBoundary(
       const delayEnter =
         fallbackVNode.transition && fallbackVNode.transition.mode === 'out-in'
       if (delayEnter) {
+        suspense.initialContent = activeBranch!
         activeBranch!.transition!.afterLeave = mountFallback
       }
       suspense.isInFallback = true
@@ -610,8 +615,6 @@ function createSuspenseBoundary(
         null, // no suspense so unmount hooks fire now
         true // shouldRemove
       )
-
-      activeBranch!.__isUnmounted = true
 
       if (!delayEnter) {
         mountFallback()

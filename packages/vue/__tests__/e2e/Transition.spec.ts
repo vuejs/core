@@ -1503,9 +1503,7 @@ describe('e2e: Transition', () => {
       'avoid unmount activeBranch twice with Suspense (out-in mode + timeout="0")',
       async () => {
         const unmountSpy = vi.fn()
-
         await page().exposeFunction('unmountSpy', unmountSpy)
-
         await page().evaluate(() => {
           const { createApp, shallowRef, h } = (window as any).Vue
           const One = {
@@ -1527,19 +1525,19 @@ describe('e2e: Transition', () => {
           }
           createApp({
             template: `
-                      <div id="container">
-                        <transition mode="out-in">
-                            <suspense timeout="0">
-                              <template #default>
-                                <component :is="view"></component>
-                              </template>
-                              <template #fallback>
-                                <div>Loading...</div>
-                              </template>
-                            </suspense>
-                      </transition>
-                      </div>
-                      <button id="toggleBtn" @click="click">button</button>
+            <div id="container">
+              <transition mode="out-in">
+                <suspense timeout="0">
+                  <template #default>
+                    <component :is="view"></component>
+                  </template>
+                  <template #fallback>
+                    <div>Loading...</div>
+                  </template>
+                </suspense>
+              </transition>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
             `,
             setup: () => {
               const view = shallowRef(One)
