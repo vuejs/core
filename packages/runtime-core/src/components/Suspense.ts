@@ -513,7 +513,7 @@ function createSuspenseBoundary(
         // #7966 when Suspense is wrapped in Transition, the fallback node will be mounted
         // in the afterLeave of Transition. This means that when Suspense is resolved,
         // the activeBranch is not the fallback node but the initialContent.
-        // so avoid unmounting the activateBranch again.
+        // so avoid unmounting the activeBranch again.
         if (activeBranch && activeBranch !== initialContent) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
