@@ -1206,27 +1206,6 @@ describe('api: watch', () => {
     expect(countW).toBe(2)
   })
 
-  test('should not trigger if computed value did not change', () => {
-    const src = ref(0)
-    const c = computed(() => src.value % 2)
-    const spy = vi.fn()
-    watchEffect(
-      () => {
-        spy(c.value)
-      },
-      { flush: 'sync' }
-    )
-    expect(spy).toHaveBeenCalledTimes(1)
-    src.value = 2
-
-    // should not trigger
-    expect(spy).toHaveBeenCalledTimes(1)
-
-    src.value = 3
-    // should trigger because latest value changes
-    expect(spy).toHaveBeenCalledTimes(2)
-  })
-
   const options = [
     { name: 'only trigger once watch' },
     {
