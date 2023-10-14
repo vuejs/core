@@ -24,7 +24,6 @@ export {
 export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
   ErrorCodes,
-  errorMessages,
   createCompilerError,
   type CoreCompilerError,
   type CompilerError
