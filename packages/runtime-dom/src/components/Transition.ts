@@ -190,6 +190,7 @@ export function resolveTransitionProps(
     done && done()
   }
 
+  const enterHookTransitionEndId = ++endId
   const makeEnterHook = (isAppear: boolean) => {
     return (el: Element, done: () => void) => {
       const hook = isAppear ? onAppear : onEnter
@@ -207,7 +208,13 @@ export function resolveTransitionProps(
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
-          whenTransitionEnds(el, type, enterDuration, resolve)
+          whenTransitionEnds(
+            el,
+            type,
+            enterDuration,
+            resolve,
+            enterHookTransitionEndId
+          )
         }
       })
     }
@@ -325,9 +332,10 @@ function whenTransitionEnds(
   el: Element & { _endId?: number },
   expectedType: TransitionProps['type'] | undefined,
   explicitTimeout: number | null,
-  resolve: () => void
+  resolve: () => void,
+  transitionEndId?: number
 ) {
-  const id = (el._endId = ++endId)
+  const id = (el._endId = transitionEndId || ++endId)
   const resolveIfNotStale = () => {
     if (id === el._endId) {
       resolve()
