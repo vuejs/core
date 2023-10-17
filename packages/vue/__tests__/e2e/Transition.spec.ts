@@ -1852,14 +1852,14 @@ describe('e2e: Transition', () => {
 
           createApp({
             template: `
-                      <div id="container">
-                        <transition name="test" appear
-                          appear-to-class="test-appear-to"
-                          appear-active-class="test-appear-active">
-                          <Comp class="test" :show="show"/>
-                        </transition>
-                      </div>
-                    `,
+              <div id="container">
+                <transition name="test" appear
+                  appear-to-class="test-appear-to"
+                  appear-active-class="test-appear-active">
+                  <Comp class="test" :show="show"/>
+                </transition>
+              </div>
+            `,
             components: { Comp },
             setup: () => {
               const show = ref(false)
