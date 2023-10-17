@@ -63,7 +63,11 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 )}`
               }
             }
-            if (prop.type === NodeTypes.ATTRIBUTE && prop.name === 'ref' && prop.value?.content) {
+            if (
+              prop.type === NodeTypes.ATTRIBUTE &&
+              prop.name === 'ref' &&
+              prop.value?.content
+            ) {
               code += `,${prop.value.content}`
             }
           }
