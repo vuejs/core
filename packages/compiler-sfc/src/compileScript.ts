@@ -856,66 +856,59 @@ export function compileScript(
       }
     }
     returned = returned.replace(/, $/, '') + ` }`
-  } else {
+  } else if (sfc.template && !sfc.template.src) {
     // inline mode
-    if (sfc.template && !sfc.template.src) {
-      if (options.templateOptions && options.templateOptions.ssr) {
-        hasInlinedSsrRenderFn = true
-      }
-      // inline render function mode - we are going to compile the template and
-      // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
-        },
-      })
-      if (tips.length) {
-        tips.forEach(warnOnce)
-      }
-      const err = errors[0]
-      if (typeof err === 'string') {
-        throw new Error(err)
-      } else if (err) {
-        if (err.loc) {
-          err.message +=
-            `\n\n` +
-            sfc.filename +
-            '\n' +
-            generateCodeFrame(
-              source,
-              err.loc.start.offset,
-              err.loc.end.offset,
-            ) +
-            `\n`
-        }
-        throw err
-      }
-      if (preamble) {
-        ctx.s.prepend(preamble)
-      }
-      // avoid duplicated unref import
-      // as this may get injected by the render function preamble OR the
-      // css vars codegen
-      if (ast && ast.helpers.has(UNREF)) {
-        ctx.helperImports.delete('unref')
-      }
-      returned = code
-    } else {
-      returned = `() => {}`
+    if (options.templateOptions && options.templateOptions.ssr) {
+      hasInlinedSsrRenderFn = true
     }
+    // inline render function mode - we are going to compile the template and
+    // inline it right here
+    const { code, ast, preamble, tips, errors } = compileTemplate({
+      filename,
+        ast: sfc.template.ast,
+      source: sfc.template.content,
+      inMap: sfc.template.map,
+      ...options.templateOptions,
+      id: scopeId,
+      scoped: sfc.styles.some(s => s.scoped),
+      isProd: options.isProd,
+      ssrCssVars: sfc.cssVars,
+      compilerOptions: {
+        ...(options.templateOptions && options.templateOptions.compilerOptions),
+        inline: true,
+        isTS: ctx.isTS,
+        bindingMetadata: ctx.bindingMetadata,
+      },
+    })
+    if (tips.length) {
+      tips.forEach(warnOnce)
+    }
+    const err = errors[0]
+    if (typeof err === 'string') {
+      throw new Error(err)
+    } else if (err) {
+      if (err.loc) {
+        err.message +=
+          `\n\n` +
+          sfc.filename +
+          '\n' +
+          generateCodeFrame(source, err.loc.start.offset, err.loc.end.offset,) +
+          `\n`
+      }
+      throw err
+    }
+    if (preamble) {
+      ctx.s.prepend(preamble)
+    }
+    // avoid duplicated unref import
+    // as this may get injected by the render function preamble OR the
+    // css vars codegen
+    if (ast && ast.helpers.has(UNREF)) {
+      ctx.helperImports.delete('unref')
+    }
+    returned = code
+  } else {
+    returned = `() => {}`
   }
 
   if (!options.inlineTemplate && !__TEST__) {
