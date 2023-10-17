@@ -8,7 +8,8 @@ import {
   defineSlots,
   VNode,
   Ref,
-  defineModel
+  defineModel,
+  PropType
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -38,6 +39,22 @@ describe('defineProps w/ generics', () => {
     expectType<boolean>(props.x)
   }
   test()
+})
+
+//github.com/vuejs/core/issues/9277
+describe('defineProps w/ generic object type', <T>() => {
+  type Props<T> = {
+    modelValue: T
+  }
+
+  const props = defineProps({
+    modelValue: {
+      type: Object as PropType<Props<T>['modelValue']>,
+      required: true
+    }
+  })
+
+  expectType<T>(props.modelValue)
 })
 
 describe('defineProps w/ type declaration + withDefaults', () => {

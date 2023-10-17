@@ -21,8 +21,7 @@ import {
   EMPTY_ARR,
   def,
   extend,
-  isOn,
-  IfAny
+  isOn
 } from '@vue/shared'
 import { warn } from './warning'
 import {
@@ -122,10 +121,20 @@ type InferPropType<T> = [T] extends [null]
   ? U extends DateConstructor
     ? Date | InferPropType<U>
     : InferPropType<U>
-  : [T] extends [Prop<infer V, infer D>]
-  ? unknown extends V
-    ? IfAny<V, V, D>
-    : V
+  : [T] extends [{ type: infer U; default: infer D }]
+  ? [T] extends [PropOptions<infer V, infer E>]
+    ? V
+    : D
+  : [T] extends [{ type: infer U }]
+  ? [T] extends [PropOptions<infer V>]
+    ? V
+    : U
+  : [T] extends [{ default: infer U }]
+  ? [T] extends [PropOptions<infer V, infer D>]
+    ? D
+    : U
+  : [T] extends [PropType<infer V>]
+  ? V
   : T
 
 /**
