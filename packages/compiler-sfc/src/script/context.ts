@@ -36,6 +36,7 @@ export class ScriptCompileContext {
   hasDefaultExportRender = false
   hasDefineOptionsCall = false
   hasDefineSlotsCall = false
+  hasDefineRenderCall = false
   hasDefineModelCall = false
 
   // defineProps
@@ -58,6 +59,9 @@ export class ScriptCompileContext {
 
   // defineOptions
   optionsRuntimeDecl: Node | undefined
+
+  // defineRender
+  renderFunction?: Node
 
   // codegen
   bindingMetadata: BindingMetadata = {}

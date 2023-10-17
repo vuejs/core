@@ -31,6 +31,7 @@ export function assertCode(code: string) {
       plugins: [
         'typescript',
         ['importAttributes', { deprecatedAssertSyntax: true }],
+        'jsx',
       ],
     })
   } catch (e: any) {

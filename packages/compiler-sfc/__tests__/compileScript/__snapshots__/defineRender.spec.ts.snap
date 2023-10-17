@@ -1,0 +1,47 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineRender() > JSX Element 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return () => <div />
+}
+
+})"
+`;
+
+exports[`defineRender() > function 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return () => <div />
+}
+
+})"
+`;
+
+exports[`defineRender() > identifier 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import { renderFn } from './ctx'
+      
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return renderFn
+}
+
+})"
+`;

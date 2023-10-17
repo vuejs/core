@@ -55,6 +55,7 @@ import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { DEFINE_RENDER, processDefineRender } from './script/defineRender'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -105,6 +106,11 @@ export interface SFCScriptCompileOptions {
    * @default true
    */
   hoistStatic?: boolean
+  /**
+   * (**Experimental**) Enable macro `defineRender`
+   * @default false
+   */
+  defineRender?: boolean
   /**
    * (**Experimental**) Enable reactive destructure for `defineProps`
    * @default false
@@ -491,7 +497,8 @@ export function compileScript(
         processDefineProps(ctx, expr) ||
         processDefineEmits(ctx, expr) ||
         processDefineOptions(ctx, expr) ||
-        processDefineSlots(ctx, expr)
+        processDefineSlots(ctx, expr) ||
+        processDefineRender(ctx, expr)
       ) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(ctx, expr)) {
@@ -529,7 +536,8 @@ export function compileScript(
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
             (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+              processDefineModel(ctx, init, decl.id) ||
+              processDefineRender(ctx, init))
 
           if (
             isDefineProps &&
@@ -797,8 +805,19 @@ export function compileScript(
   }
 
   // 9. generate return statement
-  let returned
-  if (
+  let returned = ''
+  if (ctx.renderFunction) {
+    if (sfc.template) {
+      warnOnce(`<template> is ignored when using ${DEFINE_RENDER}().`)
+    }
+    if (ctx.renderFunction.type === 'JSXElement') {
+      returned = '() => '
+    }
+    returned += scriptSetup.content.slice(
+      ctx.renderFunction.start!,
+      ctx.renderFunction.end!
+    )
+  } else if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
   ) {
