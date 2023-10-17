@@ -212,7 +212,6 @@ function doWatch(
     getter = () => source
     deep = true
   } else if (isArray(source)) {
-    deep = sourceIsReactive
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
@@ -224,6 +223,7 @@ function doWatch(
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else if (sourceIsReactive) {
+          deep = true
           return s
         } else {
           __DEV__ && warnInvalidSource(s)
