@@ -202,16 +202,17 @@ function doWatch(
     getCurrentScope() === currentInstance?.scope ? currentInstance : null
   // const instance = currentInstance
   let getter: () => any
+  let sourceIsReactive = false
   let forceTrigger = false
   let isMultiSource = false
-
   if (isRef(source)) {
     getter = () => source.value
     forceTrigger = isShallow(source)
-  } else if (isReactive(source)) {
+  } else if ((sourceIsReactive = isReactive(source)) && !isArray(source)) {
     getter = () => source
     deep = true
   } else if (isArray(source)) {
+    deep = sourceIsReactive
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
     getter = () =>
@@ -222,6 +223,8 @@ function doWatch(
           return traverse(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
+        } else if (sourceIsReactive) {
+          return s
         } else {
           __DEV__ && warnInvalidSource(s)
         }

@@ -94,6 +94,16 @@ describe('api: watch', () => {
     expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
   })
 
+  it('watching single source: reactive with array ref', async () => {
+    const foo = reactive([ref(0)])
+    const callback = vi.fn()
+    watch(foo, callback)
+    foo[0].value++
+    await nextTick()
+    expect(callback).toBeCalledTimes(1)
+    expect(callback).toBeCalledWith([1], expect.anything(), expect.anything())
+  })
+
   it('should not fire if watched getter result did not change', async () => {
     const spy = vi.fn()
     const n = ref(0)
