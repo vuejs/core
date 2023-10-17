@@ -53,6 +53,7 @@ import {
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { processDefineAttrs } from './script/defineAttrs'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -512,7 +513,8 @@ export function compileScript(
         processDefineProps(ctx, expr) ||
         processDefineEmits(ctx, expr) ||
         processDefineOptions(ctx, expr) ||
-        processDefineSlots(ctx, expr)
+        processDefineSlots(ctx, expr) ||
+        processDefineAttrs(ctx, expr)
       ) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(ctx, expr)) {
@@ -550,7 +552,8 @@ export function compileScript(
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
             (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+              processDefineModel(ctx, init, decl.id) ||
+              processDefineAttrs(ctx, init, decl.id))
 
           if (
             isDefineProps &&

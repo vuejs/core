@@ -18,7 +18,8 @@ import {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  StrictUnwrapAttrsType
 } from './componentOptions'
 import {
   ComponentPropsOptions,
@@ -211,6 +212,15 @@ export function defineSlots<
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
+  }
+  return null as any
+}
+
+export function defineAttrs<
+  Attrs extends Record<string, any> = Record<string, any>
+>(): StrictUnwrapAttrsType<Attrs> {
+  if (__DEV__) {
+    warnRuntimeUsage(`defineAttrs`)
   }
   return null as any
 }

@@ -453,6 +453,17 @@ export type ExtractComputedReturns<T extends any> = {
     : never
 }
 
+export type StrictUnwrapAttrsType<
+  Attrs extends Record<string, unknown>,
+  T = NonNullable<Attrs>
+> = [keyof T] extends [never]
+  ? Record<string, unknown>
+  : T extends new () => { $props: infer P }
+  ? Readonly<NonNullable<P>>
+  : T extends (props: infer P, ...args: any) => any
+  ? Readonly<NonNullable<P>>
+  : Readonly<T>
+
 export type ObjectWatchOptionItem = {
   handler: WatchCallback | string
 } & WatchOptions

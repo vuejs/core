@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineAttrs() > basic usage 1`] = `
+"import { useAttrs as _useAttrs, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const attrs = _useAttrs()
+      
+return { attrs }
+}
+
+})"
+`;
+
+exports[`defineAttrs() > w/o generic params 1`] = `
+"import { useAttrs as _useAttrs } from 'vue'
+
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const attrs = _useAttrs()
+      
+return { attrs }
+}
+
+}"
+`;
+
+exports[`defineAttrs() > w/o return value 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return {  }
+}
+
+})"
+`;

@@ -36,6 +36,7 @@ export class ScriptCompileContext {
   hasDefineOptionsCall = false
   hasDefineSlotsCall = false
   hasDefineModelCall = false
+  hasDefineAttrsCall = false
 
   // defineProps
   propsCall: CallExpression | undefined

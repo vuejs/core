@@ -71,6 +71,7 @@ export {
   defineExpose,
   defineOptions,
   defineSlots,
+  defineAttrs,
   defineModel,
   withDefaults,
   useModel
