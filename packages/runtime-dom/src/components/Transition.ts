@@ -190,11 +190,16 @@ export function resolveTransitionProps(
     done && done()
   }
 
-  const enterHookTransitionEndId = ++endId
   const makeEnterHook = (isAppear: boolean) => {
-    return (el: Element, done: () => void) => {
+    return (
+      el: Element & { _isAppeared?: boolean; _endId?: number },
+      done: () => void
+    ) => {
       const hook = isAppear ? onAppear : onEnter
-      const resolve = () => finishEnter(el, isAppear, done)
+      const resolve = () => {
+        finishEnter(el, isAppear, done)
+        if (isAppear) el._isAppeared = true
+      }
       callHook(hook, [el, resolve])
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
@@ -213,7 +218,8 @@ export function resolveTransitionProps(
             type,
             enterDuration,
             resolve,
-            enterHookTransitionEndId
+            // onEnter and onAppear callbacks use the same endId if el has not appeared
+            el._isAppeared ? undefined : el._endId
           )
         }
       })
