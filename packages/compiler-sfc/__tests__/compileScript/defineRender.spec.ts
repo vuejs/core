@@ -43,4 +43,22 @@ describe('defineRender()', () => {
     expect(content).toMatch(`return renderFn`)
     expect(content).not.toMatch('defineRender')
   })
+
+  describe('errors', () => {
+    test('w/ <template>', () => {
+      expect(() =>
+        compile(
+          `
+      <script setup lang="tsx">
+      defineRender(<div />)
+      </script>
+      <template>
+        <span>hello</span>
+      </template>
+    `,
+          { defineRender: true }
+        )
+      ).toThrow(`defineRender() cannot be used with <template>.`)
+    })
+  })
 })

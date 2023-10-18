@@ -808,7 +808,10 @@ export function compileScript(
   let returned = ''
   if (ctx.renderFunction) {
     if (sfc.template) {
-      warnOnce(`<template> is ignored when using ${DEFINE_RENDER}().`)
+      ctx.error(
+        `${DEFINE_RENDER}() cannot be used with <template>.`,
+        ctx.renderFunction
+      )
     }
     if (ctx.renderFunction.type === 'JSXElement') {
       returned = '() => '
