@@ -44,6 +44,21 @@ describe('defineRender()', () => {
     expect(content).not.toMatch('defineRender')
   })
 
+  test('empty argument', () => {
+    const { content } = compile(
+      `
+      <script setup>
+      const foo = 'bar'
+      defineRender()
+      </script>
+    `,
+      { defineRender: true }
+    )
+    assertCode(content)
+    expect(content).toMatch(`return { foo }`)
+    expect(content).not.toMatch('defineRender')
+  })
+
   describe('errors', () => {
     test('w/ <template>', () => {
       expect(() =>

@@ -15,6 +15,21 @@ return () => <div />
 })"
 `;
 
+exports[`defineRender() > empty argument 1`] = `
+"const foo = 'bar'
+      
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+      
+return { foo }
+}
+
+}"
+`;
+
 exports[`defineRender() > function 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
