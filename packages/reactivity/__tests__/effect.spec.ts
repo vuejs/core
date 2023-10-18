@@ -11,12 +11,8 @@ import {
   readonly,
   ReactiveEffectRunner
 } from '../src/index'
-import {
-  ITERATE_KEY,
-  getDepFromReactive,
-  pauseScheduling,
-  resetScheduling
-} from '../src/effect'
+import { pauseScheduling, resetScheduling } from '../src/effect'
+import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {

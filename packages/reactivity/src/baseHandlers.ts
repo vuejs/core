@@ -12,14 +12,12 @@ import {
 } from './reactive'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
-  track,
-  trigger,
-  ITERATE_KEY,
   pauseTracking,
   resetTracking,
   pauseScheduling,
   resetScheduling
 } from './effect'
+import { track, trigger, ITERATE_KEY } from './reactiveEffect'
 import {
   isObject,
   hasOwn,

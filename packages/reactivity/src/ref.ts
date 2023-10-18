@@ -1,6 +1,5 @@
 import {
   activeEffect,
-  getDepFromReactive,
   shouldTrack,
   trackEffect,
   triggerEffects
@@ -19,6 +18,7 @@ import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 import { ComputedRefImpl } from './computed'
+import { getDepFromReactive } from './reactiveEffect'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
