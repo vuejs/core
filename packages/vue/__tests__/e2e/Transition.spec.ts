@@ -1834,7 +1834,7 @@ describe('e2e: Transition', () => {
     )
 
     test(
-      'transition on appear with v-show(remove appear class)',
+      'transition on appear with v-show(invoke enterHook during appear)',
       async () => {
         const appearClass = await page().evaluate(async () => {
           const { createApp, ref, h, vShow, withDirectives, onMounted } = (
@@ -1871,17 +1871,17 @@ describe('e2e: Transition', () => {
               }
             }
           }).mount('#app')
-          return Promise.resolve().then(() => {
-            return document.querySelector('.test')!.className.split(/\s+/g)
-          })
+          return document.querySelector('.test')!.className.split(/\s+/g)
         })
 
+        // appear
         expect(appearClass).toStrictEqual([
           'test',
           'test-enter-from',
-          'test-appear-active',
-          'test-enter-active'
+          'test-appear-active'
         ])
+
+        // enter
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
@@ -1890,6 +1890,7 @@ describe('e2e: Transition', () => {
           'test-appear-to',
           'test-enter-to'
         ])
+
         await transitionFinish()
         expect(await html('#container')).toBe(
           '<div class="test" style="">content</div>'
