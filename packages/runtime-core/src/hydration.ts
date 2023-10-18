@@ -41,7 +41,7 @@ let hasMismatch = false
 const isSVGContainer = (container: Element) =>
   /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
 
-const isComment = (node: Node): node is Comment =>
+export const isComment = (node: Node): node is Comment =>
   node.nodeType === DOMNodeTypes.COMMENT
 
 // Note: hydration is DOM-specific

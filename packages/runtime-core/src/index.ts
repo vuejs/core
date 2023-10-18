@@ -254,6 +254,7 @@ export type {
   RootRenderFunction
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
+export { isComment } from './hydration'
 export type { Slot, Slots, SlotsType } from './componentSlots'
 export type {
   Prop,

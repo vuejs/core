@@ -24,7 +24,8 @@ import {
   toRaw,
   compatUtils,
   DeprecationTypes,
-  ComponentOptions
+  ComponentOptions,
+  isComment
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -128,6 +129,9 @@ const TransitionGroupImpl: ComponentOptions = {
       }
 
       if (prevChildren) {
+        prevChildren = prevChildren.filter(
+          child => !isComment(child.el as Element)
+        )
         for (let i = 0; i < prevChildren.length; i++) {
           const child = prevChildren[i]
           setTransitionHooks(
