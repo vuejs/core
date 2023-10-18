@@ -144,6 +144,9 @@ function cleanupDepEffect(dep: Dep, effect: ReactiveEffect) {
   const trackId = dep.get(effect)
   if (trackId !== undefined && effect._trackId !== trackId) {
     dep.delete(effect)
+    if (dep.size === 0) {
+      dep.cleanup()
+    }
   }
 }
 
@@ -275,7 +278,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     }
     let dep = depsMap.get(key)
     if (!dep) {
-      depsMap.set(key, (dep = createDep()))
+      depsMap.set(key, (dep = createDep(() => depsMap!.delete(key))))
     }
     if (__DEV__) {
       trackEffect(activeEffect, dep, {
