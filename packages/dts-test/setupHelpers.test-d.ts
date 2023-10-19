@@ -41,7 +41,7 @@ describe('defineProps w/ generics', () => {
   test()
 })
 
-//github.com/vuejs/core/issues/9277
+// #9277
 describe('defineProps w/ generic object type', <T>() => {
   type Props<T> = {
     modelValue: T
