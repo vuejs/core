@@ -6,7 +6,7 @@ import {
   ssrUtils,
   VNode
 } from 'vue'
-import { isPromise, isString } from '@vue/shared'
+import { isArray, isPromise, isString } from '@vue/shared'
 import { SSRContext, renderComponentVNode, SSRBuffer } from './render'
 
 const { isVNode } = ssrUtils
@@ -83,7 +83,11 @@ export async function resolveTeleports(context: SSRContext) {
       // note: it's OK to await sequentially here because the Promises were
       // created eagerly in parallel.
       context.teleports[key] = await unrollBuffer(
-        await Promise.all([context.__teleportBuffers[key]])
+        await Promise.all(
+          isArray(context.__teleportBuffers[key])
+            ? context.__teleportBuffers[key].flat()
+            : [context.__teleportBuffers[key]]
+        )
       )
     }
   }
