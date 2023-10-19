@@ -73,6 +73,7 @@ export {
   defineOptions,
   defineSlots,
   defineModel,
+  defineRender,
   withDefaults,
   type DefineProps,
   type ModelRef,

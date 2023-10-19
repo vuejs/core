@@ -20,6 +20,7 @@ import type {
   ComponentOptionsWithoutProps,
   ComputedOptions,
   MethodOptions,
+  RenderFunction,
 } from './componentOptions'
 import type {
   ComponentObjectPropsOptions,
@@ -311,6 +312,28 @@ type PropsWithDefaults<
       ? boolean | undefined
       : boolean
     : boolean
+}
+
+/**
+ * (**Experimental**) Vue `<script setup>` compiler macro for declaring
+ * the render function.
+ *
+ * The first argument can be a JSX element or a render function.
+ *
+ * @example
+ * ```ts
+ * // JSX element
+ * defineRender(<div>hello</div>)
+ *
+ * // Render function
+ * defineRender(() => <div>hello</div>)
+ * defineRender(() => h('div', 'hello'))
+ * ```
+ */
+export function defineRender(renderFn: JSX.Element | RenderFunction): void {
+  if (__DEV__) {
+    warnRuntimeUsage('defineRender')
+  }
 }
 
 /**
