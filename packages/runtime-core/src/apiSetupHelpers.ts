@@ -31,6 +31,7 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
+import type { VNode } from './vnode'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -330,7 +331,7 @@ type PropsWithDefaults<
  * defineRender(() => h('div', 'hello'))
  * ```
  */
-export function defineRender(renderFn: JSX.Element | RenderFunction): void {
+export function defineRender(renderFn: VNode | RenderFunction): void {
   if (__DEV__) {
     warnRuntimeUsage('defineRender')
   }
