@@ -16,7 +16,7 @@ export function processDefineRender(
   if (!ctx.options.defineRender) {
     warnOnce(
       `${DEFINE_RENDER}() is an experimental feature and disabled by default.\n` +
-        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/TODO.`
+        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/585.`
     )
     return false
   }
