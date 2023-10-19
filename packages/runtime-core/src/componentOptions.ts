@@ -457,7 +457,7 @@ export type StrictUnwrapAttrsType<
   Attrs extends Record<string, unknown>,
   T = NonNullable<Attrs>
 > = [keyof T] extends [never]
-  ? Record<string, unknown>
+  ? Readonly<Record<string, unknown>>
   : T extends new () => { $props: infer P }
   ? Readonly<NonNullable<P>>
   : T extends (props: infer P, ...args: any) => any

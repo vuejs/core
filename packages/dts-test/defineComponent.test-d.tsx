@@ -1402,6 +1402,57 @@ describe('define attrs', () => {
       <Comp class={'str'} style={'str'} bar={1} foo={'str'} />
     )
   })
+  test('ignore reserved props', () => {
+    defineComponent({
+      attrs: Object as AttrsType<{
+        bar?: number
+      }>,
+      created() {
+        // @ts-expect-error reserved props
+        this.$attrs.key
+        // @ts-expect-error reserved props
+        this.$attrs.ref
+      }
+    })
+    defineComponent(
+      (props: { foo: string }, ctx) => {
+        // @ts-expect-error reserved props
+        ctx.attrs.key
+        // @ts-expect-error reserved props
+        ctx.attrs.ref
+        return () => <div>{props.foo}</div>
+      },
+      {
+        attrs: Object as AttrsType<{
+          bar?: number
+        }>
+      }
+    )
+  })
+
+  test('always readonly', () => {
+    defineComponent({
+      attrs: Object as AttrsType<{
+        bar?: number
+      }>,
+      created() {
+        // @ts-expect-error readonly
+        this.$attrs.class = 'test'
+      }
+    })
+    defineComponent(
+      (props: { foo: string }, ctx) => {
+        // @ts-expect-error readonly
+        ctx.attrs.bar = 1
+        return () => <div>{props.foo}</div>
+      },
+      {
+        attrs: Object as AttrsType<{
+          bar?: number
+        }>
+      }
+    )
+  })
 })
 
 // #5948

@@ -218,13 +218,13 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: Prettify<
-    MakeDefaultsOptional extends true
-      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults> & AttrsProps
-      : P & PublicProps & AttrsProps
-  >
+  $props: MakeDefaultsOptional extends true
+    ? Partial<Defaults> &
+        Omit<Prettify<P> & PublicProps, keyof Defaults> &
+        AttrsProps
+    : Prettify<P> & PublicProps & AttrsProps
   $attrs: HasDefinedAttrs<Attrs> extends true
-    ? AttrsProps & AllowedComponentProps
+    ? Readonly<AttrsProps & AllowedComponentProps>
     : Data
   $refs: Data
   $slots: UnwrapSlotsType<S>
