@@ -480,7 +480,11 @@ describe('compiler: transform component slots', () => {
   })
 
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
-    function assertDynamicSlots(template: string, shouldForce: boolean) {
+    function assertDynamicSlots(
+      template: string,
+      shouldForce: boolean,
+      expectedPatchFlag?: PatchFlags
+    ) {
       const { root } = parseWithSlots(template, { prefixIdentifiers: true })
       let flag: any
       if (root.children[0].type === NodeTypes.FOR) {
@@ -495,6 +499,8 @@ describe('compiler: transform component slots', () => {
       }
       if (shouldForce) {
         expect(flag).toBe(genFlagText(PatchFlags.DYNAMIC_SLOTS))
+      } else if (expectedPatchFlag) {
+        expect(flag).toBe(genFlagText(expectedPatchFlag))
       } else {
         expect(flag).toBeUndefined()
       }
@@ -542,6 +548,15 @@ describe('compiler: transform component slots', () => {
         <Comp v-slot="bar"><button @click="fn()" /></Comp>
       </div>`,
       false
+    )
+
+    // #9380
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp :i="i">foo</Comp>
+      </div>`,
+      false,
+      PatchFlags.PROPS
     )
   })
 
