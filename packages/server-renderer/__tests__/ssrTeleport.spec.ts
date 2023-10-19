@@ -173,7 +173,7 @@ describe('ssrRenderTeleport', () => {
     )
   })
 
-  test('teleport work /w suspense', async () => {
+  test('teleport work w/ suspense', async () => {
     const ctx: SSRContext = {}
 
     const AsyncComp = defineAsyncComponent(() =>
