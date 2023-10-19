@@ -17,16 +17,17 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
 import chalk from 'chalk'
-import execa from 'execa'
+import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
 import { scanEnums } from './const-enum.js'
+import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))
@@ -34,22 +35,40 @@ const targets = args._
 const formats = args.formats || args.f
 const devOnly = args.devOnly || args.d
 const prodOnly = !devOnly && (args.prodOnly || args.p)
+const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildAllMatching = args.all || args.a
-const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const writeSize = args.size
+const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+
+const sizeDir = path.resolve('temp/size')
 
 run()
 
 async function run() {
+  if (writeSize) await fs.mkdir(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
-    if (!targets.length) {
-      await buildAll(allTargets)
-      checkAllSizes(allTargets)
-    } else {
-      await buildAll(fuzzyMatchTarget(targets, buildAllMatching))
-      checkAllSizes(fuzzyMatchTarget(targets, buildAllMatching))
+    const resolvedTargets = targets.length
+      ? fuzzyMatchTarget(targets, buildAllMatching)
+      : allTargets
+    await buildAll(resolvedTargets)
+    await checkAllSizes(resolvedTargets)
+    if (buildTypes) {
+      await execa(
+        'pnpm',
+        [
+          'run',
+          'build-dts',
+          ...(targets.length
+            ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
+            : [])
+        ],
+        {
+          stdio: 'inherit'
+        }
+      )
     }
   } finally {
     removeCache()
@@ -115,39 +134,52 @@ async function build(target) {
   )
 }
 
-function checkAllSizes(targets) {
+async function checkAllSizes(targets) {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
   }
   console.log()
   for (const target of targets) {
-    checkSize(target)
+    await checkSize(target)
   }
   console.log()
 }
 
-function checkSize(target) {
+async function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
-  checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
+  await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
   if (!formats || formats.includes('global-runtime')) {
-    checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
+    await checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
   }
 }
 
-function checkFileSize(filePath) {
+async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return
   }
-  const file = readFileSync(filePath)
-  const minSize = (file.length / 1024).toFixed(2) + 'kb'
+  const file = await fs.readFile(filePath)
+  const fileName = path.basename(filePath)
+
   const gzipped = gzipSync(file)
-  const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = brotliCompressSync(file)
-  // @ts-ignore
-  const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
+  const brotli = brotliCompressSync(file)
+
   console.log(
-    `${chalk.gray(
-      chalk.bold(path.basename(filePath))
-    )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
+    `${chalk.gray(chalk.bold(fileName))} min:${prettyBytes(
+      file.length
+    )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
+      brotli.length
+    )}`
   )
+
+  if (writeSize)
+    await fs.writeFile(
+      path.resolve(sizeDir, `${fileName}.json`),
+      JSON.stringify({
+        file: fileName,
+        size: file.length,
+        gzip: gzipped.length,
+        brotli: brotli.length
+      }),
+      'utf-8'
+    )
 }

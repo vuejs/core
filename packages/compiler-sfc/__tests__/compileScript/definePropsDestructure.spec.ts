@@ -106,6 +106,28 @@ describe('sfc reactive props destructure', () => {
 })`)
     assertCode(content)
   })
+  test('default values w/ runtime declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup>
+      const { foo = 1, 'foo:bar': fooBar = 'foo-bar' } = defineProps(['foo', 'foo:bar'])
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED
+    })
+
+    expect(content).toMatch(`
+  props: _mergeDefaults(['foo', 'foo:bar'], {
+  foo: 1,
+  "foo:bar": 'foo-bar'
+}),`)
+    assertCode(content)
+  })
 
   test('default values w/ type declaration', () => {
     const { content } = compile(`
@@ -120,6 +142,37 @@ describe('sfc reactive props destructure', () => {
     bar: { type: Object, required: false, default: () => ({}) },
     func: { type: Function, required: false, default: () => {} }
   }`)
+    assertCode(content)
+  })
+
+  test('default values w/ type declaration & key is string', () => {
+    const { content, bindings } = compile(`
+      <script setup lang="ts">
+      const { foo = 1, bar = 2, 'foo:bar': fooBar = 'foo-bar' } = defineProps<{ 
+        "foo": number // double-quoted string
+        'bar': number // single-quoted string
+        'foo:bar': string // single-quoted string containing symbols
+        "onUpdate:modelValue": (val: number) => void  // double-quoted string containing symbols
+      }>()
+      </script>
+    `)
+    expect(bindings).toStrictEqual({
+      __propsAliases: {
+        fooBar: 'foo:bar'
+      },
+      foo: BindingTypes.PROPS,
+      bar: BindingTypes.PROPS,
+      'foo:bar': BindingTypes.PROPS,
+      fooBar: BindingTypes.PROPS_ALIASED,
+      'onUpdate:modelValue': BindingTypes.PROPS
+    })
+    expect(content).toMatch(`
+  props: {
+    foo: { type: Number, required: true, default: 1 },
+    bar: { type: Number, required: true, default: 2 },
+    "foo:bar": { type: String, required: true, default: 'foo-bar' },
+    "onUpdate:modelValue": { type: Function, required: true }
+  },`)
     assertCode(content)
   })
 
@@ -227,6 +280,58 @@ describe('sfc reactive props destructure', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
     })
+  })
+
+  test('multi-variable declaration', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+      a = 1;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #6757
+  test('multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+      { item } = defineProps(['item']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #7422
+  test('multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
   })
 
   describe('errors', () => {

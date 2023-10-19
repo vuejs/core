@@ -25,7 +25,7 @@ import {
 } from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   makeMap,
   hasOwn,
   isString,
@@ -44,6 +44,10 @@ import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+
+// a heuristic safeguard to bail constant expressions on presence of
+// likely function invocation and member access
+const constantBailRE = /\w\s*\(|\.[^\d]/
 
 export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
@@ -197,13 +201,14 @@ export function processExpression(
         return genPropsAccessExp(bindingMetadata.__propsAliases![raw])
       }
     } else {
-      if (type && type.startsWith('setup')) {
+      if (
+        (type && type.startsWith('setup')) ||
+        type === BindingTypes.LITERAL_CONST
+      ) {
         // setup bindings in non-inline mode
         return `$setup.${raw}`
       } else if (type === BindingTypes.PROPS_ALIASED) {
         return `$props['${bindingMetadata.__propsAliases![raw]}']`
-      } else if (type === BindingTypes.LITERAL_CONST) {
-        return raw
       } else if (type) {
         return `$${type}.${raw}`
       }
@@ -216,11 +221,11 @@ export function processExpression(
   // fast path if expression is a simple identifier.
   const rawExp = node.content
   // bail constant on parens (function invocation) and dot (member access)
-  const bailConstant = rawExp.indexOf(`(`) > -1 || rawExp.indexOf('.') > 0
+  const bailConstant = constantBailRE.test(rawExp)
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
-    const isAllowedGlobal = isGloballyWhitelisted(rawExp)
+    const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
     if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
       // const bindings exposed from setup can be skipped for patching but
@@ -353,7 +358,7 @@ export function processExpression(
 
 function canPrefix(id: Identifier) {
   // skip whitelisted globals
-  if (isGloballyWhitelisted(id.name)) {
+  if (isGloballyAllowed(id.name)) {
     return false
   }
   // special case for webpack compilation

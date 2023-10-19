@@ -1,12 +1,14 @@
 export const version = __VERSION__
 
 // API
-export { parse } from './parse'
+export { parse, parseCache } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
+
+// TODO remove in 3.4
 export {
   shouldTransform as shouldTransformRef,
   transform as transformRef,

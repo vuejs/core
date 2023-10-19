@@ -99,9 +99,22 @@ export function createGetCanonicalFileName(useCaseSensitiveFileNames: boolean) {
   return useCaseSensitiveFileNames ? identity : toFileNameLowerCase
 }
 
+// in the browser build, the polyfill doesn't expose posix, but defaults to
+// posix behavior.
+const normalize = (path.posix || path).normalize
 const windowsSlashRE = /\\/g
 export function normalizePath(p: string) {
-  // in the browser build, the polyfill doesn't expose posix, but defualts to
-  // posix behavior.
-  return (path.posix || path).normalize(p.replace(windowsSlashRE, '/'))
+  return normalize(p.replace(windowsSlashRE, '/'))
+}
+
+export const joinPaths = (path.posix || path).join
+
+/**
+ * key may contain symbols
+ * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
+ */
+export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+
+export function getEscapedKey(key: string) {
+  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
 }

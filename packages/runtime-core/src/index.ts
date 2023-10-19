@@ -56,7 +56,7 @@ export {
   onErrorCaptured,
   onServerPrefetch
 } from './apiLifecycle'
-export { provide, inject } from './apiInject'
+export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
@@ -73,8 +73,13 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  useModel,
-  // internal
+  useModel
+} from './apiSetupHelpers'
+
+/**
+ * @internal
+ */
+export {
   mergeDefaults,
   mergeModels,
   createPropsRestProxy,
@@ -111,7 +116,9 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn, assertNumber } from './warning'
+export { warn } from './warning'
+/** @internal */
+export { assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,
@@ -254,6 +261,7 @@ export type {
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
 export type {

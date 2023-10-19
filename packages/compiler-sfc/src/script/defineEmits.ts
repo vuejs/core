@@ -1,7 +1,14 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import {
+  ArrayPattern,
+  Identifier,
+  LVal,
+  Node,
+  ObjectPattern,
+  RestElement
+} from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
-import { resolveTypeElements } from './resolveType'
+import { resolveTypeElements, resolveUnionType } from './resolveType'
 
 export const DEFINE_EMITS = 'defineEmits'
 
@@ -29,10 +36,7 @@ export function processDefineEmits(
     ctx.emitsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    ctx.emitIdentifier =
-      declId.type === 'Identifier' ? declId.name : ctx.getString(declId)
-  }
+  ctx.emitDecl = declId
 
   return true
 }
@@ -65,7 +69,7 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
   const node = ctx.emitsTypeDecl!
 
   if (node.type === 'TSFunctionType') {
-    extractEventNames(node.parameters[0], emits)
+    extractEventNames(ctx, node.parameters[0], emits)
     return emits
   }
 
@@ -85,7 +89,7 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
       )
     }
     for (const call of calls) {
-      extractEventNames(call.parameters[0], emits)
+      extractEventNames(ctx, call.parameters[0], emits)
     }
   }
 
@@ -93,7 +97,8 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
 }
 
 function extractEventNames(
-  eventName: Identifier | RestElement,
+  ctx: ScriptCompileContext,
+  eventName: ArrayPattern | Identifier | ObjectPattern | RestElement,
   emits: Set<string>
 ) {
   if (
@@ -101,22 +106,15 @@ function extractEventNames(
     eventName.typeAnnotation &&
     eventName.typeAnnotation.type === 'TSTypeAnnotation'
   ) {
-    const typeNode = eventName.typeAnnotation.typeAnnotation
-    if (typeNode.type === 'TSLiteralType') {
-      if (
-        typeNode.literal.type !== 'UnaryExpression' &&
-        typeNode.literal.type !== 'TemplateLiteral'
-      ) {
-        emits.add(String(typeNode.literal.value))
-      }
-    } else if (typeNode.type === 'TSUnionType') {
-      for (const t of typeNode.types) {
+    const types = resolveUnionType(ctx, eventName.typeAnnotation.typeAnnotation)
+
+    for (const type of types) {
+      if (type.type === 'TSLiteralType') {
         if (
-          t.type === 'TSLiteralType' &&
-          t.literal.type !== 'UnaryExpression' &&
-          t.literal.type !== 'TemplateLiteral'
+          type.literal.type !== 'UnaryExpression' &&
+          type.literal.type !== 'TemplateLiteral'
         ) {
-          emits.add(String(t.literal.value))
+          emits.add(String(type.literal.value))
         }
       }
     }
