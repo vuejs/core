@@ -40,7 +40,7 @@
     "@vue/shared": "3.3.4",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.30.5",
-    "postcss": "^8.4.30",
+    "postcss": "^8.4.31",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
