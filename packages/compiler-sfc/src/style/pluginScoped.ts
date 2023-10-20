@@ -135,8 +135,8 @@ function rewriteSelector(
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated.  Use :deep(<inner-selector>) instead.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
           )
 
           const prev = selector.at(selector.index(n) - 1)
