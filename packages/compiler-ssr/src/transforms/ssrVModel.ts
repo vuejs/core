@@ -38,6 +38,32 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     }
   }
 
+  function processOption(plainNode: PlainElementNode) {
+    if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
+      const value = findValueBinding(plainNode)
+      plainNode.ssrCodegenNode!.elements.push(
+        createConditionalExpression(
+          createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
+            createConditionalExpression(
+              createCallExpression(`Array.isArray`, [model]),
+              createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                model,
+                value
+              ]),
+              createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                model,
+                value
+              ])
+            )
+          ]),
+          createSimpleExpression(' selected', true),
+          createSimpleExpression('', true),
+          false /* no newline */
+        )
+      )
+    }
+  }
+
   if (node.tagType === ElementTypes.ELEMENT) {
     const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
@@ -131,29 +157,12 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
       node.children.forEach(option => {
-        if (option.type === NodeTypes.ELEMENT && option.tag === 'option') {
-          const plainNode = option as PlainElementNode
-          if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
-            const value = findValueBinding(plainNode)
-            plainNode.ssrCodegenNode!.elements.push(
-              createConditionalExpression(
-                createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
-                  createConditionalExpression(
-                    createCallExpression(`Array.isArray`, [model]),
-                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                      model,
-                      value
-                    ]),
-                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                      model,
-                      value
-                    ])
-                  )
-                ]),
-                createSimpleExpression(' selected', true),
-                createSimpleExpression('', true),
-                false /* no newline */
-              )
+        if (option.type === NodeTypes.ELEMENT) {
+          if (option.tag === 'option') {
+            processOption(option as PlainElementNode)
+          } else if (option.tag === 'optgroup') {
+            option.children.forEach(option =>
+              processOption(option as PlainElementNode)
             )
           }
         }
