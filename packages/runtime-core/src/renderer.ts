@@ -2116,8 +2116,8 @@ function baseCreateRenderer(
       setRef(ref, null, parentSuspense, vnode, true)
     }
 
-    // #6593 should clean memo cache when unmount 
-    if (vnode.cleanMemoCache) { 
+    // #6593 should clean memo cache when unmount
+    if (vnode.cleanMemoCache) {
       vnode.cleanMemoCache()
     }
 
