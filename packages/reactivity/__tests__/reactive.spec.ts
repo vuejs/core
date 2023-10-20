@@ -27,7 +27,7 @@ describe('reactivity/reactive', () => {
     const reactiveObj = reactive(obj)
     expect(isReactive(reactiveObj)).toBe(true)
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
-    // @ts-ignore
+    // @ts-expect-error
     const prototype = reactiveObj['__proto__']
     const otherObj = { data: ['a'] }
     expect(isReactive(otherObj)).toBe(false)
@@ -54,7 +54,7 @@ describe('reactivity/reactive', () => {
     class CustomMap extends Map {}
     const cmap = reactive(new CustomMap())
 
-    expect(cmap instanceof Map).toBe(true)
+    expect(cmap).toBeInstanceOf(Map)
     expect(isReactive(cmap)).toBe(true)
 
     cmap.set('key', {})
@@ -64,7 +64,7 @@ describe('reactivity/reactive', () => {
     class CustomSet extends Set {}
     const cset = reactive(new CustomSet())
 
-    expect(cset instanceof Set).toBe(true)
+    expect(cset).toBeInstanceOf(Set)
     expect(isReactive(cset)).toBe(true)
 
     let dummy
@@ -81,7 +81,7 @@ describe('reactivity/reactive', () => {
     class CustomMap extends WeakMap {}
     const cmap = reactive(new CustomMap())
 
-    expect(cmap instanceof WeakMap).toBe(true)
+    expect(cmap).toBeInstanceOf(WeakMap)
     expect(isReactive(cmap)).toBe(true)
 
     const key = {}
@@ -92,7 +92,7 @@ describe('reactivity/reactive', () => {
     class CustomSet extends WeakSet {}
     const cset = reactive(new CustomSet())
 
-    expect(cset instanceof WeakSet).toBe(true)
+    expect(cset).toBeInstanceOf(WeakSet)
     expect(isReactive(cset)).toBe(true)
 
     let dummy
@@ -208,7 +208,7 @@ describe('reactivity/reactive', () => {
     const dummy = computed(() => observed.a)
     expect(dummy.value).toBe(0)
 
-    // @ts-ignore
+    // @ts-expect-error
     observed.a = bar
     expect(dummy.value).toBe(1)
 
@@ -237,6 +237,9 @@ describe('reactivity/reactive', () => {
     // symbol
     const s = Symbol()
     assertValue(s)
+    // bigint
+    const bn = BigInt('9007199254740991')
+    assertValue(bn)
 
     // built-ins should work and return same value
     const p = Promise.resolve()

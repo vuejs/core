@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '../../runtime-core/src/scheduler'
 import {
@@ -44,6 +43,7 @@ test('mode as function', () => {
     template: `<div><foo/><bar/></div>`
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.innerHTML).toBe(`<div>foo</div><div>bar</div>`)
 })
 
@@ -120,6 +120,7 @@ test('V_ON_KEYCODE_MODIFIER', () => {
     template: `<input @keyup.1="spy">`,
     methods: { spy }
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLInputElement)
   triggerEvent(vm.$el, 'keyup', e => {
     e.key = '_'
     e.keyCode = 1
@@ -192,6 +193,7 @@ test('ATTR_FALSE_VALUE', () => {
   const vm = new Vue({
     template: `<div :id="false" :foo="false"/>`
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.hasAttribute('id')).toBe(false)
   expect(vm.$el.hasAttribute('foo')).toBe(false)
   expect(
@@ -210,6 +212,8 @@ test('ATTR_ENUMERATED_COERCION', () => {
   const vm = new Vue({
     template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`
   }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.getAttribute('draggable')).toBe('false')
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')

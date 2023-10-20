@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import Vue from '@vue/compat'
 import { nextTick } from '@vue/runtime-core'
 import { CompilerDeprecationTypes } from '../../compiler-core/src'
@@ -32,6 +31,7 @@ test('COMPILER_IS_ON_ELEMENT', () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(`<div>text</div>`)
   expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
 })
@@ -48,6 +48,7 @@ test('COMPILER_IS_ON_ELEMENT (dynamic)', () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(`<div>text</div>`)
   expect(CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT).toHaveBeenWarned()
 })
@@ -70,9 +71,10 @@ test('COMPILER_V_BIND_SYNC', async () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
   expect(vm.$el.textContent).toBe(`0`)
 
-  triggerEvent(vm.$el, 'click')
+  triggerEvent(vm.$el as Element, 'click')
   await nextTick()
   expect(vm.$el.textContent).toBe(`1`)
 
@@ -83,6 +85,8 @@ test('COMPILER_V_BIND_PROP', () => {
   const vm = new Vue({
     template: `<div :id.prop="'foo'"/>`
   }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.id).toBe('foo')
   expect(CompilerDeprecationTypes.COMPILER_V_BIND_PROP).toHaveBeenWarned()
 })
@@ -91,6 +95,7 @@ test('COMPILER_V_BIND_OBJECT_ORDER', () => {
   const vm = new Vue({
     template: `<div id="foo" v-bind="{ id: 'bar', class: 'baz' }" />`
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.id).toBe('foo')
   expect(vm.$el.className).toBe('baz')
   expect(
@@ -112,7 +117,8 @@ test('COMPILER_V_ON_NATIVE', () => {
     }
   }).$mount()
 
-  triggerEvent(vm.$el, 'click')
+  expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
+  triggerEvent(vm.$el as HTMLButtonElement, 'click')
   expect(spy).toHaveBeenCalledTimes(1)
   expect(CompilerDeprecationTypes.COMPILER_V_ON_NATIVE).toHaveBeenWarned()
 })
@@ -128,6 +134,8 @@ test('COMPILER_NATIVE_TEMPLATE', () => {
   const vm = new Vue({
     template: `<div><template><div/></template></div>`
   }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.innerHTML).toBe(`<div></div>`)
   expect(CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE).toHaveBeenWarned()
 })
@@ -144,6 +152,7 @@ test('COMPILER_INLINE_TEMPLATE', () => {
     }
   }).$mount()
 
-  expect(vm.$el.outerHTML).toBe(`<div>123</div>`)
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
+  expect(vm.$el?.outerHTML).toBe(`<div>123</div>`)
   expect(CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE).toHaveBeenWarned()
 })
