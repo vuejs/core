@@ -79,6 +79,12 @@ const getPkgRoot = pkg => path.resolve(__dirname, '../packages/' + pkg)
 const step = msg => console.log(chalk.cyan(msg))
 
 async function main() {
+  if (!(await isInSyncWithRemote())) {
+    return
+  } else {
+    console.log(`${chalk.green(`✓`)} commit is up-to-date with rmeote.\n`)
+  }
+
   let targetVersion = args._[0]
 
   if (isCanary) {
@@ -299,6 +305,28 @@ async function getCIResult() {
     const data = await res.json()
     return data.workflow_runs.length > 0
   } catch (e) {
+    console.error('Failed to get CI status for current commit.')
+    return false
+  }
+}
+
+async function isInSyncWithRemote() {
+  try {
+    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
+    const { stdout: branch } = await execa('git', [
+      'rev-parse',
+      '--abbrev-ref',
+      'HEAD'
+    ])
+    const res = await fetch(
+      `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
+    )
+    const data = await res.json()
+    return data.sha === sha
+  } catch (e) {
+    console.error(
+      'Failed to check whether local HEAD is up-to-date with remote.'
+    )
     return false
   }
 }
