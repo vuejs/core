@@ -50,12 +50,25 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDirective(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
+              if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+                code += `,${processExp(
+                  (prop.arg as SimpleExpressionNode).content,
+                  prop.name
+                )}`
+              }
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
                   prop.name
                 )}`
               }
+            }
+            if (
+              prop.type === NodeTypes.ATTRIBUTE &&
+              prop.name === 'ref' &&
+              prop.value?.content
+            ) {
+              code += `,${prop.value.content}`
             }
           }
         } else if (node.type === NodeTypes.INTERPOLATION) {
@@ -83,7 +96,9 @@ function processExp(exp: string, dir?: string): string {
     } else if (dir === 'for') {
       const inMatch = exp.match(forAliasRE)
       if (inMatch) {
-        const [, LHS, RHS] = inMatch
+        let [, LHS, RHS] = inMatch
+        // #6088
+        LHS = LHS.trim().replace(/^\(|\)$/g, '')
         return processExp(`(${LHS})=>{}`) + processExp(RHS)
       }
     }

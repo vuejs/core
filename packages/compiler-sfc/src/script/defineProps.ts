@@ -16,7 +16,8 @@ import {
   isLiteralNode,
   isCallOf,
   unwrapTSNode,
-  toRuntimeTypeString
+  toRuntimeTypeString,
+  getEscapedKey
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -76,14 +77,13 @@ export function processDefineProps(
     ctx.propsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    // handle props destructure
-    if (declId.type === 'ObjectPattern') {
-      processPropsDestructure(ctx, declId)
-    } else {
-      ctx.propsIdentifier = ctx.getString(declId)
-    }
+  // handle props destructure
+  if (declId && declId.type === 'ObjectPattern') {
+    processPropsDestructure(ctx, declId)
   }
+
+  ctx.propsCall = node
+  ctx.propsDecl = declId
 
   return true
 }
@@ -96,31 +96,33 @@ function processWithDefaults(
   if (!isCallOf(node, WITH_DEFAULTS)) {
     return false
   }
-  if (processDefineProps(ctx, node.arguments[0], declId)) {
-    if (ctx.propsRuntimeDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS} can only be used with type-based ` +
-          `${DEFINE_PROPS} declaration.`,
-        node
-      )
-    }
-    if (ctx.propsDestructureDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
-          `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
-        node.callee
-      )
-    }
-    ctx.propsRuntimeDefaults = node.arguments[1]
-    if (!ctx.propsRuntimeDefaults) {
-      ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
-    }
-  } else {
+  if (!processDefineProps(ctx, node.arguments[0], declId)) {
     ctx.error(
       `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
       node.arguments[0] || node
     )
   }
+
+  if (ctx.propsRuntimeDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS} can only be used with type-based ` +
+        `${DEFINE_PROPS} declaration.`,
+      node
+    )
+  }
+  if (ctx.propsDestructureDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
+        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+      node.callee
+    )
+  }
+  ctx.propsRuntimeDefaults = node.arguments[1]
+  if (!ctx.propsRuntimeDefaults) {
+    ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
+  }
+  ctx.propsCall = node
+
   return true
 }
 
@@ -133,10 +135,11 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       const defaults: string[] = []
       for (const key in ctx.propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(ctx, key)
+        const finalKey = getEscapedKey(key)
         if (d)
           defaults.push(
-            `${key}: ${d.valueString}${
-              d.needSkipFactory ? `, __skip_${key}: true` : ``
+            `${finalKey}: ${d.valueString}${
+              d.needSkipFactory ? `, __skip_${finalKey}: true` : ``
             }`
           )
       }
@@ -248,8 +251,9 @@ function genRuntimePropFromType(
     }
   }
 
+  const finalKey = getEscapedKey(key)
   if (!ctx.options.isProd) {
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       `required: ${required}`,
       skipCheck && 'skipCheck: true',
@@ -265,13 +269,13 @@ function genRuntimePropFromType(
     // #4783 for boolean, should keep the type
     // #7111 for function, if default value exists or it's not static, should keep it
     // in production
-    return `${key}: { ${concatStrings([
+    return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
       defaultString
     ])} }`
   } else {
     // production: checks are useless
-    return `${key}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
+    return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }
 }
 
@@ -308,11 +312,7 @@ function genDestructuredDefaultValue(
     const value = ctx.getString(defaultVal)
     const unwrapped = unwrapTSNode(defaultVal)
 
-    if (
-      inferredType &&
-      inferredType.length &&
-      !inferredType.includes(UNKNOWN_TYPE)
-    ) {
+    if (inferredType && inferredType.length && !inferredType.includes('null')) {
       const valueType = inferValueType(unwrapped)
       if (valueType && !inferredType.includes(valueType)) {
         ctx.error(
@@ -325,7 +325,7 @@ function genDestructuredDefaultValue(
     // If the default value is a function or is an identifier referencing
     // external value, skip factory wrap. This is needed when using
     // destructure w/ runtime declaration since we cannot safely infer
-    // whether tje expected runtime prop type is `Function`.
+    // whether the expected runtime prop type is `Function`.
     const needSkipFactory =
       !inferredType &&
       (isFunctionType(unwrapped) || unwrapped.type === 'Identifier')

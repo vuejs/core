@@ -8,6 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
+import { escapeSymbolsRE } from '../script/utils'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
@@ -31,10 +32,7 @@ function genVarName(id: string, raw: string, isProd: boolean): string {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(
-      /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g,
-      s => `\\${s}`
-    )}`
+    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
   }
 }
 
@@ -55,8 +53,9 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    // ignore v-bind() in comments /* ... */
-    const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
+    // ignore v-bind() in comments, eg /* ... */
+    // and // (Less, Sass and Stylus all support the use of // to comment)
+    const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
       const end = lexBinding(content, start)

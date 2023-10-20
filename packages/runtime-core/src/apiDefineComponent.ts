@@ -274,11 +274,15 @@ export function defineComponent<
 >
 
 // implementation, close to no-op
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineComponent(
   options: unknown,
   extraOptions?: ComponentOptions
 ) {
   return isFunction(options)
-    ? extend({}, extraOptions, { setup: options, name: options.name })
+    ? // #8326: extend call and options.name access are considered side-effects
+      // by Rollup, so we have to wrap it in a pure-annotated IIFE.
+      /*#__PURE__*/ (() =>
+        extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }
