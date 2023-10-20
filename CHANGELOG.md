@@ -3,7 +3,7 @@
 
 ### Bug Fixes
 
-* add isGloballyWhitelisted back, but deprecated ([#8556](https://github.com/vuejs/core/issues/8556)) ([63dfe8e](https://github.com/vuejs/core/commit/63dfe8eab499979bcc2f7829e82464e13899c895)), closes [/github.com/vuejs/core/issues/8416#issuecomment-1566583260](https://github.com//github.com/vuejs/core/issues/8416/issues/issuecomment-1566583260)
+* add isGloballyWhitelisted back, but deprecated ([#8556](https://github.com/vuejs/core/issues/8556)) ([63dfe8e](https://github.com/vuejs/core/commit/63dfe8eab499979bcc2f7829e82464e13899c895)), closes [#8416](https://github.com/vuejs/core/issues/8416)
 * **build:** disable useDefineForClassFields in esbuild ([#9252](https://github.com/vuejs/core/issues/9252)) ([6d14fa8](https://github.com/vuejs/core/commit/6d14fa88e85d4c9e264be394ddb37a54ca6738a8))
 * **compat:** return value of vue compat set() ([#9377](https://github.com/vuejs/core/issues/9377)) ([e3c2d69](https://github.com/vuejs/core/commit/e3c2d699f694d9500ddee78571172a24f0e3b17a))
 * **compiler-sfc:** don't hoist props and emit ([#8535](https://github.com/vuejs/core/issues/8535)) ([24db951](https://github.com/vuejs/core/commit/24db9516d8b4857182ec1a3af86cb7346691679b)), closes [#7805](https://github.com/vuejs/core/issues/7805) [#7812](https://github.com/vuejs/core/issues/7812)
