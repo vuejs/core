@@ -1,3 +1,4 @@
+import { normalize } from 'node:path'
 import { Identifier } from '@babel/types'
 import { SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
@@ -933,10 +934,10 @@ function resolve(
     id: 'test',
     fs: {
       fileExists(file) {
-        return !!files[file]
+        return !!(files[file] ?? files[normalize(file)])
       },
       readFile(file) {
-        return files[file]
+        return files[file] ?? files[normalize(file)]
       }
     },
     ...options
