@@ -244,7 +244,7 @@ export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
 
   // Standard HTML Attributes
   accesskey?: string
-  contenteditable?: Booleanish | 'inherit'
+  contenteditable?: Booleanish | 'inherit' | 'plaintext-only'
   contextmenu?: string
   dir?: string
   draggable?: Booleanish
