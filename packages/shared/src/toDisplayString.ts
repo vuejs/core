@@ -7,7 +7,7 @@ import {
   isSet,
   objectToString,
   isString
-} from './index'
+} from './general'
 
 // can't use isRef here since @vue/shared has no deps
 const isRef = (val: any): val is { value: unknown } => {

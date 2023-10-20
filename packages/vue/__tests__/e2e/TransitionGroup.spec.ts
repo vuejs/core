@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { createApp, ref } from 'vue'
@@ -401,15 +400,15 @@ describe('e2e: TransitionGroup', () => {
                       appear-from-class="test-appear-from"
                       appear-to-class="test-appear-to"
                       appear-active-class="test-appear-active"
-                      @before-enter="beforeEnterSpy"
-                      @enter="onEnterSpy"
-                      @after-enter="afterEnterSpy"
-                      @before-leave="beforeLeaveSpy"
-                      @leave="onLeaveSpy"
-                      @after-leave="afterLeaveSpy"
-                      @before-appear="beforeAppearSpy"
-                      @appear="onAppearSpy"
-                      @after-appear="afterAppearSpy">
+                      @before-enter="beforeEnterSpy()"
+                      @enter="onEnterSpy()"
+                      @after-enter="afterEnterSpy()"
+                      @before-leave="beforeLeaveSpy()"
+                      @leave="onLeaveSpy()"
+                      @after-leave="afterLeaveSpy()"
+                      @before-appear="beforeAppearSpy()"
+                      @appear="onAppearSpy()"
+                      @after-appear="afterAppearSpy()">
                     <div v-for="item in items" :key="item" class="test">{{item}}</div>
                   </transition-group>
                 </div>

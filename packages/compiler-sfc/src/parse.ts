@@ -7,11 +7,12 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map'
+import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
 import { TemplateCompiler } from './compileTemplate'
-import { parseCssVars } from './cssVars'
+import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
-import { hmrShouldReload, ImportBinding } from './compileScript'
+import { ImportBinding } from './compileScript'
+import { isImportUsed } from './script/importUsageCheck'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
 
@@ -46,6 +47,13 @@ export interface SFCScriptBlock extends SFCBlock {
   imports?: Record<string, ImportBinding>
   scriptAst?: import('@babel/types').Statement[]
   scriptSetupAst?: import('@babel/types').Statement[]
+  warnings?: string[]
+  /**
+   * Fully resolved dependency file paths (unix slashes) with imported types
+   * used in macros, used for HMR cache busting in @vitejs/plugin-vue and
+   * vue-loader.
+   */
+  deps?: string[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
@@ -85,7 +93,7 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const sourceToSFC = createCache<SFCParseResult>()
+export const parseCache = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
@@ -100,7 +108,7 @@ export function parse(
 ): SFCParseResult {
   const sourceKey =
     source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = sourceToSFC.get(sourceKey)
+  const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache
   }
@@ -276,7 +284,7 @@ export function parse(
     descriptor,
     errors
   }
-  sourceToSFC.set(sourceKey, result)
+  parseCache.set(sourceKey, result)
   return result
 }
 
@@ -428,4 +436,33 @@ function isEmpty(node: ElementNode) {
     }
   }
   return true
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }

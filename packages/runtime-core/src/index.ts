@@ -11,6 +11,7 @@ export {
   proxyRefs,
   isRef,
   toRef,
+  toValue,
   toRefs,
   isProxy,
   isReactive,
@@ -55,7 +56,7 @@ export {
   onErrorCaptured,
   onServerPrefetch
 } from './apiLifecycle'
-export { provide, inject } from './apiInject'
+export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
@@ -68,9 +69,19 @@ export {
   defineProps,
   defineEmits,
   defineExpose,
+  defineOptions,
+  defineSlots,
+  defineModel,
   withDefaults,
-  // internal
+  useModel
+} from './apiSetupHelpers'
+
+/**
+ * @internal
+ */
+export {
   mergeDefaults,
+  mergeModels,
   createPropsRestProxy,
   withAsyncContext
 } from './apiSetupHelpers'
@@ -105,7 +116,9 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn, assertNumber } from './warning'
+export { warn } from './warning'
+/** @internal */
+export { assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,
@@ -151,6 +164,8 @@ declare module '@vue/reactivity' {
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,
+  MaybeRef,
+  MaybeRefOrGetter,
   ToRef,
   ToRefs,
   UnwrapRef,
@@ -239,13 +254,14 @@ export type {
   RootRenderFunction
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
-export type { Slot, Slots } from './componentSlots'
+export type { Slot, Slots, SlotsType } from './componentSlots'
 export type {
   Prop,
   PropType,
   ComponentPropsOptions,
   ComponentObjectPropsOptions,
   ExtractPropTypes,
+  ExtractPublicPropTypes,
   ExtractDefaultPropTypes
 } from './componentProps'
 export type {

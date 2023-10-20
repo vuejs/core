@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, type SpyInstance } from 'vitest'
 
 expect.extend({
   toHaveBeenWarned(received: string) {
@@ -65,7 +65,7 @@ expect.extend({
   }
 })
 
-let warn
+let warn: SpyInstance
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {

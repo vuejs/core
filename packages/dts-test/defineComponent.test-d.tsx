@@ -8,7 +8,10 @@ import {
   ComponentPublicInstance,
   ComponentOptions,
   SetupContext,
-  h
+  h,
+  SlotsType,
+  Slots,
+  VNode
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -351,7 +354,7 @@ describe('type inference w/ optional props declaration', () => {
 })
 
 describe('type inference w/ direct setup function', () => {
-  const MyComponent = defineComponent((_props: { msg: string }) => {})
+  const MyComponent = defineComponent((_props: { msg: string }) => () => {})
   expectType<JSX.Element>(<MyComponent msg="foo" />)
   // @ts-expect-error
   ;<MyComponent />
@@ -563,7 +566,7 @@ describe('with mixins', () => {
       expectType<string>(props.z)
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
-      // from Base
+      // from MixinA
       expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
@@ -575,7 +578,7 @@ describe('with mixins', () => {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
-      // from Base
+      // from MixinA
       expectType<((...args: any[]) => any) | undefined>(props.onBar)
       expectType<string>(props.aP1)
       expectType<boolean | undefined>(props.aP2)
@@ -1250,10 +1253,146 @@ describe('prop starting with `on*` is broken', () => {
   })
 })
 
+describe('function syntax w/ generics', () => {
+  const Comp = defineComponent(
+    // TODO: babel plugin to auto infer runtime props options from type
+    // similar to defineProps<{...}>()
+    <T extends string | number>(props: { msg: T; list: T[] }) => {
+      // use Composition API here like in <script setup>
+      const count = ref(0)
+
+      return () => (
+        // return a render function (both JSX and h() works)
+        <div>
+          {props.msg} {count.value}
+        </div>
+      )
+    }
+  )
+
+  expectType<JSX.Element>(<Comp msg="fse" list={['foo']} />)
+  expectType<JSX.Element>(<Comp msg={123} list={[123]} />)
+
+  expectType<JSX.Element>(
+    // @ts-expect-error missing prop
+    <Comp msg={123} />
+  )
+
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <Comp msg="fse" list={[123]} />
+  )
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <Comp msg={123} list={['123']} />
+  )
+})
+
+describe('function syntax w/ emits', () => {
+  const Foo = defineComponent(
+    (props: { msg: string }, ctx) => {
+      ctx.emit('foo')
+      // @ts-expect-error
+      ctx.emit('bar')
+      return () => {}
+    },
+    {
+      emits: ['foo']
+    }
+  )
+  expectType<JSX.Element>(<Foo msg="hi" onFoo={() => {}} />)
+  // @ts-expect-error
+  expectType<JSX.Element>(<Foo msg="hi" onBar={() => {}} />)
+
+  defineComponent(
+    (props: { msg: string }, ctx) => {
+      ctx.emit('foo', 'hi')
+      // @ts-expect-error
+      ctx.emit('foo')
+      // @ts-expect-error
+      ctx.emit('bar')
+      return () => {}
+    },
+    {
+      emits: {
+        foo: (a: string) => true
+      }
+    }
+  )
+})
+
+describe('function syntax w/ runtime props', () => {
+  // with runtime props, the runtime props must match
+  // manual type declaration
+  defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: ['msg']
+    }
+  )
+
+  defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: ['msg']
+    }
+  )
+
+  defineComponent(
+    <T extends string>(_props: { msg: T }) => {
+      return () => {}
+    },
+    {
+      props: {
+        msg: String
+      }
+    }
+  )
+
+  // @ts-expect-error string prop names don't match
+  defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: ['bar']
+    }
+  )
+
+  defineComponent(
+    (_props: { msg: string }) => {
+      return () => {}
+    },
+    {
+      props: {
+        // @ts-expect-error prop type mismatch
+        msg: Number
+      }
+    }
+  )
+
+  // @ts-expect-error prop keys don't match
+  defineComponent(
+    (_props: { msg: string }, ctx) => {
+      return () => {}
+    },
+    {
+      props: {
+        msg: String,
+        bar: String
+      }
+    }
+  )
+})
+
 // check if defineComponent can be exported
 export default {
   // function components
-  a: defineComponent(_ => h('div')),
+  a: defineComponent(_ => () => h('div')),
   // no props
   b: defineComponent({
     data() {
@@ -1269,6 +1408,69 @@ export default {
     }
   })
 }
+
+describe('slots', () => {
+  const comp1 = defineComponent({
+    slots: Object as SlotsType<{
+      default: { foo: string; bar: number }
+      optional?: { data: string }
+      undefinedScope: undefined | { data: string }
+      optionalUndefinedScope?: undefined | { data: string }
+    }>,
+    setup(props, { slots }) {
+      expectType<(scope: { foo: string; bar: number }) => VNode[]>(
+        slots.default
+      )
+      expectType<((scope: { data: string }) => VNode[]) | undefined>(
+        slots.optional
+      )
+
+      slots.default({ foo: 'foo', bar: 1 })
+
+      // @ts-expect-error it's optional
+      slots.optional({ data: 'foo' })
+      slots.optional?.({ data: 'foo' })
+
+      expectType<{
+        (): VNode[]
+        (scope: undefined | { data: string }): VNode[]
+      }>(slots.undefinedScope)
+
+      expectType<
+        | { (): VNode[]; (scope: undefined | { data: string }): VNode[] }
+        | undefined
+      >(slots.optionalUndefinedScope)
+
+      slots.default({ foo: 'foo', bar: 1 })
+      // @ts-expect-error it's optional
+      slots.optional({ data: 'foo' })
+      slots.optional?.({ data: 'foo' })
+      slots.undefinedScope()
+      slots.undefinedScope(undefined)
+      // @ts-expect-error
+      slots.undefinedScope('foo')
+
+      slots.optionalUndefinedScope?.()
+      slots.optionalUndefinedScope?.(undefined)
+      slots.optionalUndefinedScope?.({ data: 'foo' })
+      // @ts-expect-error
+      slots.optionalUndefinedScope()
+      // @ts-expect-error
+      slots.optionalUndefinedScope?.('foo')
+
+      expectType<typeof slots | undefined>(new comp1().$slots)
+    }
+  })
+
+  const comp2 = defineComponent({
+    setup(props, { slots }) {
+      // unknown slots
+      expectType<Slots>(slots)
+      expectType<((...args: any[]) => VNode[]) | undefined>(slots.default)
+    }
+  })
+  expectType<Slots | undefined>(new comp2().$slots)
+})
 
 import {
   DefineComponent,
@@ -1294,6 +1496,7 @@ declare const MyButton: DefineComponent<
   string,
   VNodeProps & AllowedComponentProps & ComponentCustomProps,
   Readonly<ExtractPropTypes<{}>>,
+  {},
   {}
 >
 ;<MyButton class="x" />
