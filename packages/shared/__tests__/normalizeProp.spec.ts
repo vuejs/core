@@ -11,10 +11,20 @@ describe('normalizeClass', () => {
     )
   })
 
+  test('handles nested arrayd correctly', () => {
+    expect(normalizeClass(['foo', ['bar'], [['baz']]])).toEqual('foo bar baz')
+  })
+
   test('handles object correctly', () => {
     expect(normalizeClass({ foo: true, bar: false, baz: true })).toEqual(
       'foo baz'
     )
+  })
+
+  test('handles nested arrays and objects correctly', () => {
+    expect(
+      normalizeClass(['foo', ['bar'], { baz: true }, [{ qux: true }]])
+    ).toEqual('foo bar baz qux')
   })
 
   // #6777
