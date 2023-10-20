@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
   reactive,
