@@ -215,6 +215,34 @@ return function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler: transform component slots > template named v-if/else and whitespace preserve 1`] = `
+"const { toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
+
+return function render(_ctx, _cache) {
+  const _component_Comp = _resolveComponent(\\"Comp\\")
+
+  return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
+    true
+      ? {
+          name: \\"one\\",
+          fn: _withCtx(() => [
+            _createTextVNode(_toDisplayString(_ctx.foo) + _toDisplayString(_ctx.bar), 1 /* TEXT */)
+          ]),
+          key: \\"0\\"
+        }
+      : true
+        ? {
+            name: \\"one\\",
+            fn: _withCtx(() => [
+              _createTextVNode(_toDisplayString(_ctx.foo) + _toDisplayString(_ctx.bar), 1 /* TEXT */)
+            ]),
+            key: \\"1\\"
+          }
+        : undefined
+  ]), 1024 /* DYNAMIC_SLOTS */))
+}"
+`;
+
 exports[`compiler: transform component slots > with whitespace: 'preserve' > implicit default slot 1`] = `
 "const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 

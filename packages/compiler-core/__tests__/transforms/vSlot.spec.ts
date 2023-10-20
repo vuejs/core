@@ -28,8 +28,14 @@ import { createObjectMatcher, genFlagText } from '../testUtils'
 import { PatchFlags } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
+import { transformText } from '../../src/transforms/transformText'
 
-function parseWithSlots(template: string, options: CompilerOptions = {}) {
+function parseWithSlots(
+  template: string,
+  options: CompilerOptions & {
+    appendNodeTransforms?: CompilerOptions['nodeTransforms']
+  } = {}
+) {
   const ast = parse(template, {
     whitespace: options.whitespace
   })
@@ -42,7 +48,8 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
         : []),
       transformSlotOutlet,
       transformElement,
-      trackSlotScopes
+      trackSlotScopes,
+      ...(options.appendNodeTransforms ?? [])
     ],
     directiveTransforms: {
       on: transformOn,
@@ -231,6 +238,27 @@ describe('compiler: transform component slots', () => {
         }
       })
     )
+    expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
+  })
+
+  // #6063 should not throw error
+  test('template named v-if/else and whitespace preserve', () => {
+    const { root } = parseWithSlots(
+      `<Comp>
+        <template v-if="true" #one>
+            {{ foo }}{{ bar }}
+        </template>
+        <template v-else="true" #one>
+            {{ foo }}{{ bar }}
+        </template>
+      </Comp>`,
+      {
+        whitespace: 'preserve',
+        prefixIdentifiers: true,
+        appendNodeTransforms: [transformText]
+      }
+    )
+
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
 
