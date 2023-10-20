@@ -584,7 +584,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    isSVG = isSVG || (n2.type as string) === 'svg'
+    isSVG = isSVG || n2.type === 'svg'
     if (n1 == null) {
       mountElement(
         n2,

@@ -1,6 +1,7 @@
 import { provide, inject, ref, Ref, InjectionKey } from 'vue'
 import { expectType } from './utils'
 
+// non-symbol keys
 provide('foo', 123)
 provide(123, 123)
 
@@ -9,6 +10,8 @@ const key: InjectionKey<number> = Symbol()
 provide(key, 1)
 // @ts-expect-error
 provide(key, 'foo')
+// @ts-expect-error
+provide(key, null)
 
 expectType<number | undefined>(inject(key))
 expectType<number>(inject(key, 1))
@@ -27,3 +30,13 @@ const injectionKeyRef = Symbol('key') as InjectionKey<Ref<Cube>>
 
 // @ts-expect-error
 provide(injectionKeyRef, ref({}))
+
+// naive-ui: explicit provide type parameter
+provide<Cube>('cube', { size: 123 })
+provide<Cube>(123, { size: 123 })
+provide<Cube>(injectionKeyRef, { size: 123 })
+
+// @ts-expect-error
+provide<Cube>('cube', { size: 'foo' })
+// @ts-expect-error
+provide<Cube>(123, { size: 'foo' })

@@ -9,7 +9,7 @@ import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   NOOP,
   extend,
   isString,
@@ -40,7 +40,7 @@ import {
   ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
-import { SlotsType, TypedSlots } from './componentSlots'
+import { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -105,7 +105,7 @@ type ExtractMixin<T> = {
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
 export type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}>
+  ? OptionTypesType
   : UnionToIntersection<ExtractMixin<T>>
 
 export type UnwrapMixinsType<
@@ -213,7 +213,7 @@ export type ComponentPublicInstance<
   >
   $attrs: Data
   $refs: Data
-  $slots: TypedSlots<S>
+  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
@@ -511,7 +511,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       return PublicInstanceProxyHandlers.get!(target, key, target)
     },
     has(_: ComponentRenderContext, key: string) {
-      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      const has = key[0] !== '_' && !isGloballyAllowed(key)
       if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
         warn(
           `Property ${JSON.stringify(

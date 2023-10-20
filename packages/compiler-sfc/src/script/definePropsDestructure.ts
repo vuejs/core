@@ -27,13 +27,13 @@ export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
   }
 
   warnOnce(
     `This project is using reactive props destructure, which is an experimental ` +
-      ` feature. It may receive breaking changes or be removed in the future, so ` +
+      `feature. It may receive breaking changes or be removed in the future, so ` +
       `use at your own risk.\n` +
       `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/502.`
   )
@@ -103,7 +103,7 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
-  if (!ctx.options.propsDestructure) {
+  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
     return
   }
 
@@ -237,7 +237,7 @@ export function transformDestructuredProps(
   // check root scope first
   const ast = ctx.scriptSetupAst!
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 

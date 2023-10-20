@@ -62,7 +62,9 @@ export type SimpleTypeResolveContext = Pick<
   // required
   'source' | 'filename' | 'error' | 'options'
 > &
-  Partial<Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps'>> & {
+  Partial<
+    Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
+  > & {
     ast: Statement[]
   }
 
@@ -223,13 +225,16 @@ function innerResolveTypeElements(
       if (resolved) {
         return resolveTypeElements(ctx, resolved, resolved._ownerScope)
       }
+      break
     }
-    case 'TSTypeQuery': {
-      const resolved = resolveTypeReference(ctx, node, scope)
-      if (resolved) {
-        return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+    case 'TSTypeQuery':
+      {
+        const resolved = resolveTypeReference(ctx, node, scope)
+        if (resolved) {
+          return resolveTypeElements(ctx, resolved, resolved._ownerScope)
+        }
       }
-    }
+      break
   }
   return ctx.error(`Unresolvable type: ${node.type}`, node, scope)
 }
@@ -322,11 +327,29 @@ function resolveInterfaceMembers(
   const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
   if (node.extends) {
     for (const ext of node.extends) {
-      const { props } = resolveTypeElements(ctx, ext, scope)
-      for (const key in props) {
-        if (!hasOwn(base.props, key)) {
-          base.props[key] = props[key]
+      if (
+        ext.leadingComments &&
+        ext.leadingComments.some(c => c.value.includes('@vue-ignore'))
+      ) {
+        continue
+      }
+      try {
+        const { props } = resolveTypeElements(ctx, ext, scope)
+        for (const key in props) {
+          if (!hasOwn(base.props, key)) {
+            base.props[key] = props[key]
+          }
         }
+      } catch (e) {
+        ctx.error(
+          `Failed to resolve extends base type.\nIf this previously worked in 3.2, ` +
+            `you can instruct the compiler to ignore this extend by adding ` +
+            `/* @vue-ignore */ before it, for example:\n\n` +
+            `interface Props extends /* @vue-ignore */ Base {}\n\n` +
+            `Note: both in 3.2 or with the ignore, the properties in the base ` +
+            `type are treated as fallthrough attrs at runtime.`,
+          ext
+        )
       }
     }
   }
@@ -518,7 +541,7 @@ function resolveBuiltin(
   name: GetSetType<typeof SupportedBuiltinsSet>,
   scope: TypeScope
 ): ResolvedElements {
-  const t = resolveTypeElements(ctx, node.typeParameters!.params[0])
+  const t = resolveTypeElements(ctx, node.typeParameters!.params[0], scope)
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
@@ -675,7 +698,7 @@ function qualifiedNameToPath(node: Identifier | TSQualifiedName): string[] {
 
 function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
   if (ctx.options.globalTypeFiles) {
-    const fs: FS = ctx.options.fs || ts?.sys
+    const fs = resolveFS(ctx)
     if (!fs) {
       throw new Error('[vue/compiler-sfc] globalTypeFiles requires fs access.')
     }
@@ -685,16 +708,44 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
   }
 }
 
-let ts: typeof TS
+let ts: typeof TS | undefined
+let loadTS: (() => typeof TS) | undefined
 
 /**
  * @private
  */
-export function registerTS(_ts: any) {
-  ts = _ts
+export function registerTS(_loadTS: () => typeof TS) {
+  loadTS = _loadTS
 }
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
+
+function resolveFS(ctx: TypeResolveContext): FS | undefined {
+  if (ctx.fs) {
+    return ctx.fs
+  }
+  if (!ts && loadTS) {
+    ts = loadTS()
+  }
+  const fs = ctx.options.fs || ts?.sys
+  if (!fs) {
+    return
+  }
+  return (ctx.fs = {
+    fileExists(file) {
+      if (file.endsWith('.vue.ts')) {
+        file = file.replace(/\.ts$/, '')
+      }
+      return fs.fileExists(file)
+    },
+    readFile(file) {
+      if (file.endsWith('.vue.ts')) {
+        file = file.replace(/\.ts$/, '')
+      }
+      return fs.readFile(file)
+    }
+  })
+}
 
 function resolveTypeFromImport(
   ctx: TypeResolveContext,
@@ -713,9 +764,9 @@ function importSourceToScope(
   scope: TypeScope,
   source: string
 ): TypeScope {
-  const fs: FS = ctx.options.fs || ts?.sys
+  const fs = resolveFS(ctx)
   if (!fs) {
-    ctx.error(
+    return ctx.error(
       `No fs option provided to \`compileScript\` in non-Node environment. ` +
         `File system access is required for resolving imported types.`,
       node,
@@ -732,22 +783,25 @@ function importSourceToScope(
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
       if (!__NODE_JS__) {
-        ctx.error(
+        return ctx.error(
           `Type import from non-relative sources is not supported in the browser build.`,
           node,
           scope
         )
       }
       if (!ts) {
-        ctx.error(
-          `Failed to resolve import source ${JSON.stringify(source)}. ` +
-            `typescript is required as a peer dep for vue in order ` +
-            `to support resolving types from module imports.`,
-          node,
-          scope
-        )
+        if (loadTS) ts = loadTS()
+        if (!ts) {
+          return ctx.error(
+            `Failed to resolve import source ${JSON.stringify(source)}. ` +
+              `typescript is required as a peer dep for vue in order ` +
+              `to support resolving types from module imports.`,
+            node,
+            scope
+          )
+        }
       }
-      resolved = resolveWithTS(scope.filename, source, fs)
+      resolved = resolveWithTS(scope.filename, source, ts, fs)
     }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
@@ -767,6 +821,8 @@ function importSourceToScope(
 }
 
 function resolveExt(filename: string, fs: FS) {
+  // #8339 ts may import .js but we should resolve to corresponding ts or d.ts
+  filename = filename.replace(/\.js$/, '')
   const tryResolve = (filename: string) => {
     if (fs.fileExists(filename)) return filename
   }
@@ -790,6 +846,7 @@ const tsConfigRefMap = new Map<string, string>()
 function resolveWithTS(
   containingFile: string,
   source: string,
+  ts: typeof TS,
   fs: FS
 ): string | undefined {
   if (!__NODE_JS__) return
@@ -804,7 +861,7 @@ function resolveWithTS(
     const normalizedConfigPath = normalizePath(configPath)
     const cached = tsConfigCache.get(normalizedConfigPath)
     if (!cached) {
-      configs = loadTSConfig(configPath, fs).map(config => ({ config }))
+      configs = loadTSConfig(configPath, ts, fs).map(config => ({ config }))
       tsConfigCache.set(normalizedConfigPath, configs)
     } else {
       configs = cached
@@ -861,11 +918,19 @@ function resolveWithTS(
   )
 
   if (res.resolvedModule) {
-    return res.resolvedModule.resolvedFileName
+    let filename = res.resolvedModule.resolvedFileName
+    if (filename.endsWith('.vue.ts')) {
+      filename = filename.replace(/\.ts$/, '')
+    }
+    return filename
   }
 }
 
-function loadTSConfig(configPath: string, fs: FS): TS.ParsedCommandLine[] {
+function loadTSConfig(
+  configPath: string,
+  ts: typeof TS,
+  fs: FS
+): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
   // during tests, which is stubbed.
@@ -887,7 +952,7 @@ function loadTSConfig(configPath: string, fs: FS): TS.ParsedCommandLine[] {
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
       tsConfigRefMap.set(ref.path, configPath)
-      res.unshift(...loadTSConfig(ref.path, fs))
+      res.unshift(...loadTSConfig(ref.path, ts, fs))
     }
   }
   return res
@@ -916,7 +981,7 @@ export function fileToScope(
     return cached
   }
   // fs should be guaranteed to exist here
-  const fs = ctx.options.fs || ts?.sys
+  const fs = resolveFS(ctx)!
   const source = fs.readFile(filename) || ''
   const body = parseFile(filename, source, ctx.options.babelParserPlugins)
   const scope = new TypeScope(filename, source, 0, recordImports(body))
@@ -933,7 +998,11 @@ function parseFile(
   const ext = extname(filename)
   if (ext === '.ts' || ext === '.tsx') {
     return babelParse(content, {
-      plugins: resolveParserPlugins(ext.slice(1), parserPlugins),
+      plugins: resolveParserPlugins(
+        ext.slice(1),
+        parserPlugins,
+        filename.endsWith('.d.ts')
+      ),
       sourceType: 'module'
     }).program.body
   } else if (ext === '.vue') {
@@ -1063,7 +1132,7 @@ function recordTypes(
               const exported = getId(spec.exported)
               if (stmt.source) {
                 // re-export, register an import + export as a type reference
-                imports[local] = {
+                imports[exported] = {
                   source: stmt.source.value,
                   imported: local
                 }
@@ -1090,6 +1159,18 @@ function recordTypes(
           stmt.source.value
         )
         Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
+      } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
+        if (stmt.declaration.type !== 'Identifier') {
+          recordType(stmt.declaration, types, declares, 'default')
+          recordType(
+            stmt.declaration,
+            exportedTypes,
+            exportedDeclares,
+            'default'
+          )
+        } else if (types[stmt.declaration.name]) {
+          exportedTypes['default'] = types[stmt.declaration.name]
+        }
       }
     }
   }
@@ -1106,13 +1187,14 @@ function recordTypes(
 function recordType(
   node: Node,
   types: Record<string, Node>,
-  declares: Record<string, Node>
+  declares: Record<string, Node>,
+  overwriteId?: string
 ) {
   switch (node.type) {
     case 'TSInterfaceDeclaration':
     case 'TSEnumDeclaration':
     case 'TSModuleDeclaration': {
-      const id = getId(node.id)
+      const id = overwriteId || getId(node.id)
       let existing = types[id]
       if (existing) {
         if (node.type === 'TSModuleDeclaration') {
@@ -1145,7 +1227,7 @@ function recordType(
       break
     }
     case 'ClassDeclaration':
-      types[getId(node.id)] = node
+      if (overwriteId || node.id) types[overwriteId || getId(node.id!)] = node
       break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
@@ -1582,4 +1664,24 @@ function resolveReturnType(
   if (resolved.type === 'TSDeclareFunction') {
     return resolved.returnType
   }
+}
+
+export function resolveUnionType(
+  ctx: TypeResolveContext,
+  node: Node & MaybeWithScope & { _resolvedElements?: ResolvedElements },
+  scope?: TypeScope
+): Node[] {
+  if (node.type === 'TSTypeReference') {
+    const resolved = resolveTypeReference(ctx, node, scope)
+    if (resolved) node = resolved
+  }
+
+  let types: Node[]
+  if (node.type === 'TSUnionType') {
+    types = node.types.flatMap(node => resolveUnionType(ctx, node, scope))
+  } else {
+    types = [node]
+  }
+
+  return types
 }
