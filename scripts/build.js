@@ -17,11 +17,11 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
 import { gzipSync, brotliCompressSync } from 'node:zlib'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
@@ -164,7 +164,7 @@ async function checkFileSize(filePath) {
   const brotli = brotliCompressSync(file)
 
   console.log(
-    `${chalk.gray(chalk.bold(fileName))} min:${prettyBytes(
+    `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
       file.length
     )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
       brotli.length
