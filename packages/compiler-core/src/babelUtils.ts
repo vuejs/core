@@ -32,7 +32,7 @@ export function walkIdentifiers(
     root.body[0].type === 'ExpressionStatement' &&
     root.body[0].expression
 
-  ;(walk as any)(root, {
+  walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (
@@ -428,10 +428,3 @@ export const TS_NODE_TYPES = [
   'TSInstantiationExpression', // foo<string>
   'TSSatisfiesExpression' // foo satisfies T
 ]
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
-}
