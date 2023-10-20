@@ -571,6 +571,34 @@ const props = defineProps({ foo: String })
     ).toMatch(`foo: { type: Number`)
   })
 
+  // #8148
+  test('should not override local bindings', () => {
+    const { bindings } = compile(`
+    <script setup lang="ts">
+    import { computed } from 'vue'
+    defineProps<{ bar: string }>()
+    const bar = computed(() => 1)
+    </script>
+  `)
+    expect(bindings).toStrictEqual({
+      bar: BindingTypes.SETUP_REF,
+      computed: BindingTypes.SETUP_CONST
+    })
+  })
+
+  // #8289
+  test('destructure without enabling reactive destructure', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const { foo } = defineProps<{
+        foo: Foo
+      }>()
+      </script>`
+    )
+    expect(content).toMatch(`const { foo } = __props`)
+    assertCode(content)
+  })
+
   describe('errors', () => {
     test('w/ both type and non-type args', () => {
       expect(() => {

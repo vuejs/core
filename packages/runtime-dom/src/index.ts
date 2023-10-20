@@ -162,7 +162,7 @@ function injectCompilerOptionsCheck(app: App) {
       `must be passed to \`@vue/compiler-dom\` in the build setup instead.\n` +
       `- For vue-loader: pass it via vue-loader's \`compilerOptions\` loader option.\n` +
       `- For vue-cli: see https://cli.vuejs.org/guide/webpack.html#modifying-options-of-a-loader\n` +
-      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-dom`
+      `- For vite: pass it via @vitejs/plugin-vue options. See https://github.com/vitejs/vite-plugin-vue/tree/main/packages/plugin-vue#example-for-passing-options-to-vuecompiler-sfc`
 
     Object.defineProperty(app.config, 'compilerOptions', {
       get() {
