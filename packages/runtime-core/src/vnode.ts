@@ -46,15 +46,15 @@ import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
-export const Fragment = Symbol(__DEV__ ? 'Fragment' : undefined) as any as {
+export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
   new (): {
     $props: VNodeProps
   }
 }
-export const Text = Symbol(__DEV__ ? 'Text' : undefined)
-export const Comment = Symbol(__DEV__ ? 'Comment' : undefined)
-export const Static = Symbol(__DEV__ ? 'Static' : undefined)
+export const Text = Symbol.for('v-txt')
+export const Comment = Symbol.for('v-cmt')
+export const Static = Symbol.for('v-stc')
 
 export type VNodeTypes =
   | string
@@ -404,6 +404,9 @@ const normalizeRef = ({
   ref_key,
   ref_for
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
+  if (typeof ref === 'number') {
+    ref = '' + ref
+  }
   return (
     ref != null
       ? isString(ref) || isRef(ref) || isFunction(ref)
@@ -678,7 +681,7 @@ export function cloneVNode<T, U>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**
