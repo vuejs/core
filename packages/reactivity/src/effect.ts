@@ -317,6 +317,9 @@ export function triggerEffects(
     for (const token of reclaimedTokens) {
       dep.delete(token)
     }
+    if (dep.size === 0) {
+      dep.cleanup()
+    }
   }
   resetScheduling()
 }
