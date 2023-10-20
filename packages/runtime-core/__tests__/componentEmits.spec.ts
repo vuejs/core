@@ -1,14 +1,14 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { vi } from 'vitest'
 import {
   render,
   defineComponent,
   h,
   nodeOps,
   toHandlers,
-  nextTick
+  nextTick,
+  ComponentPublicInstance
 } from '@vue/runtime-test'
 import { isEmitListener } from '../src/componentEmits'
 
@@ -453,5 +453,56 @@ describe('component: emit', () => {
     render(null, el)
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
+  })
+
+  test('merge string array emits', async () => {
+    const ComponentA = defineComponent({
+      emits: ['one', 'two']
+    })
+    const ComponentB = defineComponent({
+      emits: ['three']
+    })
+    const renderFn = vi.fn(function (this: ComponentPublicInstance) {
+      expect(this.$options.emits).toEqual(['one', 'two', 'three'])
+      return h('div')
+    })
+    const ComponentC = defineComponent({
+      render: renderFn,
+      mixins: [ComponentA, ComponentB]
+    })
+    const el = nodeOps.createElement('div')
+    expect(renderFn).toHaveBeenCalledTimes(0)
+    render(h(ComponentC), el)
+    expect(renderFn).toHaveBeenCalledTimes(1)
+  })
+
+  test('merge object emits', async () => {
+    const twoFn = vi.fn((v: unknown) => !v)
+    const ComponentA = defineComponent({
+      emits: {
+        one: null,
+        two: twoFn
+      }
+    })
+    const ComponentB = defineComponent({
+      emits: ['three']
+    })
+    const renderFn = vi.fn(function (this: ComponentPublicInstance) {
+      expect(this.$options.emits).toEqual({
+        one: null,
+        two: twoFn,
+        three: null
+      })
+      expect(this.$options.emits.two).toBe(twoFn)
+      return h('div')
+    })
+    const ComponentC = defineComponent({
+      render: renderFn,
+      mixins: [ComponentA, ComponentB]
+    })
+    const el = nodeOps.createElement('div')
+    expect(renderFn).toHaveBeenCalledTimes(0)
+    render(h(ComponentC), el)
+    expect(renderFn).toHaveBeenCalledTimes(1)
   })
 })

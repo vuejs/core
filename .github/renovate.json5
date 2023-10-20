@@ -1,0 +1,50 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['config:base', 'schedule:weekly', 'group:allNonMajor'],
+  labels: ['dependencies'],
+  ignorePaths: ['**/__tests__/**'],
+  rangeStrategy: 'bump',
+  packageRules: [
+    {
+      depTypeList: ['peerDependencies'],
+      enabled: false
+    },
+    {
+      groupName: 'test',
+      matchPackageNames: ['vitest', 'jsdom', 'puppeteer'],
+      matchPackagePrefixes: ['@vitest']
+    },
+    {
+      groupName: 'playground',
+      matchFileNames: [
+        'packages/sfc-playground/package.json',
+        'packages/template-explorer/package.json'
+      ]
+    },
+    {
+      groupName: 'compiler',
+      matchPackageNames: ['magic-string'],
+      matchPackagePrefixes: ['@babel', 'postcss']
+    },
+    {
+      groupName: 'build',
+      matchPackageNames: ['vite', 'terser'],
+      matchPackagePrefixes: ['rollup', 'esbuild', '@rollup', '@vitejs']
+    },
+    {
+      groupName: 'lint',
+      matchPackageNames: ['simple-git-hooks', 'lint-staged'],
+      matchPackagePrefixes: ['@typescript-eslint', 'eslint', 'prettier']
+    }
+  ],
+  ignoreDeps: [
+    'vue',
+
+    // manually bumping
+    'node',
+    'typescript',
+
+    // ESM only
+    'estree-walker'
+  ]
+}
