@@ -19,12 +19,7 @@ const entries = {
   '@vue/compat': resolveEntryForPkg('vue-compat')
 }
 
-const nonSrcPackages = [
-  'sfc-playground',
-  'size-check',
-  'template-explorer',
-  'dts-test'
-]
+const nonSrcPackages = ['sfc-playground', 'template-explorer', 'dts-test']
 
 for (const dir of dirs) {
   const key = `@vue/${dir}`
