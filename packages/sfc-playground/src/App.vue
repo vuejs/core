@@ -35,10 +35,10 @@ const store = new ReplStore({
 
 let { mainFile } = store.state
 
-if (mainFile === 'App.vue') {
+if (mainFile === 'src/App.vue') {
   const firstFile = Object.keys(store.getFiles())[0]
   if (['index.html', 'main.js', 'main.ts'].includes(firstFile)) {
-    mainFile = firstFile
+    mainFile = `src/${firstFile}`
     store.setFiles(store.getFiles(), mainFile)
   }
 }

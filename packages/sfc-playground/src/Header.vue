@@ -12,7 +12,7 @@ import VersionSelect from './VersionSelect.vue'
 const props = defineProps<{
   store: ReplStore
   dev: boolean
-  ssr: boolean
+  ssr: boolean | null
 }>()
 const emit = defineEmits(['toggle-theme', 'toggle-ssr', 'toggle-dev'])
 
