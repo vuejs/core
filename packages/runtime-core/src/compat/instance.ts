@@ -58,6 +58,7 @@ export interface LegacyPublicProperties {
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
+    return target[key]
   }
 
   const del = (target: any, key: any) => {

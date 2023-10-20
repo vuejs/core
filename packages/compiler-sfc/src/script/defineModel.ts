@@ -24,7 +24,15 @@ export function processDefineModel(
   node: Node,
   declId?: LVal
 ): boolean {
-  if (!ctx.options.defineModel || !isCallOf(node, DEFINE_MODEL)) {
+  if (!isCallOf(node, DEFINE_MODEL)) {
+    return false
+  }
+
+  if (!ctx.options.defineModel) {
+    warnOnce(
+      `defineModel() is an experimental feature and disabled by default.\n` +
+        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
+    )
     return false
   }
 

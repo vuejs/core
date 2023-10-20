@@ -552,7 +552,11 @@ export function compileScript(
             (processDefineSlots(ctx, init, decl.id) ||
               processDefineModel(ctx, init, decl.id))
 
-          if (isDefineProps || isDefineEmits) {
+          if (
+            isDefineProps &&
+            !ctx.propsDestructureRestId &&
+            ctx.propsDestructureDecl
+          ) {
             if (left === 1) {
               ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
             } else {
@@ -570,6 +574,12 @@ export function compileScript(
               ctx.s.remove(start, end)
               left--
             }
+          } else if (isDefineEmits) {
+            ctx.s.overwrite(
+              startOffset + init.start!,
+              startOffset + init.end!,
+              '__emit'
+            )
           } else {
             lastNonRemoved = i
           }
@@ -781,22 +791,29 @@ export function compileScript(
   // inject user assignment of props
   // we use a default __props so that template expressions referencing props
   // can use it directly
-  if (ctx.propsIdentifier) {
-    ctx.s.prependLeft(
-      startOffset,
-      `\nconst ${ctx.propsIdentifier} = __props;\n`
-    )
+  if (ctx.propsDecl) {
+    if (ctx.propsDestructureRestId) {
+      ctx.s.overwrite(
+        startOffset + ctx.propsCall!.start!,
+        startOffset + ctx.propsCall!.end!,
+        `${ctx.helper(`createPropsRestProxy`)}(__props, ${JSON.stringify(
+          Object.keys(ctx.propsDestructuredBindings)
+        )})`
+      )
+      ctx.s.overwrite(
+        startOffset + ctx.propsDestructureDecl!.start!,
+        startOffset + ctx.propsDestructureDecl!.end!,
+        ctx.propsDestructureRestId
+      )
+    } else if (!ctx.propsDestructureDecl) {
+      ctx.s.overwrite(
+        startOffset + ctx.propsCall!.start!,
+        startOffset + ctx.propsCall!.end!,
+        '__props'
+      )
+    }
   }
-  if (ctx.propsDestructureRestId) {
-    ctx.s.prependLeft(
-      startOffset,
-      `\nconst ${ctx.propsDestructureRestId} = ${ctx.helper(
-        `createPropsRestProxy`
-      )}(__props, ${JSON.stringify(
-        Object.keys(ctx.propsDestructuredBindings)
-      )});\n`
-    )
-  }
+
   // inject temp variables for async context preservation
   if (hasAwait) {
     const any = ctx.isTS ? `: any` : ``
@@ -807,10 +824,8 @@ export function compileScript(
     ctx.hasDefineExposeCall || !options.inlineTemplate
       ? [`expose: __expose`]
       : []
-  if (ctx.emitIdentifier) {
-    destructureElements.push(
-      ctx.emitIdentifier === `emit` ? `emit` : `emit: ${ctx.emitIdentifier}`
-    )
+  if (ctx.emitDecl) {
+    destructureElements.push(`emit: __emit`)
   }
   if (destructureElements.length) {
     args += `, { ${destructureElements.join(', ')} }`
