@@ -1432,6 +1432,16 @@ describe('e2e: Transition', () => {
         // )
         await transitionFinish()
         expect(await html('#container')).toBe('<div class="test">two</div>')
+
+        // toggle rapidly #8105
+        await click('#toggleBtn')
+        await nextFrame()
+        await click('#toggleBtn')
+
+        // wait for awhile
+        await transitionFinish(duration * 3)
+
+        expect(await html('#container')).toBe('<div class="test">two</div>')
       },
       E2E_TIMEOUT
     )

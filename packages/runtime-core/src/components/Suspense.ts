@@ -432,7 +432,7 @@ function createSuspenseBoundary(
     m: move,
     um: unmount,
     n: next,
-    o: { parentNode, remove }
+    o: { nextSibling, parentNode, remove }
   } = rendererInternals
 
   // if set `suspensible: true`, set the current suspense as a dep of parent suspense
@@ -494,28 +494,42 @@ function createSuspenseBoundary(
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
+        const anchorCands: RendererNode[] = []
+        if (activeBranch) {
+          for (let node = next(activeBranch); node; node = nextSibling(node)) {
+            anchorCands.push(node)
+          }
+        }
+
+        // this is initial anchor on mount
+        const { anchor: initialAnchor } = suspense
+
         const delayEnter =
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
+
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
+              const anchor =
+                anchorCands.find(x => parentNode(x) === container) ||
+                initialAnchor
               move(pendingBranch!, container, anchor, MoveType.ENTER)
             }
           }
         }
-        // this is initial anchor on mount
-        let { anchor } = suspense
+
         // unmount current active tree
         if (activeBranch) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
-          anchor = next(activeBranch)
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {
           // move content from off-dom container to actual container
+          const anchor =
+            anchorCands.find(x => parentNode(x) === container) || initialAnchor
           move(pendingBranch!, container, anchor, MoveType.ENTER)
         }
       }
