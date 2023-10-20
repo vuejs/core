@@ -1,4 +1,4 @@
-name: canary release
+name: canary minor release
 on:
   # Runs every Monday at 1 AM UTC (9:00 AM in Singapore)
   schedule:
@@ -13,6 +13,8 @@ jobs:
     environment: Release
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: minor
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -26,6 +28,6 @@ jobs:
 
       - run: pnpm install
 
-      - run: pnpm release --canary
+      - run: pnpm release --canary --tag minor
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
