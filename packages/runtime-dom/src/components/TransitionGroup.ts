@@ -6,7 +6,8 @@ import {
   getTransitionInfo,
   resolveTransitionProps,
   TransitionPropsValidators,
-  forceReflow
+  forceReflow,
+  vtcKey
 } from './Transition'
 import {
   Fragment,
@@ -29,7 +30,8 @@ import { extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
-
+const moveCbKey = Symbol('_moveCb')
+const enterCbKey = Symbol('_enterCb')
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
@@ -80,13 +82,13 @@ const TransitionGroupImpl: ComponentOptions = {
         const style = el.style
         addTransitionClass(el, moveClass)
         style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
+        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
           }
           if (!e || /transform$/.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
-            ;(el as any)._moveCb = null
+            ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
           }
         })
@@ -162,11 +164,11 @@ export const TransitionGroup = TransitionGroupImpl as unknown as {
 
 function callPendingCbs(c: VNode) {
   const el = c.el as any
-  if (el._moveCb) {
-    el._moveCb()
+  if (el[moveCbKey]) {
+    el[moveCbKey]()
   }
-  if (el._enterCb) {
-    el._enterCb()
+  if (el[enterCbKey]) {
+    el[enterCbKey]()
   }
 }
 
@@ -198,8 +200,9 @@ function hasCSSTransform(
   // all other transition classes applied to ensure only the move class
   // is applied.
   const clone = el.cloneNode() as HTMLElement
-  if (el._vtc) {
-    el._vtc.forEach(cls => {
+  const _vtc = el[vtcKey]
+  if (_vtc) {
+    _vtc.forEach(cls => {
       cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
     })
   }

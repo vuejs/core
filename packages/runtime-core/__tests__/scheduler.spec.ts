@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   queueJob,
   nextTick,
@@ -546,5 +545,17 @@ describe('scheduler', () => {
     queueJob(job)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('nextTick should return promise', async () => {
+    const fn = vi.fn(() => {
+      return 1
+    })
+
+    const p = nextTick(fn)
+
+    expect(p).toBeInstanceOf(Promise)
+    expect(await p).toBe(1)
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })

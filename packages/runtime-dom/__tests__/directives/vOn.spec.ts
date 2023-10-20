@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { patchEvent } from '../../src/modules/events'
 import { withModifiers, withKeys } from '@vue/runtime-dom'
 
@@ -7,8 +6,10 @@ function triggerEvent(
   event: string,
   process?: (e: any) => any
 ) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(event, true, true)
+  const e = new Event(event, {
+    bubbles: true,
+    cancelable: true
+  })
   if (event === 'click') {
     ;(e as any).button = 0
   }

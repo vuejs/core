@@ -7,13 +7,13 @@ import {
 import {
   transformSrcset,
   createSrcsetTransformWithOptions
-} from '../src/templateTransformSrcset'
+} from '../src/template/transformSrcset'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
 import {
   AssetURLOptions,
   normalizeOptions
-} from '../src/templateTransformAssetUrl'
+} from '../src/template/transformAssetUrl'
 import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
 
 function compileWithSrcset(

@@ -1,6 +1,6 @@
 # SFC Playground
 
-This is continuously deployed at [https://sfc.vuejs.org](https://sfc.vuejs.org).
+This is continuously deployed at [https://play.vuejs.org](https://play.vuejs.org).
 
 ## Run Locally in Dev
 

@@ -286,6 +286,34 @@ describe('ssr: components', () => {
       `)
     })
 
+    // #7644
+    test('slot content with v-once', () => {
+      const { code } = compile(`<foo><bar v-once /></foo>`)
+      expect(code).not.toMatch(`_cache`)
+      expect(compile(`<foo><bar v-once /></foo>`).code).toMatchInlineSnapshot(`
+        "const { resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode } = require(\\"vue\\")
+        const { ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
+
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          const _component_foo = _resolveComponent(\\"foo\\")
+          const _component_bar = _resolveComponent(\\"bar\\")
+
+          _push(_ssrRenderComponent(_component_foo, _attrs, {
+            default: _withCtx((_, _push, _parent, _scopeId) => {
+              if (_push) {
+                _push(_ssrRenderComponent(_component_bar, null, null, _parent, _scopeId))
+              } else {
+                return [
+                  _createVNode(_component_bar)
+                ]
+              }
+            }),
+            _: 1 /* STABLE */
+          }, _parent))
+        }"
+      `)
+    })
+
     describe('built-in fallthroughs', () => {
       test('transition', () => {
         expect(compile(`<transition><div/></transition>`).code)

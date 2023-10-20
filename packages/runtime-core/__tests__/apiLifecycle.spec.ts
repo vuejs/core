@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   onBeforeMount,
   h,

@@ -1,7 +1,7 @@
 // @ts-check
 
 /**
- * We use rollup-plugin-esbuild for faster builds, but esbuild in insolation
+ * We use rollup-plugin-esbuild for faster builds, but esbuild in isolation
  * mode compiles const enums into runtime enums, bloating bundle size.
  *
  * Here we pre-process all the const enums in the project and turn them into
@@ -14,7 +14,7 @@
  * This file is expected to be executed with project root as cwd.
  */
 
-import execa from 'execa'
+import { execaSync } from 'execa'
 import {
   existsSync,
   mkdirSync,
@@ -45,7 +45,7 @@ export function scanEnums() {
   }
 
   // 1. grep for files with exported const enum
-  const { stdout } = execa.sync('git', ['grep', `export const enum`])
+  const { stdout } = execaSync('git', ['grep', `export const enum`])
   const files = [...new Set(stdout.split('\n').map(line => line.split(':')[0]))]
 
   // 2. parse matched files to collect enum info
@@ -189,7 +189,7 @@ export function constEnum() {
   )
 
   // 3. during transform:
-  //    3.1 files w/ const enum declaration: remove delcaration
+  //    3.1 files w/ const enum declaration: remove declaration
   //    3.2 files using const enum: inject into esbuild define
   /**
    * @type {import('rollup').Plugin}

@@ -285,9 +285,14 @@ export function resolveComponentType(
     }
   }
 
-  // 1.5 v-is (TODO: Deprecate)
+  // 1.5 v-is (TODO: remove in 3.4)
   const isDir = !isExplicitDynamic && findDir(node, 'is')
   if (isDir && isDir.exp) {
+    if (__DEV__) {
+      context.onWarn(
+        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
+      )
+    }
     return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
       isDir.exp
     ])

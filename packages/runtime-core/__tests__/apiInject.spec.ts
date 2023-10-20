@@ -8,9 +8,10 @@ import {
   Ref,
   readonly,
   reactive,
-  defineComponent
+  defineComponent,
+  hasInjectionContext
 } from '../src/index'
-import { render, nodeOps, serialize } from '@vue/runtime-test'
+import { render, nodeOps, serialize, createApp } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
 describe('api: provide/inject', () => {
@@ -346,5 +347,31 @@ describe('api: provide/inject', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
     expect(serialize(root)).toBe(`<div><!----></div>`)
+  })
+
+  describe('hasInjectionContext', () => {
+    it('should be false outside of setup', () => {
+      expect(hasInjectionContext()).toBe(false)
+    })
+
+    it('should be true within setup', () => {
+      expect.assertions(1)
+      const Comp = {
+        setup() {
+          expect(hasInjectionContext()).toBe(true)
+          return () => null
+        }
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+    })
+
+    it('should be true within app.runWithContext()', () => {
+      expect.assertions(1)
+      createApp({}).runWithContext(() => {
+        expect(hasInjectionContext()).toBe(true)
+      })
+    })
   })
 })

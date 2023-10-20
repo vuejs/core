@@ -51,7 +51,8 @@ import {
 import {
   ComponentObjectPropsOptions,
   ExtractPropTypes,
-  ExtractDefaultPropTypes
+  ExtractDefaultPropTypes,
+  ComponentPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
@@ -74,6 +75,8 @@ import {
 } from './compat/compatConfig'
 import { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
+import { SlotsType } from './componentSlots'
+import { normalizePropsOrEmits } from './apiSetupHelpers'
 
 /**
  * Interface for declaring custom options.
@@ -107,7 +110,8 @@ export interface ComponentOptionsBase<
   EE extends string = string,
   Defaults = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 > extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
@@ -122,7 +126,7 @@ export interface ComponentOptionsBase<
           >
         >
     >,
-    ctx: SetupContext<E>
+    ctx: SetupContext<E, S>
   ) => Promise<RawBindings> | RawBindings | RenderFunction | void
   name?: string
   template?: string | object // can be a direct DOM node
@@ -136,6 +140,7 @@ export interface ComponentOptionsBase<
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
+  slots?: S
   // TODO infer public instance type based on exposed keys
   expose?: string[]
   serverPrefetch?(): void | Promise<any>
@@ -218,6 +223,7 @@ export type ComponentOptionsWithoutProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   PE = Props & EmitsToProps<E>
 > = ComponentOptionsBase<
   PE,
@@ -231,7 +237,8 @@ export type ComponentOptionsWithoutProps<
   EE,
   {},
   I,
-  II
+  II,
+  S
 > & {
   props?: undefined
 } & ThisType<
@@ -247,7 +254,8 @@ export type ComponentOptionsWithoutProps<
       PE,
       {},
       false,
-      I
+      I,
+      S
     >
   >
 
@@ -263,6 +271,7 @@ export type ComponentOptionsWithArrayProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
 > = ComponentOptionsBase<
   Props,
@@ -276,7 +285,8 @@ export type ComponentOptionsWithArrayProps<
   EE,
   {},
   I,
-  II
+  II,
+  S
 > & {
   props: PropNames[]
 } & ThisType<
@@ -292,7 +302,8 @@ export type ComponentOptionsWithArrayProps<
       Props,
       {},
       false,
-      I
+      I,
+      S
     >
   >
 
@@ -308,6 +319,7 @@ export type ComponentOptionsWithObjectProps<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
 > = ComponentOptionsBase<
@@ -322,7 +334,8 @@ export type ComponentOptionsWithObjectProps<
   EE,
   Defaults,
   I,
-  II
+  II,
+  S
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -338,7 +351,8 @@ export type ComponentOptionsWithObjectProps<
       Props,
       Defaults,
       false,
-      I
+      I,
+      S
     >
   >
 
@@ -350,8 +364,20 @@ export type ComponentOptions<
   M extends MethodOptions = any,
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
-  E extends EmitsOptions = any
-> = ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E> &
+  E extends EmitsOptions = any,
+  S extends SlotsType = any
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  string,
+  S
+> &
   ThisType<
     CreateComponentPublicInstance<
       {},
@@ -367,6 +393,7 @@ export type ComponentOptions<
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
   any,
   any,
   any,
@@ -648,12 +675,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
   // - watch (deferred since it relies on `this` access)
 
   if (injectOptions) {
-    resolveInjections(
-      injectOptions,
-      ctx,
-      checkDuplicateProperties,
-      instance.appContext.config.unwrapInjectedRef
-    )
+    resolveInjections(injectOptions, ctx, checkDuplicateProperties)
   }
 
   if (methods) {
@@ -787,7 +809,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     if (isArray(hook)) {
       hook.forEach(_hook => register(_hook.bind(publicThis)))
     } else if (hook) {
-      register((hook as Function).bind(publicThis))
+      register(hook.bind(publicThis))
     }
   }
 
@@ -857,14 +879,13 @@ export function applyOptions(instance: ComponentInternalInstance) {
 export function resolveInjections(
   injectOptions: ComponentInjectOptions,
   ctx: any,
-  checkDuplicateProperties = NOOP as any,
-  unwrapRef = false
+  checkDuplicateProperties = NOOP as any
 ) {
   if (isArray(injectOptions)) {
     injectOptions = normalizeInject(injectOptions)!
   }
   for (const key in injectOptions) {
-    const opt = (injectOptions as ObjectInjectOptions)[key]
+    const opt = injectOptions[key]
     let injected: unknown
     if (isObject(opt)) {
       if ('default' in opt) {
@@ -880,26 +901,13 @@ export function resolveInjections(
       injected = inject(opt)
     }
     if (isRef(injected)) {
-      // TODO remove the check in 3.3
-      if (unwrapRef) {
-        Object.defineProperty(ctx, key, {
-          enumerable: true,
-          configurable: true,
-          get: () => (injected as Ref).value,
-          set: v => ((injected as Ref).value = v)
-        })
-      } else {
-        if (__DEV__) {
-          warn(
-            `injected property "${key}" is a ref and will be auto-unwrapped ` +
-              `and no longer needs \`.value\` in the next minor release. ` +
-              `To opt-in to the new behavior now, ` +
-              `set \`app.config.unwrapInjectedRef = true\` (this config is ` +
-              `temporary and will not be needed in the future.)`
-          )
-        }
-        ctx[key] = injected
-      }
+      // unwrap injected refs (ref #4196)
+      Object.defineProperty(ctx, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => (injected as Ref).value,
+        set: v => ((injected as Ref).value = v)
+      })
     } else {
       ctx[key] = injected
     }
@@ -1044,8 +1052,8 @@ export function mergeOptions(
 
 export const internalOptionMergeStrats: Record<string, Function> = {
   data: mergeDataFn,
-  props: mergeObjectOptions, // TODO
-  emits: mergeObjectOptions, // TODO
+  props: mergeEmitsOrPropsOptions,
+  emits: mergeEmitsOrPropsOptions,
   // objects
   methods: mergeObjectOptions,
   computed: mergeObjectOptions,
@@ -1122,7 +1130,33 @@ function mergeAsArray<T = Function>(to: T[] | T | undefined, from: T | T[]) {
 }
 
 function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
-  return to ? extend(extend(Object.create(null), to), from) : from
+  return to ? extend(Object.create(null), to, from) : from
+}
+
+function mergeEmitsOrPropsOptions(
+  to: EmitsOptions | undefined,
+  from: EmitsOptions | undefined
+): EmitsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: ComponentPropsOptions | undefined,
+  from: ComponentPropsOptions | undefined
+): ComponentPropsOptions | undefined
+function mergeEmitsOrPropsOptions(
+  to: ComponentPropsOptions | EmitsOptions | undefined,
+  from: ComponentPropsOptions | EmitsOptions | undefined
+) {
+  if (to) {
+    if (isArray(to) && isArray(from)) {
+      return [...new Set([...to, ...from])]
+    }
+    return extend(
+      Object.create(null),
+      normalizePropsOrEmits(to),
+      normalizePropsOrEmits(from ?? {})
+    )
+  } else {
+    return from
+  }
 }
 
 function mergeWatchOptions(

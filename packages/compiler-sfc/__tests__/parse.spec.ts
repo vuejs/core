@@ -1,6 +1,6 @@
 import { parse } from '../src'
 import { baseParse, baseCompile } from '@vue/compiler-core'
-import { SourceMapConsumer } from 'source-map'
+import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler:sfc', () => {
   describe('source map', () => {

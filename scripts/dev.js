@@ -9,7 +9,7 @@ import { resolve, relative, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import minimist from 'minimist'
-import { NodeModulesPolyfillPlugin as nodePolyfills } from '@esbuild-plugins/node-modules-polyfill'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -92,7 +92,7 @@ const plugins = [
 ]
 
 if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
-  plugins.push(nodePolyfills())
+  plugins.push(polyfillNode())
 }
 
 esbuild

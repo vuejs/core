@@ -116,7 +116,7 @@ describe('FILTERS', () => {
         }
       }
     }).$mount() as any
-    expect(vm.$refs.test.pattern instanceof RegExp).toBe(true)
+    expect(vm.$refs.test.pattern).toBeInstanceOf(RegExp)
     expect(vm.$refs.test.pattern.toString()).toBe('/a|b\\//')
     expect(CompilerDeprecationTypes.COMPILER_FILTERS).toHaveBeenWarned()
   })

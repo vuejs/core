@@ -28,7 +28,7 @@ import {
   getVNodeBlockHelper,
   getVNodeHelper
 } from './ast'
-import { SourceMapGenerator, RawSourceMap } from 'source-map'
+import { SourceMapGenerator, RawSourceMap } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,

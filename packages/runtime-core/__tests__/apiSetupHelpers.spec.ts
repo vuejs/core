@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   ComponentInternalInstance,
   createApp,
@@ -13,7 +12,9 @@ import {
   Suspense,
   computed,
   ComputedRef,
-  shallowReactive
+  shallowReactive,
+  nextTick,
+  ref
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -24,7 +25,9 @@ import {
   useSlots,
   mergeDefaults,
   withAsyncContext,
-  createPropsRestProxy
+  createPropsRestProxy,
+  mergeModels,
+  useModel
 } from '../src/apiSetupHelpers'
 
 describe('SFC <script setup> helpers', () => {
@@ -114,11 +117,165 @@ describe('SFC <script setup> helpers', () => {
       })
     })
 
+    test('merging with skipFactory', () => {
+      const fn = () => {}
+      const merged = mergeDefaults(['foo', 'bar', 'baz'], {
+        foo: fn,
+        __skip_foo: true
+      })
+      expect(merged).toMatchObject({
+        foo: { default: fn, skipFactory: true }
+      })
+    })
+
     test('should warn missing', () => {
       mergeDefaults({}, { foo: 1 })
       expect(
         `props default key "foo" has no corresponding declaration`
       ).toHaveBeenWarned()
+    })
+  })
+
+  describe('mergeModels', () => {
+    test('array syntax', () => {
+      expect(mergeModels(['foo', 'bar'], ['baz'])).toMatchObject([
+        'foo',
+        'bar',
+        'baz'
+      ])
+    })
+
+    test('object syntax', () => {
+      expect(
+        mergeModels({ foo: null, bar: { required: true } }, ['baz'])
+      ).toMatchObject({
+        foo: null,
+        bar: { required: true },
+        baz: {}
+      })
+
+      expect(
+        mergeModels(['baz'], { foo: null, bar: { required: true } })
+      ).toMatchObject({
+        foo: null,
+        bar: { required: true },
+        baz: {}
+      })
+    })
+
+    test('overwrite', () => {
+      expect(
+        mergeModels(
+          { foo: null, bar: { required: true } },
+          { bar: {}, baz: {} }
+        )
+      ).toMatchObject({
+        foo: null,
+        bar: {},
+        baz: {}
+      })
+    })
+  })
+
+  describe('useModel', () => {
+    test('basic', async () => {
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
+      const Comp = defineComponent({
+        props: ['modelValue'],
+        emits: ['update:modelValue'],
+        setup(props) {
+          foo = useModel(props, 'modelValue')
+        },
+        render() {}
+      })
+
+      const msg = ref('')
+      const setValue = vi.fn(v => (msg.value = v))
+      const root = nodeOps.createElement('div')
+      createApp(() =>
+        h(Comp, {
+          modelValue: msg.value,
+          'onUpdate:modelValue': setValue
+        })
+      ).mount(root)
+
+      expect(foo.value).toBe('')
+      expect(msg.value).toBe('')
+      expect(setValue).not.toBeCalled()
+
+      // update from child
+      update()
+
+      await nextTick()
+      expect(msg.value).toBe('bar')
+      expect(foo.value).toBe('bar')
+      expect(setValue).toBeCalledTimes(1)
+
+      // update from parent
+      msg.value = 'qux'
+
+      await nextTick()
+      expect(msg.value).toBe('qux')
+      expect(foo.value).toBe('qux')
+      expect(setValue).toBeCalledTimes(1)
+    })
+
+    test('local', async () => {
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
+      const Comp = defineComponent({
+        props: ['foo'],
+        emits: ['update:foo'],
+        setup(props) {
+          foo = useModel(props, 'foo', { local: true })
+        },
+        render() {}
+      })
+
+      const root = nodeOps.createElement('div')
+      const updateFoo = vi.fn()
+      render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
+
+      expect(foo.value).toBeUndefined()
+      update()
+
+      expect(foo.value).toBe('bar')
+
+      await nextTick()
+      expect(updateFoo).toBeCalledTimes(1)
+    })
+
+    test('default value', async () => {
+      let count: any
+      const inc = () => {
+        count.value++
+      }
+      const Comp = defineComponent({
+        props: { count: { default: 0 } },
+        emits: ['update:count'],
+        setup(props) {
+          count = useModel(props, 'count', { local: true })
+        },
+        render() {}
+      })
+
+      const root = nodeOps.createElement('div')
+      const updateCount = vi.fn()
+      render(h(Comp, { 'onUpdate:count': updateCount }), root)
+
+      expect(count.value).toBe(0)
+
+      inc()
+      expect(count.value).toBe(1)
+      await nextTick()
+      expect(updateCount).toBeCalledTimes(1)
     })
   })
 

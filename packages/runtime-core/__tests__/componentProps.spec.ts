@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi } from 'vitest'
+
 import {
   ComponentInternalInstance,
   getCurrentInstance,
@@ -335,7 +335,8 @@ describe('component props', () => {
         arr: { type: Array },
         obj: { type: Object },
         cls: { type: MyClass },
-        fn: { type: Function }
+        fn: { type: Function },
+        skipCheck: { type: [Boolean, Function], skipCheck: true }
       },
       setup() {
         return () => null
@@ -349,7 +350,8 @@ describe('component props', () => {
         arr: {},
         obj: 'false',
         cls: {},
-        fn: true
+        fn: true,
+        skipCheck: 'foo'
       }),
       nodeOps.createElement('div')
     )
@@ -374,6 +376,9 @@ describe('component props', () => {
     expect(
       `Invalid prop: type check failed for prop "cls". Expected MyClass, got Object`
     ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`
+    ).not.toHaveBeenWarned()
   })
 
   // #3495

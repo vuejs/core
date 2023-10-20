@@ -33,11 +33,15 @@ declare module 'file-saver' {
   export function saveAs(blob: any, name: any): void
 }
 
-declare module '@vue/repl' {
-  import { ComponentOptions } from '@vue/runtime-core'
-  const Repl: ComponentOptions
-  const ReplStore: any
-  export { Repl, ReplStore }
+declare module 'estree-walker' {
+  export function walk<T>(
+    root: T,
+    options: {
+      enter?: (node: T, parent: T | undefined) => any
+      leave?: (node: T, parent: T | undefined) => any
+      exit?: (node: T) => any
+    } & ThisType<{ skip: () => void }>
+  )
 }
 
 declare interface String {

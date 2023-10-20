@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   ref,
   reactive,
@@ -584,6 +583,14 @@ describe('reactivity/effect', () => {
     const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
     expect(runner.effect.fn).toBe(otherRunner.effect.fn)
+  })
+
+  it('should wrap if the passed function is a fake effect', () => {
+    const fakeRunner = () => {}
+    fakeRunner.effect = {}
+    const runner = effect(fakeRunner)
+    expect(fakeRunner).not.toBe(runner)
+    expect(runner.effect.fn).toBe(fakeRunner)
   })
 
   it('should not run multiple times for a single mutation', () => {

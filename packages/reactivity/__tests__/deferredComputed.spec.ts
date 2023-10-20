@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { computed, deferredComputed, effect, ref } from '../src'
 
 describe('deferred computed', () => {

@@ -9,7 +9,7 @@ import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   NOOP,
   extend,
   isString,
@@ -40,7 +40,7 @@ import {
   ComponentInjectOptions
 } from './componentOptions'
 import { EmitsOptions, EmitFn } from './componentEmits'
-import { Slots } from './componentSlots'
+import { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -89,7 +89,10 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer Extends,
   any,
   any,
-  infer Defaults
+  infer Defaults,
+  any,
+  any,
+  any
 >
   ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
       IntersectionMixin<Mixin> &
@@ -102,7 +105,7 @@ type ExtractMixin<T> = {
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
 export type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}>
+  ? OptionTypesType
   : UnionToIntersection<ExtractMixin<T>>
 
 export type UnwrapMixinsType<
@@ -145,6 +148,7 @@ export type CreateComponentPublicInstance<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -165,8 +169,23 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>,
-  I
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
+  I,
+  S
 >
 
 // public properties exposed on the proxy, which is used as the render context
@@ -182,7 +201,8 @@ export type ComponentPublicInstance<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  I extends ComponentInjectOptions = {}
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -193,7 +213,7 @@ export type ComponentPublicInstance<
   >
   $attrs: Data
   $refs: Data
-  $slots: Slots
+  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
@@ -336,6 +356,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
+      } else if (__DEV__ && key === '$slots') {
+        track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
     } else if (
@@ -489,7 +511,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       return PublicInstanceProxyHandlers.get!(target, key, target)
     },
     has(_: ComponentRenderContext, key: string) {
-      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      const has = key[0] !== '_' && !isGloballyAllowed(key)
       if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
         warn(
           `Property ${JSON.stringify(

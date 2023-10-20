@@ -30,7 +30,7 @@ interface DevtoolsHook {
   appRecords: AppRecord[]
   /**
    * Added at https://github.com/vuejs/devtools/commit/f2ad51eea789006ab66942e5a27c0f0986a257f9
-   * Returns wether the arg was buffered or not
+   * Returns whether the arg was buffered or not
    */
   cleanupBuffer?: (matchArg: unknown) => boolean
 }

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi } from 'vitest'
+
 import {
   createSSRApp,
   h,

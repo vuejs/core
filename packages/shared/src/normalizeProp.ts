@@ -19,16 +19,14 @@ export function normalizeStyle(
       }
     }
     return res
-  } else if (isString(value)) {
-    return value
-  } else if (isObject(value)) {
+  } else if (isString(value) || isObject(value)) {
     return value
   }
 }
 
 const listDelimiterRE = /;(?![^(]*\))/g
 const propertyDelimiterRE = /:([^]+)/
-const styleCommentRE = /\/\*.*?\*\//gs
+const styleCommentRE = /\/\*[^]*?\*\//g
 
 export function parseStringStyle(cssText: string): NormalizedStyle {
   const ret: NormalizedStyle = {}

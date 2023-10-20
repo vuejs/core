@@ -13,7 +13,9 @@ import {
   ShapeFlags,
   extend,
   def,
-  SlotFlags
+  SlotFlags,
+  Prettify,
+  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -21,14 +23,41 @@ import { ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
+import { trigger } from '@vue/reactivity'
+import { TriggerOpTypes } from '@vue/reactivity'
 
-export type Slot = (...args: any[]) => VNode[]
+export type Slot<T extends any = any> = (
+  ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
+) => VNode[]
 
 export type InternalSlots = {
   [name: string]: Slot | undefined
 }
 
 export type Slots = Readonly<InternalSlots>
+
+declare const SlotSymbol: unique symbol
+export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
+  [SlotSymbol]?: T
+}
+
+export type StrictUnwrapSlotsType<
+  S extends SlotsType,
+  T = NonNullable<S[typeof SlotSymbol]>
+> = [keyof S] extends [never] ? Slots : Readonly<T>
+
+export type UnwrapSlotsType<
+  S extends SlotsType,
+  T = NonNullable<S[typeof SlotSymbol]>
+> = [keyof S] extends [never]
+  ? Slots
+  : Readonly<
+      Prettify<{
+        [K in keyof T]: NonNullable<T[K]> extends (...args: any[]) => any
+          ? T[K]
+          : Slot<T[K]>
+      }>
+    >
 
 export type RawSlots = {
   [name: string]: unknown
@@ -174,6 +203,7 @@ export const updateSlots = (
         // Parent was HMR updated so slot content may have changed.
         // force update slots and mark instance for hmr as well
         extend(slots, children as Slots)
+        trigger(instance, TriggerOpTypes.SET, '$slots')
       } else if (optimized && type === SlotFlags.STABLE) {
         // compiled AND stable.
         // no need to update, and skip stale slots removal.

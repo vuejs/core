@@ -30,15 +30,17 @@ export function removeEventListener(
   el.removeEventListener(event, handler, options)
 }
 
+const veiKey = Symbol('_vei')
+
 export function patchEvent(
-  el: Element & { _vei?: Record<string, Invoker | undefined> },
+  el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
   nextValue: EventValue | null,
   instance: ComponentInternalInstance | null = null
 ) {
   // vei = vue event invokers
-  const invokers = el._vei || (el._vei = {})
+  const invokers = el[veiKey] || (el[veiKey] = {})
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch

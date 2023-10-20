@@ -5,16 +5,16 @@ import postcss, {
   Message,
   LazyResult
 } from 'postcss'
-import trimPlugin from './stylePluginTrim'
-import scopedPlugin from './stylePluginScoped'
+import trimPlugin from './style/pluginTrim'
+import scopedPlugin from './style/pluginScoped'
 import {
   processors,
   StylePreprocessor,
   StylePreprocessorResults,
   PreprocessLang
-} from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
-import { cssVarsPlugin } from './cssVars'
+} from './style/preprocessors'
+import { RawSourceMap } from 'source-map-js'
+import { cssVarsPlugin } from './style/cssVars'
 import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {

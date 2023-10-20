@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   CompilerOptions,
   baseParse as parse,

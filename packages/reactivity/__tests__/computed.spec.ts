@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   computed,
   reactive,
@@ -260,13 +259,13 @@ describe('reactivity/computed', () => {
     const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed
     c.value
 
-    obj.foo++
+    obj.foo!++
     expect(c.value).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
@@ -278,7 +277,6 @@ describe('reactivity/computed', () => {
       newValue: 2
     })
 
-    // @ts-ignore
     delete obj.foo
     expect(c.value).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)

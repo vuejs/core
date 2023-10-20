@@ -173,7 +173,7 @@ export function emit(
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
-      instance.emitted = {} as Record<any, boolean>
+      instance.emitted = {}
     } else if (instance.emitted[handlerName]) {
       return
     }

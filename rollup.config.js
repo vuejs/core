@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
@@ -91,7 +91,7 @@ export default packageConfigs
 
 function createConfig(format, output, plugins = []) {
   if (!output) {
-    console.log(chalk.yellow(`invalid format: "${format}"`))
+    console.log(pico.yellow(`invalid format: "${format}"`))
     process.exit(1)
   }
 
@@ -193,7 +193,7 @@ function createConfig(format, output, plugins = []) {
     if (isBundlerESMBuild) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
-        __DEV__: `process.env.NODE_ENV !== 'production'`
+        __DEV__: `!!(process.env.NODE_ENV !== 'production')`
       })
     }
 
@@ -215,7 +215,7 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
+    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {

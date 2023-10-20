@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { createApp } from '../src'
 
 // https://github.com/vuejs/docs/pull/1890
