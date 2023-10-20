@@ -274,7 +274,7 @@ function findNonCommentChild(children: VNode[]): VNode {
           // warn more than one non-comment child
           warn(
             '<transition> can only be used on a single element or component. ' +
-            'Use <transition-group> for lists.'
+              'Use <transition-group> for lists.'
           )
           break
         }
@@ -483,8 +483,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
       ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
       : undefined
     : isTeleport(vnode.type)
-      ? findNonCommentChild(vnode.children! as VNode[])
-      : vnode
+    ? findNonCommentChild(vnode.children! as VNode[])
+    : vnode
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
