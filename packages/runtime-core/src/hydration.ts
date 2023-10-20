@@ -152,16 +152,7 @@ export function createHydrationFunctions(
               .firstChild!
 
             // replace <template> node with inner child
-            replace(content, node)
-            let parent = parentComponent
-            while (parent) {
-              if (parent.vnode.el === node) {
-                parent.vnode.el = content
-                parent.subTree.el = content
-              }
-              parent = parent.parent
-            }
-            node = content
+            node = replaceNode(content, node, parentComponent)
             nextNode = nextSibling(node)
           } else {
             nextNode = onMismatch()
@@ -406,16 +397,7 @@ export function createHydrationFunctions(
         dirs && invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
 
         // replace <template> node with inner child
-        replace(content, el)
-        let parent = parentComponent
-        while (parent) {
-          if (parent.vnode.el === el) {
-            parent.vnode.el = content
-            parent.subTree.el = content
-          }
-          parent = parent.parent
-        }
-        el = content
+        el = replaceNode(content, el, parentComponent) as Element
       } else if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
@@ -638,6 +620,28 @@ export function createHydrationFunctions(
       }
     }
     return node
+  }
+
+  const replaceNode = (
+    newNode: Node,
+    oldNode: Node,
+    parentComponent: ComponentInternalInstance | null
+  ): Node => {
+    // replace node
+    replace(newNode, oldNode)
+
+    // update vnode
+    let parent = parentComponent
+    while (parent) {
+      if (parent.vnode.el === oldNode) {
+        parent.vnode.el = newNode
+        parent.subTree.el = newNode
+      }
+      parent = parent.parent
+    }
+
+    oldNode = newNode
+    return oldNode
   }
 
   return [hydrate, hydrateNode] as const
