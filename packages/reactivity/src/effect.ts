@@ -1,4 +1,4 @@
-import { extend } from '@vue/shared'
+import { extend, getGlobalThis } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import type { Dep } from './dep'
@@ -25,6 +25,15 @@ class FakeWeakRef<T> {
   constructor(public target: T) {}
   deref() {
     return this.target
+  }
+}
+
+let _WeakRef = getGlobalThis().WeakRef as typeof WeakRef
+
+if (!_WeakRef) {
+  _WeakRef = FakeWeakRef as any
+  if (__DEV__) {
+    console.warn(`WeakRef is not available domain-wide and must be stubbed!`)
   }
 }
 
@@ -96,7 +105,7 @@ export class ReactiveEffect<T = any> {
       if (this.scheduler) {
         this._trackToken = new FakeWeakRef(this) as any
       } else {
-        this._trackToken = new WeakRef(this)
+        this._trackToken = new _WeakRef(this)
       }
     }
     let lastShouldTrack = shouldTrack
