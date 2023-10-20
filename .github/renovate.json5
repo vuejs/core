@@ -45,7 +45,6 @@
     'typescript',
 
     // ESM only
-    'chalk',
     'estree-walker'
   ]
 }

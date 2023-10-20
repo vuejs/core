@@ -2,9 +2,9 @@ import fs from 'fs'
 import path from 'path'
 import { defineConfig, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import execa from 'execa'
+import { execaSync } from 'execa'
 
-const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
 
 export default defineConfig({
   plugins: [
