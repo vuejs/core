@@ -13,7 +13,7 @@ describe('e2e: markdown', () => {
     await page().goto(baseUrl)
     expect(await isVisible('#editor')).toBe(true)
     expect(await value('textarea')).toBe('# hello')
-    expect(await html('#editor div')).toBe('<h1 id="hello">hello</h1>\n')
+    expect(await html('#editor div')).toBe('<h1>hello</h1>\n')
 
     await page().type('textarea', '\n## foo\n\n- bar\n- baz')
 
@@ -23,8 +23,8 @@ describe('e2e: markdown', () => {
 
     await expectByPolling(
       () => html('#editor div'),
-      '<h1 id="hello">hello</h1>\n' +
-        '<h2 id="foo">foo</h2>\n' +
+      '<h1>hello</h1>\n' +
+        '<h2>foo</h2>\n' +
         '<ul>\n<li>bar</li>\n<li>baz</li>\n</ul>\n'
     )
   }
