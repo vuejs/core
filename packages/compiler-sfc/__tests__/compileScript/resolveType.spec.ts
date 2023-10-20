@@ -478,6 +478,31 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
+      const files = {
+        'C:\\Test\\foo.ts': 'export type P = { foo: number }',
+        'C:\\Test\\bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean'
+      }
+      const { props, deps } = resolve(
+        `
+      import { P } from './foo'
+      import { Y as PP } from './bar'
+      defineProps<P & PP>()
+    `,
+        files,
+        {},
+        'C:\\Test\\Test.vue'
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String']
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     // #8244
     test('utility type in external file', () => {
       const files = {
@@ -898,10 +923,11 @@ describe('resolveType', () => {
 function resolve(
   code: string,
   files: Record<string, string> = {},
-  options?: Partial<SFCScriptCompileOptions>
+  options?: Partial<SFCScriptCompileOptions>,
+  sourceFileName: string = '/Test.vue'
 ) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
-    filename: '/Test.vue'
+    filename: sourceFileName
   })
   const ctx = new ScriptCompileContext(descriptor, {
     id: 'test',
