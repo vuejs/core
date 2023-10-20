@@ -335,7 +335,7 @@ describe('api: createApp', () => {
   })
 
   test('onUnmount', () => {
-    const cleanup = jest.fn().mockName('plugin cleanup')
+    const cleanup = vi.fn().mockName('plugin cleanup')
     const PluginA: Plugin = app => {
       app.provide('foo', 1)
       app.onUnmount(cleanup)
