@@ -47,9 +47,6 @@ importers:
       '@vue/consolidate':
         specifier: 0.17.3
         version: 0.17.3
-      chalk:
-        specifier: ^4.1.0
-        version: 4.1.2
       conventional-changelog-cli:
         specifier: ^4.1.0
         version: 4.1.0
@@ -98,6 +95,9 @@ importers:
       npm-run-all:
         specifier: ^4.1.5
         version: 4.1.5
+      picocolors:
+        specifier: ^1.0.0
+        version: 1.0.0
       prettier:
         specifier: ^3.0.3
         version: 3.0.3
@@ -3959,6 +3959,7 @@ packages:
 
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+    requiresBuild: true
     dev: true
 
   /js-yaml@4.1.0:

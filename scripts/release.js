@@ -2,7 +2,7 @@
 import minimist from 'minimist'
 import fs from 'node:fs'
 import path from 'node:path'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import semver from 'semver'
 import enquirer from 'enquirer'
 import { execa } from 'execa'
@@ -73,16 +73,16 @@ const inc = i => semver.inc(currentVersion, i, preId)
 const run = (bin, args, opts = {}) =>
   execa(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = (bin, args, opts = {}) =>
-  console.log(chalk.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
+  console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = pkg => path.resolve(__dirname, '../packages/' + pkg)
-const step = msg => console.log(chalk.cyan(msg))
+const step = msg => console.log(pico.cyan(msg))
 
 async function main() {
   if (!(await isInSyncWithRemote())) {
     return
   } else {
-    console.log(`${chalk.green(`✓`)} commit is up-to-date with rmeote.\n`)
+    console.log(`${pico.green(`✓`)} commit is up-to-date with rmeote.\n`)
   }
 
   let targetVersion = args._[0]
@@ -285,7 +285,7 @@ async function main() {
 
   if (skippedPackages.length) {
     console.log(
-      chalk.yellow(
+      pico.yellow(
         `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
           '\n- '
         )}`
@@ -361,7 +361,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
       console.log(
-        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
+        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
       )
       deps[dep] = newVersion
     }
@@ -407,10 +407,10 @@ async function publishPackage(pkgName, version) {
         stdio: 'pipe'
       }
     )
-    console.log(chalk.green(`Successfully published ${pkgName}@${version}`))
+    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
   } catch (e) {
     if (e.stderr.match(/previously published/)) {
-      console.log(chalk.red(`Skipping already published: ${pkgName}`))
+      console.log(pico.red(`Skipping already published: ${pkgName}`))
     } else {
       throw e
     }
