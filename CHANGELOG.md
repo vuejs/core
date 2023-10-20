@@ -1,3 +1,24 @@
+## [3.3.6](https://github.com/vuejs/core/compare/v3.3.5...v3.3.6) (2023-10-20)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** model name conflict ([#8798](https://github.com/vuejs/core/issues/8798)) ([df81da8](https://github.com/vuejs/core/commit/df81da8be97c8a1366563c7e3e01076ef02eb8f7))
+* **compiler-sfc:** support asset paths containing spaces ([#8752](https://github.com/vuejs/core/issues/8752)) ([36c99a9](https://github.com/vuejs/core/commit/36c99a9c6bb6bc306be054c3c8a85ff8ce50605a))
+* **compiler-ssr:** fix missing scopeId on server-rendered TransitionGroup ([#7557](https://github.com/vuejs/core/issues/7557)) ([61c1357](https://github.com/vuejs/core/commit/61c135742795aa5e3189a79c7dec6afa21bbc8d9)), closes [#7554](https://github.com/vuejs/core/issues/7554)
+* **compiler-ssr:** fix ssr compile error for select with non-option children ([#9442](https://github.com/vuejs/core/issues/9442)) ([cdb2e72](https://github.com/vuejs/core/commit/cdb2e725e7ea297f1f4180fb04889a3b757bc84e)), closes [#9440](https://github.com/vuejs/core/issues/9440)
+* **runtime-core:** delete stale slots which are present but undefined ([#6484](https://github.com/vuejs/core/issues/6484)) ([75b8722](https://github.com/vuejs/core/commit/75b872213574cb37e2c9e8a15f65613f867ca9a6)), closes [#9109](https://github.com/vuejs/core/issues/9109)
+* **runtime-core:** fix error when using cssvars with disabled teleport ([#7341](https://github.com/vuejs/core/issues/7341)) ([8f0472c](https://github.com/vuejs/core/commit/8f0472c9abedb337dc256143b69d8ab8759dbf5c)), closes [#7342](https://github.com/vuejs/core/issues/7342)
+* **teleport:** ensure descendent component would be unmounted correctly ([#6529](https://github.com/vuejs/core/issues/6529)) ([4162311](https://github.com/vuejs/core/commit/4162311efdb0db5ca458542e1604b19efa2fae0e)), closes [#6347](https://github.com/vuejs/core/issues/6347)
+* **types:** support contenteditable="plaintext-only" ([#8796](https://github.com/vuejs/core/issues/8796)) ([26ca89e](https://github.com/vuejs/core/commit/26ca89e5cf734fbef81e182050d2a215ec8a437b))
+
+
+### Performance Improvements
+
+* replace Map/Set with WeakMap/WeakSet ([#8549](https://github.com/vuejs/core/issues/8549)) ([712f96d](https://github.com/vuejs/core/commit/712f96d6ac4d3d984732cba448cb84624daba850))
+
+
+
 ## [3.3.5](https://github.com/vuejs/core/compare/v3.3.4...v3.3.5) (2023-10-20)
 
 
