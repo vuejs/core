@@ -501,7 +501,9 @@ describe('resolveType', () => {
         foo: ['Number'],
         bar: ['String']
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps].map(normalize)).toStrictEqual(
+        Object.keys(files).map(normalize)
+      )
     })
 
     // #8244
