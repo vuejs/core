@@ -210,7 +210,12 @@ export function buildSlots(
     vFor = findDir(slotElement, 'for')
     if (vFor) vForProps = vFor.exp
     else vForProps = undefined
-    const slotFunction = buildSlotFn(slotProps, vForProps, slotChildren, slotLoc)
+    const slotFunction = buildSlotFn(
+      slotProps,
+      vForProps,
+      slotChildren,
+      slotLoc
+    )
 
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined

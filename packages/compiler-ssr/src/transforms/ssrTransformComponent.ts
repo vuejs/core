@@ -126,7 +126,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // for later use.
     if (clonedNode.children.length) {
       buildSlots(clonedNode, context, (props, vFor, children) => {
-        vnodeBranches.push(createVNodeSlotBranch(props, vFor, children, context))
+        vnodeBranches.push(
+          createVNodeSlotBranch(props, vFor, children, context)
+        )
         return createFunctionExpression(undefined)
       })
     }
