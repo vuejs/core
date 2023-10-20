@@ -83,7 +83,7 @@ describe('api: template refs', () => {
 
   it('function ref mount', () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
 
     const Comp = defineComponent(() => () => h('div', { ref: fn }))
     render(h(Comp), root)
@@ -92,8 +92,8 @@ describe('api: template refs', () => {
 
   it('function ref update', async () => {
     const root = nodeOps.createElement('div')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
     const fn = ref(fn1)
 
     const Comp = defineComponent(() => () => h('div', { ref: fn.value }))
@@ -112,11 +112,11 @@ describe('api: template refs', () => {
 
   it('function ref unmount', async () => {
     const root = nodeOps.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const toggle = ref(true)
 
     const Comp = defineComponent(
-      () => () => toggle.value ? h('div', { ref: fn }) : null
+      () => () => (toggle.value ? h('div', { ref: fn }) : null)
     )
     render(h(Comp), root)
     expect(fn.mock.calls[0][0]).toBe(root.children[0])
@@ -181,7 +181,7 @@ describe('api: template refs', () => {
 
   test('string ref inside slots', async () => {
     const root = nodeOps.createElement('div')
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Child = {
       render(this: any) {
         return this.$slots.default()
@@ -273,7 +273,7 @@ describe('api: template refs', () => {
   // #1834
   test('exchange refs', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {
@@ -304,7 +304,7 @@ describe('api: template refs', () => {
   // #1789
   test('toggle the same ref to different elements', async () => {
     const refToggle = ref(false)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Comp = {
       render(this: any) {

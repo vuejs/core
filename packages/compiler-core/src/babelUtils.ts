@@ -32,15 +32,13 @@ export function walkIdentifiers(
     root.body[0].type === 'ExpressionStatement' &&
     root.body[0].expression
 
-  ;(walk as any)(root, {
+  walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -422,3 +420,11 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
 
   return true
 }
+
+export const TS_NODE_TYPES = [
+  'TSAsExpression', // foo as number
+  'TSTypeAssertion', // (<number>foo)
+  'TSNonNullExpression', // foo!
+  'TSInstantiationExpression', // foo<string>
+  'TSSatisfiesExpression' // foo satisfies T
+]

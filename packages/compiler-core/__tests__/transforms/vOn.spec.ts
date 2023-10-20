@@ -398,7 +398,7 @@ describe('compiler: transform v-on', () => {
   })
 
   test('should error if no expression AND no modifier', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithVOn(`<div v-on:click />`, { onError })
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_ON_NO_EXPRESSION,
@@ -416,7 +416,7 @@ describe('compiler: transform v-on', () => {
   })
 
   test('should NOT error if no expression but has modifier', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithVOn(`<div v-on:click.prevent />`, { onError })
     expect(onError).not.toHaveBeenCalled()
   })
@@ -437,6 +437,7 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  // TODO remove in 3.4
   test('case conversion for vnode hooks', () => {
     const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
@@ -451,6 +452,7 @@ describe('compiler: transform v-on', () => {
         }
       ]
     })
+    expect('@vnode-* hooks in templates are deprecated').toHaveBeenWarned()
   })
 
   test('vue: prefixed events', () => {

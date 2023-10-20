@@ -23,6 +23,14 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'value', null, obj)
     expect(el.value).toBe(obj.toString())
     expect((el as any)._value).toBe(obj)
+
+    const option = document.createElement('option')
+    patchProp(option, 'textContent', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe(null)
+    patchProp(option, 'value', null, 'foo')
+    expect(option.value).toBe('foo')
+    expect(option.getAttribute('value')).toBe('foo')
   })
 
   test('value for custom elements', () => {
@@ -44,8 +52,8 @@ describe('runtime-dom: props patching', () => {
 
       public setterCalled: number = 0
     }
-    window.customElements.define('test-element', TestElement)
-    const el = document.createElement('test-element') as TestElement
+    window.customElements.define('patch-props-test-element', TestElement)
+    const el = document.createElement('patch-props-test-element') as TestElement
     patchProp(el, 'value', null, 'foo')
     expect(el.value).toBe('foo')
     expect(el.setterCalled).toBe(1)
@@ -95,7 +103,7 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn
@@ -111,7 +119,7 @@ describe('runtime-dom: props patching', () => {
 
   // #954
   test('(svg) innerHTML unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn
@@ -126,7 +134,7 @@ describe('runtime-dom: props patching', () => {
   })
 
   test('textContent unmount prev children', () => {
-    const fn = jest.fn()
+    const fn = vi.fn()
     const comp = {
       render: () => 'foo',
       unmounted: fn

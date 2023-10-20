@@ -1,14 +1,15 @@
+import { vi, SpyInstance } from 'vitest'
 import { render, h } from '@vue/runtime-dom'
 
 describe('customized built-in elements support', () => {
-  let createElement: jest.SpyInstance
+  let createElement: SpyInstance
   afterEach(() => {
     createElement.mockRestore()
   })
 
   test('should created element with is option', () => {
     const root = document.createElement('div')
-    createElement = jest.spyOn(document, 'createElement')
+    createElement = vi.spyOn(document, 'createElement')
     render(h('button', { is: 'plastic-button' }), root)
     expect(createElement.mock.calls[0]).toMatchObject([
       'button',

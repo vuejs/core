@@ -28,7 +28,7 @@ describe('compiler: v-show transform', () => {
   })
 
   test('should raise error if has no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     transformWithShow(`<div v-show/>`, { onError })
 
     expect(onError).toHaveBeenCalledTimes(1)

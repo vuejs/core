@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import {
   nodeOps,
   serializeInner,
@@ -440,8 +444,8 @@ describe('renderer: teleport', () => {
     const root = nodeOps.createElement('div')
     const toggle = ref(true)
     const dir = {
-      mounted: jest.fn(),
-      unmounted: jest.fn()
+      mounted: vi.fn(),
+      unmounted: vi.fn()
     }
 
     const app = createApp({
@@ -470,5 +474,58 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target)).toMatchInlineSnapshot(`""`)
     expect(dir.mounted).toHaveBeenCalledTimes(1)
     expect(dir.unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // #7835
+  test(`ensure that target changes when disabled are updated correctly when enabled`, async () => {
+    const root = nodeOps.createElement('div')
+    const target1 = nodeOps.createElement('div')
+    const target2 = nodeOps.createElement('div')
+    const target3 = nodeOps.createElement('div')
+    const target = ref(target1)
+    const disabled = ref(true)
+
+    const App = {
+      setup() {
+        return () =>
+          h(Fragment, [
+            h(
+              Teleport,
+              { to: target.value, disabled: disabled.value },
+              h('div', 'teleported')
+            )
+          ])
+      }
+    }
+    render(h(App), root)
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    disabled.value = true
+    await nextTick()
+    target.value = target2
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    target.value = target3
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 })

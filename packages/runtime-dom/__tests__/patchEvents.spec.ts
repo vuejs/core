@@ -5,7 +5,7 @@ const timeout = () => new Promise(r => setTimeout(r))
 describe(`runtime-dom: events patching`, () => {
   it('should assign event handler', async () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     patchProp(el, 'onClick', null, fn)
     el.dispatchEvent(new Event('click'))
     await timeout()
@@ -18,8 +18,8 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should update event handler', async () => {
     const el = document.createElement('div')
-    const prevFn = jest.fn()
-    const nextFn = jest.fn()
+    const prevFn = vi.fn()
+    const nextFn = vi.fn()
     patchProp(el, 'onClick', null, prevFn)
     el.dispatchEvent(new Event('click'))
     patchProp(el, 'onClick', prevFn, nextFn)
@@ -34,8 +34,8 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should support multiple event handlers', async () => {
     const el = document.createElement('div')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
     patchProp(el, 'onClick', null, [fn1, fn2])
     el.dispatchEvent(new Event('click'))
     await timeout()
@@ -45,7 +45,7 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should unassign event handler', async () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     patchProp(el, 'onClick', null, fn)
     patchProp(el, 'onClick', fn, null)
     el.dispatchEvent(new Event('click'))
@@ -55,7 +55,7 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should support event option modifiers', async () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     patchProp(el, 'onClickOnceCapture', null, fn)
     el.dispatchEvent(new Event('click'))
     await timeout()
@@ -66,7 +66,7 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should unassign event handler with options', async () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     patchProp(el, 'onClickCapture', null, fn)
     el.dispatchEvent(new Event('click'))
     await timeout()
@@ -84,15 +84,14 @@ describe(`runtime-dom: events patching`, () => {
     const el = document.createElement('div')
 
     // string should be set as attribute
-    const fn = ((window as any).__globalSpy = jest.fn())
-    patchProp(el, 'onclick', null, '__globalSpy(1)')
+    const fn = ((el as any).spy = vi.fn())
+    patchProp(el, 'onclick', null, 'this.spy(1)')
     el.dispatchEvent(new Event('click'))
     await timeout()
-    delete (window as any).__globalSpy
     expect(fn).toHaveBeenCalledWith(1)
 
-    const fn2 = jest.fn()
-    patchProp(el, 'onclick', '__globalSpy(1)', fn2)
+    const fn2 = vi.fn()
+    patchProp(el, 'onclick', 'this.spy(1)', fn2)
     const event = new Event('click')
     el.dispatchEvent(event)
     await timeout()
@@ -102,10 +101,10 @@ describe(`runtime-dom: events patching`, () => {
 
   it('should support stopImmediatePropagation on multiple listeners', async () => {
     const el = document.createElement('div')
-    const fn1 = jest.fn((e: Event) => {
+    const fn1 = vi.fn((e: Event) => {
       e.stopImmediatePropagation()
     })
-    const fn2 = jest.fn()
+    const fn2 = vi.fn()
     patchProp(el, 'onClick', null, [fn1, fn2])
     el.dispatchEvent(new Event('click'))
     await timeout()
@@ -119,8 +118,8 @@ describe(`runtime-dom: events patching`, () => {
     const el2 = document.createElement('div')
 
     // const event = new Event('click')
-    const prevFn = jest.fn()
-    const nextFn = jest.fn()
+    const prevFn = vi.fn()
+    const nextFn = vi.fn()
 
     patchProp(el1, 'onClick', null, prevFn)
     patchProp(el2, 'onClick', null, prevFn)
@@ -153,16 +152,17 @@ describe(`runtime-dom: events patching`, () => {
     const child = document.createElement('div')
     el.appendChild(child)
     document.body.appendChild(el)
-    const childFn = jest.fn()
-    const parentFn = jest.fn()
+    const childFn = vi.fn()
+    const parentFn = vi.fn()
 
     patchProp(child, 'onClick', null, () => {
       childFn()
       patchProp(el, 'onClick', null, parentFn)
     })
-    child.dispatchEvent(new Event('click', { bubbles: true }))
 
     await timeout()
+    child.dispatchEvent(new Event('click', { bubbles: true }))
+
     expect(childFn).toHaveBeenCalled()
     expect(parentFn).not.toHaveBeenCalled()
   })
@@ -178,8 +178,8 @@ describe(`runtime-dom: events patching`, () => {
     const testElement = document.createElement('test-element', {
       is: 'test-element'
     })
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     // in webComponents, @foo-bar will patch prop 'onFooBar'
     // and @foobar will patch prop 'onFoobar'

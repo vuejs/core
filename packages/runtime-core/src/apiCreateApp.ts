@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { isFunction, NO, isObject } from '@vue/shared'
+import { isFunction, NO, isObject, extend } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'
@@ -50,6 +50,14 @@ export interface App<HostElement = any> {
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
+
+  /**
+   * Runs a function with the app as active instance. This allows using of `inject()` within the function to get access
+   * to variables provided via `app.provide()`.
+   *
+   * @param fn - function to run with the app as active instance
+   */
+  runWithContext<T>(fn: () => T): T
 
   // internal, but we need to expose these for the server-renderer and devtools
   _uid: number
@@ -102,9 +110,10 @@ export interface AppConfig {
    */
   isCustomElement?: (tag: string) => boolean
 
+  // TODO remove in 3.4
   /**
    * Temporary config for opt-in to unwrap injected refs.
-   * TODO deprecate in 3.3
+   * @deprecated this no longer has effect. 3.3 always unwraps injected refs.
    */
   unwrapInjectedRef?: boolean
 }
@@ -193,7 +202,7 @@ export function createAppAPI<HostElement>(
 ): CreateAppFunction<HostElement> {
   return function createApp(rootComponent, rootProps = null) {
     if (!isFunction(rootComponent)) {
-      rootComponent = { ...rootComponent }
+      rootComponent = extend({}, rootComponent)
     }
 
     if (rootProps != null && !isObject(rootProps)) {
@@ -202,6 +211,22 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
+
+    // TODO remove in 3.4
+    if (__DEV__) {
+      Object.defineProperty(context.config, 'unwrapInjectedRef', {
+        get() {
+          return true
+        },
+        set() {
+          warn(
+            `app.config.unwrapInjectedRef has been deprecated. ` +
+              `3.3 now always unwraps injected refs in Options API.`
+          )
+        }
+      })
+    }
+
     const installedPlugins = new Set()
 
     let isMounted = false
@@ -305,10 +330,7 @@ export function createAppAPI<HostElement>(
                 ` you need to unmount the previous app by calling \`app.unmount()\` first.`
             )
           }
-          const vnode = createVNode(
-            rootComponent as ConcreteComponent,
-            rootProps
-          )
+          const vnode = createVNode(rootComponent, rootProps)
           // store app context on the root VNode.
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
@@ -370,6 +392,15 @@ export function createAppAPI<HostElement>(
         context.provides[key as string | symbol] = value
 
         return app
+      },
+
+      runWithContext(fn) {
+        currentApp = app
+        try {
+          return fn()
+        } finally {
+          currentApp = null
+        }
       }
     })
 
@@ -380,3 +411,9 @@ export function createAppAPI<HostElement>(
     return app
   }
 }
+
+/**
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
+ */
+export let currentApp: App<unknown> | null = null

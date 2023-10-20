@@ -33,6 +33,9 @@ const IMPORT_SOURCE = 'vue/macros'
 const shorthands = ['ref', 'computed', 'shallowRef', 'toRef', 'customRef']
 const transformCheckRE = /[^\w]\$(?:\$|ref|computed|shallowRef)?\s*(\(|\<)/
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function shouldTransform(src: string): boolean {
   return transformCheckRE.test(src)
 }
@@ -64,6 +67,9 @@ export interface ImportBinding {
   specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
 }
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function transform(
   src: string,
   {
@@ -112,6 +118,9 @@ export function transform(
   }
 }
 
+/**
+ * @deprecated will be removed in 3.4
+ */
 export function transformAST(
   ast: Program,
   s: MagicString,
@@ -129,7 +138,6 @@ export function transformAST(
   rootRefs: string[]
   importedHelpers: string[]
 } {
-  // TODO remove when out of experimental
   warnExperimental()
 
   const userImports: Record<string, ImportBinding> = Object.create(null)
@@ -395,7 +403,7 @@ export function transformAST(
             defaultValue = p.value.right
           }
         } else {
-          key = p.computed ? p.key : (p.key as Identifier).name
+          key = p.computed ? (p.key as Expression) : (p.key as Identifier).name
           if (p.value.type === 'Identifier') {
             // { foo: bar }
             nameId = p.value
@@ -628,7 +636,7 @@ export function transformAST(
 
   // check root scope first
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 
@@ -719,7 +727,7 @@ export function transformAST(
             while (i--) {
               const char = s.original.charAt(i)
               if (char === '\n') {
-                // only insert semi if it's actually the fisrt thign after
+                // only insert semi if it's actually the first thing after
                 // newline
                 s.prependRight(node.start! + offset, ';')
                 break
@@ -728,22 +736,6 @@ export function transformAST(
               }
             }
           }
-        }
-
-        // TODO remove when out of experimental
-        if (callee === '$raw') {
-          error(
-            `$raw() has been replaced by $$(). ` +
-              `See ${RFC_LINK} for latest updates.`,
-            node
-          )
-        }
-        if (callee === '$fromRef') {
-          error(
-            `$fromRef() has been replaced by $(). ` +
-              `See ${RFC_LINK} for latest updates.`,
-            node
-          )
         }
       }
     },
@@ -771,7 +763,6 @@ export function transformAST(
   }
 }
 
-const RFC_LINK = `https://github.com/vuejs/rfcs/discussions/369`
 const hasWarned: Record<string, boolean> = {}
 
 function warnExperimental() {
@@ -780,10 +771,10 @@ function warnExperimental() {
     return
   }
   warnOnce(
-    `Reactivity transform is an experimental feature.\n` +
-      `Experimental features may change behavior between patch versions.\n` +
-      `It is recommended to pin your vue dependencies to exact versions to avoid breakage.\n` +
-      `You can follow the proposal's status at ${RFC_LINK}.`
+    `Reactivity Transform was an experimental feature and has now been deprecated. ` +
+      `It will be removed from Vue core in 3.4. If you intend to continue using it, ` +
+      `switch to https://vue-macros.sxzz.moe/features/reactivity-transform.html.\n` +
+      `See reason for deprecation here: https://github.com/vuejs/rfcs/discussions/369#discussioncomment-5059028`
   )
 }
 

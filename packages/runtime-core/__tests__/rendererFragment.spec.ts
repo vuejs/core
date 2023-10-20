@@ -3,7 +3,7 @@ import {
   createVNode,
   render,
   nodeOps,
-  NodeTypes,
+  TestNodeTypes,
   TestElement,
   Fragment,
   resetOps,
@@ -32,23 +32,23 @@ describe('renderer: fragment', () => {
     expect(serializeInner(root)).toBe(`<div>one</div>two`)
     expect(root.children.length).toBe(4)
     expect(root.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: ''
     })
     expect(root.children[1]).toMatchObject({
-      type: NodeTypes.ELEMENT,
+      type: TestNodeTypes.ELEMENT,
       tag: 'div'
     })
     expect((root.children[1] as TestElement).children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'one'
     })
     expect(root.children[2]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'two'
     })
     expect(root.children[3]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: ''
     })
   })
