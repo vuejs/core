@@ -17,7 +17,7 @@
     "format": "prettier --write --cache \"**/*.[tj]s?(x)\"",
     "format-check": "prettier --check --cache \"**/*.[tj]s?(x)\"",
     "test": "vitest",
-    "test-unit": "vitest -c vitest.unit.config.ts",
+    "test-unit": "node --expose-gc node_modules/vitest/vitest.mjs -c vitest.unit.config.ts",
     "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
     "test-dts": "run-s build-dts test-dts-only",
     "test-dts-only": "tsc -p ./packages/dts-test/tsconfig.test.json",

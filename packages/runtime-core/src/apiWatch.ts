@@ -361,9 +361,7 @@ function doWatch(
     schedulerJob = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, onScheduled => {
-    onScheduled(schedulerJob as any)
-  })
+  const effect = new ReactiveEffect(getter, () => {}, schedulerJob as any)
 
   if (__DEV__) {
     effect.onTrack = onTrack

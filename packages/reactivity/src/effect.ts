@@ -4,10 +4,7 @@ import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import type { Dep } from './dep'
 import { EffectScope, recordEffectScope } from './effectScope'
 
-export type EffectScheduler = (
-  onScheduled: (cb: () => void) => void,
-  ...args: any[]
-) => any
+export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -23,6 +20,13 @@ export type DebuggerEventExtraInfo = {
 }
 
 export let activeEffect: ReactiveEffect | undefined
+
+class FakeWeakRef<T> {
+  constructor(public target: T) {}
+  deref() {
+    return this.target
+  }
+}
 
 export class ReactiveEffect<T = any> {
   active = true
@@ -53,7 +57,8 @@ export class ReactiveEffect<T = any> {
 
   constructor(
     public fn: () => T,
-    public scheduler: EffectScheduler,
+    public trigger: () => void,
+    public scheduler?: EffectScheduler,
     scope?: EffectScope
   ) {
     recordEffectScope(this, scope)
@@ -88,7 +93,11 @@ export class ReactiveEffect<T = any> {
       return this.fn()
     }
     if (!this._trackToken) {
-      this._trackToken = new WeakRef(this)
+      if (this.scheduler) {
+        this._trackToken = new FakeWeakRef(this) as any
+      } else {
+        this._trackToken = new WeakRef(this)
+      }
     }
     let lastShouldTrack = shouldTrack
     let lastEffect = activeEffect
@@ -180,13 +189,15 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const _effect = new ReactiveEffect(fn, onScheduled => {
-    onScheduled(() => {
+  const _effect = new ReactiveEffect(
+    fn,
+    () => {},
+    () => {
       if (_effect.dirty) {
         _effect.run()
       }
-    })
-  })
+    }
+  )
   if (options) {
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)
@@ -249,8 +260,8 @@ export function pauseScheduling() {
  */
 export function resetScheduling() {
   pauseScheduleStack--
-  while (!pauseScheduleStack && queueEffectCbs.length) {
-    queueEffectCbs.shift()!()
+  while (!pauseScheduleStack && queueEffectSchedulers.length) {
+    queueEffectSchedulers.shift()!()
   }
 }
 
@@ -276,8 +287,7 @@ export function trackEffect(
   }
 }
 
-const queueEffectCbs: (() => void)[] = []
-const pushEffectCb = queueEffectCbs.push.bind(queueEffectCbs)
+const queueEffectSchedulers: (() => void)[] = []
 
 export function triggerEffects(
   dep: Dep,
@@ -309,7 +319,10 @@ export function triggerEffects(
         if (__DEV__) {
           effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
         }
-        effect.scheduler(pushEffectCb)
+        effect.trigger()
+        if (effect.scheduler) {
+          queueEffectSchedulers.push(effect.scheduler)
+        }
       }
     }
   }
