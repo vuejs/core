@@ -1,3 +1,42 @@
+## [3.3.5](https://github.com/vuejs/core/compare/v3.3.4...v3.3.5) (2023-10-20)
+
+
+### Bug Fixes
+
+* add isGloballyWhitelisted back, but deprecated ([#8556](https://github.com/vuejs/core/issues/8556)) ([63dfe8e](https://github.com/vuejs/core/commit/63dfe8eab499979bcc2f7829e82464e13899c895)), closes [#8416](https://github.com/vuejs/core/issues/8416)
+* **build:** disable useDefineForClassFields in esbuild ([#9252](https://github.com/vuejs/core/issues/9252)) ([6d14fa8](https://github.com/vuejs/core/commit/6d14fa88e85d4c9e264be394ddb37a54ca6738a8))
+* **compat:** return value of vue compat set() ([#9377](https://github.com/vuejs/core/issues/9377)) ([e3c2d69](https://github.com/vuejs/core/commit/e3c2d699f694d9500ddee78571172a24f0e3b17a))
+* **compiler-sfc:** don't hoist props and emit ([#8535](https://github.com/vuejs/core/issues/8535)) ([24db951](https://github.com/vuejs/core/commit/24db9516d8b4857182ec1a3af86cb7346691679b)), closes [#7805](https://github.com/vuejs/core/issues/7805) [#7812](https://github.com/vuejs/core/issues/7812)
+* **compiler-sfc:** don't registerTS when bundling for browsers ([#8582](https://github.com/vuejs/core/issues/8582)) ([6f45f76](https://github.com/vuejs/core/commit/6f45f76df2c43796b35067ef8f8b9a7bca454040))
+* **compiler-sfc:** fix using imported ref as template ref during dev ([#7593](https://github.com/vuejs/core/issues/7593)) ([776ebf2](https://github.com/vuejs/core/commit/776ebf25b2e7570e78ac1c148fc45c823c21a542)), closes [#7567](https://github.com/vuejs/core/issues/7567)
+* **compiler-sfc:** handle dynamic directive arguments in template usage check ([#8538](https://github.com/vuejs/core/issues/8538)) ([e404a69](https://github.com/vuejs/core/commit/e404a699f48ae5c5a5da947f42679343192158c7)), closes [#8537](https://github.com/vuejs/core/issues/8537)
+* **compiler-sfc:** ignore style v-bind in double slash comments ([#5409](https://github.com/vuejs/core/issues/5409)) ([381b497](https://github.com/vuejs/core/commit/381b4977af25ba5392704f72ec6b3f2394d87ae7))
+* **compiler-sfc:** pass options directly to stylus ([#3848](https://github.com/vuejs/core/issues/3848)) ([d6446a6](https://github.com/vuejs/core/commit/d6446a6d40774b79045a9ddba7b5fd5201d51450))
+* **compiler-sfc:** support resolve multiple re-export /w same source type name ([#8365](https://github.com/vuejs/core/issues/8365)) ([4fa8da8](https://github.com/vuejs/core/commit/4fa8da8576717c619e1e8c04d19038488c75fbea)), closes [#8364](https://github.com/vuejs/core/issues/8364)
+* **compiler-sfc:** typo in experimental feature warnings ([#8513](https://github.com/vuejs/core/issues/8513)) ([fd1a3f9](https://github.com/vuejs/core/commit/fd1a3f95990d7c372fa1c0c40c55caca761a33a4))
+* **deps:** update dependency monaco-editor to ^0.44.0 ([#9237](https://github.com/vuejs/core/issues/9237)) ([8611874](https://github.com/vuejs/core/commit/8611874e09a827b6491173836c8942284d5de22c))
+* **deps:** update playground ([#9154](https://github.com/vuejs/core/issues/9154)) ([c8566a2](https://github.com/vuejs/core/commit/c8566a22b7cf37e6aefab7bad7b97ce2db9fae4c))
+* **playground:** fix github button style ([#7722](https://github.com/vuejs/core/issues/7722)) ([5ee992c](https://github.com/vuejs/core/commit/5ee992cfeabc6c4b871980c6057d0ac7140ad2fa))
+* **runtime-core:** swap client/server debug labels ([#9089](https://github.com/vuejs/core/issues/9089)) ([8f311c6](https://github.com/vuejs/core/commit/8f311c6f823f6776ca1c49bfbbbf8c7d9dea9cf1))
+* **ssr:** render correct initial selected state for select with v-model ([#7432](https://github.com/vuejs/core/issues/7432)) ([201c46d](https://github.com/vuejs/core/commit/201c46df07a38f3c2b73f384e8e6846dc62f224e)), closes [#7392](https://github.com/vuejs/core/issues/7392)
+* **ssr:** reset current instance if setting up options component errors ([#7743](https://github.com/vuejs/core/issues/7743)) ([020851e](https://github.com/vuejs/core/commit/020851e57d9a9f727c6ea07e9c1575430af02b73)), closes [#7733](https://github.com/vuejs/core/issues/7733)
+* **teleport:** handle target change while disabled ([#7837](https://github.com/vuejs/core/issues/7837)) ([140a89b](https://github.com/vuejs/core/commit/140a89b833bceed60838182b875d2953c70af114)), closes [#7835](https://github.com/vuejs/core/issues/7835)
+* **transition:** handle possible auto value for transition/animation durations ([96c76fa](https://github.com/vuejs/core/commit/96c76facb7de37fc241ccd55e121fd60a49a1452)), closes [#8409](https://github.com/vuejs/core/issues/8409)
+* **types/jsx:** add `inert` attribute and missing `hidden` values ([#8090](https://github.com/vuejs/core/issues/8090)) ([ceb0732](https://github.com/vuejs/core/commit/ceb0732e0b1bb4c8c505d80e97ff6fc89035fa90))
+* **types/jsx:** add missing loading attr for img element ([#6160](https://github.com/vuejs/core/issues/6160)) ([68d6b43](https://github.com/vuejs/core/commit/68d6b43f7e29b76aab2c6c1882885380a43fa3e3))
+* **types:** correct withDefaults return type for boolean prop with undefined default value ([#8602](https://github.com/vuejs/core/issues/8602)) ([f07cb18](https://github.com/vuejs/core/commit/f07cb18fedf9a446545aadf76bcdfb957c7ebcbd))
+* **types:** ensure nextTick return type reflect correct Promise value ([#8406](https://github.com/vuejs/core/issues/8406)) ([6a22b1f](https://github.com/vuejs/core/commit/6a22b1f6c287b60eda385df8a514335af8e040ea))
+* **types:** support correct types for style on svg elements ([#6322](https://github.com/vuejs/core/issues/6322)) ([364dc53](https://github.com/vuejs/core/commit/364dc53c7cc6f97d812ad175199c698faa92538e))
+
+
+### Performance Improvements
+
+* **compiler-sfc:** lazy require typescript ([d2c3d8b](https://github.com/vuejs/core/commit/d2c3d8b70b2df6e16f053a7ac58e6b04e7b2078f))
+* **custom-element:** cancel `MutationObserver` listener when disconnected ([#8666](https://github.com/vuejs/core/issues/8666)) ([24d98f0](https://github.com/vuejs/core/commit/24d98f03276de5b0fbced5a4c9d61b24e7d9d084))
+* mark `defineComponent` as side-effects-free ([#8512](https://github.com/vuejs/core/issues/8512)) ([438027c](https://github.com/vuejs/core/commit/438027cf9ecb63260f59d3027e0b188717694795))
+
+
+
 ## [3.3.4](https://github.com/vuejs/core/compare/v3.3.3...v3.3.4) (2023-05-18)
 
 
