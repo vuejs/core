@@ -26,23 +26,22 @@ export function patchDOMProp(
     return
   }
 
+  const tag = el.tagName
+
   if (
     key === 'value' &&
-    el.tagName !== 'PROGRESS' &&
+    tag !== 'PROGRESS' &&
     // custom elements may use _value internally
-    !el.tagName.includes('-')
+    !tag.includes('-')
   ) {
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
+    // #4956: <option> value will fallback to its text content so we need to
+    // compare against its attribute value instead.
+    const oldValue = tag === 'OPTION' ? el.getAttribute('value') : el.value
     const newValue = value == null ? '' : value
-    if (
-      el.value !== newValue ||
-      // #4956: always set for OPTION elements because its value falls back to
-      // textContent if no value attribute is present. And setting .value for
-      // OPTION has no side effect
-      el.tagName === 'OPTION'
-    ) {
+    if (oldValue !== newValue) {
       el.value = newValue
     }
     if (value == null) {
@@ -98,7 +97,7 @@ export function patchDOMProp(
     // do not warn if value is auto-coerced from nullish values
     if (__DEV__ && !needRemove) {
       warn(
-        `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
+        `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
           `value ${value} is invalid.`,
         e
       )
