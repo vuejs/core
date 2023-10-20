@@ -266,13 +266,13 @@ function createReactiveObject(
   ) {
     return target
   }
-  
+
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
   }
-    
+
   // only a whitelist of value types can be observed.
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
