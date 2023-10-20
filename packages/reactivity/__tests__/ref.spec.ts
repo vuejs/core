@@ -10,7 +10,12 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
-import { isShallow, readonly, shallowReactive } from '../src/reactive'
+import {
+  isReadonly,
+  isShallow,
+  readonly,
+  shallowReactive
+} from '../src/reactive'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -23,19 +28,18 @@ describe('reactivity/ref', () => {
   it('should be reactive', () => {
     const a = ref(1)
     let dummy
-    let calls = 0
-    effect(() => {
-      calls++
+    const fn = vi.fn(() => {
       dummy = a.value
     })
-    expect(calls).toBe(1)
+    effect(fn)
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(dummy).toBe(1)
     a.value = 2
-    expect(calls).toBe(2)
+    expect(fn).toHaveBeenCalledTimes(2)
     expect(dummy).toBe(2)
     // same value should not trigger
     a.value = 2
-    expect(calls).toBe(2)
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 
   it('should make nested properties reactive', () => {
@@ -274,6 +278,15 @@ describe('reactivity/ref', () => {
     expect(toRef(r, 'x')).toBe(r.x)
   })
 
+  test('toRef on array', () => {
+    const a = reactive(['a', 'b'])
+    const r = toRef(a, 1)
+    expect(r.value).toBe('b')
+    r.value = 'c'
+    expect(r.value).toBe('c')
+    expect(a[1]).toBe('c')
+  })
+
   test('toRef default value', () => {
     const a: { x: number | undefined } = { x: undefined }
     const x = toRef(a, 'x', 1)
@@ -284,6 +297,17 @@ describe('reactivity/ref', () => {
 
     a.x = undefined
     expect(x.value).toBe(1)
+  })
+
+  test('toRef getter', () => {
+    const x = toRef(() => 1)
+    expect(x.value).toBe(1)
+    expect(isRef(x)).toBe(true)
+    expect(unref(x)).toBe(1)
+    //@ts-expect-error
+    expect(() => (x.value = 123)).toThrow()
+
+    expect(isReadonly(x)).toBe(true)
   })
 
   test('toRefs', () => {
@@ -385,7 +409,7 @@ describe('reactivity/ref', () => {
     const obj = reactive({ count: 0 })
 
     const a = ref(obj)
-    const spy1 = jest.fn(() => a.value)
+    const spy1 = vi.fn(() => a.value)
 
     effect(spy1)
 
@@ -393,7 +417,7 @@ describe('reactivity/ref', () => {
     expect(spy1).toBeCalledTimes(1)
 
     const b = shallowRef(obj)
-    const spy2 = jest.fn(() => b.value)
+    const spy2 = vi.fn(() => b.value)
 
     effect(spy2)
 

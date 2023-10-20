@@ -10,7 +10,8 @@ import {
   Position,
   TextNode,
   InterpolationNode,
-  ConstantTypes
+  ConstantTypes,
+  DirectiveNode
 } from '../src/ast'
 
 describe('compiler: parse', () => {
@@ -31,7 +32,7 @@ describe('compiler: parse', () => {
     })
 
     test('simple text with invalid end tag', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const ast = baseParse('some text</div>', {
         onError
       })
@@ -1163,6 +1164,34 @@ describe('compiler: parse', () => {
       })
     })
 
+    // #3494
+    test('directive argument edge case', () => {
+      const ast = baseParse('<div v-slot:slot />')
+      const directive = (ast.children[0] as ElementNode)
+        .props[0] as DirectiveNode
+      expect(directive.arg).toMatchObject({
+        loc: {
+          start: { offset: 12, line: 1, column: 13 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: 'slot'
+        }
+      })
+    })
+
+    // https://github.com/vuejs/language-tools/issues/2710
+    test('directive argument edge case (2)', () => {
+      const ast = baseParse('<div #item.item />')
+      const directive = (ast.children[0] as ElementNode)
+        .props[0] as DirectiveNode
+      expect(directive.arg).toMatchObject({
+        loc: {
+          start: { offset: 6, line: 1, column: 7 },
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'item.item'
+        }
+      })
+    })
+
     test('directive with dynamic argument', () => {
       const ast = baseParse('<div v-on:[event]/>')
       const directive = (ast.children[0] as ElementNode).props[0]
@@ -1844,7 +1873,7 @@ describe('compiler: parse', () => {
       baseParse(`<div>\n<span>\n</div>\n</span>`)
     }).toThrow('Element is missing end tag.')
 
-    const spy = jest.fn()
+    const spy = vi.fn()
     const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
       onError: spy
     })
@@ -1990,7 +2019,7 @@ foo
       })
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
-    
+
     it('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
@@ -3025,7 +3054,7 @@ foo
       ]
     }
 
-    for (const key of Object.keys(patterns) as (keyof typeof patterns)[]) {
+    for (const key of Object.keys(patterns)) {
       describe(key, () => {
         for (const { code, errors, options } of patterns[key]) {
           test(
@@ -3034,7 +3063,7 @@ foo
               c => `\\x0${c.codePointAt(0)!.toString(16)};`
             ),
             () => {
-              const spy = jest.fn()
+              const spy = vi.fn()
               const ast = baseParse(code, {
                 getNamespace: (tag, parent) => {
                   const ns = parent ? parent.ns : Namespaces.HTML

@@ -1,7 +1,7 @@
 import {
   TestElement,
   TestNode,
-  NodeTypes,
+  TestNodeTypes,
   TestText,
   TestComment
 } from './nodeOps'
@@ -12,7 +12,7 @@ export function serialize(
   indent: number = 0,
   depth: number = 0
 ): string {
-  if (node.type === NodeTypes.ELEMENT) {
+  if (node.type === TestNodeTypes.ELEMENT) {
     return serializeElement(node, indent, depth)
   } else {
     return serializeText(node, indent, depth)
@@ -64,6 +64,6 @@ function serializeText(
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
   return (
     padding +
-    (node.type === NodeTypes.COMMENT ? `<!--${node.text}-->` : node.text)
+    (node.type === TestNodeTypes.COMMENT ? `<!--${node.text}-->` : node.text)
   )
 }

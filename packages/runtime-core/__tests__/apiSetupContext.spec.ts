@@ -169,7 +169,7 @@ describe('api: setup context', () => {
 
   it('context.emit', async () => {
     const count = ref(0)
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     const Parent = {
       render: () =>

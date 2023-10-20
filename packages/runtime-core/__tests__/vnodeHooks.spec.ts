@@ -4,7 +4,7 @@ import {
   nodeOps,
   VNodeProps,
   TestElement,
-  NodeTypes,
+  TestNodeTypes,
   VNode
 } from '@vue/runtime-test'
 
@@ -40,22 +40,22 @@ describe('renderer: vnode hooks', () => {
 
   test('should work on element', () => {
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(vnode => {
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
-          type: NodeTypes.TEXT,
+          type: TestNodeTypes.TEXT,
           text: 'foo'
         })
       }),
-      onVnodeUpdated: jest.fn(vnode => {
+      onVnodeUpdated: vi.fn(vnode => {
         expect((vnode.el as TestElement).children[0]).toMatchObject({
-          type: NodeTypes.TEXT,
+          type: TestNodeTypes.TEXT,
           text: 'bar'
         })
       }),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn()
     }
 
     assertHooks(hooks, h('div', hooks, 'foo'), h('div', hooks, 'bar'))
@@ -65,22 +65,22 @@ describe('renderer: vnode hooks', () => {
     const Comp = (props: { msg: string }) => props.msg
 
     const hooks: VNodeProps = {
-      onVnodeBeforeMount: jest.fn(),
-      onVnodeMounted: jest.fn(),
-      onVnodeBeforeUpdate: jest.fn(vnode => {
+      onVnodeBeforeMount: vi.fn(),
+      onVnodeMounted: vi.fn(),
+      onVnodeBeforeUpdate: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
-          type: NodeTypes.TEXT,
+          type: TestNodeTypes.TEXT,
           text: 'foo'
         })
       }),
-      onVnodeUpdated: jest.fn(vnode => {
+      onVnodeUpdated: vi.fn(vnode => {
         expect(vnode.el as TestElement).toMatchObject({
-          type: NodeTypes.TEXT,
+          type: TestNodeTypes.TEXT,
           text: 'bar'
         })
       }),
-      onVnodeBeforeUnmount: jest.fn(),
-      onVnodeUnmounted: jest.fn()
+      onVnodeBeforeUnmount: vi.fn(),
+      onVnodeUnmounted: vi.fn()
     }
 
     assertHooks(
