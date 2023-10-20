@@ -46,6 +46,7 @@ export class ReactiveEffect<T = any> {
 
   _dirtyLevel = DirtyLevels.Dirty
   _queryingDirty = false
+  _trackToken = new WeakRef(this)
   _trackId = 0
   _runnings = 0
   _depsLength = 0
@@ -131,9 +132,9 @@ function postCleanupEffect(effect: ReactiveEffect) {
 }
 
 function cleanupDepEffect(dep: Dep, effect: ReactiveEffect) {
-  const trackId = dep.get(effect)
+  const trackId = dep.get(effect._trackToken)
   if (trackId !== undefined && effect._trackId !== trackId) {
-    dep.delete(effect)
+    dep.delete(effect._trackToken)
     if (dep.size === 0) {
       dep.cleanup()
     }
@@ -255,8 +256,8 @@ export function trackEffect(
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  if (dep.get(effect) !== effect._trackId) {
-    dep.set(effect, effect._trackId)
+  if (dep.get(effect._trackToken) !== effect._trackId) {
+    dep.set(effect._trackToken, effect._trackId)
     const oldDep = effect.deps[effect._depsLength]
     if (oldDep !== dep) {
       if (oldDep) {
@@ -281,7 +282,14 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   pauseScheduling()
-  for (const effect of dep.keys()) {
+  let reclaimedTokens: WeakRef<ReactiveEffect>[] | undefined
+  for (const trackToken of dep.keys()) {
+    const effect = trackToken.deref()
+    if (!effect) {
+      reclaimedTokens ??= []
+      reclaimedTokens.push(trackToken)
+      continue
+    }
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
@@ -301,6 +309,11 @@ export function triggerEffects(
         }
         effect.scheduler(pushEffectCb)
       }
+    }
+  }
+  if (reclaimedTokens) {
+    for (const token of reclaimedTokens) {
+      dep.delete(token)
     }
   }
   resetScheduling()
