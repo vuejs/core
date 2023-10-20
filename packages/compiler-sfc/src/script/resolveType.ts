@@ -1244,7 +1244,7 @@ function recordType(
       break
     }
     case 'ClassDeclaration':
-      types[overwriteId || getId(node.id)] = node
+      if (overwriteId || node.id) types[overwriteId || getId(node.id!)] = node
       break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
