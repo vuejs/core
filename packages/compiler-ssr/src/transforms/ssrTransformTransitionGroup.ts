@@ -69,7 +69,7 @@ export function ssrProcessTransitionGroup(
         context.pushStringPart(propsExp)
       }
       if (scopeId) {
-        context.pushStringPart(scopeId)
+        context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
 
@@ -95,7 +95,7 @@ export function ssrProcessTransitionGroup(
         context.pushStringPart(propsExp)
       }
       if (scopeId) {
-        context.pushStringPart(scopeId)
+        context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
       processChildren(node, context, false, true)
