@@ -9,7 +9,14 @@ import {
   ComponentOptions,
   Suspense,
   Teleport,
-  FunctionalComponent
+  FunctionalComponent,
+  renderSlot,
+  withCtx,
+  openBlock,
+  createBlock,
+  createElementBlock,
+  createCommentVNode,
+  createElementVNode
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -273,6 +280,152 @@ describe('useCssVars', () => {
     expect(target.children.length).toBe(2)
     for (const c of [].slice.call(target.children as any)) {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(slot in child component)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(true)
+    const comp = {
+      render(ctx: any) {
+        return renderSlot(ctx.$slots, 'default')
+      }
+    }
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(Teleport, { to: target }, [
+            h(
+              comp,
+              {},
+              {
+                default: withCtx(() => [
+                  toggle.value
+                    ? (openBlock(),
+                      createElementBlock(
+                        'div',
+                        {
+                          key: 0,
+                          class: 'text'
+                        },
+                        ' test '
+                      ))
+                    : createCommentVNode('v-if', true)
+                ]),
+                _: 1
+              }
+            )
+          ])
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+
+    toggle.value = false
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(as top level in child component)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+    const comp = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createBlock(Teleport, { to: 'body' }, [
+            createElementVNode('div', { class: 'text' }, ' this ', -1)
+          ])
+        )
+      }
+    }
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          toggle.value ? h(comp, {}) : createCommentVNode('v-if', true)
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(1)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
+
+  test('with teleport(multilevel nesting)', async () => {
+    document.body.innerHTML = ''
+    const state1 = reactive({ color1: 'red' })
+    const state2 = reactive({ color2: 'green' })
+
+    const root = document.createElement('div')
+    const target = document.body
+    const toggle = ref(false)
+
+    const comp2 = {
+      render(ctx: any) {
+        return (
+          openBlock(),
+          createBlock(Teleport, { to: 'body' }, [
+            createElementVNode('div', {}, ' green ', -1)
+          ])
+        )
+      }
+    }
+
+    const comp1 = {
+      setup() {
+        useCssVars(() => state2)
+        return ()=>(
+          openBlock(),
+          createBlock(Teleport, { to: 'body' }, [
+            createElementVNode('div', {}, ' red ', -1),
+            h(comp2,{})
+          ])
+        )
+      }
+    }
+
+    const App = {
+      setup() {
+        useCssVars(() => state1)
+        return () => [
+          toggle.value ? h(comp1, {}) : createCommentVNode('v-if', true)
+        ]
+      }
+    }
+
+    render(h(App), root)
+    await nextTick()
+    toggle.value = true
+    await nextTick()
+    expect(target.children.length).toBe(2)
+    for (const c of [].slice.call(target.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color1`)).toBe('red')
+      expect((c as HTMLElement).style.getPropertyValue(`--color2`)).toBe('green')
     }
   })
 })

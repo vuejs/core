@@ -410,14 +410,9 @@ export const Teleport = TeleportImpl as unknown as {
 
 function updateCssVars(vnode: VNode) {
   // presence of .ut method indicates owner component uses css vars.
-  // code path here can assume browser environment.
-  const ctx = vnode.ctx
-  if (ctx && ctx.ut) {
-    let node = (vnode.children as VNode[])[0].el!
-    while (node !== vnode.targetAnchor) {
-      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
-      node = node.nextSibling
-    }
-    ctx.ut()
+  let ctx = vnode.ctx;
+  while (ctx) {
+      ctx.ut?.()
+      ctx = ctx.parent
   }
 }
