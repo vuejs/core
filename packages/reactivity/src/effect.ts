@@ -45,10 +45,10 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirtyLevel = DirtyLevels.Dirty
-  _queryingDirty = false
   _trackToken!: WeakRef<ReactiveEffect>
   _trackId = 0
   _runnings = 0
+  _queryings = 0
   _depsLength = 0
 
   constructor(
@@ -62,7 +62,7 @@ export class ReactiveEffect<T = any> {
   public get dirty() {
     if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
       this._dirtyLevel = DirtyLevels.NotDirty
-      this._queryingDirty = true
+      this._queryings++
       pauseTracking()
       for (const dep of this.deps) {
         if (dep.computed) {
@@ -73,7 +73,7 @@ export class ReactiveEffect<T = any> {
         }
       }
       resetTracking()
-      this._queryingDirty = false
+      this._queryings--
     }
     return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
   }
@@ -304,8 +304,7 @@ export function triggerEffects(
       effect._dirtyLevel = dirtyLevel
       if (
         lastDirtyLevel === DirtyLevels.NotDirty &&
-        (!effect._queryingDirty ||
-          dirtyLevel !== DirtyLevels.ComputedValueDirty)
+        (!effect._queryings || dirtyLevel !== DirtyLevels.ComputedValueDirty)
       ) {
         if (__DEV__) {
           effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
