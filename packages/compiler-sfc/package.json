@@ -45,7 +45,6 @@
   },
   "devDependencies": {
     "@babel/types": "^7.23.0",
-    "@types/estree": "^0.0.52",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^10.0.1",

@@ -220,9 +220,6 @@ importers:
       '@babel/types':
         specifier: ^7.23.0
         version: 7.23.0
-      '@types/estree':
-        specifier: ^0.0.52
-        version: 0.0.52
       '@vue/consolidate':
         specifier: ^0.17.3
         version: 0.17.3
