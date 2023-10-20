@@ -79,7 +79,7 @@
     "estree-walker": "^2.0.2",
     "execa": "^8.0.1",
     "jsdom": "^22.1.0",
-    "lint-staged": "^14.0.1",
+    "lint-staged": "^15.0.2",
     "lodash": "^4.17.21",
     "magic-string": "^0.30.3",
     "markdown-table": "^3.0.3",
