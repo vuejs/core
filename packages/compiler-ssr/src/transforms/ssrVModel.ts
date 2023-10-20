@@ -131,7 +131,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
       node.children.forEach(option => {
-        if (option.type === NodeTypes.ELEMENT && option.tag === 'options') {
+        if (option.type === NodeTypes.ELEMENT && option.tag === 'option') {
           const plainNode = option as PlainElementNode
           if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
             const value = findValueBinding(plainNode)
