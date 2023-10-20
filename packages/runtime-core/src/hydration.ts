@@ -209,10 +209,7 @@ export function createHydrationFunctions(
             (domType !== DOMNodeTypes.ELEMENT ||
               (vnode.type as string).toLowerCase() !==
                 (node as Element).tagName.toLowerCase()) &&
-            !(
-              node.nodeType === DOMNodeTypes.ELEMENT &&
-              (node as Element).tagName.toLowerCase() === 'template'
-            )
+            !isTemplateNode(node as Element)
           ) {
             nextNode = onMismatch()
           } else {
@@ -378,10 +375,7 @@ export function createHydrationFunctions(
       }
 
       let needCallTransitionHooks = false
-      if (
-        el.nodeType === DOMNodeTypes.ELEMENT &&
-        el.tagName.toLowerCase() === 'template'
-      ) {
+      if (isTemplateNode(el)) {
         needCallTransitionHooks =
           (!parentSuspense ||
             (parentSuspense && !parentSuspense.pendingBranch)) &&
@@ -642,6 +636,13 @@ export function createHydrationFunctions(
 
     oldNode = newNode
     return oldNode
+  }
+
+  const isTemplateNode = (node: Element): boolean => {
+    return (
+      node.nodeType === DOMNodeTypes.ELEMENT &&
+      node.tagName.toLowerCase() === 'template'
+    )
   }
 
   return [hydrate, hydrateNode] as const
