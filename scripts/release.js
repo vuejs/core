@@ -9,6 +9,8 @@ import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
+let versionUpdated = false
+
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -219,6 +221,7 @@ async function main() {
     targetVersion,
     isCanary ? renamePackageToCanary : keepThePackageName
   )
+  versionUpdated = true
 
   // build all packages with types
   step('\nBuilding all packages...')
@@ -418,7 +421,10 @@ async function publishPackage(pkgName, version) {
 }
 
 main().catch(err => {
-  updateVersions(currentVersion)
+  if (versionUpdated) {
+    // revert to current version on failed releases
+    updateVersions(currentVersion)
+  }
   console.error(err)
   process.exit(1)
 })
