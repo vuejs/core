@@ -447,7 +447,7 @@ export function createHydrationFunctions(
       } else if (vnode.type === Text && !vnode.children) {
         // #7215 create a TextNode for empty text node
         // because server rendered HTML won't contain a text node
-        insert(vnode.el = createText(''), container)
+        insert((vnode.el = createText('')), container)
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {

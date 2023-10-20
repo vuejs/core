@@ -966,9 +966,7 @@ describe('SSR hydration', () => {
         return h('p', [''])
       }
     }
-    const { container } = mountWithHydration('<p></p>', () =>
-      h(Comp)
-    )
+    const { container } = mountWithHydration('<p></p>', () => h(Comp))
     expect(container.childNodes.length).toBe(1)
     const p = container.childNodes[0]
     expect(p.childNodes.length).toBe(1)
