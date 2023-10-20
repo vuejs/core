@@ -77,14 +77,13 @@ export function processDefineProps(
     ctx.propsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    // handle props destructure
-    if (declId.type === 'ObjectPattern') {
-      processPropsDestructure(ctx, declId)
-    } else {
-      ctx.propsIdentifier = ctx.getString(declId)
-    }
+  // handle props destructure
+  if (declId && declId.type === 'ObjectPattern') {
+    processPropsDestructure(ctx, declId)
   }
+
+  ctx.propsCall = node
+  ctx.propsDecl = declId
 
   return true
 }
@@ -97,31 +96,33 @@ function processWithDefaults(
   if (!isCallOf(node, WITH_DEFAULTS)) {
     return false
   }
-  if (processDefineProps(ctx, node.arguments[0], declId)) {
-    if (ctx.propsRuntimeDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS} can only be used with type-based ` +
-          `${DEFINE_PROPS} declaration.`,
-        node
-      )
-    }
-    if (ctx.propsDestructureDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
-          `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
-        node.callee
-      )
-    }
-    ctx.propsRuntimeDefaults = node.arguments[1]
-    if (!ctx.propsRuntimeDefaults) {
-      ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
-    }
-  } else {
+  if (!processDefineProps(ctx, node.arguments[0], declId)) {
     ctx.error(
       `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
       node.arguments[0] || node
     )
   }
+
+  if (ctx.propsRuntimeDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS} can only be used with type-based ` +
+        `${DEFINE_PROPS} declaration.`,
+      node
+    )
+  }
+  if (ctx.propsDestructureDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
+        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+      node.callee
+    )
+  }
+  ctx.propsRuntimeDefaults = node.arguments[1]
+  if (!ctx.propsRuntimeDefaults) {
+    ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
+  }
+  ctx.propsCall = node
+
   return true
 }
 

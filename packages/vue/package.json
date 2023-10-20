@@ -44,10 +44,12 @@
     "./compiler-sfc": {
       "import": {
         "types": "./compiler-sfc/index.d.mts",
+        "browser": "./compiler-sfc/index.browser.mjs",
         "default": "./compiler-sfc/index.mjs"
       },
       "require": {
         "types": "./compiler-sfc/index.d.ts",
+        "browser": "./compiler-sfc/index.browser.js",
         "default": "./compiler-sfc/index.js"
       }
     },
@@ -99,5 +101,13 @@
     "@vue/runtime-dom": "3.3.4",
     "@vue/compiler-sfc": "3.3.4",
     "@vue/server-renderer": "3.3.4"
+  },
+  "peerDependencies": {
+    "typescript": "*"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
   }
 }
