@@ -69,6 +69,19 @@ describe('ssr: v-model', () => {
         }></option></select></div>\`)
       }"
     `)
+
+    expect(
+      compileWithWrapper(`<select multiple v-model="model"><slot/></select>`)
+        .code
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple>\`)
+        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
+        _push(\`</select></div>\`)
+      }"
+    `)
   })
 
   test('<input type="radio">', () => {
