@@ -277,6 +277,24 @@ describe('useCssVars', () => {
     }
   })
 
+  test('with teleport(disabled)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [h(Teleport, { to: target, disabled: true }, [h('div')])]
+      }
+    }
+
+    expect(() => render(h(App), root)).not.toThrow(TypeError)
+    await nextTick()
+    expect(target.children.length).toBe(0)
+  })
+
   // #8826
   test('with custom element', async () => {
     const state = reactive({ color: 'red' })
@@ -294,6 +312,8 @@ describe('useCssVars', () => {
     container.innerHTML = `<css-vars-ce></css-vars-ce>`
     document.body.appendChild(container)
     await nextTick()
-    expect(container.innerHTML).toBe(`<css-vars-ce style="--color: red;"></css-vars-ce>`)
+    expect(container.innerHTML).toBe(
+      `<css-vars-ce style="--color: red;"></css-vars-ce>`
+    )
   })
 })
