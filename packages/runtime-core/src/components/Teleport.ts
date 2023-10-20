@@ -250,7 +250,10 @@ export const TeleportImpl = {
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
     if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      const shouldRemove = doRemove || !isTeleportDisabled(props) || hasNotDisabledTeleport(children as VNode[])
+      const shouldRemove =
+        doRemove ||
+        !isTeleportDisabled(props) ||
+        hasNotDisabledTeleport(children as VNode[])
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
         unmount(
