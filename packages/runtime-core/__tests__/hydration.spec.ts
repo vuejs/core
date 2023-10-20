@@ -21,7 +21,8 @@ import {
   renderSlot,
   Transition,
   createCommentVNode,
-  vShow
+  vShow,
+  vShowOldKey
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
 import { PatchFlags } from '../../shared/src'
@@ -1060,7 +1061,7 @@ describe('SSR hydration', () => {
         foo
       </div>
     `)
-    expect((container.firstChild as any)._vod).toBe('')
+    expect((container.firstChild as any)[vShowOldKey]).toBe('')
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })

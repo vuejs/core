@@ -229,7 +229,7 @@ export {
   vModelDynamic
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
-export { vShow } from './directives/vShow'
+export { vShow, vShowOldKey } from './directives/vShow'
 
 import { initVModelForSSR } from './directives/vModel'
 import { initVShowForSSR } from './directives/vShow'

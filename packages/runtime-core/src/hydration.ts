@@ -385,9 +385,6 @@ export function createHydrationFunctions(
       if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
-      if (dirs) {
-        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
-      }
 
       let needCallTransitionHooks = false
       if (
@@ -419,6 +416,8 @@ export function createHydrationFunctions(
           parent = parent.parent
         }
         el = content
+      } else if (dirs) {
+        invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
 
       if (
