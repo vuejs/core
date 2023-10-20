@@ -46,7 +46,7 @@ export class ReactiveEffect<T = any> {
 
   _dirtyLevel = DirtyLevels.Dirty
   _queryingDirty = false
-  _trackToken = new WeakRef(this)
+  _trackToken!: WeakRef<ReactiveEffect>
   _trackId = 0
   _runnings = 0
   _depsLength = 0
@@ -86,6 +86,9 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = DirtyLevels.NotDirty
     if (!this.active) {
       return this.fn()
+    }
+    if (!this._trackToken) {
+      this._trackToken = new WeakRef(this)
     }
     let lastShouldTrack = shouldTrack
     let lastEffect = activeEffect
