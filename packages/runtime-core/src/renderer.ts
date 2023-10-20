@@ -1545,11 +1545,10 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const schedulerJob = () => queueJob(update)
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       () => {},
-      schedulerJob,
+      () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
 
