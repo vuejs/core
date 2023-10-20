@@ -73,8 +73,13 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  useModel,
-  // internal
+  useModel
+} from './apiSetupHelpers'
+
+/**
+ * @internal
+ */
+export {
   mergeDefaults,
   mergeModels,
   createPropsRestProxy,
@@ -115,7 +120,9 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn, assertNumber } from './warning'
+export { warn } from './warning'
+/** @internal */
+export { assertNumber } from './warning'
 export {
   handleError,
   callWithErrorHandling,

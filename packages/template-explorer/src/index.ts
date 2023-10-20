@@ -76,8 +76,8 @@ window.init = () => {
       const compileFn = ssrMode.value ? ssrCompile : compile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
-        filename: 'ExampleTemplate.vue',
         ...compilerOptions,
+        filename: 'ExampleTemplate.vue',
         sourceMap: true,
         onError: err => {
           errors.push(err)
