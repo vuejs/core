@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { patchProp } from '../src/patchProp'
 
 describe(`runtime-dom: style patching`, () => {

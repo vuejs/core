@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   ref,
   nodeOps,
@@ -117,7 +116,7 @@ describe('api: template refs', () => {
     const toggle = ref(true)
 
     const Comp = defineComponent(
-      () => () => toggle.value ? h('div', { ref: fn }) : null
+      () => () => (toggle.value ? h('div', { ref: fn }) : null)
     )
     render(h(Comp), root)
     expect(fn.mock.calls[0][0]).toBe(root.children[0])
