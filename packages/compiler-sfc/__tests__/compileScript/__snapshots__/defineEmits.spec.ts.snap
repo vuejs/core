@@ -26,11 +26,11 @@ enum Foo { Foo = 'foo', Bar = 'bar', Qux = 'qux' }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"foo\\", \\"bar\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
     enum Bar { Foo = Foo.Foo }
-    
+    const emit = __emit
     
 return { Foo, Bar, emit }
 }
