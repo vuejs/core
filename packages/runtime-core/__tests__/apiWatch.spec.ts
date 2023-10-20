@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   watch,
   watchEffect,
@@ -1001,7 +1000,7 @@ describe('api: watch', () => {
       },
       mounted() {
         // this call runs while Comp is currentInstance, but
-        // the effect for this `$watch` should nontheless be registered with Child
+        // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
           () => void 0
@@ -1172,7 +1171,7 @@ describe('api: watch', () => {
     expect(instance!.scope.effects.length).toBe(1)
   })
 
-  test('watchEffect should keep running if created in a detatched scope', async () => {
+  test('watchEffect should keep running if created in a detached scope', async () => {
     const trigger = ref(0)
     let countWE = 0
     let countW = 0
