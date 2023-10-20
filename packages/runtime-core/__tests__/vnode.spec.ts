@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   createBlock,
   createVNode,
@@ -220,7 +219,6 @@ describe('vnode', () => {
     const node2 = createVNode({}, null, [node1])
     const cloned2 = cloneVNode(node2)
     expect(cloned2).toEqual(node2)
-    expect(cloneVNode(node2)).toEqual(node2)
     expect(cloneVNode(node2)).toEqual(cloned2)
   })
 
