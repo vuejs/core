@@ -11,12 +11,15 @@ on:
 permissions:
   contents: read
 
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
 jobs:
   upload:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -28,7 +31,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+        run: pnpm install
 
       - run: pnpm run size
 
@@ -42,7 +45,7 @@ jobs:
         if: ${{github.event_name == 'pull_request'}}
         run: echo ${{ github.event.number }} > ./pr.txt
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{github.event_name == 'pull_request'}}
         with:
           name: pr-number

@@ -11,6 +11,9 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
 jobs:
   size-report:
     runs-on: ubuntu-latest
@@ -18,7 +21,7 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -30,7 +33,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+        run: pnpm install
 
       - name: Download PR number
         uses: dawidd6/action-download-artifact@v2
