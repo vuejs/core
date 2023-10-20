@@ -1,10 +1,16 @@
-import puppeteer, { Browser, Page, ClickOptions } from 'puppeteer'
+import puppeteer, {
+  Browser,
+  Page,
+  ClickOptions,
+  PuppeteerLaunchOptions
+} from 'puppeteer'
 
 export const E2E_TIMEOUT = 30 * 1000
 
-const puppeteerOptions = process.env.CI
-  ? { args: ['--no-sandbox', '--disable-setuid-sandbox'] }
-  : {}
+const puppeteerOptions: PuppeteerLaunchOptions = {
+  args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
+  headless: 'new'
+}
 
 const maxTries = 30
 export const timeout = (n: number) => new Promise(r => setTimeout(r, n))

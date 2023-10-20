@@ -19,15 +19,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to LTS
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: lts/*
+          node-version-file: '.node-version'
           cache: pnpm
 
       - name: Install dependencies
@@ -45,7 +45,7 @@ jobs:
         if: ${{github.event_name == 'pull_request'}}
         run: echo ${{ github.event.number }} > ./pr.txt
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{github.event_name == 'pull_request'}}
         with:
           name: pr-number
