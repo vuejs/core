@@ -24,14 +24,14 @@ import {
   AssignmentExpression,
   ReturnStatement,
   VNodeCall,
-  SequenceExpression
+  SequenceExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from './ast'
-import { SourceMapGenerator, RawSourceMap } from 'source-map'
+import { SourceMapGenerator, RawSourceMap } from 'source-map-js'
 import {
   advancePositionWithMutation,
   assert,
-  getVNodeBlockHelper,
-  getVNodeHelper,
   isSimpleIdentifier,
   toValidAssetId
 } from './utils'
@@ -57,6 +57,8 @@ import {
 import { ImportItem } from './transform'
 
 const PURE_ANNOTATION = `/*#__PURE__*/`
+
+const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
@@ -95,6 +97,7 @@ function createCodegenContext(
     optimizeImports = false,
     runtimeGlobalName = `Vue`,
     runtimeModuleName = `vue`,
+    ssrRuntimeModuleName = 'vue/server-renderer',
     ssr = false,
     isTS = false,
     inSSR = false
@@ -109,6 +112,7 @@ function createCodegenContext(
     optimizeImports,
     runtimeGlobalName,
     runtimeModuleName,
+    ssrRuntimeModuleName,
     ssr,
     isTS,
     inSSR,
@@ -204,7 +208,8 @@ export function generate(
     ssr
   } = context
 
-  const hasHelpers = ast.helpers.length > 0
+  const helpers = Array.from(ast.helpers)
+  const hasHelpers = helpers.length > 0
   const useWithBlock = !prefixIdentifiers && mode !== 'module'
   const genScopeId = !__BROWSER__ && scopeId != null && mode === 'module'
   const isSetupInlined = !__BROWSER__ && !!options.inline
@@ -245,11 +250,7 @@ export function generate(
     // function mode const declarations should be inside with block
     // also they should be renamed to avoid collision with user properties
     if (hasHelpers) {
-      push(
-        `const { ${ast.helpers
-          .map(s => `${helperNameMap[s]}: _${helperNameMap[s]}`)
-          .join(', ')} } = _Vue`
-      )
+      push(`const { ${helpers.map(aliasHelper).join(', ')} } = _Vue`)
       push(`\n`)
       newline()
     }
@@ -319,22 +320,21 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push,
     newline,
     runtimeModuleName,
-    runtimeGlobalName
+    runtimeGlobalName,
+    ssrRuntimeModuleName
   } = context
   const VueBinding =
     !__BROWSER__ && ssr
       ? `require(${JSON.stringify(runtimeModuleName)})`
       : runtimeGlobalName
-  const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
   // Generate const declaration for helpers
   // In prefix mode, we place the const declaration at top so it's done
   // only once; But if we not prefixing, we place the declaration inside the
   // with block so it doesn't incur the `in` check cost for every helper access.
-  if (ast.helpers.length > 0) {
+  const helpers = Array.from(ast.helpers)
+  if (helpers.length > 0) {
     if (!__BROWSER__ && prefixIdentifiers) {
-      push(
-        `const { ${ast.helpers.map(aliasHelper).join(', ')} } = ${VueBinding}\n`
-      )
+      push(`const { ${helpers.map(aliasHelper).join(', ')} } = ${VueBinding}\n`)
     } else {
       // "with" mode.
       // save Vue in a separate variable to avoid collision
@@ -350,7 +350,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
           CREATE_TEXT,
           CREATE_STATIC
         ]
-          .filter(helper => ast.helpers.includes(helper))
+          .filter(helper => helpers.includes(helper))
           .map(aliasHelper)
           .join(', ')
         push(`const { ${staticHelpers} } = _Vue\n`)
@@ -363,7 +363,7 @@ function genFunctionPreamble(ast: RootNode, context: CodegenContext) {
     push(
       `const { ${ast.ssrHelpers
         .map(aliasHelper)
-        .join(', ')} } = require("@vue/server-renderer")\n`
+        .join(', ')} } = require("${ssrRuntimeModuleName}")\n`
     )
   }
   genHoists(ast.hoists, context)
@@ -377,14 +377,22 @@ function genModulePreamble(
   genScopeId: boolean,
   inline?: boolean
 ) {
-  const { push, newline, optimizeImports, runtimeModuleName } = context
+  const {
+    push,
+    newline,
+    optimizeImports,
+    runtimeModuleName,
+    ssrRuntimeModuleName
+  } = context
 
   if (genScopeId && ast.hoists.length) {
-    ast.helpers.push(PUSH_SCOPE_ID, POP_SCOPE_ID)
+    ast.helpers.add(PUSH_SCOPE_ID)
+    ast.helpers.add(POP_SCOPE_ID)
   }
 
   // generate import statements for helpers
-  if (ast.helpers.length) {
+  if (ast.helpers.size) {
+    const helpers = Array.from(ast.helpers)
     if (optimizeImports) {
       // when bundled with webpack with code-split, calling an import binding
       // as a function leads to it being wrapped with `Object(a.b)` or `(0,a.b)`,
@@ -392,18 +400,18 @@ function genModulePreamble(
       // therefore we assign the imports to variables (which is a constant ~50b
       // cost per-component instead of scaling with template size)
       push(
-        `import { ${ast.helpers
+        `import { ${helpers
           .map(s => helperNameMap[s])
           .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
       )
       push(
-        `\n// Binding optimization for webpack code-split\nconst ${ast.helpers
+        `\n// Binding optimization for webpack code-split\nconst ${helpers
           .map(s => `_${helperNameMap[s]} = ${helperNameMap[s]}`)
           .join(', ')}\n`
       )
     } else {
       push(
-        `import { ${ast.helpers
+        `import { ${helpers
           .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
           .join(', ')} } from ${JSON.stringify(runtimeModuleName)}\n`
       )
@@ -414,7 +422,7 @@ function genModulePreamble(
     push(
       `import { ${ast.ssrHelpers
         .map(s => `${helperNameMap[s]} as _${helperNameMap[s]}`)
-        .join(', ')} } from "@vue/server-renderer"\n`
+        .join(', ')} } from "${ssrRuntimeModuleName}"\n`
     )
   }
 
@@ -470,25 +478,33 @@ function genHoists(hoists: (JSChildNode | null)[], context: CodegenContext) {
   const genScopeId = !__BROWSER__ && scopeId != null && mode !== 'function'
   newline()
 
-  // push scope Id before initializing hoisted vnodes so that these vnodes
-  // get the proper scopeId as well.
+  // generate inlined withScopeId helper
   if (genScopeId) {
-    push(`${helper(PUSH_SCOPE_ID)}("${scopeId}")`)
+    push(
+      `const _withScopeId = n => (${helper(
+        PUSH_SCOPE_ID
+      )}("${scopeId}"),n=n(),${helper(POP_SCOPE_ID)}(),n)`
+    )
     newline()
   }
 
-  hoists.forEach((exp, i) => {
+  for (let i = 0; i < hoists.length; i++) {
+    const exp = hoists[i]
     if (exp) {
-      push(`const _hoisted_${i + 1} = `)
+      const needScopeIdWrapper = genScopeId && exp.type === NodeTypes.VNODE_CALL
+      push(
+        `const _hoisted_${i + 1} = ${
+          needScopeIdWrapper ? `${PURE_ANNOTATION} _withScopeId(() => ` : ``
+        }`
+      )
       genNode(exp, context)
+      if (needScopeIdWrapper) {
+        push(`)`)
+      }
       newline()
     }
-  })
-
-  if (genScopeId) {
-    push(`${helper(POP_SCOPE_ID)}()`)
-    newline()
   }
+
   context.pure = false
 }
 

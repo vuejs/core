@@ -5,16 +5,17 @@ import postcss, {
   Message,
   LazyResult
 } from 'postcss'
-import trimPlugin from './stylePluginTrim'
-import scopedPlugin from './stylePluginScoped'
+import trimPlugin from './style/pluginTrim'
+import scopedPlugin from './style/pluginScoped'
 import {
   processors,
   StylePreprocessor,
   StylePreprocessorResults,
   PreprocessLang
-} from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
-import { cssVarsPlugin } from './cssVars'
+} from './style/preprocessors'
+import { RawSourceMap } from 'source-map-js'
+import { cssVarsPlugin } from './style/cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
@@ -30,7 +31,7 @@ export interface SFCStyleCompileOptions {
   postcssOptions?: any
   postcssPlugins?: any[]
   /**
-   * @deprecated
+   * @deprecated use `inMap` instead.
    */
   map?: RawSourceMap
 }
@@ -47,7 +48,7 @@ export interface CSSModulesOptions {
   hashPrefix?: string
   localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
   exportGlobals?: boolean
-  globalModulePaths?: string[]
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -131,7 +132,7 @@ export function doCompileStyle(
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json

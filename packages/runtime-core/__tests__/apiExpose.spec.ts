@@ -1,4 +1,4 @@
-import { nodeOps, render } from '@vue/runtime-test'
+import { createApp, nodeOps, render } from '@vue/runtime-test'
 import { defineComponent, h, ref } from '../src'
 
 describe('api: expose', () => {
@@ -170,6 +170,26 @@ describe('api: expose', () => {
     render(h(Parent), root)
   })
 
+  test('with mount', () => {
+    const Component = defineComponent({
+      setup(_, { expose }) {
+        expose({
+          foo: 1
+        })
+        return {
+          bar: 2
+        }
+      },
+      render() {
+        return h('div')
+      }
+    })
+    const root = nodeOps.createElement('div')
+    const vm = createApp(Component).mount(root) as any
+    expect(vm.foo).toBe(1)
+    expect(vm.bar).toBe(undefined)
+  })
+
   test('expose should allow access to built-in instance properties', () => {
     const GrandChild = defineComponent({
       render() {
@@ -183,7 +203,9 @@ describe('api: expose', () => {
         return h('div')
       },
       setup(_, { expose }) {
-        expose()
+        expose({
+          foo: 42
+        })
         return () => h(GrandChild, { ref: grandChildRef })
       }
     })
@@ -196,8 +218,50 @@ describe('api: expose', () => {
     }
     const root = nodeOps.createElement('div')
     render(h(Parent), root)
+    expect('$el' in childRef.value).toBe(true)
     expect(childRef.value.$el.tag).toBe('div')
+    expect('foo' in childRef.value).toBe(true)
+    expect('$parent' in grandChildRef.value).toBe(true)
     expect(grandChildRef.value.$parent).toBe(childRef.value)
     expect(grandChildRef.value.$parent.$parent).toBe(grandChildRef.value.$root)
+  })
+
+  test('warning for ref', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(ref(1))
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received ref'
+    ).toHaveBeenWarned()
+  })
+
+  test('warning for array', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(['focus'])
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received array'
+    ).toHaveBeenWarned()
+  })
+
+  test('warning for function', () => {
+    const Comp = defineComponent({
+      setup(_, { expose }) {
+        expose(() => null)
+        return () => null
+      }
+    })
+    render(h(Comp), nodeOps.createElement('div'))
+    expect(
+      'expose() should be passed a plain object, received function'
+    ).toHaveBeenWarned()
   })
 })

@@ -83,6 +83,11 @@ export const enum BindingTypes {
    */
   PROPS = 'props',
   /**
+   * a local alias of a `<script setup>` destructured prop.
+   * the original is stored in __propsAliases of the bindingMetadata object.
+   */
+  PROPS_ALIASED = 'props-aliased',
+  /**
    * a let binding (may or may not be a ref)
    */
   SETUP_LET = 'setup-let',
@@ -92,6 +97,10 @@ export const enum BindingTypes {
    * template expressions.
    */
   SETUP_CONST = 'setup-const',
+  /**
+   * a const binding that does not need `unref()`, but may be mutated.
+   */
+  SETUP_REACTIVE_CONST = 'setup-reactive-const',
   /**
    * a const binding that may be a ref.
    */
@@ -103,13 +112,18 @@ export const enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const'
 }
 
 export type BindingMetadata = {
   [key: string]: BindingTypes | undefined
 } & {
   __isScriptSetup?: boolean
+  __propsAliases?: Record<string, string>
 }
 
 interface SharedTransformCodegenOptions {
@@ -130,7 +144,7 @@ interface SharedTransformCodegenOptions {
    * When compiler generates code for SSR's fallback branch, we need to set it to false:
    *  - context.ssr = false
    *
-   * see `subTransform` in `ssrTransformCompoent.ts`
+   * see `subTransform` in `ssrTransformComponent.ts`
    */
   ssr?: boolean
   /**
@@ -275,6 +289,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    * @default 'vue'
    */
   runtimeModuleName?: string
+  /**
+   * Customize where to import ssr runtime helpers from/**
+   * @default 'vue/server-renderer'
+   */
+  ssrRuntimeModuleName?: string
   /**
    * Customize the global variable name of `Vue` to get helpers from
    * in function mode

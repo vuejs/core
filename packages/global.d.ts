@@ -8,6 +8,7 @@ declare var __GLOBAL__: boolean
 declare var __ESM_BUNDLER__: boolean
 declare var __ESM_BROWSER__: boolean
 declare var __NODE_JS__: boolean
+declare var __SSR__: boolean
 declare var __COMMIT__: string
 declare var __VERSION__: string
 declare var __COMPAT__: boolean
@@ -32,15 +33,20 @@ declare module 'file-saver' {
   export function saveAs(blob: any, name: any): void
 }
 
-declare module 'stream/web' {
-  const r: typeof ReadableStream
-  const t: typeof TransformStream
-  export { r as ReadableStream, t as TransformStream }
+declare module 'estree-walker' {
+  export function walk<T>(
+    root: T,
+    options: {
+      enter?: (node: T, parent: T | undefined) => any
+      leave?: (node: T, parent: T | undefined) => any
+      exit?: (node: T) => any
+    } & ThisType<{ skip: () => void }>
+  )
 }
 
-declare module '@vue/repl' {
-  import { ComponentOptions } from '@vue/runtime-core'
-  const Repl: ComponentOptions
-  const ReplStore: any
-  export { Repl, ReplStore }
+declare interface String {
+  /**
+   * @deprecated Please use String.prototype.slice instead of String.prototype.substring in the repository.
+   */
+  substring(start: number, end?: number): string
 }

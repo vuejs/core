@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { vi, type Mock } from 'vitest'
 import {
   h,
   nodeOps,
@@ -12,6 +16,7 @@ import {
   createApp,
   computed
 } from '@vue/runtime-test'
+import { render as domRender } from 'vue'
 
 describe('api: options', () => {
   test('data', async () => {
@@ -53,7 +58,7 @@ describe('api: options', () => {
         bar(): number {
           return this.foo + 1
         },
-        baz: (vm): number => vm.bar + 1
+        baz: (vm: any): number => vm.bar + 1
       },
       render() {
         return h(
@@ -117,7 +122,7 @@ describe('api: options', () => {
     expect(serializeInner(root)).toBe(`<div>4</div>`)
   })
 
-  test('component’s own methods have higher priority than global properties', async () => {
+  test("component's own methods have higher priority than global properties", async () => {
     const app = createApp({
       methods: {
         foo() {
@@ -139,11 +144,11 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
-    const spyD = jest.fn(returnThis)
-    const spyE = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
+    const spyD = vi.fn(returnThis)
+    const spyE = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -185,9 +190,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -221,9 +226,9 @@ describe('api: options', () => {
     function returnThis(this: any) {
       return this
     }
-    const spyA = jest.fn(returnThis)
-    const spyB = jest.fn(returnThis)
-    const spyC = jest.fn(returnThis)
+    const spyA = vi.fn(returnThis)
+    const spyB = vi.fn(returnThis)
+    const spyC = vi.fn(returnThis)
 
     let ctx: any
     const Comp = {
@@ -258,9 +263,9 @@ describe('api: options', () => {
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
 
-    function assertCall(spy: jest.Mock, callIndex: number, args: any[]) {
+    function assertCall(spy: Mock, callIndex: number, args: any[]) {
       expect(spy.mock.calls[callIndex].slice(0, 2)).toMatchObject(args)
-      expect(spy).toHaveReturnedWith(ctx)
+      expect(spy.mock.results[callIndex].value).toBe(ctx)
     }
 
     ctx.foo++
@@ -377,7 +382,7 @@ describe('api: options', () => {
         render() {
           return this[injectedKey]
         }
-      } as any)
+      }) as any
 
     const ChildA = defineChild(['a'], 'a')
     const ChildB = defineChild({ b: 'a' })
@@ -446,8 +451,6 @@ describe('api: options', () => {
       }
     })
     const app = createApp(Parent)
-    // TODO remove in 3.3
-    app.config.unwrapInjectedRef = true
     const root = nodeOps.createElement('div')
     app.mount(root)
     expect(serializeInner(root)).toBe(`1`)
@@ -455,39 +458,6 @@ describe('api: options', () => {
     n.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`3`)
-  })
-
-  // TODO remove in 3.3
-  test('provide/inject refs (compat)', async () => {
-    const n = ref(0)
-    const np = computed(() => n.value + 1)
-    const Parent = defineComponent({
-      provide() {
-        return {
-          n,
-          np
-        }
-      },
-      render: () => h(Child)
-    })
-    const Child = defineComponent({
-      inject: ['n', 'np'],
-      render(this: any) {
-        return this.n.value + this.np.value
-      }
-    })
-    const app = createApp(Parent)
-
-    const root = nodeOps.createElement('div')
-    app.mount(root)
-    expect(serializeInner(root)).toBe(`1`)
-
-    n.value++
-    await nextTick()
-    expect(serializeInner(root)).toBe(`3`)
-
-    expect(`injected property "n" is a ref`).toHaveBeenWarned()
-    expect(`injected property "np" is a ref`).toHaveBeenWarned()
   })
 
   test('provide accessing data in extends', () => {
@@ -662,7 +632,7 @@ describe('api: options', () => {
 
   test('mixins', () => {
     const calls: string[] = []
-    const mixinA = {
+    const mixinA = defineComponent({
       data() {
         return {
           a: 1
@@ -677,8 +647,8 @@ describe('api: options', () => {
       mounted() {
         calls.push('mixinA mounted')
       }
-    }
-    const mixinB = {
+    })
+    const mixinB = defineComponent({
       props: {
         bP: {
           type: String
@@ -700,7 +670,7 @@ describe('api: options', () => {
       mounted() {
         calls.push('mixinB mounted')
       }
-    }
+    })
     const mixinC = defineComponent({
       props: ['cP1', 'cP2'],
       data() {
@@ -722,7 +692,7 @@ describe('api: options', () => {
       props: {
         aaa: String
       },
-      mixins: [defineComponent(mixinA), defineComponent(mixinB), mixinC],
+      mixins: [mixinA, mixinB, mixinC],
       data() {
         return {
           c: 4,
@@ -812,6 +782,22 @@ describe('api: options', () => {
     ])
   })
 
+  test('unlikely mixin usage', () => {
+    const MixinA = {
+      data() {}
+    }
+    const MixinB = {
+      data() {}
+    }
+    defineComponent({
+      // @ts-expect-error edge case after #7963, unlikely to happen in practice
+      // since the user will want to type the mixins themselves.
+      mixins: [defineComponent(MixinA), defineComponent(MixinB)],
+      // @ts-expect-error
+      data() {}
+    })
+  })
+
   test('chained extends in mixins', () => {
     const calls: string[] = []
 
@@ -858,7 +844,7 @@ describe('api: options', () => {
 
   test('extends', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
@@ -873,9 +859,9 @@ describe('api: options', () => {
         expect(this.b).toBe(2)
         calls.push('base')
       }
-    }
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
+      extends: Base,
       data() {
         return {
           b: 2
@@ -895,7 +881,7 @@ describe('api: options', () => {
 
   test('extends with mixins', () => {
     const calls: string[] = []
-    const Base = {
+    const Base = defineComponent({
       data() {
         return {
           a: 1,
@@ -911,8 +897,8 @@ describe('api: options', () => {
         expect(this.c).toBe(2)
         calls.push('base')
       }
-    }
-    const Mixin = {
+    })
+    const Mixin = defineComponent({
       data() {
         return {
           b: true,
@@ -925,10 +911,10 @@ describe('api: options', () => {
         expect(this.c).toBe(2)
         calls.push('mixin')
       }
-    }
+    })
     const Comp = defineComponent({
-      extends: defineComponent(Base),
-      mixins: [defineComponent(Mixin)],
+      extends: Base,
+      mixins: [Mixin],
       data() {
         return {
           c: 2
@@ -1035,6 +1021,18 @@ describe('api: options', () => {
     expect(renderToString(h(Comp))).toBe('base,base')
   })
 
+  test('extends template', () => {
+    const Comp = {
+      extends: {
+        template: `<h1>Foo</h1>`
+      }
+    }
+
+    const root = document.createElement('div') as any
+    domRender(h(Comp), root)
+    expect(root.innerHTML).toBe(`<h1>Foo</h1>`)
+  })
+
   test('options defined in component have higher priority', async () => {
     const Mixin = {
       msg1: 'base'
@@ -1107,7 +1105,7 @@ describe('api: options', () => {
       methods: {}
     }
 
-    const watchSpy = jest.fn()
+    const watchSpy = vi.fn()
     const mixin2 = {
       watch: {
         mixin3Data: watchSpy
@@ -1411,7 +1409,7 @@ describe('api: options', () => {
       }
 
       const root = nodeOps.createElement('div')
-      // @ts-ignore
+      // @ts-expect-error
       render(h(Comp), root)
 
       expect('Invalid watch option: "foo"').toHaveBeenWarned()

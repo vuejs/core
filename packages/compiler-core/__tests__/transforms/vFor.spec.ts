@@ -206,7 +206,7 @@ describe('compiler: v-for', () => {
 
   describe('errors', () => {
     test('missing expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform('<span v-for />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -218,7 +218,7 @@ describe('compiler: v-for', () => {
     })
 
     test('empty expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform('<span v-for="" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -230,7 +230,7 @@ describe('compiler: v-for', () => {
     })
 
     test('invalid expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform('<span v-for="items" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -242,7 +242,7 @@ describe('compiler: v-for', () => {
     })
 
     test('missing source', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform('<span v-for="item in" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -254,7 +254,7 @@ describe('compiler: v-for', () => {
     })
 
     test('missing value', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform('<span v-for="in items" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -266,7 +266,7 @@ describe('compiler: v-for', () => {
     })
 
     test('<template v-for> key placement', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithForTransform(
         `
       <template v-for="item in items">
@@ -634,6 +634,26 @@ describe('compiler: v-for', () => {
               { content: `item` },
               `)`
             ]
+          }
+        })
+      })
+    })
+
+    test('template v-for key no prefixing on attribute key', () => {
+      const {
+        node: { codegenNode }
+      } = parseWithForTransform(
+        '<template v-for="item in items" key="key">test</template>',
+        { prefixIdentifiers: true }
+      )
+      const innerBlock = codegenNode.children.arguments[1].returns
+      expect(innerBlock).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: FRAGMENT,
+        props: createObjectMatcher({
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'key'
           }
         })
       })

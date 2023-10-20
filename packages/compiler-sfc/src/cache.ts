@@ -1,5 +1,10 @@
-export function createCache<T>(size = 500) {
-  return __GLOBAL__ || __ESM_BROWSER__
-    ? new Map<string, T>()
-    : (new (require('lru-cache'))(size) as Map<string, T>)
+import { LRUCache } from 'lru-cache'
+
+export function createCache<T extends {}>(
+  max = 500
+): Map<string, T> | LRUCache<string, T> {
+  if (__GLOBAL__ || __ESM_BROWSER__) {
+    return new Map<string, T>()
+  }
+  return new LRUCache({ max })
 }

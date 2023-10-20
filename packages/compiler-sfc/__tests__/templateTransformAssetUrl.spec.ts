@@ -1,14 +1,24 @@
-import { generate, baseParse, transform } from '@vue/compiler-core'
+import {
+  generate,
+  baseParse,
+  transform,
+  TransformOptions
+} from '@vue/compiler-core'
 import {
   transformAssetUrl,
   createAssetUrlTransformWithOptions,
   AssetURLOptions,
   normalizeOptions
-} from '../src/templateTransformAssetUrl'
+} from '../src/template/transformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
+import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStatic'
 
-function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
+function compileWithAssetUrls(
+  template: string,
+  options?: AssetURLOptions,
+  transformOptions?: TransformOptions
+) {
   const ast = baseParse(template)
   const t = options
     ? createAssetUrlTransformWithOptions(normalizeOptions(options))
@@ -17,7 +27,8 @@ function compileWithAssetUrls(template: string, options?: AssetURLOptions) {
     nodeTransforms: [t, transformElement],
     directiveTransforms: {
       bind: transformBind
-    }
+    },
+    ...transformOptions
   })
   return generate(ast, { mode: 'module' })
 }
@@ -29,6 +40,7 @@ describe('compiler sfc: transform asset url', () => {
 			<img src="~fixtures/logo.png"/>
 			<img src="~/fixtures/logo.png"/>
 			<img src="http://example.com/fixtures/logo.png"/>
+			<img src="//example.com/fixtures/logo.png"/>
 			<img src="/fixtures/logo.png"/>
 			<img src="data:image/png;base64,i"/>
 		`)
@@ -42,9 +54,12 @@ describe('compiler sfc: transform asset url', () => {
   test('support uri fragment', () => {
     const result = compileWithAssetUrls(
       '<use href="~@svg/file.svg#fragment"></use>' +
-        '<use href="~@svg/file.svg#fragment"></use>'
+        '<use href="~@svg/file.svg#fragment"></use>',
+      {},
+      {
+        hoistStatic: true
+      }
     )
-
     expect(result.code).toMatchSnapshot()
   })
 
@@ -76,7 +91,8 @@ describe('compiler sfc: transform asset url', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"/>` +
         `<img src="/bar.png"/>` +
-        `<img src="https://foo.bar/baz.png"/>`,
+        `<img src="https://foo.bar/baz.png"/>` +
+        `<img src="//foo.bar/baz.png"/>`,
       {
         includeAbsolute: true
       }
@@ -128,5 +144,56 @@ describe('compiler sfc: transform asset url', () => {
     })
 
     expect(code).toMatchSnapshot()
+  })
+
+  test('transform with stringify', () => {
+    const { code } = compileWithAssetUrls(
+      `<div>` +
+        `<img src="./bar.png"/>` +
+        `<img src="/bar.png"/>` +
+        `<img src="https://foo.bar/baz.png"/>` +
+        `<img src="//foo.bar/baz.png"/>` +
+        `<img src="./bar.png"/>` +
+        `</div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createStaticVNode`)
+    expect(code).toMatchSnapshot()
+  })
+
+  test('transform with stringify with space in absolute filename', () => {
+    const { code } = compileWithAssetUrls(
+      `<div><img src="/foo bar.png"/></div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createElementVNode`)
+    expect(code).toContain(`import _imports_0 from '/foo bar.png'`)
+  })
+
+  test('transform with stringify with space in relative filename', () => {
+    const { code } = compileWithAssetUrls(
+      `<div><img src="./foo bar.png"/></div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createElementVNode`)
+    expect(code).toContain(`import _imports_0 from './foo bar.png'`)
   })
 })

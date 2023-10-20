@@ -1,3 +1,4 @@
+import { BindingTypes } from '@vue/compiler-dom'
 import { compile } from '../src'
 
 describe('ssr: inject <style vars>', () => {
@@ -8,7 +9,7 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _cssVars = { style: { color: _ctx.color }}
@@ -23,7 +24,7 @@ describe('ssr: inject <style vars>', () => {
         ssrCssVars: `{ color }`
       }).code
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _cssVars = { style: { color: _ctx.color }}
@@ -43,7 +44,7 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
@@ -63,7 +64,7 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _cssVars = { style: { color: _ctx.color }}
@@ -95,7 +96,7 @@ describe('ssr: inject <style vars>', () => {
       ).code
     ).toMatchInlineSnapshot(`
       "const { withCtx: _withCtx } = require(\\"vue\\")
-      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _cssVars = { style: { color: _ctx.color }}
@@ -109,6 +110,27 @@ describe('ssr: inject <style vars>', () => {
           _: 1 /* STABLE */
         })
       }"
+    `)
+  })
+
+  test('inject helpers', () => {
+    const result = compile(`<div/>`, {
+      inline: true,
+      bindingMetadata: { dynamic: BindingTypes.SETUP_MAYBE_REF },
+      ssrCssVars: '{ "--hash": (dynamic) }'
+    })
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "(_ctx, _push, _parent, _attrs) => {
+        const _cssVars = { style: { \\"--hash\\": (_unref(dynamic)) }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+    expect(result.ast.helpers).toMatchInlineSnapshot(`
+      Set {
+        Symbol(mergeProps),
+        Symbol(unref),
+      }
     `)
   })
 })

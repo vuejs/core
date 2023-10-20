@@ -8,24 +8,28 @@ import { getGlobalThis } from '@vue/shared'
  * istanbul-ignore-next
  */
 export function initFeatureFlags() {
-  let needWarn = false
+  const needWarn = []
 
   if (typeof __FEATURE_OPTIONS_API__ !== 'boolean') {
-    needWarn = true
+    __DEV__ && needWarn.push(`__VUE_OPTIONS_API__`)
     getGlobalThis().__VUE_OPTIONS_API__ = true
   }
 
   if (typeof __FEATURE_PROD_DEVTOOLS__ !== 'boolean') {
-    needWarn = true
+    __DEV__ && needWarn.push(`__VUE_PROD_DEVTOOLS__`)
     getGlobalThis().__VUE_PROD_DEVTOOLS__ = false
   }
 
-  if (__DEV__ && needWarn) {
+  if (__DEV__ && needWarn.length) {
+    const multi = needWarn.length > 1
     console.warn(
-      `You are running the esm-bundler build of Vue. It is recommended to ` +
-        `configure your bundler to explicitly replace feature flag globals ` +
-        `with boolean literals to get proper tree-shaking in the final bundle. ` +
-        `See http://link.vuejs.org/feature-flags for more details.`
+      `Feature flag${multi ? `s` : ``} ${needWarn.join(', ')} ${
+        multi ? `are` : `is`
+      } not explicitly defined. You are running the esm-bundler build of Vue, ` +
+        `which expects these compile-time feature flags to be globally injected ` +
+        `via the bundler config in order to get better tree-shaking in the ` +
+        `production bundle.\n\n` +
+        `For more details, see https://link.vuejs.org/feature-flags.`
     )
   }
 }

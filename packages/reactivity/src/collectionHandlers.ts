@@ -1,14 +1,7 @@
-import { toRaw, reactive, readonly, ReactiveFlags } from './reactive'
+import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import {
-  isObject,
-  capitalize,
-  hasOwn,
-  hasChanged,
-  toRawType,
-  isMap
-} from '@vue/shared'
+import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
 export type CollectionTypes = IterableCollections | WeakCollections
 
@@ -16,12 +9,6 @@ type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
 type MapTypes = Map<any, any> | WeakMap<any, any>
 type SetTypes = Set<any> | WeakSet<any>
-
-const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value) : value
-
-const toReadonly = <T extends unknown>(value: T): T =>
-  isObject(value) ? readonly(value as Record<any, any>) : value
 
 const toShallow = <T extends unknown>(value: T): T => value
 
@@ -39,10 +26,12 @@ function get(
   target = (target as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.GET, key)
+  if (!isReadonly) {
+    if (hasChanged(key, rawKey)) {
+      track(rawTarget, TrackOpTypes.GET, key)
+    }
+    track(rawTarget, TrackOpTypes.GET, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.GET, rawKey)
   const { has } = getProto(rawTarget)
   const wrap = isShallow ? toShallow : isReadonly ? toReadonly : toReactive
   if (has.call(rawTarget, key)) {
@@ -60,10 +49,12 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
   const target = (this as any)[ReactiveFlags.RAW]
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
-  if (key !== rawKey) {
-    !isReadonly && track(rawTarget, TrackOpTypes.HAS, key)
+  if (!isReadonly) {
+    if (hasChanged(key, rawKey)) {
+      track(rawTarget, TrackOpTypes.HAS, key)
+    }
+    track(rawTarget, TrackOpTypes.HAS, rawKey)
   }
-  !isReadonly && track(rawTarget, TrackOpTypes.HAS, rawKey)
   return key === rawKey
     ? target.has(key)
     : target.has(key) || target.has(rawKey)
@@ -237,7 +228,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
 }
 
 function createInstrumentations() {
-  const mutableInstrumentations: Record<string, Function> = {
+  const mutableInstrumentations: Record<string, Function | number> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key)
     },
@@ -252,7 +243,7 @@ function createInstrumentations() {
     forEach: createForEach(false, false)
   }
 
-  const shallowInstrumentations: Record<string, Function> = {
+  const shallowInstrumentations: Record<string, Function | number> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, false, true)
     },
@@ -267,7 +258,7 @@ function createInstrumentations() {
     forEach: createForEach(false, true)
   }
 
-  const readonlyInstrumentations: Record<string, Function> = {
+  const readonlyInstrumentations: Record<string, Function | number> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true)
     },
@@ -284,7 +275,7 @@ function createInstrumentations() {
     forEach: createForEach(true, false)
   }
 
-  const shallowReadonlyInstrumentations: Record<string, Function> = {
+  const shallowReadonlyInstrumentations: Record<string, Function | number> = {
     get(this: MapTypes, key: unknown) {
       return get(this, key, true, true)
     },

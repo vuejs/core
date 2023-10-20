@@ -1,5 +1,6 @@
 import { VNode, VNodeChild, isVNode } from './vnode'
 import {
+  isRef,
   pauseTracking,
   resetTracking,
   shallowReadonly,
@@ -7,7 +8,8 @@ import {
   EffectScope,
   markRaw,
   track,
-  TrackOpTypes
+  TrackOpTypes,
+  ReactiveEffect
 } from '@vue/reactivity'
 import {
   ComponentPublicInstance,
@@ -25,7 +27,13 @@ import {
   initProps,
   normalizePropsOptions
 } from './componentProps'
-import { Slots, initSlots, InternalSlots } from './componentSlots'
+import {
+  initSlots,
+  InternalSlots,
+  Slots,
+  SlotsType,
+  UnwrapSlotsType
+} from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
@@ -34,7 +42,8 @@ import {
   applyOptions,
   ComponentOptions,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
+  resolveMergedOptions
 } from './componentOptions'
 import {
   EmitsOptions,
@@ -45,6 +54,7 @@ import {
 } from './componentEmits'
 import {
   EMPTY_OBJ,
+  isArray,
   isFunction,
   NOOP,
   isObject,
@@ -52,7 +62,9 @@ import {
   makeMap,
   isPromise,
   ShapeFlags,
-  extend
+  extend,
+  getGlobalThis,
+  IfAny
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -60,8 +72,13 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { startMeasure, endMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
-import { globalCompatConfig, validateCompatConfig } from './compat/compatConfig'
+import {
+  CompatConfig,
+  globalCompatConfig,
+  validateCompatConfig
+} from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
+import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
 
@@ -101,16 +118,28 @@ export interface ComponentInternalOptions {
    * This one should be exposed so that devtools can make use of it
    */
   __file?: string
+  /**
+   * name inferred from filename
+   */
+  __name?: string
 }
 
-export interface FunctionalComponent<P = {}, E extends EmitsOptions = {}>
-  extends ComponentInternalOptions {
+export interface FunctionalComponent<
+  P = {},
+  E extends EmitsOptions = {},
+  S extends Record<string, any> = any
+> extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
-  (props: P, ctx: Omit<SetupContext<E>, 'expose'>): any
+  (
+    props: P,
+    ctx: Omit<SetupContext<E, IfAny<S, {}, SlotsType<S>>>, 'expose'>
+  ): any
   props?: ComponentPropsOptions<P>
   emits?: E | (keyof E)[]
+  slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
+  compatConfig?: CompatConfig
 }
 
 export interface ClassComponent {
@@ -148,33 +177,22 @@ export type Component<
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
 
-export { ComponentOptions }
+export type { ComponentOptions }
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export const enum LifecycleHooks {
-  BEFORE_CREATE = 'bc',
-  CREATED = 'c',
-  BEFORE_MOUNT = 'bm',
-  MOUNTED = 'm',
-  BEFORE_UPDATE = 'bu',
-  UPDATED = 'u',
-  BEFORE_UNMOUNT = 'bum',
-  UNMOUNTED = 'um',
-  DEACTIVATED = 'da',
-  ACTIVATED = 'a',
-  RENDER_TRIGGERED = 'rtg',
-  RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec',
-  SERVER_PREFETCH = 'sp'
-}
-
-export interface SetupContext<E = EmitsOptions> {
-  attrs: Data
-  slots: Slots
-  emit: EmitFn<E>
-  expose: (exposed?: Record<string, any>) => void
-}
+// use `E extends any` to force evaluating type to fix #2362
+export type SetupContext<
+  E = EmitsOptions,
+  S extends SlotsType = {}
+> = E extends any
+  ? {
+      attrs: Data
+      slots: UnwrapSlotsType<S>
+      emit: EmitFn<E>
+      expose: (exposed?: Record<string, any>) => void
+    }
+  : never
 
 /**
  * @internal
@@ -220,6 +238,10 @@ export interface ComponentInternalInstance {
    */
   subTree: VNode
   /**
+   * Render effect instance
+   */
+  effect: ReactiveEffect
+  /**
    * Bound effect runner to be passed to schedulers
    */
   update: SchedulerJob
@@ -234,7 +256,7 @@ export interface ComponentInternalInstance {
    */
   ssrRender?: Function | null
   /**
-   * Object containing values this component provides for its descendents
+   * Object containing values this component provides for its descendants
    * @internal
    */
   provides: Data
@@ -288,10 +310,12 @@ export interface ComponentInternalInstance {
   inheritAttrs?: boolean
   /**
    * is custom element?
+   * @internal
    */
   isCE?: boolean
   /**
    * custom element specific HMR method
+   * @internal
    */
   ceReload?: (newStyles?: string[]) => void
 
@@ -325,6 +349,10 @@ export interface ComponentInternalInstance {
   slots: InternalSlots
   refs: Data
   emit: EmitFn
+
+  attrsProxy: Data | null
+  slotsProxy: Slots | null
+
   /**
    * used for keeping track of .once event handlers on components
    * @internal
@@ -430,6 +458,23 @@ export interface ComponentInternalInstance {
    * @internal
    */
   [LifecycleHooks.SERVER_PREFETCH]: LifecycleHook<() => Promise<unknown>>
+
+  /**
+   * For caching bound $forceUpdate on public proxy access
+   * @internal
+   */
+  f?: () => void
+  /**
+   * For caching bound $nextTick on public proxy access
+   * @internal
+   */
+  n?: () => Promise<void>
+  /**
+   * `updateTeleportCssVars`
+   * For updating css vars on contained teleports
+   * @internal
+   */
+  ut?: (vars?: Record<string, string>) => void
 }
 
 const emptyAppContext = createAppContext()
@@ -455,6 +500,7 @@ export function createComponentInstance(
     root: null!, // to be immediately set
     next: null,
     subTree: null!, // will be set synchronously right after creation
+    effect: null!,
     update: null!, // will be set synchronously right after creation
     scope: new EffectScope(true /* detached */),
     render: null,
@@ -466,7 +512,7 @@ export function createComponentInstance(
     accessCache: null!,
     renderCache: [],
 
-    // local resovled assets
+    // local resolved assets
     components: null,
     directives: null,
 
@@ -493,6 +539,9 @@ export function createComponentInstance(
     refs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     setupContext: null,
+
+    attrsProxy: null,
+    slotsProxy: null,
 
     // suspense related
     suspense,
@@ -541,14 +590,52 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
+type GlobalInstanceSetter = ((
+  instance: ComponentInternalInstance | null
+) => void) & { version?: string }
+
+let internalSetCurrentInstance: GlobalInstanceSetter
+let globalCurrentInstanceSetters: GlobalInstanceSetter[]
+let settersKey = '__VUE_INSTANCE_SETTERS__'
+
+/**
+ * The following makes getCurrentInstance() usage across multiple copies of Vue
+ * work. Some cases of how this can happen are summarized in #7590. In principle
+ * the duplication should be avoided, but in practice there are often cases
+ * where the user is unable to resolve on their own, especially in complicated
+ * SSR setups.
+ *
+ * Note this fix is technically incomplete, as we still rely on other singletons
+ * for effectScope and global reactive dependency maps. However, it does make
+ * some of the most common cases work. It also warns if the duplication is
+ * found during browser execution.
+ */
+if (__SSR__) {
+  if (!(globalCurrentInstanceSetters = getGlobalThis()[settersKey])) {
+    globalCurrentInstanceSetters = getGlobalThis()[settersKey] = []
+  }
+  globalCurrentInstanceSetters.push(i => (currentInstance = i))
+  internalSetCurrentInstance = instance => {
+    if (globalCurrentInstanceSetters.length > 1) {
+      globalCurrentInstanceSetters.forEach(s => s(instance))
+    } else {
+      globalCurrentInstanceSetters[0](instance)
+    }
+  }
+} else {
+  internalSetCurrentInstance = i => {
+    currentInstance = i
+  }
+}
+
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
-  currentInstance = instance
+  internalSetCurrentInstance(instance)
   instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
   currentInstance && currentInstance.scope.off()
-  currentInstance = null
+  internalSetCurrentInstance(null)
 }
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
@@ -643,7 +730,6 @@ function setupStatefulComponent(
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
-
       if (isSSR) {
         // return the promise so server-renderer can wait on it
         return setupResult
@@ -657,6 +743,15 @@ function setupStatefulComponent(
         // async setup returned Promise.
         // bail here and wait for re-entry.
         instance.asyncDep = setupResult
+        if (__DEV__ && !instance.suspense) {
+          const name = Component.name ?? 'Anonymous'
+          warn(
+            `Component <${name}>: setup function returned a promise, but no ` +
+              `<Suspense> boundary was found in the parent component tree. ` +
+              `A component with async setup() must be nested in a <Suspense> ` +
+              `in order to be rendered.`
+          )
+        }
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
@@ -678,7 +773,7 @@ export function handleSetupResult(
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
-    if (__NODE_JS__ && (instance.type as ComponentOptions).__ssrInlineRender) {
+    if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
       // when the function's name is `ssrRender` (compiled by SFC inline mode),
       // set it as ssrRender instead.
       instance.ssrRender = setupResult
@@ -751,23 +846,17 @@ export function finishComponentSetup(
   }
 
   // template / render function normalization
-  if (__NODE_JS__ && isSSR) {
-    // 1. the render function may already exist, returned by `setup`
-    // 2. otherwise try to use the `Component.render`
-    // 3. if the component doesn't have a render function,
-    //    set `instance.render` to NOOP so that it can inherit the render
-    //    function from mixins/extend
-    instance.render = (instance.render ||
-      Component.render ||
-      NOOP) as InternalRenderFunction
-  } else if (!instance.render) {
-    // could be set from setup()
-    if (compile && !Component.render) {
+  // could be already set when returned from setup()
+  if (!instance.render) {
+    // only do on-the-fly compile if not in SSR - SSR on-the-fly compilation
+    // is done by server-renderer
+    if (!isSSR && compile && !Component.render) {
       const template =
         (__COMPAT__ &&
           instance.vnode.props &&
           instance.vnode.props['inline-template']) ||
-        Component.template
+        Component.template ||
+        resolveMergedOptions(instance).template
       if (template) {
         if (__DEV__) {
           startMeasure(instance, `compile`)
@@ -789,6 +878,7 @@ export function finishComponentSetup(
           // pass runtime compat config into the compiler
           finalCompilerOptions.compatConfig = Object.create(globalCompatConfig)
           if (Component.compatConfig) {
+            // @ts-expect-error types are not compatible
             extend(finalCompilerOptions.compatConfig, Component.compatConfig)
           }
         }
@@ -813,9 +903,12 @@ export function finishComponentSetup(
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
     setCurrentInstance(instance)
     pauseTracking()
-    applyOptions(instance)
-    resetTracking()
-    unsetCurrentInstance()
+    try {
+      applyOptions(instance)
+    } finally {
+      resetTracking()
+      unsetCurrentInstance()
+    }
   }
 
   // warn missing template/render
@@ -840,31 +933,49 @@ export function finishComponentSetup(
   }
 }
 
-function createAttrsProxy(instance: ComponentInternalInstance): Data {
-  return new Proxy(
-    instance.attrs,
-    __DEV__
-      ? {
-          get(target, key: string) {
-            markAttrsAccessed()
-            track(instance, TrackOpTypes.GET, '$attrs')
-            return target[key]
-          },
-          set() {
-            warn(`setupContext.attrs is readonly.`)
-            return false
-          },
-          deleteProperty() {
-            warn(`setupContext.attrs is readonly.`)
-            return false
+function getAttrsProxy(instance: ComponentInternalInstance): Data {
+  return (
+    instance.attrsProxy ||
+    (instance.attrsProxy = new Proxy(
+      instance.attrs,
+      __DEV__
+        ? {
+            get(target, key: string) {
+              markAttrsAccessed()
+              track(instance, TrackOpTypes.GET, '$attrs')
+              return target[key]
+            },
+            set() {
+              warn(`setupContext.attrs is readonly.`)
+              return false
+            },
+            deleteProperty() {
+              warn(`setupContext.attrs is readonly.`)
+              return false
+            }
           }
-        }
-      : {
-          get(target, key: string) {
-            track(instance, TrackOpTypes.GET, '$attrs')
-            return target[key]
+        : {
+            get(target, key: string) {
+              track(instance, TrackOpTypes.GET, '$attrs')
+              return target[key]
+            }
           }
-        }
+    ))
+  )
+}
+
+/**
+ * Dev-only
+ */
+function getSlotsProxy(instance: ComponentInternalInstance): Slots {
+  return (
+    instance.slotsProxy ||
+    (instance.slotsProxy = new Proxy(instance.slots, {
+      get(target, key: string) {
+        track(instance, TrackOpTypes.GET, '$slots')
+        return target[key]
+      }
+    }))
   )
 }
 
@@ -872,22 +983,38 @@ export function createSetupContext(
   instance: ComponentInternalInstance
 ): SetupContext {
   const expose: SetupContext['expose'] = exposed => {
-    if (__DEV__ && instance.exposed) {
-      warn(`expose() should be called only once per setup().`)
+    if (__DEV__) {
+      if (instance.exposed) {
+        warn(`expose() should be called only once per setup().`)
+      }
+      if (exposed != null) {
+        let exposedType: string = typeof exposed
+        if (exposedType === 'object') {
+          if (isArray(exposed)) {
+            exposedType = 'array'
+          } else if (isRef(exposed)) {
+            exposedType = 'ref'
+          }
+        }
+        if (exposedType !== 'object') {
+          warn(
+            `expose() should be passed a plain object, received ${exposedType}.`
+          )
+        }
+      }
     }
     instance.exposed = exposed || {}
   }
 
-  let attrs: Data
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
     return Object.freeze({
       get attrs() {
-        return attrs || (attrs = createAttrsProxy(instance))
+        return getAttrsProxy(instance)
       },
       get slots() {
-        return shallowReadonly(instance.slots)
+        return getSlotsProxy(instance)
       },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
@@ -897,7 +1024,7 @@ export function createSetupContext(
   } else {
     return {
       get attrs() {
-        return attrs || (attrs = createAttrsProxy(instance))
+        return getAttrsProxy(instance)
       },
       slots: instance.slots,
       emit: instance.emit,
@@ -917,6 +1044,9 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
           } else if (key in publicPropertiesMap) {
             return publicPropertiesMap[key](instance)
           }
+        },
+        has(target, key: string) {
+          return key in target || key in publicPropertiesMap
         }
       }))
     )
@@ -928,11 +1058,12 @@ const classify = (str: string): string =>
   str.replace(classifyRE, c => c.toUpperCase()).replace(/[-_]/g, '')
 
 export function getComponentName(
-  Component: ConcreteComponent
-): string | undefined {
+  Component: ConcreteComponent,
+  includeInferred = true
+): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
-    : Component.name
+    : Component.name || (includeInferred && Component.__name)
 }
 
 /* istanbul ignore next */

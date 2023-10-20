@@ -35,15 +35,12 @@ import {
   TO_HANDLERS,
   NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
-  CREATE_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_VNODE,
-  CREATE_ELEMENT_VNODE,
-  WITH_MEMO,
-  OPEN_BLOCK
+  WITH_MEMO
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend } from '@vue/shared'
+import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
+import { parseExpression } from '@babel/parser'
+import { Expression } from '@babel/types'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -84,7 +81,7 @@ const whitespaceRE = /\s+[.[]\s*|\s*[.[]\s+/g
  * inside square brackets), but it's ok since these are only used on template
  * expressions and false positives are invalid expressions in the first place.
  */
-export const isMemberExpression = (path: string): boolean => {
+export const isMemberExpressionBrowser = (path: string): boolean => {
   // remove whitespaces around . or [ first
   path = path.trim().replace(whitespaceRE, s => s.trim())
 
@@ -153,13 +150,37 @@ export const isMemberExpression = (path: string): boolean => {
   return !currentOpenBracketCount && !currentOpenParensCount
 }
 
+export const isMemberExpressionNode = __BROWSER__
+  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
+  : (path: string, context: TransformContext): boolean => {
+      try {
+        let ret: Expression = parseExpression(path, {
+          plugins: context.expressionPlugins
+        })
+        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
+          ret = ret.expression
+        }
+        return (
+          ret.type === 'MemberExpression' ||
+          ret.type === 'OptionalMemberExpression' ||
+          ret.type === 'Identifier'
+        )
+      } catch (e) {
+        return false
+      }
+    }
+
+export const isMemberExpression = __BROWSER__
+  ? isMemberExpressionBrowser
+  : isMemberExpressionNode
+
 export function getInnerRange(
   loc: SourceLocation,
   offset: number,
-  length?: number
+  length: number
 ): SourceLocation {
   __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.substr(offset, length)
+  const source = loc.source.slice(offset, offset + length)
   const newLoc: SourceLocation = {
     source,
     start: advancePositionWithClone(loc.start, loc.source, offset),
@@ -256,14 +277,17 @@ export function findProp(
     } else if (
       p.name === 'bind' &&
       (p.exp || allowEmpty) &&
-      isBindKey(p.arg, name)
+      isStaticArgOf(p.arg, name)
     ) {
       return p
     }
   }
 }
 
-export function isBindKey(arg: DirectiveNode['arg'], name: string): boolean {
+export function isStaticArgOf(
+  arg: DirectiveNode['arg'],
+  name: string
+): boolean {
   return !!(arg && isStaticExp(arg) && arg.content === name)
 }
 
@@ -302,14 +326,6 @@ export function isSlotOutlet(
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
 
-export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
-}
-
-export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
-}
-
 const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
@@ -337,9 +353,6 @@ export function injectProp(
   context: TransformContext
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
-  const originalProps =
-    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
-
   /**
    * 1. mergeProps(...)
    * 2. toHandlers(...)
@@ -348,7 +361,8 @@ export function injectProp(
    *
    * we need to get the real props before normalization
    */
-  let props = originalProps
+  let props =
+    node.type === NodeTypes.VNODE_CALL ? node.props : node.arguments[2]
   let callPath: CallExpression[] = []
   let parentCall: CallExpression | undefined
   if (
@@ -370,7 +384,10 @@ export function injectProp(
     // if doesn't override user provided keys
     const first = props.arguments[0] as string | JSChildNode
     if (!isString(first) && first.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-      first.properties.unshift(prop)
+      // #6631
+      if (!hasProp(prop, first)) {
+        first.properties.unshift(prop)
+      }
     } else {
       if (props.callee === TO_HANDLERS) {
         // #2366
@@ -384,17 +401,7 @@ export function injectProp(
     }
     !propsWithInjection && (propsWithInjection = props)
   } else if (props.type === NodeTypes.JS_OBJECT_EXPRESSION) {
-    let alreadyExists = false
-    // check existing key to avoid overriding user provided keys
-    if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
-      const propKeyName = prop.key.content
-      alreadyExists = props.properties.some(
-        p =>
-          p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-          p.key.content === propKeyName
-      )
-    }
-    if (!alreadyExists) {
+    if (!hasProp(prop, props)) {
       props.properties.unshift(prop)
     }
     propsWithInjection = props
@@ -424,6 +431,20 @@ export function injectProp(
       node.arguments[2] = propsWithInjection
     }
   }
+}
+
+// check existing key to avoid overriding user provided keys
+function hasProp(prop: Property, props: ObjectExpression) {
+  let result = false
+  if (prop.key.type === NodeTypes.SIMPLE_EXPRESSION) {
+    const propKeyName = prop.key.content
+    result = props.properties.some(
+      p =>
+        p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
+        p.key.content === propKeyName
+    )
+  }
+  return result
 }
 
 export function toValidAssetId(
@@ -496,17 +517,5 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
     return node.arguments[1].returns as VNodeCall
   } else {
     return node
-  }
-}
-
-export function makeBlock(
-  node: VNodeCall,
-  { helper, removeHelper, inSSR }: TransformContext
-) {
-  if (!node.isBlock) {
-    node.isBlock = true
-    removeHelper(getVNodeHelper(inSSR, node.isComponent))
-    helper(OPEN_BLOCK)
-    helper(getVNodeBlockHelper(inSSR, node.isComponent))
   }
 }
