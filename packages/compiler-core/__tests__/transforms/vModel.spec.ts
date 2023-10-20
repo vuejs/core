@@ -506,7 +506,7 @@ describe('compiler: transform v-model', () => {
 
   describe('errors', () => {
     test('missing expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -518,7 +518,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('empty expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -530,7 +530,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('mal-formed expression', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="a + b" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -542,14 +542,14 @@ describe('compiler: transform v-model', () => {
     })
 
     test('allow unicode', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-model="变.量" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(0)
     })
 
     test('used on scope variable', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<span v-for="i in list" v-model="i" />', {
         onError,
         prefixIdentifiers: true
@@ -564,7 +564,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('used on props', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       parseWithVModel('<div v-model="p" />', {
         onError,
         bindingMetadata: {

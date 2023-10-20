@@ -10,7 +10,7 @@ describe(`runtime-dom: style patching`, () => {
   // #1309
   it('should not patch same string style', () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const value = (el.style.cssText = 'color:red;')
     Object.defineProperty(el.style, 'cssText', {
       get(): any {

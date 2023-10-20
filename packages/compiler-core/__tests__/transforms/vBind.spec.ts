@@ -99,7 +99,7 @@ describe('compiler: transform v-bind', () => {
   })
 
   test('should error if no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     const node = parseWithVBind(`<div v-bind:arg />`, { onError })
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(onError.mock.calls[0][0]).toMatchObject({

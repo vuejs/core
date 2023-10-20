@@ -20,7 +20,7 @@ test('computed reactivity during SSR', async () => {
     }
   }
 
-  const getterSpy = jest.fn()
+  const getterSpy = vi.fn()
 
   const App = defineComponent(async () => {
     const msg = computed(() => {

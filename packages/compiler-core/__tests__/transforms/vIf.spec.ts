@@ -213,7 +213,7 @@ describe('compiler: v-if', () => {
 
   describe('errors', () => {
     test('error on v-else missing adjacent v-if', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
 
       const { node: node1 } = parseWithIfTransform(`<div v-else/>`, { onError })
       expect(onError.mock.calls[0]).toMatchObject([
@@ -249,7 +249,7 @@ describe('compiler: v-if', () => {
     })
 
     test('error on v-else-if missing adjacent v-if or v-else-if', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
 
       const { node: node1 } = parseWithIfTransform(`<div v-else-if="foo"/>`, {
         onError
@@ -302,7 +302,7 @@ describe('compiler: v-if', () => {
     })
 
     test('error on user key', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       // dynamic
       parseWithIfTransform(
         `<div v-if="ok" :key="a + 1" /><div v-else :key="a + 1" />`,

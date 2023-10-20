@@ -322,7 +322,7 @@ describe('defineCustomElement', () => {
               emit('my-click', 1)
             },
             onMousedown: () => {
-              emit('myEvent', 1) // validate hypenization
+              emit('myEvent', 1) // validate hyphenation
             }
           })
       }
@@ -332,7 +332,7 @@ describe('defineCustomElement', () => {
 
     test('emit on connect', () => {
       const e = new E()
-      const spy = jest.fn()
+      const spy = vi.fn()
       e.addEventListener('created', spy)
       container.appendChild(e)
       expect(spy).toHaveBeenCalled()
@@ -341,7 +341,7 @@ describe('defineCustomElement', () => {
     test('emit on interaction', () => {
       container.innerHTML = `<my-el-emits></my-el-emits>`
       const e = container.childNodes[0] as VueElement
-      const spy = jest.fn()
+      const spy = vi.fn()
       e.addEventListener('my-click', spy)
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalledTimes(1)
@@ -354,9 +354,9 @@ describe('defineCustomElement', () => {
     test('case transform for camelCase event', () => {
       container.innerHTML = `<my-el-emits></my-el-emits>`
       const e = container.childNodes[0] as VueElement
-      const spy1 = jest.fn()
+      const spy1 = vi.fn()
       e.addEventListener('myEvent', spy1)
-      const spy2 = jest.fn()
+      const spy2 = vi.fn()
       // emitting myEvent, but listening for my-event. This happens when
       // using the custom element in a Vue template
       e.addEventListener('my-event', spy2)
@@ -366,18 +366,17 @@ describe('defineCustomElement', () => {
     })
 
     test('emit from within async component wrapper', async () => {
-      const E = defineCustomElement(
-        defineAsyncComponent(
-          () => new Promise<typeof CompDef>(res => res(CompDef as any))
-        )
-      )
+      const p = new Promise<typeof CompDef>(res => res(CompDef as any))
+      const E = defineCustomElement(defineAsyncComponent(() => p))
       customElements.define('my-async-el-emits', E)
       container.innerHTML = `<my-async-el-emits></my-async-el-emits>`
       const e = container.childNodes[0] as VueElement
-      const spy = jest.fn()
+      const spy = vi.fn()
       e.addEventListener('my-click', spy)
       // this feels brittle but seems necessary to reach the node in the DOM.
       await customElements.whenDefined('my-async-el-emits')
+      await nextTick()
+      await nextTick()
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
@@ -394,9 +393,11 @@ describe('defineCustomElement', () => {
       customElements.define('my-async-el-props-emits', E)
       container.innerHTML = `<my-async-el-props-emits id="my_async_el_props_emits"></my-async-el-props-emits>`
       const e = container.childNodes[0] as VueElement
-      const spy = jest.fn()
+      const spy = vi.fn()
       e.addEventListener('my-click', spy)
       await customElements.whenDefined('my-async-el-props-emits')
+      await nextTick()
+      await nextTick()
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalled()
       expect(spy.mock.calls[0][0]).toMatchObject({
@@ -549,7 +550,7 @@ describe('defineCustomElement', () => {
 
   describe('async', () => {
     test('should work', async () => {
-      const loaderSpy = jest.fn()
+      const loaderSpy = vi.fn()
       const E = defineCustomElement(
         defineAsyncComponent(() => {
           loaderSpy()
