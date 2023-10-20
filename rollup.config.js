@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import replace from '@rollup/plugin-replace'
 import json from '@rollup/plugin-json'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import commonJS from '@rollup/plugin-commonjs'
 import polyfillNode from 'rollup-plugin-polyfill-node'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
@@ -91,7 +91,7 @@ export default packageConfigs
 
 function createConfig(format, output, plugins = []) {
   if (!output) {
-    console.log(chalk.yellow(`invalid format: "${format}"`))
+    console.log(pico.yellow(`invalid format: "${format}"`))
     process.exit(1)
   }
 
@@ -102,7 +102,8 @@ function createConfig(format, output, plugins = []) {
   const isServerRenderer = name === 'server-renderer'
   const isNodeBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
-  const isCompatPackage = pkg.name === '@vue/compat'
+  const isCompatPackage =
+    pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
   const isCompatBuild = !!packageOptions.compat
   const isBrowserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
@@ -192,7 +193,7 @@ function createConfig(format, output, plugins = []) {
     if (isBundlerESMBuild) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
-        __DEV__: `process.env.NODE_ENV !== 'production'`
+        __DEV__: `!!(process.env.NODE_ENV !== 'production')`
       })
     }
 
@@ -214,7 +215,7 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = ['source-map', '@babel/parser', 'estree-walker']
+    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {
@@ -240,7 +241,10 @@ function createConfig(format, output, plugins = []) {
     // we are bundling forked consolidate.js in compiler-sfc which dynamically
     // requires a ton of template engines which should be ignored.
     let cjsIgnores = []
-    if (pkg.name === '@vue/compiler-sfc') {
+    if (
+      pkg.name === '@vue/compiler-sfc' ||
+      pkg.name === '@vue/compiler-sfc-canary'
+    ) {
       cjsIgnores = [
         ...Object.keys(consolidatePkg.devDependencies),
         'vm',
@@ -265,10 +269,6 @@ function createConfig(format, output, plugins = []) {
             nodeResolve()
           ]
         : []
-
-    if (format === 'cjs') {
-      nodePlugins.push(cjsReExportsPatchPlugin())
-    }
 
     return nodePlugins
   }
@@ -334,47 +334,4 @@ function createMinifiedConfig(format) {
       })
     ]
   )
-}
-
-// temporary patch for https://github.com/nodejs/cjs-module-lexer/issues/79
-//
-// When importing a cjs module from esm, Node.js uses cjs-module-lexer to
-// detect * re-exports from other packages. However, the detection logic is
-// fragile and breaks when Rollup generates different code for the re-exports.
-// We were locked on an old version of Rollup because of this.
-//
-// The latest versions of Node ships an updated version of cjs-module-lexer that
-// has fixed https://github.com/nodejs/cjs-module-lexer/issues/38, however we
-// still need to support older versions of Node that does not have the latest
-// version of cjs-module-lexer (Node < 14.18)
-//
-// At the same time, we want to upgrade to Rollup 3 so we are not forever locked
-// on an old version of Rollup.
-//
-// What this patch does:
-// 1. Rewrite the for...in loop to Object.keys() so cjs-module-lexer can find it
-//    The for...in loop is only used when output.externalLiveBindings is set to
-//    false, and we do want to set it to false to avoid perf costs during SSR.
-// 2. Also remove exports.hasOwnProperty check, which breaks the detection in
-//    Node.js versions that
-//
-// TODO in the future, we should no longer rely on this if we inline all deps
-// in the main `vue` package.
-function cjsReExportsPatchPlugin() {
-  const matcher =
-    /for \(var k in (\w+)\) {(\s+if \(k !== 'default') && !exports.hasOwnProperty\(k\)(\) exports\[k\] = (?:\w+)\[k\];\s+)}/
-  return {
-    name: 'patch-cjs-re-exports',
-    renderChunk(code, _, options) {
-      if (matcher.test(code)) {
-        return code.replace(matcher, (_, r1, r2, r3) => {
-          return `Object.keys(${r1}).forEach(function(k) {${r2}${r3}});`
-        })
-      } else if (options.file.endsWith('packages/vue/dist/vue.cjs.js')) {
-        // make sure we don't accidentally miss the rewrite in case Rollup
-        // changes the output again.
-        throw new Error('cjs build re-exports rewrite failed.')
-      }
-    }
-  }
 }
