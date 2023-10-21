@@ -37,9 +37,9 @@ export function processDefineOptions(
         prop.key.type === 'Identifier'
       ) {
         if (prop.key.name === 'props') propsOption = prop
-        if (prop.key.name === 'emits') emitsOption = prop
-        if (prop.key.name === 'expose') exposeOption = prop
-        if (prop.key.name === 'slots') slotsOption = prop
+        else if (prop.key.name === 'emits') emitsOption = prop
+        else if (prop.key.name === 'expose') exposeOption = prop
+        else if (prop.key.name === 'slots') slotsOption = prop
       }
     }
   }
