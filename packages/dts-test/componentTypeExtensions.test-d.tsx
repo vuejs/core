@@ -49,6 +49,7 @@ export const Custom = defineComponent({
 expectType<JSX.Element>(<Custom baz={1} />)
 expectType<JSX.Element>(<Custom custom={1} baz={1} />)
 expectType<JSX.Element>(<Custom bar="bar" baz={1} />)
+// @ts-expect-error cannot be string #3455
 expectType<JSX.Element>(<Custom ref={''} bar="bar" baz={1} />)
 
 // @ts-expect-error
