@@ -1,7 +1,7 @@
 import { extend, getGlobalThis } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
-import type { Dep, TrackToken } from './dep'
+import type { Dep } from './dep'
 import { EffectScope, recordEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -51,6 +51,8 @@ if (!_WeakRef && __DEV__) {
 }
 
 export const depsMap = new WeakMap<TrackToken, Dep[]>()
+
+export type TrackToken = WeakRef<ReactiveEffect> | ReactiveEffect
 
 export class ReactiveEffect<T = any> {
   active = true
