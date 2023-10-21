@@ -22,8 +22,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // disable threads on GH actions to speed it up
-    threads: !process.env.GITHUB_ACTIONS,
+    // threads must be disabled because FinalizationRegistry.register is used in the code
+    // and multi-threading causes thread locks for some reasons
+    threads: false,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']

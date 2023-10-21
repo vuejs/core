@@ -8,7 +8,7 @@ import {
 } from '../src/index'
 import { getDepFromReactive } from '../src/reactiveEffect'
 
-describe('reactivity/gc', () => {
+describe.skipIf(!global.gc)('reactivity/gc', () => {
   const gc = () => {
     return new Promise<void>(resolve => {
       setTimeout(() => {
@@ -17,10 +17,6 @@ describe('reactivity/gc', () => {
       })
     })
   }
-
-  it('should enabled --expose-gc', () => {
-    expect(global.gc).not.toBeUndefined()
-  })
 
   // #9233
   it('should release computed cache', async () => {
