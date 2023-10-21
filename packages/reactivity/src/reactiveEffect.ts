@@ -1,4 +1,4 @@
-import { isArray, isIntegerKey, isMap } from '@vue/shared'
+import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import { createDep, Dep } from './dep'
 import {
@@ -82,7 +82,7 @@ export function trigger(
   } else if (key === 'length' && isArray(target)) {
     const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= newLength) {
+      if (key === 'length' || (!isSymbol(key) && key >= newLength)) {
         deps.push(dep)
       }
     })
