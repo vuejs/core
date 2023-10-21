@@ -272,5 +272,73 @@ describe('CSS vars injection', () => {
         `export default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
       )
     })
+
+    describe('skip codegen in SSR', () => {
+      test('script setup, inline', () => {
+        const { content } = compileSFCScript(
+          `<script setup>
+          let size = 1
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            inlineTemplate: true,
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+
+      // #6926
+      test('script, non-inline', () => {
+        const { content } = compileSFCScript(
+          `<script setup>
+          let size = 1
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            inlineTemplate: false,
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+
+      test('normal script', () => {
+        const { content } = compileSFCScript(
+          `<script>
+          export default {
+            setup() {
+              return {
+                size: ref('100px')
+              }
+            }
+          }
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+    })
   })
 })
