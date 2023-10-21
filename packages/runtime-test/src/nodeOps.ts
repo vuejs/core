@@ -236,7 +236,6 @@ export const nodeOps = {
   insert,
   remove,
   createElement,
-  replace,
   createText,
   createComment,
   setText,
