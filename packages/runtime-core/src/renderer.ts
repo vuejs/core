@@ -105,7 +105,6 @@ export interface RendererOptions<
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
-  replace(newChild: HostNode, oldChild: HostNode): void
   createElement(
     type: string,
     isSVG?: boolean,

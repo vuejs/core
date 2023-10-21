@@ -62,8 +62,7 @@ export function createHydrationFunctions(
       parentNode,
       remove,
       insert,
-      createComment,
-      replace
+      createComment
     }
   } = rendererInternals
 
@@ -622,7 +621,10 @@ export function createHydrationFunctions(
     parentComponent: ComponentInternalInstance | null
   ): Node => {
     // replace node
-    replace(newNode, oldNode)
+    const parentNode = oldNode.parentNode
+    if (parentNode) {
+      parentNode.replaceChild(newNode, oldNode)
+    }
 
     // update vnode
     let parent = parentComponent

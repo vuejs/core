@@ -188,28 +188,6 @@ function remove(child: TestNode, logOp = true) {
   }
 }
 
-function replace(newChild: TestNode, oldChild: TestNode, logOp = true) {
-  const parent = oldChild.parentNode
-  if (parent) {
-    if (logOp) {
-      logNodeOp({
-        type: NodeOpTypes.REMOVE,
-        targetNode: oldChild,
-        parentNode: parent
-      })
-    }
-    const i = parent.children.indexOf(oldChild)
-    if (i > -1) {
-      parent.children.splice(i, 1, newChild)
-    } else {
-      console.error('target: ', oldChild)
-      console.error('parent: ', parent)
-      throw Error('target is not a childNode of parent')
-    }
-    oldChild.parentNode = null
-  }
-}
-
 function setElementText(el: TestElement, text: string) {
   logNodeOp({
     type: NodeOpTypes.SET_ELEMENT_TEXT,
