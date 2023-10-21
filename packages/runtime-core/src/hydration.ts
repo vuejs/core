@@ -227,15 +227,19 @@ export function createHydrationFunctions(
             optimized
           )
 
-          // component may be async, so in the case of fragments we cannot rely
-          // on component's rendered output to determine the end of the fragment
-          // instead, we do a lookahead to find the end anchor node.
-          nextNode = isFragmentStart
-            ? locateClosingAnchor(node, '[', ']')
-            : // #4293 #6152 if teleport start look ahead for teleport end.
-            isComment(node) && node.data === 'teleport start'
-            ? locateClosingAnchor(node, 'teleport start', 'teleport end')
-            : nextSibling(node)
+          // Locate the next node.
+          if (isFragmentStart) {
+            // If it's a fragment: since components may be async, we cannot rely
+            // on component's rendered output to determine the end of the
+            // fragment. Instead, we do a lookahead to find the end anchor node.
+            nextNode = locateClosingAnchor(node)
+          } else if (isComment(node) && node.data === 'teleport start') {
+            // #4293 #6152
+            // If a teleport is at component root, look ahead for teleport end.
+            nextNode = locateClosingAnchor(node, node.data, 'teleport end')
+          } else {
+            nextNode = nextSibling(node)
+          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -527,7 +531,7 @@ export function createHydrationFunctions(
 
     if (isFragment) {
       // remove excessive fragment nodes
-      const end = locateClosingAnchor(node, '[', ']')
+      const end = locateClosingAnchor(node)
       while (true) {
         const next = nextSibling(node)
         if (next && next !== end) {
@@ -558,15 +562,15 @@ export function createHydrationFunctions(
   // looks ahead for a start and closing comment node
   const locateClosingAnchor = (
     node: Node | null,
-    startData: string,
-    endData: string
+    open = '[',
+    close = ']'
   ): Node | null => {
     let match = 0
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === startData) match++
-        if (node.data === endData) {
+        if (node.data === open) match++
+        if (node.data === close) {
           if (match === 0) {
             return nextSibling(node)
           } else {
