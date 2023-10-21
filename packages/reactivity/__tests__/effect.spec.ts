@@ -243,6 +243,22 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(undefined)
   })
 
+  it('should support manipulating an array while observing symbol keyed properties', () => {
+    const key = Symbol()
+    let dummy
+    const array: any = reactive([1, 2, 3])
+    effect(() => (dummy = array[key]))
+
+    expect(dummy).toBe(undefined)
+    array.pop()
+    array.shift()
+    array.splice(0, 1)
+    expect(dummy).toBe(undefined)
+    array[key] = 'value'
+    array.length = 0
+    expect(dummy).toBe('value')
+  })
+
   it('should observe function valued properties', () => {
     const oldFunc = () => {}
     const newFunc = () => {}
