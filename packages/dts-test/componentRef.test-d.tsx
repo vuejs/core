@@ -31,6 +31,9 @@ expectType<JSX.Element>(<Comp ref={e => (myComp = e)} />)
 expectType<JSX.Element>(<Comp ref={myCompRef} />)
 expectType<JSX.Element>(<Comp ref={e => (anyComp = e)} />)
 
+// @ts-expect-error cannot be string #3455
+expectType<JSX.Element>(<Comp ref={'test'} />)
+
 declare let wrongComponent: ComponentPublicInstance<{ a: string }>
 
 // @ts-expect-error wrong Component type

@@ -46,7 +46,8 @@ declare global {
               ? ComponentPublicInstance<Props>
               : C extends () => any
               ? ComponentPublicInstance<{}>
-              : Element | ComponentPublicInstance
+              : Element | ComponentPublicInstance,
+            never
           >
     } & P
   }

@@ -68,8 +68,10 @@ export type VNodeTypes =
   | typeof Suspense
   | typeof SuspenseImpl
 
-export type VNodeRef<T = object> =
-  | string
+// T is the actual Ref Type, S is to allow supporting string type
+// but when using TSX we need to prevent it from being a string
+export type VNodeRef<T = object, S = string> =
+  | S
   | Ref<T | null>
   | ((ref: T | null, refs: Record<string, any>) => void)
 
