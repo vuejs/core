@@ -21,7 +21,7 @@ export type DebuggerEventExtraInfo = {
 
 export let activeEffect: ReactiveEffect | undefined
 
-let _FinalizationRegistry = getGlobalThis().FinalizationRegistry as
+const _FinalizationRegistry = getGlobalThis().FinalizationRegistry as
   | typeof FinalizationRegistry
   | undefined
 
