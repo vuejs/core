@@ -295,16 +295,10 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
-/**
- * @internal
- */
 export function pauseScheduling() {
   pauseScheduleStack++
 }
 
-/**
- * @internal
- */
 export function resetScheduling() {
   pauseScheduleStack--
   while (!pauseScheduleStack && queueEffectSchedulers.length) {
