@@ -21,33 +21,28 @@ export type DebuggerEventExtraInfo = {
 
 export let activeEffect: ReactiveEffect | undefined
 
-let _FinalizationRegistry = getGlobalThis()
-  .FinalizationRegistry as typeof FinalizationRegistry
+let _FinalizationRegistry = getGlobalThis().FinalizationRegistry as
+  | typeof FinalizationRegistry
+  | undefined
 
-if (!_FinalizationRegistry) {
-  _FinalizationRegistry = class FakeFinalizationRegistry {
-    register() {}
-    unregister() {}
-  } as any
-  if (__DEV__) {
-    console.warn(`FinalizationRegistry is not available in this environment.`)
-  }
+if (!_FinalizationRegistry && __DEV__) {
+  console.warn(`FinalizationRegistry is not available in this environment.`)
 }
 
-const registry = new _FinalizationRegistry<WeakRef<ReactiveEffect>>(
-  trackToken => {
-    const deps = depsMap.get(trackToken)
-    if (deps) {
-      for (const dep of deps) {
-        dep.delete(trackToken)
-        if (dep.size === 0) {
-          dep.cleanup()
+const registry = _FinalizationRegistry
+  ? new _FinalizationRegistry<WeakRef<ReactiveEffect>>(trackToken => {
+      const deps = depsMap.get(trackToken)
+      if (deps) {
+        for (const dep of deps) {
+          dep.delete(trackToken)
+          if (dep.size === 0) {
+            dep.cleanup()
+          }
         }
+        deps.length = 0
       }
-      deps.length = 0
-    }
-  }
-)
+    })
+  : undefined
 
 class StrongRef<T> {
   constructor(public target: T) {}
@@ -140,7 +135,7 @@ export class ReactiveEffect<T = any> {
         this._trackToken = new StrongRef(this) as any
       } else {
         this._trackToken = new _WeakRef(this)
-        registry.register(this, this._trackToken, this)
+        registry?.register(this, this._trackToken, this)
       }
     }
     let lastShouldTrack = shouldTrack
