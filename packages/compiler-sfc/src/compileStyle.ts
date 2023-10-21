@@ -1,34 +1,54 @@
 import postcss, {
   ProcessOptions,
-  LazyResult,
   Result,
-  ResultMap,
-  ResultMessage
+  SourceMap,
+  Message,
+  LazyResult
 } from 'postcss'
-import trimPlugin from './stylePluginTrim'
-import scopedPlugin from './stylePluginScoped'
-import scopedVarsPlugin from './stylePluginScopedVars'
+import trimPlugin from './style/pluginTrim'
+import scopedPlugin from './style/pluginScoped'
 import {
   processors,
   StylePreprocessor,
   StylePreprocessorResults,
   PreprocessLang
-} from './stylePreprocessors'
-import { RawSourceMap } from 'source-map'
+} from './style/preprocessors'
+import { RawSourceMap } from 'source-map-js'
+import { cssVarsPlugin } from './style/cssVars'
+import postcssModules from 'postcss-modules'
 
 export interface SFCStyleCompileOptions {
   source: string
   filename: string
   id: string
-  map?: RawSourceMap
   scoped?: boolean
-  vars?: boolean
   trim?: boolean
+  isProd?: boolean
+  inMap?: RawSourceMap
   preprocessLang?: PreprocessLang
   preprocessOptions?: any
   preprocessCustomRequire?: (id: string) => any
   postcssOptions?: any
   postcssPlugins?: any[]
+  /**
+   * @deprecated use `inMap` instead.
+   */
+  map?: RawSourceMap
+}
+
+/**
+ * Aligns with postcss-modules
+ * https://github.com/css-modules/postcss-modules
+ */
+export interface CSSModulesOptions {
+  scopeBehaviour?: 'global' | 'local'
+  generateScopedName?:
+    | string
+    | ((name: string, filename: string, css: string) => string)
+  hashPrefix?: string
+  localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
+  exportGlobals?: boolean
+  globalModulePaths?: RegExp[]
 }
 
 export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
@@ -36,23 +56,13 @@ export interface SFCAsyncStyleCompileOptions extends SFCStyleCompileOptions {
   // css modules support, note this requires async so that we can get the
   // resulting json
   modules?: boolean
-  // maps to postcss-modules options
-  // https://github.com/css-modules/postcss-modules
-  modulesOptions?: {
-    scopeBehaviour?: 'global' | 'local'
-    globalModulePaths?: string[]
-    generateScopedName?:
-      | string
-      | ((name: string, filename: string, css: string) => string)
-    hashPrefix?: string
-    localsConvention?: 'camelCase' | 'camelCaseOnly' | 'dashes' | 'dashesOnly'
-  }
+  modulesOptions?: CSSModulesOptions
 }
 
 export interface SFCStyleCompileResults {
   code: string
   map: RawSourceMap | undefined
-  rawResult: LazyResult | Result | undefined
+  rawResult: Result | LazyResult | undefined
   errors: Error[]
   modules?: Record<string, string>
   dependencies: Set<string>
@@ -70,9 +80,10 @@ export function compileStyle(
 export function compileStyleAsync(
   options: SFCAsyncStyleCompileOptions
 ): Promise<SFCStyleCompileResults> {
-  return doCompileStyle({ ...options, isAsync: true }) as Promise<
-    SFCStyleCompileResults
-  >
+  return doCompileStyle({
+    ...options,
+    isAsync: true
+  }) as Promise<SFCStyleCompileResults>
 }
 
 export function doCompileStyle(
@@ -82,8 +93,8 @@ export function doCompileStyle(
     filename,
     id,
     scoped = false,
-    vars = false,
     trim = true,
+    isProd = false,
     modules = false,
     modulesOptions = {},
     preprocessLang,
@@ -92,20 +103,21 @@ export function doCompileStyle(
   } = options
   const preprocessor = preprocessLang && processors[preprocessLang]
   const preProcessedSource = preprocessor && preprocess(options, preprocessor)
-  const map = preProcessedSource ? preProcessedSource.map : options.map
+  const map = preProcessedSource
+    ? preProcessedSource.map
+    : options.inMap || options.map
   const source = preProcessedSource ? preProcessedSource.code : options.source
 
+  const shortId = id.replace(/^data-v-/, '')
+  const longId = `data-v-${shortId}`
+
   const plugins = (postcssPlugins || []).slice()
-  if (vars && scoped) {
-    // vars + scoped, only applies to raw source before other transforms
-    // #1623
-    plugins.unshift(scopedVarsPlugin(id))
-  }
+  plugins.unshift(cssVarsPlugin({ id: shortId, isProd }))
   if (trim) {
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(id))
+    plugins.push(scopedPlugin(longId))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {
@@ -120,7 +132,7 @@ export function doCompileStyle(
       )
     }
     plugins.push(
-      require('postcss-modules')({
+      postcssModules({
         ...modulesOptions,
         getJSON: (_cssFileName: string, json: Record<string, string>) => {
           cssModules = json
@@ -144,7 +156,7 @@ export function doCompileStyle(
 
   let result: LazyResult | undefined
   let code: string | undefined
-  let outMap: ResultMap | undefined
+  let outMap: SourceMap | undefined
   // stylus output include plain css. so need remove the repeat item
   const dependencies = new Set(
     preProcessedSource ? preProcessedSource.dependencies : []
@@ -157,7 +169,7 @@ export function doCompileStyle(
     errors.push(...preProcessedSource.errors)
   }
 
-  const recordPlainCssDependencies = (messages: ResultMessage[]) => {
+  const recordPlainCssDependencies = (messages: Message[]) => {
     messages.forEach(msg => {
       if (msg.type === 'dependency') {
         // postcss output path is absolute position path
@@ -175,7 +187,7 @@ export function doCompileStyle(
       return result
         .then(result => ({
           code: result.css || '',
-          map: result.map && (result.map.toJSON() as any),
+          map: result.map && result.map.toJSON(),
           errors,
           modules: cssModules,
           rawResult: result,
@@ -194,13 +206,13 @@ export function doCompileStyle(
     // force synchronous transform (we know we only have sync plugins)
     code = result.css
     outMap = result.map
-  } catch (e) {
+  } catch (e: any) {
     errors.push(e)
   }
 
   return {
     code: code || ``,
-    map: outMap && (outMap.toJSON() as any),
+    map: outMap && outMap.toJSON(),
     errors,
     rawResult: result,
     dependencies
@@ -221,7 +233,7 @@ function preprocess(
 
   return preprocessor(
     options.source,
-    options.map,
+    options.inMap || options.map,
     {
       filename: options.filename,
       ...options.preprocessOptions

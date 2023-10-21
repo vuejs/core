@@ -1,3 +1,4 @@
+import { BindingTypes } from '@vue/compiler-dom'
 import { compile } from '../src'
 
 describe('ssr: inject <style vars>', () => {
@@ -8,10 +9,10 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = { style: { color: _ctx.color }}
         _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
       }"
     `)
@@ -23,10 +24,10 @@ describe('ssr: inject <style vars>', () => {
         ssrCssVars: `{ color }`
       }).code
     ).toMatchInlineSnapshot(`
-      "const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = { style: { color: _ctx.color }}
         _push(\`<!--[--><div\${
           _ssrRenderAttrs(_cssVars)
         }></div><div\${
@@ -43,12 +44,12 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent } = require(\\"vue\\")
-      const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderComponent: _ssrRenderComponent } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         const _component_foo = _resolveComponent(\\"foo\\")
 
-        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = { style: { color: _ctx.color }}
         _push(\`<!--[--><div\${_ssrRenderAttrs(_cssVars)}></div>\`)
         _push(_ssrRenderComponent(_component_foo, _cssVars, null, _parent))
         _push(\`<!--]-->\`)
@@ -63,10 +64,10 @@ describe('ssr: inject <style vars>', () => {
       }).code
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = _ssrResolveCssVars({ color: _ctx.color })
+        const _cssVars = { style: { color: _ctx.color }}
         if (_ctx.ok) {
           _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
         } else {
@@ -80,20 +81,56 @@ describe('ssr: inject <style vars>', () => {
     `)
   })
 
-  test('w/ scopeId', () => {
+  test('w/ suspense', () => {
     expect(
-      compile(`<div/>`, {
-        ssrCssVars: `{ color }`,
-        scopeId: 'data-v-foo'
-      }).code
+      compile(
+        `<Suspense>
+          <div>ok</div>
+          <template #fallback>
+            <div>fallback</div>
+          </template>
+        </Suspense>`,
+        {
+          ssrCssVars: `{ color }`
+        }
+      ).code
     ).toMatchInlineSnapshot(`
-      "const { mergeProps: _mergeProps } = require(\\"vue\\")
-      const { ssrResolveCssVars: _ssrResolveCssVars, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"@vue/server-renderer\\")
+      "const { withCtx: _withCtx } = require(\\"vue\\")
+      const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderSuspense: _ssrRenderSuspense } = require(\\"vue/server-renderer\\")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
-        const _cssVars = _ssrResolveCssVars({ color: _ctx.color }, \\"data-v-foo\\")
-        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))} data-v-foo></div>\`)
+        const _cssVars = { style: { color: _ctx.color }}
+        _ssrRenderSuspense(_push, {
+          fallback: () => {
+            _push(\`<div\${_ssrRenderAttrs(_cssVars)}>fallback</div>\`)
+          },
+          default: () => {
+            _push(\`<div\${_ssrRenderAttrs(_cssVars)}>ok</div>\`)
+          },
+          _: 1 /* STABLE */
+        })
       }"
+    `)
+  })
+
+  test('inject helpers', () => {
+    const result = compile(`<div/>`, {
+      inline: true,
+      bindingMetadata: { dynamic: BindingTypes.SETUP_MAYBE_REF },
+      ssrCssVars: '{ "--hash": (dynamic) }'
+    })
+
+    expect(result.code).toMatchInlineSnapshot(`
+      "(_ctx, _push, _parent, _attrs) => {
+        const _cssVars = { style: { \\"--hash\\": (_unref(dynamic)) }}
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps(_attrs, _cssVars))}></div>\`)
+      }"
+    `)
+    expect(result.ast.helpers).toMatchInlineSnapshot(`
+      Set {
+        Symbol(mergeProps),
+        Symbol(unref),
+      }
     `)
   })
 })

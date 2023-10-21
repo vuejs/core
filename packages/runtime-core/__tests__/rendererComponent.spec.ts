@@ -91,7 +91,7 @@ describe('renderer: component', () => {
   it('should not update Component if only changed props are declared emit listeners', () => {
     const Comp1 = {
       emits: ['foo'],
-      updated: jest.fn(),
+      updated: vi.fn(),
       render: () => null
     }
     const root = nodeOps.createElement('div')
@@ -142,11 +142,11 @@ describe('renderer: component', () => {
 
   // #2170
   test('instance.$el should be exposed to watch options', async () => {
-    function returnThis(this: any) {
+    function returnThis(this: any, _arg: any) {
       return this
     }
-    const propWatchSpy = jest.fn(returnThis)
-    const dataWatchSpy = jest.fn(returnThis)
+    const propWatchSpy = vi.fn(returnThis)
+    const dataWatchSpy = vi.fn(returnThis)
     let instance: any
     const Comp = {
       props: {
@@ -216,7 +216,10 @@ describe('renderer: component', () => {
     const Child = {
       props: ['value'],
       setup(props: any, { emit }: SetupContext) {
-        watch(() => props.value, (val: number) => emit('update', val))
+        watch(
+          () => props.value,
+          (val: number) => emit('update', val)
+        )
 
         return () => {
           return h('div', props.value)
@@ -231,5 +234,124 @@ describe('renderer: component', () => {
     outer.value++
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
+  })
+
+  // #2521
+  test('should pause tracking deps when initializing legacy options', async () => {
+    let childInstance = null as any
+    const Child = {
+      props: ['foo'],
+      data() {
+        return {
+          count: 0
+        }
+      },
+      watch: {
+        foo: {
+          immediate: true,
+          handler() {
+            ;(this as any).count
+          }
+        }
+      },
+      created() {
+        childInstance = this as any
+        childInstance.count
+      },
+      render() {
+        return h('h1', (this as any).count)
+      }
+    }
+
+    const App = {
+      setup() {
+        return () => h(Child)
+      },
+      updated: vi.fn()
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(App.updated).toHaveBeenCalledTimes(0)
+
+    childInstance.count++
+    await nextTick()
+    expect(App.updated).toHaveBeenCalledTimes(0)
+  })
+
+  describe('render with access caches', () => {
+    // #3297
+    test('should not set the access cache in the data() function (production mode)', () => {
+      const Comp = {
+        data() {
+          ;(this as any).foo
+          return { foo: 1 }
+        },
+        render() {
+          return h('h1', (this as any).foo)
+        }
+      }
+      const root = nodeOps.createElement('div')
+
+      __DEV__ = false
+      render(h(Comp), root)
+      __DEV__ = true
+      expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    })
+  })
+
+  test('the component VNode should be cloned when reusing it', () => {
+    const App = {
+      render() {
+        const c = [h(Comp)]
+        return [c, c, c]
+      }
+    }
+
+    const ids: number[] = []
+    const Comp = {
+      render: () => h('h1'),
+      beforeUnmount() {
+        ids.push((this as any).$.uid)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<h1></h1><h1></h1><h1></h1>`)
+
+    render(null, root)
+    expect(serializeInner(root)).toBe(``)
+    expect(ids).toEqual([ids[0], ids[0] + 1, ids[0] + 2])
+  })
+
+  test('child component props update should not lead to double update', async () => {
+    const text = ref(0)
+    const spy = vi.fn()
+
+    const App = {
+      render() {
+        return h(Comp, { text: text.value })
+      }
+    }
+
+    const Comp = {
+      props: ['text'],
+      render(this: any) {
+        spy()
+        return h('h1', this.text)
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(serializeInner(root)).toBe(`<h1>0</h1>`)
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    text.value++
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<h1>1</h1>`)
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })

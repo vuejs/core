@@ -1,13 +1,17 @@
 import {
-  isArray,
-  isOn,
-  hasOwn,
+  camelize,
   EMPTY_OBJ,
-  capitalize,
-  hyphenate,
-  isFunction,
+  toHandlerKey,
   extend,
-  camelize
+  hasOwn,
+  hyphenate,
+  isArray,
+  isFunction,
+  isObject,
+  isString,
+  isOn,
+  UnionToIntersection,
+  looseToNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -17,15 +21,39 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
+import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
+import {
+  compatModelEventPrefix,
+  compatModelEmit
+} from './compat/componentVModel'
 
 export type ObjectEmitsOptions = Record<
   string,
   ((...args: any[]) => any) | null
 >
+
 export type EmitsOptions = ObjectEmitsOptions | string[]
+
+export type EmitsToProps<T extends EmitsOptions> = T extends string[]
+  ? {
+      [K in string & `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
+    }
+  : T extends ObjectEmitsOptions
+  ? {
+      [K in string &
+        `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+        ? T[Uncapitalize<C>] extends null
+          ? (...args: any[]) => any
+          : (
+              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                ? P
+                : never
+            ) => any
+        : never
+    }
+  : {}
 
 export type EmitFn<
   Options = ObjectEmitsOptions,
@@ -33,20 +61,21 @@ export type EmitFn<
 > = Options extends Array<infer V>
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (event: string, ...args: any[]) => void
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends ((...args: infer Args) => any)
-            ? (event: key, ...args: Args) => void
-            : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+  ? (event: string, ...args: any[]) => void
+  : UnionToIntersection<
+      {
+        [key in Event]: Options[key] extends (...args: infer Args) => any
+          ? (event: key, ...args: Args) => void
+          : (event: key, ...args: any[]) => void
+      }[Event]
+    >
 
 export function emit(
   instance: ComponentInternalInstance,
   event: string,
-  ...args: any[]
+  ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -55,17 +84,24 @@ export function emit(
       propsOptions: [propsOptions]
     } = instance
     if (emitsOptions) {
-      if (!(event in emitsOptions)) {
-        if (!propsOptions || !(`on` + capitalize(event) in propsOptions)) {
+      if (
+        !(event in emitsOptions) &&
+        !(
+          __COMPAT__ &&
+          (event.startsWith('hook:') ||
+            event.startsWith(compatModelEventPrefix))
+        )
+      ) {
+        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
           warn(
             `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "on${capitalize(event)}" prop.`
+              `the emits option nor as an "${toHandlerKey(event)}" prop.`
           )
         }
       } else {
         const validator = emitsOptions[event]
         if (isFunction(validator)) {
-          const isValid = validator(...args)
+          const isValid = validator(...rawArgs)
           if (!isValid) {
             warn(
               `Invalid event arguments: event validation failed for event "${event}".`
@@ -76,13 +112,31 @@ export function emit(
     }
   }
 
+  let args = rawArgs
+  const isModelListener = event.startsWith('update:')
+
+  // for v-model update:xxx events, apply modifiers on args
+  const modelArg = isModelListener && event.slice(7)
+  if (modelArg && modelArg in props) {
+    const modifiersKey = `${
+      modelArg === 'modelValue' ? 'model' : modelArg
+    }Modifiers`
+    const { number, trim } = props[modifiersKey] || EMPTY_OBJ
+    if (trim) {
+      args = rawArgs.map(a => (isString(a) ? a.trim() : a))
+    }
+    if (number) {
+      args = rawArgs.map(looseToNumber)
+    }
+  }
+
   if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
     devtoolsComponentEmit(instance, event, args)
   }
 
   if (__DEV__) {
     const lowerCaseEvent = event.toLowerCase()
-    if (lowerCaseEvent !== event && props[`on` + capitalize(lowerCaseEvent)]) {
+    if (lowerCaseEvent !== event && props[toHandlerKey(lowerCaseEvent)]) {
       warn(
         `Event "${lowerCaseEvent}" is emitted in component ` +
           `${formatComponentName(
@@ -96,23 +150,17 @@ export function emit(
     }
   }
 
-  // convert handler name to camelCase. See issue #2249
-  let handlerName = `on${capitalize(camelize(event))}`
-  let handler = props[handlerName]
+  let handlerName
+  let handler =
+    props[(handlerName = toHandlerKey(event))] ||
+    // also try camelCase event handler (#2249)
+    props[(handlerName = toHandlerKey(camelize(event)))]
   // for v-model update:xxx events, also trigger kebab-case equivalent
   // for props passed via kebab-case
-  if (!handler && event.startsWith('update:')) {
-    handlerName = `on${capitalize(hyphenate(event))}`
-    handler = props[handlerName]
+  if (!handler && isModelListener) {
+    handler = props[(handlerName = toHandlerKey(hyphenate(event)))]
   }
-  if (!handler) {
-    handler = props[handlerName + `Once`]
-    if (!instance.emitted) {
-      ;(instance.emitted = {} as Record<string, boolean>)[handlerName] = true
-    } else if (instance.emitted[handlerName]) {
-      return
-    }
-  }
+
   if (handler) {
     callWithAsyncErrorHandling(
       handler,
@@ -121,6 +169,27 @@ export function emit(
       args
     )
   }
+
+  const onceHandler = props[handlerName + `Once`]
+  if (onceHandler) {
+    if (!instance.emitted) {
+      instance.emitted = {}
+    } else if (instance.emitted[handlerName]) {
+      return
+    }
+    instance.emitted[handlerName] = true
+    callWithAsyncErrorHandling(
+      onceHandler,
+      instance,
+      ErrorCodes.COMPONENT_EVENT_HANDLER,
+      args
+    )
+  }
+
+  if (__COMPAT__) {
+    compatModelEmit(instance, event, args)
+    return compatInstanceEmit(instance, event, args)
+  }
 }
 
 export function normalizeEmitsOptions(
@@ -128,8 +197,10 @@ export function normalizeEmitsOptions(
   appContext: AppContext,
   asMixin = false
 ): ObjectEmitsOptions | null {
-  if (!appContext.deopt && comp.__emits !== undefined) {
-    return comp.__emits
+  const cache = appContext.emitsCache
+  const cached = cache.get(comp)
+  if (cached !== undefined) {
+    return cached
   }
 
   const raw = comp.emits
@@ -139,8 +210,11 @@ export function normalizeEmitsOptions(
   let hasExtends = false
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendEmits = (raw: ComponentOptions) => {
-      hasExtends = true
-      extend(normalized, normalizeEmitsOptions(raw, appContext, true))
+      const normalizedFromExtend = normalizeEmitsOptions(raw, appContext, true)
+      if (normalizedFromExtend) {
+        hasExtends = true
+        extend(normalized, normalizedFromExtend)
+      }
     }
     if (!asMixin && appContext.mixins.length) {
       appContext.mixins.forEach(extendEmits)
@@ -154,7 +228,10 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    return (comp.__emits = null)
+    if (isObject(comp)) {
+      cache.set(comp, null)
+    }
+    return null
   }
 
   if (isArray(raw)) {
@@ -162,7 +239,11 @@ export function normalizeEmitsOptions(
   } else {
     extend(normalized, raw)
   }
-  return (comp.__emits = normalized)
+
+  if (isObject(comp)) {
+    cache.set(comp, normalized)
+  }
+  return normalized
 }
 
 // Check if an incoming prop key is a declared emit event listener.
@@ -175,9 +256,15 @@ export function isEmitListener(
   if (!options || !isOn(key)) {
     return false
   }
-  key = key.replace(/Once$/, '')
+
+  if (__COMPAT__ && key.startsWith(compatModelEventPrefix)) {
+    return true
+  }
+
+  key = key.slice(2).replace(/Once$/, '')
   return (
-    hasOwn(options, key[2].toLowerCase() + key.slice(3)) ||
-    hasOwn(options, key.slice(2))
+    hasOwn(options, key[0].toLowerCase() + key.slice(1)) ||
+    hasOwn(options, hyphenate(key)) ||
+    hasOwn(options, key)
   )
 }

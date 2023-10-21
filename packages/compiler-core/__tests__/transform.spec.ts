@@ -88,7 +88,7 @@ describe('compiler: transform', () => {
         )
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -113,7 +113,7 @@ describe('compiler: transform', () => {
         context.removeNode()
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -141,7 +141,7 @@ describe('compiler: transform', () => {
         context.removeNode(context.parent!.children[0])
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -168,7 +168,7 @@ describe('compiler: transform', () => {
         context.removeNode(context.parent!.children[1])
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -209,7 +209,7 @@ describe('compiler: transform', () => {
         createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc)
       )
     }
-    const spy = jest.fn()
+    const spy = vi.fn()
     transform(ast, {
       nodeTransforms: [plugin],
       onError: spy
@@ -339,6 +339,25 @@ describe('compiler: transform', () => {
             { type: NodeTypes.ELEMENT, tag: `div` }
           ] as any,
           genFlagText(PatchFlags.STABLE_FRAGMENT)
+        )
+      )
+    })
+
+    test('multiple children w/ single root + comments', () => {
+      const ast = transformWithCodegen(`<!--foo--><div/><!--bar-->`)
+      expect(ast.codegenNode).toMatchObject(
+        createBlockMatcher(
+          FRAGMENT,
+          undefined,
+          [
+            { type: NodeTypes.COMMENT },
+            { type: NodeTypes.ELEMENT, tag: `div` },
+            { type: NodeTypes.COMMENT }
+          ] as any,
+          genFlagText([
+            PatchFlags.STABLE_FRAGMENT,
+            PatchFlags.DEV_ROOT_FRAGMENT
+          ])
         )
       )
     })

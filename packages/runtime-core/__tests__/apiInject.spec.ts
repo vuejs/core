@@ -7,9 +7,11 @@ import {
   nextTick,
   Ref,
   readonly,
-  reactive
+  reactive,
+  defineComponent,
+  hasInjectionContext
 } from '../src/index'
-import { render, nodeOps, serialize } from '@vue/runtime-test'
+import { render, nodeOps, serialize, createApp } from '@vue/runtime-test'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#provide-inject
 describe('api: provide/inject', () => {
@@ -91,6 +93,34 @@ describe('api: provide/inject', () => {
     expect(serialize(root)).toBe(`<div>foobar</div>`)
   })
 
+  it('bound to instance', () => {
+    const Provider = {
+      setup() {
+        return () => h(Consumer)
+      }
+    }
+
+    const Consumer = defineComponent({
+      name: 'Consumer',
+      inject: {
+        foo: {
+          from: 'foo',
+          default() {
+            return this!.$options.name
+          }
+        }
+      },
+      render() {
+        // @ts-ignore
+        return this.foo
+      }
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Provider), root)
+    expect(serialize(root)).toBe(`<div>Consumer</div>`)
+  })
+
   it('nested providers', () => {
     const ProviderOne = {
       setup() {
@@ -139,7 +169,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const count = inject('count') as Ref<number>
+        const count = inject<Ref<number>>('count')!
         return () => count.value
       }
     }
@@ -169,7 +199,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const count = inject('count') as Ref<number>
+        const count = inject<Ref<number>>('count')!
         // should not work
         count.value++
         return () => count.value
@@ -206,7 +236,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const state = inject('state') as typeof rootState
+        const state = inject<typeof rootState>('state')!
         return () => state.count
       }
     }
@@ -236,7 +266,7 @@ describe('api: provide/inject', () => {
 
     const Consumer = {
       setup() {
-        const state = inject('state') as typeof rootState
+        const state = inject<typeof rootState>('state')!
         // should not work
         state.count++
         return () => state.count
@@ -302,5 +332,46 @@ describe('api: provide/inject', () => {
     const root = nodeOps.createElement('div')
     render(h(Provider), root)
     expect(`injection "foo" not found.`).not.toHaveBeenWarned()
+  })
+
+  // #2400
+  it('should not self-inject', () => {
+    const Comp = {
+      setup() {
+        provide('foo', 'foo')
+        const injection = inject('foo', null)
+        return () => injection
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serialize(root)).toBe(`<div><!----></div>`)
+  })
+
+  describe('hasInjectionContext', () => {
+    it('should be false outside of setup', () => {
+      expect(hasInjectionContext()).toBe(false)
+    })
+
+    it('should be true within setup', () => {
+      expect.assertions(1)
+      const Comp = {
+        setup() {
+          expect(hasInjectionContext()).toBe(true)
+          return () => null
+        }
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+    })
+
+    it('should be true within app.runWithContext()', () => {
+      expect.assertions(1)
+      createApp({}).runWithContext(() => {
+        expect(hasInjectionContext()).toBe(true)
+      })
+    })
   })
 })

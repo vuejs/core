@@ -7,10 +7,11 @@ import {
   SlotOutletNode,
   createFunctionExpression
 } from '../ast'
-import { isSlotOutlet, findProp } from '../utils'
+import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
 import { buildProps, PropsExpression } from './transformElement'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
+import { camelize } from '@vue/shared'
 
 export const transformSlotOutlet: NodeTransform = (node, context) => {
   if (isSlotOutlet(node)) {
@@ -19,19 +20,27 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
 
     const slotArgs: CallExpression['arguments'] = [
       context.prefixIdentifiers ? `_ctx.$slots` : `$slots`,
-      slotName
+      slotName,
+      '{}',
+      'undefined',
+      'true'
     ]
+    let expectedLen = 2
 
     if (slotProps) {
-      slotArgs.push(slotProps)
+      slotArgs[2] = slotProps
+      expectedLen = 3
     }
 
     if (children.length) {
-      if (!slotProps) {
-        slotArgs.push(`{}`)
-      }
-      slotArgs.push(createFunctionExpression([], children, false, false, loc))
+      slotArgs[3] = createFunctionExpression([], children, false, false, loc)
+      expectedLen = 4
     }
+
+    if (context.scopeId && !context.slotted) {
+      expectedLen = 5
+    }
+    slotArgs.splice(expectedLen) // remove unused arguments
 
     node.codegenNode = createCallExpression(
       context.helper(RENDER_SLOT),
@@ -53,24 +62,40 @@ export function processSlotOutlet(
   let slotName: string | ExpressionNode = `"default"`
   let slotProps: PropsExpression | undefined = undefined
 
-  // check for <slot name="xxx" OR :name="xxx" />
-  const name = findProp(node, 'name')
-  if (name) {
-    if (name.type === NodeTypes.ATTRIBUTE && name.value) {
-      // static name
-      slotName = JSON.stringify(name.value.content)
-    } else if (name.type === NodeTypes.DIRECTIVE && name.exp) {
-      // dynamic name
-      slotName = name.exp
+  const nonNameProps = []
+  for (let i = 0; i < node.props.length; i++) {
+    const p = node.props[i]
+    if (p.type === NodeTypes.ATTRIBUTE) {
+      if (p.value) {
+        if (p.name === 'name') {
+          slotName = JSON.stringify(p.value.content)
+        } else {
+          p.name = camelize(p.name)
+          nonNameProps.push(p)
+        }
+      }
+    } else {
+      if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
+        if (p.exp) slotName = p.exp
+      } else {
+        if (p.name === 'bind' && p.arg && isStaticExp(p.arg)) {
+          p.arg.content = camelize(p.arg.content)
+        }
+        nonNameProps.push(p)
+      }
     }
   }
 
-  const propsWithoutName = name
-    ? node.props.filter(p => p !== name)
-    : node.props
-  if (propsWithoutName.length > 0) {
-    const { props, directives } = buildProps(node, context, propsWithoutName)
+  if (nonNameProps.length > 0) {
+    const { props, directives } = buildProps(
+      node,
+      context,
+      nonNameProps,
+      false,
+      false
+    )
     slotProps = props
+
     if (directives.length) {
       context.onError(
         createCompilerError(

@@ -10,7 +10,8 @@ import {
   trackSlotScopes,
   noopDirectiveTransform,
   transformBind,
-  transformStyle
+  transformStyle,
+  transformOn
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -35,6 +36,7 @@ export function compile(
     // apply DOM-specific parsing options
     ...parserOptions,
     ssr: true,
+    inSSR: true,
     scopeId: options.mode === 'function' ? null : options.scopeId,
     // always prefix since compiler-ssr doesn't have size concern
     prefixIdentifiers: true,
@@ -51,6 +53,7 @@ export function compile(
 
   transform(ast, {
     ...options,
+    hoistStatic: false,
     nodeTransforms: [
       ssrTransformIf,
       ssrTransformFor,
@@ -68,13 +71,15 @@ export function compile(
     directiveTransforms: {
       // reusing core v-bind
       bind: transformBind,
+      on: transformOn,
       // model and show has dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
       // the following are ignored during SSR
-      on: noopDirectiveTransform,
+      // on: noopDirectiveTransform,
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
+      memo: noopDirectiveTransform,
       ...(options.directiveTransforms || {}) // user transforms
     }
   })

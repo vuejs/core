@@ -7,9 +7,14 @@ import {
   VNodeCall,
   IfNode,
   ElementNode,
-  ForNode
+  ForNode,
+  ConstantTypes
 } from '../../src'
-import { FRAGMENT, RENDER_LIST, CREATE_TEXT } from '../../src/runtimeHelpers'
+import {
+  FRAGMENT,
+  RENDER_LIST,
+  NORMALIZE_CLASS
+} from '../../src/runtimeHelpers'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformIf } from '../../src/transforms/vIf'
@@ -19,6 +24,17 @@ import { transformOn } from '../../src/transforms/vOn'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
 import { PatchFlags } from '@vue/shared'
+
+const hoistedChildrenArrayMatcher = (startIndex = 1, length = 1) => ({
+  type: NodeTypes.JS_ARRAY_EXPRESSION,
+  elements: new Array(length).fill(0).map((_, i) => ({
+    type: NodeTypes.ELEMENT,
+    codegenNode: {
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: `_hoisted_${startIndex + i}`
+    }
+  }))
+})
 
 function transformWithHoist(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -69,20 +85,13 @@ describe('compiler: hoistStatic transform', () => {
           type: NodeTypes.TEXT,
           content: `hello`
         }
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: [
-        {
-          type: NodeTypes.ELEMENT,
-          codegenNode: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`
-          }
-        }
-      ]
+      children: { content: `_hoisted_2` }
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -98,17 +107,12 @@ describe('compiler: hoistStatic transform', () => {
           { type: NodeTypes.ELEMENT, tag: `span` },
           { type: NodeTypes.ELEMENT, tag: `span` }
         ]
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
-      }
-    ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: '_hoisted_2'
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -120,17 +124,12 @@ describe('compiler: hoistStatic transform', () => {
         tag: `"div"`,
         props: undefined,
         children: [{ type: NodeTypes.COMMENT, content: `comment` }]
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
-      }
-    ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: `_hoisted_2`
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -144,24 +143,12 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`
-      }
-    ])
-    expect((root.codegenNode as VNodeCall).children).toMatchObject([
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_1`
-        }
       },
-      {
-        type: NodeTypes.ELEMENT,
-        codegenNode: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `_hoisted_2`
-        }
-      }
+      hoistedChildrenArrayMatcher(1, 2)
     ])
+    expect((root.codegenNode as VNodeCall).children).toMatchObject({
+      content: '_hoisted_3'
+    })
     expect(generate(root).code).toMatchSnapshot()
   })
 
@@ -180,9 +167,9 @@ describe('compiler: hoistStatic transform', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
-  test('should NOT hoist element with dynamic props', () => {
+  test('should NOT hoist element with dynamic props (but hoist the props list)', () => {
     const root = transformWithHoist(`<div><div :id="foo"/></div>`)
-    expect(root.hoists.length).toBe(0)
+    expect(root.hoists.length).toBe(1)
     expect((root.codegenNode as VNodeCall).children).toMatchObject([
       {
         type: NodeTypes.ELEMENT,
@@ -194,7 +181,11 @@ describe('compiler: hoistStatic transform', () => {
           }),
           children: undefined,
           patchFlag: genFlagText(PatchFlags.PROPS),
-          dynamicProps: `["id"]`
+          dynamicProps: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: `_hoisted_1`,
+            isStatic: false
+          }
         }
       }
     ])
@@ -203,26 +194,19 @@ describe('compiler: hoistStatic transform', () => {
 
   test('hoist element with static key', () => {
     const root = transformWithHoist(`<div><div key="foo"/></div>`)
-    expect(root.hoists.length).toBe(1)
+    expect(root.hoists.length).toBe(2)
     expect(root.hoists).toMatchObject([
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
         props: createObjectMatcher({ key: 'foo' })
-      }
+      },
+      hoistedChildrenArrayMatcher()
     ])
     expect(root.codegenNode).toMatchObject({
       tag: `"div"`,
       props: undefined,
-      children: [
-        {
-          type: NodeTypes.ELEMENT,
-          codegenNode: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `_hoisted_1`
-          }
-        }
-      ]
+      children: { content: `_hoisted_2` }
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -338,7 +322,8 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"span"`
-      }
+      },
+      hoistedChildrenArrayMatcher(2)
     ])
     expect(
       ((root.children[0] as ElementNode).children[0] as IfNode).codegenNode
@@ -349,11 +334,7 @@ describe('compiler: hoistStatic transform', () => {
         type: NodeTypes.VNODE_CALL,
         tag: `"div"`,
         props: { content: `_hoisted_1` },
-        children: [
-          {
-            codegenNode: { content: `_hoisted_2` }
-          }
-        ]
+        children: { content: `_hoisted_3` }
       }
     })
     expect(generate(root).code).toMatchSnapshot()
@@ -370,10 +351,12 @@ describe('compiler: hoistStatic transform', () => {
       {
         type: NodeTypes.VNODE_CALL,
         tag: `"span"`
-      }
+      },
+      hoistedChildrenArrayMatcher(2)
     ])
-    const forBlockCodegen = ((root.children[0] as ElementNode)
-      .children[0] as ForNode).codegenNode
+    const forBlockCodegen = (
+      (root.children[0] as ElementNode).children[0] as ForNode
+    ).codegenNode
     expect(forBlockCodegen).toMatchObject({
       type: NodeTypes.VNODE_CALL,
       tag: FRAGMENT,
@@ -389,32 +372,9 @@ describe('compiler: hoistStatic transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: `"div"`,
       props: { content: `_hoisted_1` },
-      children: [
-        {
-          codegenNode: { content: `_hoisted_2` }
-        }
-      ]
+      children: { content: `_hoisted_3` }
     })
     expect(generate(root).code).toMatchSnapshot()
-  })
-
-  test('hoist static text node between elements', () => {
-    const root = transformWithHoist(`<div>static<div>static</div></div>`)
-    expect(root.hoists).toMatchObject([
-      {
-        callee: CREATE_TEXT,
-        arguments: [
-          {
-            type: NodeTypes.TEXT,
-            content: `static`
-          }
-        ]
-      },
-      {
-        type: NodeTypes.VNODE_CALL,
-        tag: `"div"`
-      }
-    ])
   })
 
   describe('prefixIdentifiers', () => {
@@ -433,20 +393,16 @@ describe('compiler: hoistStatic transform', () => {
           children: {
             type: NodeTypes.COMPOUND_EXPRESSION
           }
-        }
+        },
+        hoistedChildrenArrayMatcher()
       ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: [
-          {
-            type: NodeTypes.ELEMENT,
-            codegenNode: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_hoisted_1`
-            }
-          }
-        ]
+        children: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `_hoisted_2`
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -469,23 +425,19 @@ describe('compiler: hoistStatic transform', () => {
             content: {
               content: `1`,
               isStatic: false,
-              isConstant: true
+              constType: ConstantTypes.CAN_STRINGIFY
             }
           }
-        }
+        },
+        hoistedChildrenArrayMatcher()
       ])
       expect(root.codegenNode).toMatchObject({
         tag: `"div"`,
         props: undefined,
-        children: [
-          {
-            type: NodeTypes.ELEMENT,
-            codegenNode: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: `_hoisted_1`
-            }
-          }
-        ]
+        children: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `_hoisted_2`
+        }
       })
       expect(generate(root).code).toMatchSnapshot()
     })
@@ -505,13 +457,19 @@ describe('compiler: hoistStatic transform', () => {
             {
               key: {
                 content: `class`,
-                isConstant: true,
-                isStatic: true
+                isStatic: true,
+                constType: ConstantTypes.CAN_STRINGIFY
               },
               value: {
-                content: `{ foo: true }`,
-                isConstant: true,
-                isStatic: false
+                type: NodeTypes.JS_CALL_EXPRESSION,
+                callee: NORMALIZE_CLASS,
+                arguments: [
+                  {
+                    content: `{ foo: true }`,
+                    isStatic: false,
+                    constType: ConstantTypes.CAN_STRINGIFY
+                  }
+                ]
               }
             }
           ]
@@ -534,8 +492,8 @@ describe('compiler: hoistStatic transform', () => {
                 type: NodeTypes.INTERPOLATION,
                 content: {
                   content: `_ctx.bar`,
-                  isConstant: false,
-                  isStatic: false
+                  isStatic: false,
+                  constType: ConstantTypes.NOT_CONSTANT
                 }
               },
               patchFlag: `1 /* TEXT */`
@@ -601,11 +559,38 @@ describe('compiler: hoistStatic transform', () => {
       ).toMatchSnapshot()
     })
 
+    test('should NOT hoist elements with cached handlers + other bindings', () => {
+      const root = transformWithHoist(
+        `<div><div><div :class="{}" @click="foo"/></div></div>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true
+        }
+      )
+
+      expect(root.cached).toBe(1)
+      expect(root.hoists.length).toBe(0)
+      expect(
+        generate(root, {
+          mode: 'module',
+          prefixIdentifiers: true
+        }).code
+      ).toMatchSnapshot()
+    })
+
     test('should NOT hoist keyed template v-for with plain element child', () => {
       const root = transformWithHoist(
         `<div><template v-for="item in items" :key="item"><span/></template></div>`
       )
       expect(root.hoists.length).toBe(0)
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('should NOT hoist SVG with directives', () => {
+      const root = transformWithHoist(
+        `<div><svg v-foo><path d="M2,3H5.5L12"/></svg></div>`
+      )
+      expect(root.hoists.length).toBe(2)
       expect(generate(root).code).toMatchSnapshot()
     })
   })

@@ -6,9 +6,17 @@ import {
   DirectiveTransform,
   TransformContext
 } from './transform'
+import { CompilerCompatOptions } from './compat/compatConfig'
 import { ParserPlugin } from '@babel/parser'
 
-export interface ParserOptions {
+export interface ErrorHandlingOptions {
+  onWarn?: (warning: CompilerError) => void
+  onError?: (error: CompilerError) => void
+}
+
+export interface ParserOptions
+  extends ErrorHandlingOptions,
+    CompilerCompatOptions {
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
@@ -45,12 +53,16 @@ export interface ParserOptions {
    */
   delimiters?: [string, string]
   /**
+   * Whitespace handling strategy
+   */
+  whitespace?: 'preserve' | 'condense'
+  /**
    * Only needed for DOM compilers
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
-  onError?: (error: CompilerError) => void
   /**
-   * Keep comments in the templates AST, even in production
+   * Whether to keep comments in the templates AST.
+   * This defaults to `true` in development and `false` in production builds.
    */
   comments?: boolean
 }
@@ -61,11 +73,115 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
-export interface BindingMetadata {
-  [key: string]: 'data' | 'props' | 'setup' | 'options'
+export const enum BindingTypes {
+  /**
+   * returned from data()
+   */
+  DATA = 'data',
+  /**
+   * declared as a prop
+   */
+  PROPS = 'props',
+  /**
+   * a local alias of a `<script setup>` destructured prop.
+   * the original is stored in __propsAliases of the bindingMetadata object.
+   */
+  PROPS_ALIASED = 'props-aliased',
+  /**
+   * a let binding (may or may not be a ref)
+   */
+  SETUP_LET = 'setup-let',
+  /**
+   * a const binding that can never be a ref.
+   * these bindings don't need `unref()` calls when processed in inlined
+   * template expressions.
+   */
+  SETUP_CONST = 'setup-const',
+  /**
+   * a const binding that does not need `unref()`, but may be mutated.
+   */
+  SETUP_REACTIVE_CONST = 'setup-reactive-const',
+  /**
+   * a const binding that may be a ref.
+   */
+  SETUP_MAYBE_REF = 'setup-maybe-ref',
+  /**
+   * bindings that are guaranteed to be refs
+   */
+  SETUP_REF = 'setup-ref',
+  /**
+   * declared by other options, e.g. computed, inject
+   */
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const'
 }
 
-export interface TransformOptions {
+export type BindingMetadata = {
+  [key: string]: BindingTypes | undefined
+} & {
+  __isScriptSetup?: boolean
+  __propsAliases?: Record<string, string>
+}
+
+interface SharedTransformCodegenOptions {
+  /**
+   * Transform expressions like {{ foo }} to `_ctx.foo`.
+   * If this option is false, the generated code will be wrapped in a
+   * `with (this) { ... }` block.
+   * - This is force-enabled in module mode, since modules are by default strict
+   * and cannot use `with`
+   * @default mode === 'module'
+   */
+  prefixIdentifiers?: boolean
+  /**
+   * Control whether generate SSR-optimized render functions instead.
+   * The resulting function must be attached to the component via the
+   * `ssrRender` option instead of `render`.
+   *
+   * When compiler generates code for SSR's fallback branch, we need to set it to false:
+   *  - context.ssr = false
+   *
+   * see `subTransform` in `ssrTransformComponent.ts`
+   */
+  ssr?: boolean
+  /**
+   * Indicates whether the compiler generates code for SSR,
+   * it is always true when generating code for SSR,
+   * regardless of whether we are generating code for SSR's fallback branch,
+   * this means that when the compiler generates code for SSR's fallback branch:
+   *  - context.ssr = false
+   *  - context.inSSR = true
+   */
+  inSSR?: boolean
+  /**
+   * Optional binding metadata analyzed from script - used to optimize
+   * binding access when `prefixIdentifiers` is enabled.
+   */
+  bindingMetadata?: BindingMetadata
+  /**
+   * Compile the function for inlining inside setup().
+   * This allows the function to directly access setup() local bindings.
+   */
+  inline?: boolean
+  /**
+   * Indicates that transforms and codegen should try to output valid TS code
+   */
+  isTS?: boolean
+  /**
+   * Filename for source map generation.
+   * Also used for self-recursive reference in templates
+   * @default 'template.vue.html'
+   */
+  filename?: string
+}
+
+export interface TransformOptions
+  extends SharedTransformCodegenOptions,
+    ErrorHandlingOptions,
+    CompilerCompatOptions {
   /**
    * An array of node transforms to be applied to every AST node.
    */
@@ -129,25 +245,20 @@ export interface TransformOptions {
    */
   scopeId?: string | null
   /**
-   * Generate SSR-optimized render functions instead.
-   * The resulting function must be attached to the component via the
-   * `ssrRender` option instead of `render`.
+   * Indicates this SFC template has used :slotted in its styles
+   * Defaults to `true` for backwards compatibility - SFC tooling should set it
+   * to `false` if no `:slotted` usage is detected in `<style>`
    */
-  ssr?: boolean
+  slotted?: boolean
   /**
    * SFC `<style vars>` injection string
+   * Should already be an object expression, e.g. `{ 'xxxx-color': color }`
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
-  /**
-   * Optional binding metadata analyzed from script - used to optimize
-   * binding access when `prefixIdentifiers` is enabled.
-   */
-  bindingMetadata?: BindingMetadata
-  onError?: (error: CompilerError) => void
 }
 
-export interface CodegenOptions {
+export interface CodegenOptions extends SharedTransformCodegenOptions {
   /**
    * - `module` mode will generate ES module import statements for helpers
    * and export the render function as the default export.
@@ -164,11 +275,6 @@ export interface CodegenOptions {
    */
   sourceMap?: boolean
   /**
-   * Filename for source map generation.
-   * @default 'template.vue.html'
-   */
-  filename?: string
-  /**
    * SFC scoped styles ID
    */
   scopeId?: string | null
@@ -184,16 +290,16 @@ export interface CodegenOptions {
    */
   runtimeModuleName?: string
   /**
+   * Customize where to import ssr runtime helpers from/**
+   * @default 'vue/server-renderer'
+   */
+  ssrRuntimeModuleName?: string
+  /**
    * Customize the global variable name of `Vue` to get helpers from
    * in function mode
    * @default 'Vue'
    */
   runtimeGlobalName?: string
-  // we need to know this during codegen to generate proper preambles
-  prefixIdentifiers?: boolean
-  bindingMetadata?: BindingMetadata
-  // generate ssr-specific code?
-  ssr?: boolean
 }
 
 export type CompilerOptions = ParserOptions & TransformOptions & CodegenOptions

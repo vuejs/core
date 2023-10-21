@@ -1,10 +1,12 @@
 import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
+import { isShallow } from '../../reactivity/src/reactive'
 import { ComponentInternalInstance, ComponentOptions } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter() {
-  if (!__DEV__ || !__BROWSER__) {
+  /* eslint-disable no-restricted-globals */
+  if (!__DEV__ || typeof window === 'undefined') {
     return
   }
 
@@ -37,7 +39,7 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Reactive'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReactive' : 'Reactive'],
           '<',
           formatValue(obj),
           `>${isReadonly(obj) ? ` (readonly)` : ``}`
@@ -46,7 +48,7 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ['span', vueStyle, 'Readonly'],
+          ['span', vueStyle, isShallow(obj) ? 'ShallowReadonly' : 'Readonly'],
           '<',
           formatValue(obj),
           '>'
@@ -180,7 +182,7 @@ export function initCustomFormatter() {
   }
 
   function genRefFlag(v: Ref) {
-    if (v._shallow) {
+    if (isShallow(v)) {
       return `ShallowRef`
     }
     if ((v as any).effect) {
@@ -189,7 +191,6 @@ export function initCustomFormatter() {
     return `Ref`
   }
 
-  /* eslint-disable no-restricted-globals */
   if ((window as any).devtoolsFormatters) {
     ;(window as any).devtoolsFormatters.push(formatter)
   } else {

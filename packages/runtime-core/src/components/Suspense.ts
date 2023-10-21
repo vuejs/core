@@ -1,9 +1,14 @@
 import {
   VNode,
   normalizeVNode,
-  VNodeChild,
   VNodeProps,
-  isSameVNodeType
+  isSameVNodeType,
+  openBlock,
+  closeBlock,
+  currentBlock,
+  Comment,
+  createVNode,
+  isBlockTreeEnabled
 } from '../vnode'
 import { isFunction, isArray, ShapeFlags, toNumber } from '@vue/shared'
 import { ComponentInternalInstance, handleSetupResult } from '../component'
@@ -17,7 +22,12 @@ import {
 } from '../renderer'
 import { queuePostFlushCb } from '../scheduler'
 import { filterSingleRoot, updateHOCHostEl } from '../componentRenderUtils'
-import { pushWarningContext, popWarningContext, warn } from '../warning'
+import {
+  pushWarningContext,
+  popWarningContext,
+  warn,
+  assertNumber
+} from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
 
 export interface SuspenseProps {
@@ -25,6 +35,12 @@ export interface SuspenseProps {
   onPending?: () => void
   onFallback?: () => void
   timeout?: string | number
+  /**
+   * Allow suspense to be captured by parent suspense
+   *
+   * @default false
+   */
+  suspensible?: boolean
 }
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
@@ -33,6 +49,7 @@ export const isSuspense = (type: any): boolean => type.__isSuspense
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
 export const SuspenseImpl = {
+  name: 'Suspense',
   // In order to make Suspense tree-shakable, we need to avoid importing it
   // directly in the renderer. The renderer checks for the __isSuspense flag
   // on a vnode's type and calls the `process` method, passing in renderer
@@ -46,6 +63,7 @@ export const SuspenseImpl = {
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     isSVG: boolean,
+    slotScopeIds: string[] | null,
     optimized: boolean,
     // platform-specific impl passed from renderer
     rendererInternals: RendererInternals
@@ -58,6 +76,7 @@ export const SuspenseImpl = {
         parentComponent,
         parentSuspense,
         isSVG,
+        slotScopeIds,
         optimized,
         rendererInternals
       )
@@ -69,21 +88,39 @@ export const SuspenseImpl = {
         anchor,
         parentComponent,
         isSVG,
+        slotScopeIds,
         optimized,
         rendererInternals
       )
     }
   },
   hydrate: hydrateSuspense,
-  create: createSuspenseBoundary
+  create: createSuspenseBoundary,
+  normalize: normalizeSuspenseChildren
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Suspense = ((__FEATURE_SUSPENSE__
+export const Suspense = (__FEATURE_SUSPENSE__
   ? SuspenseImpl
-  : null) as any) as {
+  : null) as unknown as {
   __isSuspense: true
-  new (): { $props: VNodeProps & SuspenseProps }
+  new (): {
+    $props: VNodeProps & SuspenseProps
+    $slots: {
+      default(): VNode[]
+      fallback(): VNode[]
+    }
+  }
+}
+
+function triggerEvent(
+  vnode: VNode,
+  name: 'onResolve' | 'onPending' | 'onFallback'
+) {
+  const eventListener = vnode.props && vnode.props[name]
+  if (isFunction(eventListener)) {
+    eventListener()
+  }
 }
 
 function mountSuspense(
@@ -93,6 +130,7 @@ function mountSuspense(
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals
 ) {
@@ -109,6 +147,7 @@ function mountSuspense(
     hiddenContainer,
     anchor,
     isSVG,
+    slotScopeIds,
     optimized,
     rendererInternals
   ))
@@ -122,11 +161,15 @@ function mountSuspense(
     parentComponent,
     suspense,
     isSVG,
-    optimized
+    slotScopeIds
   )
   // now check if we have encountered any async deps
   if (suspense.deps > 0) {
     // has async
+    // invoke @fallback event
+    triggerEvent(vnode, 'onPending')
+    triggerEvent(vnode, 'onFallback')
+
     // mount the fallback tree
     patch(
       null,
@@ -136,12 +179,12 @@ function mountSuspense(
       parentComponent,
       null, // fallback tree will not have suspense context
       isSVG,
-      optimized
+      slotScopeIds
     )
     setActiveBranch(suspense, vnode.ssFallback!)
   } else {
     // Suspense has no async deps. Just resolve.
-    suspense.resolve()
+    suspense.resolve(false, true)
   }
 }
 
@@ -152,6 +195,7 @@ function patchSuspense(
   anchor: RendererNode | null,
   parentComponent: ComponentInternalInstance | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   { p: patch, um: unmount, o: { createElement } }: RendererInternals
 ) {
@@ -174,6 +218,7 @@ function patchSuspense(
         parentComponent,
         suspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
       if (suspense.deps <= 0) {
@@ -187,6 +232,7 @@ function patchSuspense(
           parentComponent,
           null, // fallback tree will not have suspense context
           isSVG,
+          slotScopeIds,
           optimized
         )
         setActiveBranch(suspense, newFallback)
@@ -221,6 +267,7 @@ function patchSuspense(
           parentComponent,
           suspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         if (suspense.deps <= 0) {
@@ -234,6 +281,7 @@ function patchSuspense(
             parentComponent,
             null, // fallback tree will not have suspense context
             isSVG,
+            slotScopeIds,
             optimized
           )
           setActiveBranch(suspense, newFallback)
@@ -248,6 +296,7 @@ function patchSuspense(
           parentComponent,
           suspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         // force resolve
@@ -262,6 +311,7 @@ function patchSuspense(
           parentComponent,
           suspense,
           isSVG,
+          slotScopeIds,
           optimized
         )
         if (suspense.deps <= 0) {
@@ -280,16 +330,14 @@ function patchSuspense(
         parentComponent,
         suspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
       setActiveBranch(suspense, newBranch)
     } else {
       // root node toggled
       // invoke @pending event
-      const onPending = n2.props && n2.props.onPending
-      if (isFunction(onPending)) {
-        onPending()
-      }
+      triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
       suspense.pendingId++
@@ -301,6 +349,7 @@ function patchSuspense(
         parentComponent,
         suspense,
         isSVG,
+        slotScopeIds,
         optimized
       )
       if (suspense.deps <= 0) {
@@ -327,7 +376,6 @@ export interface SuspenseBoundary {
   parent: SuspenseBoundary | null
   parentComponent: ComponentInternalInstance | null
   isSVG: boolean
-  optimized: boolean
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
@@ -340,7 +388,7 @@ export interface SuspenseBoundary {
   isHydrating: boolean
   isUnmounted: boolean
   effects: Function[]
-  resolve(force?: boolean): void
+  resolve(force?: boolean, sync?: boolean): void
   fallback(fallbackVNode: VNode): void
   move(
     container: RendererElement,
@@ -359,12 +407,13 @@ let hasWarned = false
 
 function createSuspenseBoundary(
   vnode: VNode,
-  parent: SuspenseBoundary | null,
+  parentSuspense: SuspenseBoundary | null,
   parentComponent: ComponentInternalInstance | null,
   container: RendererElement,
   hiddenContainer: RendererElement,
   anchor: RendererNode | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,
   isHydrating = false
@@ -386,13 +435,26 @@ function createSuspenseBoundary(
     o: { parentNode, remove }
   } = rendererInternals
 
-  const timeout = toNumber(vnode.props && vnode.props.timeout)
+  // if set `suspensible: true`, set the current suspense as a dep of parent suspense
+  let parentSuspenseId: number | undefined
+  const isSuspensible = isVNodeSuspensible(vnode)
+  if (isSuspensible) {
+    if (parentSuspense?.pendingBranch) {
+      parentSuspenseId = parentSuspense.pendingId
+      parentSuspense.deps++
+    }
+  }
+
+  const timeout = vnode.props ? toNumber(vnode.props.timeout) : undefined
+  if (__DEV__) {
+    assertNumber(timeout, `Suspense timeout`)
+  }
+
   const suspense: SuspenseBoundary = {
     vnode,
-    parent,
+    parent: parentSuspense,
     parentComponent,
     isSVG,
-    optimized,
     container,
     hiddenContainer,
     anchor,
@@ -406,7 +468,7 @@ function createSuspenseBoundary(
     isUnmounted: false,
     effects: [],
 
-    resolve(resume = false) {
+    resolve(resume = false, sync = false) {
       if (__DEV__) {
         if (!resume && !suspense.pendingBranch) {
           throw new Error(
@@ -482,11 +544,22 @@ function createSuspenseBoundary(
       }
       suspense.effects = []
 
-      // invoke @resolve event
-      const onResolve = vnode.props && vnode.props.onResolve
-      if (isFunction(onResolve)) {
-        onResolve()
+      // resolve parent suspense if all async deps are resolved
+      if (isSuspensible) {
+        if (
+          parentSuspense &&
+          parentSuspense.pendingBranch &&
+          parentSuspenseId === parentSuspense.pendingId
+        ) {
+          parentSuspense.deps--
+          if (parentSuspense.deps === 0 && !sync) {
+            parentSuspense.resolve()
+          }
+        }
       }
+
+      // invoke @resolve event
+      triggerEvent(vnode, 'onResolve')
     },
 
     fallback(fallbackVNode) {
@@ -494,20 +567,11 @@ function createSuspenseBoundary(
         return
       }
 
-      const {
-        vnode,
-        activeBranch,
-        parentComponent,
-        container,
-        isSVG,
-        optimized
-      } = suspense
+      const { vnode, activeBranch, parentComponent, container, isSVG } =
+        suspense
 
       // invoke @fallback event
-      const onFallback = vnode.props && vnode.props.onFallback
-      if (isFunction(onFallback)) {
-        onFallback()
-      }
+      triggerEvent(vnode, 'onFallback')
 
       const anchor = next(activeBranch!)
       const mountFallback = () => {
@@ -523,6 +587,7 @@ function createSuspenseBoundary(
           parentComponent,
           null, // fallback tree will not have suspense context
           isSVG,
+          slotScopeIds,
           optimized
         )
         setActiveBranch(suspense, fallbackVNode)
@@ -533,6 +598,8 @@ function createSuspenseBoundary(
       if (delayEnter) {
         activeBranch!.transition!.afterLeave = mountFallback
       }
+      suspense.isInFallback = true
+
       // unmount current active branch
       unmount(
         activeBranch!,
@@ -541,7 +608,6 @@ function createSuspenseBoundary(
         true // shouldRemove
       )
 
-      suspense.isInFallback = true
       if (!delayEnter) {
         mountFallback()
       }
@@ -558,12 +624,11 @@ function createSuspenseBoundary(
     },
 
     registerDep(instance, setupRenderEffect) {
-      if (!suspense.pendingBranch) {
-        return
+      const isInPendingSuspense = !!suspense.pendingBranch
+      if (isInPendingSuspense) {
+        suspense.deps++
       }
-
       const hydratedEl = instance.vnode.el
-      suspense.deps++
       instance
         .asyncDep!.catch(err => {
           handleError(err, instance, ErrorCodes.SETUP_FUNCTION)
@@ -578,7 +643,6 @@ function createSuspenseBoundary(
           ) {
             return
           }
-          suspense.deps--
           // retry from this component
           instance.asyncResolved = true
           const { vnode } = instance
@@ -613,7 +677,8 @@ function createSuspenseBoundary(
           if (__DEV__) {
             popWarningContext()
           }
-          if (suspense.deps === 0) {
+          // only decrease deps count if suspense is not already resolved
+          if (isInPendingSuspense && --suspense.deps === 0) {
             suspense.resolve()
           }
         })
@@ -649,6 +714,7 @@ function hydrateSuspense(
   parentComponent: ComponentInternalInstance | null,
   parentSuspense: SuspenseBoundary | null,
   isSVG: boolean,
+  slotScopeIds: string[] | null,
   optimized: boolean,
   rendererInternals: RendererInternals,
   hydrateNode: (
@@ -656,6 +722,7 @@ function hydrateSuspense(
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
+    slotScopeIds: string[] | null,
     optimized: boolean
   ) => Node | null
 ): Node | null {
@@ -668,6 +735,7 @@ function hydrateSuspense(
     document.createElement('div'),
     null,
     isSVG,
+    slotScopeIds,
     optimized,
     rendererInternals,
     true /* hydrating */
@@ -683,40 +751,44 @@ function hydrateSuspense(
     (suspense.pendingBranch = vnode.ssContent!),
     parentComponent,
     suspense,
+    slotScopeIds,
     optimized
   )
   if (suspense.deps === 0) {
-    suspense.resolve()
+    suspense.resolve(false, true)
   }
   return result
   /* eslint-enable no-restricted-globals */
 }
 
-export function normalizeSuspenseChildren(
-  vnode: VNode
-): {
-  content: VNode
-  fallback: VNode
-} {
+function normalizeSuspenseChildren(vnode: VNode) {
   const { shapeFlag, children } = vnode
-  let content: VNode
-  let fallback: VNode
-  if (shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    content = normalizeSuspenseSlot((children as Slots).default)
-    fallback = normalizeSuspenseSlot((children as Slots).fallback)
-  } else {
-    content = normalizeSuspenseSlot(children as VNodeChild)
-    fallback = normalizeVNode(null)
-  }
-  return {
-    content,
-    fallback
-  }
+  const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
+  vnode.ssContent = normalizeSuspenseSlot(
+    isSlotChildren ? (children as Slots).default : children
+  )
+  vnode.ssFallback = isSlotChildren
+    ? normalizeSuspenseSlot((children as Slots).fallback)
+    : createVNode(Comment)
 }
 
 function normalizeSuspenseSlot(s: any) {
+  let block: VNode[] | null | undefined
   if (isFunction(s)) {
+    const trackBlock = isBlockTreeEnabled && s._c
+    if (trackBlock) {
+      // disableTracking: false
+      // allow block tracking for compiled slots
+      // (see ./componentRenderContext.ts)
+      s._d = false
+      openBlock()
+    }
     s = s()
+    if (trackBlock) {
+      s._d = true
+      block = currentBlock
+      closeBlock()
+    }
   }
   if (isArray(s)) {
     const singleChild = filterSingleRoot(s)
@@ -725,7 +797,11 @@ function normalizeSuspenseSlot(s: any) {
     }
     s = singleChild
   }
-  return normalizeVNode(s)
+  s = normalizeVNode(s)
+  if (block && !s.dynamicChildren) {
+    s.dynamicChildren = block.filter(c => c !== s)
+  }
+  return s
 }
 
 export function queueEffectWithSuspense(
@@ -753,4 +829,8 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
     parentComponent.vnode.el = el
     updateHOCHostEl(parentComponent, el)
   }
+}
+
+function isVNodeSuspensible(vnode: VNode) {
+  return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }

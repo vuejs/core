@@ -7,15 +7,21 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map'
+import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
 import { TemplateCompiler } from './compileTemplate'
-import { Statement } from '@babel/types'
+import { parseCssVars } from './style/cssVars'
+import { createCache } from './cache'
+import { ImportBinding } from './compileScript'
+import { isImportUsed } from './script/importUsageCheck'
+
+export const DEFAULT_FILENAME = 'anonymous.vue'
 
 export interface SFCParseOptions {
   filename?: string
   sourceMap?: boolean
   sourceRoot?: string
   pad?: boolean | 'line' | 'space'
+  ignoreEmpty?: boolean
   compiler?: TemplateCompiler
 }
 
@@ -31,21 +37,28 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  functional?: boolean
+  ast: ElementNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
   type: 'script'
   setup?: string | boolean
   bindings?: BindingMetadata
-  scriptAst?: Statement[]
-  scriptSetupAst?: Statement[]
+  imports?: Record<string, ImportBinding>
+  scriptAst?: import('@babel/types').Statement[]
+  scriptSetupAst?: import('@babel/types').Statement[]
+  warnings?: string[]
+  /**
+   * Fully resolved dependency file paths (unix slashes) with imported types
+   * used in macros, used for HMR cache busting in @vitejs/plugin-vue and
+   * vue-loader.
+   */
+  deps?: string[]
 }
 
 export interface SFCStyleBlock extends SFCBlock {
   type: 'style'
   scoped?: boolean
-  vars?: string
   module?: string | boolean
 }
 
@@ -57,6 +70,22 @@ export interface SFCDescriptor {
   scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
   customBlocks: SFCBlock[]
+  cssVars: string[]
+  /**
+   * whether the SFC uses :slotted() modifier.
+   * this is used as a compiler optimization hint.
+   */
+  slotted: boolean
+
+  /**
+   * compare with an existing descriptor to determine whether HMR should perform
+   * a reload vs. re-render.
+   *
+   * Note: this comparison assumes the prev/next script are already identical,
+   * and only checks the special case where <script setup lang="ts"> unused import
+   * pruning result changes due to template changes.
+   */
+  shouldForceReload: (prevImports: Record<string, ImportBinding>) => boolean
 }
 
 export interface SFCParseResult {
@@ -64,28 +93,22 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-const SFC_CACHE_MAX_SIZE = 500
-const sourceToSFC =
-  __GLOBAL__ || __ESM_BROWSER__
-    ? new Map<string, SFCParseResult>()
-    : (new (require('lru-cache'))(SFC_CACHE_MAX_SIZE) as Map<
-        string,
-        SFCParseResult
-      >)
+export const parseCache = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
   {
     sourceMap = true,
-    filename = 'component.vue',
+    filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
+    ignoreEmpty = true,
     compiler = CompilerDOM
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
     source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = sourceToSFC.get(sourceKey)
+  const cache = parseCache.get(sourceKey)
   if (cache) {
     return cache
   }
@@ -97,7 +120,10 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
-    customBlocks: []
+    customBlocks: [],
+    cssVars: [],
+    slotted: false,
+    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor)
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -112,13 +138,15 @@ export function parse(
       if (
         (!parent && tag !== 'template') ||
         // <template lang="xxx"> should also be treated as raw text
-        props.some(
-          p =>
-            p.type === NodeTypes.ATTRIBUTE &&
-            p.name === 'lang' &&
-            p.value &&
-            p.value.content !== 'html'
-        )
+        (tag === 'template' &&
+          props.some(
+            p =>
+              p.type === NodeTypes.ATTRIBUTE &&
+              p.name === 'lang' &&
+              p.value &&
+              p.value.content &&
+              p.value.content !== 'html'
+          ))
       ) {
         return TextModes.RAWTEXT
       } else {
@@ -129,48 +157,81 @@ export function parse(
       errors.push(e)
     }
   })
-
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    if (!node.children.length && !hasSrc(node)) {
+    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    if (
+      ignoreEmpty &&
+      node.tag !== 'template' &&
+      isEmpty(node) &&
+      !hasSrc(node)
+    ) {
       return
     }
     switch (node.tag) {
       case 'template':
         if (!descriptor.template) {
-          descriptor.template = createBlock(
+          const templateBlock = (descriptor.template = createBlock(
             node,
             source,
             false
-          ) as SFCTemplateBlock
+          ) as SFCTemplateBlock)
+          templateBlock.ast = node
+
+          // warn against 2.x <template functional>
+          if (templateBlock.attrs.functional) {
+            const err = new SyntaxError(
+              `<template functional> is no longer supported in Vue 3, since ` +
+                `functional components no longer have significant performance ` +
+                `difference from stateful ones. Just use a normal <template> ` +
+                `instead.`
+            ) as CompilerError
+            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            errors.push(err)
+          }
         } else {
           errors.push(createDuplicateBlockError(node))
         }
         break
       case 'script':
-        const block = createBlock(node, source, pad) as SFCScriptBlock
-        const isSetup = !!block.attrs.setup
+        const scriptBlock = createBlock(node, source, pad) as SFCScriptBlock
+        const isSetup = !!scriptBlock.attrs.setup
         if (isSetup && !descriptor.scriptSetup) {
-          descriptor.scriptSetup = block
+          descriptor.scriptSetup = scriptBlock
           break
         }
         if (!isSetup && !descriptor.script) {
-          descriptor.script = block
+          descriptor.script = scriptBlock
           break
         }
         errors.push(createDuplicateBlockError(node, isSetup))
         break
       case 'style':
-        descriptor.styles.push(createBlock(node, source, pad) as SFCStyleBlock)
+        const styleBlock = createBlock(node, source, pad) as SFCStyleBlock
+        if (styleBlock.attrs.vars) {
+          errors.push(
+            new SyntaxError(
+              `<style vars> has been replaced by a new proposal: ` +
+                `https://github.com/vuejs/rfcs/pull/231`
+            )
+          )
+        }
+        descriptor.styles.push(styleBlock)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
         break
     }
   })
-
+  if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
+    errors.push(
+      new SyntaxError(
+        `At least one <template> or <script> is required in a single file component.`
+      )
+    )
+  }
   if (descriptor.scriptSetup) {
     if (descriptor.scriptSetup.src) {
       errors.push(
@@ -210,11 +271,20 @@ export function parse(
     descriptor.customBlocks.forEach(genMap)
   }
 
+  // parse CSS vars
+  descriptor.cssVars = parseCssVars(descriptor)
+
+  // check if the SFC uses :slotted
+  const slottedRE = /(?:::v-|:)slotted\(/
+  descriptor.slotted = descriptor.styles.some(
+    s => s.scoped && slottedRE.test(s.content)
+  )
+
   const result = {
     descriptor,
     errors
   }
-  sourceToSFC.set(sourceKey, result)
+  parseCache.set(sourceKey, result)
   return result
 }
 
@@ -243,6 +313,16 @@ function createBlock(
     start = node.children[0].loc.start
     end = node.children[node.children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
+  } else {
+    const offset = node.loc.source.indexOf(`</`)
+    if (offset > -1) {
+      start = {
+        line: start.line,
+        column: start.column + offset,
+        offset: start.offset + offset
+      }
+    }
+    end = { ...start }
   }
   const loc = {
     source: content,
@@ -269,13 +349,9 @@ function createBlock(
       } else if (type === 'style') {
         if (p.name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'vars' && typeof attrs.vars === 'string') {
-          ;(block as SFCStyleBlock).vars = attrs.vars
         } else if (p.name === 'module') {
           ;(block as SFCStyleBlock).module = attrs[p.name]
         }
-      } else if (type === 'template' && p.name === 'functional') {
-        ;(block as SFCTemplateBlock).functional = true
       } else if (type === 'script' && p.name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }
@@ -346,4 +422,47 @@ function hasSrc(node: ElementNode) {
     }
     return p.name === 'src'
   })
+}
+
+/**
+ * Returns true if the node has no children
+ * once the empty text nodes (trimmed content) have been filtered out.
+ */
+function isEmpty(node: ElementNode) {
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i]
+    if (child.type !== NodeTypes.TEXT || child.content.trim() !== '') {
+      return false
+    }
+  }
+  return true
+}
+
+/**
+ * Note: this comparison assumes the prev/next script are already identical,
+ * and only checks the special case where <script setup lang="ts"> unused import
+ * pruning result changes due to template changes.
+ */
+export function hmrShouldReload(
+  prevImports: Record<string, ImportBinding>,
+  next: SFCDescriptor
+): boolean {
+  if (
+    !next.scriptSetup ||
+    (next.scriptSetup.lang !== 'ts' && next.scriptSetup.lang !== 'tsx')
+  ) {
+    return false
+  }
+
+  // for each previous import, check if its used status remain the same based on
+  // the next descriptor's template
+  for (const key in prevImports) {
+    // if an import was previous unused, but now is used, we need to force
+    // reload so that the script now includes that import.
+    if (!prevImports[key].isUsedInTemplate && isImportUsed(key, next)) {
+      return true
+    }
+  }
+
+  return false
 }

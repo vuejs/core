@@ -2,7 +2,8 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn } from '@vue/runtime-core'
+import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
+import { includeBooleanAttr } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
 export function patchDOMProp(
@@ -24,35 +25,83 @@ export function patchDOMProp(
     el[key] = value == null ? '' : value
     return
   }
-  if (key === 'value' && el.tagName !== 'PROGRESS') {
+
+  const tag = el.tagName
+
+  if (
+    key === 'value' &&
+    tag !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !tag.includes('-')
+  ) {
     // store value as _value as well since
     // non-string values will be stringified.
     el._value = value
+    // #4956: <option> value will fallback to its text content so we need to
+    // compare against its attribute value instead.
+    const oldValue = tag === 'OPTION' ? el.getAttribute('value') : el.value
     const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
+    if (oldValue !== newValue) {
       el.value = newValue
+    }
+    if (value == null) {
+      el.removeAttribute(key)
     }
     return
   }
-  if (value === '' && typeof el[key] === 'boolean') {
-    // e.g. <select multiple> compiles to { multiple: '' }
-    el[key] = true
-  } else if (value == null && typeof el[key] === 'string') {
-    // e.g. <div :id="null">
-    el[key] = ''
-    el.removeAttribute(key)
+
+  let needRemove = false
+  if (value === '' || value == null) {
+    const type = typeof el[key]
+    if (type === 'boolean') {
+      // e.g. <select multiple> compiles to { multiple: '' }
+      value = includeBooleanAttr(value)
+    } else if (value == null && type === 'string') {
+      // e.g. <div :id="null">
+      value = ''
+      needRemove = true
+    } else if (type === 'number') {
+      // e.g. <img :width="null">
+      value = 0
+      needRemove = true
+    }
   } else {
-    // some properties perform value validation and throw
-    try {
-      el[key] = value
-    } catch (e) {
-      if (__DEV__) {
-        warn(
-          `Failed setting prop "${key}" on <${el.tagName.toLowerCase()}>: ` +
-            `value ${value} is invalid.`,
-          e
-        )
+    if (
+      __COMPAT__ &&
+      value === false &&
+      compatUtils.isCompatEnabled(
+        DeprecationTypes.ATTR_FALSE_VALUE,
+        parentComponent
+      )
+    ) {
+      const type = typeof el[key]
+      if (type === 'string' || type === 'number') {
+        __DEV__ &&
+          compatUtils.warnDeprecation(
+            DeprecationTypes.ATTR_FALSE_VALUE,
+            parentComponent,
+            key
+          )
+        value = type === 'number' ? 0 : ''
+        needRemove = true
       }
     }
   }
+
+  // some properties perform value validation and throw,
+  // some properties has getter, no setter, will error in 'use strict'
+  // eg. <select :type="null"></select> <select :willValidate="null"></select>
+  try {
+    el[key] = value
+  } catch (e: any) {
+    // do not warn if value is auto-coerced from nullish values
+    if (__DEV__ && !needRemove) {
+      warn(
+        `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
+          `value ${value} is invalid.`,
+        e
+      )
+    }
+  }
+  needRemove && el.removeAttribute(key)
 }

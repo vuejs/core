@@ -31,7 +31,9 @@ describe('compiler: v-text transform', () => {
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        textContent: `[test]`
+        textContent: {
+          arguments: [{ content: 'test' }]
+        }
       }),
       children: undefined,
       patchFlag: genFlagText(PatchFlags.PROPS),
@@ -40,7 +42,7 @@ describe('compiler: v-text transform', () => {
   })
 
   it('should raise error and ignore children when v-text is present', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     const ast = transformWithVText(`<div v-text="test">hello</div>`, {
       onError
     })
@@ -50,7 +52,9 @@ describe('compiler: v-text transform', () => {
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        textContent: `[test]`
+        textContent: {
+          arguments: [{ content: 'test' }]
+        }
       }),
       children: undefined, // <-- children should have been removed
       patchFlag: genFlagText(PatchFlags.PROPS),
@@ -59,7 +63,7 @@ describe('compiler: v-text transform', () => {
   })
 
   it('should raise error if has no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     transformWithVText(`<div v-text></div>`, {
       onError
     })
