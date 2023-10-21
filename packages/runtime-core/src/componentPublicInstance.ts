@@ -82,7 +82,7 @@ type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
     : false
   : false
 
-  // TODO-CR check this 
+// TODO-CR check this
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer P,
   infer B,
@@ -247,14 +247,16 @@ export type ComponentPublicInstance<
       : (...args: any) => any,
     options?: WatchOptions
   ): WatchStopHandle
-} & ExposedKeys<P &
-  ShallowUnwrapRef<B> &
-  UnwrapNestedRefs<D> &
-  ExtractComputedReturns<C> &
-  M &
-  ComponentCustomProperties &
-  InjectToObject<I>,
-  Exposed>
+} & ExposedKeys<
+  P &
+    ShallowUnwrapRef<B> &
+    UnwrapNestedRefs<D> &
+    ExtractComputedReturns<C> &
+    M &
+    ComponentCustomProperties &
+    InjectToObject<I>,
+  Exposed
+>
 
 export type PublicPropertiesMap = Record<
   string,

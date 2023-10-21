@@ -5,7 +5,7 @@ declare module 'vue' {
   interface ComponentCustomOptions {
     test?(n: number): void
   }
-  
+
   interface GlobalDirectives {
     test: Directive
   }
