@@ -181,13 +181,11 @@ function preCleanupEffect(effect: ReactiveEffect) {
 function postCleanupEffect(effect: ReactiveEffect) {
   if (effect._trackToken) {
     const deps = depsMap.get(effect._trackToken)
-    if (deps) {
-      if (deps.length > effect._depsLength) {
-        for (let i = effect._depsLength; i < deps.length; i++) {
-          cleanupDepEffect(deps[i], effect)
-        }
-        deps.length = effect._depsLength
+    if (deps && deps.length > effect._depsLength) {
+      for (let i = effect._depsLength; i < deps.length; i++) {
+        cleanupDepEffect(deps[i], effect)
       }
+      deps.length = effect._depsLength
     }
   }
 }
