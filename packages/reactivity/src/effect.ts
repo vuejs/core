@@ -1,7 +1,7 @@
 import { extend, getGlobalThis } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
-import type { Dep } from './dep'
+import type { Dep, TrackToken } from './dep'
 import { EffectScope, recordEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -50,10 +50,7 @@ if (!_WeakRef && __DEV__) {
   console.warn(`WeakRef is not available in this environment.`)
 }
 
-export const depsMap = new WeakMap<
-  WeakRef<ReactiveEffect> | ReactiveEffect,
-  Dep[]
->()
+export const depsMap = new WeakMap<TrackToken, Dep[]>()
 
 export class ReactiveEffect<T = any> {
   active = true
@@ -75,7 +72,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirtyLevel = DirtyLevels.Dirty
-  _trackToken?: WeakRef<ReactiveEffect> | ReactiveEffect
+  _trackToken?: TrackToken
   _trackId = 0
   _runnings = 0
   _queryings = 0
