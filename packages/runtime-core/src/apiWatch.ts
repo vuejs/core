@@ -6,6 +6,7 @@ import {
   ReactiveEffect,
   isReactive,
   ReactiveFlags,
+  EffectScheduler,
   DebuggerOptions,
   getCurrentScope
 } from '@vue/reactivity'
@@ -348,20 +349,19 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
-  let schedulerJob: SchedulerJob
+  let scheduler: EffectScheduler
   if (flush === 'sync') {
-    schedulerJob = job // the scheduler function gets called directly
+    scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
-    schedulerJob = () =>
-      queuePostRenderEffect(job, instance && instance.suspense)
+    scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
     job.pre = true
     if (instance) job.id = instance.uid
-    schedulerJob = () => queueJob(job)
+    scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, () => {}, schedulerJob as any)
+  const effect = new ReactiveEffect(getter, () => {}, scheduler)
 
   if (__DEV__) {
     effect.onTrack = onTrack
