@@ -228,23 +228,6 @@ export function createHydrationFunctions(
           vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
 
-          // component may be async, so in the case of fragments we cannot rely
-          // on component's rendered output to determine the end of the fragment
-          // instead, we do a lookahead to find the end anchor node.
-          nextNode = isFragmentStart
-            ? locateClosingAnchor(node)
-            : nextSibling(node)
-
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            isSVGContainer(container),
-            optimized
-          )
-
           // Locate the next node.
           if (isFragmentStart) {
             // If it's a fragment: since components may be async, we cannot rely
@@ -258,6 +241,16 @@ export function createHydrationFunctions(
           } else {
             nextNode = nextSibling(node)
           }
+
+          mountComponent(
+            vnode,
+            container,
+            null,
+            parentComponent,
+            parentSuspense,
+            isSVGContainer(container),
+            optimized
+          )
 
           // #3787
           // if component is async, it may get moved / unmounted before its
