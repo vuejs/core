@@ -19,11 +19,7 @@ import {
   createRoot
 } from '@vue/compiler-dom'
 import { isString, escapeHtml } from '@vue/shared'
-import {
-  SSR_INTERPOLATE,
-  ssrHelpers,
-  SSR_RESOLVE_CSS_VARS
-} from './runtimeHelpers'
+import { SSR_INTERPOLATE, ssrHelpers } from './runtimeHelpers'
 import { ssrProcessIf } from './transforms/ssrVIf'
 import { ssrProcessFor } from './transforms/ssrVFor'
 import { ssrProcessSlotOutlet } from './transforms/ssrTransformSlotOutlet'
@@ -40,36 +36,38 @@ import { createSSRCompilerError, SSRErrorCodes } from './errors'
 export function ssrCodegenTransform(ast: RootNode, options: CompilerOptions) {
   const context = createSSRTransformContext(ast, options)
 
-  // inject <style vars> resolution
+  // inject SFC <style> CSS variables
   // we do this instead of inlining the expression to ensure the vars are
   // only resolved once per render
   if (options.ssrCssVars) {
+    const cssContext = createTransformContext(createRoot([]), options)
     const varsExp = processExpression(
       createSimpleExpression(options.ssrCssVars, false),
-      createTransformContext(createRoot([]), options)
+      cssContext
     )
     context.body.push(
-      createCompoundExpression([
-        `const _cssVars = _${ssrHelpers[SSR_RESOLVE_CSS_VARS]}(`,
-        varsExp,
-        options.scopeId ? `, ${JSON.stringify(options.scopeId)}` : ``,
-        `)`
-      ])
+      createCompoundExpression([`const _cssVars = { style: `, varsExp, `}`])
     )
+    Array.from(cssContext.helpers.keys()).forEach(helper => {
+      ast.helpers.add(helper)
+    })
   }
 
   const isFragment =
     ast.children.length > 1 && ast.children.some(c => !isText(c))
-  processChildren(ast.children, context, isFragment)
+  processChildren(ast, context, isFragment)
   ast.codegenNode = createBlockStatement(context.body)
 
   // Finalize helpers.
   // We need to separate helpers imported from 'vue' vs. '@vue/server-renderer'
-  ast.ssrHelpers = [
-    ...ast.helpers.filter(h => h in ssrHelpers),
-    ...context.helpers
-  ]
-  ast.helpers = ast.helpers.filter(h => !(h in ssrHelpers))
+  ast.ssrHelpers = Array.from(
+    new Set([
+      ...Array.from(ast.helpers).filter(h => h in ssrHelpers),
+      ...context.helpers
+    ])
+  )
+
+  ast.helpers = new Set(Array.from(ast.helpers).filter(h => !(h in ssrHelpers)))
 }
 
 export type SSRTransformContext = ReturnType<typeof createSSRTransformContext>
@@ -134,14 +132,20 @@ function createChildContext(
   )
 }
 
+interface Container {
+  children: TemplateChildNode[]
+}
+
 export function processChildren(
-  children: TemplateChildNode[],
+  parent: Container,
   context: SSRTransformContext,
-  asFragment = false
+  asFragment = false,
+  disableNestedFragments = false
 ) {
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
   }
+  const { children } = parent
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     switch (child.type) {
@@ -151,7 +155,7 @@ export function processChildren(
             ssrProcessElement(child, context)
             break
           case ElementTypes.COMPONENT:
-            ssrProcessComponent(child, context)
+            ssrProcessComponent(child, context, parent)
             break
           case ElementTypes.SLOT:
             ssrProcessSlotOutlet(child, context)
@@ -185,10 +189,10 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        ssrProcessIf(child, context)
+        ssrProcessIf(child, context, disableNestedFragments)
         break
       case NodeTypes.FOR:
-        ssrProcessFor(child, context)
+        ssrProcessFor(child, context, disableNestedFragments)
         break
       case NodeTypes.IF_BRANCH:
         // no-op - handled by ssrProcessIf
@@ -216,12 +220,12 @@ export function processChildren(
 }
 
 export function processChildrenAsStatement(
-  children: TemplateChildNode[],
+  parent: Container,
   parentContext: SSRTransformContext,
   asFragment = false,
   withSlotScopeId = parentContext.withSlotScopeId
 ): BlockStatement {
   const childContext = createChildContext(parentContext, withSlotScopeId)
-  processChildren(children, childContext, asFragment)
+  processChildren(parent, childContext, asFragment)
   return createBlockStatement(childContext.body)
 }

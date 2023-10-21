@@ -11,14 +11,16 @@ import {
   looseEqual,
   looseIndexOf,
   invokeArrayFns,
-  toNumber,
+  looseToNumber,
   isSet
 } from '@vue/shared'
 
 type AssignerFn = (value: any) => void
 
 const getModelAssigner = (vnode: VNode): AssignerFn => {
-  const fn = vnode.props!['onUpdate:modelValue']
+  const fn =
+    vnode.props!['onUpdate:modelValue'] ||
+    (__COMPAT__ && vnode.props!['onModelCompat:input'])
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -30,17 +32,13 @@ function onCompositionEnd(e: Event) {
   const target = e.target as any
   if (target.composing) {
     target.composing = false
-    trigger(target, 'input')
+    target.dispatchEvent(new Event('input'))
   }
 }
 
-function trigger(el: HTMLElement, type: string) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(type, true, true)
-  el.dispatchEvent(e)
-}
+const assignKey = Symbol('_assign')
 
-type ModelDirective<T> = ObjectDirective<T & { _assign: AssignerFn }>
+type ModelDirective<T> = ObjectDirective<T & { [assignKey]: AssignerFn }>
 
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
@@ -48,17 +46,19 @@ export const vModelText: ModelDirective<
   HTMLInputElement | HTMLTextAreaElement
 > = {
   created(el, { modifiers: { lazy, trim, number } }, vnode) {
-    el._assign = getModelAssigner(vnode)
-    const castToNumber = number || el.type === 'number'
+    el[assignKey] = getModelAssigner(vnode)
+    const castToNumber =
+      number || (vnode.props && vnode.props.type === 'number')
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
         domValue = domValue.trim()
-      } else if (castToNumber) {
-        domValue = toNumber(domValue)
       }
-      el._assign(domValue)
+      if (castToNumber) {
+        domValue = looseToNumber(domValue)
+      }
+      el[assignKey](domValue)
     })
     if (trim) {
       addEventListener(el, 'change', () => {
@@ -79,15 +79,21 @@ export const vModelText: ModelDirective<
   mounted(el, { value }) {
     el.value = value == null ? '' : value
   },
-  beforeUpdate(el, { value, modifiers: { trim, number } }, vnode) {
-    el._assign = getModelAssigner(vnode)
+  beforeUpdate(el, { value, modifiers: { lazy, trim, number } }, vnode) {
+    el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-    if (document.activeElement === el) {
+    if (document.activeElement === el && el.type !== 'range') {
+      if (lazy) {
+        return
+      }
       if (trim && el.value.trim() === value) {
         return
       }
-      if ((number || el.type === 'number') && toNumber(el.value) === value) {
+      if (
+        (number || el.type === 'number') &&
+        looseToNumber(el.value) === value
+      ) {
         return
       }
     }
@@ -99,14 +105,15 @@ export const vModelText: ModelDirective<
 }
 
 export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
-  created(el, binding, vnode) {
-    setChecked(el, binding, vnode)
-    el._assign = getModelAssigner(vnode)
+  // #4096 array checkboxes need to be deep traversed
+  deep: true,
+  created(el, _, vnode) {
+    el[assignKey] = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
       const modelValue = (el as any)._modelValue
       const elementValue = getValue(el)
       const checked = el.checked
-      const assign = el._assign
+      const assign = el[assignKey]
       if (isArray(modelValue)) {
         const index = looseIndexOf(modelValue, elementValue)
         const found = index !== -1
@@ -118,18 +125,22 @@ export const vModelCheckbox: ModelDirective<HTMLInputElement> = {
           assign(filtered)
         }
       } else if (isSet(modelValue)) {
+        const cloned = new Set(modelValue)
         if (checked) {
-          modelValue.add(elementValue)
+          cloned.add(elementValue)
         } else {
-          modelValue.delete(elementValue)
+          cloned.delete(elementValue)
         }
+        assign(cloned)
       } else {
         assign(getCheckboxValue(el, checked))
       }
     })
   },
+  // set initial checked on mount to wait for true-value/false-value
+  mounted: setChecked,
   beforeUpdate(el, binding, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     setChecked(el, binding, vnode)
   }
 }
@@ -154,13 +165,13 @@ function setChecked(
 export const vModelRadio: ModelDirective<HTMLInputElement> = {
   created(el, { value }, vnode) {
     el.checked = looseEqual(value, vnode.props!.value)
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     addEventListener(el, 'change', () => {
-      el._assign(getValue(el))
+      el[assignKey](getValue(el))
     })
   },
   beforeUpdate(el, { value, oldValue }, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
     if (value !== oldValue) {
       el.checked = looseEqual(value, vnode.props!.value)
     }
@@ -168,17 +179,25 @@ export const vModelRadio: ModelDirective<HTMLInputElement> = {
 }
 
 export const vModelSelect: ModelDirective<HTMLSelectElement> = {
-  created(el, { modifiers: { number } }, vnode) {
+  // <select multiple> value need to be deep traversed
+  deep: true,
+  created(el, { value, modifiers: { number } }, vnode) {
+    const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
-        .map(
-          (o: HTMLOptionElement) =>
-            number ? toNumber(getValue(o)) : getValue(o)
+        .map((o: HTMLOptionElement) =>
+          number ? looseToNumber(getValue(o)) : getValue(o)
         )
-      el._assign(el.multiple ? selectedVal : selectedVal[0])
+      el[assignKey](
+        el.multiple
+          ? isSetModel
+            ? new Set(selectedVal)
+            : selectedVal
+          : selectedVal[0]
+      )
     })
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
@@ -186,7 +205,7 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
     setSelected(el, value)
   },
   beforeUpdate(el, _binding, vnode) {
-    el._assign = getModelAssigner(vnode)
+    el[assignKey] = getModelAssigner(vnode)
   },
   updated(el, { value }) {
     setSelected(el, value)
@@ -214,12 +233,12 @@ function setSelected(el: HTMLSelectElement, value: any) {
       }
     } else {
       if (looseEqual(getValue(option), value)) {
-        el.selectedIndex = i
+        if (el.selectedIndex !== i) el.selectedIndex = i
         return
       }
     }
   }
-  if (!isMultiple) {
+  if (!isMultiple && el.selectedIndex !== -1) {
     el.selectedIndex = -1
   }
 }
@@ -255,6 +274,24 @@ export const vModelDynamic: ObjectDirective<
   }
 }
 
+function resolveDynamicModel(tagName: string, type: string | undefined) {
+  switch (tagName) {
+    case 'SELECT':
+      return vModelSelect
+    case 'TEXTAREA':
+      return vModelText
+    default:
+      switch (type) {
+        case 'checkbox':
+          return vModelCheckbox
+        case 'radio':
+          return vModelRadio
+        default:
+          return vModelText
+      }
+  }
+}
+
 function callModelHook(
   el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   binding: DirectiveBinding,
@@ -262,32 +299,17 @@ function callModelHook(
   prevVNode: VNode | null,
   hook: keyof ObjectDirective
 ) {
-  let modelToUse: ObjectDirective
-  switch (el.tagName) {
-    case 'SELECT':
-      modelToUse = vModelSelect
-      break
-    case 'TEXTAREA':
-      modelToUse = vModelText
-      break
-    default:
-      switch (vnode.props && vnode.props.type) {
-        case 'checkbox':
-          modelToUse = vModelCheckbox
-          break
-        case 'radio':
-          modelToUse = vModelRadio
-          break
-        default:
-          modelToUse = vModelText
-      }
-  }
+  const modelToUse = resolveDynamicModel(
+    el.tagName,
+    vnode.props && vnode.props.type
+  )
   const fn = modelToUse[hook] as DirectiveHook
   fn && fn(el, binding, vnode, prevVNode)
 }
 
-// SSR vnode transforms
-if (__NODE_JS__) {
+// SSR vnode transforms, only used when user includes client-oriented render
+// function in SSR
+export function initVModelForSSR() {
   vModelText.getSSRProps = ({ value }) => ({ value })
 
   vModelRadio.getSSRProps = ({ value }, vnode) => {
@@ -307,6 +329,20 @@ if (__NODE_JS__) {
       }
     } else if (value) {
       return { checked: true }
+    }
+  }
+
+  vModelDynamic.getSSRProps = (binding, vnode) => {
+    if (typeof vnode.type !== 'string') {
+      return
+    }
+    const modelToUse = resolveDynamicModel(
+      // resolveDynamicModel expects an uppercase tag name, but vnode.type is lowercase
+      vnode.type.toUpperCase(),
+      vnode.props && vnode.props.type
+    )
+    if (modelToUse.getSSRProps) {
+      return modelToUse.getSSRProps(binding, vnode)
     }
   }
 }

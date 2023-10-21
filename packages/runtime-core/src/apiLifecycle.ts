@@ -2,14 +2,15 @@ import {
   ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
-  LifecycleHooks,
-  setCurrentInstance
+  setCurrentInstance,
+  unsetCurrentInstance
 } from './component'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
+import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -38,7 +39,7 @@ export function injectHook(
         // can only be false when the user does something really funky.
         setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        setCurrentInstance(null)
+        unsetCurrentInstance()
         resetTracking()
         return res
       })
@@ -62,11 +63,12 @@ export function injectHook(
   }
 }
 
-export const createHook = <T extends Function = () => any>(
-  lifecycle: LifecycleHooks
-) => (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
-  // post-create lifecycle registrations are noops during SSR
-  !isInSSRComponentSetup && injectHook(lifecycle, hook, target)
+export const createHook =
+  <T extends Function = () => any>(lifecycle: LifecycleHooks) =>
+  (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
+    // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
+    (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
+    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
@@ -74,6 +76,7 @@ export const onBeforeUpdate = createHook(LifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(LifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(LifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
+export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(
@@ -83,15 +86,15 @@ export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED
 )
 
-export type ErrorCapturedHook = (
-  err: unknown,
+export type ErrorCapturedHook<TError = unknown> = (
+  err: TError,
   instance: ComponentPublicInstance | null,
   info: string
 ) => boolean | void
 
-export const onErrorCaptured = (
-  hook: ErrorCapturedHook,
+export function onErrorCaptured<TError = Error>(
+  hook: ErrorCapturedHook<TError>,
   target: ComponentInternalInstance | null = currentInstance
-) => {
+) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }

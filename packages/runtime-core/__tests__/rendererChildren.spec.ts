@@ -3,7 +3,7 @@ import {
   h,
   render,
   nodeOps,
-  NodeTypes,
+  TestNodeTypes,
   TestElement,
   serialize,
   serializeInner
@@ -321,21 +321,28 @@ describe('renderer: keyed children', () => {
     }
 
     for (let n = 0; n < samples; ++n) {
-      render(h('span', arr.map(n => spanNumWithOpacity(n, '1'))), root)
+      render(
+        h(
+          'span',
+          arr.map(n => spanNumWithOpacity(n, '1'))
+        ),
+        root
+      )
       elm = root.children[0] as TestElement
 
       for (let i = 0; i < elms; ++i) {
         expect(serializeInner(elm.children[i] as TestElement)).toBe(
           i.toString()
         )
-        opacities[i] = Math.random()
-          .toFixed(5)
-          .toString()
+        opacities[i] = Math.random().toFixed(5).toString()
       }
 
       const shufArr = shuffle(arr.slice(0))
       render(
-        h('span', arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n]))),
+        h(
+          'span',
+          arr.map(n => spanNumWithOpacity(shufArr[n], opacities[n]))
+        ),
         root
       )
       elm = root.children[0] as TestElement
@@ -480,7 +487,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
 
@@ -488,7 +495,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
   })
@@ -498,7 +505,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text'
     })
 
@@ -506,7 +513,7 @@ describe('renderer: unkeyed children', () => {
 
     elm = root.children[0] as TestElement
     expect(elm.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'text2'
     })
   })

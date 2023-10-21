@@ -1,7 +1,7 @@
 import { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
-  code: number
+  code: number | string
   loc?: SourceLocation
 }
 
@@ -13,20 +13,28 @@ export function defaultOnError(error: CompilerError) {
   throw error
 }
 
+export function defaultOnWarn(msg: CompilerError) {
+  __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
+}
+
+type InferCompilerError<T> = T extends ErrorCodes
+  ? CoreCompilerError
+  : CompilerError
+
 export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
   messages?: { [code: number]: string },
   additionalMessage?: string
-): T extends ErrorCodes ? CoreCompilerError : CompilerError {
+): InferCompilerError<T> {
   const msg =
     __DEV__ || !__BROWSER__
       ? (messages || errorMessages)[code] + (additionalMessage || ``)
       : code
-  const error = new SyntaxError(String(msg)) as CompilerError
+  const error = new SyntaxError(String(msg)) as InferCompilerError<T>
   error.code = code
   error.loc = loc
-  return error as any
+  return error
 }
 
 export const enum ErrorCodes {
@@ -59,6 +67,7 @@ export const enum ErrorCodes {
   X_INVALID_END_TAG,
   X_MISSING_END_TAG,
   X_MISSING_INTERPOLATION_END,
+  X_MISSING_DIRECTIVE_NAME,
   X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
 
   // transform errors
@@ -78,6 +87,7 @@ export const enum ErrorCodes {
   X_V_MODEL_NO_EXPRESSION,
   X_V_MODEL_MALFORMED_EXPRESSION,
   X_V_MODEL_ON_SCOPE_VARIABLE,
+  X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
 
@@ -87,13 +97,17 @@ export const enum ErrorCodes {
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
 
+  // deprecations
+  DEPRECATION_VNODE_HOOKS,
+  DEPRECATION_V_IS,
+
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
   __EXTEND_POINT__
 }
 
-export const errorMessages: { [code: number]: string } = {
+export const errorMessages: Record<ErrorCodes, string> = {
   // parse errors
   [ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT]: 'Illegal comment.',
   [ErrorCodes.CDATA_IN_HTML_CONTENT]:
@@ -124,6 +138,7 @@ export const errorMessages: { [code: number]: string } = {
     "Attribute name cannot start with '='.",
   [ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME]:
     "'<?' is allowed only in XML context.",
+  [ErrorCodes.UNEXPECTED_NULL_CHARACTER]: `Unexpected null character.`,
   [ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG]: "Illegal '/' in tags.",
 
   // Vue-specific parse errors
@@ -134,11 +149,12 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END]:
     'End bracket for dynamic directive argument was not found. ' +
     'Note that dynamic directive argument cannot contain spaces.',
+  [ErrorCodes.X_MISSING_DIRECTIVE_NAME]: 'Legal directive name was expected.',
 
   // transform errors
   [ErrorCodes.X_V_IF_NO_EXPRESSION]: `v-if/v-else-if is missing expression.`,
   [ErrorCodes.X_V_IF_SAME_KEY]: `v-if/else branches must use unique keys.`,
-  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if.`,
+  [ErrorCodes.X_V_ELSE_NO_ADJACENT_IF]: `v-else/v-else-if has no adjacent v-if or v-else-if.`,
   [ErrorCodes.X_V_FOR_NO_EXPRESSION]: `v-for is missing expression.`,
   [ErrorCodes.X_V_FOR_MALFORMED_EXPRESSION]: `v-for has invalid expression.`,
   [ErrorCodes.X_V_FOR_TEMPLATE_KEY_PLACEMENT]: `<template v-for> key should be placed on the <template> tag.`,
@@ -146,7 +162,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_ON_NO_EXPRESSION]: `v-on is missing expression.`,
   [ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET]: `Unexpected custom directive on <slot> outlet.`,
   [ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE]:
-    `Mixed v-slot usage on both the component and nested <template>.` +
+    `Mixed v-slot usage on both the component and nested <template>. ` +
     `When there are multiple named slots, all slots should use <template> ` +
     `syntax to avoid scope ambiguity.`,
   [ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES]: `Duplicate slot names found. `,
@@ -157,6 +173,7 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_V_MODEL_NO_EXPRESSION]: `v-model is missing expression.`,
   [ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION]: `v-model value must be a valid JavaScript member expression.`,
   [ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE]: `v-model cannot be used on v-for or v-slot scope variables because they are not writable.`,
+  [ErrorCodes.X_V_MODEL_ON_PROPS]: `v-model cannot be used on a prop, because local prop bindings are not writable.\nUse a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
 
@@ -164,5 +181,12 @@ export const errorMessages: { [code: number]: string } = {
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
   [ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
-  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`
+  [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
+
+  // deprecations
+  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support will be removed in 3.4.`,
+  [ErrorCodes.DEPRECATION_V_IS]: `v-is="component-name" has been deprecated. Use is="vue:component-name" instead. v-is support will be removed in 3.4.`,
+
+  // just to fulfill types
+  [ErrorCodes.__EXTEND_POINT__]: ``
 }

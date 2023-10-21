@@ -3,7 +3,8 @@ import {
   NodeTypes,
   createSimpleExpression,
   SimpleExpressionNode,
-  SourceLocation
+  SourceLocation,
+  ConstantTypes
 } from '@vue/compiler-core'
 import { parseStringStyle } from '@vue/shared'
 
@@ -36,5 +37,10 @@ const parseInlineCSS = (
   loc: SourceLocation
 ): SimpleExpressionNode => {
   const normalized = parseStringStyle(cssText)
-  return createSimpleExpression(JSON.stringify(normalized), false, loc, true)
+  return createSimpleExpression(
+    JSON.stringify(normalized),
+    false,
+    loc,
+    ConstantTypes.CAN_STRINGIFY
+  )
 }

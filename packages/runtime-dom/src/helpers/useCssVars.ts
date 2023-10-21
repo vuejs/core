@@ -1,20 +1,22 @@
 import {
-  ComponentPublicInstance,
   getCurrentInstance,
-  onMounted,
   warn,
   VNode,
   Fragment,
-  unref,
-  onUpdated,
-  watchEffect
+  Static,
+  watchPostEffect,
+  onMounted,
+  onUnmounted
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
-export function useCssVars(
-  getter: (ctx: ComponentPublicInstance) => Record<string, string>,
-  scoped = false
-) {
+/**
+ * Runtime helper for SFC's CSS variable injection feature.
+ * @private
+ */
+export function useCssVars(getter: (ctx: any) => Record<string, string>) {
+  if (!__BROWSER__ && !__TEST__) return
+
   const instance = getCurrentInstance()
   /* istanbul ignore next */
   if (!instance) {
@@ -23,28 +25,34 @@ export function useCssVars(
     return
   }
 
-  const prefix =
-    scoped && instance.type.__scopeId
-      ? `${instance.type.__scopeId.replace(/^data-v-/, '')}-`
-      : ``
+  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
+    Array.from(
+      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)
+    ).forEach(node => setVarsOnNode(node, vars))
+  })
 
-  const setVars = () =>
-    setVarsOnVNode(instance.subTree, getter(instance.proxy!), prefix)
-  onMounted(() => watchEffect(setVars))
-  onUpdated(setVars)
+  const setVars = () => {
+    const vars = getter(instance.proxy)
+    setVarsOnVNode(instance.subTree, vars)
+    updateTeleports(vars)
+  }
+
+  watchPostEffect(setVars)
+
+  onMounted(() => {
+    const ob = new MutationObserver(setVars)
+    ob.observe(instance.subTree.el!.parentNode, { childList: true })
+    onUnmounted(() => ob.disconnect())
+  })
 }
 
-function setVarsOnVNode(
-  vnode: VNode,
-  vars: Record<string, string>,
-  prefix: string
-) {
+function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
     if (suspense.pendingBranch && !suspense.isHydrating) {
       suspense.effects.push(() => {
-        setVarsOnVNode(suspense.activeBranch!, vars, prefix)
+        setVarsOnVNode(suspense.activeBranch!, vars)
       })
     }
   }
@@ -55,11 +63,24 @@ function setVarsOnVNode(
   }
 
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
-    const style = vnode.el.style
-    for (const key in vars) {
-      style.setProperty(`--${prefix}${key}`, unref(vars[key]))
-    }
+    setVarsOnNode(vnode.el as Node, vars)
   } else if (vnode.type === Fragment) {
-    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars, prefix))
+    ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))
+  } else if (vnode.type === Static) {
+    let { el, anchor } = vnode
+    while (el) {
+      setVarsOnNode(el as Node, vars)
+      if (el === anchor) break
+      el = el.nextSibling
+    }
+  }
+}
+
+function setVarsOnNode(el: Node, vars: Record<string, string>) {
+  if (el.nodeType === 1) {
+    const style = (el as HTMLElement).style
+    for (const key in vars) {
+      style.setProperty(`--${key}`, vars[key])
+    }
   }
 }

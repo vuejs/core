@@ -27,8 +27,10 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
   })
   return {
     root: ast,
-    props: (((ast.children[0] as ElementNode).codegenNode as VNodeCall)
-      .props as ObjectExpression).properties
+    props: (
+      ((ast.children[0] as ElementNode).codegenNode as VNodeCall)
+        .props as ObjectExpression
+    ).properties
   }
 }
 
@@ -278,7 +280,7 @@ describe('compiler-dom: transform v-on', () => {
       },
       value: {
         type: NodeTypes.JS_CACHE_EXPRESSION,
-        index: 1,
+        index: 0,
         value: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: V_ON_WITH_KEYS

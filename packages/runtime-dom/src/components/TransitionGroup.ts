@@ -5,7 +5,9 @@ import {
   ElementWithTransition,
   getTransitionInfo,
   resolveTransitionProps,
-  TransitionPropsValidators
+  TransitionPropsValidators,
+  forceReflow,
+  vtcKey
 } from './Transition'
 import {
   Fragment,
@@ -18,25 +20,24 @@ import {
   setTransitionHooks,
   createVNode,
   onUpdated,
-  SetupContext
+  SetupContext,
+  toRaw,
+  compatUtils,
+  DeprecationTypes,
+  ComponentOptions
 } from '@vue/runtime-core'
-import { toRaw } from '@vue/reactivity'
 import { extend } from '@vue/shared'
 
-interface Position {
-  top: number
-  left: number
-}
-
-const positionMap = new WeakMap<VNode, Position>()
-const newPositionMap = new WeakMap<VNode, Position>()
-
+const positionMap = new WeakMap<VNode, DOMRect>()
+const newPositionMap = new WeakMap<VNode, DOMRect>()
+const moveCbKey = Symbol('_moveCb')
+const enterCbKey = Symbol('_enterCb')
 export type TransitionGroupProps = Omit<TransitionProps, 'mode'> & {
   tag?: string
   moveClass?: string
 }
 
-const TransitionGroupImpl = {
+const TransitionGroupImpl: ComponentOptions = {
   name: 'TransitionGroup',
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
@@ -81,13 +82,13 @@ const TransitionGroupImpl = {
         const style = el.style
         addTransitionClass(el, moveClass)
         style.transform = style.webkitTransform = style.transitionDuration = ''
-        const cb = ((el as any)._moveCb = (e: TransitionEvent) => {
+        const cb = ((el as any)[moveCbKey] = (e: TransitionEvent) => {
           if (e && e.target !== el) {
             return
           }
           if (!e || /transform$/.test(e.propertyName)) {
             el.removeEventListener('transitionend', cb)
-            ;(el as any)._moveCb = null
+            ;(el as any)[moveCbKey] = null
             removeTransitionClass(el, moveClass)
           }
         })
@@ -98,7 +99,19 @@ const TransitionGroupImpl = {
     return () => {
       const rawProps = toRaw(props)
       const cssTransitionProps = resolveTransitionProps(rawProps)
-      const tag = rawProps.tag || Fragment
+      let tag = rawProps.tag || Fragment
+
+      if (
+        __COMPAT__ &&
+        !rawProps.tag &&
+        compatUtils.checkCompatEnabled(
+          DeprecationTypes.TRANSITION_GROUP_ROOT,
+          instance.parent
+        )
+      ) {
+        tag = 'span'
+      }
+
       prevChildren = children
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
@@ -130,6 +143,10 @@ const TransitionGroupImpl = {
   }
 }
 
+if (__COMPAT__) {
+  TransitionGroupImpl.__isBuiltIn = true
+}
+
 /**
  * TransitionGroup does not support "mode" so we need to remove it from the
  * props declarations, but direct delete operation is considered a side effect
@@ -139,7 +156,7 @@ const TransitionGroupImpl = {
 const removeMode = (props: any) => delete props.mode
 /*#__PURE__*/ removeMode(TransitionGroupImpl.props)
 
-export const TransitionGroup = (TransitionGroupImpl as unknown) as {
+export const TransitionGroup = TransitionGroupImpl as unknown as {
   new (): {
     $props: TransitionGroupProps
   }
@@ -147,11 +164,11 @@ export const TransitionGroup = (TransitionGroupImpl as unknown) as {
 
 function callPendingCbs(c: VNode) {
   const el = c.el as any
-  if (el._moveCb) {
-    el._moveCb()
+  if (el[moveCbKey]) {
+    el[moveCbKey]()
   }
-  if (el._enterCb) {
-    el._enterCb()
+  if (el[enterCbKey]) {
+    el[enterCbKey]()
   }
 }
 
@@ -172,11 +189,6 @@ function applyTranslation(c: VNode): VNode | undefined {
   }
 }
 
-// this is put in a dedicated function to avoid the line from being treeshaken
-function forceReflow() {
-  return document.body.offsetHeight
-}
-
 function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
@@ -188,16 +200,17 @@ function hasCSSTransform(
   // all other transition classes applied to ensure only the move class
   // is applied.
   const clone = el.cloneNode() as HTMLElement
-  if (el._vtc) {
-    el._vtc.forEach(cls => {
+  const _vtc = el[vtcKey]
+  if (_vtc) {
+    _vtc.forEach(cls => {
       cls.split(/\s+/).forEach(c => c && clone.classList.remove(c))
     })
   }
   moveClass.split(/\s+/).forEach(c => c && clone.classList.add(c))
   clone.style.display = 'none'
-  const container = (root.nodeType === 1
-    ? root
-    : root.parentNode) as HTMLElement
+  const container = (
+    root.nodeType === 1 ? root : root.parentNode
+  ) as HTMLElement
   container.appendChild(clone)
   const { hasTransform } = getTransitionInfo(clone)
   container.removeChild(clone)

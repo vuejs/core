@@ -10,6 +10,12 @@ import {
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
 import { shallowRef, unref, customRef, triggerRef } from '../src/ref'
+import {
+  isReadonly,
+  isShallow,
+  readonly,
+  shallowReactive
+} from '../src/reactive'
 
 describe('reactivity/ref', () => {
   it('should hold a value', () => {
@@ -22,20 +28,18 @@ describe('reactivity/ref', () => {
   it('should be reactive', () => {
     const a = ref(1)
     let dummy
-    let calls = 0
-    effect(() => {
-      calls++
+    const fn = vi.fn(() => {
       dummy = a.value
     })
-    expect(calls).toBe(1)
+    effect(fn)
+    expect(fn).toHaveBeenCalledTimes(1)
     expect(dummy).toBe(1)
     a.value = 2
-    expect(calls).toBe(2)
+    expect(fn).toHaveBeenCalledTimes(2)
     expect(dummy).toBe(2)
     // same value should not trigger
     a.value = 2
-    expect(calls).toBe(2)
-    expect(dummy).toBe(2)
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 
   it('should make nested properties reactive', () => {
@@ -152,16 +156,44 @@ describe('reactivity/ref', () => {
   it('should keep symbols', () => {
     const customSymbol = Symbol()
     const obj = {
-      [Symbol.asyncIterator]: { a: 1 },
-      [Symbol.unscopables]: { b: '1' },
-      [customSymbol]: { c: [1, 2, 3] }
+      [Symbol.asyncIterator]: ref(1),
+      [Symbol.hasInstance]: { a: ref('a') },
+      [Symbol.isConcatSpreadable]: { b: ref(true) },
+      [Symbol.iterator]: [ref(1)],
+      [Symbol.match]: new Set<Ref<number>>(),
+      [Symbol.matchAll]: new Map<number, Ref<string>>(),
+      [Symbol.replace]: { arr: [ref('a')] },
+      [Symbol.search]: { set: new Set<Ref<number>>() },
+      [Symbol.species]: { map: new Map<number, Ref<string>>() },
+      [Symbol.split]: new WeakSet<Ref<boolean>>(),
+      [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
+      [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
+      [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
+      [customSymbol]: { arr: [ref(1)] }
     }
 
     const objRef = ref(obj)
 
-    expect(objRef.value[Symbol.asyncIterator]).toBe(obj[Symbol.asyncIterator])
-    expect(objRef.value[Symbol.unscopables]).toBe(obj[Symbol.unscopables])
-    expect(objRef.value[customSymbol]).toStrictEqual(obj[customSymbol])
+    const keys: (keyof typeof obj)[] = [
+      Symbol.asyncIterator,
+      Symbol.hasInstance,
+      Symbol.isConcatSpreadable,
+      Symbol.iterator,
+      Symbol.match,
+      Symbol.matchAll,
+      Symbol.replace,
+      Symbol.search,
+      Symbol.species,
+      Symbol.split,
+      Symbol.toPrimitive,
+      Symbol.toStringTag,
+      Symbol.unscopables,
+      customSymbol
+    ]
+
+    keys.forEach(key => {
+      expect(objRef.value[key]).toStrictEqual(obj[key])
+    })
   })
 
   test('unref', () => {
@@ -198,6 +230,10 @@ describe('reactivity/ref', () => {
     // force trigger
     triggerRef(sref)
     expect(dummy).toBe(2)
+  })
+
+  test('shallowRef isShallow', () => {
+    expect(isShallow(shallowRef({ a: 1 }))).toBe(true)
   })
 
   test('isRef', () => {
@@ -240,6 +276,38 @@ describe('reactivity/ref', () => {
     // should keep ref
     const r = { x: ref(1) }
     expect(toRef(r, 'x')).toBe(r.x)
+  })
+
+  test('toRef on array', () => {
+    const a = reactive(['a', 'b'])
+    const r = toRef(a, 1)
+    expect(r.value).toBe('b')
+    r.value = 'c'
+    expect(r.value).toBe('c')
+    expect(a[1]).toBe('c')
+  })
+
+  test('toRef default value', () => {
+    const a: { x: number | undefined } = { x: undefined }
+    const x = toRef(a, 'x', 1)
+    expect(x.value).toBe(1)
+
+    a.x = 2
+    expect(x.value).toBe(2)
+
+    a.x = undefined
+    expect(x.value).toBe(1)
+  })
+
+  test('toRef getter', () => {
+    const x = toRef(() => 1)
+    expect(x.value).toBe(1)
+    expect(isRef(x)).toBe(true)
+    expect(unref(x)).toBe(1)
+    //@ts-expect-error
+    expect(() => (x.value = 123)).toThrow()
+
+    expect(isReadonly(x)).toBe(true)
   })
 
   test('toRefs', () => {
@@ -335,5 +403,43 @@ describe('reactivity/ref', () => {
 
     _trigger!()
     expect(dummy).toBe(2)
+  })
+
+  test('should not trigger when setting value to same proxy', () => {
+    const obj = reactive({ count: 0 })
+
+    const a = ref(obj)
+    const spy1 = vi.fn(() => a.value)
+
+    effect(spy1)
+
+    a.value = obj
+    expect(spy1).toBeCalledTimes(1)
+
+    const b = shallowRef(obj)
+    const spy2 = vi.fn(() => b.value)
+
+    effect(spy2)
+
+    b.value = obj
+    expect(spy2).toBeCalledTimes(1)
+  })
+
+  test('ref should preserve value shallow/readonly-ness', () => {
+    const original = {}
+    const r = reactive(original)
+    const s = shallowReactive(original)
+    const rr = readonly(original)
+    const a = ref(original)
+
+    expect(a.value).toBe(r)
+
+    a.value = s
+    expect(a.value).toBe(s)
+    expect(a.value).not.toBe(r)
+
+    a.value = rr
+    expect(a.value).toBe(rr)
+    expect(a.value).not.toBe(r)
   })
 })

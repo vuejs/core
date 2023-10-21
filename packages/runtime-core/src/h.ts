@@ -4,6 +4,8 @@ import {
   createVNode,
   VNodeArrayChildren,
   Fragment,
+  Text,
+  Comment,
   isVNode
 } from './vnode'
 import { Teleport, TeleportProps } from './components/Teleport'
@@ -84,6 +86,16 @@ export function h(
   children?: RawChildren | RawSlots
 ): VNode
 
+// text/comment
+export function h(
+  type: typeof Text | typeof Comment,
+  children?: string | number | boolean
+): VNode
+export function h(
+  type: typeof Text | typeof Comment,
+  props?: null,
+  children?: string | number | boolean
+): VNode
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
 export function h(
@@ -96,7 +108,7 @@ export function h(
 export function h(
   type: typeof Teleport,
   props: RawProps & TeleportProps,
-  children: RawChildren
+  children: RawChildren | RawSlots
 ): VNode
 
 // suspense
@@ -108,8 +120,12 @@ export function h(
 ): VNode
 
 // functional component
-export function h<P, E extends EmitsOptions = {}>(
-  type: FunctionalComponent<P, E>,
+export function h<
+  P,
+  E extends EmitsOptions = {},
+  S extends Record<string, any> = {}
+>(
+  type: FunctionalComponent<P, E, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
@@ -129,9 +145,9 @@ export function h<P>(
 ): VNode
 
 // component without props
-export function h(
-  type: Component,
-  props: null,
+export function h<P>(
+  type: Component<P>,
+  props?: (RawProps & P) | null,
   children?: RawChildren | RawSlots
 ): VNode
 

@@ -19,3 +19,12 @@ export const enum SlotFlags {
    */
   FORWARDED = 3
 }
+
+/**
+ * Dev only
+ */
+export const slotFlagsText = {
+  [SlotFlags.STABLE]: 'STABLE',
+  [SlotFlags.DYNAMIC]: 'DYNAMIC',
+  [SlotFlags.FORWARDED]: 'FORWARDED'
+}

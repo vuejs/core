@@ -5,10 +5,14 @@ import {
   DirectiveNode,
   NodeTypes,
   CompilerOptions,
-  InterpolationNode
+  InterpolationNode,
+  ConstantTypes,
+  BindingTypes,
+  baseCompile
 } from '../../src'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { PatchFlagNames, PatchFlags } from '../../../shared/src'
 
 function parseWithExpressionTransform(
   template: string,
@@ -392,11 +396,48 @@ describe('compiler: expression transform', () => {
   })
 
   test('should handle parse error', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     parseWithExpressionTransform(`{{ a( }}`, { onError })
     expect(onError.mock.calls[0][0].message).toMatch(
       `Error parsing JavaScript expression: Unexpected token`
     )
+  })
+
+  test('should prefix in assignment', () => {
+    const node = parseWithExpressionTransform(
+      `{{ x = 1 }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [{ content: `_ctx.x` }, ` = 1`]
+    })
+  })
+
+  test('should prefix in assignment pattern', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { x, y: [z] } = obj }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: [
+        `{ x: `,
+        { content: `_ctx.x` },
+        `, y: [`,
+        { content: `_ctx.z` },
+        `] } = `,
+        { content: `_ctx.obj` }
+      ]
+    })
+  })
+
+  // #8295
+  test('should treat floating point number literals as constant', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [1, 2.1] }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY
+    })
   })
 
   describe('ES Proposals support', () => {
@@ -408,7 +449,7 @@ describe('compiler: expression transform', () => {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: `13000n`,
         isStatic: false,
-        isConstant: true
+        constType: ConstantTypes.CAN_STRINGIFY
       })
     })
 
@@ -454,6 +495,84 @@ describe('compiler: expression transform', () => {
         type: NodeTypes.COMPOUND_EXPRESSION,
         children: [{ content: `_ctx.a` }, ` |> `, { content: `_ctx.uppercase` }]
       })
+    })
+  })
+
+  describe('bindingMetadata', () => {
+    const bindingMetadata = {
+      props: BindingTypes.PROPS,
+      setup: BindingTypes.SETUP_MAYBE_REF,
+      setupConst: BindingTypes.SETUP_CONST,
+      data: BindingTypes.DATA,
+      options: BindingTypes.OPTIONS,
+      reactive: BindingTypes.SETUP_REACTIVE_CONST,
+      literal: BindingTypes.LITERAL_CONST
+    }
+
+    function compileWithBindingMetadata(
+      template: string,
+      options?: CompilerOptions
+    ) {
+      return baseCompile(template, {
+        prefixIdentifiers: true,
+        bindingMetadata,
+        ...options
+      })
+    }
+
+    test('non-inline mode', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }}</div>`
+      )
+      expect(code).toMatch(`$props.props`)
+      expect(code).toMatch(`$setup.setup`)
+      expect(code).toMatch(`$data.data`)
+      expect(code).toMatch(`$options.options`)
+      expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('inline mode', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
+        { inline: true }
+      )
+      expect(code).toMatch(`__props.props`)
+      expect(code).toMatch(`_unref(setup)`)
+      expect(code).toMatch(`_toDisplayString(setupConst)`)
+      expect(code).toMatch(`_ctx.data`)
+      expect(code).toMatch(`_ctx.options`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('literal const handling', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ literal }}</div>`, {
+        inline: true
+      })
+      expect(code).toMatch(`toDisplayString(literal)`)
+      // #7973 should skip patch for literal const
+      expect(code).not.toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
+    })
+
+    test('literal const handling， non-inline mode', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ literal }}</div>`)
+      expect(code).toMatch(`toDisplayString($setup.literal)`)
+      // #7973 should skip patch for literal const
+      expect(code).not.toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
+    })
+
+    test('reactive const handling', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ reactive }}</div>`, {
+        inline: true
+      })
+      // #7973 should not skip patch for reactive const
+      expect(code).toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
     })
   })
 })
