@@ -82,7 +82,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirtyLevel = DirtyLevels.Dirty
-  _trackToken!: WeakRef<ReactiveEffect>
+  _trackToken?: WeakRef<ReactiveEffect>
   _trackId = 0
   _runnings = 0
   _queryings = 0
@@ -129,14 +129,6 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = DirtyLevels.NotDirty
     if (!this.active) {
       return this.fn()
-    }
-    if (!this._trackToken) {
-      if (this.scheduler) {
-        this._trackToken = new StrongRef(this) as any
-      } else {
-        this._trackToken = new _WeakRef(this)
-        registry?.register(this, this._trackToken, this)
-      }
     }
     let lastShouldTrack = shouldTrack
     let lastEffect = activeEffect
@@ -186,11 +178,13 @@ function postCleanupEffect(effect: ReactiveEffect) {
 }
 
 function cleanupDepEffect(dep: Dep, effect: ReactiveEffect) {
-  const trackId = dep.get(effect._trackToken)
-  if (trackId !== undefined && effect._trackId !== trackId) {
-    dep.delete(effect._trackToken)
-    if (dep.size === 0) {
-      dep.cleanup()
+  if (effect._trackToken) {
+    const trackId = dep.get(effect._trackToken)
+    if (trackId !== undefined && effect._trackId !== trackId) {
+      dep.delete(effect._trackToken)
+      if (dep.size === 0) {
+        dep.cleanup()
+      }
     }
   }
 }
@@ -306,11 +300,20 @@ export function trackEffect(
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  if (dep.get(effect._trackToken) !== effect._trackId) {
-    dep.set(effect._trackToken, effect._trackId)
-    let deps = depsMap.get(effect._trackToken)
+  if (!effect._trackToken) {
+    if (effect.scheduler) {
+      effect._trackToken = new StrongRef(effect) as any
+    } else {
+      effect._trackToken = new _WeakRef(effect)
+      registry?.register(effect, effect._trackToken, effect)
+    }
+  }
+  const trackToken = effect._trackToken!
+  if (dep.get(trackToken) !== effect._trackId) {
+    dep.set(trackToken, effect._trackId)
+    let deps = depsMap.get(trackToken)
     if (!deps) {
-      depsMap.set(effect._trackToken, (deps = []))
+      depsMap.set(trackToken, (deps = []))
     }
     const oldDep = deps[effect._depsLength]
     if (oldDep !== dep) {

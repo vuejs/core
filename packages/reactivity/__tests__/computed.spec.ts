@@ -401,7 +401,7 @@ describe('reactivity/computed', () => {
     a.value++
     e.value
 
-    const deps = depsMap.get(e.effect._trackToken)
+    const deps = depsMap.get(e.effect._trackToken!)
     expect(deps!.length).toBe(3)
     expect(deps!.indexOf((b as any).dep)).toBe(0)
     expect(deps!.indexOf((d as any).dep)).toBe(1)

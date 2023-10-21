@@ -394,7 +394,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(depsMap.get(eff.effect._trackToken)).toBeUndefined()
+    expect(depsMap.get(eff.effect._trackToken!)).toBeUndefined()
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
