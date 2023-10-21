@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi } from 'vitest'
+
 import {
   createSSRApp,
   h,
@@ -391,6 +391,28 @@ describe('SSR hydration', () => {
     expect(container.innerHTML).toMatchInlineSnapshot(
       '"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class=\\"bar\\"></span><!--teleport end--><div class=\\"bar2\\">bar</div><!--]-->"'
     )
+  })
+
+  // #6152
+  test('Teleport (disabled + as component root)', () => {
+    const { container } = mountWithHydration(
+      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+      () => [
+        h('div', 'Parent fragment'),
+        h(() =>
+          h(Teleport, { to: 'body', disabled: true }, [
+            h('div', 'Teleport content')
+          ])
+        )
+      ]
+    )
+    expect(document.body.innerHTML).toBe('')
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->'
+    )
+    expect(
+      `Hydration completed but contains mismatches.`
+    ).not.toHaveBeenWarned()
   })
 
   test('Teleport (as component root)', () => {

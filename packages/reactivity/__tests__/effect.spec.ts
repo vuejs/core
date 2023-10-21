@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   ref,
   reactive,
@@ -242,6 +241,22 @@ describe('reactivity/effect', () => {
     array[key] = true
     expect(array[key]).toBe(true)
     expect(dummy).toBe(undefined)
+  })
+
+  it('should support manipulating an array while observing symbol keyed properties', () => {
+    const key = Symbol()
+    let dummy
+    const array: any = reactive([1, 2, 3])
+    effect(() => (dummy = array[key]))
+
+    expect(dummy).toBe(undefined)
+    array.pop()
+    array.shift()
+    array.splice(0, 1)
+    expect(dummy).toBe(undefined)
+    array[key] = 'value'
+    array.length = 0
+    expect(dummy).toBe('value')
   })
 
   it('should observe function valued properties', () => {
@@ -584,6 +599,14 @@ describe('reactivity/effect', () => {
     const otherRunner = effect(runner)
     expect(runner).not.toBe(otherRunner)
     expect(runner.effect.fn).toBe(otherRunner.effect.fn)
+  })
+
+  it('should wrap if the passed function is a fake effect', () => {
+    const fakeRunner = () => {}
+    fakeRunner.effect = {}
+    const runner = effect(fakeRunner)
+    expect(fakeRunner).not.toBe(runner)
+    expect(runner.effect.fn).toBe(fakeRunner)
   })
 
   it('should not run multiple times for a single mutation', () => {

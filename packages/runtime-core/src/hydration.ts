@@ -134,8 +134,10 @@ export function createHydrationFunctions(
             __DEV__ &&
               warn(
                 `Hydration text mismatch:` +
-                  `\n- Client: ${JSON.stringify((node as Text).data)}` +
-                  `\n- Server: ${JSON.stringify(vnode.children)}`
+                  `\n- Server rendered: ${JSON.stringify(
+                    (node as Text).data
+                  )}` +
+                  `\n- Client rendered: ${JSON.stringify(vnode.children)}`
               )
             ;(node as Text).data = vnode.children as string
           }
@@ -225,20 +227,18 @@ export function createHydrationFunctions(
             optimized
           )
 
-          // component may be async, so in the case of fragments we cannot rely
-          // on component's rendered output to determine the end of the fragment
-          // instead, we do a lookahead to find the end anchor node.
-          nextNode = isFragmentStart
-            ? locateClosingAsyncAnchor(node)
-            : nextSibling(node)
-
-          // #4293 teleport as component root
-          if (
-            nextNode &&
-            isComment(nextNode) &&
-            nextNode.data === 'teleport end'
-          ) {
-            nextNode = nextSibling(nextNode)
+          // Locate the next node.
+          if (isFragmentStart) {
+            // If it's a fragment: since components may be async, we cannot rely
+            // on component's rendered output to determine the end of the
+            // fragment. Instead, we do a lookahead to find the end anchor node.
+            nextNode = locateClosingAnchor(node)
+          } else if (isComment(node) && node.data === 'teleport start') {
+            // #4293 #6152
+            // If a teleport is at component root, look ahead for teleport end.
+            nextNode = locateClosingAnchor(node, node.data, 'teleport end')
+          } else {
+            nextNode = nextSibling(node)
           }
 
           // #3787
@@ -406,8 +406,8 @@ export function createHydrationFunctions(
               `Hydration text content mismatch in <${
                 vnode.type as string
               }>:\n` +
-                `- Client: ${el.textContent}\n` +
-                `- Server: ${vnode.children as string}`
+                `- Server rendered: ${el.textContent}\n` +
+                `- Client rendered: ${vnode.children as string}`
             )
           el.textContent = vnode.children as string
         }
@@ -531,7 +531,7 @@ export function createHydrationFunctions(
 
     if (isFragment) {
       // remove excessive fragment nodes
-      const end = locateClosingAsyncAnchor(node)
+      const end = locateClosingAnchor(node)
       while (true) {
         const next = nextSibling(node)
         if (next && next !== end) {
@@ -559,13 +559,18 @@ export function createHydrationFunctions(
     return next
   }
 
-  const locateClosingAsyncAnchor = (node: Node | null): Node | null => {
+  // looks ahead for a start and closing comment node
+  const locateClosingAnchor = (
+    node: Node | null,
+    open = '[',
+    close = ']'
+  ): Node | null => {
     let match = 0
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === '[') match++
-        if (node.data === ']') {
+        if (node.data === open) match++
+        if (node.data === close) {
           if (match === 0) {
             return nextSibling(node)
           } else {
