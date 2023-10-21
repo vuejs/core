@@ -72,6 +72,60 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
+  test('no expression', () => {
+    const node = parseWithVBind(`<div v-bind:id />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `id`,
+        isStatic: true,
+        loc: {
+          start: {
+            line: 1,
+            column: 13,
+            offset: 12
+          },
+          end: {
+            line: 1,
+            column: 15,
+            offset: 14
+          }
+        }
+      },
+      value: {
+        content: `id`,
+        isStatic: false,
+        loc: {
+          start: {
+            line: 1,
+            column: 1,
+            offset: 0
+          },
+          end: {
+            line: 1,
+            column: 1,
+            offset: 0
+          }
+        }
+      }
+    })
+  })
+
+  test('no expression (shorthand)', () => {
+    const node = parseWithVBind(`<div :id />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `id`,
+        isStatic: true
+      },
+      value: {
+        content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
   test('dynamic arg', () => {
     const node = parseWithVBind(`<div v-bind:[id]="id"/>`)
     const props = (node.codegenNode as VNodeCall).props as CallExpression
@@ -98,9 +152,9 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test('should error if no expression', () => {
+  test('should error if empty expression', () => {
     const onError = vi.fn()
-    const node = parseWithVBind(`<div v-bind:arg />`, { onError })
+    const node = parseWithVBind(`<div v-bind:arg="" />`, { onError })
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
@@ -111,7 +165,7 @@ describe('compiler: transform v-bind', () => {
         },
         end: {
           line: 1,
-          column: 16
+          column: 19
         }
       }
     })
@@ -137,6 +191,21 @@ describe('compiler: transform v-bind', () => {
       },
       value: {
         content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.camel modifier w/ no expression', () => {
+    const node = parseWithVBind(`<div v-bind:foo-bar.camel />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `fooBar`,
+        isStatic: true
+      },
+      value: {
+        content: `fooBar`,
         isStatic: false
       }
     })
@@ -219,6 +288,21 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
+  test('.prop modifier w/ no expression', () => {
+    const node = parseWithVBind(`<div v-bind:fooBar.prop />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `.fooBar`,
+        isStatic: true
+      },
+      value: {
+        content: `fooBar`,
+        isStatic: false
+      }
+    })
+  })
+
   test('.prop modifier w/ dynamic arg', () => {
     const node = parseWithVBind(`<div v-bind:[fooBar].prop="id"/>`)
     const props = (node.codegenNode as VNodeCall).props as CallExpression
@@ -296,6 +380,21 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
+  test('.prop modifier (shortband) w/ no expression', () => {
+    const node = parseWithVBind(`<div .fooBar />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `.fooBar`,
+        isStatic: true
+      },
+      value: {
+        content: `fooBar`,
+        isStatic: false
+      }
+    })
+  })
+
   test('.attr modifier', () => {
     const node = parseWithVBind(`<div v-bind:foo-bar.attr="id"/>`)
     const props = (node.codegenNode as VNodeCall).props as ObjectExpression
@@ -306,6 +405,21 @@ describe('compiler: transform v-bind', () => {
       },
       value: {
         content: `id`,
+        isStatic: false
+      }
+    })
+  })
+
+  test('.attr modifier w/ no expression', () => {
+    const node = parseWithVBind(`<div v-bind:foo-bar.attr />`)
+    const props = (node.codegenNode as VNodeCall).props as ObjectExpression
+    expect(props.properties[0]).toMatchObject({
+      key: {
+        content: `^foo-bar`,
+        isStatic: true
+      },
+      value: {
+        content: `fooBar`,
         isStatic: false
       }
     })
