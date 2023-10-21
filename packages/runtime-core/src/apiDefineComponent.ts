@@ -63,8 +63,7 @@ export type DefineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -166,28 +165,26 @@ export function defineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
 >(
-  options: Options &
-    ComponentOptionsWithoutProps<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      I,
-      II,
-      S,
-      LC,
-      Directives,
-      Exposed,
-      Provide
-    >
+  options: ComponentOptionsWithoutProps<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    I,
+    II,
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
+  >
 ): DefineComponent<
   Props,
   RawBindings,
@@ -205,8 +202,7 @@ export function defineComponent<
   LC,
   Directives,
   Exposed,
-  Provide,
-  Options
+  Provide
 >
 
 // overload 3: object format with array props declaration
@@ -229,28 +225,26 @@ export function defineComponent<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {},
   Props = Readonly<{ [key in PropNames]?: any }>
 >(
-  options: Options &
-    ComponentOptionsWithArrayProps<
-      PropNames,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      I,
-      II,
-      S,
-      LC,
-      Directives,
-      Exposed,
-      Provide
-    >
+  options: ComponentOptionsWithArrayProps<
+    PropNames,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    I,
+    II,
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
+  >
 ): DefineComponent<
   Props,
   RawBindings,
@@ -268,8 +262,7 @@ export function defineComponent<
   LC,
   Directives,
   Exposed,
-  Provide,
-  Options
+  Provide
 >
 
 // overload 4: object format with object props declaration
@@ -292,8 +285,7 @@ export function defineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Options extends {} = {}
+  Provide extends ComponentProvideOptions = ComponentProvideOptions
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -330,8 +322,7 @@ export function defineComponent<
   LC,
   Directives,
   Exposed,
-  Provide,
-  Options
+  Provide
 >
 
 // implementation, close to no-op
