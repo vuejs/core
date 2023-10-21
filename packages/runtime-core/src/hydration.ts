@@ -232,7 +232,7 @@ export function createHydrationFunctions(
           // on component's rendered output to determine the end of the fragment
           // instead, we do a lookahead to find the end anchor node.
           nextNode = isFragmentStart
-            ? locateClosingAsyncAnchor(node)
+            ? locateClosingAnchor(node)
             : nextSibling(node)
 
           mountComponent(
