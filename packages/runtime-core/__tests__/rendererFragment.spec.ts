@@ -3,7 +3,7 @@ import {
   createVNode,
   render,
   nodeOps,
-  NodeTypes,
+  TestNodeTypes,
   TestElement,
   Fragment,
   resetOps,
@@ -32,23 +32,23 @@ describe('renderer: fragment', () => {
     expect(serializeInner(root)).toBe(`<div>one</div>two`)
     expect(root.children.length).toBe(4)
     expect(root.children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: ''
     })
     expect(root.children[1]).toMatchObject({
-      type: NodeTypes.ELEMENT,
+      type: TestNodeTypes.ELEMENT,
       tag: 'div'
     })
     expect((root.children[1] as TestElement).children[0]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'one'
     })
     expect(root.children[2]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: 'two'
     })
     expect(root.children[3]).toMatchObject({
-      type: NodeTypes.TEXT,
+      type: TestNodeTypes.TEXT,
       text: ''
     })
   })
@@ -314,5 +314,41 @@ describe('renderer: fragment', () => {
     expect(serializeInner(root)).toBe(
       `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`
     )
+  })
+
+  // #6852
+  test('`template` keyed fragment w/ text', () => {
+    const root = nodeOps.createElement('div')
+
+    const renderFn = (items: string[]) => {
+      return (
+        openBlock(true),
+        createBlock(
+          Fragment,
+          null,
+          renderList(items, item => {
+            return (
+              openBlock(),
+              createBlock(
+                Fragment,
+                { key: item },
+                [
+                  createTextVNode('text'),
+                  createVNode('div', null, item, PatchFlags.TEXT)
+                ],
+                PatchFlags.STABLE_FRAGMENT
+              )
+            )
+          }),
+          PatchFlags.KEYED_FRAGMENT
+        )
+      )
+    }
+
+    render(renderFn(['one', 'two']), root)
+    expect(serializeInner(root)).toBe(`text<div>one</div>text<div>two</div>`)
+
+    render(renderFn(['two', 'one']), root)
+    expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
   })
 })

@@ -84,7 +84,11 @@ export function setRef(
     if (_isString || _isRef) {
       const doSet = () => {
         if (rawRef.f) {
-          const existing = _isString ? refs[ref] : ref.value
+          const existing = _isString
+            ? hasOwn(setupState, ref)
+              ? setupState[ref]
+              : refs[ref]
+            : ref.value
           if (isUnmount) {
             isArray(existing) && remove(existing, refValue)
           } else {
@@ -107,7 +111,7 @@ export function setRef(
           if (hasOwn(setupState, ref)) {
             setupState[ref] = value
           }
-        } else if (isRef(ref)) {
+        } else if (_isRef) {
           ref.value = value
           if (rawRef.k) refs[rawRef.k] = value
         } else if (__DEV__) {

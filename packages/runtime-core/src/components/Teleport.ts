@@ -52,13 +52,13 @@ const resolveTarget = <T = RendererElement>(
               `ideally should be outside of the entire Vue component tree.`
           )
       }
-      return target as any
+      return target as T
     }
   } else {
     if (__DEV__ && !targetSelector && !isTeleportDisabled(props)) {
       warn(`Invalid Teleport target: ${targetSelector}`)
     }
-    return targetSelector as any
+    return targetSelector as T
   }
 }
 
@@ -186,6 +186,13 @@ export const TeleportImpl = {
             internals,
             TeleportMoveTypes.TOGGLE
           )
+        } else {
+          // #7835
+          // When `teleport` is disabled, `to` may change, making it always old,
+          // to ensure the correct `to` when enabled
+          if (n2.props && n1.props && n2.props.to !== n1.props.to) {
+            n2.props.to = n1.props.to
+          }
         }
       } else {
         // target changed
@@ -222,6 +229,8 @@ export const TeleportImpl = {
         }
       }
     }
+
+    updateCssVars(n2)
   },
 
   remove(
@@ -230,7 +239,7 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
-    doRemove: Boolean
+    doRemove: boolean
   ) {
     const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
 
@@ -238,20 +247,19 @@ export const TeleportImpl = {
       hostRemove(targetAnchor!)
     }
 
-    // an unmounted teleport should always remove its children if not disabled
-    if (doRemove || !isTeleportDisabled(props)) {
-      hostRemove(anchor!)
-      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        for (let i = 0; i < (children as VNode[]).length; i++) {
-          const child = (children as VNode[])[i]
-          unmount(
-            child,
-            parentComponent,
-            parentSuspense,
-            true,
-            !!child.dynamicChildren
-          )
-        }
+    // an unmounted teleport should always unmount its children whether it's disabled or not
+    doRemove && hostRemove(anchor!)
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      const shouldRemove = doRemove || !isTeleportDisabled(props)
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        const child = (children as VNode[])[i]
+        unmount(
+          child,
+          parentComponent,
+          parentSuspense,
+          shouldRemove,
+          !!child.dynamicChildren
+        )
       }
     }
   },
@@ -353,7 +361,26 @@ function hydrateTeleport(
         vnode.targetAnchor = targetNode
       } else {
         vnode.anchor = nextSibling(node)
-        vnode.targetAnchor = hydrateChildren(
+
+        // lookahead until we find the target anchor
+        // we cannot rely on return value of hydrateChildren() because there
+        // could be nested teleports
+        let targetAnchor = targetNode
+        while (targetAnchor) {
+          targetAnchor = nextSibling(targetAnchor)
+          if (
+            targetAnchor &&
+            targetAnchor.nodeType === 8 &&
+            (targetAnchor as Comment).data === 'teleport anchor'
+          ) {
+            vnode.targetAnchor = targetAnchor
+            ;(target as TeleportTargetElement)._lpa =
+              vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
+            break
+          }
+        }
+
+        hydrateChildren(
           targetNode,
           vnode,
           target,
@@ -363,15 +390,33 @@ function hydrateTeleport(
           optimized
         )
       }
-      ;(target as TeleportTargetElement)._lpa =
-        vnode.targetAnchor && nextSibling(vnode.targetAnchor as Node)
     }
+    updateCssVars(vnode)
   }
   return vnode.anchor && nextSibling(vnode.anchor as Node)
 }
 
 // Force-casted public typing for h and TSX props inference
-export const Teleport = TeleportImpl as any as {
+export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
-  new (): { $props: VNodeProps & TeleportProps }
+  new (): {
+    $props: VNodeProps & TeleportProps
+    $slots: {
+      default(): VNode[]
+    }
+  }
+}
+
+function updateCssVars(vnode: VNode) {
+  // presence of .ut method indicates owner component uses css vars.
+  // code path here can assume browser environment.
+  const ctx = vnode.ctx
+  if (ctx && ctx.ut) {
+    let node = (vnode.children as VNode[])[0].el!
+    while (node && node !== vnode.targetAnchor) {
+      if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
+      node = node.nextSibling
+    }
+    ctx.ut()
+  }
 }

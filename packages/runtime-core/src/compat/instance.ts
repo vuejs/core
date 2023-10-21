@@ -2,9 +2,9 @@ import {
   extend,
   looseEqual,
   looseIndexOf,
+  looseToNumber,
   NOOP,
-  toDisplayString,
-  toNumber
+  toDisplayString
 } from '@vue/shared'
 import {
   ComponentPublicInstance,
@@ -58,6 +58,7 @@ export interface LegacyPublicProperties {
 export function installCompatInstanceProperties(map: PublicPropertiesMap) {
   const set = (target: any, key: any, val: any) => {
     target[key] = val
+    return target[key]
   }
 
   const del = (target: any, key: any) => {
@@ -148,7 +149,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       $createElement: () => compatH,
       _c: () => compatH,
       _o: () => legacyMarkOnce,
-      _n: () => toNumber,
+      _n: () => looseToNumber,
       _s: () => toDisplayString,
       _l: () => renderList,
       _t: i => legacyRenderSlot.bind(null, i),
