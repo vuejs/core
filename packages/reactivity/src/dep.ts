@@ -1,7 +1,7 @@
 import type { ReactiveEffect } from './effect'
 import type { ComputedRefImpl } from './computed'
 
-export type Dep = Map<WeakRef<ReactiveEffect>, number> & {
+export type Dep = Map<WeakRef<ReactiveEffect> | ReactiveEffect, number> & {
   cleanup: () => void
   computed?: ComputedRefImpl<any>
 }

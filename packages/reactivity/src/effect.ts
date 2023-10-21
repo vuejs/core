@@ -44,23 +44,16 @@ const registry = _FinalizationRegistry
     })
   : undefined
 
-class StrongRef<T> {
-  constructor(public target: T) {}
-  deref() {
-    return this.target
-  }
+let _WeakRef = getGlobalThis().WeakRef as typeof WeakRef | undefined
+
+if (!_WeakRef && __DEV__) {
+  console.warn(`WeakRef is not available in this environment.`)
 }
 
-let _WeakRef = getGlobalThis().WeakRef as typeof WeakRef
-
-if (!_WeakRef) {
-  _WeakRef = StrongRef as any
-  if (__DEV__) {
-    console.warn(`WeakRef is not available in this environment.`)
-  }
-}
-
-export const depsMap = new WeakMap<WeakRef<ReactiveEffect>, Dep[]>()
+export const depsMap = new WeakMap<
+  WeakRef<ReactiveEffect> | ReactiveEffect,
+  Dep[]
+>()
 
 export class ReactiveEffect<T = any> {
   active = true
@@ -82,7 +75,7 @@ export class ReactiveEffect<T = any> {
   onTrigger?: (event: DebuggerEvent) => void
 
   _dirtyLevel = DirtyLevels.Dirty
-  _trackToken?: WeakRef<ReactiveEffect>
+  _trackToken?: WeakRef<ReactiveEffect> | ReactiveEffect
   _trackId = 0
   _runnings = 0
   _queryings = 0
@@ -153,6 +146,10 @@ export class ReactiveEffect<T = any> {
       this.onStop?.()
       this.active = false
     }
+  }
+
+  deref() {
+    return this
   }
 }
 
@@ -301,8 +298,8 @@ export function trackEffect(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   if (!effect._trackToken) {
-    if (effect.scheduler) {
-      effect._trackToken = new StrongRef(effect) as any
+    if (effect.scheduler || !_WeakRef) {
+      effect._trackToken = effect
     } else {
       effect._trackToken = new _WeakRef(effect)
       registry?.register(effect, effect._trackToken, effect)
