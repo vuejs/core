@@ -21,7 +21,35 @@ export type DebuggerEventExtraInfo = {
 
 export let activeEffect: ReactiveEffect | undefined
 
-class FakeWeakRef<T> {
+let _FinalizationRegistry = getGlobalThis()
+  .FinalizationRegistry as typeof FinalizationRegistry
+
+if (!_FinalizationRegistry) {
+  _FinalizationRegistry = class FakeFinalizationRegistry {
+    register() {}
+    unregister() {}
+  } as any
+  if (__DEV__) {
+    console.warn(`FinalizationRegistry is not available in this environment.`)
+  }
+}
+
+const registry = new _FinalizationRegistry<WeakRef<ReactiveEffect>>(
+  trackToken => {
+    const deps = depsMap.get(trackToken)
+    if (deps) {
+      for (const dep of deps) {
+        dep.delete(trackToken)
+        if (dep.size === 0) {
+          dep.cleanup()
+        }
+      }
+      deps.length = 0
+    }
+  }
+)
+
+class StrongRef<T> {
   constructor(public target: T) {}
   deref() {
     return this.target
@@ -31,15 +59,16 @@ class FakeWeakRef<T> {
 let _WeakRef = getGlobalThis().WeakRef as typeof WeakRef
 
 if (!_WeakRef) {
-  _WeakRef = FakeWeakRef as any
+  _WeakRef = StrongRef as any
   if (__DEV__) {
-    console.warn(`WeakRef is not available domain-wide and must be stubbed!`)
+    console.warn(`WeakRef is not available in this environment.`)
   }
 }
 
+export const depsMap = new WeakMap<WeakRef<ReactiveEffect>, Dep[]>()
+
 export class ReactiveEffect<T = any> {
   active = true
-  deps: Dep[] = []
 
   /**
    * Can be attached after creation
@@ -76,18 +105,23 @@ export class ReactiveEffect<T = any> {
   public get dirty() {
     if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
       this._dirtyLevel = DirtyLevels.NotDirty
-      this._queryings++
-      pauseTracking()
-      for (const dep of this.deps) {
-        if (dep.computed) {
-          triggerComputed(dep.computed)
-          if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
-            break
+      if (this._trackToken) {
+        const deps = depsMap.get(this._trackToken)
+        if (deps) {
+          this._queryings++
+          pauseTracking()
+          for (const dep of deps) {
+            if (dep.computed) {
+              triggerComputed(dep.computed)
+              if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
+                break
+              }
+            }
           }
+          resetTracking()
+          this._queryings--
         }
       }
-      resetTracking()
-      this._queryings--
     }
     return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
   }
@@ -103,9 +137,10 @@ export class ReactiveEffect<T = any> {
     }
     if (!this._trackToken) {
       if (this.scheduler) {
-        this._trackToken = new FakeWeakRef(this) as any
+        this._trackToken = new StrongRef(this) as any
       } else {
         this._trackToken = new _WeakRef(this)
+        registry.register(this, this._trackToken, this)
       }
     }
     let lastShouldTrack = shouldTrack
@@ -114,7 +149,7 @@ export class ReactiveEffect<T = any> {
       shouldTrack = true
       activeEffect = this
       this._runnings++
-      cleanupEffect(this)
+      preCleanupEffect(this)
       return this.fn()
     } finally {
       postCleanupEffect(this)
@@ -126,7 +161,7 @@ export class ReactiveEffect<T = any> {
 
   stop() {
     if (this.active) {
-      cleanupEffect(this)
+      preCleanupEffect(this)
       postCleanupEffect(this)
       this.onStop?.()
       this.active = false
@@ -138,17 +173,22 @@ function triggerComputed(computed: ComputedRefImpl<any>) {
   return computed.value
 }
 
-function cleanupEffect(effect: ReactiveEffect) {
+function preCleanupEffect(effect: ReactiveEffect) {
   effect._trackId++
   effect._depsLength = 0
 }
 
 function postCleanupEffect(effect: ReactiveEffect) {
-  if (effect.deps.length > effect._depsLength) {
-    for (let i = effect._depsLength; i < effect.deps.length; i++) {
-      cleanupDepEffect(effect.deps[i], effect)
+  if (effect._trackToken) {
+    const deps = depsMap.get(effect._trackToken)
+    if (deps) {
+      if (deps.length > effect._depsLength) {
+        for (let i = effect._depsLength; i < deps.length; i++) {
+          cleanupDepEffect(deps[i], effect)
+        }
+        deps.length = effect._depsLength
+      }
     }
-    effect.deps.length = effect._depsLength
   }
 }
 
@@ -281,12 +321,16 @@ export function trackEffect(
 ) {
   if (dep.get(effect._trackToken) !== effect._trackId) {
     dep.set(effect._trackToken, effect._trackId)
-    const oldDep = effect.deps[effect._depsLength]
+    let deps = depsMap.get(effect._trackToken)
+    if (!deps) {
+      depsMap.set(effect._trackToken, (deps = []))
+    }
+    const oldDep = deps[effect._depsLength]
     if (oldDep !== dep) {
       if (oldDep) {
         cleanupDepEffect(oldDep, effect)
       }
-      effect.deps[effect._depsLength++] = dep
+      deps[effect._depsLength++] = dep
     } else {
       effect._depsLength++
     }
@@ -304,12 +348,9 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   pauseScheduling()
-  let reclaimedTokens: WeakRef<ReactiveEffect>[] | undefined
   for (const trackToken of dep.keys()) {
     const effect = trackToken.deref()
     if (!effect) {
-      reclaimedTokens ??= []
-      reclaimedTokens.push(trackToken)
       continue
     }
     if (!effect.allowRecurse && effect._runnings) {
@@ -333,14 +374,6 @@ export function triggerEffects(
           queueEffectSchedulers.push(effect.scheduler)
         }
       }
-    }
-  }
-  if (reclaimedTokens) {
-    for (const token of reclaimedTokens) {
-      dep.delete(token)
-    }
-    if (dep.size === 0) {
-      dep.cleanup()
     }
   }
   resetScheduling()

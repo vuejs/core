@@ -2,9 +2,11 @@ import {
   ComputedRef,
   computed,
   effect,
+  reactive,
   shallowRef as ref,
-  stop
+  toRaw
 } from '../src/index'
+import { getDepFromReactive } from '../src/reactiveEffect'
 
 describe('reactivity/gc', () => {
   const gc = () => {
@@ -35,7 +37,21 @@ describe('reactivity/gc', () => {
     expect(srcRef.deref()).toBeUndefined()
   })
 
-  it('should not release effect', async () => {
+  it('should release reactive property dep', async () => {
+    const src = reactive({ foo: 1 })
+
+    let c: ComputedRef | undefined = computed(() => src.foo)
+
+    c.value
+    expect(getDepFromReactive(toRaw(src), 'foo')).not.toBeUndefined()
+
+    c = undefined
+    await gc()
+    await gc()
+    expect(getDepFromReactive(toRaw(src), 'foo')).toBeUndefined()
+  })
+
+  it('should not release effect for ref', async () => {
     const spy = vi.fn()
     const src = ref(0)
 
@@ -48,6 +64,22 @@ describe('reactivity/gc', () => {
 
     await gc()
     src.value++
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should not release effect for reactive', async () => {
+    const spy = vi.fn()
+    const src = reactive({ foo: 1 })
+
+    effect(() => {
+      spy()
+      src.foo
+    })
+
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    await gc()
+    src.foo++
     expect(spy).toHaveBeenCalledTimes(2)
   })
 })

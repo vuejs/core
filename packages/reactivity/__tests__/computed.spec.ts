@@ -11,6 +11,7 @@ import {
   ITERATE_KEY,
   TriggerOpTypes
 } from '../src'
+import { depsMap } from '../src/effect'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -400,10 +401,11 @@ describe('reactivity/computed', () => {
     a.value++
     e.value
 
-    expect(e.effect.deps.length).toBe(3)
-    expect(e.effect.deps.indexOf((b as any).dep)).toBe(0)
-    expect(e.effect.deps.indexOf((d as any).dep)).toBe(1)
-    expect(e.effect.deps.indexOf((c as any).dep)).toBe(2)
+    const deps = depsMap.get(e.effect._trackToken)
+    expect(deps!.length).toBe(3)
+    expect(deps!.indexOf((b as any).dep)).toBe(0)
+    expect(deps!.indexOf((d as any).dep)).toBe(1)
+    expect(deps!.indexOf((c as any).dep)).toBe(2)
     expect(cSpy).toHaveBeenCalledTimes(2)
 
     a.value++
