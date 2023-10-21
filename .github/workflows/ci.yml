@@ -80,7 +80,7 @@ jobs:
           cache: 'pnpm'
 
       - run: pnpm install
-      - run: node node_modules/puppeteer/install.js
+      - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
         run: pnpm run test-e2e
