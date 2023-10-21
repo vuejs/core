@@ -82,7 +82,6 @@ type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
     : false
   : false
 
-// TODO-CR check this
 type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   infer P,
   infer B,
@@ -94,6 +93,10 @@ type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
   any,
   any,
   infer Defaults,
+  any,
+  any,
+  any,
+  any,
   any,
   any,
   any
