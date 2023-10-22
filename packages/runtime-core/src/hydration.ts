@@ -15,7 +15,7 @@ import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals } from './renderer'
+import { needTransition, RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
@@ -374,22 +374,20 @@ export function createHydrationFunctions(
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
-          (!parentSuspense ||
-            (parentSuspense && !parentSuspense.pendingBranch)) &&
-          transition &&
-          !transition.persisted &&
-          parentComponent?.vnode.props?.appear
+          needTransition(parentSuspense, transition) &&
+          parentComponent &&
+          parentComponent.vnode.props &&
+          parentComponent.vnode.props.appear
 
         const content = (el as HTMLTemplateElement).content
           .firstChild as Element
         needCallTransitionHooks && transition!.beforeEnter(content)
 
-        vnode.el = content
-        dirs && invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
-
         // replace <template> node with inner child
-        el = replaceNode(content, el, parentComponent) as Element
-      } else if (dirs) {
+        vnode.el = el = replaceNode(content, el, parentComponent) as Element
+      }
+
+      if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
 
