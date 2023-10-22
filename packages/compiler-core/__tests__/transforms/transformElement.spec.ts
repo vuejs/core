@@ -171,7 +171,7 @@ describe('compiler: element transform', () => {
       }
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
-    expect(node.tag).toBe('$props["Foo"].Example')
+    expect(node.tag).toBe('_unref($props["Foo"]).Example')
   })
 
   test('do not resolve component from non-script-setup bindings', () => {
