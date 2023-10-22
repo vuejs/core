@@ -160,7 +160,7 @@ describe('compiler: element transform', () => {
       }
     })
     expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
-    expect(node.tag).toBe(`_unref(props["Foo"]).Example`)
+    expect(node.tag).toBe(`_unref(__props["Foo"]).Example`)
   })
 
   test('resolve namespaced component from props bindings (non-inline)', () => {

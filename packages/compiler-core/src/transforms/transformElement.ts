@@ -389,7 +389,7 @@ function resolveSetupReference(name: string, context: TransformContext) {
   const fromProps = checkType(BindingTypes.PROPS)
   if (fromProps) {
     return `${context.helperString(UNREF)}(${
-      context.inline ? 'props' : '$props'
+      context.inline ? '__props' : '$props'
     }[${JSON.stringify(fromProps)}])`
   }
 }
