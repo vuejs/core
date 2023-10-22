@@ -21,6 +21,18 @@ describe('scopeId runtime support', () => {
     expect(serializeInner(root)).toBe(`<div parent><div parent></div></div>`)
   })
 
+  test('should attach scopeId when receiving an existing vnode', () => {
+    const Child = h('div')
+    const App = {
+      __scopeId: 'parent',
+      render: () => h('div', [h(Child)])
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<div parent><div parent></div></div>`)
+  })
+
   test('should attach scopeId to components in parent component', () => {
     const Child = {
       __scopeId: 'child',
