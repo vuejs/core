@@ -526,8 +526,8 @@ function _createVNode(
     // createVNode receiving an existing vnode. This happens in cases like
     // <component :is="vnode"/>
     // #2078 make sure to merge refs during the clone instead of overwriting it
+    type.scopeId = currentScopeId
     const cloned = cloneVNode(type, props, true /* mergeRef: true */)
-    cloned.scopeId = currentScopeId
     if (children) {
       normalizeChildren(cloned, children)
     }
