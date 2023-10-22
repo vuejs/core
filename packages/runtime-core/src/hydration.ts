@@ -150,8 +150,9 @@ export function createHydrationFunctions(
             const content = (vnode.el! as HTMLTemplateElement).content
               .firstChild!
 
-            // replace <template> node with inner child
-            node = replaceNode(content, node, parentComponent)
+            // replace <template> node with inner children
+            replaceNode(content, node, parentComponent)
+            vnode.el = node = content
             nextNode = nextSibling(node)
           } else {
             nextNode = onMismatch()
@@ -383,8 +384,9 @@ export function createHydrationFunctions(
           .firstChild as Element
         needCallTransitionHooks && transition!.beforeEnter(content)
 
-        // replace <template> node with inner child
-        vnode.el = el = replaceNode(content, el, parentComponent) as Element
+        // replace <template> node with inner children
+        replaceNode(content, el, parentComponent)
+        vnode.el = el = content
       }
 
       if (dirs) {
@@ -620,7 +622,7 @@ export function createHydrationFunctions(
     newNode: Node,
     oldNode: Node,
     parentComponent: ComponentInternalInstance | null
-  ): Node => {
+  ): void => {
     // replace node
     const parentNode = oldNode.parentNode
     if (parentNode) {
@@ -636,9 +638,6 @@ export function createHydrationFunctions(
       }
       parent = parent.parent
     }
-
-    oldNode = newNode
-    return oldNode
   }
 
   const isTemplateNode = (node: Element): boolean => {
