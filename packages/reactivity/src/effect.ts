@@ -24,9 +24,13 @@ export let activeEffect: ReactiveEffect | undefined
 const _FinalizationRegistry = getGlobalThis().FinalizationRegistry as
   | typeof FinalizationRegistry
   | undefined
+const _WeakRef = getGlobalThis().WeakRef as typeof WeakRef | undefined
 
 if (!_FinalizationRegistry && __DEV__) {
   console.warn(`FinalizationRegistry is not available in this environment.`)
+}
+if (!_WeakRef && __DEV__) {
+  console.warn(`WeakRef is not available in this environment.`)
 }
 
 const registry = _FinalizationRegistry
@@ -43,12 +47,6 @@ const registry = _FinalizationRegistry
       }
     })
   : undefined
-
-let _WeakRef = getGlobalThis().WeakRef as typeof WeakRef | undefined
-
-if (!_WeakRef && __DEV__) {
-  console.warn(`WeakRef is not available in this environment.`)
-}
 
 export const depsMap = new WeakMap<TrackToken, Dep[]>()
 
