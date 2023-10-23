@@ -14,9 +14,7 @@ export function ssrTransformTransition(
 ) {
   return () => {
     const appear = findProp(node, 'appear', false, true)
-    if (appear) {
-      wipMap.set(node, true)
-    }
+    wipMap.set(node, !!appear)
   }
 }
 
