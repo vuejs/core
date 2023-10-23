@@ -25,8 +25,8 @@ export function ssrProcessTransition(
   // #5351: filter out comment children inside transition
   node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
 
-  const hasAppear = wipMap.get(node)
-  if (hasAppear) {
+  const appear = wipMap.get(node)
+  if (appear) {
     context.pushStringPart(`<template>`)
     processChildren(node, context, false, true)
     context.pushStringPart(`</template>`)
