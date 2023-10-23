@@ -138,8 +138,8 @@ importers:
         specifier: ^5.22.0
         version: 5.22.0
       todomvc-app-css:
-        specifier: ^2.4.2
-        version: 2.4.2
+        specifier: ^2.4.3
+        version: 2.4.3
       tslib:
         specifier: ^2.6.2
         version: 2.6.2
@@ -5482,8 +5482,9 @@ packages:
       is-number: 7.0.0
     dev: true
 
-  /todomvc-app-css@2.4.2:
-    resolution: {integrity: sha512-ViAkQ7ed89rmhFIGRsT36njN+97z8+s3XsJnB8E2IKOq+/SLD/6PtSvmTtiwUcVk39qPcjAc/OyeDys4LoJUVg==}
+  /todomvc-app-css@2.4.3:
+    resolution: {integrity: sha512-mSnWZaKBWj9aQcFRsGguY/a8O8NR8GmecD48yU1rzwNemgZa/INLpIsxxMiToFGVth+uEKBrQ7IhWkaXZxwq5Q==}
+    engines: {node: '>=4'}
     dev: true
 
   /token-stream@1.0.0:
