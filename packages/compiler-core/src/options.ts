@@ -260,7 +260,6 @@ export interface TransformOptions
    * Whether to compile the template assuming it needs to handle HMR.
    * Some edge cases may need to generate different code for HMR to work
    * correctly, e.g. #6938, #7138
-   * @internal
    */
   hmr?: boolean
 }
