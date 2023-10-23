@@ -103,11 +103,9 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   if (isSymbol(component)) {
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
-    }
-    if (component === TRANSITION_GROUP) {
+    } else if (component === TRANSITION_GROUP) {
       return ssrTransformTransitionGroup(node, context)
-    }
-    if (component === TRANSITION) {
+    } else if (component === TRANSITION) {
       return ssrTransformTransition(node, context)
     }
     return // other built-in components: fallthrough
