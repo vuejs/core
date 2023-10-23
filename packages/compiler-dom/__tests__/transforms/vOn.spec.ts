@@ -293,7 +293,7 @@ describe('compiler-dom: transform v-on', () => {
     })
   })
 
-  test('cache handler w/ modifiers (passed to a component)', () => {
+  test('cache handler w/ modifiers (on component)', () => {
     const {
       root,
       props: [prop]
