@@ -593,5 +593,17 @@ describe('compiler: hoistStatic transform', () => {
       expect(root.hoists.length).toBe(2)
       expect(generate(root).code).toMatchSnapshot()
     })
+
+    test('clone hoisted array children in HMR mode', () => {
+      const root = transformWithHoist(`<div><span class="hi"></span></div>`, {
+        hmr: true
+      })
+      expect(root.hoists.length).toBe(2)
+      expect(root.codegenNode).toMatchObject({
+        children: {
+          content: '[..._hoisted_2]'
+        }
+      })
+    })
   })
 })
