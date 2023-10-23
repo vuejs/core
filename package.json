@@ -100,7 +100,7 @@
     "serve": "^14.2.1",
     "simple-git-hooks": "^2.9.0",
     "terser": "^5.22.0",
-    "todomvc-app-css": "^2.4.2",
+    "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
     "tsx": "^3.14.0",
     "typescript": "^5.2.2",
