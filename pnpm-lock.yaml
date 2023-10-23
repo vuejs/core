@@ -108,8 +108,8 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       puppeteer:
-        specifier: ~21.3.8
-        version: 21.3.8(typescript@5.2.2)
+        specifier: ~21.4.0
+        version: 21.4.0(typescript@5.2.2)
       rimraf:
         specifier: ^5.0.5
         version: 5.0.5
@@ -1160,8 +1160,8 @@ packages:
     dev: true
     optional: true
 
-  /@puppeteer/browsers@1.7.1:
-    resolution: {integrity: sha512-nIb8SOBgDEMFY2iS2MdnUZOg2ikcYchRrBoF+wtdjieRFKR2uGRipHY/oFLo+2N6anDualyClPzGywTHRGrLfw==}
+  /@puppeteer/browsers@1.8.0:
+    resolution: {integrity: sha512-TkRHIV6k2D8OlUe8RtG+5jgOF/H98Myx0M6AOafC8DdNVOFiBSFa5cpRDtpm8LXOa9sVwe0+e6Q3FC56X/DZfg==}
     engines: {node: '>=16.3.0'}
     hasBin: true
     dependencies:
@@ -1171,7 +1171,7 @@ packages:
       proxy-agent: 6.3.1
       tar-fs: 3.0.4
       unbzip2-stream: 1.4.3
-      yargs: 17.7.1
+      yargs: 17.7.2
     transitivePeerDependencies:
       - supports-color
     dev: true
@@ -1976,12 +1976,12 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /chromium-bidi@0.4.31(devtools-protocol@0.0.1179426):
-    resolution: {integrity: sha512-OtvEg2JMRQrHsmLx4FV3u1Hf9waYxB5PmL+yM0HkFpc9H2x3TMbUqS+GP2/fC4399hzOO+EQF8uVU43By9ILag==}
+  /chromium-bidi@0.4.32(devtools-protocol@0.0.1191157):
+    resolution: {integrity: sha512-RJnw0PW3sNdx1WclINVfVVx8JUH+tWTHZNpnEzlcM+Qgvf40dUH34U7gJq+cc/0LE+rbPxeT6ldqWrCbUf4jeg==}
     peerDependencies:
       devtools-protocol: '*'
     dependencies:
-      devtools-protocol: 0.0.1179426
+      devtools-protocol: 0.0.1191157
       mitt: 3.0.1
       urlpattern-polyfill: 9.0.0
     dev: true
@@ -2411,8 +2411,8 @@ packages:
     engines: {node: '>=0.4.0'}
     dev: true
 
-  /devtools-protocol@0.0.1179426:
-    resolution: {integrity: sha512-KKC7IGwdOr7u9kTGgjUvGTov/z1s2H7oHi3zKCdR9eSDyCPia5CBi4aRhtp7d8uR7l0GS5UTDw3TjKGu5CqINg==}
+  /devtools-protocol@0.0.1191157:
+    resolution: {integrity: sha512-Fu2mUhX7zkzLHMJZk5wQTiHdl1eJrhK0GypUoSzogUt51MmYEv/46pCz4PtGGFlr0f2ZyYDzzx5CPtbEkuvcTA==}
     dev: true
 
   /diff-sequences@29.6.3:
@@ -4714,15 +4714,15 @@ packages:
     engines: {node: '>=6'}
     dev: true
 
-  /puppeteer-core@21.3.8:
-    resolution: {integrity: sha512-yv12E/+zZ7Lei5tJB4sUkSrsuqKibuYpYxLGbmtLUjjYIqGE5HKz9OUI2I/RFHEvF+pHi2bTbv5bWydeCGJ6Mw==}
+  /puppeteer-core@21.4.0:
+    resolution: {integrity: sha512-ONYjYgHItm6i9WdJf+MnRTRPB4HegwPbPfi1jjNN0LCW3rnNich/5hXgZFcn2oWvgFc8DWLDIcwly7C8z+EvIw==}
     engines: {node: '>=16.3.0'}
     dependencies:
-      '@puppeteer/browsers': 1.7.1
-      chromium-bidi: 0.4.31(devtools-protocol@0.0.1179426)
+      '@puppeteer/browsers': 1.8.0
+      chromium-bidi: 0.4.32(devtools-protocol@0.0.1191157)
       cross-fetch: 4.0.0
       debug: 4.3.4
-      devtools-protocol: 0.0.1179426
+      devtools-protocol: 0.0.1191157
       ws: 8.14.2
     transitivePeerDependencies:
       - bufferutil
@@ -4731,14 +4731,14 @@ packages:
       - utf-8-validate
     dev: true
 
-  /puppeteer@21.3.8(typescript@5.2.2):
-    resolution: {integrity: sha512-4OrInVIAtDgcznENUV4Du4gYSZhRmbCkckvOoPstXrUH4JsQ3atSegY+9f/tOKCDB2qh7sXaszDcFEn+RymY0g==}
+  /puppeteer@21.4.0(typescript@5.2.2):
+    resolution: {integrity: sha512-KkiDe39NJxlw7fyiN6fieM9SVsewzt037nUZRoffNuFtYdAl5rRLVtleBuVZ5i1swK/R4CmA6Pbka/ytpFCu4Q==}
     engines: {node: '>=16.3.0'}
     requiresBuild: true
     dependencies:
-      '@puppeteer/browsers': 1.7.1
+      '@puppeteer/browsers': 1.8.0
       cosmiconfig: 8.3.6(typescript@5.2.2)
-      puppeteer-core: 21.3.8
+      puppeteer-core: 21.4.0
     transitivePeerDependencies:
       - bufferutil
       - encoding
@@ -6028,8 +6028,8 @@ packages:
     engines: {node: '>=12'}
     dev: true
 
-  /yargs@17.7.1:
-    resolution: {integrity: sha512-cwiTb08Xuv5fqF4AovYacTFNxk62th7LKJ6BL9IGUpTJrWoU7/7WdQGTP2SjKf1dUNBGzDd28p/Yfs/GI6JrLw==}
+  /yargs@17.7.2:
+    resolution: {integrity: sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==}
     engines: {node: '>=12'}
     dependencies:
       cliui: 8.0.1
