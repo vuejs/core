@@ -92,7 +92,7 @@
     "pug": "^3.0.2",
     "puppeteer": "~21.4.0",
     "rimraf": "^5.0.5",
-    "rollup": "^3.29.4",
+    "rollup": "^4.1.4",
     "rollup-plugin-dts": "^6.1.0",
     "rollup-plugin-esbuild": "^6.1.0",
     "rollup-plugin-polyfill-node": "^0.12.0",
