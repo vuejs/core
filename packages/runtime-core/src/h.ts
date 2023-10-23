@@ -174,7 +174,7 @@ export function h<P>(
   children?: RawChildren | RawSlots
 ): VNode
 
-// catch or types
+// catch all types
 export function h(type: string | Component, children?: RawChildren): VNode
 export function h<P>(
   type: string | Component<P>,
