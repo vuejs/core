@@ -103,12 +103,50 @@ export type VNodeProps = {
   ref_for?: boolean
   ref_key?: string
 
+  // vue hooks
+  ['onVue:BeforeMount']?: VNodeMountHook | VNodeMountHook[]
+  ['onVue:Mounted']?: VNodeMountHook | VNodeMountHook[]
+  ['onVue:BeforeUpdate']?: VNodeUpdateHook | VNodeUpdateHook[]
+  ['onVue:Updated']?: VNodeUpdateHook | VNodeUpdateHook[]
+  ['onVue:BeforeUnmount']?: VNodeMountHook | VNodeMountHook[]
+  ['onVue:Unmounted']?: VNodeMountHook | VNodeMountHook[]
+
   // vnode hooks
+  /**
+   * Please use onVue:beforeMount
+   * @deprecated
+   * @internal
+   */
   onVnodeBeforeMount?: VNodeMountHook | VNodeMountHook[]
+  /**
+   * Please use onVue:mounted
+   * @deprecated
+   * @internal
+   */
   onVnodeMounted?: VNodeMountHook | VNodeMountHook[]
+  /**
+   * Please use onVue:beforeUpdate
+   * @deprecated
+   * @internal
+   */
   onVnodeBeforeUpdate?: VNodeUpdateHook | VNodeUpdateHook[]
+  /**
+   * Please use onVue:updated
+   * @deprecated
+   * @internal
+   */
   onVnodeUpdated?: VNodeUpdateHook | VNodeUpdateHook[]
+  /**
+   * Please use onVue:beforeUnmount
+   * @deprecated
+   * @internal
+   */
   onVnodeBeforeUnmount?: VNodeMountHook | VNodeMountHook[]
+  /**
+   * Please use onVue:unmounted
+   * @deprecated
+   * @internal
+   */
   onVnodeUnmounted?: VNodeMountHook | VNodeMountHook[]
 }
 

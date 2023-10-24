@@ -1472,6 +1472,37 @@ describe('slots', () => {
   expectType<Slots | undefined>(new comp2().$slots)
 })
 
+// Not exposed by vue
+type VueMountHook = (vnode: VNode) => void
+type VueUpdateHook = (vnode: VNode, vnodeOld: VNode) => void
+
+type VueMountHooks = VueMountHook | VueMountHook[]
+type VueUpdateHooks = VueUpdateHook | VueUpdateHook[]
+
+describe('@vue:* events', () => {
+  const Comp = new (defineComponent({}))()
+  expectType<VueMountHooks | undefined>(Comp.$props['onVue:BeforeMount'])
+  expectType<VueMountHooks | undefined>(Comp.$props['onVue:Mounted'])
+  expectType<VueUpdateHooks | undefined>(Comp.$props['onVue:BeforeUpdate'])
+  expectType<VueUpdateHooks | undefined>(Comp.$props['onVue:Updated'])
+  expectType<VueMountHooks | undefined>(Comp.$props['onVue:BeforeUnmount'])
+  expectType<VueMountHooks | undefined>(Comp.$props['onVue:Unmounted'])
+
+  // NOTE These Should have been removed :/
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeBeforeMount
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeMounted
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeBeforeUpdate
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeUpdated
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeBeforeUnmount
+  // // @ts-expect-error not valid anymore
+  // Comp.$props.onVnodeUnmounted
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,
