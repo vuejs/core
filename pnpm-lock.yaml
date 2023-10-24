@@ -257,8 +257,23 @@ importers:
         specifier: 3.3.6
         version: link:../shared
 
+  packages/dts-built-test:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+      vue:
+        specifier: workspace:*
+        version: link:../vue
+
   packages/dts-test:
     dependencies:
+      '@vue/dts-built-test':
+        specifier: workspace:*
+        version: link:../dts-built-test
       vue:
         specifier: workspace:*
         version: link:../vue
