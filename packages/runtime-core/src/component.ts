@@ -402,20 +402,12 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
-
-  // Whether the component is a child component of a custom element
-  isCEChild: boolean | null
-  // When the component is a child component of a custom element,
-  // the method of adding style passed down from the ancestor
-  addCEChildStyle:
-    | null
-    | ((styles: string[], instance: ComponentInternalInstance) => void)
-  // When the component is a child component of a custom element,
-  // The method passed down from the ancestor to remove the style tag,
-  // which will be called when the component is unmounted
-  removeCEChildStyle:
-    | null
-    | ((styles: string[] | undefined, uid: number) => void)
+  // custom element context,
+  // exists when the component is a child component of custom element
+  ceContext: {
+    addCEChildStyle: ((styles: string[]) => void)
+    removeCEChildStyle: ((styles: string[] | undefined) => void)
+  } | null
 
   /**
    * @internal
@@ -570,17 +562,7 @@ export function createComponentInstance(
     isUnmounted: false,
     isDeactivated: false,
 
-    // Whether the component is a child component of a custom element
-    isCEChild: parent && (parent.isCE || parent.isCEChild),
-    // When the component is a child component of a custom element,
-    // the method of adding style passed down from the ancestor
-    addCEChildStyle:
-      parent && parent.addCEChildStyle ? parent.addCEChildStyle : null,
-    // When the component is a child component of a custom element,
-    // The method passed down from the ancestor to remove the style tag,
-    // which will be called when the component is unmounted
-    removeCEChildStyle:
-      parent && parent.removeCEChildStyle ? parent.removeCEChildStyle : null,
+    ceContext: parent && (parent.isCE || parent.ceContext) ? parent.ceContext : null,
 
     bc: null,
     c: null,

@@ -1381,12 +1381,12 @@ function baseCreateRenderer(
               )
             ) {
               const styles =
-                (instance.isCEChild &&
+                (instance.ceContext &&
                   (instance.type as ConcreteComponent & { styles?: string[] })
                     .styles) ||
                 null
-              if (instance.addCEChildStyle && styles) {
-                instance.addCEChildStyle(styles, instance)
+              if (instance.ceContext && styles) {
+                instance.ceContext.addCEChildStyle(styles)
               }
             }
           }
@@ -2121,11 +2121,10 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       // remove style tags when the component is a child
       // component of a custom element
-      if (vnode.component!.isCEChild && vnode.component!.removeCEChildStyle) {
-        vnode.component!.removeCEChildStyle(
+      if (vnode.component!.ceContext) {
+        vnode.component!.ceContext.removeCEChildStyle(
           (vnode.component!.type as ConcreteComponent & { styles?: string[] })
-            .styles,
-          vnode.component!.uid
+            .styles
         )
       }
       unmountComponent(vnode.component!, parentSuspense, doRemove)

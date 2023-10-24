@@ -368,12 +368,11 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
-        // Reference the _addChildStyles method on the instance,
-        // which will be used to add styles in the child components of the custom element
-        instance.addCEChildStyle = this._addChildStyles.bind(this)
-        // Reference the _removeChildStyles method on the instance,
-        // This will be used to remove styles in child components of custom elements
-        instance.removeCEChildStyle = this._removeChildStyles.bind(this)
+
+        instance.ceContext = {
+          addCEChildStyle: this._addChildStyles.bind(this),
+          removeCEChildStyle: this._removeChildStyles.bind(this)
+        }
         // HMR
         if (__DEV__) {
           instance.ceReload = newStyles => {
@@ -441,8 +440,7 @@ export class VueElement extends BaseClass {
   // The method used by custom element child components
   // to add styles to the shadow dom
   protected _addChildStyles(
-    styles: string[] | undefined,
-    instance: ComponentInternalInstance
+    styles: string[] | undefined
   ) {
     if (styles) {
       const styleContent = styles.join()
@@ -460,12 +458,9 @@ export class VueElement extends BaseClass {
       ceKeySet!.add(ceKey)
       ceChildStyleMap.set(styleContent, ceKeySet)
 
-      const ceStyleId = `data-v-ce-${instance.uid}`
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
-
-        s.setAttribute(ceStyleId, '')
 
         if (this._childStylesAnchor) {
           this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
@@ -483,7 +478,7 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStyles(styles: string[] | undefined, uid: number) {
+  protected _removeChildStyles(styles: string[] | undefined) {
     if (styles) {
       const styleContent = styles.join()
       let cecStyle = new Set<string>()
@@ -494,15 +489,6 @@ export class VueElement extends BaseClass {
         cecStyle.delete(ceKey)
 
         if (cecStyle.size === 0) {
-          // remove style tag
-          const sList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
-          sList.length > 0 &&
-            sList.forEach(s => this.shadowRoot!.removeChild(s))
-          // update archor
-          const archor = this.shadowRoot!.querySelectorAll('style')
-          this._childStylesAnchor =
-            archor.length > 0 ? archor[archor.length - 1] : undefined
-
           // clear ceChildStyleMap
           ceChildStyleMap.delete(styleContent)
         } else {

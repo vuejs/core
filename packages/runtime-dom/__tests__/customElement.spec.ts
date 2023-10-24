@@ -828,52 +828,6 @@ describe('defineCustomElement', () => {
       expect(style2[1].textContent).toBe(`.my-red { color: red; }`)
     })
 
-    test('When the component is unmounted, the style tag can be handled correctly', async () => {
-      const show = ref(true)
-      const Child = {
-        styles: [`.my-green { color: green; }`],
-        render() {
-          return h('p', { class: 'my-green' }, 'This should be green')
-        }
-      }
-
-      const Foo = defineCustomElement({
-        components: { Child },
-        styles: [`.my-red { color: red; }`],
-        render() {
-          return [
-            h('p', { class: 'my-red' }, 'This should be red'),
-            show.value ? h(Child) : h('p')
-          ]
-        }
-      })
-      customElements.define('my-el-with-if-styles', Foo)
-      container.innerHTML = `<my-el-with-if-styles></my-el-with-if-styles>`
-      await nextTick()
-
-      const el = container.childNodes[0] as VueElement
-      const style = el.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(2)
-      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
-      expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-      show.value = false
-      await nextTick()
-
-      const el2 = container.childNodes[0] as VueElement
-      const style2 = el2.shadowRoot?.querySelectorAll('style')!
-      expect(style2.length).toBe(1)
-      expect(style2[0].textContent).toBe(`.my-red { color: red; }`)
-
-      show.value = true
-      await nextTick()
-
-      const el3 = container.childNodes[0] as VueElement
-      const style3 = el3.shadowRoot?.querySelectorAll('style')!
-      expect(style3.length).toBe(2)
-      expect(style3[0].textContent).toBe(`.my-green { color: green; }`)
-      expect(style3[1].textContent).toBe(`.my-red { color: red; }`)
-    })
-
     test('nested child components w/ fragments in shadow dom should have styles', async () => {
       const GrandChild = {
         styles: [`.my-green { color: green; }`],
