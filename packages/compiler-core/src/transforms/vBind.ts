@@ -49,7 +49,7 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
   }
 
   // :arg is replaced by :arg="arg"
-  let exp = dir.exp
+  let { exp } = dir
   if (!exp && arg.type === NodeTypes.SIMPLE_EXPRESSION) {
     const propName = camelize(arg.loc.source)
     const simpleExpression = createSimpleExpression(propName, false, {
