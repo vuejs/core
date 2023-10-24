@@ -1453,9 +1453,8 @@ function baseCreateRenderer(
           ): ComponentInternalInstance | null => {
             if (instance.subTree.shapeFlag & ShapeFlags.COMPONENT) {
               if (
-                // this happens only during hydration
-                instance.subTree.component?.subTree == null &&
-                // we don't know the subTree yet because we haven't resolve it
+                // this happens during hydration or updating a component that resolve to a unresolved async component
+                instance.subTree.component?.asyncDep != null &&
                 instance.subTree.component?.asyncResolved === false
               ) {
                 return instance.subTree.component!
