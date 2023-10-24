@@ -21,11 +21,11 @@ import {
   renderSlot,
   Transition,
   createCommentVNode,
-  vShow,
-  vShowOldKey
+  vShow
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
-import { PatchFlags } from '../../shared/src'
+import { PatchFlags } from '@vue/shared'
+import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
