@@ -13,95 +13,102 @@ permissions:
 jobs:
   unit-test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - run: pnpm install
 
       - name: Run unit tests
         run: pnpm run test-unit
 
+  unit-test-windows:
+    runs-on: windows-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: '.node-version'
+          cache: 'pnpm'
+
+      - run: pnpm install
+
+      - name: Run compiler unit tests
+        run: pnpm run test-unit compiler
+
+      - name: Run ssr unit tests
+        run: pnpm run test-unit server-renderer
+
   e2e-test:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup cache for Chromium binary
         uses: actions/cache@v3
         with:
-          path: ~/.cache/puppeteer/chrome
+          path: ~/.cache/puppeteer
           key: chromium-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
+      - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
         run: pnpm run test-e2e
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
+      - name: Install Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+      - run: pnpm install
 
       - name: Run eslint
         run: pnpm run lint
 
-      # - name: Run prettier
-      # run: pnpm run format-check
+      - name: Run prettier
+        run: pnpm run format-check
 
       - name: Run type declaration tests
         run: pnpm run test-dts
-
-  size:
-    runs-on: ubuntu-latest
-    env:
-      CI_JOB_NUMBER: 1
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
-
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: 'pnpm'
-
-      - run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
-      - run: pnpm run size
-
-      # - name: Check build size
-      #   uses: posva/size-check-action@v1.1.2
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     build_script: size
-      #     files: packages/vue/dist/vue.global.prod.js packages/runtime-dom/dist/runtime-dom.global.prod.js packages/size-check/dist/index.js

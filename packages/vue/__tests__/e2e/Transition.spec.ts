@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'path'
 import { h, createApp, Transition, ref, nextTick } from 'vue'
@@ -296,12 +295,12 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy"
-                @before-leave="beforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="afterLeaveSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -497,7 +496,7 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @enter-cancelled="enterCancelledSpy">
+                @enter-cancelled="enterCancelledSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -667,15 +666,15 @@ describe('e2e: Transition', () => {
                   appear-from-class="test-appear-from"
                   appear-to-class="test-appear-to"
                   appear-active-class="test-appear-active"
-                  @before-enter="beforeEnterSpy"
-                  @enter="onEnterSpy"
-                  @after-enter="afterEnterSpy"
-                  @before-leave="beforeLeaveSpy"
-                  @leave="onLeaveSpy"
-                  @after-leave="afterLeaveSpy"
-                  @before-appear="beforeAppearSpy"
-                  @appear="onAppearSpy"
-                  @after-appear="afterAppearSpy">
+                  @before-enter="beforeEnterSpy()"
+                  @enter="onEnterSpy()"
+                  @after-enter="afterEnterSpy()"
+                  @before-leave="beforeLeaveSpy()"
+                  @leave="onLeaveSpy()"
+                  @after-leave="afterLeaveSpy()"
+                  @before-appear="beforeAppearSpy()"
+                  @appear="onAppearSpy()"
+                  @after-appear="afterAppearSpy()">
                   <div v-if="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -803,12 +802,12 @@ describe('e2e: Transition', () => {
               <transition
                 :css="false"
                 name="test"
-                @before-enter="onBeforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="onAfterEnterSpy"
-                @before-leave="onBeforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="onAfterLeaveSpy">
+                @before-enter="onBeforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="onAfterEnterSpy()"
+                @before-leave="onBeforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="onAfterLeaveSpy()">
                 <div v-if="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1234,7 +1233,7 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <transition @enter="onEnterSpy" @leave="onLeaveSpy">
+              <transition @enter="onEnterSpy()" @leave="onLeaveSpy()">
                 <Suspense>
                   <Comp v-if="toggle" class="test">content</Comp>
                 </Suspense>
@@ -1499,6 +1498,94 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+
+    // #5844
+    test('children mount should be called after html changes', async () => {
+      const fooMountSpy = vi.fn()
+      const barMountSpy = vi.fn()
+
+      await page().exposeFunction('fooMountSpy', fooMountSpy)
+      await page().exposeFunction('barMountSpy', barMountSpy)
+
+      await page().evaluate(() => {
+        const { fooMountSpy, barMountSpy } = window as any
+        const { createApp, ref, h, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+          <div id="container">
+            <transition mode="out-in">
+              <Suspense>
+                <Foo v-if="toggle" />
+                <Bar v-else />
+              </Suspense>
+            </transition>
+          </div>
+          <button id="toggleBtn" @click="click">button</button>
+        `,
+          components: {
+            Foo: {
+              setup() {
+                const el = ref(null)
+                onMounted(() => {
+                  fooMountSpy(
+                    !!el.value,
+                    !!document.getElementById('foo'),
+                    !!document.getElementById('bar')
+                  )
+                })
+
+                return () => h('div', { ref: el, id: 'foo' }, 'Foo')
+              }
+            },
+            Bar: {
+              setup() {
+                const el = ref(null)
+                onMounted(() => {
+                  barMountSpy(
+                    !!el.value,
+                    !!document.getElementById('foo'),
+                    !!document.getElementById('bar')
+                  )
+                })
+
+                return () => h('div', { ref: el, id: 'bar' }, 'Bar')
+              }
+            }
+          },
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          }
+        }).mount('#app')
+      })
+
+      await nextFrame()
+      expect(await html('#container')).toBe('<div id="foo">Foo</div>')
+      await transitionFinish()
+
+      expect(fooMountSpy).toBeCalledTimes(1)
+      expect(fooMountSpy).toHaveBeenNthCalledWith(1, true, true, false)
+
+      await page().evaluate(async () => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        // nextTrick for patch start
+        await Promise.resolve()
+        // nextTrick for Suspense resolve
+        await Promise.resolve()
+        // nextTrick for dom transition start
+        await Promise.resolve()
+        return document.querySelector('#container div')!.className.split(/\s+/g)
+      })
+
+      await nextFrame()
+      await transitionFinish()
+
+      expect(await html('#container')).toBe('<div id="bar" class="">Bar</div>')
+
+      expect(barMountSpy).toBeCalledTimes(1)
+      expect(barMountSpy).toHaveBeenNthCalledWith(1, true, false, true)
+    })
   })
 
   describe('transition with v-show', () => {
@@ -1593,12 +1680,12 @@ describe('e2e: Transition', () => {
             <div id="container">
               <transition
                 name="test"
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy"
-                @before-leave="beforeLeaveSpy"
-                @leave="onLeaveSpy"
-                @after-leave="afterLeaveSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()"
+                @before-leave="beforeLeaveSpy()"
+                @leave="onLeaveSpy()"
+                @after-leave="afterLeaveSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1679,7 +1766,7 @@ describe('e2e: Transition', () => {
           createApp({
             template: `
             <div id="container">
-              <transition name="test" @leave-cancelled="onLeaveCancelledSpy">
+              <transition name="test" @leave-cancelled="onLeaveCancelledSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>
@@ -1751,9 +1838,9 @@ describe('e2e: Transition', () => {
                             appear-from-class="test-appear-from"
                             appear-to-class="test-appear-to"
                             appear-active-class="test-appear-active"
-                            @before-enter="beforeEnterSpy"
-                            @enter="onEnterSpy"
-                            @after-enter="afterEnterSpy">
+                            @before-enter="beforeEnterSpy()"
+                            @enter="onEnterSpy()"
+                            @after-enter="afterEnterSpy()">
                   <div v-show="toggle" class="test">content</div>
                 </transition>
               </div>
@@ -1855,9 +1942,9 @@ describe('e2e: Transition', () => {
               <transition
                 name="test"
                 appear
-                @before-enter="beforeEnterSpy"
-                @enter="onEnterSpy"
-                @after-enter="afterEnterSpy">
+                @before-enter="beforeEnterSpy()"
+                @enter="onEnterSpy()"
+                @after-enter="afterEnterSpy()">
                 <div v-show="toggle" class="test">content</div>
               </transition>
             </div>

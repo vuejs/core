@@ -12,11 +12,13 @@ import {
   ParentNode,
   JSChildNode,
   CallExpression,
-  createArrayExpression
+  createArrayExpression,
+  getVNodeBlockHelper,
+  getVNodeHelper
 } from '../ast'
 import { TransformContext } from '../transform'
 import { PatchFlags, isString, isSymbol, isArray } from '@vue/shared'
-import { getVNodeBlockHelper, getVNodeHelper, isSlotOutlet } from '../utils'
+import { isSlotOutlet } from '../utils'
 import {
   OPEN_BLOCK,
   GUARD_REACTIVE_PROPS,
@@ -138,9 +140,16 @@ function walk(
     node.codegenNode.type === NodeTypes.VNODE_CALL &&
     isArray(node.codegenNode.children)
   ) {
-    node.codegenNode.children = context.hoist(
+    const hoisted = context.hoist(
       createArrayExpression(node.codegenNode.children)
     )
+    // #6978, #7138, #7114
+    // a hoisted children array inside v-for can caused HMR errors since
+    // it might be mutated when mounting the v-for list
+    if (context.hmr) {
+      hoisted.content = `[...${hoisted.content}]`
+    }
+    node.codegenNode.children = hoisted
   }
 }
 

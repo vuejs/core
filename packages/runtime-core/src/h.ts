@@ -120,8 +120,12 @@ export function h(
 ): VNode
 
 // functional component
-export function h<P, E extends EmitsOptions = {}>(
-  type: FunctionalComponent<P, E>,
+export function h<
+  P,
+  E extends EmitsOptions = {},
+  S extends Record<string, any> = {}
+>(
+  type: FunctionalComponent<P, E, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
@@ -166,6 +170,14 @@ export function h<P>(
 export function h(type: DefineComponent, children?: RawChildren): VNode
 export function h<P>(
   type: DefineComponent<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+
+// catch all types
+export function h(type: string | Component, children?: RawChildren): VNode
+export function h<P>(
+  type: string | Component<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode

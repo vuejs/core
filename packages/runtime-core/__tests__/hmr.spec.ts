@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { HMRRuntime } from '../src/hmr'
 import '../src/hmr'
 import { ComponentOptions, InternalRenderFunction } from '../src/component'
@@ -21,7 +20,7 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 registerRuntimeCompiler(compileToFunction)
 
 function compileToFunction(template: string) {
-  const { code } = baseCompile(template)
+  const { code } = baseCompile(template, { hoistStatic: true, hmr: true })
   const render = new Function('Vue', code)(
     runtimeTest
   ) as InternalRenderFunction
@@ -536,5 +535,72 @@ describe('hot module replacement', () => {
     const root = nodeOps.createElement('div')
     render(h(Foo), root)
     expect(serializeInner(root)).toBe('bar')
+  })
+
+  // #7155 - force HMR on slots content update
+  test('force update slot content change', () => {
+    const root = nodeOps.createElement('div')
+    const parentId = 'test-force-computed-parent'
+    const childId = 'test-force-computed-child'
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      computed: {
+        slotContent() {
+          return this.$slots.default?.()
+        }
+      },
+      render: compileToFunction(`<component :is="() => slotContent" />`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      __hmrId: parentId,
+      components: { Child },
+      render: compileToFunction(`<Child>1</Child>`)
+    }
+    createRecord(parentId, Parent)
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`1`)
+
+    rerender(parentId, compileToFunction(`<Child>2</Child>`))
+    expect(serializeInner(root)).toBe(`2`)
+  })
+
+  // #6978, #7138, #7114
+  test('hoisted children array inside v-for', () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: compileToFunction(
+        `<div v-for="item of 2">
+          <div>1</div>
+        </div>
+        <p>2</p>
+        <p>3</p>`
+      )
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`
+    )
+
+    // move the <p>3</p> into the <div>1</div>
+    rerender(
+      appId,
+      compileToFunction(
+        `<div v-for="item of 2">
+          <div>1<p>3</p></div>
+        </div>
+        <p>2</p>`
+      )
+    )
+    expect(serializeInner(root)).toBe(
+      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`
+    )
   })
 })
