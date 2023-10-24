@@ -405,8 +405,8 @@ export interface ComponentInternalInstance {
   // custom element context,
   // exists when the component is a child component of custom element
   ceContext: {
-    addCEChildStyle: ((styles: string[]) => void)
-    removeCEChildStyle: ((styles: string[] | undefined) => void)
+    addCEChildStyle: (styles: string[]) => void
+    removeCEChildStyle: (styles: string[] | undefined) => void
   } | null
 
   /**
@@ -562,7 +562,8 @@ export function createComponentInstance(
     isUnmounted: false,
     isDeactivated: false,
 
-    ceContext: parent && (parent.isCE || parent.ceContext) ? parent.ceContext : null,
+    ceContext:
+      parent && (parent.isCE || parent.ceContext) ? parent.ceContext : null,
 
     bc: null,
     c: null,

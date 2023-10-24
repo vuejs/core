@@ -439,9 +439,7 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addChildStyles(
-    styles: string[] | undefined
-  ) {
+  protected _addChildStyles(styles: string[] | undefined) {
     if (styles) {
       const styleContent = styles.join()
       const ceKey = `__${this._instance!.uid}`
