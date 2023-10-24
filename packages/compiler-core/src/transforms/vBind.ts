@@ -9,7 +9,7 @@ import {
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
-import { processExpression } from '..'
+import { processExpression } from './transformExpression'
 
 // v-bind without arg is handled directly in ./transformElements.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
