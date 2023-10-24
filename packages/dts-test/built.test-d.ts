@@ -1,4 +1,4 @@
-import { CustomPropsNotErased } from '@vue/built-test'
+import { CustomPropsNotErased } from '@vue/dts-built-test'
 import { expectType, describe } from './utils'
 
 declare module 'vue' {
