@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   ref,
   render,
@@ -135,9 +134,11 @@ describe('component: slots', () => {
     }
 
     const oldSlots = {
-      header: 'header'
+      header: 'header',
+      footer: undefined
     }
     const newSlots = {
+      header: undefined,
       footer: 'footer'
     }
 

@@ -255,5 +255,90 @@ describe('CSS vars injection', () => {
       )
       expect(cssVars).toMatchObject([`count.toString(`, `xxx`])
     })
+
+    // #7759
+    test('It should correctly parse the case where there is no space after the script tag', () => {
+      const { content } = compileSFCScript(
+        `<script setup>import { ref as _ref } from 'vue';
+                let background = _ref('red')
+             </script>
+             <style>
+             label {
+               background: v-bind(background);
+             }
+             </style>`
+      )
+      expect(content).toMatch(
+        `export default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCssVars(_ctx => ({\n  "xxxxxxxx-background": (_unref(background))\n}))`
+      )
+    })
+
+    describe('skip codegen in SSR', () => {
+      test('script setup, inline', () => {
+        const { content } = compileSFCScript(
+          `<script setup>
+          let size = 1
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            inlineTemplate: true,
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+
+      // #6926
+      test('script, non-inline', () => {
+        const { content } = compileSFCScript(
+          `<script setup>
+          let size = 1
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            inlineTemplate: false,
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+
+      test('normal script', () => {
+        const { content } = compileSFCScript(
+          `<script>
+          export default {
+            setup() {
+              return {
+                size: ref('100px')
+              }
+            }
+          }
+          </script>\n` +
+            `<style>
+              div {
+                font-size: v-bind(size);
+              }
+            </style>`,
+          {
+            templateOptions: {
+              ssr: true
+            }
+          }
+        )
+        expect(content).not.toMatch(`_useCssVars`)
+      })
+    })
   })
 })

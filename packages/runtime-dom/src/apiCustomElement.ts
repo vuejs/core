@@ -20,7 +20,8 @@ import {
   warn,
   ConcreteComponent,
   ComponentOptions,
-  ComponentInjectOptions
+  ComponentInjectOptions,
+  SlotsType
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -52,7 +53,8 @@ export function defineCustomElement<
   E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -65,7 +67,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<Props>
 
@@ -81,7 +84,8 @@ export function defineCustomElement<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -94,7 +98,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<{ [K in PropNames]: any }>
 
@@ -110,7 +115,8 @@ export function defineCustomElement<
   E extends EmitsOptions = Record<string, any>,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -123,7 +129,8 @@ export function defineCustomElement<
     E,
     EE,
     I,
-    II
+    II,
+    S
   > & { styles?: string[] }
 ): VueElementConstructor<ExtractPropTypes<PropsOptions>>
 
@@ -133,11 +140,12 @@ export function defineCustomElement(options: {
   new (...args: any[]): ComponentPublicInstance
 }): VueElementConstructor
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
   hydrate?: RootHydrateFunction
 ): VueElementConstructor {
-  const Comp = defineComponent(options as any)
+  const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
     static def = Comp
     constructor(initialProps?: Record<string, any>) {
@@ -148,6 +156,7 @@ export function defineCustomElement(
   return VueCustomElement
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
   // @ts-ignore
   return defineCustomElement(options, hydrate)
@@ -169,7 +178,7 @@ export class VueElement extends BaseClass {
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
-
+  private _ob?: MutationObserver | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -206,6 +215,10 @@ export class VueElement extends BaseClass {
 
   disconnectedCallback() {
     this._connected = false
+    if (this._ob) {
+      this._ob.disconnect()
+      this._ob = null
+    }
     nextTick(() => {
       if (!this._connected) {
         render(null, this.shadowRoot!)
@@ -226,11 +239,13 @@ export class VueElement extends BaseClass {
     }
 
     // watch future attr changes
-    new MutationObserver(mutations => {
+    this._ob = new MutationObserver(mutations => {
       for (const m of mutations) {
         this._setAttr(m.attributeName!)
       }
-    }).observe(this, { attributes: true })
+    })
+
+    this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def

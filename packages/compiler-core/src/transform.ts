@@ -17,7 +17,8 @@ import {
   TemplateLiteral,
   createVNodeCall,
   ConstantTypes,
-  ArrayExpression
+  ArrayExpression,
+  convertToBlock
 } from './ast'
 import {
   isString,
@@ -36,7 +37,7 @@ import {
   helperNameMap,
   CREATE_COMMENT
 } from './runtimeHelpers'
-import { isVSlot, makeBlock } from './utils'
+import { isVSlot } from './utils'
 import { hoistStatic, isSingleElementRoot } from './transforms/hoistStatic'
 import { CompilerCompatOptions } from './compat/compatConfig'
 
@@ -116,7 +117,7 @@ export interface TransformContext
   removeIdentifiers(exp: ExpressionNode | string): void
   hoist(exp: string | JSChildNode | ArrayExpression): SimpleExpressionNode
   cache<T extends JSChildNode>(exp: T, isVNode?: boolean): CacheExpression | T
-  constantCache: Map<TemplateChildNode, ConstantTypes>
+  constantCache: WeakMap<TemplateChildNode, ConstantTypes>
 
   // 2.x Compat only
   filters?: Set<string>
@@ -128,6 +129,7 @@ export function createTransformContext(
     filename = '',
     prefixIdentifiers = false,
     hoistStatic = false,
+    hmr = false,
     cacheHandlers = false,
     nodeTransforms = [],
     directiveTransforms = {},
@@ -154,6 +156,7 @@ export function createTransformContext(
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
+    hmr,
     cacheHandlers,
     nodeTransforms,
     directiveTransforms,
@@ -180,7 +183,7 @@ export function createTransformContext(
     directives: new Set(),
     hoists: [],
     imports: [],
-    constantCache: new Map(),
+    constantCache: new WeakMap(),
     temps: 0,
     cached: 0,
     identifiers: Object.create(null),
@@ -348,7 +351,7 @@ function createRootCodegen(root: RootNode, context: TransformContext) {
       // SimpleExpressionNode
       const codegenNode = child.codegenNode
       if (codegenNode.type === NodeTypes.VNODE_CALL) {
-        makeBlock(codegenNode, context)
+        convertToBlock(codegenNode, context)
       }
       root.codegenNode = codegenNode
     } else {

@@ -7,10 +7,15 @@ import {
   reactive,
   proxyRefs,
   toRef,
+  toValue,
   toRefs,
   ToRefs,
   shallowReactive,
   readonly,
+  MaybeRef,
+  MaybeRefOrGetter,
+  ComputedRef,
+  computed,
   ShallowRef
 } from 'vue'
 import { expectType, describe, IsUnion } from './utils'
@@ -27,6 +32,8 @@ function plainType(arg: number | Ref<number>) {
 
   // ref unwrapping
   expectType<number>(unref(arg))
+  expectType<number>(toValue(arg))
+  expectType<number>(toValue(() => 123))
 
   // ref inner type should be unwrapped
   const nestedRef = ref({
@@ -220,6 +227,13 @@ expectType<Ref<string>>(p2.obj.k)
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
 
+  expectType<Ref<number>>(toRef(() => 123))
+  expectType<Ref<number | string>>(toRef(() => obj.c))
+
+  const r = toRef(() => 123)
+  // @ts-expect-error
+  r.value = 234
+
   // toRefs
   expectType<{
     a: Ref<number>
@@ -335,4 +349,59 @@ describe('reactive in shallow ref', () => {
   })
 
   expectType<number>(x.value.a.b)
+})
+
+describe('toRef <-> toValue', () => {
+  function foo(
+    a: MaybeRef<string>,
+    b: () => string,
+    c: MaybeRefOrGetter<string>,
+    d: ComputedRef<string>
+  ) {
+    const r = toRef(a)
+    expectType<Ref<string>>(r)
+    // writable
+    r.value = 'foo'
+
+    const rb = toRef(b)
+    expectType<Readonly<Ref<string>>>(rb)
+    // @ts-expect-error ref created from getter should be readonly
+    rb.value = 'foo'
+
+    const rc = toRef(c)
+    expectType<Readonly<Ref<string> | Ref<string>>>(rc)
+    // @ts-expect-error ref created from MaybeReadonlyRef should be readonly
+    rc.value = 'foo'
+
+    const rd = toRef(d)
+    expectType<ComputedRef<string>>(rd)
+    // @ts-expect-error ref created from computed ref should be readonly
+    rd.value = 'foo'
+
+    expectType<string>(toValue(a))
+    expectType<string>(toValue(b))
+    expectType<string>(toValue(c))
+    expectType<string>(toValue(d))
+
+    return {
+      r: toValue(r),
+      rb: toValue(rb),
+      rc: toValue(rc),
+      rd: toValue(rd)
+    }
+  }
+
+  expectType<{
+    r: string
+    rb: string
+    rc: string
+    rd: string
+  }>(
+    foo(
+      'foo',
+      () => 'bar',
+      ref('baz'),
+      computed(() => 'hi')
+    )
+  )
 })
