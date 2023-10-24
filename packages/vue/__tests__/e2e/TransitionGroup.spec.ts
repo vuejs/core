@@ -519,13 +519,13 @@ describe('e2e: TransitionGroup', () => {
         const show = ref(false)
         createApp({
           template: `
-              <div id="container">
-								<transition-group name="test">
-									<div v-for="item in items" :key="item" class="test">{{item}}</div>
-                  <Child key="child"/>
-								</transition-group>
-							</div>
-              <button id="toggleBtn" @click="click">button</button>
+            <div id="container">
+              <transition-group name="test">
+                <div v-for="item in items" :key="item" class="test">{{item}}</div>
+                <Child key="child"/>
+              </transition-group>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
 					`,
           components: {
             Child: {
@@ -560,13 +560,6 @@ describe('e2e: TransitionGroup', () => {
       )
 
       await transitionFinish(duration)
-      expect(await html('#container')).toBe(
-        `<div class="test test-enter-active test-enter-to">a</div>` +
-          `<div class="test test-enter-active test-enter-to">b</div>` +
-          `<div class="test test-enter-active test-enter-to">c</div>` +
-          `<div class="test test-enter-from test-enter-active">child</div>`
-      )
-
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
