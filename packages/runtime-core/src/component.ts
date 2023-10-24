@@ -406,7 +406,7 @@ export interface ComponentInternalInstance {
   // exists when the component is a child component of custom element
   ceContext: {
     addCEChildStyle: ((styles: string[]) => void)
-    removeCEChildStyle: ((styles: string[] | undefined) => void)
+    removeCEChildStylesMap: ((styles: string[] | undefined) => void)
   } | null
 
   /**

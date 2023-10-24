@@ -371,7 +371,7 @@ export class VueElement extends BaseClass {
 
         instance.ceContext = {
           addCEChildStyle: this._addChildStyles.bind(this),
-          removeCEChildStyle: this._removeChildStyles.bind(this)
+          removeCEChildStylesMap: this._removeChildStylesMap.bind(this)
         }
         // HMR
         if (__DEV__) {
@@ -443,20 +443,9 @@ export class VueElement extends BaseClass {
     styles: string[] | undefined
   ) {
     if (styles) {
-      const styleContent = styles.join()
-      const ceKey = `__${this._instance!.uid}`
-      let ceKeySet = new Set<string>()
-      if (ceChildStyleMap.has(styleContent)) {
-        ceKeySet = ceChildStyleMap.get(styleContent)!
-        if (ceKeySet.has(ceKey)) {
-          ceKeySet!.add(ceKey)
-          ceChildStyleMap.set(styleContent, ceKeySet)
-          return
-        }
-      }
-
-      ceKeySet!.add(ceKey)
-      ceChildStyleMap.set(styleContent, ceKeySet)
+      // record style
+      const isRepeated =  this._addChildStylesMap(styles, this._instance!.uid)
+      if(isRepeated) return
 
       styles.forEach((css, index) => {
         const s = document.createElement('style')
@@ -478,24 +467,53 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStyles(styles: string[] | undefined) {
+  protected _removeChildStylesMap(styles: string[] | undefined) {
     if (styles) {
       const styleContent = styles.join()
-      let cecStyle = new Set<string>()
       if (ceChildStyleMap.has(styleContent)) {
-        const ceKey = `__${this._instance!.uid}`
-        // update cecStyle
-        cecStyle = ceChildStyleMap.get(styleContent)!
-        cecStyle.delete(ceKey)
-
-        if (cecStyle.size === 0) {
+        const ceUid = `__${this._instance!.uid}`
+        // update ceUidSet
+        const ceUidSet = ceChildStyleMap.get(styleContent)!
+        ceUidSet.delete(ceUid)
+        if (ceUidSet.size === 0) {
           // clear ceChildStyleMap
           ceChildStyleMap.delete(styleContent)
         } else {
           // update ceChildStyleMap
-          ceChildStyleMap.set(styleContent, cecStyle)
+          ceChildStyleMap.set(styleContent, ceUidSet)
         }
       }
+    }
+  }
+
+  protected _addChildStylesMap(styles: string[] | undefined, uid: number) {
+    if (styles) {
+      const styleContent = styles.join()
+      // ceChildStyleMap is global,
+      // and a `CE` may be used multiple times,
+      // so we need to maintain it at the granularity of the uid.
+      // ceChildStyleMap = {
+      //  [style1]: [uid1, uid2, ...]
+      //  .....
+      // }
+      //            / - comp2
+      //       / CE1  - comp2 --- Styles will not be added repeatedly
+      // comp1
+      //      \ comp3 - CE2 - comp2
+
+      const ceUid = `__${uid}`
+      let ceUidSet = new Set<string>()
+      if (ceChildStyleMap.has(styleContent)) {
+        ceUidSet = ceChildStyleMap.get(styleContent)!
+        if (ceUidSet.has(ceUid)) {
+          ceUidSet.add(ceUid);
+          ceChildStyleMap.set(styleContent, ceUidSet)
+          return true
+        }
+      }
+      ceUidSet.add(ceUid)
+      ceChildStyleMap.set(styleContent, ceUidSet)
+      return false
     }
   }
 }

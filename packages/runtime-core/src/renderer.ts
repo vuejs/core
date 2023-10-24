@@ -2122,7 +2122,7 @@ function baseCreateRenderer(
       // remove style tags when the component is a child
       // component of a custom element
       if (vnode.component!.ceContext) {
-        vnode.component!.ceContext.removeCEChildStyle(
+        vnode.component!.ceContext.removeCEChildStylesMap(
           (vnode.component!.type as ConcreteComponent & { styles?: string[] })
             .styles
         )
