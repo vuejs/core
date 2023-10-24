@@ -73,6 +73,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { TransitionHooks } from './components/BaseTransition'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -702,10 +703,7 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks =
-      (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
-      transition &&
-      !transition.persisted
+    const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
@@ -2393,6 +2391,17 @@ function toggleRecurse(
   allowed: boolean
 ) {
   effect.allowRecurse = update.allowRecurse = allowed
+}
+
+export function needTransition(
+  parentSuspense: SuspenseBoundary | null,
+  transition: TransitionHooks | null
+) {
+  return (
+    (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
+    transition &&
+    !transition.persisted
+  )
 }
 
 /**
