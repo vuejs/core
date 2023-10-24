@@ -152,7 +152,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
 
-    const buildSSRSlotFn: SlotFnBuilder = (props, _vFor, children, loc) => {
+    const buildSSRSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) => {
       const param0 = (props && stringifyExpression(props)) || `_`
       const fn = createFunctionExpression(
         [param0, `_push`, `_parent`, `_scopeId`],
@@ -279,7 +279,7 @@ const vnodeDirectiveTransforms = {
 
 function createVNodeSlotBranch(
   props: ExpressionNode | undefined,
-  vFor: ExpressionNode | undefined,
+  vForExp: ExpressionNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext
 ): ReturnStatement {
@@ -306,8 +306,8 @@ function createVNodeSlotBranch(
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
     isSelfClosing: false,
-    // important: provide v-slot="props" and v-for="exp" on the wrapper for proper
-    // scope analysis
+    // important: provide v-slot="props" and v-for="exp" on the wrapper for
+    // proper scope analysis
     props: [
       {
         type: NodeTypes.DIRECTIVE,
@@ -320,7 +320,7 @@ function createVNodeSlotBranch(
       {
         type: NodeTypes.DIRECTIVE,
         name: 'for',
-        exp: vFor,
+        exp: vForExp,
         arg: undefined,
         modifiers: [],
         loc: locStub

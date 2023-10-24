@@ -100,12 +100,12 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
 
 export type SlotFnBuilder = (
   slotProps: ExpressionNode | undefined,
-  vForProps: ExpressionNode | undefined,
+  vForExp: ExpressionNode | undefined,
   slotChildren: TemplateChildNode[],
   loc: SourceLocation
 ) => FunctionExpression
 
-const buildClientSlotFn: SlotFnBuilder = (props, _vFor, children, loc) =>
+const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
   createFunctionExpression(
     props,
     children,
@@ -139,9 +139,6 @@ export function buildSlots(
     hasDynamicSlots = hasScopeRef(node, context.identifiers)
   }
 
-  let vFor: DirectiveNode | undefined
-  let vForProps: ExpressionNode | undefined
-
   // 1. Check for slot with slotProps on component itself.
   //    <Comp v-slot="{ prop }"/>
   const onComponentSlot = findDir(node, 'slot', true)
@@ -150,12 +147,10 @@ export function buildSlots(
     if (arg && !isStaticExp(arg)) {
       hasDynamicSlots = true
     }
-    vFor = findDir(node, 'for')
-    if (vFor) vForProps = vFor.exp
     slotsProperties.push(
       createObjectProperty(
         arg || createSimpleExpression('default', true),
-        buildSlotFn(exp, vForProps, children, loc)
+        buildSlotFn(exp, undefined, children, loc)
       )
     )
   }
@@ -207,12 +202,10 @@ export function buildSlots(
       hasDynamicSlots = true
     }
 
-    vFor = findDir(slotElement, 'for')
-    if (vFor) vForProps = vFor.exp
-    else vForProps = undefined
+    const vFor = findDir(slotElement, 'for')
     const slotFunction = buildSlotFn(
       slotProps,
-      vForProps,
+      vFor?.exp,
       slotChildren,
       slotLoc
     )
