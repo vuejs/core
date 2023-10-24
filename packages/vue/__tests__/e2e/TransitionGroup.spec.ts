@@ -508,4 +508,81 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  // #5168
+  test(
+    'avoid set transition hooks for comment node',
+    async () => {
+      await page().evaluate(duration => {
+        const { createApp, ref, h, createCommentVNode } = (window as any).Vue
+
+        const show = ref(false)
+        createApp({
+          template: `
+              <div id="container">
+								<transition-group name="test">
+									<div v-for="item in items" :key="item" class="test">{{item}}</div>
+                  <Child key="child"/>
+								</transition-group>
+							</div>
+              <button id="toggleBtn" @click="click">button</button>
+					`,
+          components: {
+            Child: {
+              setup() {
+                return () =>
+                  show.value
+                    ? h('div', { class: 'test' }, 'child')
+                    : createCommentVNode('v-if', true)
+              }
+            }
+          },
+          setup: () => {
+            const items = ref([])
+            const click = () => {
+              items.value = ['a', 'b', 'c']
+              setTimeout(() => {
+                show.value = true
+              }, duration)
+            }
+            return { click, items }
+          }
+        }).mount('#app')
+      }, duration)
+
+      expect(await html('#container')).toBe(`<!--v-if-->`)
+
+      expect(await htmlWhenTransitionStart()).toBe(
+        `<div class="test test-enter-from test-enter-active">a</div>` +
+          `<div class="test test-enter-from test-enter-active">b</div>` +
+          `<div class="test test-enter-from test-enter-active">c</div>` +
+          `<!--v-if-->`
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test test-enter-active test-enter-to">a</div>` +
+          `<div class="test test-enter-active test-enter-to">b</div>` +
+          `<div class="test test-enter-active test-enter-to">c</div>` +
+          `<div class="test test-enter-from test-enter-active">child</div>`
+      )
+
+      await nextFrame()
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test test-enter-active test-enter-to">child</div>`
+      )
+
+      await transitionFinish(duration)
+      expect(await html('#container')).toBe(
+        `<div class="test">a</div>` +
+          `<div class="test">b</div>` +
+          `<div class="test">c</div>` +
+          `<div class="test">child</div>`
+      )
+    },
+    E2E_TIMEOUT
+  )
 })
