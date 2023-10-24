@@ -4,6 +4,8 @@
   "main": "dist/built-test.esm-bundler.js",
   "types": "dist/built-test.d.ts",
   "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/reactivity": "workspace:*",
     "vue": "workspace:*"
   },
   "buildOptions": {
