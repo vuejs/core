@@ -439,13 +439,11 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addChildStyles(
-    styles: string[] | undefined
-  ) {
+  protected _addChildStyles(styles: string[] | undefined) {
     if (styles) {
       // record style
-      const isRepeated =  this._addChildStylesMap(styles, this._instance!.uid)
-      if(isRepeated) return
+      const isRepeated = this._addChildStylesMap(styles, this._instance!.uid)
+      if (isRepeated) return
 
       styles.forEach((css, index) => {
         const s = document.createElement('style')
@@ -506,7 +504,7 @@ export class VueElement extends BaseClass {
       if (ceChildStyleMap.has(styleContent)) {
         ceUidSet = ceChildStyleMap.get(styleContent)!
         if (ceUidSet.has(ceUid)) {
-          ceUidSet.add(ceUid);
+          ceUidSet.add(ceUid)
           ceChildStyleMap.set(styleContent, ceUidSet)
           return true
         }
