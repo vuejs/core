@@ -15,7 +15,8 @@ import {
   MaybeRef,
   MaybeRefOrGetter,
   ComputedRef,
-  computed
+  computed,
+  UnwrapRef
 } from 'vue'
 import { expectType, describe } from './utils'
 
@@ -388,3 +389,37 @@ describe('toRef <-> toValue', () => {
     )
   )
 })
+
+// Complex example based on Pinia usage
+
+type StateTree = Record<string | number | symbol, any>
+
+interface ComplexObjectOptions<T extends StateTree, A> {
+  state?: () => T
+
+  actions?: A & ThisType<A & UnwrapRef<T>>
+}
+
+interface ComplexObjectState<T extends StateTree, A> {
+  $state: UnwrapRef<T>
+
+  $actions: A
+}
+
+declare function defineComplexObject<T extends StateTree, A>(
+  options: ComplexObjectOptions<T, A>
+): ComplexObjectState<T, A>
+
+type Model = { id: string }
+export function init<User extends Model>() {
+  return defineComplexObject({
+    state: () => ({
+      user: {} as User
+    }),
+    actions: {
+      setUser(user: User) {
+        this.user = user
+      }
+    }
+  })
+}
