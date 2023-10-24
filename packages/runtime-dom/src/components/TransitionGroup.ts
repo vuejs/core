@@ -113,7 +113,8 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      prevChildren =
+        children && children.filter(child => !isComment(child.el as Element))
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
@@ -129,9 +130,6 @@ const TransitionGroupImpl: ComponentOptions = {
       }
 
       if (prevChildren) {
-        prevChildren = prevChildren.filter(
-          child => !isComment(child.el as Element)
-        )
         for (let i = 0; i < prevChildren.length; i++) {
           const child = prevChildren[i]
           setTransitionHooks(
