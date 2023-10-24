@@ -526,7 +526,7 @@ describe('e2e: TransitionGroup', () => {
               </transition-group>
             </div>
             <button id="toggleBtn" @click="click">button</button>
-					`,
+          `,
           components: {
             Child: {
               setup() {
