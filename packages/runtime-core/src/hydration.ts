@@ -372,6 +372,7 @@ export function createHydrationFunctions(
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
 
+      // handle appear transition
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
@@ -382,7 +383,10 @@ export function createHydrationFunctions(
 
         const content = (el as HTMLTemplateElement).content
           .firstChild as Element
-        needCallTransitionHooks && transition!.beforeEnter(content)
+
+        if (needCallTransitionHooks) {
+          transition!.beforeEnter(content)
+        }
 
         // replace <template> node with inner children
         replaceNode(content, el, parentComponent)
