@@ -374,6 +374,8 @@ type StylePropertiesKey =
   | `${AnimationTypes}${AnimationProperties}`
   | `${typeof TRANSITION}Property`
 
+const transformRE = /\b(transform|all)(,|$)/
+
 export function getTransitionInfo(
   el: Element,
   expectedType?: TransitionProps['type']
@@ -424,9 +426,7 @@ export function getTransitionInfo(
   }
   const hasTransform =
     type === TRANSITION &&
-    /\b(transform|all)(,|$)/.test(
-      getStyleProperties(`${TRANSITION}Property`).toString()
-    )
+    transformRE.test(getStyleProperties(`${TRANSITION}Property`).toString())
   return {
     type,
     timeout,

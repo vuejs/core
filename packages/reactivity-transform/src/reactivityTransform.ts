@@ -67,6 +67,8 @@ export interface ImportBinding {
   specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
 }
 
+const tsxRE = /\.tsx?$/
+
 /**
  * @deprecated will be removed in 3.4
  */
@@ -81,7 +83,7 @@ export function transform(
 ): RefTransformResults {
   const plugins: ParserPlugin[] = parserPlugins || []
   if (filename) {
-    if (/\.tsx?$/.test(filename)) {
+    if (tsxRE.test(filename)) {
       plugins.push('typescript')
     }
     if (filename.endsWith('x')) {
@@ -117,6 +119,8 @@ export function transform(
       : null
   }
 }
+
+const whitespaceRE = /\s/
 
 /**
  * @deprecated will be removed in 3.4
@@ -731,7 +735,7 @@ export function transformAST(
                 // newline
                 s.prependRight(node.start! + offset, ';')
                 break
-              } else if (!/\s/.test(char)) {
+              } else if (!whitespaceRE.test(char)) {
                 break
               }
             }

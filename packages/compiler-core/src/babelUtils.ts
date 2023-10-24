@@ -231,8 +231,10 @@ function markScopeIdentifier(
   ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
 }
 
+const functionTypeRE = /Function(?:Expression|Declaration)$|Method$/
+
 export const isFunctionType = (node: Node): node is Function => {
-  return /Function(?:Expression|Declaration)$|Method$/.test(node.type)
+  return functionTypeRE.test(node.type)
 }
 
 export const isStaticProperty = (node: Node): node is ObjectProperty =>

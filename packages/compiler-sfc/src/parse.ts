@@ -363,6 +363,7 @@ function createBlock(
 const splitRE = /\r?\n/g
 const emptyRE = /^(?:\/\/)?\s*$/
 const replaceRE = /./g
+const whitespaceRE = /\s/
 
 function generateSourceMap(
   filename: string,
@@ -381,7 +382,7 @@ function generateSourceMap(
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
-        if (!/\s/.test(line[i])) {
+        if (!whitespaceRE.test(line[i])) {
           map.addMapping({
             source: filename,
             original: {

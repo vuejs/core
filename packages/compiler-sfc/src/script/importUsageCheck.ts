@@ -86,9 +86,10 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 }
 
 const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+const asRE = / as\s+\w|<.*>|:/
 
 function processExp(exp: string, dir?: string): string {
-  if (/ as\s+\w|<.*>|:/.test(exp)) {
+  if (asRE.test(exp)) {
     if (dir === 'slot') {
       exp = `(${exp})=>{}`
     } else if (dir === 'on') {

@@ -141,6 +141,9 @@ export interface ImportBinding {
   isUsedInTemplate: boolean
 }
 
+const whitespaceRE = /\s/
+const newlineLfRE = /\n$/
+
 /**
  * Compile `<script setup>`
  * It requires the whole SFC descriptor because we need to handle and merge
@@ -215,7 +218,7 @@ export function compileScript(
     }
     // locate the end of whitespace between this statement and the next
     while (end <= source.length) {
-      if (!/\s/.test(source.charAt(end))) {
+      if (!whitespaceRE.test(source.charAt(end))) {
         break
       }
       end++
@@ -496,7 +499,7 @@ export function compileScript(
     // declared before being used in the actual component definition
     if (scriptStartOffset! > startOffset) {
       // if content doesn't end with newline, add one
-      if (!/\n$/.test(script.content.trim())) {
+      if (!newlineLfRE.test(script.content.trim())) {
         ctx.s.appendLeft(scriptEndOffset!, `\n`)
       }
       ctx.s.move(scriptStartOffset!, scriptEndOffset!, 0)

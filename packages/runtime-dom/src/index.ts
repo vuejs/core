@@ -62,6 +62,8 @@ export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
 }) as RootHydrateFunction
 
+const globalMountContainerRE = /^(v-|:|@)/
+
 export const createApp = ((...args) => {
   const app = ensureRenderer().createApp(...args)
 
@@ -86,7 +88,10 @@ export const createApp = ((...args) => {
       if (__COMPAT__ && __DEV__) {
         for (let i = 0; i < container.attributes.length; i++) {
           const attr = container.attributes[i]
-          if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
+          if (
+            attr.name !== 'v-cloak' &&
+            globalMountContainerRE.test(attr.name)
+          ) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
               null
