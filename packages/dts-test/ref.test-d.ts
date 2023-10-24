@@ -191,6 +191,11 @@ if (refStatus.value === 'initial') {
   expectType<IsUnion<typeof shallowUnionAsCast>>(false)
 }
 
+describe('shallowRef with generic', <T>() => {
+  const r = ref({}) as MaybeRef<T>
+  expectType<ShallowRef<T> | Ref<T>>(shallowRef(r))
+})
+
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
   k: 'v'
