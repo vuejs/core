@@ -1,0 +1,26 @@
+{
+  "name": "@vue/built-test",
+  "private": false,
+  "main": "dist/built-test.esm-bundler.js",
+  "types": "dist/built-test.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/built-test.d.ts",
+      "default": "./dist/built-test.esm-bundler.js"
+    }
+  },
+  "dependencies": {
+    "vue": "workspace:*"
+  },
+  "sideEffects": false,
+  "buildOptions": {
+    "name": "VueRuntimeDOM",
+    "formats": [
+      "esm-bundler",
+      "esm-browser",
+      "cjs",
+      "global"
+    ]
+  },
+  "version": "3.3.6"
+}

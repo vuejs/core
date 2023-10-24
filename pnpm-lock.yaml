@@ -156,6 +156,18 @@ importers:
         specifier: ^0.34.6
         version: 0.34.6(jsdom@22.1.0)(terser@5.22.0)
 
+  packages/built-test:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
+      vue:
+        specifier: workspace:*
+        version: link:../vue
+
   packages/compiler-core:
     dependencies:
       '@babel/parser':
@@ -259,6 +271,9 @@ importers:
 
   packages/dts-test:
     dependencies:
+      '@vue/built-test':
+        specifier: workspace:*
+        version: link:../built-test
       vue:
         specifier: workspace:*
         version: link:../vue
