@@ -21,7 +21,7 @@ export function createDOMCompilerError(
 }
 
 export const enum DOMErrorCodes {
-  X_V_HTML_NO_EXPRESSION = ErrorCodes.__EXTEND_POINT__,
+  X_V_HTML_NO_EXPRESSION = 53 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
   X_V_TEXT_WITH_CHILDREN,
@@ -33,6 +33,19 @@ export const enum DOMErrorCodes {
   X_TRANSITION_INVALID_CHILDREN,
   X_IGNORED_SIDE_EFFECT_TAG,
   __EXTEND_POINT__
+}
+
+if (__TEST__) {
+  // esbuild cannot infer const enum increments if first value is from another
+  // file, so we have to manually keep them in sync. this check ensures it
+  // errors out if there are collisions.
+  if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
+    throw new Error(
+      `DOMErrorCodes need to be updated to ${
+        ErrorCodes.__EXTEND_POINT__ + 1
+      } to match extension point from core ErrorCodes.`
+    )
+  }
 }
 
 export const DOMErrorMessages: { [code: number]: string } = {

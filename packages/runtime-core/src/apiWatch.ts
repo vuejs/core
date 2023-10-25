@@ -7,7 +7,8 @@ import {
   isReactive,
   ReactiveFlags,
   EffectScheduler,
-  DebuggerOptions
+  DebuggerOptions,
+  getCurrentScope
 } from '@vue/reactivity'
 import { SchedulerJob, queueJob } from './scheduler'
 import {
@@ -21,7 +22,8 @@ import {
   remove,
   isMap,
   isSet,
-  isPlainObject
+  isPlainObject,
+  extend
 } from '@vue/shared'
 import {
   currentInstance,
@@ -41,7 +43,6 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from '@vue/runtime-core'
-import { SSRContext } from '@vue/server-renderer'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -93,7 +94,7 @@ export function watchPostEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? { ...options, flush: 'post' } : { flush: 'post' }
+    __DEV__ ? extend({}, options as any, { flush: 'post' }) : { flush: 'post' }
   )
 }
 
@@ -104,7 +105,7 @@ export function watchSyncEffect(
   return doWatch(
     effect,
     null,
-    __DEV__ ? { ...options, flush: 'sync' } : { flush: 'sync' }
+    __DEV__ ? extend({}, options as any, { flush: 'sync' }) : { flush: 'sync' }
   )
 }
 
@@ -197,7 +198,9 @@ function doWatch(
     )
   }
 
-  const instance = currentInstance
+  const instance =
+    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+  // const instance = currentInstance
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -293,7 +296,7 @@ function doWatch(
       ])
     }
     if (flush === 'sync') {
-      const ctx = useSSRContext() as SSRContext
+      const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
       return NOOP
@@ -314,9 +317,7 @@ function doWatch(
         deep ||
         forceTrigger ||
         (isMultiSource
-          ? (newValue as any[]).some((v, i) =>
-              hasChanged(v, (oldValue as any[])[i])
-            )
+          ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue)) ||
         (__COMPAT__ &&
           isArray(newValue) &&
@@ -329,11 +330,11 @@ function doWatch(
         callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
           newValue,
           // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE 
+          oldValue === INITIAL_WATCHER_VALUE
             ? undefined
-            : (isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE)
-              ? []
-              : oldValue,
+            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+            ? []
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue
@@ -457,7 +458,7 @@ export function traverse(value: unknown, seen?: Set<unknown>) {
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse((value as any)[key], seen)
+      traverse(value[key], seen)
     }
   }
   return value

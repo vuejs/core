@@ -1,3 +1,7 @@
+/**
+ * @vitest-environment jsdom
+ */
+
 import {
   createSSRApp,
   h,
@@ -14,10 +18,14 @@ import {
   createVNode,
   withDirectives,
   vModelCheckbox,
-  renderSlot
+  renderSlot,
+  Transition,
+  createCommentVNode,
+  vShow
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
-import { PatchFlags } from '../../shared/src'
+import { PatchFlags } from '@vue/shared'
+import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -134,7 +142,7 @@ describe('SSR hydration', () => {
 
   test('element with elements children', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const { vnode, container } = mountWithHydration(
       '<div><span>foo</span><span class="foo"></span></div>',
       () =>
@@ -171,7 +179,7 @@ describe('SSR hydration', () => {
 
   test('Fragment', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const { vnode, container } = mountWithHydration(
       '<div><!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]--></div>',
       () =>
@@ -222,7 +230,7 @@ describe('SSR hydration', () => {
 
   test('Teleport', async () => {
     const msg = ref('foo')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const teleportContainer = document.createElement('div')
     teleportContainer.id = 'teleport'
     teleportContainer.innerHTML = `<span>foo</span><span class="foo"></span><!--teleport anchor-->`
@@ -262,8 +270,8 @@ describe('SSR hydration', () => {
 
   test('Teleport (multiple + integration)', async () => {
     const msg = ref('foo')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () => [
       h(Teleport, { to: '#teleport2' }, [
@@ -286,7 +294,7 @@ describe('SSR hydration', () => {
 
     const teleportHtml = ctx.teleports!['#teleport2']
     expect(teleportHtml).toMatchInlineSnapshot(
-      `"<span>foo</span><span class="foo"></span><!--teleport anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`
+      '"<span>foo</span><span class=\\"foo\\"></span><!--teleport anchor--><span>foo2</span><span class=\\"foo2\\"></span><!--teleport anchor-->"'
     )
 
     teleportContainer.innerHTML = teleportHtml
@@ -323,14 +331,14 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-      `"<span>bar</span><span class="bar"></span><!--teleport anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`
+      '"<span>bar</span><span class=\\"bar\\"></span><!--teleport anchor--><span>bar2</span><span class=\\"bar2\\"></span><!--teleport anchor-->"'
     )
   })
 
   test('Teleport (disabled)', async () => {
     const msg = ref('foo')
-    const fn1 = jest.fn()
-    const fn2 = jest.fn()
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
 
     const Comp = () => [
       h('div', 'foo'),
@@ -346,7 +354,7 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     const mainHtml = await renderToString(h(Comp), ctx)
     expect(mainHtml).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`
+      '"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class=\\"foo\\"></span><!--teleport end--><div class=\\"foo2\\">bar</div><!--]-->"'
     )
 
     const teleportHtml = ctx.teleports!['#teleport3']
@@ -385,8 +393,30 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`
+      '"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class=\\"bar\\"></span><!--teleport end--><div class=\\"bar2\\">bar</div><!--]-->"'
     )
+  })
+
+  // #6152
+  test('Teleport (disabled + as component root)', () => {
+    const { container } = mountWithHydration(
+      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
+      () => [
+        h('div', 'Parent fragment'),
+        h(() =>
+          h(Teleport, { to: 'body', disabled: true }, [
+            h('div', 'Teleport content')
+          ])
+        )
+      ]
+    )
+    expect(document.body.innerHTML).toBe('')
+    expect(container.innerHTML).toBe(
+      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->'
+    )
+    expect(
+      `Hydration completed but contains mismatches.`
+    ).not.toHaveBeenWarned()
   })
 
   test('Teleport (as component root)', () => {
@@ -453,7 +483,7 @@ describe('SSR hydration', () => {
   // compile SSR + client render fn from the same template & hydrate
   test('full compiler integration', async () => {
     const mounted: string[] = []
-    const log = jest.fn()
+    const log = vi.fn()
     const toggle = ref(true)
 
     const Child = {
@@ -564,7 +594,7 @@ describe('SSR hydration', () => {
     container.innerHTML = await renderToString(h(App))
     // hydrate
     const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(container)
     // assert interactions
     // parent button click
@@ -591,7 +621,7 @@ describe('SSR hydration', () => {
     container.innerHTML = await renderToString(h(App))
     // hydrate
     const app = createSSRApp(App)
-    const handler = (app.config.errorHandler = jest.fn())
+    const handler = (app.config.errorHandler = vi.fn())
     app.mount(container)
     // assert interactions
     // parent blur event
@@ -653,7 +683,7 @@ describe('SSR hydration', () => {
       }
     })
 
-    const done = jest.fn()
+    const done = vi.fn()
     const App = {
       template: `
       <Suspense @resolve="done">
@@ -710,7 +740,7 @@ describe('SSR hydration', () => {
   })
 
   test('async component', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Comp = () =>
       h(
         'button',
@@ -987,6 +1017,74 @@ describe('SSR hydration', () => {
     mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
       createStaticVNode(`<div></div>`, 1)
     )
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', 'foo')
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-if', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><!----></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => (show ? h('div', 'foo') : createCommentVNode(''))
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot('<!---->')
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-show', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><div style="display: none;">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]])
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+        style="display: none;"
+      >
+        foo
+      </div>
+    `)
+    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 

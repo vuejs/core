@@ -1,6 +1,7 @@
 import {
   BaseTransition,
   BaseTransitionProps,
+  BaseTransitionPropsValidators,
   h,
   assertNumber,
   FunctionalComponent,
@@ -31,12 +32,14 @@ export interface TransitionProps extends BaseTransitionProps<Element> {
   leaveToClass?: string
 }
 
+export const vtcKey = Symbol('_vtc')
+
 export interface ElementWithTransition extends HTMLElement {
   // _vtc = Vue Transition Classes.
   // Store the temporarily-added transition classes on the element
   // so that we can avoid overwriting them if the element's class is patched
   // during the transition.
-  _vtc?: Set<string>
+  [vtcKey]?: Set<string>
 }
 
 // DOM Transition is a higher-order-component based on the platform-agnostic
@@ -74,7 +77,7 @@ const DOMTransitionPropsValidators = {
 export const TransitionPropsValidators = (Transition.props =
   /*#__PURE__*/ extend(
     {},
-    (BaseTransition as any).props,
+    BaseTransitionPropsValidators as any,
     DOMTransitionPropsValidators
   ))
 
@@ -195,10 +198,12 @@ export function resolveTransitionProps(
       nextFrame(() => {
         removeTransitionClass(el, isAppear ? appearFromClass : enterFromClass)
         if (__COMPAT__ && legacyClassEnabled) {
-          removeTransitionClass(
-            el,
-            isAppear ? legacyAppearFromClass : legacyEnterFromClass
-          )
+          const legacyClass = isAppear
+            ? legacyAppearFromClass
+            : legacyEnterFromClass
+          if (legacyClass) {
+            removeTransitionClass(el, legacyClass)
+          }
         }
         addTransitionClass(el, isAppear ? appearToClass : enterToClass)
         if (!hasExplicitCallback(hook)) {
@@ -212,7 +217,7 @@ export function resolveTransitionProps(
     onBeforeEnter(el) {
       callHook(onBeforeEnter, [el])
       addTransitionClass(el, enterFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyEnterFromClass) {
         addTransitionClass(el, legacyEnterFromClass)
       }
       addTransitionClass(el, enterActiveClass)
@@ -220,7 +225,7 @@ export function resolveTransitionProps(
     onBeforeAppear(el) {
       callHook(onBeforeAppear, [el])
       addTransitionClass(el, appearFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyAppearFromClass) {
         addTransitionClass(el, legacyAppearFromClass)
       }
       addTransitionClass(el, appearActiveClass)
@@ -231,7 +236,7 @@ export function resolveTransitionProps(
       el._isLeaving = true
       const resolve = () => finishLeave(el, done)
       addTransitionClass(el, leaveFromClass)
-      if (__COMPAT__ && legacyClassEnabled) {
+      if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
       // force reflow so *-leave-from classes immediately take effect (#2593)
@@ -243,7 +248,7 @@ export function resolveTransitionProps(
           return
         }
         removeTransitionClass(el, leaveFromClass)
-        if (__COMPAT__ && legacyClassEnabled) {
+        if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
           removeTransitionClass(el, legacyLeaveFromClass)
         }
         addTransitionClass(el, leaveToClass)
@@ -292,18 +297,18 @@ function NumberOf(val: unknown): number {
 export function addTransitionClass(el: Element, cls: string) {
   cls.split(/\s+/).forEach(c => c && el.classList.add(c))
   ;(
-    (el as ElementWithTransition)._vtc ||
-    ((el as ElementWithTransition)._vtc = new Set())
+    (el as ElementWithTransition)[vtcKey] ||
+    ((el as ElementWithTransition)[vtcKey] = new Set())
   ).add(cls)
 }
 
 export function removeTransitionClass(el: Element, cls: string) {
   cls.split(/\s+/).forEach(c => c && el.classList.remove(c))
-  const { _vtc } = el as ElementWithTransition
+  const _vtc = (el as ElementWithTransition)[vtcKey]
   if (_vtc) {
     _vtc.delete(cls)
     if (!_vtc!.size) {
-      ;(el as ElementWithTransition)._vtc = undefined
+      ;(el as ElementWithTransition)[vtcKey] = undefined
     }
   }
 }
@@ -442,6 +447,8 @@ function getTimeout(delays: string[], durations: string[]): number {
 // If comma is not replaced with a dot, the input will be rounded down
 // (i.e. acting as a floor function) causing unexpected behaviors
 function toMs(s: string): number {
+  // #8409 default value for CSS durations can be 'auto'
+  if (s === 'auto') return 0
   return Number(s.slice(0, -1).replace(',', '.')) * 1000
 }
 

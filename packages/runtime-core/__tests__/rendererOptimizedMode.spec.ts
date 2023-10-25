@@ -343,8 +343,8 @@ describe('renderer: optimized mode', () => {
   })
 
   test('PatchFlags: PatchFlags.NEED_PATCH', async () => {
-    const spyMounted = jest.fn()
-    const spyUpdated = jest.fn()
+    const spyMounted = vi.fn()
+    const spyUpdated = vi.fn()
     const count = ref(0)
     const Comp = {
       setup() {
@@ -469,7 +469,7 @@ describe('renderer: optimized mode', () => {
   // When unmounting (1), we know we are in optimized mode so no need to further
   // traverse unmount its children
   test('should not perform unnecessary unmount traversals', () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const Child = {
       setup() {
         onBeforeUnmount(spy)
@@ -490,8 +490,8 @@ describe('renderer: optimized mode', () => {
   // #2444
   // `KEYED_FRAGMENT` and `UNKEYED_FRAGMENT` always need to diff its children
   test('non-stable Fragment always need to diff its children', () => {
-    const spyA = jest.fn()
-    const spyB = jest.fn()
+    const spyA = vi.fn()
+    const spyB = vi.fn()
     const ChildA = {
       setup() {
         onBeforeUnmount(spyA)
@@ -830,7 +830,7 @@ describe('renderer: optimized mode', () => {
   // #4183
   test('should not take unmount children fast path /w Suspense', async () => {
     const show = ref(true)
-    const spyUnmounted = jest.fn()
+    const spyUnmounted = vi.fn()
 
     const Parent = {
       setup(props: any, { slots }: SetupContext) {

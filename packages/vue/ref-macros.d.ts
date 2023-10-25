@@ -1,2 +1,2 @@
-// TODO deprecated file - to be removed when out of experimental
+// TODO remove in 3.4
 import './macros-global'

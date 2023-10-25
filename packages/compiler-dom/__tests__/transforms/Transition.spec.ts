@@ -6,7 +6,7 @@ describe('Transition multi children warnings', () => {
     shouldWarn: boolean,
     message = `<Transition> expects exactly one child element or component.`
   ) {
-    const spy = jest.fn()
+    const spy = vi.fn()
     compile(template.trim(), {
       hoistStatic: true,
       transformHoist: null,

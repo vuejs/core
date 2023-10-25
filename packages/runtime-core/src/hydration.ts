@@ -15,7 +15,7 @@ import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals } from './renderer'
+import { needTransition, RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
@@ -134,8 +134,10 @@ export function createHydrationFunctions(
             __DEV__ &&
               warn(
                 `Hydration text mismatch:` +
-                  `\n- Client: ${JSON.stringify((node as Text).data)}` +
-                  `\n- Server: ${JSON.stringify(vnode.children)}`
+                  `\n- Server rendered: ${JSON.stringify(
+                    (node as Text).data
+                  )}` +
+                  `\n- Client rendered: ${JSON.stringify(vnode.children)}`
               )
             ;(node as Text).data = vnode.children as string
           }
@@ -144,7 +146,17 @@ export function createHydrationFunctions(
         break
       case Comment:
         if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
-          nextNode = onMismatch()
+          if ((node as Element).tagName.toLowerCase() === 'template') {
+            const content = (vnode.el! as HTMLTemplateElement).content
+              .firstChild!
+
+            // replace <template> node with inner children
+            replaceNode(content, node, parentComponent)
+            vnode.el = node = content
+            nextNode = nextSibling(node)
+          } else {
+            nextNode = onMismatch()
+          }
         } else {
           nextNode = nextSibling(node)
         }
@@ -194,9 +206,10 @@ export function createHydrationFunctions(
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
-            domType !== DOMNodeTypes.ELEMENT ||
-            (vnode.type as string).toLowerCase() !==
-              (node as Element).tagName.toLowerCase()
+            (domType !== DOMNodeTypes.ELEMENT ||
+              (vnode.type as string).toLowerCase() !==
+                (node as Element).tagName.toLowerCase()) &&
+            !isTemplateNode(node as Element)
           ) {
             nextNode = onMismatch()
           } else {
@@ -215,6 +228,21 @@ export function createHydrationFunctions(
           // on its sub-tree.
           vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
+
+          // Locate the next node.
+          if (isFragmentStart) {
+            // If it's a fragment: since components may be async, we cannot rely
+            // on component's rendered output to determine the end of the
+            // fragment. Instead, we do a lookahead to find the end anchor node.
+            nextNode = locateClosingAnchor(node)
+          } else if (isComment(node) && node.data === 'teleport start') {
+            // #4293 #6152
+            // If a teleport is at component root, look ahead for teleport end.
+            nextNode = locateClosingAnchor(node, node.data, 'teleport end')
+          } else {
+            nextNode = nextSibling(node)
+          }
+
           mountComponent(
             vnode,
             container,
@@ -224,22 +252,6 @@ export function createHydrationFunctions(
             isSVGContainer(container),
             optimized
           )
-
-          // component may be async, so in the case of fragments we cannot rely
-          // on component's rendered output to determine the end of the fragment
-          // instead, we do a lookahead to find the end anchor node.
-          nextNode = isFragmentStart
-            ? locateClosingAsyncAnchor(node)
-            : nextSibling(node)
-
-          // #4293 teleport as component root
-          if (
-            nextNode &&
-            isComment(nextNode) &&
-            nextNode.data === 'teleport end'
-          ) {
-            nextNode = nextSibling(nextNode)
-          }
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -307,7 +319,7 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
     const forcePatchValue = (type === 'input' && dirs) || type === 'option'
@@ -359,12 +371,40 @@ export function createHydrationFunctions(
       if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
+
+      // handle appear transition
+      let needCallTransitionHooks = false
+      if (isTemplateNode(el)) {
+        needCallTransitionHooks =
+          needTransition(parentSuspense, transition) &&
+          parentComponent &&
+          parentComponent.vnode.props &&
+          parentComponent.vnode.props.appear
+
+        const content = (el as HTMLTemplateElement).content
+          .firstChild as Element
+
+        if (needCallTransitionHooks) {
+          transition!.beforeEnter(content)
+        }
+
+        // replace <template> node with inner children
+        replaceNode(content, el, parentComponent)
+        vnode.el = el = content
+      }
+
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
+
+      if (
+        (vnodeHooks = props && props.onVnodeMounted) ||
+        dirs ||
+        needCallTransitionHooks
+      ) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)
       }
@@ -406,8 +446,8 @@ export function createHydrationFunctions(
               `Hydration text content mismatch in <${
                 vnode.type as string
               }>:\n` +
-                `- Client: ${el.textContent}\n` +
-                `- Server: ${vnode.children as string}`
+                `- Server rendered: ${el.textContent}\n` +
+                `- Client rendered: ${vnode.children as string}`
             )
           el.textContent = vnode.children as string
         }
@@ -531,7 +571,7 @@ export function createHydrationFunctions(
 
     if (isFragment) {
       // remove excessive fragment nodes
-      const end = locateClosingAsyncAnchor(node)
+      const end = locateClosingAnchor(node)
       while (true) {
         const next = nextSibling(node)
         if (next && next !== end) {
@@ -559,13 +599,18 @@ export function createHydrationFunctions(
     return next
   }
 
-  const locateClosingAsyncAnchor = (node: Node | null): Node | null => {
+  // looks ahead for a start and closing comment node
+  const locateClosingAnchor = (
+    node: Node | null,
+    open = '[',
+    close = ']'
+  ): Node | null => {
     let match = 0
     while (node) {
       node = nextSibling(node)
       if (node && isComment(node)) {
-        if (node.data === '[') match++
-        if (node.data === ']') {
+        if (node.data === open) match++
+        if (node.data === close) {
           if (match === 0) {
             return nextSibling(node)
           } else {
@@ -575,6 +620,35 @@ export function createHydrationFunctions(
       }
     }
     return node
+  }
+
+  const replaceNode = (
+    newNode: Node,
+    oldNode: Node,
+    parentComponent: ComponentInternalInstance | null
+  ): void => {
+    // replace node
+    const parentNode = oldNode.parentNode
+    if (parentNode) {
+      parentNode.replaceChild(newNode, oldNode)
+    }
+
+    // update vnode
+    let parent = parentComponent
+    while (parent) {
+      if (parent.vnode.el === oldNode) {
+        parent.vnode.el = newNode
+        parent.subTree.el = newNode
+      }
+      parent = parent.parent
+    }
+  }
+
+  const isTemplateNode = (node: Element): boolean => {
+    return (
+      node.nodeType === DOMNodeTypes.ELEMENT &&
+      node.tagName.toLowerCase() === 'template'
+    )
   }
 
   return [hydrate, hydrateNode] as const
