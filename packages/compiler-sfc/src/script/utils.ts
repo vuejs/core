@@ -107,7 +107,12 @@ export function normalizePath(p: string) {
   return normalize(p.replace(windowsSlashRE, '/'))
 }
 
-export const joinPaths = (path.posix || path).join
+/**
+ * On Windows OS
+ * "(path.posix || path)" still resolves to "path.posix"
+ * which leads to a malformed "join()" filename path
+ */
+export const joinPaths = (process.platform !== 'win32' && path.posix ? path.posix : path).join
 
 /**
  * key may contain symbols
