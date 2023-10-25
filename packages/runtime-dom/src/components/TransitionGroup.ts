@@ -24,9 +24,9 @@ import {
   toRaw,
   compatUtils,
   DeprecationTypes,
-  ComponentOptions,
-  isComment
+  ComponentOptions
 } from '@vue/runtime-core'
+import { isComment } from '../../../runtime-core/src/hydration'
 import { extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
