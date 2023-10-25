@@ -40,15 +40,17 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     if (!dep) {
       depsMap.set(key, (dep = createDep(() => depsMap!.delete(key))))
     }
-    if (__DEV__) {
-      trackEffect(activeEffect, dep, {
-        target,
-        type,
-        key
-      })
-    } else {
-      trackEffect(activeEffect, dep)
-    }
+    trackEffect(
+      activeEffect,
+      dep,
+      __DEV__
+        ? {
+            target,
+            type,
+            key
+          }
+        : void 0
+    )
   }
 }
 
@@ -124,18 +126,20 @@ export function trigger(
   pauseScheduling()
   for (const dep of deps) {
     if (dep) {
-      if (__DEV__) {
-        triggerEffects(dep, DirtyLevels.Dirty, {
-          target,
-          type,
-          key,
-          newValue,
-          oldValue,
-          oldTarget
-        })
-      } else {
-        triggerEffects(dep, DirtyLevels.Dirty)
-      }
+      triggerEffects(
+        dep,
+        DirtyLevels.Dirty,
+        __DEV__
+          ? {
+              target,
+              type,
+              key,
+              newValue,
+              oldValue,
+              oldTarget
+            }
+          : void 0
+      )
     }
   }
   resetScheduling()
