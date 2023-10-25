@@ -66,6 +66,7 @@ function unmounted(el: HTMLElement) {
   const offs = elementMap.get(el)
   if (offs) {
     offs.forEach(off => off())
+    elementMap.delete(el)
   }
 }
 
