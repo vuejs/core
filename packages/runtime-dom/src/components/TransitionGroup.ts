@@ -26,7 +26,6 @@ import {
   DeprecationTypes,
   ComponentOptions
 } from '@vue/runtime-core'
-import { isComment } from '../../../runtime-core/src/hydration'
 import { extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
@@ -114,7 +113,8 @@ const TransitionGroupImpl: ComponentOptions = {
       }
 
       prevChildren =
-        children && children.filter(child => !isComment(child.el as Element))
+        children &&
+        children.filter(child => child.el && child.el instanceof Element)
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
