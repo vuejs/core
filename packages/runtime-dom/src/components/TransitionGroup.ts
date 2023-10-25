@@ -112,6 +112,7 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
+      // filter out comment nodes and text nodes
       prevChildren =
         children &&
         children.filter(child => child.el && child.el instanceof Element)

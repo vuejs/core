@@ -509,7 +509,7 @@ describe('e2e: TransitionGroup', () => {
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
 
-  // #5168,#7898,#9067
+  // #5168, #7898, #9067
   test(
     'avoid set transition hooks for comment node',
     async () => {
