@@ -41,30 +41,21 @@ type RefBase<T> = {
 export function trackRefValue(ref: RefBase<any>) {
   if (shouldTrack && activeEffect) {
     ref = toRaw(ref)
-    if (__DEV__) {
-      trackEffect(
-        activeEffect,
-        ref.dep ||
-          (ref.dep = createDep(
-            () => (ref.dep = undefined),
-            ref instanceof ComputedRefImpl ? ref : undefined
-          )),
-        {
-          target: ref,
-          type: TrackOpTypes.GET,
-          key: 'value'
-        }
-      )
-    } else {
-      trackEffect(
-        activeEffect,
-        ref.dep ||
-          (ref.dep = createDep(
-            () => (ref.dep = undefined),
-            ref instanceof ComputedRefImpl ? ref : undefined
-          ))
-      )
-    }
+    trackEffect(
+      activeEffect,
+      ref.dep ||
+        (ref.dep = createDep(
+          () => (ref.dep = undefined),
+          ref instanceof ComputedRefImpl ? ref : undefined
+        )),
+      __DEV__
+        ? {
+            target: ref,
+            type: TrackOpTypes.GET,
+            key: 'value'
+          }
+        : void 0
+    )
   }
 }
 
@@ -76,16 +67,18 @@ export function triggerRefValue(
   ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
-    if (__DEV__) {
-      triggerEffects(dep, dirtyLevel, {
-        target: ref,
-        type: TriggerOpTypes.SET,
-        key: 'value',
-        newValue: newVal
-      })
-    } else {
-      triggerEffects(dep, dirtyLevel)
-    }
+    triggerEffects(
+      dep,
+      dirtyLevel,
+      __DEV__
+        ? {
+            target: ref,
+            type: TriggerOpTypes.SET,
+            key: 'value',
+            newValue: newVal
+          }
+        : void 0
+    )
   }
 }
 

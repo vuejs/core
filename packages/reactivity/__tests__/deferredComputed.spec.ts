@@ -15,6 +15,7 @@ describe('deferred computed', () => {
     expect(spy).toHaveBeenCalledTimes(1)
 
     src.value = 3
+    src.value = 5
     // should trigger because latest value changes
     expect(spy).toHaveBeenCalledTimes(2)
   })

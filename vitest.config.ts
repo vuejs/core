@@ -22,8 +22,7 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // threads must be disabled because FinalizationRegistry.register is used in the code
-    // and multi-threading causes thread locks for some reasons
+    // threads must be disabled as FinalizationRegistry causes vitest zombie process somehow
     threads: false,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
