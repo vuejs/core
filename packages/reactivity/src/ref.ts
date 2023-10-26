@@ -13,8 +13,7 @@ import {
   isReactive,
   toReactive,
   isReadonly,
-  isShallow,
-  DeepReadonly
+  isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
 import { CollectionTypes } from './collectionHandlers'
@@ -450,7 +449,7 @@ export function toRef(
  * @returns The converted reference object. If the value is a function, it returns a Readonly<Ref<T>>.
  * If the value is a Ref object, it returns a Ref<T>. Otherwise, it returns a ShallowRef<T>.
  */
-export function toShallowRef<T>(value: () => T): DeepReadonly<Ref<T>>
+export function toShallowRef<T>(value: () => T): Readonly<Ref<T>>
 
 /**
  * Converts the given value to a shallow reference.

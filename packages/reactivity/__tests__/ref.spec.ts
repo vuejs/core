@@ -451,7 +451,7 @@ describe('reactivity/ref', () => {
 })
 
 describe('toShallowRef', () => {
-  it('should convert a function value to a DeepReadonly Ref', () => {
+  it('should convert a function value to a Readonly Ref', () => {
     const value = () => ({
       a: 1
     })
@@ -460,11 +460,6 @@ describe('toShallowRef', () => {
 
     // @ts-expect-error
     expect(() => (result.value = { b: 2 })).toThrow()
-    expect(result.value).toEqual(value())
-
-    // @ts-expect-error
-    result.value.a = 2
-
     expect(result.value).toEqual(value())
   })
 
@@ -483,7 +478,7 @@ describe('toShallowRef', () => {
 
   it('should convert object to a ShallowRef', () => {
     const value = { a: 1 }
-    const result = shallowRef(value)
+    const result = toShallowRef(value)
 
     let dummy
     effect(() => {
