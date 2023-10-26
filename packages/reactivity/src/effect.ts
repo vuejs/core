@@ -397,12 +397,12 @@ export function triggerEffects(
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
   effects
-    .filter(x => {
-      if (!x.computed) return true
-      triggerEffect(x)
+    .filter(effect => {
+      if (!effect.computed) return true
+      triggerEffect(effect, debuggerEventExtraInfo)
       return false
     })
-    .forEach(x => triggerEffect(x))
+    .forEach(effect => triggerEffect(effect, debuggerEventExtraInfo))
 }
 
 function triggerEffect(
