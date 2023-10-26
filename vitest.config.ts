@@ -22,8 +22,8 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    // threads must be disabled as FinalizationRegistry causes vitest zombie process somehow
-    threads: false,
+    // disable threads on GH actions to speed it up
+    threads: !process.env.GITHUB_ACTIONS,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
