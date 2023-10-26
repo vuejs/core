@@ -396,17 +396,13 @@ export function triggerEffects(
 ) {
   // spread into array for stabilization
   const effects = isArray(dep) ? dep : [...dep]
-  const notComputedEffect: ReactiveEffect<any>[] = []
-  for (const effect of effects) {
-    if (effect.computed) {
-      triggerEffect(effect, debuggerEventExtraInfo)
-    } else {
-      notComputedEffect.push(effect)
-    }
-  }
-  notComputedEffect.forEach(effect =>
-    triggerEffect(effect, debuggerEventExtraInfo)
-  )
+  effects
+    .filter(x => {
+      if (!x.computed) return true
+      triggerEffect(x)
+      return false
+    })
+    .forEach(x => triggerEffect(x))
 }
 
 function triggerEffect(
