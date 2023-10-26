@@ -1,4 +1,4 @@
-import { NOOP, extend, getGlobalThis } from '@vue/shared'
+import { NOOP, extend } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import type { Dep } from './dep'
@@ -21,39 +21,11 @@ export type DebuggerEventExtraInfo = {
 
 export let activeEffect: ReactiveEffect | undefined
 
-const _FinalizationRegistry = getGlobalThis().FinalizationRegistry as
-  | typeof FinalizationRegistry
-  | undefined
-const _WeakRef = getGlobalThis().WeakRef as typeof WeakRef | undefined
-
-if (!_FinalizationRegistry && __DEV__) {
-  console.warn(`FinalizationRegistry is not available in this environment.`)
-}
-if (!_WeakRef && __DEV__) {
-  console.warn(`WeakRef is not available in this environment.`)
-}
-
-const registry = _FinalizationRegistry
-  ? new _FinalizationRegistry<WeakRef<ReactiveEffect>>(trackToken => {
-      const deps = depsMap.get(trackToken)
-      if (deps) {
-        for (const dep of deps) {
-          dep.delete(trackToken)
-          if (dep.size === 0) {
-            dep.cleanup()
-          }
-        }
-        deps.length = 0
-      }
-    })
-  : undefined
-
-export const depsMap = new WeakMap<TrackToken, Dep[]>()
-
 export type TrackToken = WeakRef<ReactiveEffect> | ReactiveEffect
 
 export class ReactiveEffect<T = any> {
   active = true
+  deps: Dep[] = []
 
   /**
    * Can be attached after creation
@@ -75,10 +47,6 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   _dirtyLevel = DirtyLevels.Dirty
-  /**
-   * @internal
-   */
-  _trackToken?: TrackToken
   /**
    * @internal
    */
@@ -108,23 +76,18 @@ export class ReactiveEffect<T = any> {
   public get dirty() {
     if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
       this._dirtyLevel = DirtyLevels.NotDirty
-      if (this._trackToken) {
-        const deps = depsMap.get(this._trackToken)
-        if (deps) {
-          this._queryings++
-          pauseTracking()
-          for (const dep of deps) {
-            if (dep.computed) {
-              triggerComputed(dep.computed)
-              if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
-                break
-              }
-            }
+      this._queryings++
+      pauseTracking()
+      for (const dep of this.deps) {
+        if (dep.computed) {
+          triggerComputed(dep.computed)
+          if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
+            break
           }
-          resetTracking()
-          this._queryings--
         }
       }
+      resetTracking()
+      this._queryings--
     }
     return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
   }
@@ -178,25 +141,20 @@ function preCleanupEffect(effect: ReactiveEffect) {
 }
 
 function postCleanupEffect(effect: ReactiveEffect) {
-  if (effect._trackToken) {
-    const deps = depsMap.get(effect._trackToken)
-    if (deps && deps.length > effect._depsLength) {
-      for (let i = effect._depsLength; i < deps.length; i++) {
-        cleanupDepEffect(deps[i], effect)
-      }
-      deps.length = effect._depsLength
+  if (effect.deps && effect.deps.length > effect._depsLength) {
+    for (let i = effect._depsLength; i < effect.deps.length; i++) {
+      cleanupDepEffect(effect.deps[i], effect)
     }
+    effect.deps.length = effect._depsLength
   }
 }
 
 function cleanupDepEffect(dep: Dep, effect: ReactiveEffect) {
-  if (effect._trackToken) {
-    const trackId = dep.get(effect._trackToken)
-    if (trackId !== undefined && effect._trackId !== trackId) {
-      dep.delete(effect._trackToken)
-      if (dep.size === 0) {
-        dep.cleanup()
-      }
+  const trackId = dep.get(effect)
+  if (trackId !== undefined && effect._trackId !== trackId) {
+    dep.delete(effect)
+    if (dep.size === 0) {
+      dep.cleanup()
     }
   }
 }
@@ -308,27 +266,14 @@ export function trackEffect(
   dep: Dep,
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
-  if (!effect._trackToken) {
-    if (effect.scheduler || !_WeakRef) {
-      effect._trackToken = effect
-    } else {
-      effect._trackToken = new _WeakRef(effect)
-      registry?.register(effect, effect._trackToken, effect)
-    }
-  }
-  const trackToken = effect._trackToken!
-  if (dep.get(trackToken) !== effect._trackId) {
-    dep.set(trackToken, effect._trackId)
-    let deps = depsMap.get(trackToken)
-    if (!deps) {
-      depsMap.set(trackToken, (deps = []))
-    }
-    const oldDep = deps[effect._depsLength]
+  if (dep.get(effect) !== effect._trackId) {
+    dep.set(effect, effect._trackId)
+    const oldDep = effect.deps[effect._depsLength]
     if (oldDep !== dep) {
       if (oldDep) {
         cleanupDepEffect(oldDep, effect)
       }
-      deps[effect._depsLength++] = dep
+      effect.deps[effect._depsLength++] = dep
     } else {
       effect._depsLength++
     }

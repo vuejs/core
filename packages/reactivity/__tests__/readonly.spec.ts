@@ -10,7 +10,6 @@ import {
   isProxy,
   computed
 } from '../src'
-import { depsMap } from '../src/effect'
 
 /**
  * @see https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-4.html
@@ -394,7 +393,7 @@ describe('reactivity/readonly', () => {
     const eff = effect(() => {
       roArr.includes(2)
     })
-    expect(depsMap.get(eff.effect._trackToken!)).toBeUndefined()
+    expect(eff.effect.deps.length).toBe(0)
   })
 
   test('readonly should track and trigger if wrapping reactive original (collection)', () => {
