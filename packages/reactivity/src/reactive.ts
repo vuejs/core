@@ -273,7 +273,6 @@ function createReactiveObject(
     return target
   }
 
-  // only a whitelist of value types can be observed.
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
