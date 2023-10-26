@@ -138,6 +138,7 @@ export interface ComponentOptionsBase<
   render?: Function
   components?: Record<string, Component>
   directives?: Record<string, Directive>
+  ceStylesAttrs?: Array<string | Record<string, string | number>>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
   slots?: S
@@ -649,6 +650,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     // public API
     expose,
     inheritAttrs,
+    ceStylesAttrs,
     // assets
     components,
     directives,
@@ -862,6 +864,10 @@ export function applyOptions(instance: ComponentInternalInstance) {
   }
   if (inheritAttrs != null) {
     instance.inheritAttrs = inheritAttrs
+  }
+
+  if (ceStylesAttrs) {
+    instance.ceStylesAttrs = ceStylesAttrs
   }
 
   // asset options.

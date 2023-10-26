@@ -1384,7 +1384,11 @@ function baseCreateRenderer(
                     .styles) ||
                 null
               if (instance.ceContext && styles) {
-                instance.ceContext.addCEChildStyle(styles)
+                instance.ceContext.addCEChildStyle(
+                  styles,
+                  instance.ceStylesAttrs,
+                  instance.uid
+                )
               }
             }
           }
@@ -2122,7 +2126,8 @@ function baseCreateRenderer(
       if (vnode.component!.ceContext) {
         vnode.component!.ceContext.removeCEChildStylesMap(
           (vnode.component!.type as ConcreteComponent & { styles?: string[] })
-            .styles
+            .styles,
+          vnode.component!.uid
         )
       }
       unmountComponent(vnode.component!, parentSuspense, doRemove)

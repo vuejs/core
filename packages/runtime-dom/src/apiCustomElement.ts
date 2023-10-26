@@ -23,7 +23,15 @@ import {
   ComponentInjectOptions,
   SlotsType
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  isObject,
+  isString,
+  toNumber
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -251,7 +259,7 @@ export class VueElement extends BaseClass {
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
-      const { props, styles } = def
+      const { props, styles, ceStylesAttrs } = def
 
       // cast Number-type props set before resolve
       let numberProps
@@ -277,7 +285,7 @@ export class VueElement extends BaseClass {
       }
 
       // apply CSS
-      this._applyStyles(styles)
+      this._applyStyles(styles, ceStylesAttrs)
 
       // initial render
       this._update()
@@ -375,13 +383,16 @@ export class VueElement extends BaseClass {
         }
         // HMR
         if (__DEV__) {
-          instance.ceReload = newStyles => {
+          instance.ceReload = (
+            newStyles: string[] | undefined,
+            attrs: ComponentInternalInstance['ceStylesAttrs']
+          ) => {
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
             }
-            this._applyStyles(newStyles)
+            this._applyStyles(newStyles, attrs)
             this._instance = null
             this._update()
           }
@@ -422,11 +433,16 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(styles: string[] | undefined) {
+  private _applyStyles(
+    styles: string[] | undefined,
+    attrs: ComponentInternalInstance['ceStylesAttrs']) {
     if (styles) {
-      styles.forEach(css => {
+      styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
+        if (attrs && attrs[index]) {
+          this._setStyleAttrs(s, attrs[index])
+        }
         this.shadowRoot!.appendChild(s)
         this._childStylesAnchor = s
         // record for HMR
@@ -439,7 +455,11 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addChildStyles(styles: string[] | undefined) {
+  protected _addChildStyles(
+    styles: string[] | undefined,
+    attrs: ComponentInternalInstance['ceStylesAttrs'],
+    uid: number
+  ) {
     if (styles) {
       // record style
       const isRepeated = this._addChildStylesMap(styles, this._instance!.uid)
@@ -448,6 +468,14 @@ export class VueElement extends BaseClass {
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
+        if (attrs && attrs[index]) {
+          this._setStyleAttrs(s, attrs[index])
+        }
+        // set id for hmr
+        if(__DEV__){
+          const ceStyleId = `data-v-ce-${uid}`
+          s.setAttribute(ceStyleId, '')
+        }
 
         if (this._childStylesAnchor) {
           this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
@@ -465,7 +493,35 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStylesMap(styles: string[] | undefined) {
+  // TODO: 子组件  unit-test
+  // TODO: CE 根组件  unit-test
+  // TODO: 多个 style 标签的顺序 unit-test
+  // TODO: string 或 对象的测试  unit-test
+
+  // TODO: 子組件的熱更新(attrs)
+  // TODO: 子組件的熱更新(attrs) unit-test
+
+  // TODO: 子組件的熱更新(style)
+  // TODO: 子組件的熱更新(style) unit-test
+  // TODO: CE 根组件热更新(attrs) ✅
+  // TODO: CE 根组件热更新(style)
+  // TODO: CE 根组件热更新(报错)
+  // TODO: CE 根组件热更新(attrs) unit-test
+  // TODO: CE 根组件热更新(style) unit-test
+  protected _setStyleAttrs(
+    s: HTMLStyleElement,
+    attr: string | Record<string, string | number>
+  ) {
+    if (isString(attr)) {
+      s.setAttribute(attr.toString(), '')
+    } else if (isObject(attr)) {
+      for (const key in attr) {
+        s.setAttribute(key, attr[key].toString())
+      }
+    }
+  }
+
+  protected _removeChildStylesMap(styles: string[] | undefined, uid: number) {
     if (styles) {
       const styleContent = styles.join()
       if (ceChildStyleMap.has(styleContent)) {
@@ -474,6 +530,17 @@ export class VueElement extends BaseClass {
         const ceUidSet = ceChildStyleMap.get(styleContent)!
         ceUidSet.delete(ceUid)
         if (ceUidSet.size === 0) {
+          // dev only
+          if(__DEV__){
+            // remove style tag
+            const sList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+            sList.length > 0 &&
+            sList.forEach(s => this.shadowRoot!.removeChild(s))
+            // update archor
+            const archor = this.shadowRoot!.querySelectorAll('style')
+            this._childStylesAnchor =
+              archor.length > 0 ? archor[archor.length - 1] : undefined
+          }
           // clear ceChildStyleMap
           ceChildStyleMap.delete(styleContent)
         } else {

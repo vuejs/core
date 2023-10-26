@@ -131,7 +131,8 @@ function reload(id: string, newComp: HMRComponent) {
     if (instance.ceReload) {
       // custom element
       hmrDirtyComponents.add(oldComp)
-      instance.ceReload((newComp as any).styles)
+      debugger
+      instance.ceReload((newComp as any).styles, (newComp as any).ceStylesAttrs)
       hmrDirtyComponents.delete(oldComp)
     } else if (instance.parent) {
       // 4. Force the parent instance to re-render. This will cause all updated

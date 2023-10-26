@@ -138,6 +138,7 @@ export interface FunctionalComponent<
   emits?: E | (keyof E)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
+  ceStylesAttrs?: Array<string | Record<string, string | number>>
   displayName?: string
   compatConfig?: CompatConfig
 }
@@ -309,6 +310,12 @@ export interface ComponentInternalInstance {
    */
   inheritAttrs?: boolean
   /**
+   * Set attributes for the custom element
+   * and the style of the child component
+   * @internal
+   */
+  ceStylesAttrs?: Array<string | Record<string, string | number>>
+  /**
    * is custom element?
    * @internal
    */
@@ -317,7 +324,7 @@ export interface ComponentInternalInstance {
    * custom element specific HMR method
    * @internal
    */
-  ceReload?: (newStyles?: string[]) => void
+  ceReload?: (newStyles?: string[], attrs?: ComponentInternalInstance['ceStylesAttrs']) => void
 
   // the rest are only for stateful components ---------------------------------
 
@@ -405,8 +412,12 @@ export interface ComponentInternalInstance {
   // custom element context,
   // exists when the component is a child component of custom element
   ceContext: {
-    addCEChildStyle: (styles: string[]) => void
-    removeCEChildStylesMap: (styles: string[] | undefined) => void
+    addCEChildStyle: (
+      styles: string[],
+      attrs: ComponentInternalInstance['ceStylesAttrs'],
+      uid:number
+    ) => void
+    removeCEChildStylesMap: (styles: string[] | undefined, uid: number) => void
   } | null
 
   /**
@@ -536,7 +547,7 @@ export function createComponentInstance(
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
-
+    ceStylesAttrs: type.ceStylesAttrs,
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
