@@ -636,7 +636,7 @@ export function transformAST(
 
   // check root scope first
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 
