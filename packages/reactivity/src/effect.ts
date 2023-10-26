@@ -71,11 +71,29 @@ export class ReactiveEffect<T = any> {
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
+  /**
+   * @internal
+   */
   _dirtyLevel = DirtyLevels.Dirty
+  /**
+   * @internal
+   */
   _trackToken?: TrackToken
+  /**
+   * @internal
+   */
   _trackId = 0
+  /**
+   * @internal
+   */
   _runnings = 0
+  /**
+   * @internal
+   */
   _queryings = 0
+  /**
+   * @internal
+   */
   _depsLength = 0
 
   constructor(
