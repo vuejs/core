@@ -316,6 +316,19 @@ export interface ComponentInternalInstance {
    */
   ceStylesAttrs?: Array<string | Record<string, string | number>>
   /**
+   * custom element context,
+   * exists when the component is a child component of custom element
+   * @internal
+   */
+  ceContext: {
+    addCEChildStyle: (
+      styles: string[],
+      attrs: ComponentInternalInstance['ceStylesAttrs'],
+      uid: number
+    ) => void
+    removeCEChildStyles: (uid: number) => void
+  } | null
+  /**
    * is custom element?
    * @internal
    */
@@ -324,7 +337,10 @@ export interface ComponentInternalInstance {
    * custom element specific HMR method
    * @internal
    */
-  ceReload?: (newStyles?: string[], attrs?: ComponentInternalInstance['ceStylesAttrs']) => void
+  ceReload?: (
+    newStyles?: string[],
+    attrs?: ComponentInternalInstance['ceStylesAttrs']
+  ) => void
 
   // the rest are only for stateful components ---------------------------------
 
@@ -409,16 +425,6 @@ export interface ComponentInternalInstance {
   isMounted: boolean
   isUnmounted: boolean
   isDeactivated: boolean
-  // custom element context,
-  // exists when the component is a child component of custom element
-  ceContext: {
-    addCEChildStyle: (
-      styles: string[],
-      attrs: ComponentInternalInstance['ceStylesAttrs'],
-      uid:number
-    ) => void
-    removeCEChildStyles: (uid: number) => void
-  } | null
 
   /**
    * @internal

@@ -435,7 +435,8 @@ export class VueElement extends BaseClass {
 
   private _applyStyles(
     styles: string[] | undefined,
-    attrs: ComponentInternalInstance['ceStylesAttrs']) {
+    attrs: ComponentInternalInstance['ceStylesAttrs']
+  ) {
     if (styles) {
       styles.forEach((css, index) => {
         const s = document.createElement('style')
@@ -474,7 +475,7 @@ export class VueElement extends BaseClass {
           this._setStyleAttrs(s, attrs[index])
         }
         // set id for hmr
-        if(__DEV__){
+        if (__DEV__) {
           const ceStyleId = `data-v-ce-${uid}`
           s.setAttribute(ceStyleId, '')
         }
@@ -520,17 +521,18 @@ export class VueElement extends BaseClass {
 
   protected _removeChildStyles(uid: number) {
     // remove style tag and _childStylesSet(for HMR)
-    if(__DEV__){
+    if (__DEV__) {
       const styleList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
       let oldStyleContentList: string[] = []
-      styleList.length > 0 && styleList.forEach((s) => {
-        oldStyleContentList.unshift(s.innerHTML as string)
-        this.shadowRoot!.removeChild(s)
-        // update archor
-        const archor = this.shadowRoot!.querySelectorAll('style')
-        this._childStylesAnchor =
+      styleList.length > 0 &&
+        styleList.forEach(s => {
+          oldStyleContentList.unshift(s.innerHTML as string)
+          this.shadowRoot!.removeChild(s)
+          // update archor
+          const archor = this.shadowRoot!.querySelectorAll('style')
+          this._childStylesAnchor =
             archor.length > 0 ? archor[archor.length - 1] : undefined
-      });
+        })
       this._childStylesSet.delete(oldStyleContentList.join())
     }
   }
