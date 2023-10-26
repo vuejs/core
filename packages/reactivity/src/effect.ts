@@ -1,4 +1,4 @@
-import { extend, getGlobalThis } from '@vue/shared'
+import { NOOP, extend, getGlobalThis } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import type { Dep } from './dep'
@@ -237,15 +237,11 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const _effect = new ReactiveEffect(
-    fn,
-    () => {},
-    () => {
-      if (_effect.dirty) {
-        _effect.run()
-      }
+  const _effect = new ReactiveEffect(fn, NOOP, () => {
+    if (_effect.dirty) {
+      _effect.run()
     }
-  )
+  })
   if (options) {
     extend(_effect, options)
     if (options.scope) recordEffectScope(_effect, options.scope)

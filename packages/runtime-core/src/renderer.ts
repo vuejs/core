@@ -1547,7 +1547,7 @@ function baseCreateRenderer(
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      () => {},
+      NOOP,
       () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
