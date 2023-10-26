@@ -1,7 +1,7 @@
-import type { TrackToken } from './effect'
+import type { ReactiveEffect } from './effect'
 import type { ComputedRefImpl } from './computed'
 
-export type Dep = Map<TrackToken, number> & {
+export type Dep = Map<ReactiveEffect, number> & {
   cleanup: () => void
   computed?: ComputedRefImpl<any>
 }

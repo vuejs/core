@@ -21,8 +21,6 @@ export type DebuggerEventExtraInfo = {
 
 export let activeEffect: ReactiveEffect | undefined
 
-export type TrackToken = WeakRef<ReactiveEffect> | ReactiveEffect
-
 export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
@@ -124,10 +122,6 @@ export class ReactiveEffect<T = any> {
       this.onStop?.()
       this.active = false
     }
-  }
-
-  deref() {
-    return this
   }
 }
 
@@ -291,11 +285,7 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo
 ) {
   pauseScheduling()
-  for (const trackToken of dep.keys()) {
-    const effect = trackToken.deref()
-    if (!effect) {
-      continue
-    }
+  for (const effect of dep.keys()) {
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
