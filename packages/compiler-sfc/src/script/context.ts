@@ -54,7 +54,7 @@ export class ScriptCompileContext {
   emitDecl: Node | undefined
 
   // defineModel
-  modelDecls: Record<string, ModelDecl> = {}
+  modelDecls: Record<string, ModelDecl> = Object.create(null)
 
   // defineOptions
   optionsRuntimeDecl: Node | undefined

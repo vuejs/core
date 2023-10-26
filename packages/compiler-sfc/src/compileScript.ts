@@ -769,7 +769,7 @@ export function compileScript(
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
-    !(options.inlineTemplate && options.templateOptions?.ssr)
+    !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
     ctx.helperImports.add('unref')
