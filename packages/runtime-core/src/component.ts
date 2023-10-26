@@ -417,7 +417,7 @@ export interface ComponentInternalInstance {
       attrs: ComponentInternalInstance['ceStylesAttrs'],
       uid:number
     ) => void
-    removeCEChildStylesMap: (styles: string[] | undefined, uid: number) => void
+    removeCEChildStyles: (uid: number) => void
   } | null
 
   /**

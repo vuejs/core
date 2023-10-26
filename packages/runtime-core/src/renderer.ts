@@ -2124,11 +2124,7 @@ function baseCreateRenderer(
       // remove style tags when the component is a child
       // component of a custom element
       if (vnode.component!.ceContext) {
-        vnode.component!.ceContext.removeCEChildStylesMap(
-          (vnode.component!.type as ConcreteComponent & { styles?: string[] })
-            .styles,
-          vnode.component!.uid
-        )
+        vnode.component!.ceContext.removeCEChildStyles(vnode.component!.uid)
       }
       unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {

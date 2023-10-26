@@ -38,8 +38,6 @@ export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P
 }
 
-const ceChildStyleMap = new Map<string, Set<string>>()
-
 // defineCustomElement provides the same type inference as defineComponent
 // so most of the following overloads should be kept in sync w/ defineComponent.
 
@@ -190,6 +188,7 @@ export class VueElement extends BaseClass {
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
   private _childStylesAnchor?: HTMLStyleElement
+  private _childStylesSet: Set<string> = new Set<string>()
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -379,7 +378,7 @@ export class VueElement extends BaseClass {
 
         instance.ceContext = {
           addCEChildStyle: this._addChildStyles.bind(this),
-          removeCEChildStylesMap: this._removeChildStylesMap.bind(this)
+          removeCEChildStyles: this._removeChildStyles.bind(this)
         }
         // HMR
         if (__DEV__) {
@@ -387,12 +386,12 @@ export class VueElement extends BaseClass {
             newStyles: string[] | undefined,
             attrs: ComponentInternalInstance['ceStylesAttrs']
           ) => {
-            debugger
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
             }
+            this._childStylesSet.clear()
             this._applyStyles(newStyles, attrs)
             this._instance = null
             this._update()
@@ -461,15 +460,16 @@ export class VueElement extends BaseClass {
     attrs: ComponentInternalInstance['ceStylesAttrs'],
     uid: number
   ) {
-    debugger
     if (styles) {
       // record style
-      const isRepeated = this._addChildStylesMap(styles, this._instance!.uid)
+      const isRepeated = this.isHasChildStyle(styles)
       if (isRepeated) return
 
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
+
+        // handle ceStylesAttrs option
         if (attrs && attrs[index]) {
           this._setStyleAttrs(s, attrs[index])
         }
@@ -495,21 +495,16 @@ export class VueElement extends BaseClass {
     }
   }
 
-  // TODO: 子组件  unit-test
-  // TODO: CE 根组件  unit-test
-  // TODO: 多个 style 标签的顺序 unit-test
-  // TODO: string 或 对象的测试  unit-test
+  // TODO: attrs & CE Child component  unit-test
+  // TODO: attrs & CE root component  unit-test
+  // TODO: attrs order whit style tag unit-test
+  // TODO: attrs is string or object  unit-test
 
-  // TODO: 子組件的熱更新(attrs) ✅
-  // TODO: 子組件的熱更新(attrs) unit-test
-  // TODO: 子組件的熱更新(style)
-  // TODO: 子組件的熱更新(style) unit-test
+  // TODO: CE child component hrm unit-test (attrs)
+  // TODO: CE child component hrm unit-test (style)
 
-  // TODO: CE 根组件热更新(attrs) ✅
-  // TODO: CE 根组件热更新(style)
-  // TODO: CE 根组件热更新(报错)
-  // TODO: CE 根组件热更新(attrs) unit-test
-  // TODO: CE 根组件热更新(style) unit-test
+  // TODO: CE root component hrm unit-test (attrs)
+  // TODO: CE root component hrm unit-test (style)
   protected _setStyleAttrs(
     s: HTMLStyleElement,
     attr: string | Record<string, string | number>
@@ -523,72 +518,30 @@ export class VueElement extends BaseClass {
     }
   }
 
-  protected _removeChildStylesMap(styles: string[] | undefined, uid: number) {
-    if (styles) {
-      const styleContent = styles.join()
+  protected _removeChildStyles(uid: number) {
+    // remove style tag and _childStylesSet(for HMR)
+    if(__DEV__){
       const styleList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
-      if (ceChildStyleMap.has(styleContent)) {
-        const ceUid = `__${this._instance!.uid}`
-        // update ceUidSet
-        const ceUidSet = ceChildStyleMap.get(styleContent)!
-        ceUidSet.delete(ceUid)
-
-        if (ceUidSet.size === 0) {
-          // dev only
-          if(__DEV__){
-            // remove style tag
-            styleList.length > 0 &&
-            styleList.forEach(s => this.shadowRoot!.removeChild(s))
-            // update archor
-            const archor = this.shadowRoot!.querySelectorAll('style')
-            this._childStylesAnchor =
-              archor.length > 0 ? archor[archor.length - 1] : undefined
-          }
-          // clear ceChildStyleMap
-          ceChildStyleMap.delete(styleContent)
-        } else {
-          // update ceChildStyleMap
-          ceChildStyleMap.set(styleContent, ceUidSet)
-        }
-      } else {
-        let oldStyleContent = []
-        styleList.length > 0 && styleList.forEach((s) => {
-          oldStyleContent.unshift(s.innerHTML)
-        });
-        if(ceChildStyleMap.has(oldStyleContent.join())){
-          this._removeChildStylesMap(oldStyleContent, uid)
-        }
-      }
+      let oldStyleContentList: string[] = []
+      styleList.length > 0 && styleList.forEach((s) => {
+        oldStyleContentList.unshift(s.innerHTML as string)
+        this.shadowRoot!.removeChild(s)
+        // update archor
+        const archor = this.shadowRoot!.querySelectorAll('style')
+        this._childStylesAnchor =
+            archor.length > 0 ? archor[archor.length - 1] : undefined
+      });
+      this._childStylesSet.delete(oldStyleContentList.join())
     }
   }
 
-  protected _addChildStylesMap(styles: string[] | undefined, uid: number) {
+  protected isHasChildStyle(styles: string[] | undefined) {
     if (styles) {
       const styleContent = styles.join()
-      // ceChildStyleMap is global,
-      // and a `CE` may be used multiple times,
-      // so we need to maintain it at the granularity of the uid.
-      // ceChildStyleMap = {
-      //  [style1]: [uid1, uid2, ...]
-      //  .....
-      // }
-      //            / - comp2
-      //       / CE1  - comp2 --- Styles will not be added repeatedly
-      // comp1
-      //      \ comp3 - CE2 - comp2
-
-      const ceUid = `__${uid}`
-      let ceUidSet = new Set<string>()
-      if (ceChildStyleMap.has(styleContent)) {
-        ceUidSet = ceChildStyleMap.get(styleContent)!
-        if (ceUidSet.has(ceUid)) {
-          ceUidSet.add(ceUid)
-          ceChildStyleMap.set(styleContent, ceUidSet)
-          return true
-        }
+      if (this._childStylesSet.has(styleContent)) {
+        return true
       }
-      ceUidSet.add(ceUid)
-      ceChildStyleMap.set(styleContent, ceUidSet)
+      this._childStylesSet.add(styleContent)
       return false
     }
   }
