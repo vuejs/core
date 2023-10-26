@@ -387,6 +387,7 @@ export class VueElement extends BaseClass {
             newStyles: string[] | undefined,
             attrs: ComponentInternalInstance['ceStylesAttrs']
           ) => {
+            debugger
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
@@ -460,6 +461,7 @@ export class VueElement extends BaseClass {
     attrs: ComponentInternalInstance['ceStylesAttrs'],
     uid: number
   ) {
+    debugger
     if (styles) {
       // record style
       const isRepeated = this._addChildStylesMap(styles, this._instance!.uid)
@@ -498,11 +500,11 @@ export class VueElement extends BaseClass {
   // TODO: 多个 style 标签的顺序 unit-test
   // TODO: string 或 对象的测试  unit-test
 
-  // TODO: 子組件的熱更新(attrs)
+  // TODO: 子組件的熱更新(attrs) ✅
   // TODO: 子組件的熱更新(attrs) unit-test
-
   // TODO: 子組件的熱更新(style)
   // TODO: 子組件的熱更新(style) unit-test
+
   // TODO: CE 根组件热更新(attrs) ✅
   // TODO: CE 根组件热更新(style)
   // TODO: CE 根组件热更新(报错)
@@ -524,18 +526,19 @@ export class VueElement extends BaseClass {
   protected _removeChildStylesMap(styles: string[] | undefined, uid: number) {
     if (styles) {
       const styleContent = styles.join()
+      const styleList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
       if (ceChildStyleMap.has(styleContent)) {
         const ceUid = `__${this._instance!.uid}`
         // update ceUidSet
         const ceUidSet = ceChildStyleMap.get(styleContent)!
         ceUidSet.delete(ceUid)
+
         if (ceUidSet.size === 0) {
           // dev only
           if(__DEV__){
             // remove style tag
-            const sList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
-            sList.length > 0 &&
-            sList.forEach(s => this.shadowRoot!.removeChild(s))
+            styleList.length > 0 &&
+            styleList.forEach(s => this.shadowRoot!.removeChild(s))
             // update archor
             const archor = this.shadowRoot!.querySelectorAll('style')
             this._childStylesAnchor =
@@ -546,6 +549,14 @@ export class VueElement extends BaseClass {
         } else {
           // update ceChildStyleMap
           ceChildStyleMap.set(styleContent, ceUidSet)
+        }
+      } else {
+        let oldStyleContent = []
+        styleList.length > 0 && styleList.forEach((s) => {
+          oldStyleContent.unshift(s.innerHTML)
+        });
+        if(ceChildStyleMap.has(oldStyleContent.join())){
+          this._removeChildStylesMap(oldStyleContent, uid)
         }
       }
     }
