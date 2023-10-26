@@ -1,3 +1,22 @@
+## [3.3.7](https://github.com/vuejs/core/compare/v3.3.6...v3.3.7) (2023-10-24)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** avoid gen useCssVars when targeting SSR ([#6979](https://github.com/vuejs/core/issues/6979)) ([c568778](https://github.com/vuejs/core/commit/c568778ea3265d8e57f788b00864c9509bf88a4e)), closes [#6926](https://github.com/vuejs/core/issues/6926)
+* **compiler-ssr:**  proper scope analysis for ssr vnode slot fallback ([#7184](https://github.com/vuejs/core/issues/7184)) ([e09c26b](https://github.com/vuejs/core/commit/e09c26bc9bc4394c2c2d928806d382515c2676f3)), closes [#7095](https://github.com/vuejs/core/issues/7095)
+* correctly resolve types from relative paths on Windows ([#9446](https://github.com/vuejs/core/issues/9446)) ([089d36d](https://github.com/vuejs/core/commit/089d36d167dc7834065b03ca689f9b6a44eead8a)), closes [#8671](https://github.com/vuejs/core/issues/8671)
+* **hmr:** fix hmr error for hoisted children array in v-for ([7334376](https://github.com/vuejs/core/commit/733437691f70ebca8dd6cc3bc8356f5b57d4d5d8)), closes [#6978](https://github.com/vuejs/core/issues/6978) [#7114](https://github.com/vuejs/core/issues/7114)
+* **reactivity:** assigning array.length while observing a symbol property ([#7568](https://github.com/vuejs/core/issues/7568)) ([e9e2778](https://github.com/vuejs/core/commit/e9e2778e9ec5cca07c1df5f0c9b7b3595a1a3244))
+* **scheduler:** ensure jobs are in the correct order ([#7748](https://github.com/vuejs/core/issues/7748)) ([a8f6638](https://github.com/vuejs/core/commit/a8f663867b8cd2736b82204bc58756ef02441276)), closes [#7576](https://github.com/vuejs/core/issues/7576)
+* **ssr:** fix hydration mismatch for disabled teleport at component root ([#9399](https://github.com/vuejs/core/issues/9399)) ([d8990fc](https://github.com/vuejs/core/commit/d8990fc6182d1c2cf0a8eab7b35a9d04df668507)), closes [#6152](https://github.com/vuejs/core/issues/6152)
+* **Suspense:** calling hooks before the transition finishes ([#9388](https://github.com/vuejs/core/issues/9388)) ([00de3e6](https://github.com/vuejs/core/commit/00de3e61ed7a55e7d6c2e1987551d66ad0f909ff)), closes [#5844](https://github.com/vuejs/core/issues/5844) [#5952](https://github.com/vuejs/core/issues/5952)
+* **transition/ssr:** make transition appear work with SSR ([#8859](https://github.com/vuejs/core/issues/8859)) ([5ea8a8a](https://github.com/vuejs/core/commit/5ea8a8a4fab4e19a71e123e4d27d051f5e927172)), closes [#6951](https://github.com/vuejs/core/issues/6951)
+* **types:** fix ComponentCustomProps augmentation ([#9468](https://github.com/vuejs/core/issues/9468)) ([7374e93](https://github.com/vuejs/core/commit/7374e93f0281f273b90ab5a6724cc47332a01d6c)), closes [#8376](https://github.com/vuejs/core/issues/8376)
+* **types:** improve `h` overload to support union of string and component ([#5432](https://github.com/vuejs/core/issues/5432)) ([16ecb44](https://github.com/vuejs/core/commit/16ecb44c89cd8299a3b8de33cccc2e2cc36f065b)), closes [#5431](https://github.com/vuejs/core/issues/5431)
+
+
+
 ## [3.3.6](https://github.com/vuejs/core/compare/v3.3.5...v3.3.6) (2023-10-20)
 
 
