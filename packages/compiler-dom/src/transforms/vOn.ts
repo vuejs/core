@@ -7,7 +7,6 @@ import {
   NodeTypes,
   createCompoundExpression,
   ExpressionNode,
-  SimpleExpressionNode,
   isStaticExp,
   CompilerDeprecationTypes,
   TransformContext,
@@ -64,7 +63,7 @@ const resolveModifiers = (
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
         if (isStaticExp(key)) {
-          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+          if (isKeyboardEvent(key.content)) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)
