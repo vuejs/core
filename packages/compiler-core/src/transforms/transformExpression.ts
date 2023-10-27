@@ -235,7 +235,10 @@ export function processExpression(
       }
       node.content = rewriteIdentifier(rawExp)
     } else if (!isScopeVarReference) {
-      if (isLiteral) {
+      if (isAllowedGlobal && bindingMetadata[rawExp]) {
+        // #9482
+        node.content = rewriteIdentifier(rawExp)
+      } else if (isLiteral) {
         node.constType = ConstantTypes.CAN_STRINGIFY
       } else {
         node.constType = ConstantTypes.CAN_HOIST
