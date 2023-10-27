@@ -1,8 +1,9 @@
 import { DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
-import { isFunction, NOOP } from '@vue/shared'
-import { ReactiveFlags, toRaw } from './reactive'
+import { hasChanged, isFunction, NOOP } from '@vue/shared'
+import { toRaw } from './reactive'
 import { Dep } from './dep'
+import { DirtyLevels, ReactiveFlags } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -32,7 +33,6 @@ export class ComputedRefImpl<T> {
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _dirty = true
   public _cacheable: boolean
 
   constructor(
@@ -42,10 +42,7 @@ export class ComputedRefImpl<T> {
     isSSR: boolean
   ) {
     this.effect = new ReactiveEffect(getter, () => {
-      if (!this._dirty) {
-        this._dirty = true
-        triggerRefValue(this)
-      }
+      triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
     })
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
@@ -56,9 +53,10 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     trackRefValue(self)
-    if (self._dirty || !self._cacheable) {
-      self._dirty = false
-      self._value = self.effect.run()!
+    if (!self._cacheable || self.effect.dirty) {
+      if (hasChanged(self._value, (self._value = self.effect.run()!))) {
+        triggerRefValue(self, DirtyLevels.ComputedValueDirty)
+      }
     }
     return self._value
   }
@@ -66,6 +64,16 @@ export class ComputedRefImpl<T> {
   set value(newValue: T) {
     this._setter(newValue)
   }
+
+  // #region polyfill _dirty for backward compatibility third party code for Vue <= 3.3.x
+  get _dirty() {
+    return this.effect.dirty
+  }
+
+  set _dirty(v) {
+    this.effect.dirty = v
+  }
+  // #endregion
 }
 
 /**

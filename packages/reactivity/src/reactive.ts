@@ -12,14 +12,7 @@ import {
   shallowReadonlyCollectionHandlers
 } from './collectionHandlers'
 import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
-
-export const enum ReactiveFlags {
-  SKIP = '__v_skip',
-  IS_REACTIVE = '__v_isReactive',
-  IS_READONLY = '__v_isReadonly',
-  IS_SHALLOW = '__v_isShallow',
-  RAW = '__v_raw'
-}
+import { ReactiveFlags } from './constants'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
