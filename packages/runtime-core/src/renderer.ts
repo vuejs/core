@@ -1241,6 +1241,7 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        initialVNode.el = placeholder.el
       }
       return
     }
@@ -1453,8 +1454,9 @@ function baseCreateRenderer(
           ): ComponentInternalInstance | null => {
             if (instance.subTree.shapeFlag & ShapeFlags.COMPONENT) {
               if (
-                // this happens during hydration or updating a component that resolve to a unresolved async component
-                instance.subTree.component?.asyncDep != null &&
+                // this happens only during hydration
+                instance.subTree.component?.subTree == null &&
+                // we don't know the subTree yet because we haven't resolve it
                 instance.subTree.component?.asyncResolved === false
               ) {
                 return instance.subTree.component!
