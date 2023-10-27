@@ -39,8 +39,9 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { extname, dirname } from 'path'
+import { extname, dirname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
+import * as process from 'process'
 
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
@@ -776,7 +777,12 @@ function importSourceToScope(
 
   let resolved: string | undefined = scope.resolvedImportSources[source]
   if (!resolved) {
-    if (source.startsWith('.')) {
+    if (source.startsWith('..')) {
+      const osSpecificJoinFn = process.platform === 'win32' ? join : joinPaths
+
+      const filename = osSpecificJoinFn(dirname(scope.filename), source)
+      resolved = resolveExt(filename, fs)
+    } else if (source.startsWith('.')) {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
