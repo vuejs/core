@@ -496,16 +496,6 @@ export class VueElement extends BaseClass {
     }
   }
 
-  // TODO: attrs & CE Child component  unit-test
-  // TODO: attrs & CE root component  unit-test
-  // TODO: attrs order whit style tag unit-test
-  // TODO: attrs is string or object  unit-test
-
-  // TODO: CE child component hrm unit-test (attrs)
-  // TODO: CE child component hrm unit-test (style)
-
-  // TODO: CE root component hrm unit-test (attrs)
-  // TODO: CE root component hrm unit-test (style)
   protected _setStyleAttrs(
     s: HTMLStyleElement,
     attr: string | Record<string, string | number>
