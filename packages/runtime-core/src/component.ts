@@ -323,8 +323,8 @@ export interface ComponentInternalInstance {
   ceContext: {
     addCEChildStyle: (
       styles: string[],
-      attrs: ComponentInternalInstance['ceStylesAttrs'],
-      uid: number
+      uid: number,
+      attrs?: Array<string | Record<string, string | number>>
     ) => void
     removeCEChildStyles: (uid: number) => void
   } | null
@@ -339,7 +339,7 @@ export interface ComponentInternalInstance {
    */
   ceReload?: (
     newStyles?: string[],
-    attrs?: ComponentInternalInstance['ceStylesAttrs']
+    attrs?: Array<string | Record<string, string | number>>
   ) => void
 
   // the rest are only for stateful components ---------------------------------

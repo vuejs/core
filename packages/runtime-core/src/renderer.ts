@@ -1386,8 +1386,8 @@ function baseCreateRenderer(
               if (instance.ceContext && styles) {
                 instance.ceContext.addCEChildStyle(
                   styles,
-                  instance.ceStylesAttrs,
-                  instance.uid
+                  instance.uid,
+                  instance.ceStylesAttrs
                 )
               }
             }

@@ -383,8 +383,8 @@ export class VueElement extends BaseClass {
         // HMR
         if (__DEV__) {
           instance.ceReload = (
-            newStyles: string[] | undefined,
-            attrs: ComponentInternalInstance['ceStylesAttrs']
+            newStyles?: string[] | undefined,
+            attrs?: Array<string | Record<string, string | number>>
           ) => {
             // always reset styles
             if (this._styles) {
@@ -435,7 +435,7 @@ export class VueElement extends BaseClass {
 
   private _applyStyles(
     styles: string[] | undefined,
-    attrs: ComponentInternalInstance['ceStylesAttrs']
+    attrs?: Array<string | Record<string, string | number>>
   ) {
     if (styles) {
       styles.forEach((css, index) => {
@@ -458,8 +458,8 @@ export class VueElement extends BaseClass {
   // to add styles to the shadow dom
   protected _addChildStyles(
     styles: string[] | undefined,
-    attrs: ComponentInternalInstance['ceStylesAttrs'],
-    uid: number
+    uid: number,
+    attrs?: Array<string | Record<string, string | number>>
   ) {
     if (styles) {
       // record style
