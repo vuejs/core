@@ -1566,7 +1566,7 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
-    
+
     // #5844
     test('children mount should be called after html changes', async () => {
       const fooMountSpy = vi.fn()
