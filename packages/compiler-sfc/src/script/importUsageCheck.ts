@@ -53,7 +53,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
                 code += `,${processExp(
                   (prop.arg as SimpleExpressionNode).content,
-                  prop.name
+                  'bind'
                 )}`
               }
               if (prop.exp) {
