@@ -50,7 +50,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDirective(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
-              
+
               //  process dynamic directive arguments as bind
               if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
                 code += `,${processExp(
@@ -58,7 +58,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                   'bind'
                 )}`
               }
-              
+
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
