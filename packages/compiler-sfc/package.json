@@ -39,6 +39,7 @@
     "@vue/reactivity-transform": "3.3.7",
     "@vue/shared": "3.3.7",
     "estree-walker": "^2.0.2",
+    "lru-cache": "^10.0.1",
     "magic-string": "^0.30.5",
     "postcss": "^8.4.31",
     "source-map-js": "^1.0.2"
@@ -47,7 +48,6 @@
     "@babel/types": "^7.23.0",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
-    "lru-cache": "^10.0.1",
     "merge-source-map": "^1.1.0",
     "minimatch": "^9.0.3",
     "postcss-modules": "^4.3.1",
