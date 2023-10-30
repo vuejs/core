@@ -100,11 +100,12 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
 
 export type SlotFnBuilder = (
   slotProps: ExpressionNode | undefined,
+  vForExp: ExpressionNode | undefined,
   slotChildren: TemplateChildNode[],
   loc: SourceLocation
 ) => FunctionExpression
 
-const buildClientSlotFn: SlotFnBuilder = (props, children, loc) =>
+const buildClientSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) =>
   createFunctionExpression(
     props,
     children,
@@ -151,7 +152,7 @@ export function buildSlots(
     slotsProperties.push(
       createObjectProperty(
         arg || createSimpleExpression('default', true),
-        buildSlotFn(exp, children, loc)
+        buildSlotFn(exp, undefined, children, loc)
       )
     )
   }
@@ -203,11 +204,17 @@ export function buildSlots(
       hasDynamicSlots = true
     }
 
-    const slotFunction = buildSlotFn(slotProps, slotChildren, slotLoc)
+    const vFor = findDir(slotElement, 'for')
+    const slotFunction = buildSlotFn(
+      slotProps,
+      vFor?.exp,
+      slotChildren,
+      slotLoc
+    )
+
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined
     let vElse: DirectiveNode | undefined
-    let vFor: DirectiveNode | undefined
     if ((vIf = findDir(slotElement, 'if'))) {
       hasDynamicSlots = true
       dynamicSlots.push(
@@ -259,7 +266,7 @@ export function buildSlots(
           createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, vElse.loc)
         )
       }
-    } else if ((vFor = findDir(slotElement, 'for'))) {
+    } else if (vFor) {
       hasDynamicSlots = true
       const parseResult =
         vFor.parseResult ||
@@ -308,7 +315,7 @@ export function buildSlots(
       props: ExpressionNode | undefined,
       children: TemplateChildNode[]
     ) => {
-      const fn = buildSlotFn(props, children, loc)
+      const fn = buildSlotFn(props, undefined, children, loc)
       if (__COMPAT__ && context.compatConfig) {
         fn.isNonScopedSlot = true
       }
