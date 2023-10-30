@@ -18,6 +18,7 @@ type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
+export const ARRAY_ITERATE_KEY = Symbol(__DEV__ ? 'Array iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
 
 /**
@@ -84,7 +85,11 @@ export function trigger(
   } else if (key === 'length' && isArray(target)) {
     const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || (!isSymbol(key) && key >= newLength)) {
+      if (
+        key === 'length' ||
+        key === ARRAY_ITERATE_KEY ||
+        (!isSymbol(key) && key >= newLength)
+      ) {
         deps.push(dep)
       }
     })
@@ -92,6 +97,14 @@ export function trigger(
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
       deps.push(depsMap.get(key))
+    }
+
+    // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
+    if (isArray(target)) {
+      const iterateDeps = depsMap.get(ARRAY_ITERATE_KEY)
+      if (iterateDeps && isIntegerKey(key)) {
+        deps.push(iterateDeps)
+      }
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET

@@ -1,4 +1,5 @@
 import { VNode, VNodeChild } from '../vnode'
+import { readArray } from '@vue/reactivity'
 import { isArray, isString, isObject } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -58,8 +59,12 @@ export function renderList(
 ): VNodeChild[] {
   let ret: VNodeChild[]
   const cached = (cache && cache[index!]) as VNode[] | undefined
+  const array = isArray(source)
 
-  if (isArray(source) || isString(source)) {
+  if (array || isString(source)) {
+    if (array) {
+      source = readArray(source, true)
+    }
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
       ret[i] = renderItem(source[i], i, undefined, cached && cached[i])

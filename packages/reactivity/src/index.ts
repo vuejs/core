@@ -61,7 +61,12 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo
 } from './effect'
-export { trigger, track, ITERATE_KEY } from './reactiveEffect'
+export {
+  trigger,
+  track,
+  ITERATE_KEY,
+  ARRAY_ITERATE_KEY
+} from './reactiveEffect'
 export {
   effectScope,
   EffectScope,
@@ -73,3 +78,4 @@ export {
   TriggerOpTypes /* @remove */,
   ReactiveFlags /* @remove */
 } from './constants'
+export { readArray } from './arrayInstrumentations'

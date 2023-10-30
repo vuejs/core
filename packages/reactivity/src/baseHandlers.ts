@@ -10,13 +10,8 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
+import { arrayInstrumentations } from './arrayInstrumentations'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  pauseTracking,
-  resetTracking,
-  pauseScheduling,
-  resetScheduling
-} from './effect'
 import { track, trigger, ITERATE_KEY } from './reactiveEffect'
 import {
   isObject,
@@ -42,43 +37,6 @@ const builtInSymbols = new Set(
     .map(key => (Symbol as any)[key])
     .filter(isSymbol)
 )
-
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      pauseTracking()
-      pauseScheduling()
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
-      resetTracking()
-      return res
-    }
-  })
-  return instrumentations
-}
 
 function hasOwnProperty(this: object, key: string) {
   const obj = toRaw(this)
@@ -119,8 +77,9 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      let fn: Function | undefined
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       if (key === 'hasOwnProperty') {
         return hasOwnProperty
