@@ -88,10 +88,10 @@ interface Base { (e: 'foo'): void }
     
 export default /*#__PURE__*/_defineComponent({
   emits: [\\"bar\\", \\"foo\\"],
-  setup(__props, { expose: __expose, emit }) {
+  setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
 
-    
+    const emit = __emit
     
 return { emit }
 }
