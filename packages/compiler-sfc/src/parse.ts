@@ -7,6 +7,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
+import { LRUCache } from 'lru-cache'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
 import { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
@@ -93,7 +94,9 @@ export interface SFCParseResult {
   errors: (CompilerError | SyntaxError)[]
 }
 
-export const parseCache = createCache<SFCParseResult>()
+export const parseCache:
+  | Map<string, SFCParseResult>
+  | LRUCache<string, SFCParseResult> = createCache<SFCParseResult>()
 
 export function parse(
   source: string,
