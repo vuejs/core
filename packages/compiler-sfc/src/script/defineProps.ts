@@ -156,7 +156,9 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   const modelsDecls = genModelProps(ctx)
 
   if (propsDecls && modelsDecls) {
-    return `${ctx.helper('mergeModels')}(${propsDecls}, ${modelsDecls})`
+    return `/*#__PURE__*/${ctx.helper(
+      'mergeModels'
+    )}(${propsDecls}, ${modelsDecls})`
   } else {
     return modelsDecls || propsDecls
   }
