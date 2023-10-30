@@ -144,7 +144,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
           )
       }
       if (defaults.length) {
-        propsDecls = `${ctx.helper(
+        propsDecls = `/*#__PURE__*/${ctx.helper(
           `mergeDefaults`
         )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
       }
@@ -184,9 +184,9 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
     ${propStrings.join(',\n    ')}\n  }`
 
   if (ctx.propsRuntimeDefaults && !hasStaticDefaults) {
-    propsDecls = `${ctx.helper('mergeDefaults')}(${propsDecls}, ${ctx.getString(
-      ctx.propsRuntimeDefaults
-    )})`
+    propsDecls = `/*#__PURE__*/${ctx.helper(
+      'mergeDefaults'
+    )}(${propsDecls}, ${ctx.getString(ctx.propsRuntimeDefaults)})`
   }
 
   return propsDecls
