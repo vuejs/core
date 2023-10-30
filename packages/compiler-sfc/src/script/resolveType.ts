@@ -781,7 +781,7 @@ function importSourceToScope(
   if (!resolved) {
     if (source.startsWith('.')) {
       // relative import - fast path
-      const filename = joinPaths(scope.filename, '..', source)
+      const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
@@ -1394,6 +1394,7 @@ export function inferRuntimeType(
             case 'WeakMap':
             case 'Date':
             case 'Promise':
+            case 'Error':
               return [node.typeName.name]
 
             // TS built-in utility types
