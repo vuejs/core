@@ -40,7 +40,7 @@ const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
 const buildAllMatching = args.all || args.a
 const writeSize = args.size
-const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
 
 const sizeDir = path.resolve('temp/size')
 
