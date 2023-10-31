@@ -1391,6 +1391,7 @@ export function inferRuntimeType(
             case 'WeakMap':
             case 'Date':
             case 'Promise':
+            case 'Error':
               return [node.typeName.name]
 
             // TS built-in utility types
