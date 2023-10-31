@@ -97,6 +97,7 @@ const props = defineProps({ foo: String })
       alias: Alias
       method(): void
       symbol: symbol
+      error: Error
       extract: Extract<1 | 2 | boolean, 2>
       exclude: Exclude<1 | 2 | boolean, 2>
       uppercase: Uppercase<'foo'>
@@ -143,6 +144,7 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`alias: { type: Array, required: true }`)
     expect(content).toMatch(`method: { type: Function, required: true }`)
     expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
+    expect(content).toMatch(`error: { type: Error, required: true }`)
     expect(content).toMatch(
       `objectOrFn: { type: [Function, Object], required: true },`
     )
@@ -198,6 +200,7 @@ const props = defineProps({ foo: String })
       alias: BindingTypes.PROPS,
       method: BindingTypes.PROPS,
       symbol: BindingTypes.PROPS,
+      error: BindingTypes.PROPS,
       objectOrFn: BindingTypes.PROPS,
       extract: BindingTypes.PROPS,
       exclude: BindingTypes.PROPS,

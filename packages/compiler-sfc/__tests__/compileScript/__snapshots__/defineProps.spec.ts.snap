@@ -292,6 +292,7 @@ export default /*#__PURE__*/_defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
+    error: { type: Error, required: true },
     extract: { type: Number, required: true },
     exclude: { type: [Number, Boolean], required: true },
     uppercase: { type: String, required: true },
