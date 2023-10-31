@@ -16,8 +16,8 @@ export interface WritableComputedRef<T> extends Ref<T> {
   readonly effect: ReactiveEffect<T>
 }
 
-export type ComputedGetter<T> = (...args: any[]) => T
-export type ComputedSetter<T> = (v: T) => void
+export type ComputedGetter<T> = (oldValue?: T) => T
+export type ComputedSetter<T> = (newValue: T) => void
 
 export interface WritableComputedOptions<T> {
   get: ComputedGetter<T>
@@ -41,9 +41,10 @@ export class ComputedRefImpl<T> {
     isReadonly: boolean,
     isSSR: boolean
   ) {
-    this.effect = new ReactiveEffect(getter, () => {
-      triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
-    })
+    this.effect = new ReactiveEffect(
+      () => getter(this._value),
+      () => triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
+    )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
