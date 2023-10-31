@@ -1,6 +1,6 @@
 // @ts-check
 import fs from 'node:fs'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import { createRequire } from 'node:module'
 
 const require = createRequire(import.meta.url)
@@ -33,8 +33,8 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
   } else {
     console.log()
     console.error(
-      `  ${chalk.bgRed.white(' ERROR ')} ${chalk.red(
-        `Target ${chalk.underline(partialTargets)} not found!`
+      `  ${pico.white(pico.bgRed(' ERROR '))} ${pico.red(
+        `Target ${pico.underline(partialTargets)} not found!`
       )}`
     )
     console.log()
