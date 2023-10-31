@@ -1,4 +1,13 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  ref,
+  readonly,
+  shallowReadonly,
+  Ref,
+  reactive,
+  markRaw,
+  ComputedRef,
+  computed
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
@@ -61,4 +70,24 @@ describe('should unwrap tuple correctly', () => {
   const tuple: [Ref<number>] = [ref(0)]
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
+})
+
+// #1930
+describe('should unwrap the computed type', () => {
+  interface Bar {
+    a: number
+    b: (_: any) => void
+  }
+
+  const computedA: ComputedRef<number> = computed(() => 1)
+
+  expectType<{ a: number }>(reactive({ a: computedA }))
+
+  expectType<Bar>(
+    reactive({
+      a: computedA, // issue happens here, but is should be okay
+      // @ts-expect-error
+      b: _ => {} // error depending on --noImplicitAny
+    })
+  )
 })
