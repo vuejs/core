@@ -72,6 +72,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { TransitionHooks } from './components/BaseTransition'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -271,7 +272,11 @@ export const enum MoveType {
 }
 
 export const queuePostRenderEffect = __FEATURE_SUSPENSE__
-  ? queueEffectWithSuspense
+  ? __TEST__
+    ? // vitest can't seem to handle eager circular dependency
+      (fn: Function | Function[], suspense: SuspenseBoundary | null) =>
+        queueEffectWithSuspense(fn, suspense)
+    : queueEffectWithSuspense
   : queuePostFlushCb
 
 /**
@@ -580,7 +585,7 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    isSVG = isSVG || (n2.type as string) === 'svg'
+    isSVG = isSVG || n2.type === 'svg'
     if (n1 == null) {
       mountElement(
         n2,
@@ -697,10 +702,7 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks =
-      (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
-      transition &&
-      !transition.persisted
+    const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
@@ -831,7 +833,8 @@ function baseCreateRenderer(
         areChildrenSVG,
         slotScopeIds
       )
-      if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+      if (__DEV__) {
+        // necessary for HMR
         traverseStaticChildren(n1, n2)
       }
     } else if (!optimized) {
@@ -1106,7 +1109,8 @@ function baseCreateRenderer(
           isSVG,
           slotScopeIds
         )
-        if (__DEV__ && parentComponent && parentComponent.type.__hmrId) {
+        if (__DEV__) {
+          // necessary for HMR
           traverseStaticChildren(n1, n2)
         } else if (
           // #2080 if the stable fragment has a key, it's a <template v-for> that may
@@ -2357,6 +2361,17 @@ function toggleRecurse(
   allowed: boolean
 ) {
   effect.allowRecurse = update.allowRecurse = allowed
+}
+
+export function needTransition(
+  parentSuspense: SuspenseBoundary | null,
+  transition: TransitionHooks | null
+) {
+  return (
+    (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
+    transition &&
+    !transition.persisted
+  )
 }
 
 /**

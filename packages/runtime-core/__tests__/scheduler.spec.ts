@@ -143,6 +143,7 @@ describe('scheduler', () => {
         queueJob(job1)
         // cb2 should execute before the job
         queueJob(cb2)
+        queueJob(cb3)
       }
       cb1.pre = true
 
@@ -152,9 +153,60 @@ describe('scheduler', () => {
       cb2.pre = true
       cb2.id = 1
 
+      const cb3 = () => {
+        calls.push('cb3')
+      }
+      cb3.pre = true
+      cb3.id = 1
+
       queueJob(cb1)
       await nextTick()
-      expect(calls).toEqual(['cb1', 'cb2', 'job1'])
+      expect(calls).toEqual(['cb1', 'cb2', 'cb3', 'job1'])
+    })
+
+    it('should insert jobs after pre jobs with the same id', async () => {
+      const calls: string[] = []
+      const job1 = () => {
+        calls.push('job1')
+      }
+      job1.id = 1
+      job1.pre = true
+      const job2 = () => {
+        calls.push('job2')
+        queueJob(job5)
+        queueJob(job6)
+      }
+      job2.id = 2
+      job2.pre = true
+      const job3 = () => {
+        calls.push('job3')
+      }
+      job3.id = 2
+      job3.pre = true
+      const job4 = () => {
+        calls.push('job4')
+      }
+      job4.id = 3
+      job4.pre = true
+      const job5 = () => {
+        calls.push('job5')
+      }
+      job5.id = 2
+      const job6 = () => {
+        calls.push('job6')
+      }
+      job6.id = 2
+      job6.pre = true
+
+      // We need several jobs to test this properly, otherwise
+      // findInsertionIndex can yield the correct index by chance
+      queueJob(job4)
+      queueJob(job2)
+      queueJob(job3)
+      queueJob(job1)
+
+      await nextTick()
+      expect(calls).toEqual(['job1', 'job2', 'job3', 'job6', 'job5', 'job4'])
     })
 
     it('preFlushCb inside queueJob', async () => {
@@ -187,7 +239,7 @@ describe('scheduler', () => {
 
     // #3806
     it('queue preFlushCb inside postFlushCb', async () => {
-      const spy = jest.fn()
+      const spy = vi.fn()
       const cb = () => spy()
       cb.pre = true
       queuePostFlushCb(() => {
@@ -515,7 +567,7 @@ describe('scheduler', () => {
 
   // #910
   test('should not run stopped reactive effects', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
 
     // simulate parent component that toggles child
     const job1 = () => {
@@ -536,7 +588,7 @@ describe('scheduler', () => {
   })
 
   it('flushPreFlushCbs inside a pre job', async () => {
-    const spy = jest.fn()
+    const spy = vi.fn()
     const job = () => {
       spy()
       flushPreFlushCbs()
@@ -545,5 +597,17 @@ describe('scheduler', () => {
     queueJob(job)
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(1)
+  })
+
+  it('nextTick should return promise', async () => {
+    const fn = vi.fn(() => {
+      return 1
+    })
+
+    const p = nextTick(fn)
+
+    expect(p).toBeInstanceOf(Promise)
+    expect(await p).toBe(1)
+    expect(fn).toHaveBeenCalledTimes(1)
   })
 })

@@ -125,7 +125,7 @@ describe('shallowReactive', () => {
 
     // #1210
     test('onTrack on called on objectSpread', () => {
-      const onTrackFn = jest.fn()
+      const onTrackFn = vi.fn()
       const shallowSet = shallowReactive(new Set())
       let a
       effect(
@@ -170,7 +170,7 @@ describe('shallowReactive', () => {
     })
 
     test('onTrack on called on objectSpread', () => {
-      const onTrackFn = jest.fn()
+      const onTrackFn = vi.fn()
       const shallowArray = shallowReactive([])
       let a
       effect(

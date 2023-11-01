@@ -6,7 +6,7 @@ describe('deferred computed', () => {
   test('should only trigger once on multiple mutations', async () => {
     const src = ref(0)
     const c = deferredComputed(() => src.value)
-    const spy = jest.fn()
+    const spy = vi.fn()
     effect(() => {
       spy(c.value)
     })
@@ -25,7 +25,7 @@ describe('deferred computed', () => {
   test('should not trigger if value did not change', async () => {
     const src = ref(0)
     const c = deferredComputed(() => src.value % 2)
-    const spy = jest.fn()
+    const spy = vi.fn()
     effect(() => {
       spy(c.value)
     })
@@ -46,9 +46,9 @@ describe('deferred computed', () => {
   })
 
   test('chained computed trigger', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
     const c1 = deferredComputed(() => {
@@ -76,9 +76,9 @@ describe('deferred computed', () => {
   })
 
   test('chained computed avoid re-compute', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
     const c1 = deferredComputed(() => {
@@ -108,9 +108,9 @@ describe('deferred computed', () => {
   })
 
   test('chained computed value invalidation', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
     const c1 = deferredComputed(() => {
@@ -140,9 +140,9 @@ describe('deferred computed', () => {
   })
 
   test('sync access of invalidated chained computed should not prevent final effect from running', async () => {
-    const effectSpy = jest.fn()
-    const c1Spy = jest.fn()
-    const c2Spy = jest.fn()
+    const effectSpy = vi.fn()
+    const c1Spy = vi.fn()
+    const c2Spy = vi.fn()
 
     const src = ref(0)
     const c1 = deferredComputed(() => {
@@ -167,7 +167,7 @@ describe('deferred computed', () => {
   })
 
   test('should not compute if deactivated before scheduler is called', async () => {
-    const c1Spy = jest.fn()
+    const c1Spy = vi.fn()
     const src = ref(0)
     const c1 = deferredComputed(() => {
       c1Spy()
