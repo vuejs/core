@@ -183,6 +183,36 @@ describe('api: lifecycle hooks', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
+  it('onMounted return onUnmounted', async () => {
+    const toggle = ref(true)
+    const root = nodeOps.createElement('div')
+    const fn1 = vi.fn(() => fn2)
+    const fn2 = vi.fn()
+
+    const Comp = {
+      setup() {
+        return () => (toggle.value ? h(Child) : null)
+      }
+    }
+
+    const Child = {
+      setup() {
+        onMounted(fn1)
+        return () => h('div')
+      }
+    }
+
+    render(h(Comp), root)
+
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(0)
+
+    toggle.value = false
+
+    await nextTick()
+    expect(fn2).toHaveBeenCalledTimes(1)
+  })
+
   it('onBeforeUnmount in onMounted', async () => {
     const toggle = ref(true)
     const root = nodeOps.createElement('div')

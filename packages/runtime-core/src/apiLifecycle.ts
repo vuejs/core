@@ -8,7 +8,7 @@ import {
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
-import { toHandlerKey } from '@vue/shared'
+import { isPromise, isFunction, toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
 
@@ -68,7 +68,22 @@ export const createHook =
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
+    injectHook(
+      lifecycle,
+      (...args: unknown[]) => {
+        const res = hook(...args)
+        if (lifecycle === LifecycleHooks.MOUNTED) {
+          // In the mounted hook, if a function is returned, it will be called in the unmounted hook.
+          if (isPromise(res)) {
+            res.then(_res => isFunction(_res) && onUnmounted(_res, target))
+          } else if (isFunction(res)) {
+            onUnmounted(res)
+          }
+        }
+        return res
+      },
+      target
+    )
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
