@@ -154,6 +154,10 @@ export function createHydrationFunctions(
             replaceNode(content, node, parentComponent)
             vnode.el = node = content
             nextNode = nextSibling(node)
+          }
+          // real left square bracket comment node
+          else if (isFragmentStart && vnode.children === '[') {
+            nextNode = nextSibling(node)
           } else {
             nextNode = onMismatch()
           }
