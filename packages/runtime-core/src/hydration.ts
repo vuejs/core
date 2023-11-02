@@ -146,7 +146,7 @@ export function createHydrationFunctions(
         break
       case Comment:
         if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
-          if ((node as Element).tagName.toLowerCase() === 'template') {
+          if (isTemplateNode(node as Element)) {
             const content = (vnode.el! as HTMLTemplateElement).content
               .firstChild!
 
