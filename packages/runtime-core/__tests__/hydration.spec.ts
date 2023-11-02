@@ -18,10 +18,14 @@ import {
   createVNode,
   withDirectives,
   vModelCheckbox,
-  renderSlot
+  renderSlot,
+  Transition,
+  createCommentVNode,
+  vShow
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
-import { PatchFlags } from '../../shared/src'
+import { PatchFlags } from '@vue/shared'
+import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1013,6 +1017,74 @@ describe('SSR hydration', () => {
     mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
       createStaticVNode(`<div></div>`, 1)
     )
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', 'foo')
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-if', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><!----></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => (show ? h('div', 'foo') : createCommentVNode(''))
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot('<!---->')
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-show', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><div style="display: none;">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]])
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+        style="display: none;"
+      >
+        foo
+      </div>
+    `)
+    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
