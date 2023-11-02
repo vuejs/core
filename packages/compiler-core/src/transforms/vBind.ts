@@ -3,17 +3,19 @@ import {
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
+  locStub,
   NodeTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
 import { camelize } from '@vue/shared'
 import { CAMELIZE } from '../runtimeHelpers'
+import { processExpression } from './transformExpression'
 
 // v-bind without arg is handled directly in ./transformElements.ts due to it affecting
 // codegen for the entire props object. This transform here is only for v-bind
 // *with* args.
 export const transformBind: DirectiveTransform = (dir, _node, context) => {
-  const { exp, modifiers, loc } = dir
+  const { modifiers, loc } = dir
   const arg = dir.arg!
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
@@ -44,6 +46,18 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     if (modifiers.includes('attr')) {
       injectPrefix(arg, '^')
     }
+  }
+
+  // :arg is replaced by :arg="arg"
+  let { exp } = dir
+  if (!exp && arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+    const propName = camelize(arg.loc.source)
+    const simpleExpression = createSimpleExpression(propName, false, {
+      ...locStub,
+      source: propName
+    })
+
+    exp = dir.exp = processExpression(simpleExpression, context)
   }
 
   if (

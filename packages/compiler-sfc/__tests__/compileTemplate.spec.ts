@@ -124,7 +124,7 @@ test('source map', () => {
 test('template errors', () => {
   const result = compile({
     filename: 'example.vue',
-    source: `<div :foo
+    source: `<div
       :bar="a[" v-model="baz"/>`
   })
   expect(result.errors).toMatchSnapshot()
