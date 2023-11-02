@@ -270,8 +270,23 @@ async function main() {
 
   // publish packages
   step('\nPublishing packages...')
+
+  const additionalPublishFlags = []
+  if (isDryRun) {
+    additionalPublishFlags.push('--dry-run')
+  }
+  if (skipGit) {
+    additionalPublishFlags.push('--no-git-checks')
+  }
+  // bypass the pnpm --publish-branch restriction which isn't too useful to us
+  // otherwise it leads to a prompt and blocks the release script
+  const branch = await getBranch()
+  if (branch !== 'main') {
+    additionalPublishFlags.push('--publish-branch', branch)
+  }
+
   for (const pkg of packages) {
-    await publishPackage(pkg, targetVersion)
+    await publishPackage(pkg, targetVersion, additionalPublishFlags)
   }
 
   // push to GitHub
@@ -300,7 +315,7 @@ async function main() {
 
 async function getCIResult() {
   try {
-    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
+    const sha = await getSha()
     const res = await fetch(
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`
@@ -315,23 +330,26 @@ async function getCIResult() {
 
 async function isInSyncWithRemote() {
   try {
-    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
-    const { stdout: branch } = await execa('git', [
-      'rev-parse',
-      '--abbrev-ref',
-      'HEAD'
-    ])
+    const branch = await getBranch()
     const res = await fetch(
       `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
     )
     const data = await res.json()
-    return data.sha === sha
+    return data.sha === (await getSha())
   } catch (e) {
     console.error(
       'Failed to check whether local HEAD is up-to-date with remote.'
     )
     return false
   }
+}
+
+async function getSha() {
+  return (await execa('git', ['rev-parse', 'HEAD'])).stdout
+}
+
+async function getBranch() {
+  return (await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
 
 function updateVersions(version, getNewPackageName = keepThePackageName) {
@@ -371,7 +389,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
   })
 }
 
-async function publishPackage(pkgName, version) {
+async function publishPackage(pkgName, version, additionalFlags) {
   if (skippedPackages.includes(pkgName)) {
     return
   }
@@ -402,8 +420,7 @@ async function publishPackage(pkgName, version) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
-        ...(isDryRun ? ['--dry-run'] : []),
-        ...(skipGit ? ['--no-git-checks'] : [])
+        ...additionalFlags
       ],
       {
         cwd: pkgRoot,
