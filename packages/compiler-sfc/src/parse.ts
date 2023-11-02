@@ -4,7 +4,9 @@ import {
   SourceLocation,
   CompilerError,
   TextModes,
-  BindingMetadata
+  BindingMetadata,
+  AttributeNode,
+  DirectiveNode, SimpleExpressionNode
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -69,6 +71,7 @@ export interface SFCDescriptor {
   script: SFCScriptBlock | null
   scriptSetup: SFCScriptBlock | null
   styles: SFCStyleBlock[]
+  ceStyleAttrs: Array<AttributeNode | DirectiveNode>[]
   customBlocks: SFCBlock[]
   cssVars: string[]
   /**
@@ -120,6 +123,7 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
+    ceStyleAttrs:[],
     customBlocks: [],
     cssVars: [],
     slotted: false,
@@ -219,6 +223,8 @@ export function parse(
           )
         }
         descriptor.styles.push(styleBlock)
+        // ce style attrs
+        setPropsNodeForStyleAttrs(descriptor, node.props)
         break
       default:
         descriptor.customBlocks.push(createBlock(node, source, pad))
@@ -466,3 +472,18 @@ export function hmrShouldReload(
 
   return false
 }
+ function setPropsNodeForStyleAttrs(
+   descriptor: SFCDescriptor,
+   props: Array<AttributeNode | DirectiveNode>,
+ ){
+   descriptor.ceStyleAttrs.push(props.filter(prop => {
+     // skip scoped and lang
+     if(prop.type === 6 && (prop.name === 'scoped' || prop.name === 'lang')){
+       return false
+     }
+     return !(prop.type === 7 && (
+       ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'scoped' ||
+       ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'lang'));
+
+   }))
+ }

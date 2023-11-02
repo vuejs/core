@@ -213,6 +213,9 @@ export {
 export { useCssModule } from './helpers/useCssModule'
 export { useCssVars } from './helpers/useCssVars'
 
+// CE utilities
+export { useCEStyleAttrs } from './helpers/useCEStyleAttrs'
+
 // DOM-only components
 export { Transition, type TransitionProps } from './components/Transition'
 export {
