@@ -476,7 +476,7 @@ export function hmrShouldReload(
    descriptor: SFCDescriptor,
    props: Array<AttributeNode | DirectiveNode>,
  ){
-   descriptor.ceStyleAttrs.push(props.filter(prop => {
+   const propsArr = props.filter(prop => {
      // skip scoped and lang
      if(prop.type === 6 && (prop.name === 'scoped' || prop.name === 'lang')){
        return false
@@ -485,5 +485,10 @@ export function hmrShouldReload(
        ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'scoped' ||
        ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'lang'));
 
-   }))
+   })
+
+   if(propsArr.length > 0){
+     descriptor.ceStyleAttrs.push(propsArr)
+   }
+
  }

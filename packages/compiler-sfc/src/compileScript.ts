@@ -783,7 +783,7 @@ export function compileScript(
 
   debugger
   if (
-    sfc.cssVars.length &&
+    ctx.descriptor.ceStyleAttrs.length &&
     // no need to do this when targeting SSR
     !options.templateOptions?.ssr
   ) {
