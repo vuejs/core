@@ -75,7 +75,9 @@ export const createHook =
         if (lifecycle === LifecycleHooks.MOUNTED) {
           // In the mounted hook, if a function is returned, it will be called in the unmounted hook.
           if (isPromise(res)) {
-            res.then(_res => isFunction(_res) && onUnmounted(_res, target))
+            res
+              .then(_res => isFunction(_res) && onUnmounted(_res, target))
+              .catch(() => {})
           } else if (isFunction(res)) {
             onUnmounted(res)
           }
