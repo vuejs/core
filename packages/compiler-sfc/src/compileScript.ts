@@ -53,7 +53,7 @@ import {
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
-import {CE_STYLE_ATTRS_HELPER, genCEStyleAttrs} from "./style/compileStyleAttrs";
+import {CE_STYLE_ATTRS_HELPER, genCEStyleAttrs} from "./style/ceStyleAttrs";
 
 export interface SFCScriptCompileOptions {
   /**
@@ -781,7 +781,7 @@ export function compileScript(
     )
   }
 
-  debugger
+
   if (
     ctx.descriptor.ceStyleAttrs.length &&
     // no need to do this when targeting SSR
@@ -791,7 +791,7 @@ export function compileScript(
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genCEStyleAttrs(ctx)}\n`
+      `\n${genCEStyleAttrs(ctx.descriptor.ceStyleAttrs, ctx.bindingMetadata)}\n`
     )
   }
 

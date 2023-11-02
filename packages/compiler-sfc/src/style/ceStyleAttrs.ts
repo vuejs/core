@@ -9,17 +9,17 @@ import {
   processExpression,
   SimpleExpressionNode
 } from "@vue/compiler-core";
-import {ScriptCompileContext} from "../script/context";
-import { genCssVarsCode} from "./cssVars";
 
 export const CE_STYLE_ATTRS_HELPER = `useCEStyleAttrs`
 
-export function genCEStyleAttrs( ctx: ScriptCompileContext){
-  const ceStyleAttrs = ctx.descriptor.ceStyleAttrs
+export function genCEStyleAttrs(
+  ceStyleAttrs: Array<AttributeNode | DirectiveNode>[],
+  bindings: BindingMetadata
+){
   let code = ''
   for (let i = 0; i < ceStyleAttrs.length; i++) {
     const ceStyleAttr = ceStyleAttrs[i]
-    code = `${code}${doGenStyleAttrsCode(ceStyleAttr, ctx.bindingMetadata)},\n`
+    code = `${code}${doGenStyleAttrsCode(ceStyleAttr, bindings)},\n`
   }
   return `_${CE_STYLE_ATTRS_HELPER}(_ctx => ([\n${code}]))`
 }
@@ -71,32 +71,6 @@ function genAttrsFromList(attrs: Array<AttributeNode | DirectiveNode>,){
   return code
 }
 
-
-export function genNormalScriptCEStyleAttrsCode(
-  cssVars: string[],
-  bindings: BindingMetadata,
-  id: string,
-  isProd: boolean,
-  defaultVar: string
-): string {
-  return (
-    `\nimport { ${CE_STYLE_ATTRS_HELPER} as _${CE_STYLE_ATTRS_HELPER} } from 'vue'\n` +
-    `const __injectCEStyleAttrs__ = () => {\n${genCssVarsCode(
-      cssVars,
-      bindings,
-      id,
-      isProd
-    )}}\n` +
-    `const __setup__ = ${defaultVar}.setup\n` +
-    `${defaultVar}.setup = __setup__\n` +
-    `  ? (props, ctx) => { __injectCEStyleAttrs__();return __setup__(props, ctx) }\n` +
-    `  : __injectCEStyleAttrs__\n`
-  )
-}
-
-
-// TODO normal script
-// TODO 兼容 useCSSvars
 // TODO unit test
 
 /*

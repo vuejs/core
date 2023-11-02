@@ -176,27 +176,3 @@ export function genCssVarsCode(
 
   return `_${CSS_VARS_HELPER}(_ctx => (${transformedString}))`
 }
-
-// <script setup> already gets the calls injected as part of the transform
-// this is only for single normal <script>
-export function genNormalScriptCssVarsCode(
-  cssVars: string[],
-  bindings: BindingMetadata,
-  id: string,
-  isProd: boolean,
-  defaultVar: string
-): string {
-  return (
-    `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
-    `const __injectCSSVars__ = () => {\n${genCssVarsCode(
-      cssVars,
-      bindings,
-      id,
-      isProd
-    )}}\n` +
-    `const __setup__ = ${defaultVar}.setup\n` +
-    `${defaultVar}.setup = __setup__\n` +
-    `  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }\n` +
-    `  : __injectCSSVars__\n`
-  )
-}
