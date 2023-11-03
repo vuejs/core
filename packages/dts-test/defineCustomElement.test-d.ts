@@ -70,11 +70,16 @@ describe('inject', () => {
 describe('emits', () => {
   test('no props', () => {
     const Comp1Vue = defineComponent({
+      props: {
+        a: String
+      },
       emits: {
         click: () => true
       }
     })
     const Comp = defineCustomElement(Comp1Vue)
     expectType<VueElementConstructor>(Comp)
+
+    expectType<string | undefined>(new Comp().a)
   })
 })
