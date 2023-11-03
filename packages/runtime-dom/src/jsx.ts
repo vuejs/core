@@ -1235,7 +1235,7 @@ export interface IntrinsicElementAttributes {
   view: SVGAttributes
 }
 
-export interface Events {
+export interface BaseEvents {
   // clipboard events
   onCopy: ClipboardEvent
   onCut: ClipboardEvent
@@ -1349,6 +1349,12 @@ export interface Events {
   // transition events
   onTransitionend: TransitionEvent
   onTransitionstart: TransitionEvent
+}
+
+type EventModifiers = 'Capture' | 'Once' | `OnceCapture` | 'CaptureOnce'
+
+type Events = BaseEvents & {
+  [K in keyof BaseEvents as `${K & string}${EventModifiers}`]: BaseEvents[K]
 }
 
 type EventHandlers<E> = {
