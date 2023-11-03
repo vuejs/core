@@ -1241,6 +1241,9 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        // This noramlly gets setup by the following `setupRenderEffect`.
+        // But the call is skipped in initial mounting of async element.
+        // Thus, manually patching is required here or it will result in a crash during parent component update.
         initialVNode.el = placeholder.el
       }
       return
