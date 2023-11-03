@@ -64,12 +64,12 @@ export function processNormalScript(
           bindings,
           scopeId,
           !!isProd,
-        ) + '\n'
+        )
         injectImporter.push(CSS_VARS_HELPER)
       }
 
       if (ceStyleAttrs.length && !ctx.options.templateOptions?.ssr) {
-        injectCode += genCEStyleAttrs(
+        injectCode +=  '\n' + genCEStyleAttrs(
           ceStyleAttrs,
           bindings,
         )
@@ -103,7 +103,7 @@ export function processNormalScript(
 function genInjectCode(content: string, defaultVar: string, importer: string[]){
   const importerContent = importer.map(v => ` ${v} as _${v} `).join(',')
   return (
-    `\nimport { ${importerContent} } from 'vue'\n` +
+    `\nimport {${importerContent}} from 'vue'\n` +
     `const __injectCSSVars__ = () => {\n${content}}\n` +
     `const __setup__ = ${defaultVar}.setup\n` +
     `${defaultVar}.setup = __setup__\n` +

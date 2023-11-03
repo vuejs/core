@@ -28,8 +28,6 @@ import {
   extend,
   hyphenate,
   isArray,
-  isObject,
-  isString,
   toNumber
 } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -258,7 +256,7 @@ export class VueElement extends BaseClass {
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
-      const { props, styles, ceStylesAttrs } = def
+      const { props, styles } = def
 
       // cast Number-type props set before resolve
       let numberProps
@@ -284,7 +282,7 @@ export class VueElement extends BaseClass {
       }
 
       // apply CSS
-      this._applyStyles(styles, ceStylesAttrs)
+      this._applyStyles(styles)
 
       // initial render
       this._update()
@@ -378,21 +376,19 @@ export class VueElement extends BaseClass {
 
         instance.ceContext = {
           addCEChildStyle: this._addChildStyles.bind(this),
-          removeCEChildStyles: this._removeChildStyles.bind(this)
+          removeCEChildStyles: this._removeChildStyles.bind(this),
+          setStyleAttrs: this._setStyleAttrs.bind(this)
         }
         // HMR
         if (__DEV__) {
-          instance.ceReload = (
-            newStyles?: string[] | undefined,
-            attrs?: Array<string | Record<string, string | number>>
-          ) => {
+          instance.ceReload = (newStyles?: string[] | undefined) => {
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
             }
             this._childStylesSet.clear()
-            this._applyStyles(newStyles, attrs)
+            this._applyStyles(newStyles)
             this._instance = null
             this._update()
           }
@@ -433,17 +429,12 @@ export class VueElement extends BaseClass {
     return vnode
   }
 
-  private _applyStyles(
-    styles: string[] | undefined,
-    attrs?: Array<string | Record<string, string | number>>
-  ) {
+  private _applyStyles(styles: string[] | undefined) {
     if (styles) {
       styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
-        if (attrs && attrs[index]) {
-          this._setStyleAttrs(s, attrs[index])
-        }
+        s.setAttribute(`data-v-ce-root`, '')
         this.shadowRoot!.appendChild(s)
         this._childStylesAnchor = s
         // record for HMR
@@ -459,7 +450,6 @@ export class VueElement extends BaseClass {
   protected _addChildStyles(
     styles: string[] | undefined,
     uid: number,
-    attrs?: Array<string | Record<string, string | number>>
   ) {
     if (styles) {
       // record style
@@ -470,15 +460,8 @@ export class VueElement extends BaseClass {
         const s = document.createElement('style')
         s.textContent = css
 
-        // handle ceStylesAttrs option
-        if (attrs && attrs[index]) {
-          this._setStyleAttrs(s, attrs[index])
-        }
-        // set id for hmr
-        if (__DEV__) {
-          const ceStyleId = `data-v-ce-${uid}`
-          s.setAttribute(ceStyleId, '')
-        }
+        // set id for useCEStyleAttrs
+        s.setAttribute(`data-v-ce-${uid}`, '')
 
         if (this._childStylesAnchor) {
           this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
@@ -497,16 +480,15 @@ export class VueElement extends BaseClass {
   }
 
   protected _setStyleAttrs(
-    s: HTMLStyleElement,
-    attr: string | Record<string, string | number>
+    uid: number | 'root',
+    attrs: Array<Record<string, string | number>>
   ) {
-    if (isString(attr)) {
-      s.setAttribute(attr.toString(), '')
-    } else if (isObject(attr)) {
-      for (const key in attr) {
-        s.setAttribute(key, attr[key].toString())
+    const styleEls =  this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+    styleEls.forEach((s, index) => {
+      for (const key in attrs[index]) {
+        s.setAttribute(key, (attrs[index][key] || '').toString())
       }
-    }
+    })
   }
 
   protected _removeChildStyles(uid: number) {
@@ -518,10 +500,10 @@ export class VueElement extends BaseClass {
         styleList.forEach(s => {
           oldStyleContentList.unshift(s.innerHTML as string)
           this.shadowRoot!.removeChild(s)
-          // update archor
-          const archor = this.shadowRoot!.querySelectorAll('style')
+          // update anchor
+          const anchor = this.shadowRoot!.querySelectorAll('style')
           this._childStylesAnchor =
-            archor.length > 0 ? archor[archor.length - 1] : undefined
+            anchor.length > 0 ? anchor[anchor.length - 1] : undefined
         })
       this._childStylesSet.delete(oldStyleContentList.join())
     }
@@ -538,3 +520,6 @@ export class VueElement extends BaseClass {
     }
   }
 }
+// TODO: attrs unit test
+// TODO: useCEStyleAttrs unit test
+// TODO: useCEStyleAttrs compiler unit test

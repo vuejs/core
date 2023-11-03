@@ -138,7 +138,6 @@ export interface FunctionalComponent<
   emits?: E | (keyof E)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
-  ceStylesAttrs?: Array<string | Record<string, string | number>>
   displayName?: string
   compatConfig?: CompatConfig
 }
@@ -310,23 +309,17 @@ export interface ComponentInternalInstance {
    */
   inheritAttrs?: boolean
   /**
-   * Set attributes for the custom element
-   * and the style of the child component
-   * @internal
-   */
-  ceStylesAttrs?: Array<string | Record<string, string | number>>
-  /**
    * custom element context,
    * exists when the component is a child component of custom element
    * @internal
    */
   ceContext: {
-    addCEChildStyle: (
-      styles: string[],
-      uid: number,
-      attrs?: Array<string | Record<string, string | number>>
-    ) => void
+    addCEChildStyle: ( styles: string[], uid: number) => void
     removeCEChildStyles: (uid: number) => void
+    setStyleAttrs: (
+      uid: number | 'root',
+      attrs: Array<Record<string, string | number>>
+    ) => void
   } | null
   /**
    * is custom element?
@@ -339,7 +332,7 @@ export interface ComponentInternalInstance {
    */
   ceReload?: (
     newStyles?: string[],
-    attrs?: Array<string | Record<string, string | number>>
+    attrs?: Array<Record<string, string | number>>
   ) => void
 
   // the rest are only for stateful components ---------------------------------
@@ -553,7 +546,6 @@ export function createComponentInstance(
 
     // inheritAttrs
     inheritAttrs: type.inheritAttrs,
-    ceStylesAttrs: type.ceStylesAttrs,
     // state
     ctx: EMPTY_OBJ,
     data: EMPTY_OBJ,
