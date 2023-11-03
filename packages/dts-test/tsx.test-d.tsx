@@ -42,6 +42,22 @@ expectType<JSX.Element>(
     onInputCaptureOnce={e => {
       expectType<EventTarget | null>(e.target)
     }}
+    onInputPassive={e => {
+      // infer correct event type
+      expectType<EventTarget | null>(e.target)
+    }}
+    onInputCapturePassive={e => {
+      expectType<EventTarget | null>(e.target)
+    }}
+    onInputOncePassive={e => {
+      expectType<EventTarget | null>(e.target)
+    }}
+    onInputOnceCapturePassive={e => {
+      expectType<EventTarget | null>(e.target)
+    }}
+    onInputPassiveCaptureOnce={e => {
+      expectType<EventTarget | null>(e.target)
+    }}
   />
 )
 
