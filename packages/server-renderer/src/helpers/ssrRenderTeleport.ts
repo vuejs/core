@@ -33,5 +33,7 @@ export function ssrRenderTeleport(
   }
 
   targetBuffer.splice(bufferIndex, 0, teleportContent)
+  targetBuffer.hasAsync =
+    typeof teleportContent !== 'string' && teleportContent.hasAsync
   parentPush('<!--teleport end-->')
 }
