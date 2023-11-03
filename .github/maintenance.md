@@ -40,7 +40,7 @@ Depending on the type of the PR, different considerations need to be taken into 
 #### Verifying a Fix
 
 - **Always locally verify that the fix indeed fixes the original behavior, either through a reproduction or a failing test case.**
-- We will run [ecosystem-ci](https://github.com/vuejs/ecosystem-ci) before every release, but if you are concerned about the potential impact of a change, it never hurts to manually run ecosystem-ci` by leaving a `/ecosystem-ci run` comment (only works for team members).
+- We will run [ecosystem-ci](https://github.com/vuejs/ecosystem-ci) before every release, but if you are concerned about the potential impact of a change, it never hurts to manually run ecosystem-ci by leaving a `/ecosystem-ci run` comment (only works for team members).
 - Take extra caution with snapshot tests! The CI can be "passing" even if the code generated in the snapshot contains bugs. It's best to always accompany a snapshot test with extra `expect(code).toMatch(...)` assertions.
 
 ### Reviewing a Refactor
