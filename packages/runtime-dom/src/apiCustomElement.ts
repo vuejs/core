@@ -481,12 +481,21 @@ export class VueElement extends BaseClass {
 
   protected _setStyleAttrs(
     uid: number | 'root',
-    attrs: Array<Record<string, string | number>>
+    nAttrs: Array<Record<string, string | number>>,
+    oAttrs?: Array<Record<string, string | number>>
   ) {
     const styleEls =  this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
     styleEls.forEach((s, index) => {
-      for (const key in attrs[index]) {
-        s.setAttribute(key, (attrs[index][key] || '').toString())
+      if(oAttrs && oAttrs[index]){
+        for (const key in oAttrs[index]) {
+          if(nAttrs[index] && !nAttrs[index].hasOwnProperty(nAttrs[index][key])){
+            s.removeAttribute((oAttrs[index][key] || '').toString())
+          }
+        }
+      }
+
+      for (const key in nAttrs[index]) {
+        s.setAttribute(key, (nAttrs[index][key] || '').toString())
       }
     })
   }
@@ -520,6 +529,10 @@ export class VueElement extends BaseClass {
     }
   }
 }
-// TODO: attrs unit test
+
 // TODO: useCEStyleAttrs unit test
 // TODO: useCEStyleAttrs compiler unit test
+
+// TODO: teleport ce child style style (vue/core or @vite/plugin-vue)
+// TODO: suspense ce child style style (vue/core or @vite/plugin-vue)
+// TODO: 重複style？？？ 儅style 有屬性時，要再加一個style

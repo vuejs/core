@@ -318,7 +318,8 @@ export interface ComponentInternalInstance {
     removeCEChildStyles: (uid: number) => void
     setStyleAttrs: (
       uid: number | 'root',
-      attrs: Array<Record<string, string | number>>
+      nAttrs: Array<Record<string, string | number>>,
+      oAttrs?: Array<Record<string, string | number>>
     ) => void
   } | null
   /**

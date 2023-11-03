@@ -12,14 +12,16 @@ export function useCEStyleAttrs(getter: (ctx: any) => Array<Record<string, strin
   }
 
 
+  let oAttrs: undefined | Array<Record<string, string | number>>  = undefined
   const setAttrs = () => {
     const attrs = getter(instance.proxy)
     if(instance.ceContext){
       if(instance.isCE){
-        instance.ceContext.setStyleAttrs('root', attrs)
+        instance.ceContext.setStyleAttrs('root', attrs, oAttrs)
       } else {
-        instance.ceContext.setStyleAttrs(instance.uid, attrs)
+        instance.ceContext.setStyleAttrs(instance.uid, attrs, oAttrs)
       }
+      oAttrs = attrs
     }
   }
   watchPostEffect(setAttrs)

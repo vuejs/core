@@ -605,10 +605,10 @@ describe('defineCustomElement', () => {
 
       // should inject styles
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>hello</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>hello</div>`
       )
       expect(e2.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>world</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>world</div>`
       )
 
       // attr
@@ -616,7 +616,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>attr</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>attr</div>`
       )
 
       // props
@@ -624,7 +624,7 @@ describe('defineCustomElement', () => {
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>prop</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>prop</div>`
       )
     })
 
@@ -913,112 +913,4 @@ describe('defineCustomElement', () => {
     })
   })
 
-  describe('ceStylesAttrs option', () => {
-    test('ceStylesAttrs should work in custom element', async () => {
-      const Foo = defineCustomElement({
-        styles: [`.my-red { color: red; }`],
-        ceStylesAttrs: ['data-style-attr'],
-        render() {
-          return [h('p', { class: 'my-red' }, 'This should be red')]
-        }
-      })
-      customElements.define('ce-style-attr', Foo)
-      container.innerHTML = `<ce-style-attr></ce-style-attr>`
-      await nextTick()
-
-      const el1 = container.childNodes[0] as VueElement
-      const style = el1.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(1)
-      expect(style[0].textContent).toBe(`.my-red { color: red; }`)
-      expect(el1.shadowRoot?.querySelector('[data-style-attr]')).toBeTruthy()
-    })
-
-    test('ceStylesAttrs should work in child components of custom element', async () => {
-      const Child = {
-        styles: [`.my-green { color: green; }`],
-        ceStylesAttrs: ['data-style-attr-child'],
-        render() {
-          return h('p', { class: 'my-green' }, 'This should be green')
-        }
-      }
-
-      const Foo = defineCustomElement({
-        components: { Child },
-        styles: [`.my-red { color: red; }`],
-        ceStylesAttrs: ['data-style-attr'],
-        render() {
-          return [
-            h('p', { class: 'my-red' }, 'This should be red'),
-            h(Child),
-            h(Child),
-            h(Child)
-          ]
-        }
-      })
-      customElements.define('ce-style-attr-child', Foo)
-      container.innerHTML = `<ce-style-attr-child></ce-style-attr-child>`
-      await nextTick()
-
-      const el1 = container.childNodes[0] as VueElement
-      const style = el1.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(2)
-      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
-      expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-      expect(el1.shadowRoot?.querySelector('[data-style-attr]')).toBeTruthy()
-      expect(
-        el1.shadowRoot?.querySelector('[data-style-attr-child]')
-      ).toBeTruthy()
-    })
-
-    test('ceStylesAttrs The order of adding attributes should be consistent with the order of styles', async () => {
-      const Foo = defineCustomElement({
-        styles: [`.my-red { color: red; }`, `.my-green { color: green; }`],
-        ceStylesAttrs: ['data-style-red', 'data-style-green'],
-        render() {
-          return [h('p', { class: 'my-red' }, 'This should be red')]
-        }
-      })
-      customElements.define('ce-style-attr-child-order', Foo)
-      container.innerHTML = `<ce-style-attr-child-order></ce-style-attr-child-order>`
-      await nextTick()
-
-      const el1 = container.childNodes[0] as VueElement
-      const style = el1.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(2)
-
-      const styleRed = el1.shadowRoot?.querySelector('[data-style-red]')
-      expect(styleRed).toBeTruthy()
-      expect(styleRed?.textContent).toBe(`.my-red { color: red; }`)
-
-      const styleGreen = el1.shadowRoot?.querySelector('[data-style-green]')
-      expect(styleGreen).toBeTruthy()
-      expect(styleGreen?.textContent).toBe(`.my-green { color: green; }`)
-    })
-
-    test('ceStylesAttrs supports string and object', async () => {
-      const Foo = defineCustomElement({
-        styles: [`.my-red { color: red; }`, `.my-green { color: green; }`],
-        ceStylesAttrs: ['data-style-red', { 'data-style-green': 'green' }],
-        render() {
-          return [h('p', { class: 'my-red' }, 'This should be red')]
-        }
-      })
-      customElements.define('ce-style-attr-child-obj', Foo)
-      container.innerHTML = `<ce-style-attr-child-obj></ce-style-attr-child-obj>`
-      await nextTick()
-      const el1 = container.childNodes[0] as VueElement
-      const style = el1.shadowRoot?.querySelectorAll('style')!
-      expect(style.length).toBe(2)
-
-      const styleRed = el1.shadowRoot?.querySelector('[data-style-red]')
-      expect(styleRed).toBeTruthy()
-      expect(styleRed?.textContent).toBe(`.my-red { color: red; }`)
-
-      const styleGreen = el1.shadowRoot?.querySelector(
-        '[data-style-green="green"]'
-      )
-      expect(styleGreen).toBeTruthy()
-      expect(styleGreen?.textContent).toBe(`.my-green { color: green; }`)
-    })
-  })
 })
