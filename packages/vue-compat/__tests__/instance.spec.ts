@@ -1,4 +1,4 @@
-import { vi, Mock } from 'vitest'
+import { type Mock } from 'vitest'
 import Vue from '@vue/compat'
 import { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'
@@ -319,6 +319,7 @@ test('INSTANCE_ATTR_CLASS_STYLE', () => {
     }
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.outerHTML).toBe(
     `<div class="foo" style="color: red;"><div id="ok"></div></div>`
   )

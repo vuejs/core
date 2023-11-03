@@ -1,5 +1,5 @@
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { extend, isArray, isIntegerKey, isMap } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { EffectScope, recordEffectScope } from './effectScope'
 import {
   createDep,
@@ -16,7 +16,7 @@ import { ComputedRefImpl } from './computed'
 // which maintains a Set of subscribers, but we simply store them as
 // raw Sets to reduce memory overhead.
 type KeyToDepMap = Map<any, Dep>
-const targetMap = new WeakMap<any, KeyToDepMap>()
+const targetMap = new WeakMap<object, KeyToDepMap>()
 
 // The number of effects currently being tracked recursively.
 let effectTrackDepth = 0
@@ -167,11 +167,21 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
+/**
+ * Registers the given function to track reactive updates.
+ *
+ * The given function will be run once immediately. Every time any reactive
+ * property that's accessed within it gets updated, the function will run again.
+ *
+ * @param fn - The function that will track reactive updates.
+ * @param options - Allows to control the effect's behaviour.
+ * @returns A runner that can be used to control the effect after creation.
+ */
 export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions
 ): ReactiveEffectRunner {
-  if ((fn as ReactiveEffectRunner).effect) {
+  if ((fn as ReactiveEffectRunner).effect instanceof ReactiveEffect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
@@ -188,6 +198,11 @@ export function effect<T = any>(
   return runner
 }
 
+/**
+ * Stops the effect associated with the given runner.
+ *
+ * @param runner - Association with the effect to stop tracking.
+ */
 export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
@@ -195,21 +210,40 @@ export function stop(runner: ReactiveEffectRunner) {
 export let shouldTrack = true
 const trackStack: boolean[] = []
 
+/**
+ * Temporarily pauses tracking.
+ */
 export function pauseTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = false
 }
 
+/**
+ * Re-enables effect tracking (if it was paused).
+ */
 export function enableTracking() {
   trackStack.push(shouldTrack)
   shouldTrack = true
 }
 
+/**
+ * Resets the previous global effect tracking state.
+ */
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
 }
 
+/**
+ * Tracks access to a reactive property.
+ *
+ * This will check which effect is running at the moment and record it as dep
+ * which records all effects that depend on the reactive property.
+ *
+ * @param target - Object holding the reactive property.
+ * @param type - Defines the type of access to the reactive property.
+ * @param key - Identifier of the reactive property to track.
+ */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
@@ -260,6 +294,14 @@ export function trackEffects(
   }
 }
 
+/**
+ * Finds all deps associated with the target (or a specific property) and
+ * triggers the effects stored within.
+ *
+ * @param target - The reactive object.
+ * @param type - Defines the type of the operation that needs to trigger effects.
+ * @param key - Can be used to target a specific reactive property in the target object.
+ */
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -282,7 +324,7 @@ export function trigger(
   } else if (key === 'length' && isArray(target)) {
     const newLength = Number(newValue)
     depsMap.forEach((dep, key) => {
-      if (key === 'length' || key >= newLength) {
+      if (key === 'length' || (!isSymbol(key) && key >= newLength)) {
         deps.push(dep)
       }
     })

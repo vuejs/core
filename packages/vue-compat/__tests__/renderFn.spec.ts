@@ -230,7 +230,7 @@ describe('compat: render function', () => {
         )
       }
     }).$mount()
-
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div class="foo" id="bar">hello</div>`)
     expect(
       deprecationData[DeprecationTypes.RENDER_FUNCTION].message
@@ -249,6 +249,7 @@ describe('compat: render function', () => {
         return createVNode('div', null, c.a)
       }
     }).$mount()
+    expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)
   })
 })

@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import {
   baseParse as parse,
   transform,
@@ -13,6 +12,7 @@ import {
 } from '../../src'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { PatchFlagNames, PatchFlags } from '../../../shared/src'
 
 function parseWithExpressionTransform(
   template: string,
@@ -430,6 +430,16 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  // #8295
+  test('should treat floating point number literals as constant', () => {
+    const node = parseWithExpressionTransform(
+      `{{ [1, 2.1] }}`
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY
+    })
+  })
+
   describe('ES Proposals support', () => {
     test('bigInt', () => {
       const node = parseWithExpressionTransform(
@@ -494,7 +504,10 @@ describe('compiler: expression transform', () => {
       setup: BindingTypes.SETUP_MAYBE_REF,
       setupConst: BindingTypes.SETUP_CONST,
       data: BindingTypes.DATA,
-      options: BindingTypes.OPTIONS
+      options: BindingTypes.OPTIONS,
+      reactive: BindingTypes.SETUP_REACTIVE_CONST,
+      literal: BindingTypes.LITERAL_CONST,
+      isNaN: BindingTypes.SETUP_REF
     }
 
     function compileWithBindingMetadata(
@@ -510,10 +523,11 @@ describe('compiler: expression transform', () => {
 
     test('non-inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ data }} {{ options }}</div>`
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }} {{ isNaN }}</div>`
       )
       expect(code).toMatch(`$props.props`)
       expect(code).toMatch(`$setup.setup`)
+      expect(code).toMatch(`$setup.isNaN`)
       expect(code).toMatch(`$data.data`)
       expect(code).toMatch(`$options.options`)
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
@@ -522,7 +536,7 @@ describe('compiler: expression transform', () => {
 
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }}</div>`,
         { inline: true }
       )
       expect(code).toMatch(`__props.props`)
@@ -530,7 +544,38 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_toDisplayString(setupConst)`)
       expect(code).toMatch(`_ctx.data`)
       expect(code).toMatch(`_ctx.options`)
+      expect(code).toMatch(`isNaN.value`)
       expect(code).toMatchSnapshot()
+    })
+
+    test('literal const handling', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ literal }}</div>`, {
+        inline: true
+      })
+      expect(code).toMatch(`toDisplayString(literal)`)
+      // #7973 should skip patch for literal const
+      expect(code).not.toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
+    })
+
+    test('literal const handling， non-inline mode', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ literal }}</div>`)
+      expect(code).toMatch(`toDisplayString($setup.literal)`)
+      // #7973 should skip patch for literal const
+      expect(code).not.toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
+    })
+
+    test('reactive const handling', () => {
+      const { code } = compileWithBindingMetadata(`<div>{{ reactive }}</div>`, {
+        inline: true
+      })
+      // #7973 should not skip patch for reactive const
+      expect(code).toMatch(
+        `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`
+      )
     })
   })
 })
