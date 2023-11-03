@@ -156,7 +156,7 @@ describe('ssr: scopedId runtime behavior', () => {
   })
 
   // #3513
-  test('scopeId inheritance across ssr-compiled andn on-ssr compiled parent chain', async () => {
+  test('scopeId inheritance across ssr-compiled and on-ssr compiled parent chain', async () => {
     const Child = {
       ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
         push(`<div${ssrRenderAttrs(attrs)}></div>`)

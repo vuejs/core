@@ -2,17 +2,27 @@
 import minimist from 'minimist'
 import fs from 'node:fs'
 import path from 'node:path'
-import chalk from 'chalk'
+import pico from 'picocolors'
 import semver from 'semver'
 import enquirer from 'enquirer'
-import execa from 'execa'
+import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
+
+let versionUpdated = false
 
 const { prompt } = enquirer
 const currentVersion = createRequire(import.meta.url)('../package.json').version
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const args = minimist(process.argv.slice(2))
+const args = minimist(process.argv.slice(2), {
+  alias: {
+    skipBuild: 'skip-build',
+    skipTests: 'skip-tests',
+    skipGit: 'skip-git',
+    skipPrompts: 'skip-prompts'
+  }
+})
+
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
 let skipTests = args.skipTests
@@ -65,16 +75,22 @@ const inc = i => semver.inc(currentVersion, i, preId)
 const run = (bin, args, opts = {}) =>
   execa(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = (bin, args, opts = {}) =>
-  console.log(chalk.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
+  console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = pkg => path.resolve(__dirname, '../packages/' + pkg)
-const step = msg => console.log(chalk.cyan(msg))
+const step = msg => console.log(pico.cyan(msg))
 
 async function main() {
+  if (!(await isInSyncWithRemote())) {
+    return
+  } else {
+    console.log(`${pico.green(`✓`)} commit is up-to-date with rmeote.\n`)
+  }
+
   let targetVersion = args._[0]
 
   if (isCanary) {
-    // The canary version string format is `3.yyyyMMdd.0`.
+    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
     // Use UTC date so that it's consistent across CI and maintainers' machines
     const date = new Date()
     const yyyy = date.getUTCFullYear()
@@ -82,9 +98,13 @@ async function main() {
     const dd = date.getUTCDate().toString().padStart(2, '0')
 
     const major = semver.major(currentVersion)
-    const minor = `${yyyy}${MM}${dd}`
-    const patch = 0
-    let canaryVersion = `${major}.${minor}.${patch}`
+    const datestamp = `${yyyy}${MM}${dd}`
+    let canaryVersion
+
+    canaryVersion = `${major}.${datestamp}.0`
+    if (args.tag && args.tag !== 'latest') {
+      canaryVersion = `${major}.${datestamp}.0-${args.tag}.0`
+    }
 
     // check the registry to avoid version collision
     // in case we need to publish more than one canary versions in a day
@@ -100,9 +120,15 @@ async function main() {
       const latestSameDayPatch = /** @type {string} */ (
         semver.maxSatisfying(versions, `~${canaryVersion}`)
       )
+
       canaryVersion = /** @type {string} */ (
         semver.inc(latestSameDayPatch, 'patch')
       )
+      if (args.tag && args.tag !== 'latest') {
+        canaryVersion = /** @type {string} */ (
+          semver.inc(latestSameDayPatch, 'prerelease', args.tag)
+        )
+      }
     } catch (e) {
       if (/E404/.test(e.message)) {
         // the first patch version on that day
@@ -195,13 +221,14 @@ async function main() {
     targetVersion,
     isCanary ? renamePackageToCanary : keepThePackageName
   )
+  versionUpdated = true
 
   // build all packages with types
   step('\nBuilding all packages...')
   if (!skipBuild && !isDryRun) {
-    await run('pnpm', ['run', 'build'])
-    step('\nBuilding and testing types...')
-    await run('pnpm', ['test-dts'])
+    await run('pnpm', ['run', 'build', '--withTypes'])
+    step('\nTesting built types...')
+    await run('pnpm', ['test-dts-only'])
   } else {
     console.log(`(skipped)`)
   }
@@ -209,6 +236,19 @@ async function main() {
   // generate changelog
   step('\nGenerating changelog...')
   await run(`pnpm`, ['run', 'changelog'])
+
+  if (!skipPrompts) {
+    // @ts-ignore
+    const { yes: changelogOk } = await prompt({
+      type: 'confirm',
+      name: 'yes',
+      message: `Changelog generated. Does it look good?`
+    })
+
+    if (!changelogOk) {
+      return
+    }
+  }
 
   // update pnpm-lock.yaml
   // skipped during canary release because the package names changed and installing with `workspace:*` would fail
@@ -248,7 +288,7 @@ async function main() {
 
   if (skippedPackages.length) {
     console.log(
-      chalk.yellow(
+      pico.yellow(
         `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
           '\n- '
         )}`
@@ -268,6 +308,28 @@ async function getCIResult() {
     const data = await res.json()
     return data.workflow_runs.length > 0
   } catch (e) {
+    console.error('Failed to get CI status for current commit.')
+    return false
+  }
+}
+
+async function isInSyncWithRemote() {
+  try {
+    const { stdout: sha } = await execa('git', ['rev-parse', 'HEAD'])
+    const { stdout: branch } = await execa('git', [
+      'rev-parse',
+      '--abbrev-ref',
+      'HEAD'
+    ])
+    const res = await fetch(
+      `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
+    )
+    const data = await res.json()
+    return data.sha === sha
+  } catch (e) {
+    console.error(
+      'Failed to check whether local HEAD is up-to-date with remote.'
+    )
     return false
   }
 }
@@ -302,7 +364,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
       console.log(
-        chalk.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
+        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
       )
       deps[dep] = newVersion
     }
@@ -333,28 +395,25 @@ async function publishPackage(pkgName, version) {
 
   step(`Publishing ${pkgName}...`)
   try {
-    await runIfNotDry(
-      // note: use of yarn is intentional here as we rely on its publishing
-      // behavior.
-      'yarn',
+    await run(
+      'pnpm',
       [
         'publish',
-        '--new-version',
-        version,
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
-        ...(skipGit ? ['--no-commit-hooks', '--no-git-tag-version'] : [])
+        ...(isDryRun ? ['--dry-run'] : []),
+        ...(skipGit ? ['--no-git-checks'] : [])
       ],
       {
         cwd: pkgRoot,
         stdio: 'pipe'
       }
     )
-    console.log(chalk.green(`Successfully published ${pkgName}@${version}`))
+    console.log(pico.green(`Successfully published ${pkgName}@${version}`))
   } catch (e) {
     if (e.stderr.match(/previously published/)) {
-      console.log(chalk.red(`Skipping already published: ${pkgName}`))
+      console.log(pico.red(`Skipping already published: ${pkgName}`))
     } else {
       throw e
     }
@@ -362,6 +421,10 @@ async function publishPackage(pkgName, version) {
 }
 
 main().catch(err => {
-  updateVersions(currentVersion)
+  if (versionUpdated) {
+    // revert to current version on failed releases
+    updateVersions(currentVersion)
+  }
   console.error(err)
+  process.exit(1)
 })

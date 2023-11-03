@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi } from 'vitest'
+
 import {
   nodeOps,
   serializeInner,
@@ -170,6 +170,31 @@ describe('renderer: teleport', () => {
 
     render(null, root)
     expect(serializeInner(target)).toBe('')
+  })
+
+  // #6347
+  test('descendent component should be unmounted when teleport is disabled and unmounted', () => {
+    const root = nodeOps.createElement('div')
+
+    const CompWithHook = {
+      render() {
+        return [h('p'), h('p')]
+      },
+      beforeUnmount: vi.fn(),
+      unmounted: vi.fn()
+    }
+
+    render(
+      h(() => [h(Teleport, { to: null, disabled: true }, h(CompWithHook))]),
+      root
+    )
+    expect(CompWithHook.beforeUnmount).toBeCalledTimes(0)
+    expect(CompWithHook.unmounted).toBeCalledTimes(0)
+
+    render(null, root)
+
+    expect(CompWithHook.beforeUnmount).toBeCalledTimes(1)
+    expect(CompWithHook.unmounted).toBeCalledTimes(1)
   })
 
   test('multiple teleport with same target', () => {
@@ -474,5 +499,58 @@ describe('renderer: teleport', () => {
     expect(serializeInner(target)).toMatchInlineSnapshot(`""`)
     expect(dir.mounted).toHaveBeenCalledTimes(1)
     expect(dir.unmounted).toHaveBeenCalledTimes(1)
+  })
+
+  // #7835
+  test(`ensure that target changes when disabled are updated correctly when enabled`, async () => {
+    const root = nodeOps.createElement('div')
+    const target1 = nodeOps.createElement('div')
+    const target2 = nodeOps.createElement('div')
+    const target3 = nodeOps.createElement('div')
+    const target = ref(target1)
+    const disabled = ref(true)
+
+    const App = {
+      setup() {
+        return () =>
+          h(Fragment, [
+            h(
+              Teleport,
+              { to: target.value, disabled: disabled.value },
+              h('div', 'teleported')
+            )
+          ])
+      }
+    }
+    render(h(App), root)
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    disabled.value = true
+    await nextTick()
+    target.value = target2
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    target.value = target3
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(`""`)
+
+    disabled.value = false
+    await nextTick()
+    expect(serializeInner(target1)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target2)).toMatchInlineSnapshot(`""`)
+    expect(serializeInner(target3)).toMatchInlineSnapshot(
+      `"<div>teleported</div>"`
+    )
   })
 })

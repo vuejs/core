@@ -33,6 +33,95 @@ describe('ssr: v-model', () => {
       `)
   })
 
+  test('<select v-model>', () => {
+    expect(
+      compileWithWrapper(
+        `<select v-model="model"><option value="1"></option></select>`
+      ).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><select><option value=\\"1\\"\${
+          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+            ? _ssrLooseContain(_ctx.model, \\"1\\")
+            : _ssrLooseEqual(_ctx.model, \\"1\\"))) ? \\" selected\\" : \\"\\"
+        }></option></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(
+        `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`
+      ).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><select multiple><option value=\\"1\\" selected></option><option value=\\"2\\"\${
+          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+            ? _ssrLooseContain(_ctx.model, \\"2\\")
+            : _ssrLooseEqual(_ctx.model, \\"2\\"))) ? \\" selected\\" : \\"\\"
+        }></option></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`<select multiple v-model="model"><slot/></select>`)
+        .code
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple>\`)
+        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
+        _push(\`</select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup label="foo">
+            <option value="bar">bar</option>
+          </optgroup>
+        </select>`).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${
+          _ssrRenderAttrs(_attrs)
+        }><select multiple><optgroup label=\\"foo\\"><option value=\\"bar\\"\${
+          (_ssrIncludeBooleanAttr((Array.isArray(_ctx.model))
+            ? _ssrLooseContain(_ctx.model, \\"bar\\")
+            : _ssrLooseEqual(_ctx.model, \\"bar\\"))) ? \\" selected\\" : \\"\\"
+        }>bar</option></optgroup></select></div>\`)
+      }"
+    `)
+
+    expect(
+      compileWithWrapper(`
+        <select multiple v-model="model">
+          <optgroup label="foo">
+            <slot/>
+          </optgroup>
+        </select>`).code
+    ).toMatchInlineSnapshot(`
+      "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require(\\"vue/server-renderer\\")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}><select multiple><optgroup label=\\"foo\\">\`)
+        _ssrRenderSlot(_ctx.$slots, \\"default\\", {}, null, _push, _parent)
+        _push(\`</optgroup></select></div>\`)
+      }"
+    `)
+  })
+
   test('<input type="radio">', () => {
     expect(
       compileWithWrapper(`<input type="radio" value="foo" v-model="bar">`).code
