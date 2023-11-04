@@ -383,7 +383,7 @@ describe('SFC compile <script setup>', () => {
           <FooBar #unused />
           <div :[bar.attrName]="15"></div>
           <div unused="unused"></div>
-          <div #[\`item\${item.key}\`]="{ value }"></div>
+          <div #[\`item:\${item.key}\`]="{ value }"></div>
         </template>
         `)
       expect(content).toMatch(

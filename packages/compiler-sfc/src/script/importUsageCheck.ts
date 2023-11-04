@@ -51,11 +51,10 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
 
-              //  process dynamic directive arguments as bind
+              // process dynamic directive arguments
               if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
-                code += `,${processExp(
-                  (prop.arg as SimpleExpressionNode).content,
-                  'bind'
+                code += `,${stripStrings(
+                  (prop.arg as SimpleExpressionNode).content
                 )}`
               }
 
