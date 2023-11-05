@@ -20,6 +20,11 @@ export function initFeatureFlags() {
     getGlobalThis().__VUE_PROD_DEVTOOLS__ = false
   }
 
+  if (typeof __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ !== 'boolean') {
+    __DEV__ && needWarn.push(`__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`)
+    getGlobalThis().__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
+  }
+
   if (__DEV__ && needWarn.length) {
     const multi = needWarn.length > 1
     console.warn(
