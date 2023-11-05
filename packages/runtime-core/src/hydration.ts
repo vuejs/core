@@ -483,7 +483,7 @@ export function createHydrationFunctions(
           optimized
         )
       } else if (vnode.type === Text && !vnode.children) {
-        continue
+        // noop
       } else {
         hasMismatch = true
         if (__DEV__ && !hasWarned) {
