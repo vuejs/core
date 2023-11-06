@@ -1,36 +1,28 @@
 // import { DefineComponent } from './apiDefineComponent'
-import { ComponentOptionsBase } from './componentOptions'
+import { ComponentOptionsBase } from '.'
+import { DefineComponent, RawOptionsSymbol } from './apiDefineComponent'
+// import { ComponentOptionsBase } from './componentOptions'
 
-export type ExtractComponentOptions<T> = T extends ComponentOptionsBase<
-  infer Props,
-  infer RawBindings,
-  infer D,
-  infer C,
-  infer M,
-  infer Mixin,
-  infer Extends,
-  infer E,
-  infer EE,
-  infer Defaults,
-  infer I,
-  infer II,
-  infer S
->
-  ? ComponentOptionsBase<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      Defaults,
-      I,
-      II,
-      S
+export type ExtractComponentOptions<T> = T extends {
+  [RawOptionsSymbol]: infer Options
+}
+  ? Options
+  : T extends ComponentOptionsBase<
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any
     >
+  ? T
   : never
 
 export type ComponentProps = {}

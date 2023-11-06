@@ -1358,12 +1358,12 @@ describe('function syntax w/ runtime props', () => {
     }
   )
 
+  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
-      // @ts-expect-error string prop names don't match
       props: ['bar']
     }
   )
@@ -1380,6 +1380,7 @@ describe('function syntax w/ runtime props', () => {
     }
   )
 
+  // @ts-expect-error prop keys don't match
   defineComponent(
     (_props: { msg: string }, ctx) => {
       return () => {}
@@ -1387,7 +1388,6 @@ describe('function syntax w/ runtime props', () => {
     {
       props: {
         msg: String,
-        // @ts-expect-error prop keys don't match
         bar: String
       }
     }

@@ -41,6 +41,8 @@ type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
 > &
   ({} extends E ? {} : EmitsToProps<E>)
 
+export declare const RawOptionsSymbol: unique symbol
+
 export type DefineComponent<
   PropsOrPropOptions = {},
   RawBindings = {},
@@ -93,8 +95,9 @@ export type DefineComponent<
       S
     >,
     'props'
-  > & { props: PropsOrPropOptions } & Omit<Options, '__asyncLoader'> &
-  PP
+  > & { props: PropsOrPropOptions } & Omit<Options, 'props'> & {
+    [RawOptionsSymbol]: Options
+  } & PP
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -102,25 +105,6 @@ export type DefineComponent<
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function
-export function defineComponent<
-  Props extends Record<string, any>,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  Options = {}
->(
-  setup: (
-    props: Props,
-    ctx: SetupContext<E, S>
-  ) => RenderFunction | Promise<RenderFunction>,
-  options?: Options &
-    Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-      props?: (keyof Props)[]
-      emits?: E | EE[]
-      slots?: S
-    }
-): (props: Props & EmitsToProps<E>) => any
-
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -137,54 +121,11 @@ export function defineComponent<
     slots?: S
   }
 ): (props: Props & EmitsToProps<E>) => any
-
-// (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
-  Options = {}
->(
-  setup: (
-    props: Props,
-    ctx: SetupContext<E, S>
-  ) => RenderFunction | Promise<RenderFunction>,
-  options?: Options &
-    Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-      props?: (keyof Props)[]
-      emits?: E | EE[]
-      slots?: S
-    }
-): DefineComponent<
-  Props & EmitsToProps<E>,
-  {},
-  {},
-  {},
-  {},
-  {},
-  {},
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  {},
-  string,
-  S,
-  {
-    name: string
-  } & Options
->
-
-// extend({ name: options.name }, extraOptions, { setup: options }))()
-
-export function defineComponent<
-  Props extends Record<string, any>,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  Options = {}
+  S extends SlotsType = {}
 >(
   setup: (
     props: Props,
@@ -195,26 +136,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   }
-): DefineComponent<
-  Props & EmitsToProps<E>,
-  {},
-  {},
-  {},
-  {},
-  {},
-  {},
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  {},
-  string,
-  S,
-  {
-    name: string
-  } & Options
->
+): (props: Props & EmitsToProps<E>) => any
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -338,22 +260,24 @@ export function defineComponent<
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Options = {}
 >(
-  options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >
+  options: Options &
+    ComponentOptionsWithObjectProps<
+      PropsOptions,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      I,
+      II,
+      S
+    >
 ): DefineComponent<
   PropsOptions,
   RawBindings,
@@ -369,7 +293,8 @@ export function defineComponent<
   ExtractDefaultPropTypes<PropsOptions>,
   I,
   II,
-  S
+  S,
+  Options
 >
 
 // implementation, close to no-op
