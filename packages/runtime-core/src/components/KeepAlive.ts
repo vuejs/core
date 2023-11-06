@@ -45,6 +45,7 @@ import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
 import { LifecycleHooks } from '../enums'
+import { ComponentOptionsCompat } from '../compat/compatConfig'
 
 type MatchPattern = string | RegExp | (string | RegExp)[]
 
@@ -73,7 +74,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
 export const isKeepAlive = (vnode: VNode): boolean =>
   (vnode.type as any).__isKeepAlive
 
-const KeepAliveImpl: ComponentOptions = {
+const KeepAliveImpl: ComponentOptions & { __isKeepAlive: true } = {
   name: `KeepAlive`,
 
   // Marker for special handling inside the renderer. We are not using a ===
@@ -335,7 +336,7 @@ const KeepAliveImpl: ComponentOptions = {
 }
 
 if (__COMPAT__) {
-  KeepAliveImpl.__isBuildIn = true
+  ;(KeepAliveImpl as ComponentOptionsCompat).__isBuildIn = true
 }
 
 // export the public type for h/tsx inference

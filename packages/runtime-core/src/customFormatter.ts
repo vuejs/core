@@ -165,7 +165,11 @@ export function initCustomFormatter() {
     return extracted
   }
 
-  function isKeyOfType(Comp: ComponentOptions, key: string, type: string) {
+  function isKeyOfType(
+    Comp: ComponentOptions & Record<string, any>,
+    key: string,
+    type: string
+  ) {
     const opts = Comp[type]
     if (
       (isArray(opts) && opts.includes(key)) ||

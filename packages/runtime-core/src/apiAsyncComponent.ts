@@ -207,7 +207,7 @@ export function defineAsyncComponent<
         }
       }
     }
-  }) as T
+  }) as unknown as T
 }
 
 function createInnerComp(

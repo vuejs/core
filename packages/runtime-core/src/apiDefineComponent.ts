@@ -6,9 +6,9 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
-  ComponentOptionsBase,
   ComponentInjectOptions,
-  ComponentOptions
+  ComponentOptions,
+  ComponentOptionsBase
 } from './componentOptions'
 import {
   SetupContext,
@@ -54,7 +54,10 @@ export type DefineComponent<
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
-  S extends SlotsType = {}
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  Options = {}
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -68,7 +71,7 @@ export type DefineComponent<
     PP & Props,
     Defaults,
     true,
-    {},
+    I,
     S
   > &
     Props
@@ -84,10 +87,30 @@ export type DefineComponent<
     E,
     EE,
     Defaults,
-    {},
-    string,
-    S
-  > &
+    I,
+    II,
+    S,
+    PropsOrPropOptions
+  > & { props: Props } & Options &
+  // Omit<
+  //   Options,
+  //   keyof ComponentOptionsBase<
+  //     Props,
+  //     RawBindings,
+  //     D,
+  //     C,
+  //     M,
+  //     Mixin,
+  //     Extends,
+  //     E,
+  //     EE,
+  //     Defaults,
+  //     I,
+  //     II,
+  //     S
+  //   >
+  // > &
+
   PP
 
 // defineComponent is a utility that is primarily used for type inference
@@ -143,24 +166,26 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {},
+  Options = {}
 >(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >
+  options: Options &
+    ComponentOptionsWithoutProps<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      I,
+      II,
+      S
+    >
 ): DefineComponent<
   Props,
   RawBindings,
@@ -174,12 +199,16 @@ export function defineComponent<
   PublicProps,
   ResolveProps<Props, E>,
   ExtractDefaultPropTypes<Props>,
-  S
+  I,
+  II,
+  S,
+  Options
 >
 
 // overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
 // return type is for Vetur and TSX support
+
 export function defineComponent<
   PropNames extends string,
   RawBindings,
@@ -193,22 +222,24 @@ export function defineComponent<
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }>
+  Props = Readonly<{ [key in PropNames]?: any }>,
+  Options = {}
 >(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >
+  options: Options &
+    ComponentOptionsWithArrayProps<
+      PropNames,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      I,
+      II,
+      S
+    >
 ): DefineComponent<
   Props,
   RawBindings,
@@ -222,7 +253,10 @@ export function defineComponent<
   PublicProps,
   ResolveProps<Props, E>,
   ExtractDefaultPropTypes<Props>,
-  S
+  I,
+  II,
+  S,
+  Options
 >
 
 // overload 4: object format with object props declaration
@@ -239,9 +273,9 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
-  II extends string = string
+  II extends string = string,
+  S extends SlotsType = {}
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -270,6 +304,8 @@ export function defineComponent<
   PublicProps,
   ResolveProps<PropsOptions, E>,
   ExtractDefaultPropTypes<PropsOptions>,
+  I,
+  II,
   S
 >
 

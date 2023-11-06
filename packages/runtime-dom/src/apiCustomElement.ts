@@ -166,7 +166,7 @@ const BaseClass = (
   typeof HTMLElement !== 'undefined' ? HTMLElement : class {}
 ) as typeof HTMLElement
 
-type InnerComponentDef = ConcreteComponent & { styles?: string[] }
+type InnerComponentDef = ConcreteComponent<any> & { styles?: string[] }
 
 export class VueElement extends BaseClass {
   /**
@@ -255,7 +255,10 @@ export class VueElement extends BaseClass {
       if (props && !isArray(props)) {
         for (const key in props) {
           const opt = props[key]
-          if (opt === Number || (opt && opt.type === Number)) {
+          if (
+            opt === Number ||
+            (opt && (opt as Record<string, any>).type === Number)
+          ) {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }

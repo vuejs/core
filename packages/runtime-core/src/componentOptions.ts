@@ -67,7 +67,7 @@ import { warn } from './warning'
 import { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { deepMergeData } from './compat/data'
-import { DeprecationTypes } from './compat/compatConfig'
+import { ComponentOptionsCompat, DeprecationTypes } from './compat/compatConfig'
 import {
   CompatConfig,
   isCompatEnabled,
@@ -111,8 +111,9 @@ export interface ComponentOptionsBase<
   Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {}
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
+  S extends SlotsType = {},
+  OriginalProps = ComponentPropsOptions<Props>
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, OriginalProps>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -273,20 +274,23 @@ export type ComponentOptionsWithArrayProps<
   II extends string = string,
   S extends SlotsType = {},
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  {},
-  I,
-  II,
-  S
+> = Omit<
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    {},
+    I,
+    II,
+    S
+  >,
+  'props'
 > & {
   props: PropNames[]
 } & ThisType<
@@ -322,20 +326,23 @@ export type ComponentOptionsWithObjectProps<
   S extends SlotsType = {},
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  Defaults,
-  I,
-  II,
-  S
+> = Omit<
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Defaults,
+    I,
+    II,
+    S
+  >,
+  'props'
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -355,7 +362,6 @@ export type ComponentOptionsWithObjectProps<
       S
     >
   >
-
 export type ComponentOptions<
   Props = {},
   RawBindings = any,
@@ -463,12 +469,14 @@ interface LegacyOptions<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
-  II extends string
+  II extends string,
+  OriginalProps
 > {
   compatConfig?: CompatConfig
+  props?: OriginalProps
 
-  // allow any custom options
-  [key: string]: any
+  // // allow any custom options
+  // [key: string]: any
 
   // state
   // Limitation: we cannot expose RawBindings on the `this` context for data
@@ -984,7 +992,7 @@ export function resolveMergedOptions(
   } = instance.appContext
   const cached = cache.get(base)
 
-  let resolved: MergedComponentOptions
+  let resolved: MergedComponentOptions & ComponentOptionsCompat
 
   if (cached) {
     resolved = cached
@@ -993,7 +1001,8 @@ export function resolveMergedOptions(
       __COMPAT__ &&
       isCompatEnabled(DeprecationTypes.PRIVATE_APIS, instance)
     ) {
-      resolved = extend({}, base) as MergedComponentOptions
+      resolved = extend({}, base) as ComponentOptionsCompat
+
       resolved.parent = instance.parent && instance.parent.proxy
       resolved.propsData = instance.vnode.props
     } else {

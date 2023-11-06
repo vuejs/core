@@ -161,6 +161,8 @@ declare module '@vue/reactivity' {
   }
 }
 
+export type * from './componentTypeHelpers'
+
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
   Ref,

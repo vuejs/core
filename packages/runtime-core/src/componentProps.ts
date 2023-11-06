@@ -37,7 +37,11 @@ import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
+import {
+  ComponentOptionsCompat,
+  isCompatEnabled,
+  softAssertCompatEnabled
+} from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 
@@ -499,7 +503,7 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  comp: ConcreteComponent,
+  comp: ConcreteComponent<any>,
   appContext: AppContext,
   asMixin = false
 ): NormalizedPropsOptions {
@@ -518,7 +522,7 @@ export function normalizePropsOptions(
   if (__FEATURE_OPTIONS_API__ && !isFunction(comp)) {
     const extendProps = (raw: ComponentOptions) => {
       if (__COMPAT__ && isFunction(raw)) {
-        raw = raw.options
+        raw = (raw as ComponentOptionsCompat).options
       }
       hasExtends = true
       const [props, keys] = normalizePropsOptions(raw, appContext, true)
