@@ -1177,5 +1177,21 @@ describe('SSR hydration', () => {
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
+
+    test('comment mismatch (element)', () => {
+      const { container } = mountWithHydration(`<div><span></span></div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('comment mismatch (text)', () => {
+      const { container } = mountWithHydration(`<div>foobar</div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
   })
 })
