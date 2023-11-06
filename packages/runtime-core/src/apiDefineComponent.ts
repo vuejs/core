@@ -76,41 +76,24 @@ export type DefineComponent<
   > &
     Props
 > &
-  ComponentOptionsBase<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    Defaults,
-    I,
-    II,
-    S,
-    PropsOrPropOptions
-  > & { props: Props } & Options &
-  // Omit<
-  //   Options,
-  //   keyof ComponentOptionsBase<
-  //     Props,
-  //     RawBindings,
-  //     D,
-  //     C,
-  //     M,
-  //     Mixin,
-  //     Extends,
-  //     E,
-  //     EE,
-  //     Defaults,
-  //     I,
-  //     II,
-  //     S
-  //   >
-  // > &
-
+  Omit<
+    ComponentOptionsBase<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      Defaults,
+      I,
+      II,
+      S
+    >,
+    'props'
+  > & { props: PropsOrPropOptions } & Omit<Options, '__asyncLoader'> &
   PP
 
 // defineComponent is a utility that is primarily used for type inference
@@ -119,7 +102,25 @@ export type DefineComponent<
 // for TSX / manual render function / IDE support.
 
 // overload 1: direct setup function
-// (uses user defined props interface)
+export function defineComponent<
+  Props extends Record<string, any>,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+  Options = {}
+>(
+  setup: (
+    props: Props,
+    ctx: SetupContext<E, S>
+  ) => RenderFunction | Promise<RenderFunction>,
+  options?: Options &
+    Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+      props?: (keyof Props)[]
+      emits?: E | EE[]
+      slots?: S
+    }
+): (props: Props & EmitsToProps<E>) => any
+
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -136,11 +137,54 @@ export function defineComponent<
     slots?: S
   }
 ): (props: Props & EmitsToProps<E>) => any
+
+// (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  Options = {}
+>(
+  setup: (
+    props: Props,
+    ctx: SetupContext<E, S>
+  ) => RenderFunction | Promise<RenderFunction>,
+  options?: Options &
+    Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+      props?: (keyof Props)[]
+      emits?: E | EE[]
+      slots?: S
+    }
+): DefineComponent<
+  Props & EmitsToProps<E>,
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  {},
+  string,
+  S,
+  {
+    name: string
+  } & Options
+>
+
+// extend({ name: options.name }, extraOptions, { setup: options }))()
+
+export function defineComponent<
+  Props extends Record<string, any>,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  S extends SlotsType = {},
+  Options = {}
 >(
   setup: (
     props: Props,
@@ -151,7 +195,26 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   }
-): (props: Props & EmitsToProps<E>) => any
+): DefineComponent<
+  Props & EmitsToProps<E>,
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  {},
+  string,
+  S,
+  {
+    name: string
+  } & Options
+>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
@@ -311,10 +374,7 @@ export function defineComponent<
 
 // implementation, close to no-op
 /*! #__NO_SIDE_EFFECTS__ */
-export function defineComponent(
-  options: unknown,
-  extraOptions?: ComponentOptions
-) {
+export function defineComponent(options: unknown, extraOptions?: unknown) {
   return isFunction(options)
     ? // #8326: extend call and options.name access are considered side-effects
       // by Rollup, so we have to wrap it in a pure-annotated IIFE.

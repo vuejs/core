@@ -1190,7 +1190,7 @@ describe('async setup', () => {
 
 // #5948
 describe('DefineComponent should infer correct types when assigning to Component', () => {
-  let component: Component
+  let component: Component<any, any, any, any, any>
   component = defineComponent({
     setup(_, { attrs, slots }) {
       // @ts-expect-error should not be any
@@ -1254,6 +1254,10 @@ describe('prop starting with `on*` is broken', () => {
 })
 
 describe('function syntax w/ generics', () => {
+  const aa = defineComponent(<T extends string | number>(props: { msg: T }) => {
+    return () => h('div')
+  })
+
   const Comp = defineComponent(
     // TODO: babel plugin to auto infer runtime props options from type
     // similar to defineProps<{...}>()
@@ -1300,6 +1304,7 @@ describe('function syntax w/ emits', () => {
       emits: ['foo']
     }
   )
+
   expectType<JSX.Element>(<Foo msg="hi" onFoo={() => {}} />)
   // @ts-expect-error
   expectType<JSX.Element>(<Foo msg="hi" onBar={() => {}} />)
@@ -1353,12 +1358,12 @@ describe('function syntax w/ runtime props', () => {
     }
   )
 
-  // @ts-expect-error string prop names don't match
   defineComponent(
     (_props: { msg: string }) => {
       return () => {}
     },
     {
+      // @ts-expect-error string prop names don't match
       props: ['bar']
     }
   )
@@ -1375,7 +1380,6 @@ describe('function syntax w/ runtime props', () => {
     }
   )
 
-  // @ts-expect-error prop keys don't match
   defineComponent(
     (_props: { msg: string }, ctx) => {
       return () => {}
@@ -1383,6 +1387,7 @@ describe('function syntax w/ runtime props', () => {
     {
       props: {
         msg: String,
+        // @ts-expect-error prop keys don't match
         bar: String
       }
     }

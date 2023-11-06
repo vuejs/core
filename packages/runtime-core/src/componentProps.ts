@@ -513,7 +513,7 @@ export function normalizePropsOptions(
     return cached
   }
 
-  const raw = comp.props
+  const raw = comp.props as Record<string, any> | Array<string>
   const normalized: NormalizedPropsOptions[0] = {}
   const needCastKeys: NormalizedPropsOptions[1] = []
 

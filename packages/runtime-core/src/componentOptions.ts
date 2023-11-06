@@ -111,9 +111,8 @@ export interface ComponentOptionsBase<
   Defaults = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
-  S extends SlotsType = {},
-  OriginalProps = ComponentPropsOptions<Props>
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, OriginalProps>,
+  S extends SlotsType = {}
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -362,8 +361,23 @@ export type ComponentOptionsWithObjectProps<
       S
     >
   >
+
+// Props,
+// RawBindings,
+// D,
+// C extends ComputedOptions,
+// M extends MethodOptions,
+// Mixin extends ComponentOptionsMixin,
+// Extends extends ComponentOptionsMixin,
+// E extends EmitsOptions,
+// EE extends string = string,
+// Defaults = {},
+// I extends ComponentInjectOptions = {},
+// II extends string = string,
+// S extends SlotsType = {},
+// OriginalProps extends ComponentPropsOptions = {}
 export type ComponentOptions<
-  Props = {},
+  Props = Record<string, any>,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = any,
@@ -371,6 +385,7 @@ export type ComponentOptions<
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
   E extends EmitsOptions = any,
+  I extends ComponentInjectOptions = {},
   S extends SlotsType = any
 > = ComponentOptionsBase<
   Props,
@@ -381,6 +396,9 @@ export type ComponentOptions<
   Mixin,
   Extends,
   E,
+  string,
+  {},
+  I,
   string,
   S
 > &
@@ -394,7 +412,11 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
-      Readonly<Props>
+      Readonly<Props>,
+      {},
+      false,
+      I,
+      S
     >
   >
 
@@ -469,11 +491,10 @@ interface LegacyOptions<
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
-  II extends string,
-  OriginalProps
+  II extends string
 > {
   compatConfig?: CompatConfig
-  props?: OriginalProps
+  props?: ComponentPropsOptions
 
   // // allow any custom options
   // [key: string]: any

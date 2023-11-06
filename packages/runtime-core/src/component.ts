@@ -40,6 +40,7 @@ import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
 import { Directive, validateDirectiveName } from './directives'
 import {
   applyOptions,
+  ComponentInjectOptions,
   ComponentOptions,
   ComputedOptions,
   MethodOptions,
@@ -154,15 +155,16 @@ export interface ClassComponent {
  * implementation code.
  */
 export type ConcreteComponent<
-  Props = {},
+  Props = Record<string, any>,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
   E extends EmitsOptions = any,
+  I extends ComponentInjectOptions = any,
   S extends SlotsType = any
 > =
-  | ComponentOptions<Props, RawBindings, D, C, M, any, any, E, S>
+  | ComponentOptions<Props, RawBindings, D, C, M, any, any, E, I, S>
   | FunctionalComponent<Props, E, S>
 
 /**
@@ -178,7 +180,7 @@ export type Component<
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
-  | InstanceType<ComponentPublicInstanceConstructor<Props>>
+  | ComponentPublicInstance<Props>
 
 export type { ComponentOptions }
 

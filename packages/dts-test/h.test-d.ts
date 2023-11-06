@@ -7,9 +7,10 @@ import {
   Teleport,
   Suspense,
   Component,
-  resolveComponent
+  resolveComponent,
+  ConcreteComponent
 } from 'vue'
-import { describe, expectAssignable } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('h inference w/ element', () => {
   // key
@@ -84,7 +85,12 @@ describe('h support w/ plain object component', () => {
       foo: String
     }
   }
-  h(Foo, { foo: 'ok' })
+
+  expectType<ConcreteComponent>(Foo)
+
+  h(Foo, { test: 'asd' })
+  const a = h(Foo, { foo: undefined })
+  const a1 = h(Foo, { foo: '' })
   h(Foo, { foo: 'ok', class: 'extra' })
   // no inference in this case
 })
