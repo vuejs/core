@@ -314,7 +314,7 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ceContext: {
-    addCEChildStyle: (styles: string[], uid: number) => void
+    addCEChildStyle: (styles: string[], uid: number, hasAttr: boolean) => void
     removeCEChildStyles: (uid: number) => void
     setStyleAttrs: (
       uid: number | 'root',
@@ -322,6 +322,11 @@ export interface ComponentInternalInstance {
       oAttrs?: Array<Record<string, string | number>>
     ) => void
   } | null
+  /**
+   * Whether the style tag has attribute tags
+   * @internal
+   */
+  hasStyleAttrs: boolean
   /**
    * is custom element?
    * @internal
@@ -574,6 +579,7 @@ export function createComponentInstance(
 
     ceContext:
       parent && (parent.isCE || parent.ceContext) ? parent.ceContext : null,
+    hasStyleAttrs: false,
 
     bc: null,
     c: null,

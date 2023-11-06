@@ -1384,7 +1384,11 @@ function baseCreateRenderer(
                     .styles) ||
                 null
               if (instance.ceContext && styles) {
-                instance.ceContext.addCEChildStyle(styles, instance.uid)
+                instance.ceContext.addCEChildStyle(
+                  styles,
+                  instance.uid,
+                  instance.hasStyleAttrs
+                )
               }
             }
           }

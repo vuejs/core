@@ -15,6 +15,7 @@ export function useCEStyleAttrs(
     return
   }
 
+  instance.hasStyleAttrs = true
   let oAttrs: undefined | Array<Record<string, string | number>> = undefined
   const setAttrs = () => {
     const attrs = getter(instance.proxy)

@@ -441,11 +441,15 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addChildStyles(styles: string[] | undefined, uid: number) {
+  protected _addChildStyles(
+    styles: string[] | undefined,
+    uid: number,
+    hasAttr: boolean
+  ) {
     if (styles) {
       // record style
       const isRepeated = this.isHasChildStyle(styles)
-      if (isRepeated) return
+      if (isRepeated && !hasAttr) return
 
       styles.forEach((css, index) => {
         const s = document.createElement('style')
@@ -525,4 +529,3 @@ export class VueElement extends BaseClass {
 }
 
 // TODO: teleport 会导致dom 不会在 shadowRoot 中（是否需要）
-// TODO: 重複style？？？ （儅style 有屬性時，要再加一個style）

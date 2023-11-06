@@ -9,6 +9,7 @@ import {
   Ref,
   ref,
   renderSlot,
+  useCEStyleAttrs,
   VueElement
 } from '../src'
 import { expect } from 'vitest'
@@ -827,6 +828,57 @@ describe('defineCustomElement', () => {
       expect(style2.length).toBe(2)
       expect(style2[0].textContent).toBe(`.my-green { color: green; }`)
       expect(style2[1].textContent).toBe(`.my-red { color: red; }`)
+    })
+
+    test('Component with style attribute used multiple times', async () => {
+      const Child = {
+        styles: [`.my-green { color: green; }`],
+        setup() {
+          const id = 'foo'
+          useCEStyleAttrs(() => {
+            return [
+              {
+                id: id
+              }
+            ] as Record<string, string | number>[]
+          })
+        },
+        render() {
+          return h('p', { class: 'my-green' }, 'This should be green')
+        }
+      }
+
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [
+            h('p', { class: 'my-red' }, 'This should be red'),
+            h(Child),
+            h(Child),
+            h(Child)
+          ]
+        }
+      })
+      customElements.define('my-el-with-multiple-attr', Foo)
+      container.innerHTML = `<my-el-with-multiple-attr></my-el-with-multiple-attr><my-el-with-multiple-attr></my-el-with-multiple-attr>`
+      await nextTick()
+
+      const el1 = container.childNodes[0] as VueElement
+      const style = el1.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(4)
+      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[2].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[3].textContent).toBe(`.my-red { color: red; }`)
+
+      const el2 = container.childNodes[1] as VueElement
+      const style2 = el2.shadowRoot?.querySelectorAll('style')!
+      expect(style2.length).toBe(4)
+      expect(style2[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[1].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[2].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[3].textContent).toBe(`.my-red { color: red; }`)
     })
 
     test('nested child components w/ fragments in shadow dom should have styles', async () => {

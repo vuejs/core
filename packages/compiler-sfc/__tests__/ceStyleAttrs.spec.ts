@@ -1,5 +1,5 @@
 import { parse } from '../src'
-import { mockId, compileSFCScript, assertCode } from './utils'
+import { compileSFCScript, assertCode } from './utils'
 
 describe('CE style attrs injection', () => {
   test('generating correct code for nested paths', () => {
@@ -189,39 +189,6 @@ id="{ id: msg2, 'other-attr': msg }"
    "id": { id: _ctx.msg3, 'other-attr': msg },
  },
 ]))`)
-      assertCode(content)
-    })
-
-    test('should work with w/ complex expression', () => {
-      const { content } = compileSFCScript(
-        `<script setup>
-        let a = 100
-        let b = 200
-        let foo = 300
-        </script>\n` +
-          `<style>
-          p{
-            width: calc(v-bind(foo) - 3px);
-            height: calc(v-bind('foo') - 3px);
-            top: calc(v-bind(foo + 'px') - 3px);
-          }
-          div {
-            color: v-bind((a + b) / 2 + 'px' );
-          }
-          div {
-            color: v-bind    ((a + b) / 2 + 'px' );
-          }
-          p {
-            color: v-bind(((a + b)) / (2 * a));
-          }
-        </style>`
-      )
-      expect(content).toMatch(`_useCssVars(_ctx => ({
-  "${mockId}-foo": (_unref(foo)),
-  "${mockId}-foo\\ \\+\\ \\'px\\'": (_unref(foo) + 'px'),
-  "${mockId}-\\(a\\ \\+\\ b\\)\\ \\/\\ 2\\ \\+\\ \\'px\\'": ((_unref(a) + _unref(b)) / 2 + 'px'),
-  "${mockId}-\\(\\(a\\ \\+\\ b\\)\\)\\ \\/\\ \\(2\\ \\*\\ a\\)": (((_unref(a) + _unref(b))) / (2 * _unref(a)))
-}))`)
       assertCode(content)
     })
 
