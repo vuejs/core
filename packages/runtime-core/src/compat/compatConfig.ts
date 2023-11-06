@@ -19,7 +19,7 @@ export interface ComponentOptionsCompat extends ComponentOptions {
 
   propsData?: any
   parent?: any
-  
+
   __isBuildIn?: boolean
 }
 
