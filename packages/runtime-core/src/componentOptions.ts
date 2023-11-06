@@ -362,20 +362,6 @@ export type ComponentOptionsWithObjectProps<
     >
   >
 
-// Props,
-// RawBindings,
-// D,
-// C extends ComputedOptions,
-// M extends MethodOptions,
-// Mixin extends ComponentOptionsMixin,
-// Extends extends ComponentOptionsMixin,
-// E extends EmitsOptions,
-// EE extends string = string,
-// Defaults = {},
-// I extends ComponentInjectOptions = {},
-// II extends string = string,
-// S extends SlotsType = {},
-// OriginalProps extends ComponentPropsOptions = {}
 export type ComponentOptions<
   Props = Record<string, any>,
   RawBindings = any,
