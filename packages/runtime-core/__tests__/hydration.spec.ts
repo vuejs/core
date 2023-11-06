@@ -75,6 +75,16 @@ describe('SSR hydration', () => {
     expect(vnode.el.nodeType).toBe(8) // comment
   })
 
+  test('comment (real left square bracket)', () => {
+    const { vnode, container } = mountWithHydration(
+      `<div><span>foo</span><!--hello--></div>`,
+      () => h('div', [h('span', 'foo'), createCommentVNode('hello')])
+    )
+    expect(vnode.el).toBe(container.firstChild)
+    expect(container.innerHTML).toBe('<div><span>foo</span><!--hello--></div>')
+    expect(`Hydration node mismatch`).not.toHaveBeenWarned()
+  })
+
   test('static', () => {
     const html = '<div><span>hello</span></div>'
     const { vnode, container } = mountWithHydration(html, () =>
@@ -1176,6 +1186,22 @@ describe('SSR hydration', () => {
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('comment mismatch (element)', () => {
+      const { container } = mountWithHydration(`<div><span></span></div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('comment mismatch (text)', () => {
+      const { container } = mountWithHydration(`<div>foobar</div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
     })
   })
 })
