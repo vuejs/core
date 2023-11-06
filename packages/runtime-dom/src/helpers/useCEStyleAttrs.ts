@@ -1,22 +1,25 @@
-import {getCurrentInstance, warn, watchPostEffect} from "@vue/runtime-core";
+import { getCurrentInstance, warn, watchPostEffect } from '@vue/runtime-core'
 
-export function useCEStyleAttrs(getter: (ctx: any) => Array<Record<string, string | number>>) {
+export function useCEStyleAttrs(
+  getter: (ctx: any) => Array<Record<string, string | number>>
+) {
   if (!__BROWSER__ && !__TEST__) return
 
   const instance = getCurrentInstance()
   /* istanbul ignore next */
   if (!instance) {
     __DEV__ &&
-    warn(`useCEStyleAttrs is called without current active component instance.`)
+      warn(
+        `useCEStyleAttrs is called without current active component instance.`
+      )
     return
   }
 
-
-  let oAttrs: undefined | Array<Record<string, string | number>>  = undefined
+  let oAttrs: undefined | Array<Record<string, string | number>> = undefined
   const setAttrs = () => {
     const attrs = getter(instance.proxy)
-    if(instance.ceContext){
-      if(instance.isCE){
+    if (instance.ceContext) {
+      if (instance.isCE) {
         instance.ceContext.setStyleAttrs('root', attrs, oAttrs)
       } else {
         instance.ceContext.setStyleAttrs(instance.uid, attrs, oAttrs)
@@ -25,5 +28,4 @@ export function useCEStyleAttrs(getter: (ctx: any) => Array<Record<string, strin
     }
   }
   watchPostEffect(setAttrs)
-
 }

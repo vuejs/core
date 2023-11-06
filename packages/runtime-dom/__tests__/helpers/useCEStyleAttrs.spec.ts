@@ -5,9 +5,9 @@ import {
   VueElement,
   ref,
   useCEStyleAttrs,
-  Suspense,
+  Suspense
 } from '@vue/runtime-dom'
-import {expect} from "vitest";
+import { expect } from 'vitest'
 
 describe('useCEStyleAttrs', () => {
   const container = document.createElement('div')
@@ -23,12 +23,14 @@ describe('useCEStyleAttrs', () => {
       setup() {
         const attr = ref('foo')
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
@@ -43,7 +45,11 @@ describe('useCEStyleAttrs', () => {
     const style = el1.shadowRoot?.querySelectorAll('style')!
     expect(style.length).toBe(1)
     expect(style[0].textContent).toBe(`.my-red { color: red; }`)
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
   })
 
   test('useCEStyleAttrs should work in child components of custom element', async () => {
@@ -52,12 +58,14 @@ describe('useCEStyleAttrs', () => {
       setup() {
         const attr = ref('foo')
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
@@ -71,19 +79,18 @@ describe('useCEStyleAttrs', () => {
       setup() {
         const attr = ref('foo2')
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
-        return [
-          h('p', { class: 'my-red' }, 'This should be red'),
-          h(Child),
-        ]
+        return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
       }
     })
     customElements.define('ce-style-attr-child', Foo)
@@ -95,8 +102,16 @@ describe('useCEStyleAttrs', () => {
     expect(style.length).toBe(2)
     expect(style[0].textContent).toBe(`.my-green { color: green; }`)
     expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"')).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"'
+      )
+    ).toBeTruthy()
   })
 
   test('useCEStyleAttrs The order of adding attributes should be consistent with the order of styles', async () => {
@@ -107,12 +122,12 @@ describe('useCEStyleAttrs', () => {
         const attr2 = ref('foo2')
         useCEStyleAttrs(() => {
           return [
-          {
-            "id": attr.value,
-          },
-          {
-            "id": attr2.value,
-           },
+            {
+              id: attr.value
+            },
+            {
+              id: attr2.value
+            }
           ] as Record<string, string | number>[]
         })
       },
@@ -144,12 +159,14 @@ describe('useCEStyleAttrs', () => {
       styles: [`.my-green { color: green; }`],
       setup() {
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr2.value,
-            "src": attr2.value,
-            [attr2.value]: attr2.value,
-            "xlink:special": attr2.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr2.value,
+              src: attr2.value,
+              [attr2.value]: attr2.value,
+              'xlink:special': attr2.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
@@ -162,19 +179,18 @@ describe('useCEStyleAttrs', () => {
       styles: [`.my-red { color: red; }`],
       setup() {
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
-        return [
-          h('p', { class: 'my-red' }, 'This should be red'),
-          h(Child)
-        ]
+        return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
       }
     })
     customElements.define('ce-style-attr-child-update', Foo)
@@ -186,19 +202,32 @@ describe('useCEStyleAttrs', () => {
     expect(style.length).toBe(2)
     expect(style[0].textContent).toBe(`.my-green { color: green; }`)
     expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"')).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"'
+      )
+    ).toBeTruthy()
 
     attr.value = 'foo-change'
     attr2.value = 'foo2-change'
     await nextTick()
 
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo-change" src="foo-change" xlink:special="foo-change" foo-change="foo-change"')).toBeTruthy()
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo2-change" src="foo2-change" xlink:special="foo2-change" foo2-change="foo2-change"')).toBeTruthy()
-
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo-change" src="foo-change" xlink:special="foo-change" foo-change="foo-change"'
+      )
+    ).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo2-change" src="foo2-change" xlink:special="foo2-change" foo2-change="foo2-change"'
+      )
+    ).toBeTruthy()
   })
-
-
 
   test('on fragment root', async () => {
     const Foo = defineCustomElement({
@@ -206,12 +235,14 @@ describe('useCEStyleAttrs', () => {
       setup() {
         const attr = ref('foo')
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
       },
       render() {
@@ -229,11 +260,14 @@ describe('useCEStyleAttrs', () => {
     const style = el1.shadowRoot?.querySelectorAll('style')!
     expect(style.length).toBe(1)
     expect(style[0].textContent).toBe(`.my-red { color: red; }`)
-    expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
   })
 
-
-   test('on suspense root', async () => {
+  test('on suspense root', async () => {
     const attr = ref('foo')
     const attr2 = ref('foo2')
 
@@ -244,12 +278,14 @@ describe('useCEStyleAttrs', () => {
       styles: [`.my-green { color: green; }`],
       setup() {
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr2.value,
-            "src": attr2.value,
-            [attr2.value]: attr2.value,
-            "xlink:special": attr2.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr2.value,
+              src: attr2.value,
+              [attr2.value]: attr2.value,
+              'xlink:special': attr2.value
+            }
+          ] as Record<string, string | number>[]
         })
         asyncPromise = new Promise(r => {
           resolveAsync = () => {
@@ -264,12 +300,14 @@ describe('useCEStyleAttrs', () => {
       styles: [`.my-red { color: red; }`],
       setup() {
         useCEStyleAttrs(() => {
-          return [{
-            "id": attr.value,
-            "src": attr.value,
-            [attr.value]: attr.value,
-            "xlink:special": attr.value,
-          }] as Record<string, string | number>[]
+          return [
+            {
+              id: attr.value,
+              src: attr.value,
+              [attr.value]: attr.value,
+              'xlink:special': attr.value
+            }
+          ] as Record<string, string | number>[]
         })
         return () =>
           h(Suspense, null, {
@@ -279,36 +317,56 @@ describe('useCEStyleAttrs', () => {
       }
     }
 
+    customElements.define(
+      'ce-style-attr-child-suspense',
+      defineCustomElement(App)
+    )
+    container.innerHTML = `<ce-style-attr-child-suspense></ce-style-attr-child-suspense>`
+    await nextTick()
 
-     customElements.define('ce-style-attr-child-suspense', defineCustomElement(App))
-     container.innerHTML = `<ce-style-attr-child-suspense></ce-style-attr-child-suspense>`
-     await nextTick()
+    const el1 = container.childNodes[0] as VueElement
+    let style = el1.shadowRoot?.querySelectorAll('style')!
+    expect(style.length).toBe(1)
+    expect(style[0].textContent).toBe(`.my-red { color: red; }`)
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
 
-     const el1 = container.childNodes[0] as VueElement
-     let style = el1.shadowRoot?.querySelectorAll('style')!
-     expect(style.length).toBe(1)
-     expect(style[0].textContent).toBe(`.my-red { color: red; }`)
-     expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
+    resolveAsync()
+    await asyncPromise.then(() => {})
+    // Suspense effects flush
+    await nextTick()
 
-     resolveAsync()
-     await asyncPromise.then(() => {})
-     // Suspense effects flush
-     await nextTick()
+    style = el1.shadowRoot?.querySelectorAll('style')!
+    expect(style.length).toBe(2)
+    expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+    expect(style[1].textContent).toBe(`.my-red { color: red; }`)
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo" src="foo" foo="foo" xlink:special="foo"'
+      )
+    ).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"'
+      )
+    ).toBeTruthy()
 
-     style = el1.shadowRoot?.querySelectorAll('style')!
-     expect(style.length).toBe(2)
-     expect(style[0].textContent).toBe(`.my-green { color: green; }`)
-     expect(style[1].textContent).toBe(`.my-red { color: red; }`)
-     expect(el1.shadowRoot?.innerHTML.includes('id="foo" src="foo" foo="foo" xlink:special="foo"')).toBeTruthy()
-     expect(el1.shadowRoot?.innerHTML.includes('id="foo2" src="foo2" foo2="foo2" xlink:special="foo2"')).toBeTruthy()
+    attr.value = 'foo-change'
+    attr2.value = 'foo2-change'
+    await nextTick()
 
-     attr.value = 'foo-change'
-     attr2.value = 'foo2-change'
-     await nextTick()
-
-     expect(el1.shadowRoot?.innerHTML.includes('id="foo-change" src="foo-change" xlink:special="foo-change" foo-change="foo-change"')).toBeTruthy()
-     expect(el1.shadowRoot?.innerHTML.includes('id="foo2-change" src="foo2-change" xlink:special="foo2-change" foo2-change="foo2-change"')).toBeTruthy()
-
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo-change" src="foo-change" xlink:special="foo-change" foo-change="foo-change"'
+      )
+    ).toBeTruthy()
+    expect(
+      el1.shadowRoot?.innerHTML.includes(
+        'id="foo2-change" src="foo2-change" xlink:special="foo2-change" foo2-change="foo2-change"'
+      )
+    ).toBeTruthy()
   })
-
 })

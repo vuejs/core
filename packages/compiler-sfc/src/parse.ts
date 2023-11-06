@@ -6,7 +6,8 @@ import {
   TextModes,
   BindingMetadata,
   AttributeNode,
-  DirectiveNode, SimpleExpressionNode
+  DirectiveNode,
+  SimpleExpressionNode
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -123,7 +124,7 @@ export function parse(
     script: null,
     scriptSetup: null,
     styles: [],
-    ceStyleAttrs:[],
+    ceStyleAttrs: [],
     customBlocks: [],
     cssVars: [],
     slotted: false,
@@ -472,23 +473,25 @@ export function hmrShouldReload(
 
   return false
 }
- function setPropsNodeForStyleAttrs(
-   descriptor: SFCDescriptor,
-   props: Array<AttributeNode | DirectiveNode>,
- ){
-   const propsArr = props.filter(prop => {
-     // skip scoped and lang
-     if(prop.type === 6 && (prop.name === 'scoped' || prop.name === 'lang')){
-       return false
-     }
-     return !(prop.type === 7 && (
-       ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'scoped' ||
-       ((prop as DirectiveNode).arg! as SimpleExpressionNode).content === 'lang'));
+function setPropsNodeForStyleAttrs(
+  descriptor: SFCDescriptor,
+  props: Array<AttributeNode | DirectiveNode>
+) {
+  const propsArr = props.filter(prop => {
+    // skip scoped and lang
+    if (prop.type === 6 && (prop.name === 'scoped' || prop.name === 'lang')) {
+      return false
+    }
+    return !(
+      prop.type === 7 &&
+      (((prop as DirectiveNode).arg! as SimpleExpressionNode).content ===
+        'scoped' ||
+        ((prop as DirectiveNode).arg! as SimpleExpressionNode).content ===
+          'lang')
+    )
+  })
 
-   })
-
-   if(propsArr.length > 0){
-     descriptor.ceStyleAttrs.push(propsArr)
-   }
-
- }
+  if (propsArr.length > 0) {
+    descriptor.ceStyleAttrs.push(propsArr)
+  }
+}

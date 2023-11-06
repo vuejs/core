@@ -314,7 +314,7 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ceContext: {
-    addCEChildStyle: ( styles: string[], uid: number) => void
+    addCEChildStyle: (styles: string[], uid: number) => void
     removeCEChildStyles: (uid: number) => void
     setStyleAttrs: (
       uid: number | 'root',

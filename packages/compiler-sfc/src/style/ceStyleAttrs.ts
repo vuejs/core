@@ -8,14 +8,14 @@ import {
   NodeTypes,
   processExpression,
   SimpleExpressionNode
-} from "@vue/compiler-core";
+} from '@vue/compiler-core'
 
 export const CE_STYLE_ATTRS_HELPER = `useCEStyleAttrs`
 
 export function genCEStyleAttrs(
   ceStyleAttrs: Array<AttributeNode | DirectiveNode>[],
   bindings: BindingMetadata
-){
+) {
   let code = ''
   for (let i = 0; i < ceStyleAttrs.length; i++) {
     const ceStyleAttr = ceStyleAttrs[i]
@@ -26,8 +26,8 @@ export function genCEStyleAttrs(
 
 function doGenStyleAttrsCode(
   attrs: Array<AttributeNode | DirectiveNode>,
-  bindings: BindingMetadata,
-  ){
+  bindings: BindingMetadata
+) {
   const attrsExp = genAttrsFromList(attrs)
   const exp = createSimpleExpression(attrsExp, false)
   const context = createTransformContext(createRoot([]), {
@@ -40,30 +40,36 @@ function doGenStyleAttrsCode(
   return transformed.type === NodeTypes.SIMPLE_EXPRESSION
     ? transformed.content
     : transformed.children
-      .map(c => {
-        return typeof c === 'string'
-          ? c
-          : (c as SimpleExpressionNode).content
-      })
-      .join('')
+        .map(c => {
+          return typeof c === 'string' ? c : (c as SimpleExpressionNode).content
+        })
+        .join('')
 }
 
-function genAttrsFromList(attrs: Array<AttributeNode | DirectiveNode>,){
+function genAttrsFromList(attrs: Array<AttributeNode | DirectiveNode>) {
   let code = '  {\n'
   let keySet = new Set<string>()
   for (let i = 0; i < attrs.length; i++) {
     const attr = attrs[i]
-    if(attr.type === 6){
+    if (attr.type === 6) {
       const key = `"${attr.name}"`
-      if(keySet.has(key)) continue
-      const val = `${(attr as AttributeNode).value ? (attr as AttributeNode).value?.content : 'undefined'}`
+      if (keySet.has(key)) continue
+      const val = `${
+        (attr as AttributeNode).value
+          ? (attr as AttributeNode).value?.content
+          : 'undefined'
+      }`
       code = code + `   ${key}: ${val},\n`
       keySet.add(key)
-    } else if(attr.type === 7){
+    } else if (attr.type === 7) {
       const arg = (attr as DirectiveNode).arg! as SimpleExpressionNode
-      const key  = !arg.isStatic ? `[${arg.content}]` : `"${arg.content}"`
-      if(keySet.has(key)) continue
-      code = code + `   ${key}: ${((attr as DirectiveNode).exp! as SimpleExpressionNode).content},\n`
+      const key = !arg.isStatic ? `[${arg.content}]` : `"${arg.content}"`
+      if (keySet.has(key)) continue
+      code =
+        code +
+        `   ${key}: ${
+          ((attr as DirectiveNode).exp! as SimpleExpressionNode).content
+        },\n`
       keySet.add(key)
     }
   }

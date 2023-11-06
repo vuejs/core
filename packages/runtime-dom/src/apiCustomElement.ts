@@ -23,13 +23,7 @@ import {
   ComponentInjectOptions,
   SlotsType
 } from '@vue/runtime-core'
-import {
-  camelize,
-  extend,
-  hyphenate,
-  isArray,
-  toNumber
-} from '@vue/shared'
+import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -447,10 +441,7 @@ export class VueElement extends BaseClass {
 
   // The method used by custom element child components
   // to add styles to the shadow dom
-  protected _addChildStyles(
-    styles: string[] | undefined,
-    uid: number,
-  ) {
+  protected _addChildStyles(styles: string[] | undefined, uid: number) {
     if (styles) {
       // record style
       const isRepeated = this.isHasChildStyle(styles)
@@ -484,11 +475,14 @@ export class VueElement extends BaseClass {
     nAttrs: Array<Record<string, string | number>>,
     oAttrs?: Array<Record<string, string | number>>
   ) {
-    const styleEls =  this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+    const styleEls = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
     styleEls.forEach((s, index) => {
-      if(oAttrs && oAttrs[index]){
+      if (oAttrs && oAttrs[index]) {
         for (const key in oAttrs[index]) {
-          if(nAttrs[index] && !nAttrs[index].hasOwnProperty(nAttrs[index][key])){
+          if (
+            nAttrs[index] &&
+            !nAttrs[index].hasOwnProperty(nAttrs[index][key])
+          ) {
             s.removeAttribute((oAttrs[index][key] || '').toString())
           }
         }
@@ -530,9 +524,5 @@ export class VueElement extends BaseClass {
   }
 }
 
-// TODO: useCEStyleAttrs unit test
-// TODO: useCEStyleAttrs compiler unit test
-
-// TODO: teleport ce child style style (vue/core or @vite/plugin-vue)
-// TODO: suspense ce child style style (vue/core or @vite/plugin-vue)
-// TODO: 重複style？？？ 儅style 有屬性時，要再加一個style
+// TODO: teleport 会导致dom 不会在 shadowRoot 中（是否需要）
+// TODO: 重複style？？？ （儅style 有屬性時，要再加一個style）

@@ -912,5 +912,4 @@ describe('defineCustomElement', () => {
       expect(style[3].textContent).toBe(`.my-red { color: red; }`)
     })
   })
-
 })

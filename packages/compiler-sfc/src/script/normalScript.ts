@@ -5,7 +5,7 @@ import MagicString from 'magic-string'
 import { RawSourceMap } from 'source-map-js'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { CSS_VARS_HELPER, genCssVarsCode } from '../style/cssVars'
-import { CE_STYLE_ATTRS_HELPER, genCEStyleAttrs } from "../style/ceStyleAttrs";
+import { CE_STYLE_ATTRS_HELPER, genCEStyleAttrs } from '../style/ceStyleAttrs'
 
 export const normalScriptDefaultVar = `__default__`
 
@@ -51,7 +51,7 @@ export function processNormalScript(
       }
     }
 
-    if (cssVars.length || ceStyleAttrs.length ||genDefaultAs) {
+    if (cssVars.length || ceStyleAttrs.length || genDefaultAs) {
       const defaultVar = genDefaultAs || normalScriptDefaultVar
       const s = new MagicString(content)
       rewriteDefaultAST(scriptAst.body, s, defaultVar)
@@ -59,24 +59,16 @@ export function processNormalScript(
       let injectCode = ''
       let injectImporter = []
       if (cssVars.length && !ctx.options.templateOptions?.ssr) {
-        injectCode += genCssVarsCode(
-          cssVars,
-          bindings,
-          scopeId,
-          !!isProd,
-        )
+        injectCode += genCssVarsCode(cssVars, bindings, scopeId, !!isProd)
         injectImporter.push(CSS_VARS_HELPER)
       }
 
       if (ceStyleAttrs.length && !ctx.options.templateOptions?.ssr) {
-        injectCode +=  '\n' + genCEStyleAttrs(
-          ceStyleAttrs,
-          bindings,
-        )
+        injectCode += '\n' + genCEStyleAttrs(ceStyleAttrs, bindings)
         injectImporter.push(CE_STYLE_ATTRS_HELPER)
       }
 
-      if(injectCode){
+      if (injectCode) {
         content += genInjectCode(injectCode, defaultVar, injectImporter)
       }
 
@@ -100,7 +92,11 @@ export function processNormalScript(
 
 // <script setup> already gets the calls injected as part of the transform
 // this is only for single normal <script>
-function genInjectCode(content: string, defaultVar: string, importer: string[]){
+function genInjectCode(
+  content: string,
+  defaultVar: string,
+  importer: string[]
+) {
   const importerContent = importer.map(v => ` ${v} as _${v} `).join(',')
   return (
     `\nimport {${importerContent}} from 'vue'\n` +
