@@ -293,11 +293,16 @@ type InferDefault<P, T> =
   | ((props: P) => T & {})
   | (T extends NativeType ? T : never)
 
+// https://github.com/vuejs/core/issues/9335
+type OmitKeepDiscriminatedUnion<T, K extends keyof any> = T extends any
+  ? Pick<T, Exclude<keyof T, K>>
+  : never
+
 type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T
-> = Omit<T, keyof Defaults> & {
+> = OmitKeepDiscriminatedUnion<T, keyof Defaults> & {
   [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
       ? T[K]
