@@ -17,6 +17,12 @@ describe('normalizeClass', () => {
     )
   })
 
+  // #3173
+  test('handles null and undefined correctly', () => {
+    expect(normalizeClass(undefined)).toEqual(undefined)
+    expect(normalizeClass(null)).toEqual(undefined)
+  })
+
   // #6777
   test('parse multi-line inline style', () => {
     expect(
