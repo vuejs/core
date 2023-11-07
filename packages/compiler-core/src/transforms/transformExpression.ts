@@ -240,7 +240,9 @@ export function processExpression(
       }
       node.content = rewriteIdentifier(rawExp)
     } else if (!isScopeVarReference) {
-      node.constType = isLiteral ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.CAN_HOIST
+      node.constType = isLiteral
+        ? ConstantTypes.CAN_STRINGIFY
+        : ConstantTypes.CAN_HOIST
     }
     return node
   }
