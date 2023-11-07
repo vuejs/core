@@ -145,18 +145,17 @@ export function createHydrationFunctions(
         }
         break
       case Comment:
-        if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
-          if ((node as Element).tagName.toLowerCase() === 'template') {
-            const content = (vnode.el! as HTMLTemplateElement).content
-              .firstChild!
-
-            // replace <template> node with inner children
-            replaceNode(content, node, parentComponent)
-            vnode.el = node = content
-            nextNode = nextSibling(node)
-          } else {
-            nextNode = onMismatch()
-          }
+        if (isTemplateNode(node)) {
+          nextNode = nextSibling(node)
+          // wrapped <transition appear>
+          // replace <template> node with inner child
+          replaceNode(
+            (vnode.el = node.content.firstChild!),
+            node,
+            parentComponent
+          )
+        } else if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
+          nextNode = onMismatch()
         } else {
           nextNode = nextSibling(node)
         }
@@ -209,7 +208,7 @@ export function createHydrationFunctions(
             (domType !== DOMNodeTypes.ELEMENT ||
               (vnode.type as string).toLowerCase() !==
                 (node as Element).tagName.toLowerCase()) &&
-            !isTemplateNode(node as Element)
+            !isTemplateNode(node)
           ) {
             nextNode = onMismatch()
           } else {
@@ -637,17 +636,16 @@ export function createHydrationFunctions(
     let parent = parentComponent
     while (parent) {
       if (parent.vnode.el === oldNode) {
-        parent.vnode.el = newNode
-        parent.subTree.el = newNode
+        parent.vnode.el = parent.subTree.el = newNode
       }
       parent = parent.parent
     }
   }
 
-  const isTemplateNode = (node: Element): boolean => {
+  const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
     return (
       node.nodeType === DOMNodeTypes.ELEMENT &&
-      node.tagName.toLowerCase() === 'template'
+      (node as Element).tagName.toLowerCase() === 'template'
     )
   }
 
