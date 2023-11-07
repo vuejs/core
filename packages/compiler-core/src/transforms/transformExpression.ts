@@ -228,10 +228,10 @@ export function processExpression(
     const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
     if (
-      !asParams &&
-      !isScopeVarReference &&
-      !isLiteral &&
-      (!isAllowedGlobal || bindingMetadata[rawExp])
+      asParams ||
+      isScopeVarReference ||
+      isLiteral ||
+      (isAllowedGlobal && !bindingMetadata[rawExp])
     ) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
@@ -240,11 +240,7 @@ export function processExpression(
       }
       node.content = rewriteIdentifier(rawExp)
     } else if (!isScopeVarReference) {
-      if (isLiteral) {
-        node.constType = ConstantTypes.CAN_STRINGIFY
-      } else {
-        node.constType = ConstantTypes.CAN_HOIST
-      }
+      node.constType = isLiteral ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.CAN_HOIST
     }
     return node
   }
