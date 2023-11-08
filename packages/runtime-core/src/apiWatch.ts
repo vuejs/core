@@ -74,7 +74,7 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
 }
 
 export type WatchStopHandle = () => void
@@ -210,7 +210,7 @@ function doWatch(
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
-    deep = true
+    if (!deep) deep = true
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
@@ -270,7 +270,7 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter())
+    getter = () => traverse(baseGetter(), deep)
   }
 
   let cleanup: () => void
@@ -437,28 +437,41 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-export function traverse(value: unknown, seen?: Set<unknown>) {
+export function traverse(
+  value: unknown,
+  deep?: boolean | number,
+  currentDepth = 0,
+  seen?: Set<unknown>
+) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
+
+  if (typeof deep === 'number') {
+    if (currentDepth >= deep) {
+      return value
+    }
+    currentDepth++
+  }
+
   seen = seen || new Set()
   if (seen.has(value)) {
     return value
   }
   seen.add(value)
   if (isRef(value)) {
-    traverse(value.value, seen)
+    traverse(value.value, deep, currentDepth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], seen)
+      traverse(value[i], deep, currentDepth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, seen)
+      traverse(v, deep, currentDepth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], seen)
+      traverse(value[key], deep, currentDepth, seen)
     }
   }
   return value

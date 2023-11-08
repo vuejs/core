@@ -1205,4 +1205,36 @@ describe('api: watch', () => {
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
   })
+
+  it('Passing deep as a number for use as depth', async () => {
+    const state = reactive({
+      a: {
+        b: {
+          c: {
+            d: {
+              e: 1
+            }
+          }
+        }
+      }
+    })
+
+    const cb = vi.fn()
+
+    watch(state, cb, { deep: 2 })
+
+    state.a.b = { c: { d: { e: 2 } } }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    state.a.b.c = { d: { e: 3 } }
+
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    state.a.b = { c: { d: { e: 4 } } }
+
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+  })
 })
