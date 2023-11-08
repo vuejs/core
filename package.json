@@ -27,7 +27,7 @@
     "dev-esm": "node scripts/dev.js -if esm-bundler-runtime",
     "dev-compiler": "run-p \"dev template-explorer\" serve",
     "dev-sfc": "run-s dev-sfc-prepare dev-sfc-run",
-    "dev-sfc-prepare": "node scripts/pre-dev-sfc.js || npm run build-compiler-cjs",
+    "dev-sfc-prepare": "node scripts/pre-dev-sfc.js || npm run build-all-cjs",
     "dev-sfc-serve": "vite packages/sfc-playground --host",
     "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
     "serve": "serve",
