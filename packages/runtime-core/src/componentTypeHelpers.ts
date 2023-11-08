@@ -1,11 +1,6 @@
-import { ComponentOptionsBase, ComponentOptionsMixin } from './componentOptions'
+import { ComponentOptionsBase } from './componentOptions'
 import { RawOptionsSymbol } from './apiDefineComponent'
-import {
-  EmitFn,
-  EmitsOptions,
-  EmitsToProps,
-  ObjectEmitsOptions
-} from './componentEmits'
+import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import { ExtractPropTypes } from './componentProps'
 import { Slot, Slots } from './componentSlots'
 import { VNode } from '.'

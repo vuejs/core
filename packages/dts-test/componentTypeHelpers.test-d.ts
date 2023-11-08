@@ -5,11 +5,6 @@ import {
   ComponentProps,
   defineComponent,
   defineAsyncComponent,
-  ExtractComponentProp,
-  ExtractComponentSlots,
-  SlotsType,
-  ExtractComponentEmits,
-  ComponentSlots
 } from 'vue'
 
 const propsOptions = {
