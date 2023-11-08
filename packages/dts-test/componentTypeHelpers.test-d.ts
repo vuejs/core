@@ -4,7 +4,7 @@ import {
   ExtractComponentOptions,
   ComponentProps,
   defineComponent,
-  defineAsyncComponent,
+  defineAsyncComponent
 } from 'vue'
 
 const propsOptions = {
