@@ -225,7 +225,7 @@ export function processExpression(
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
-    if(!isScopeVarReference){
+    if (!isScopeVarReference) {
       const isAllowedGlobal = isGloballyAllowed(rawExp)
       const isLiteral = isLiteralWhitelisted(rawExp)
       const bindingMetadataRawExp = bindingMetadata[rawExp]
@@ -234,7 +234,9 @@ export function processExpression(
         isLiteral ||
         (isAllowedGlobal && !bindingMetadataRawExp)
       ) {
-        node.constType = isLiteral ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.CAN_HOIST
+        node.constType = isLiteral
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.CAN_HOIST
       } else {
         // const bindings exposed from setup can be skipped for patching but
         // cannot be hoisted to module scope
