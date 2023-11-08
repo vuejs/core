@@ -1,18 +1,11 @@
-import { as } from 'vitest/dist/reporters-5f784f42.js'
 import { expectType, describe } from './utils'
 
 import {
   ExtractComponentOptions,
-  ExtractComponentSlots,
   ComponentProps,
-  ExtractComponentEmits,
   defineComponent,
   defineAsyncComponent
 } from 'vue'
-
-declare function extractComponentOptions<T>(comp: T): ExtractComponentOptions<T>
-
-declare function extractComponentSlots<T>(comp: T): ExtractComponentSlots<T>
 
 const propsOptions = {
   props: {
@@ -33,10 +26,11 @@ const propsOptions = {
       test: 1
     }
   }
-} as const
+}
 
 const arrayOptions = {
-  props: ['a', 'b', 'c'] as const,
+  // preventing from set as readonly otherwise it breaks typing
+  props: ['a', 'b', 'c'] as ['a', 'b', 'c'],
   slots: {
     default(arg: { msg: string }) {}
   },
@@ -58,7 +52,7 @@ const noPropsOptions = {
       test: 1
     }
   }
-} as const
+}
 
 // const mixIn = {
 //   props: ['a1'],
@@ -162,12 +156,19 @@ describe('Component Props', () => {
 
     const mixin = defineComponent({
       props: ['a1'],
-      mixins: [CompProps, CompPropsArray, CompNoProps]
+      mixins: [CompProps, CompPropsArray, CompNoProps],
+
+      setup(props) {
+        props.a, props.a1
+        props.bb
+      }
     })
-    const a = {} as ComponentProps<typeof mixin>
-    // a.c
     expectType<{
       a1?: any
+      a?: any
+      b?: any
+      c?: any
+      bb: boolean
     }>({} as ComponentProps<typeof mixin>)
   })
 
@@ -211,5 +212,18 @@ describe('Component Props', () => {
     expectType<{}>({} as ComponentProps<typeof noPropsOptions>)
     // @ts-expect-error checking if is not any
     expectType<{ bar: 'foo' }>({} as ComponentProps<typeof noPropsOptions>)
+
+    const mixin = {
+      props: ['a1'] as ['a1'],
+      // casting cost to keep the types
+      mixins: [propsOptions, arrayOptions, noPropsOptions] as const
+    }
+    expectType<{
+      a1?: any
+      a?: any
+      b?: any
+      c?: any
+      bb: boolean
+    }>({} as ComponentProps<typeof mixin>)
   })
 })

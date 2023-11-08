@@ -482,10 +482,7 @@ interface LegacyOptions<
   II extends string
 > {
   compatConfig?: CompatConfig
-  props?: ComponentPropsOptions | Readonly<string[]>
-
-  // // allow any custom options
-  // [key: string]: any
+  props?: ComponentPropsOptions | Readonly<ComponentPropsOptions>
 
   // state
   // Limitation: we cannot expose RawBindings on the `this` context for data
