@@ -1,6 +1,11 @@
 import { ComponentOptionsBase, ComponentOptionsMixin } from './componentOptions'
 import { RawOptionsSymbol } from './apiDefineComponent'
-import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
+import {
+  EmitFn,
+  EmitsOptions,
+  EmitsToProps,
+  ObjectEmitsOptions
+} from './componentEmits'
 import { ExtractPropTypes } from './componentProps'
 import { Slot, Slots } from './componentSlots'
 import { VNode } from '.'
@@ -42,29 +47,52 @@ export type ExtractComponentProp<T> = T extends { props: infer P }
   ? P
   : {}
 
-export type ExtractComponentSlots<T> = T extends {
-  [RawOptionsSymbol]: infer Options
-}
-  ? Options
+export type ExtractComponentSlots<T> = T extends ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer S
+>
+  ? S
+  : T extends { slots: infer S }
+  ? S
   : T extends { slots: infer S extends Slots }
   ? S
-  : T extends (props: any, opts: { slots: infer S extends Slots }) => any
+  : T extends (props: any, opts: { slots: infer S }) => any
   ? S
   : T extends { new (): { $slots: infer S extends Slots } }
   ? S
   : {}
 
-export type ExtractComponentEmits<T> = T extends {
-  [RawOptionsSymbol]: infer Options extends ComponentOptionsMixin
-}
-  ? Options['emits']
+export type ExtractComponentEmits<T> = T extends ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
+  infer E
+>
+  ? E
+  : T extends {
+      emits: infer E
+    }
+  ? E
   : T extends { emits: infer E extends EmitsOptions }
   ? E
   : T extends (props: any, opts: { emits: infer E extends EmitsOptions }) => any
   ? E
-  : // : T extends { new (): { $emits: infer E extends EmitsOptions } }
-    // ? S
-    {}
+  : {}
 
 type ResolveMixin<T> = [T] extends [
   Readonly<
@@ -94,12 +122,12 @@ export type ComponentProps<
   T,
   excludeEmits extends boolean = false
 > = (excludeEmits extends false
-  ? ExtractComponentEmits<T> extends infer E extends EmitsOptions
-    ? {} extends E
-      ? unknown
-      : EmitsToProps<E>
+  ? ExtractComponentEmits<T> extends infer E
+    ? E extends EmitsOptions
+      ? EmitsToProps<E>
+      : unknown
     : unknown
-  : unknown) &
+  : {}) &
   (ExtractComponentProp<T> extends infer P
     ? P extends Readonly<Array<infer V>>
       ? [V] extends [string]
@@ -107,48 +135,17 @@ export type ComponentProps<
         : {}
       : ExtractPropTypes<P>
     : {}) &
-  // props to be omitted since it does not like of `readonly ['', '']` props
+  // props to be omitted since we don't need them here
   ResolveMixinProps<Omit<T, 'props'>>
 
-export type ComponentSlots<T> = ExtractComponentSlots<T> extends infer S extends
-  Slots
+export type ComponentSlots<T> = ExtractComponentSlots<T> extends infer S
   ? {
       [K in keyof S]: S[K] extends Slot<infer V> ? (arg: V) => VNode : never
     }
   : {}
-
-// export type ComponentEmits<T> = ExtractComponentOptions<T> extends {
-//   emits: infer E
-// }
-//   ? E extends EmitsOptions
-//     ? EmitsToProps<E>
-//     : {}
-//   : T extends (props: any, opts: { emits: infer E extends EmitsOptions }) => any
-//   ? EmitsToProps<E>
-//   : {}
 
 export type ComponentEmits<T> = ExtractComponentEmits<T> extends infer E
   ? {} extends E
     ? () => void
     : EmitFn<E>
   : () => void
-
-export type ComponentInternalInstance = {}
-export type ComponentInstance = {}
-
-// type P = ComponentProps<{
-//   props: readonly ['a']
-//   emits: ['a']
-// }>
-
-// type AA = ComponentEmits<{
-//   emits: {
-//     a: (a: string) => true
-//   }
-// }>
-// type AA1 = ComponentEmits<
-//   (props: {}, ctx: { emits: { a: (a: string) => true } }) => void
-// >
-
-// type BB1 = ExtractComponentEmits<{}>
-// type B1 = ComponentEmits<{}>

@@ -4,7 +4,12 @@ import {
   ExtractComponentOptions,
   ComponentProps,
   defineComponent,
-  defineAsyncComponent
+  defineAsyncComponent,
+  ExtractComponentProp,
+  ExtractComponentSlots,
+  SlotsType,
+  ExtractComponentEmits,
+  ComponentSlots
 } from 'vue'
 
 const propsOptions = {
