@@ -180,7 +180,7 @@ export type Component<
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
-  // | ComponentPublicInstance<Props>
+// | ComponentPublicInstance<Props>
 
 export type { ComponentOptions }
 
