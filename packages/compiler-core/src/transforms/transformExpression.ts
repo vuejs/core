@@ -225,24 +225,24 @@ export function processExpression(
 
   if (isSimpleIdentifier(rawExp)) {
     const isScopeVarReference = context.identifiers[rawExp]
-    const isAllowedGlobal = isGloballyAllowed(rawExp)
-    const isLiteral = isLiteralWhitelisted(rawExp)
-    if (
-      asParams ||
-      isScopeVarReference ||
-      isLiteral ||
-      (isAllowedGlobal && !bindingMetadata[rawExp])
-    ) {
-      // const bindings exposed from setup can be skipped for patching but
-      // cannot be hoisted to module scope
-      if (isConst(bindingMetadata[rawExp])) {
-        node.constType = ConstantTypes.CAN_SKIP_PATCH
+    if(!isScopeVarReference){
+      const isAllowedGlobal = isGloballyAllowed(rawExp)
+      const isLiteral = isLiteralWhitelisted(rawExp)
+      const bindingMetadataRawExp = bindingMetadata[rawExp]
+      if (
+        asParams ||
+        isLiteral ||
+        (isAllowedGlobal && !bindingMetadataRawExp)
+      ) {
+        node.constType = isLiteral ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.CAN_HOIST
+      } else {
+        // const bindings exposed from setup can be skipped for patching but
+        // cannot be hoisted to module scope
+        if (isConst(bindingMetadataRawExp)) {
+          node.constType = ConstantTypes.CAN_SKIP_PATCH
+        }
+        node.content = rewriteIdentifier(rawExp)
       }
-      node.content = rewriteIdentifier(rawExp)
-    } else if (!isScopeVarReference) {
-      node.constType = isLiteral
-        ? ConstantTypes.CAN_STRINGIFY
-        : ConstantTypes.CAN_HOIST
     }
     return node
   }
