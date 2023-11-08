@@ -8,7 +8,8 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  SetupContext
+  SetupContext,
+  ComponentProps
 } from 'vue'
 import { describe, expectAssignable, expectType, IsAny } from './utils'
 
@@ -19,6 +20,8 @@ declare function extractComponentOptions<Props, RawBindings>(
   rawBindings: RawBindings
   setup: ShallowUnwrapRef<RawBindings>
 }
+
+declare function extractComponentProps<T>(obj: T): ComponentProps<T>
 
 describe('object props', () => {
   interface ExpectedProps {
@@ -167,7 +170,9 @@ describe('object props', () => {
       }
     })
 
-    const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
+    const { rawBindings, setup } = extractComponentOptions(MyComponent)
+
+    const props = extractComponentProps(MyComponent)
 
     // props
     expectType<ExpectedProps['a']>(props.a)
@@ -323,8 +328,9 @@ describe('object props', () => {
       }
     } as const
 
-    const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
+    const { rawBindings, setup } = extractComponentOptions(MyComponent)
 
+    const props = extractComponentProps(MyComponent)
     // props
     expectType<ExpectedProps['a']>(props.a)
     expectType<ExpectedProps['b']>(props.b)
@@ -341,7 +347,7 @@ describe('object props', () => {
     expectType<ExpectedProps['fff']>(props.fff)
     expectType<ExpectedProps['hhh']>(props.hhh)
     expectType<ExpectedProps['ggg']>(props.ggg)
-    // expectType<ExpectedProps['ffff']>(props.ffff) // todo fix
+    expectType<ExpectedProps['ffff']>(props.ffff)
     expectType<ExpectedProps['validated']>(props.validated)
     expectType<ExpectedProps['object']>(props.object)
 
@@ -385,14 +391,15 @@ describe('array props', () => {
       }
     }
 
-    const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
+    const { rawBindings, setup } = extractComponentOptions(MyComponent)
+
+    const props = extractComponentProps(MyComponent)
 
     // @ts-expect-error props should be readonly
     props.a = 1
 
-    // TODO infer the correct keys
-    // expectType<any>(props.a)
-    // expectType<any>(props.b)
+    expectType<any>(props.a)
+    expectType<any>(props.b)
 
     expectType<number>(rawBindings.c)
     expectType<number>(setup.c)

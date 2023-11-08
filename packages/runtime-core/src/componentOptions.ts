@@ -417,6 +417,8 @@ export type ComponentOptionsMixin = ComponentOptionsBase<
   any,
   any,
   any,
+  any,
+  any,
   any
 >
 
@@ -480,7 +482,7 @@ interface LegacyOptions<
   II extends string
 > {
   compatConfig?: CompatConfig
-  props?: ComponentPropsOptions
+  props?: ComponentPropsOptions | Readonly<string[]>
 
   // // allow any custom options
   // [key: string]: any

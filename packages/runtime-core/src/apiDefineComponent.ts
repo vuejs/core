@@ -41,7 +41,7 @@ type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
 > &
   ({} extends E ? {} : EmitsToProps<E>)
 
-export declare const RawOptionsSymbol: unique symbol
+export declare const RawOptionsSymbol: '__rawOptions'
 
 export type DefineComponent<
   PropsOrPropOptions = {},

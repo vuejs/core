@@ -21,7 +21,8 @@ import {
   ConcreteComponent,
   ComponentOptions,
   ComponentInjectOptions,
-  SlotsType
+  SlotsType,
+  ComponentObjectPropsOptions
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -254,7 +255,8 @@ export class VueElement extends BaseClass {
       let numberProps
       if (props && !isArray(props)) {
         for (const key in props) {
-          const opt = props[key]
+          // isArray does not exclude `readonly string[]` type
+          const opt = (props as ComponentObjectPropsOptions)[key]
           if (
             opt === Number ||
             (opt && (opt as Record<string, any>).type === Number)

@@ -1,3 +1,4 @@
+import { as } from 'vitest/dist/reporters-5f784f42.js'
 import { expectType, describe } from './utils'
 
 import {
@@ -35,7 +36,7 @@ const propsOptions = {
 } as const
 
 const arrayOptions = {
-  props: ['a', 'b', 'c'],
+  props: ['a', 'b', 'c'] as const,
   slots: {
     default(arg: { msg: string }) {}
   },
@@ -45,7 +46,7 @@ const arrayOptions = {
       test: 1
     }
   }
-} as const
+}
 
 const noPropsOptions = {
   slots: {
@@ -59,10 +60,10 @@ const noPropsOptions = {
   }
 } as const
 
-const mixIn = {
-  props: ['a1'],
-  mixins: [propsOptions, arrayOptions, noPropsOptions]
-} as const
+// const mixIn = {
+//   props: ['a1'],
+//   mixins: [propsOptions, arrayOptions, noPropsOptions]
+// }
 
 describe('Extract Component Options', () => {
   describe('defineComponent', () => {
@@ -84,10 +85,17 @@ describe('Extract Component Options', () => {
     // @ts-expect-error checking if is not any
     expectType<ExtractComponentOptions<typeof CompNoProps>>({ bar: 'foo' })
 
-    const Mixins = defineComponent(mixIn)
-    expectType<ExtractComponentOptions<typeof Mixins>>(mixIn)
+    const Mixins = defineComponent({
+      props: ['a1'],
+      mixins: [propsOptions, arrayOptions, noPropsOptions]
+    })
+
+    expectType<ExtractComponentOptions<typeof Mixins>>({
+      props: ['a1'],
+      mixins: [propsOptions, arrayOptions, noPropsOptions]
+    })
     // @ts-expect-error checking if is not any
-    expectType<ExtractComponentOptions<typeof Mixins>>(mixIn)
+    expectType<ExtractComponentOptions<typeof Mixins>>({ bar: 'foo' })
   })
 
   describe('async component', () => {
@@ -128,17 +136,6 @@ describe('Component Props', () => {
   describe('defineComponent', () => {
     // Component with props
     const CompProps = defineComponent(propsOptions)
-    const p = {} as ComponentProps<{
-      props: ['a']
-
-      emits: {
-        foo: (a: { msg: string }) => true
-      }
-    }>
-
-    if (p.a && p.onFoo) {
-    }
-
     expectType<{
       readonly a?: string | undefined
       readonly b: boolean | undefined
@@ -149,18 +146,29 @@ describe('Component Props', () => {
 
     // component array props
     const CompPropsArray = defineComponent(arrayOptions)
-    expectType<ComponentProps<typeof CompPropsArray>>(arrayOptions)
-
-    // extractComponentOptions(CompPropsArray)
-    const a = {} as ComponentProps<typeof CompPropsArray>
+    // aX
+    expectType<{
+      readonly a?: any
+      readonly b?: any
+      readonly c?: any
+    }>({} as ComponentProps<typeof CompPropsArray>)
     // @ts-expect-error checking if is not any
-    expectType<ComponentProps<typeof CompPropsArray>>({ bar: 'foo' })
+    expectType<{ bar: 'foo' }>({} as ComponentProps<typeof CompPropsArray>)
 
     // component no props
     const CompNoProps = defineComponent(noPropsOptions)
-    expectType<ComponentProps<typeof CompNoProps>>(noPropsOptions)
     // @ts-expect-error checking if is not any
-    expectType<ComponentProps<typeof CompNoProps>>({ bar: 'foo' })
+    expectType<{ bar: 'foo' }>({} as ComponentProps<typeof CompNoProps>)
+
+    const mixin = defineComponent({
+      props: ['a1'],
+      mixins: [CompProps, CompPropsArray, CompNoProps]
+    })
+    const a = {} as ComponentProps<typeof mixin>
+    // a.c
+    expectType<{
+      a1?: any
+    }>({} as ComponentProps<typeof mixin>)
   })
 
   describe('async component', () => {
@@ -168,31 +176,40 @@ describe('Component Props', () => {
       loader: () =>
         Promise.resolve(
           defineComponent({
-            foo: 'bar'
+            props: {
+              foo: String
+            }
           })
         )
     })
 
     // NOTE not sure if this is the intention since Component.foo is undefined
-    expectType<ComponentProps<typeof Component>>({
-      foo: 'bar'
-    })
+    expectType<{
+      foo?: string | undefined
+    }>({} as ComponentProps<typeof Component>)
   })
 
   describe('options object', () => {
-    // Component with props
-    expectType<ComponentProps<typeof propsOptions>>(propsOptions)
+    expectType<{
+      readonly a?: string | undefined
+      readonly b: boolean | undefined
+      readonly bb: boolean
+    }>({} as ComponentProps<typeof propsOptions>)
     // @ts-expect-error checking if is not any
-    expectType<ComponentProps<typeof propsOptions>>({ bar: 'foo' })
+    expectType<{ bar: string }>({} as ComponentProps<typeof propsOptions>)
 
     // component array props
-    expectType<ComponentProps<typeof arrayOptions>>(arrayOptions)
+    expectType<{
+      readonly a?: any
+      readonly b?: any
+      readonly c?: any
+    }>({} as ComponentProps<typeof arrayOptions>)
     // @ts-expect-error checking if is not any
-    expectType<ComponentProps<typeof arrayOptions>>({ bar: 'foo' })
+    expectType<{ bar: 'foo' }>({} as ComponentProps<typeof arrayOptions>)
 
     // component no props
-    expectType<ComponentProps<typeof noPropsOptions>>(noPropsOptions)
+    expectType<{}>({} as ComponentProps<typeof noPropsOptions>)
     // @ts-expect-error checking if is not any
-    expectType<ComponentProps<typeof noPropsOptions>>({ bar: 'foo' })
+    expectType<{ bar: 'foo' }>({} as ComponentProps<typeof noPropsOptions>)
   })
 })
