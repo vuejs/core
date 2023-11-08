@@ -29,6 +29,7 @@ import {
   assertNumber
 } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
+import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -491,10 +492,12 @@ function createSuspenseBoundary(
         container
       } = suspense
 
+      // if there's a transition happening we need to wait it to finish.
+      let delayEnter: boolean | null = false
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
-        const delayEnter =
+        delayEnter =
           activeBranch &&
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
@@ -502,6 +505,7 @@ function createSuspenseBoundary(
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
               move(pendingBranch!, container, anchor, MoveType.ENTER)
+              queuePostFlushCb(effects)
             }
           }
         }
@@ -538,8 +542,8 @@ function createSuspenseBoundary(
         }
         parent = parent.parent
       }
-      // no pending parent suspense, flush all jobs
-      if (!hasUnresolvedAncestor) {
+      // no pending parent suspense nor transition, flush all jobs
+      if (!hasUnresolvedAncestor && !delayEnter) {
         queuePostFlushCb(effects)
       }
       suspense.effects = []
@@ -792,7 +796,11 @@ function normalizeSuspenseSlot(s: any) {
   }
   if (isArray(s)) {
     const singleChild = filterSingleRoot(s)
-    if (__DEV__ && !singleChild) {
+    if (
+      __DEV__ &&
+      !singleChild &&
+      s.filter(child => child !== NULL_DYNAMIC_COMPONENT).length > 0
+    ) {
       warn(`<Suspense> slots expect a single root node.`)
     }
     s = singleChild
