@@ -224,8 +224,7 @@ export function processExpression(
   const bailConstant = constantBailRE.test(rawExp)
 
   if (isSimpleIdentifier(rawExp)) {
-    const isScopeVarReference = context.identifiers[rawExp]
-    if (!isScopeVarReference) {
+    if (!context.identifiers[rawExp]) {
       const isAllowedGlobal = isGloballyAllowed(rawExp)
       const isLiteral = isLiteralWhitelisted(rawExp)
       const bindingMetadataRawExp = bindingMetadata[rawExp]
