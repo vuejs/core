@@ -520,4 +520,13 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
   }
 }
 
-export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+const forAliasRE = /([\s\S]*?[\s\)\}\]]+)(?:in|of)([\s\[]+[\s\S]*)/
+export function matchForAlias(exp: string) {
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+
+  const LHS = inMatch[1].trim()
+  const RHS = inMatch[2].trim()
+
+  if (LHS && RHS) return { LHS, RHS }
+}
