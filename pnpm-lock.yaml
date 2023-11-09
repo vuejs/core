@@ -361,6 +361,8 @@ importers:
         specifier: 3.3.8
         version: link:../shared
 
+  packages/runtime-vapor: {}
+
   packages/server-renderer:
     dependencies:
       '@vue/compiler-ssr':

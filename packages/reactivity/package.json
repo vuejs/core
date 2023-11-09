@@ -14,7 +14,7 @@
   "sideEffects": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vuejs/core.git",
+    "url": "git+https://github.com/vuejs/core-vapor.git",
     "directory": "packages/reactivity"
   },
   "buildOptions": {
@@ -32,9 +32,9 @@
   "author": "Evan You",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vuejs/core/issues"
+    "url": "https://github.com/vuejs/core-vapor/issues"
   },
-  "homepage": "https://github.com/vuejs/core/tree/main/packages/reactivity#readme",
+  "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/reactivity#readme",
   "dependencies": {
     "@vue/shared": "3.3.8"
   }

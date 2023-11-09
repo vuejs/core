@@ -1,0 +1,32 @@
+{
+  "name": "@vue/runtime-vapor",
+  "version": "0.0.0",
+  "description": "@vue/runtime-vapor",
+  "main": "dist/runtime-vapor.cjs.js",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "formats": [
+      "cjs"
+    ],
+    "prod": false
+  },
+  "types": "dist/runtime-vapor.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core-vapor.git",
+    "directory": "packages/runtime-vapor"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core-vapor/issues"
+  },
+  "homepage": "https://github.com/vuejs/core-vapor/tree/dev/packages/runtime-vapor#readme",
+  "dependencies": {},
+  "devDependencies": {}
+}
