@@ -20,7 +20,7 @@ const { createRecord, rerender, reload } = __VUE_HMR_RUNTIME__
 registerRuntimeCompiler(compileToFunction)
 
 function compileToFunction(template: string) {
-  const { code } = baseCompile(template)
+  const { code } = baseCompile(template, { hoistStatic: true, hmr: true })
   const render = new Function('Vue', code)(
     runtimeTest
   ) as InternalRenderFunction
@@ -212,6 +212,75 @@ describe('hot module replacement', () => {
     // should not mount when toggling
     triggerEvent(root.children[1] as TestElement, 'click')
     await nextTick()
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(2)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // #7121
+  test('reload KeepAlive slot in Transition', async () => {
+    const root = nodeOps.createElement('div')
+    const childId = 'test-transition-keep-alive-reload'
+    const unmountSpy = vi.fn()
+    const mountSpy = vi.fn()
+    const activeSpy = vi.fn()
+    const deactiveSpy = vi.fn()
+
+    const Child: ComponentOptions = {
+      __hmrId: childId,
+      data() {
+        return { count: 0 }
+      },
+      unmounted: unmountSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    }
+    createRecord(childId, Child)
+
+    const Parent: ComponentOptions = {
+      components: { Child },
+      data() {
+        return { toggle: true }
+      },
+      render: compileToFunction(
+        `<button @click="toggle = !toggle"></button><BaseTransition mode="out-in"><KeepAlive><Child v-if="toggle" /></KeepAlive></BaseTransition>`
+      )
+    }
+
+    render(h(Parent), root)
+    expect(serializeInner(root)).toBe(`<button></button><div>0</div>`)
+
+    reload(childId, {
+      __hmrId: childId,
+      data() {
+        return { count: 1 }
+      },
+      mounted: mountSpy,
+      unmounted: unmountSpy,
+      activated: activeSpy,
+      deactivated: deactiveSpy,
+      render: compileToFunction(`<div>{{ count }}</div>`)
+    })
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(0)
+
+    // should not unmount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><!---->`)
+    expect(unmountSpy).toHaveBeenCalledTimes(1)
+    expect(mountSpy).toHaveBeenCalledTimes(1)
+    expect(activeSpy).toHaveBeenCalledTimes(1)
+    expect(deactiveSpy).toHaveBeenCalledTimes(1)
+
+    // should not mount when toggling
+    triggerEvent(root.children[1] as TestElement, 'click')
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<button></button><div>1</div>`)
     expect(unmountSpy).toHaveBeenCalledTimes(1)
     expect(mountSpy).toHaveBeenCalledTimes(1)
     expect(activeSpy).toHaveBeenCalledTimes(2)
@@ -566,5 +635,41 @@ describe('hot module replacement', () => {
 
     rerender(parentId, compileToFunction(`<Child>2</Child>`))
     expect(serializeInner(root)).toBe(`2`)
+  })
+
+  // #6978, #7138, #7114
+  test('hoisted children array inside v-for', () => {
+    const root = nodeOps.createElement('div')
+    const appId = 'test-app-id'
+    const App: ComponentOptions = {
+      __hmrId: appId,
+      render: compileToFunction(
+        `<div v-for="item of 2">
+          <div>1</div>
+        </div>
+        <p>2</p>
+        <p>3</p>`
+      )
+    }
+    createRecord(appId, App)
+
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div>1</div></div><div><div>1</div></div><p>2</p><p>3</p>`
+    )
+
+    // move the <p>3</p> into the <div>1</div>
+    rerender(
+      appId,
+      compileToFunction(
+        `<div v-for="item of 2">
+          <div>1<p>3</p></div>
+        </div>
+        <p>2</p>`
+      )
+    )
+    expect(serializeInner(root)).toBe(
+      `<div><div>1<p>3</p></div></div><div><div>1<p>3</p></div></div><p>2</p>`
+    )
   })
 })
