@@ -195,7 +195,8 @@ export type {
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
-  WatchStopHandle
+  WatchStopHandle,
+  MultiWatchSources
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'
 export type {
