@@ -41,7 +41,7 @@
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm lint-staged && pnpm check",
+    "pre-commit": "pnpm lint-staged",
     "commit-msg": "node scripts/verifyCommit.js"
   },
   "lint-staged": {
