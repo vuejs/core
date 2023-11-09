@@ -484,24 +484,45 @@ export type ShallowUnwrapRef<T> = {
     : T[K]
 }
 
-export type UnwrapRef<T> = T extends ShallowRef<infer V>
-  ? V
-  : T extends Ref<infer V>
-  ? UnwrapRefSimple<V>
-  : UnwrapRefSimple<T>
-
-export type UnwrapRefSimple<T> = T extends
+export type UnwrapLeaf =
   | Function
   | CollectionTypes
   | BaseTypes
-  | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
+
+export type UnwrapRef<T> = T extends UnwrapLeaf
   ? T
   : T extends ReadonlyArray<any>
-  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-  : T extends object & { [ShallowReactiveMarker]?: never }
   ? {
-      [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+      [K in keyof T]: UnwrapRefSimple<T[K]>
     }
-  : T
+  : UnwrapRefLazy<{ ref: T }>['ref']
+
+export type UnwrapRefSimple<T> = T extends Ref | UnwrapLeaf
+  ? T
+  : T extends ReadonlyArray<any>
+  ? UnwrapRefLazyArray<T>
+  : UnwrapRefLazy<T>
+
+export type UnwrapRefLazyArray<T> = {
+  [K in keyof T]: T[K] extends Ref | UnwrapLeaf
+    ? T[K]
+    : T[K] extends ReadonlyArray<any>
+    ? UnwrapRefLazyArray<T[K]>
+    : UnwrapRefLazy<T[K]>
+}
+
+export type UnwrapRefLazy<T> = {
+  [K in keyof T]: K extends symbol
+    ? T[K]
+    : T[K] extends object & { [ShallowReactiveMarker]?: never }
+    ? T[K] extends UnwrapLeaf
+      ? T[K]
+      : T[K] extends ShallowRef<infer V>
+      ? V
+      : T[K] extends Ref<infer V>
+      ? UnwrapRefLazy<V>
+      : UnwrapRefLazy<T[K]>
+    : T[K]
+}
