@@ -114,7 +114,7 @@ describe('reactivity/shallowReadonly', () => {
       })
     })
 
-    test('should undefined from Map.clear call', () => {
+    test('should return undefined from Map.clear() call', () => {
       const sroMap = shallowReadonly(new Map())
       expect(sroMap.clear()).toBeUndefined()
       expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
@@ -204,7 +204,7 @@ describe('reactivity/shallowReadonly', () => {
       })
     })
 
-    test('should undefined from Set.clear call', () => {
+    test('should return undefined from Set.clear() call', () => {
       const sroSet = shallowReadonly(new Set())
       expect(sroSet.clear()).toBeUndefined()
       expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
