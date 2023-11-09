@@ -1,3 +1,4 @@
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
@@ -127,12 +128,14 @@ export function handleError(
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
+      pauseTracking()
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo]
       )
+      resetTracking()
       return
     }
   }
