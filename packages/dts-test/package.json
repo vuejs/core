@@ -5,5 +5,5 @@
     "vue": "workspace:*",
     "@vue/dts-built-test": "workspace:*"
   },
-  "version": "3.3.7"
+  "version": "3.3.8"
 }
