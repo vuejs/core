@@ -17,7 +17,11 @@ Hi! I'm really excited that you are interested in contributing to Vue.js. Before
 
 ## Pull Request Guidelines
 
-- Checkout a topic branch from a base branch, e.g. `main`, and merge back against that branch.
+- Vue core has two primary work branches: `main` and `minor`.
+
+  - If your pull request is a feature that adds new API surface, it should be submitted against the `minor` branch.
+
+  - Otherwise, it should be submitted against the `main` branch.
 
 - [Make sure to tick the "Allow edits from maintainers" box](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/allowing-changes-to-a-pull-request-branch-created-from-a-fork). This allows us to directly make minor edits / refactors and saves a lot of time.
 
