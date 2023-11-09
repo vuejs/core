@@ -49,7 +49,6 @@ import {
   WritableComputedOptions
 } from '@vue/reactivity'
 import {
-  ComponentObjectPropsOptions,
   ExtractPropTypes,
   ExtractDefaultPropTypes,
   ComponentPropsOptions
@@ -311,7 +310,7 @@ export type ComponentOptionsWithArrayProps<
   >
 
 export type ComponentOptionsWithObjectProps<
-  PropsOptions = ComponentObjectPropsOptions,
+  PropsOptions = ComponentPropsOptions,
   RawBindings = {},
   D = {},
   C extends ComputedOptions = {},
@@ -323,25 +322,24 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
+  Props = {} extends PropsOptions
+    ? Prettify<EmitsToProps<E>>
+    : Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
-> = Omit<
-  ComponentOptionsBase<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    Defaults,
-    I,
-    II,
-    S
-  >,
-  'props'
+> = ComponentOptionsBase<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  Defaults,
+  I,
+  II,
+  S
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
