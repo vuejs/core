@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { vi, type Mock } from 'vitest'
+import { type Mock } from 'vitest'
 import {
   h,
   nodeOps,
@@ -382,7 +382,7 @@ describe('api: options', () => {
         render() {
           return this[injectedKey]
         }
-      } as any)
+      }) as any
 
     const ChildA = defineChild(['a'], 'a')
     const ChildB = defineChild({ b: 'a' })

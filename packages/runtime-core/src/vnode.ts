@@ -114,6 +114,7 @@ export type VNodeProps = {
 
 type VNodeChildAtom =
   | VNode
+  | typeof NULL_DYNAMIC_COMPONENT
   | string
   | number
   | boolean
@@ -681,7 +682,7 @@ export function cloneVNode<T, U>(
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
   }
-  return cloned as any
+  return cloned
 }
 
 /**
