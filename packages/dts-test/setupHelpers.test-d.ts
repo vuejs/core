@@ -8,7 +8,8 @@ import {
   defineSlots,
   VNode,
   Ref,
-  defineModel
+  defineModel,
+  toRefs
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -20,6 +21,7 @@ describe('defineProps w/ type declaration', () => {
     foo: string
     bool?: boolean
     boolAndUndefined: boolean | undefined
+    file?: File | File[]
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
@@ -100,7 +102,8 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
   )
 })
 
-describe('defineProps w/ generic type declaration + withDefaults', <T extends number, TA extends {
+describe('defineProps w/ generic type declaration + withDefaults', <T extends
+  number, TA extends {
   a: string
 }, TString extends string>() => {
   const res = withDefaults(
@@ -117,10 +120,10 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
       n: 123,
 
       generic1: () => [123, 33] as T[],
-      generic2: () => ({ x: 123 } as { x: T }),
+      generic2: () => ({ x: 123 }) as { x: T },
 
       generic3: () => 'test' as TString,
-      generic4: () => ({ a: 'test' } as TA)
+      generic4: () => ({ a: 'test' }) as TA
     }
   )
 
@@ -132,6 +135,26 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
   expectType<TA>(res.generic4)
 
   expectType<boolean>(res.bool)
+})
+
+describe('withDefaults w/ boolean type', () => {
+  const res1 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    { bool: false }
+  )
+  expectType<boolean>(res1.bool)
+
+  const res2 = withDefaults(
+    defineProps<{
+      bool?: boolean
+    }>(),
+    {
+      bool: undefined
+    }
+  )
+  expectType<boolean | undefined>(res2.bool)
 })
 
 describe('defineProps w/ runtime declaration', () => {
@@ -306,4 +329,12 @@ describe('useAttrs', () => {
 describe('useSlots', () => {
   const slots = useSlots()
   expectType<Slots>(slots)
+})
+
+// #6420
+describe('toRefs w/ type declaration', () => {
+  const props = defineProps<{
+    file?: File | File[]
+  }>()
+  expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
 })
