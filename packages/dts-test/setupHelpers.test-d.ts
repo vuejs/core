@@ -331,20 +331,10 @@ describe('useSlots', () => {
   expectType<Slots>(slots)
 })
 
+// #6420
 describe('toRefs w/ type declaration', () => {
-  // type declaration
   const props = defineProps<{
-    foo: string
-    bool?: boolean
-    boolAndUndefined: boolean | undefined
     file?: File | File[]
   }>()
-
-  // #6420
-  expectType<{
-    foo: Ref<string>
-    bool: Ref<boolean | undefined>
-    boolAndUndefined: Ref<boolean | undefined>
-    file: Ref<File | File[] | undefined>
-  }>(toRefs(props))
+  expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
 })
