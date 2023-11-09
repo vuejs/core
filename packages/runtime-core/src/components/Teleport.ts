@@ -63,6 +63,7 @@ const resolveTarget = <T = RendererElement>(
 }
 
 export const TeleportImpl = {
+  name: 'Teleport',
   __isTeleport: true,
   process(
     n1: TeleportVNode | null,
@@ -186,6 +187,13 @@ export const TeleportImpl = {
             internals,
             TeleportMoveTypes.TOGGLE
           )
+        } else {
+          // #7835
+          // When `teleport` is disabled, `to` may change, making it always old,
+          // to ensure the correct `to` when enabled
+          if (n2.props && n1.props && n2.props.to !== n1.props.to) {
+            n2.props.to = n1.props.to
+          }
         }
       } else {
         // target changed
@@ -232,7 +240,7 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
-    doRemove: Boolean
+    doRemove: boolean
   ) {
     const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
 
@@ -240,20 +248,19 @@ export const TeleportImpl = {
       hostRemove(targetAnchor!)
     }
 
-    // an unmounted teleport should always remove its children if not disabled
-    if (doRemove || !isTeleportDisabled(props)) {
-      hostRemove(anchor!)
-      if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-        for (let i = 0; i < (children as VNode[]).length; i++) {
-          const child = (children as VNode[])[i]
-          unmount(
-            child,
-            parentComponent,
-            parentSuspense,
-            true,
-            !!child.dynamicChildren
-          )
-        }
+    // an unmounted teleport should always unmount its children whether it's disabled or not
+    doRemove && hostRemove(anchor!)
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      const shouldRemove = doRemove || !isTeleportDisabled(props)
+      for (let i = 0; i < (children as VNode[]).length; i++) {
+        const child = (children as VNode[])[i]
+        unmount(
+          child,
+          parentComponent,
+          parentSuspense,
+          shouldRemove,
+          !!child.dynamicChildren
+        )
       }
     }
   },
@@ -393,7 +400,7 @@ function hydrateTeleport(
 // Force-casted public typing for h and TSX props inference
 export const Teleport = TeleportImpl as unknown as {
   __isTeleport: true
-  new(): {
+  new (): {
     $props: VNodeProps & TeleportProps
     $slots: {
       default(): VNode[]
@@ -407,7 +414,7 @@ function updateCssVars(vnode: VNode) {
   const ctx = vnode.ctx
   if (ctx && ctx.ut) {
     let node = (vnode.children as VNode[])[0].el!
-    while (node !== vnode.targetAnchor) {
+    while (node && node !== vnode.targetAnchor) {
       if (node.nodeType === 1) node.setAttribute('data-v-owner', ctx.uid)
       node = node.nextSibling
     }

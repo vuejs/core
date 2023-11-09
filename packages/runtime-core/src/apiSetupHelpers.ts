@@ -4,7 +4,8 @@ import {
   isFunction,
   Prettify,
   UnionToIntersection,
-  extend
+  extend,
+  LooseRequired
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -82,7 +83,7 @@ export function defineProps<
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
 export function defineProps<TypeProps>(): DefineProps<
-  TypeProps,
+  LooseRequired<TypeProps>,
   BooleanKey<TypeProps>
 >
 // implementation
@@ -303,7 +304,13 @@ type PropsWithDefaults<
       ? T[K]
       : NotUndefined<T[K]>
     : never
-} & { readonly [K in BKeys]-?: boolean }
+} & {
+  readonly [K in BKeys]-?: K extends keyof Defaults
+    ? Defaults[K] extends undefined
+      ? boolean | undefined
+      : boolean
+    : boolean
+}
 
 /**
  * Vue `<script setup>` compiler macro for providing props default values when

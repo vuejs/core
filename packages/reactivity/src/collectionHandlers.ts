@@ -233,7 +233,11 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
         toRaw(this)
       )
     }
-    return type === TriggerOpTypes.DELETE ? false : this
+    return type === TriggerOpTypes.DELETE
+      ? false
+      : type === TriggerOpTypes.CLEAR
+      ? undefined
+      : this
   }
 }
 
