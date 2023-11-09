@@ -376,18 +376,19 @@ describe('SFC compile <script setup>', () => {
     test('dynamic arguments', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, foo, bar, unused } from './x'
+        import { FooBar, foo, bar, unused, baz } from './x'
         </script>
         <template>
           <FooBar #[foo.slotName] />
           <FooBar #unused />
           <div :[bar.attrName]="15"></div>
           <div unused="unused"></div>
+          <div #[\`item:\${baz.key}\`]="{ value }"></div>
         </template>
         `)
       expect(content).toMatch(
         `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
-          `get bar() { return bar } }`
+          `get bar() { return bar }, get baz() { return baz } }`
       )
       assertCode(content)
     })

@@ -101,6 +101,61 @@ describe('vModel', () => {
     expect(data.value).toEqual(1)
   })
 
+  // #7003
+  it('should work with number input and be able to update rendering correctly', async () => {
+    const setValue1 = function (this: any, value: any) {
+      this.value1 = value
+    }
+    const setValue2 = function (this: any, value: any) {
+      this.value2 = value
+    }
+    const component = defineComponent({
+      data() {
+        return { value1: 1.002, value2: 1.002 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              id: 'input_num1',
+              type: 'number',
+              'onUpdate:modelValue': setValue1.bind(this)
+            }),
+            this.value1
+          ),
+          withVModel(
+            h('input', {
+              id: 'input_num2',
+              type: 'number',
+              'onUpdate:modelValue': setValue2.bind(this)
+            }),
+            this.value2
+          )
+        ]
+      }
+    })
+    render(h(component), root)
+    const data = root._vnode.component.data
+
+    const inputNum1 = root.querySelector('#input_num1')!
+    expect(inputNum1.value).toBe('1.002')
+
+    const inputNum2 = root.querySelector('#input_num2')!
+    expect(inputNum2.value).toBe('1.002')
+
+    inputNum1.value = '1.00'
+    triggerEvent('input', inputNum1)
+    await nextTick()
+    expect(data.value1).toBe(1)
+
+    inputNum2.value = '1.00'
+    triggerEvent('input', inputNum2)
+    await nextTick()
+    expect(data.value2).toBe(1)
+
+    expect(inputNum1.value).toBe('1.00')
+  })
+
   it('should work with multiple listeners', async () => {
     const spy = vi.fn()
     const component = defineComponent({

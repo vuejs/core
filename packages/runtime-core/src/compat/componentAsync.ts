@@ -18,7 +18,10 @@ type LegacyAsyncComponent = (
   reject?: (reason?: any) => void
 ) => LegacyAsyncReturnValue | undefined
 
-const normalizedAsyncComponentMap = new Map<LegacyAsyncComponent, Component>()
+const normalizedAsyncComponentMap = new WeakMap<
+  LegacyAsyncComponent,
+  Component
+>()
 
 export function convertLegacyAsyncComponent(comp: LegacyAsyncComponent) {
   if (normalizedAsyncComponentMap.has(comp)) {

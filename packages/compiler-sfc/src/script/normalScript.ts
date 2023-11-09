@@ -55,7 +55,7 @@ export function processNormalScript(
       const s = new MagicString(content)
       rewriteDefaultAST(scriptAst.body, s, defaultVar)
       content = s.toString()
-      if (cssVars.length) {
+      if (cssVars.length && !ctx.options.templateOptions?.ssr) {
         content += genNormalScriptCssVarsCode(
           cssVars,
           bindings,

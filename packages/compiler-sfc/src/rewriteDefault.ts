@@ -37,7 +37,7 @@ export function rewriteDefaultAST(
   // multi-line comments or template strings. fallback to a full parse.
   ast.forEach(node => {
     if (node.type === 'ExportDefaultDeclaration') {
-      if (node.declaration.type === 'ClassDeclaration') {
+      if (node.declaration.type === 'ClassDeclaration' && node.declaration.id) {
         let start: number =
           node.declaration.decorators && node.declaration.decorators.length > 0
             ? node.declaration.decorators[

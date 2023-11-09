@@ -168,7 +168,13 @@ function getImportsExpressionExp(
         loc,
         ConstantTypes.CAN_STRINGIFY
       )
-      context.imports.push({ exp, path })
+
+      // We need to ensure the path is not encoded (to %2F),
+      // so we decode it back in case it is encoded
+      context.imports.push({
+        exp,
+        path: decodeURIComponent(path)
+      })
     }
 
     if (!hash) {

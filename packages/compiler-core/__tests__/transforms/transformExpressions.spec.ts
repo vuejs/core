@@ -506,7 +506,8 @@ describe('compiler: expression transform', () => {
       data: BindingTypes.DATA,
       options: BindingTypes.OPTIONS,
       reactive: BindingTypes.SETUP_REACTIVE_CONST,
-      literal: BindingTypes.LITERAL_CONST
+      literal: BindingTypes.LITERAL_CONST,
+      isNaN: BindingTypes.SETUP_REF
     }
 
     function compileWithBindingMetadata(
@@ -522,19 +523,56 @@ describe('compiler: expression transform', () => {
 
     test('non-inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ data }} {{ options }}</div>`
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }} {{ isNaN }}</div>`
       )
       expect(code).toMatch(`$props.props`)
       expect(code).toMatch(`$setup.setup`)
+      expect(code).toMatch(`$setup.isNaN`)
       expect(code).toMatch(`$data.data`)
       expect(code).toMatch(`$options.options`)
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
       expect(code).toMatchSnapshot()
     })
 
+    test('should not prefix temp variable of for...in', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x in list) {
+            log(x)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not prefix temp variable of for...of', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x of list) {
+            log(x)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not prefix temp variable of for loop', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (let i = 0; i < list.length; i++) {
+            log(i)
+          }         
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.i`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }}</div>`,
         { inline: true }
       )
       expect(code).toMatch(`__props.props`)
@@ -542,6 +580,7 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_toDisplayString(setupConst)`)
       expect(code).toMatch(`_ctx.data`)
       expect(code).toMatch(`_ctx.options`)
+      expect(code).toMatch(`isNaN.value`)
       expect(code).toMatchSnapshot()
     })
 

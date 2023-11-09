@@ -8,11 +8,10 @@ import { InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
-const normalizedFunctionalComponentMap = new Map<
+const normalizedFunctionalComponentMap = new WeakMap<
   ComponentOptions,
   FunctionalComponent
 >()
-
 export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   get(target, key: string) {
     const slot = target[key]

@@ -212,6 +212,7 @@ function doCompileTemplate({
     slotted,
     sourceMap: true,
     ...compilerOptions,
+    hmr: !isProd,
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
     onError: e => errors.push(e),

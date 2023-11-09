@@ -1,4 +1,4 @@
-import { vi, SpyInstance } from 'vitest'
+import { type SpyInstance } from 'vitest'
 import { render, h } from '@vue/runtime-dom'
 
 describe('customized built-in elements support', () => {

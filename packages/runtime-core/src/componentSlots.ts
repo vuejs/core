@@ -234,7 +234,7 @@ export const updateSlots = (
   // delete stale slots
   if (needDeletionCheck) {
     for (const key in slots) {
-      if (!isInternalKey(key) && !(key in deletionComparisonTarget)) {
+      if (!isInternalKey(key) && deletionComparisonTarget[key] == null) {
         delete slots[key]
       }
     }

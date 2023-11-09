@@ -18,6 +18,7 @@ const wipMap = new WeakMap<ComponentNode, WIPEntry>()
 interface WIPEntry {
   tag: AttributeNode | DirectiveNode
   propsExp: string | JSChildNode | null
+  scopeId: string | null
 }
 
 // phase 1: build props
@@ -45,7 +46,8 @@ export function ssrTransformTransitionGroup(
       }
       wipMap.set(node, {
         tag,
-        propsExp
+        propsExp,
+        scopeId: context.scopeId || null
       })
     }
   }
@@ -58,13 +60,16 @@ export function ssrProcessTransitionGroup(
 ) {
   const entry = wipMap.get(node)
   if (entry) {
-    const { tag, propsExp } = entry
+    const { tag, propsExp, scopeId } = entry
     if (tag.type === NodeTypes.DIRECTIVE) {
       // dynamic :tag
       context.pushStringPart(`<`)
       context.pushStringPart(tag.exp!)
       if (propsExp) {
         context.pushStringPart(propsExp)
+      }
+      if (scopeId) {
+        context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
 
@@ -88,6 +93,9 @@ export function ssrProcessTransitionGroup(
       context.pushStringPart(`<${tag.value!.content}`)
       if (propsExp) {
         context.pushStringPart(propsExp)
+      }
+      if (scopeId) {
+        context.pushStringPart(` ${scopeId}`)
       }
       context.pushStringPart(`>`)
       processChildren(node, context, false, true)

@@ -174,6 +174,14 @@ export function h<P>(
   children?: RawChildren | RawSlots
 ): VNode
 
+// catch all types
+export function h(type: string | Component, children?: RawChildren): VNode
+export function h<P>(
+  type: string | Component<P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+
 // Actual implementation
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   const l = arguments.length

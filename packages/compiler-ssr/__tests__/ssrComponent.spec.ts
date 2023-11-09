@@ -181,11 +181,14 @@ describe('ssr: components', () => {
     })
 
     test('v-for slot', () => {
-      expect(
-        compile(`<foo>
-        <template v-for="key in names" v-slot:[key]="{ msg }">{{ msg + key + bar }}</template>
-      </foo>`).code
-      ).toMatchInlineSnapshot(`
+      const { code } = compile(`<foo>
+      <template v-for="(key, index) in names" v-slot:[key]="{ msg }">{{ msg + key + index + bar }}</template>
+    </foo>`)
+      expect(code).not.toMatch(`_ctx.msg`)
+      expect(code).not.toMatch(`_ctx.key`)
+      expect(code).not.toMatch(`_ctx.index`)
+      expect(code).toMatch(`_ctx.bar`)
+      expect(code).toMatchInlineSnapshot(`
         "const { resolveComponent: _resolveComponent, withCtx: _withCtx, toDisplayString: _toDisplayString, createTextVNode: _createTextVNode, renderList: _renderList, createSlots: _createSlots } = require(\\"vue\\")
         const { ssrRenderComponent: _ssrRenderComponent, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
@@ -193,15 +196,15 @@ describe('ssr: components', () => {
           const _component_foo = _resolveComponent(\\"foo\\")
 
           _push(_ssrRenderComponent(_component_foo, _attrs, _createSlots({ _: 2 /* DYNAMIC */ }, [
-            _renderList(_ctx.names, (key) => {
+            _renderList(_ctx.names, (key, index) => {
               return {
                 name: key,
                 fn: _withCtx(({ msg }, _push, _parent, _scopeId) => {
                   if (_push) {
-                    _push(\`\${_ssrInterpolate(msg + key + _ctx.bar)}\`)
+                    _push(\`\${_ssrInterpolate(msg + key + index + _ctx.bar)}\`)
                   } else {
                     return [
-                      _createTextVNode(_toDisplayString(msg + _ctx.key + _ctx.bar), 1 /* TEXT */)
+                      _createTextVNode(_toDisplayString(msg + key + index + _ctx.bar), 1 /* TEXT */)
                     ]
                   }
                 })

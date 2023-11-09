@@ -56,6 +56,10 @@ import {
 } from './ssrTransformTransitionGroup'
 import { isSymbol, isObject, isArray } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
+import {
+  ssrProcessTransition,
+  ssrTransformTransition
+} from './ssrTransformTransition'
 
 // We need to construct the slot functions in the 1st pass to ensure proper
 // scope tracking, but the children of each slot cannot be processed until
@@ -99,9 +103,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   if (isSymbol(component)) {
     if (component === SUSPENSE) {
       return ssrTransformSuspense(node, context)
-    }
-    if (component === TRANSITION_GROUP) {
+    } else if (component === TRANSITION_GROUP) {
       return ssrTransformTransitionGroup(node, context)
+    } else if (component === TRANSITION) {
+      return ssrTransformTransition(node, context)
     }
     return // other built-in components: fallthrough
   }
@@ -120,8 +125,10 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     // fallback in case the child is render-fn based). Store them in an array
     // for later use.
     if (clonedNode.children.length) {
-      buildSlots(clonedNode, context, (props, children) => {
-        vnodeBranches.push(createVNodeSlotBranch(props, children, context))
+      buildSlots(clonedNode, context, (props, vFor, children) => {
+        vnodeBranches.push(
+          createVNodeSlotBranch(props, vFor, children, context)
+        )
         return createFunctionExpression(undefined)
       })
     }
@@ -145,7 +152,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
     const wipEntries: WIPSlotEntry[] = []
     wipMap.set(node, wipEntries)
 
-    const buildSSRSlotFn: SlotFnBuilder = (props, children, loc) => {
+    const buildSSRSlotFn: SlotFnBuilder = (props, _vForExp, children, loc) => {
       const param0 = (props && stringifyExpression(props)) || `_`
       const fn = createFunctionExpression(
         [param0, `_push`, `_parent`, `_scopeId`],
@@ -216,9 +223,8 @@ export function ssrProcessComponent(
       if ((parent as WIPSlotEntry).type === WIP_SLOT) {
         context.pushStringPart(``)
       }
-      // #5351: filter out comment children inside transition
       if (component === TRANSITION) {
-        node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)
+        return ssrProcessTransition(node, context)
       }
       processChildren(node, context)
     }
@@ -273,6 +279,7 @@ const vnodeDirectiveTransforms = {
 
 function createVNodeSlotBranch(
   props: ExpressionNode | undefined,
+  vForExp: ExpressionNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext
 ): ReturnStatement {
@@ -299,13 +306,21 @@ function createVNodeSlotBranch(
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
     isSelfClosing: false,
-    // important: provide v-slot="props" on the wrapper for proper
-    // scope analysis
+    // important: provide v-slot="props" and v-for="exp" on the wrapper for
+    // proper scope analysis
     props: [
       {
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
         exp: props,
+        arg: undefined,
+        modifiers: [],
+        loc: locStub
+      },
+      {
+        type: NodeTypes.DIRECTIVE,
+        name: 'for',
+        exp: vForExp,
         arg: undefined,
         modifiers: [],
         loc: locStub

@@ -69,8 +69,13 @@ function findInsertionIndex(id: number) {
 
   while (start < end) {
     const middle = (start + end) >>> 1
-    const middleJobId = getId(queue[middle])
-    middleJobId < id ? (start = middle + 1) : (end = middle)
+    const middleJob = queue[middle]
+    const middleJobId = getId(middleJob)
+    if (middleJobId < id || (middleJobId === id && middleJob.pre)) {
+      start = middle + 1
+    } else {
+      end = middle
+    }
   }
 
   return start

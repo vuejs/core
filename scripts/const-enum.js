@@ -14,7 +14,7 @@
  * This file is expected to be executed with project root as cwd.
  */
 
-import execa from 'execa'
+import { execaSync } from 'execa'
 import {
   existsSync,
   mkdirSync,
@@ -45,7 +45,7 @@ export function scanEnums() {
   }
 
   // 1. grep for files with exported const enum
-  const { stdout } = execa.sync('git', ['grep', `export const enum`])
+  const { stdout } = execaSync('git', ['grep', `export const enum`])
   const files = [...new Set(stdout.split('\n').map(line => line.split(':')[0]))]
 
   // 2. parse matched files to collect enum info

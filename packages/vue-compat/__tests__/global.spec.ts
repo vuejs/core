@@ -1,4 +1,3 @@
-import { expect, vi } from 'vitest'
 import Vue from '@vue/compat'
 import { effect, isReactive } from '@vue/reactivity'
 import { h, nextTick } from '@vue/runtime-core'

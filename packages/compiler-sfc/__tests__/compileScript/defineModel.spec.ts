@@ -8,6 +8,7 @@ describe('defineModel()', () => {
       <script setup>
       const modelValue = defineModel({ required: true })
       const c = defineModel('count')
+      const toString = defineModel('toString', { type: Function })
       </script>
       `,
       { defineModel: true }
@@ -16,18 +17,22 @@ describe('defineModel()', () => {
     expect(content).toMatch('props: {')
     expect(content).toMatch('"modelValue": { required: true },')
     expect(content).toMatch('"count": {},')
-    expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
+    expect(content).toMatch('"toString": { type: Function },')
+    expect(content).toMatch(
+      'emits: ["update:modelValue", "update:count", "update:toString"],'
+    )
     expect(content).toMatch(
       `const modelValue = _useModel(__props, "modelValue")`
     )
     expect(content).toMatch(`const c = _useModel(__props, "count")`)
-    expect(content).toMatch(`return { modelValue, c }`)
+    expect(content).toMatch(`return { modelValue, c, toString }`)
     expect(content).not.toMatch('defineModel')
 
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
       count: BindingTypes.PROPS,
-      c: BindingTypes.SETUP_REF
+      c: BindingTypes.SETUP_REF,
+      toString: BindingTypes.SETUP_REF
     })
   })
 

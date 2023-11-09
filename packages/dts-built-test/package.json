@@ -1,0 +1,11 @@
+{
+  "name": "@vue/dts-built-test",
+  "private": true,
+  "types": "dist/dts-built-test.d.ts",
+  "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/reactivity": "workspace:*",
+    "vue": "workspace:*"
+  },
+  "version": "3.3.8"
+}
