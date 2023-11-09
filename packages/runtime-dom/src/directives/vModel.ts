@@ -83,24 +83,25 @@ export const vModelText: ModelDirective<
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
+
+    const elValue =
+      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+    const newValue = value == null ? '' : value
+
+    if (elValue === newValue) {
+      return
+    }
+
     if (document.activeElement === el && el.type !== 'range') {
       if (lazy) {
         return
       }
-      if (trim && el.value.trim() === value) {
-        return
-      }
-      if (
-        (number || el.type === 'number') &&
-        looseToNumber(el.value) === value
-      ) {
+      if (trim && el.value.trim() === newValue) {
         return
       }
     }
-    const newValue = value == null ? '' : value
-    if (el.value !== newValue) {
-      el.value = newValue
-    }
+
+    el.value = newValue
   }
 }
 
