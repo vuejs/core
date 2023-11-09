@@ -275,7 +275,8 @@ describe('reactivity/readonly', () => {
             expect(isReactive(value)).toBe(true)
           }
         })
-        test('should undefined from Map.clear call', () => {
+
+        test('should return undefined from Map.clear() call', () => {
           const wrapped = readonly(new Collection())
           expect(wrapped.clear()).toBeUndefined()
           expect(
@@ -340,7 +341,7 @@ describe('reactivity/readonly', () => {
           }
         })
 
-        test('should undefined from Set.clear call', () => {
+        test('should return undefined from Set.clear() call', () => {
           const wrapped = readonly(new Collection())
           expect(wrapped.clear()).toBeUndefined()
           expect(
