@@ -257,6 +257,28 @@ importers:
         specifier: 3.3.8
         version: link:../shared
 
+  packages/compiler-vapor:
+    dependencies:
+      '@babel/parser':
+        specifier: ^7.23.0
+        version: 7.23.0
+      '@vue/compiler-core':
+        specifier: 3.3.8
+        version: link:../compiler-core
+      '@vue/shared':
+        specifier: 3.3.8
+        version: link:../shared
+      estree-walker:
+        specifier: ^2.0.2
+        version: 2.0.2
+      magic-string:
+        specifier: ^0.30.5
+        version: 0.30.5
+    devDependencies:
+      '@babel/types':
+        specifier: ^7.23.0
+        version: 7.23.0
+
   packages/dts-built-test:
     dependencies:
       '@vue/reactivity':

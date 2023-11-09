@@ -1,0 +1,40 @@
+{
+  "name": "@vue/compiler-vapor",
+  "version": "0.0.0",
+  "description": "@vue/compiler-vapor",
+  "main": "dist/compiler-vapor.cjs.js",
+  "files": [
+    "dist"
+  ],
+  "buildOptions": {
+    "formats": [
+      "cjs"
+    ],
+    "prod": false
+  },
+  "types": "dist/compiler-vapor.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuejs/core.git",
+    "directory": "packages/compiler-vapor"
+  },
+  "keywords": [
+    "vue"
+  ],
+  "author": "Evan You",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vuejs/core/issues"
+  },
+  "homepage": "https://github.com/vuejs/core/tree/dev/packages/compiler-vapor#readme",
+  "dependencies": {
+    "@babel/parser": "^7.23.0",
+    "@vue/compiler-core": "3.3.8",
+    "@vue/shared": "3.3.8",
+    "estree-walker": "^2.0.2",
+    "magic-string": "^0.30.5"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.23.0"
+  }
+}
