@@ -20,7 +20,8 @@ import {
   isString,
   isFunction,
   UnionToIntersection,
-  Prettify
+  Prettify,
+  IfAny
 } from '@vue/shared'
 import {
   toRaw,
@@ -192,7 +193,6 @@ export type CreateComponentPublicInstance<
   I,
   S
 >
-
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -231,7 +231,7 @@ export type ComponentPublicInstance<
       : (...args: [any, any, OnCleanup]) => any,
     options?: WatchOptions
   ): WatchStopHandle
-} & P &
+} & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
   ShallowUnwrapRef<B> &
   UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &

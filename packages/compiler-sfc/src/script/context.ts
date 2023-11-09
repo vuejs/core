@@ -164,7 +164,7 @@ export function resolveParserPlugins(
   }
   if (lang === 'ts' || lang === 'tsx') {
     plugins.push(['typescript', { dts }])
-    if (!plugins.includes('decorators')) {
+    if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
   }
