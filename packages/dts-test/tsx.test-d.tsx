@@ -52,7 +52,7 @@ expectType<JSX.Element>(
     ]}
   />
 )
-    
+
 // #7955
 expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)
 
