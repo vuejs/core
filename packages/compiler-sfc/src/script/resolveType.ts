@@ -341,7 +341,7 @@ function resolveInterfaceMembers(
           }
         }
         if (calls) {
-          ;(base.calls ||= []).push(...calls)
+          ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
         ctx.error(
