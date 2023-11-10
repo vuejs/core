@@ -17,6 +17,59 @@ expectType<JSX.Element>(
   <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
 )
 
+// allow undefined, string, object, array and nested array classes
+expectType<JSX.Element>(<div class={undefined} />)
+expectType<JSX.Element>(<div class={'foo'} />)
+expectType<JSX.Element>(<div class={['foo', undefined, 'bar']} />)
+expectType<JSX.Element>(<div class={[]} />)
+expectType<JSX.Element>(<div class={['foo', ['bar'], [['baz']]]} />)
+expectType<JSX.Element>(<div class={{ foo: true, bar: false, baz: true }} />)
+expectType<JSX.Element>(<div class={{}} />)
+expectType<JSX.Element>(
+  <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />
+)
+expectType<JSX.Element>(
+  <div
+    class={[
+      { foo: false },
+      { bar: 0 },
+      { baz: -0 },
+      { qux: '' },
+      { quux: null },
+      { corge: undefined },
+      { grault: NaN }
+    ]}
+  />
+)
+expectType<JSX.Element>(
+  <div
+    class={[
+      { foo: true },
+      { bar: 'not-empty' },
+      { baz: 1 },
+      { qux: {} },
+      { quux: [] }
+    ]}
+  />
+)
+
+// #7955
+expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)
+
+expectType<JSX.Element>(<div style={undefined} />)
+
+expectType<JSX.Element>(<div style={null} />)
+
+expectType<JSX.Element>(<div style={''} />)
+
+expectType<JSX.Element>(<div style={false} />)
+
+// @ts-expect-error
+;<div style={[0]} />
+
+// @ts-expect-error
+;<div style={0} />
+
 // @ts-expect-error unknown prop
 ;<div foo="bar" />
 

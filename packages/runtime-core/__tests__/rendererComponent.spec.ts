@@ -354,4 +354,25 @@ describe('renderer: component', () => {
     expect(serializeInner(root)).toBe(`<h1>1</h1>`)
     expect(spy).toHaveBeenCalledTimes(2)
   })
+
+  it('should warn accessing `this` in a <script setup> template', () => {
+    const App = {
+      setup() {
+        return {
+          __isScriptSetup: true
+        }
+      },
+
+      render(this: any) {
+        return this.$attrs.id
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(
+      `Property '$attrs' was accessed via 'this'. Avoid using 'this' in templates.`
+    ).toHaveBeenWarned()
+  })
 })

@@ -1,4 +1,3 @@
-import { extend } from '@vue/shared'
 import * as m from 'monaco-editor'
 import { compile, CompilerError, CompilerOptions } from '@vue/compiler-dom'
 import { compile as ssrCompile } from '@vue/compiler-ssr'
@@ -65,7 +64,7 @@ window.init = () => {
     // to debug with custom nodeTransforms
     delete persistedState.options?.nodeTransforms
     ssrMode.value = persistedState.ssr
-    extend(compilerOptions, persistedState.options)
+    Object.assign({}, defaultOptions)
   }
 
   let lastSuccessfulCode: string

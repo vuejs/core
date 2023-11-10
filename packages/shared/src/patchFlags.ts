@@ -57,10 +57,11 @@ export const enum PatchFlags {
   FULL_PROPS = 1 << 4,
 
   /**
-   * Indicates an element with event listeners (which need to be attached
-   * during hydration)
+   * Indicates an element that requires props hydration
+   * (but not necessarily patching)
+   * e.g. event listeners & v-bind with prop modifier
    */
-  HYDRATE_EVENTS = 1 << 5,
+  NEED_HYDRATION = 1 << 5,
 
   /**
    * Indicates a fragment whose children order doesn't change.
@@ -131,7 +132,7 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.STYLE]: `STYLE`,
   [PatchFlags.PROPS]: `PROPS`,
   [PatchFlags.FULL_PROPS]: `FULL_PROPS`,
-  [PatchFlags.HYDRATE_EVENTS]: `HYDRATE_EVENTS`,
+  [PatchFlags.NEED_HYDRATION]: `NEED_HYDRATION`,
   [PatchFlags.STABLE_FRAGMENT]: `STABLE_FRAGMENT`,
   [PatchFlags.KEYED_FRAGMENT]: `KEYED_FRAGMENT`,
   [PatchFlags.UNKEYED_FRAGMENT]: `UNKEYED_FRAGMENT`,

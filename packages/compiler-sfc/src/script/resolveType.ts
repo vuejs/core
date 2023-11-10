@@ -34,7 +34,7 @@ import {
 } from './utils'
 import { ScriptCompileContext, resolveParserPlugins } from './context'
 import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, extend, hasOwn } from '@vue/shared'
+import { capitalize, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -631,8 +631,8 @@ function innerResolveTypeReference(
             ? scope.exportedDeclares
             : scope.declares
           : onlyExported
-          ? scope.exportedTypes
-          : scope.types
+            ? scope.exportedTypes
+            : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
       } else {
@@ -675,10 +675,10 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
     node.type === 'TSTypeReference'
       ? node.typeName
       : node.type === 'TSExpressionWithTypeArguments'
-      ? node.expression
-      : node.type === 'TSImportType'
-      ? node.qualifier
-      : node.exprName
+        ? node.expression
+        : node.type === 'TSImportType'
+          ? node.qualifier
+          : node.exprName
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -1047,8 +1047,8 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
     'ast' in ctx
       ? ctx.ast
       : ctx.scriptAst
-      ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
-      : ctx.scriptSetupAst!.body
+        ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+        : ctx.scriptSetupAst!.body
 
   const scope = new TypeScope(
     ctx.filename,
@@ -1158,7 +1158,7 @@ function recordTypes(
           scope,
           stmt.source.value
         )
-        extend(scope.exportedTypes, sourceScope.exportedTypes)
+        Object.assign(scope.exportedTypes, sourceScope.exportedTypes)
       } else if (stmt.type === 'ExportDefaultDeclaration' && stmt.declaration) {
         if (stmt.declaration.type !== 'Identifier') {
           recordType(stmt.declaration, types, declares, 'default')

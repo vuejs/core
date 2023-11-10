@@ -1,4 +1,3 @@
-import { extend } from '@vue/shared'
 import { h, reactive, createApp, ref } from 'vue'
 import { CompilerOptions } from '@vue/compiler-dom'
 import { BindingTypes } from '@vue/compiler-core'
@@ -28,7 +27,7 @@ export const defaultOptions: CompilerOptions = {
 }
 
 export const compilerOptions: CompilerOptions = reactive(
-  extend({}, defaultOptions)
+  Object.assign({}, defaultOptions)
 )
 
 const App = {

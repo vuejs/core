@@ -6,7 +6,7 @@ import {
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
-import { extend, generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame } from '@vue/shared'
 import {
   Node,
   Declaration,
@@ -735,7 +735,7 @@ export function compileScript(
   // 7. analyze binding metadata
   // `defineProps` & `defineModel` also register props bindings
   if (scriptAst) {
-    extend(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
+    Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   for (const [key, { isType, imported, source }] of Object.entries(
     ctx.userImports
@@ -1172,8 +1172,8 @@ function walkObjectPattern(
         const type = isDefineCall
           ? BindingTypes.SETUP_CONST
           : isConst
-          ? BindingTypes.SETUP_MAYBE_REF
-          : BindingTypes.SETUP_LET
+            ? BindingTypes.SETUP_MAYBE_REF
+            : BindingTypes.SETUP_LET
         registerBinding(bindings, p.key, type)
       } else {
         walkPattern(p.value, bindings, isConst, isDefineCall)
@@ -1208,8 +1208,8 @@ function walkPattern(
     const type = isDefineCall
       ? BindingTypes.SETUP_CONST
       : isConst
-      ? BindingTypes.SETUP_MAYBE_REF
-      : BindingTypes.SETUP_LET
+        ? BindingTypes.SETUP_MAYBE_REF
+        : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
     // argument can only be identifier when destructuring
@@ -1224,8 +1224,8 @@ function walkPattern(
       const type = isDefineCall
         ? BindingTypes.SETUP_CONST
         : isConst
-        ? BindingTypes.SETUP_MAYBE_REF
-        : BindingTypes.SETUP_LET
+          ? BindingTypes.SETUP_MAYBE_REF
+          : BindingTypes.SETUP_LET
       registerBinding(bindings, node.left, type)
     } else {
       walkPattern(node.left, bindings, isConst)
