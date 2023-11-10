@@ -162,6 +162,7 @@ declare module '@vue/reactivity' {
 }
 
 export type * from './componentTypeHelpers'
+export type { LooseRequired } from '@vue/shared'
 
 export { TrackOpTypes, TriggerOpTypes } from '@vue/reactivity'
 export type {
