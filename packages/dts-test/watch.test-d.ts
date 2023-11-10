@@ -1,4 +1,4 @@
-import { ref, computed, watch, defineComponent } from 'vue'
+import { ref, computed, watch, defineComponent, shallowRef } from 'vue'
 import { expectType } from './utils'
 
 const source = ref('foo')
@@ -92,3 +92,17 @@ defineComponent({
     )
   }
 })
+
+{
+  //#7852
+  type Steps = { step: '1' } | { step: '2' }
+  const shallowUnionGenParam = shallowRef<Steps>({ step: '1' })
+  const shallowUnionAsCast = shallowRef({ step: '1' } as Steps)
+
+  watch(shallowUnionGenParam, value => {
+    expectType<Steps>(value)
+  })
+  watch(shallowUnionAsCast, value => {
+    expectType<Steps>(value)
+  })
+}

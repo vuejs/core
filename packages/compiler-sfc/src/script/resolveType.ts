@@ -334,11 +334,14 @@ function resolveInterfaceMembers(
         continue
       }
       try {
-        const { props } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
           }
+        }
+        if (calls) {
+          ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
         ctx.error(
@@ -708,13 +711,14 @@ function resolveGlobalScope(ctx: TypeResolveContext): TypeScope[] | undefined {
   }
 }
 
-let ts: typeof TS
+let ts: typeof TS | undefined
+let loadTS: (() => typeof TS) | undefined
 
 /**
  * @private
  */
-export function registerTS(_ts: any) {
-  ts = _ts
+export function registerTS(_loadTS: () => typeof TS) {
+  loadTS = _loadTS
 }
 
 type FS = NonNullable<SFCScriptCompileOptions['fs']>
@@ -723,7 +727,10 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
   if (ctx.fs) {
     return ctx.fs
   }
-  const fs = ctx.options.fs || ts.sys
+  if (!ts && loadTS) {
+    ts = loadTS()
+  }
+  const fs = ctx.options.fs || ts?.sys
   if (!fs) {
     return
   }
@@ -774,27 +781,30 @@ function importSourceToScope(
   if (!resolved) {
     if (source.startsWith('.')) {
       // relative import - fast path
-      const filename = joinPaths(scope.filename, '..', source)
+      const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
       if (!__NODE_JS__) {
-        ctx.error(
+        return ctx.error(
           `Type import from non-relative sources is not supported in the browser build.`,
           node,
           scope
         )
       }
       if (!ts) {
-        ctx.error(
-          `Failed to resolve import source ${JSON.stringify(source)}. ` +
-            `typescript is required as a peer dep for vue in order ` +
-            `to support resolving types from module imports.`,
-          node,
-          scope
-        )
+        if (loadTS) ts = loadTS()
+        if (!ts) {
+          return ctx.error(
+            `Failed to resolve import source ${JSON.stringify(source)}. ` +
+              `typescript is required as a peer dep for vue in order ` +
+              `to support resolving types from module imports.`,
+            node,
+            scope
+          )
+        }
       }
-      resolved = resolveWithTS(scope.filename, source, fs)
+      resolved = resolveWithTS(scope.filename, source, ts, fs)
     }
     if (resolved) {
       resolved = scope.resolvedImportSources[source] = normalizePath(resolved)
@@ -839,6 +849,7 @@ const tsConfigRefMap = new Map<string, string>()
 function resolveWithTS(
   containingFile: string,
   source: string,
+  ts: typeof TS,
   fs: FS
 ): string | undefined {
   if (!__NODE_JS__) return
@@ -853,7 +864,7 @@ function resolveWithTS(
     const normalizedConfigPath = normalizePath(configPath)
     const cached = tsConfigCache.get(normalizedConfigPath)
     if (!cached) {
-      configs = loadTSConfig(configPath, fs).map(config => ({ config }))
+      configs = loadTSConfig(configPath, ts, fs).map(config => ({ config }))
       tsConfigCache.set(normalizedConfigPath, configs)
     } else {
       configs = cached
@@ -918,7 +929,11 @@ function resolveWithTS(
   }
 }
 
-function loadTSConfig(configPath: string, fs: FS): TS.ParsedCommandLine[] {
+function loadTSConfig(
+  configPath: string,
+  ts: typeof TS,
+  fs: FS
+): TS.ParsedCommandLine[] {
   // The only case where `fs` is NOT `ts.sys` is during tests.
   // parse config host requires an extra `readDirectory` method
   // during tests, which is stubbed.
@@ -940,7 +955,7 @@ function loadTSConfig(configPath: string, fs: FS): TS.ParsedCommandLine[] {
   if (config.projectReferences) {
     for (const ref of config.projectReferences) {
       tsConfigRefMap.set(ref.path, configPath)
-      res.unshift(...loadTSConfig(ref.path, fs))
+      res.unshift(...loadTSConfig(ref.path, ts, fs))
     }
   }
   return res
@@ -1215,7 +1230,7 @@ function recordType(
       break
     }
     case 'ClassDeclaration':
-      types[overwriteId || getId(node.id)] = node
+      if (overwriteId || node.id) types[overwriteId || getId(node.id!)] = node
       break
     case 'TSTypeAliasDeclaration':
       types[node.id.name] = node.typeAnnotation
@@ -1379,6 +1394,7 @@ export function inferRuntimeType(
             case 'WeakMap':
             case 'Date':
             case 'Promise':
+            case 'Error':
               return [node.typeName.name]
 
             // TS built-in utility types

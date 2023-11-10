@@ -91,7 +91,7 @@ describe('api: watch', () => {
     array.push(1)
     await nextTick()
     expect(spy).toBeCalledTimes(1)
-    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+    expect(spy).toBeCalledWith([1], [1], expect.anything())
   })
 
   it('should not fire if watched getter result did not change', async () => {
@@ -1000,7 +1000,7 @@ describe('api: watch', () => {
       },
       mounted() {
         // this call runs while Comp is currentInstance, but
-        // the effect for this `$watch` should nontheless be registered with Child
+        // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
           () => void 0
@@ -1171,7 +1171,7 @@ describe('api: watch', () => {
     expect(instance!.scope.effects.length).toBe(1)
   })
 
-  test('watchEffect should keep running if created in a detatched scope', async () => {
+  test('watchEffect should keep running if created in a detached scope', async () => {
     const trigger = ref(0)
     let countWE = 0
     let countW = 0
