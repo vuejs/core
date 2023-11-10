@@ -261,9 +261,7 @@ export function defineComponent<
   II extends string = string,
   S extends SlotsType = {},
   Options = {},
-  Props = {} extends PropsOptions
-    ? {}
-    : PropsOptions
+  Props = {} extends PropsOptions ? {} : PropsOptions
 >(
   options: Options &
     ComponentOptionsWithObjectProps<
