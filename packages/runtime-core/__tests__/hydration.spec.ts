@@ -953,6 +953,20 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any)._trueValue).toBe(true)
   })
 
+  test('force hydrate checkbox with indeterminate', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" indeterminate>',
+      () =>
+        createVNode(
+          'input',
+          { type: 'checkbox', indeterminate: '' },
+          null,
+          PatchFlags.HOISTED
+        )
+    )
+    expect((container.firstChild as any).indeterminate).toBe(true)
+  })
+
   test('force hydrate select option with non-string value bindings', () => {
     const { container } = mountWithHydration(
       '<select><option :value="true">ok</option></select>',
