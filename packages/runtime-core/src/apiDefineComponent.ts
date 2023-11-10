@@ -75,8 +75,7 @@ export type DefineComponent<
     true,
     I,
     S
-  > &
-    Props
+  >
 > &
   Omit<
     ComponentOptionsBase<

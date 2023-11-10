@@ -729,6 +729,12 @@ function getInvalidTypeMessage(
   value: unknown,
   expectedTypes: string[]
 ): string {
+  if (expectedTypes.length === 0) {
+    return (
+      `Prop type [] for prop "${name}" won't match anything.` +
+      ` Did you mean to use type Array instead?`
+    )
+  }
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
     ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
