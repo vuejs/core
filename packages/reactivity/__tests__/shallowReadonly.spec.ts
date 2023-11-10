@@ -113,6 +113,12 @@ describe('reactivity/shallowReadonly', () => {
         ).not.toHaveBeenWarned()
       })
     })
+
+    test('should return undefined from Map.clear() call', () => {
+      const sroMap = shallowReadonly(new Map())
+      expect(sroMap.clear()).toBeUndefined()
+      expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
+    })
   })
 
   describe('collection/Set', () => {
@@ -196,6 +202,12 @@ describe('reactivity/shallowReadonly', () => {
           `Set operation on key "foo" failed: target is readonly.`
         ).not.toHaveBeenWarned()
       })
+    })
+
+    test('should return undefined from Set.clear() call', () => {
+      const sroSet = shallowReadonly(new Set())
+      expect(sroSet.clear()).toBeUndefined()
+      expect(`Clear operation failed: target is readonly.`).toHaveBeenWarned()
     })
   })
 })

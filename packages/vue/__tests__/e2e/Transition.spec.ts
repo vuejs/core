@@ -1498,6 +1498,94 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT
     )
+
+    // #5844
+    test('children mount should be called after html changes', async () => {
+      const fooMountSpy = vi.fn()
+      const barMountSpy = vi.fn()
+
+      await page().exposeFunction('fooMountSpy', fooMountSpy)
+      await page().exposeFunction('barMountSpy', barMountSpy)
+
+      await page().evaluate(() => {
+        const { fooMountSpy, barMountSpy } = window as any
+        const { createApp, ref, h, onMounted } = (window as any).Vue
+        createApp({
+          template: `
+          <div id="container">
+            <transition mode="out-in">
+              <Suspense>
+                <Foo v-if="toggle" />
+                <Bar v-else />
+              </Suspense>
+            </transition>
+          </div>
+          <button id="toggleBtn" @click="click">button</button>
+        `,
+          components: {
+            Foo: {
+              setup() {
+                const el = ref(null)
+                onMounted(() => {
+                  fooMountSpy(
+                    !!el.value,
+                    !!document.getElementById('foo'),
+                    !!document.getElementById('bar')
+                  )
+                })
+
+                return () => h('div', { ref: el, id: 'foo' }, 'Foo')
+              }
+            },
+            Bar: {
+              setup() {
+                const el = ref(null)
+                onMounted(() => {
+                  barMountSpy(
+                    !!el.value,
+                    !!document.getElementById('foo'),
+                    !!document.getElementById('bar')
+                  )
+                })
+
+                return () => h('div', { ref: el, id: 'bar' }, 'Bar')
+              }
+            }
+          },
+          setup: () => {
+            const toggle = ref(true)
+            const click = () => (toggle.value = !toggle.value)
+            return { toggle, click }
+          }
+        }).mount('#app')
+      })
+
+      await nextFrame()
+      expect(await html('#container')).toBe('<div id="foo">Foo</div>')
+      await transitionFinish()
+
+      expect(fooMountSpy).toBeCalledTimes(1)
+      expect(fooMountSpy).toHaveBeenNthCalledWith(1, true, true, false)
+
+      await page().evaluate(async () => {
+        ;(document.querySelector('#toggleBtn') as any)!.click()
+        // nextTrick for patch start
+        await Promise.resolve()
+        // nextTrick for Suspense resolve
+        await Promise.resolve()
+        // nextTrick for dom transition start
+        await Promise.resolve()
+        return document.querySelector('#container div')!.className.split(/\s+/g)
+      })
+
+      await nextFrame()
+      await transitionFinish()
+
+      expect(await html('#container')).toBe('<div id="bar" class="">Bar</div>')
+
+      expect(barMountSpy).toBeCalledTimes(1)
+      expect(barMountSpy).toHaveBeenNthCalledWith(1, true, false, true)
+    })
   })
 
   describe('transition with v-show', () => {
