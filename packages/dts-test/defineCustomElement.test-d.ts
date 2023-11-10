@@ -67,8 +67,8 @@ describe('inject', () => {
   })
 })
 
-describe('emits', () => {
-  test('no props', () => {
+describe('defineCustomElement using defineComponent return type', () => {
+  test('with emits', () => {
     const Comp1Vue = defineComponent({
       props: {
         a: String
