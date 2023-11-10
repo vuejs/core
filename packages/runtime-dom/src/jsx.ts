@@ -244,7 +244,13 @@ interface AriaAttributes {
 }
 
 // Vue's style normalization supports nested arrays
-export type StyleValue = false | null | undefined | string | CSSProperties | Array<StyleValue>
+export type StyleValue =
+  | false
+  | null
+  | undefined
+  | string
+  | CSSProperties
+  | Array<StyleValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
@@ -474,7 +480,6 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   srcset?: string
   usemap?: string
   width?: Numberish
-  loading?: 'lazy' | 'eager'
 }
 
 export interface InsHTMLAttributes extends HTMLAttributes {
