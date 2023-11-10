@@ -4,6 +4,7 @@ import {
   NodeTypes,
   SimpleExpressionNode,
   createRoot,
+  forAliasRE,
   parserOptions,
   transform,
   walkIdentifiers
@@ -50,12 +51,14 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
               if (!isBuiltInDirective(prop.name)) {
                 code += `,v${capitalize(camelize(prop.name))}`
               }
+
+              // process dynamic directive arguments
               if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
-                code += `,${processExp(
-                  (prop.arg as SimpleExpressionNode).content,
-                  prop.name
+                code += `,${stripStrings(
+                  (prop.arg as SimpleExpressionNode).content
                 )}`
               }
+
               if (prop.exp) {
                 code += `,${processExp(
                   (prop.exp as SimpleExpressionNode).content,
@@ -84,8 +87,6 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   templateUsageCheckCache.set(content, code)
   return code
 }
-
-const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
 
 function processExp(exp: string, dir?: string): string {
   if (/ as\s+\w|<.*>|:/.test(exp)) {

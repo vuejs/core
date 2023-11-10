@@ -525,3 +525,5 @@ export function getMemoedOrOnceVNodeCall(
       : (node as VNodeCall)
   }
 }
+
+export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
