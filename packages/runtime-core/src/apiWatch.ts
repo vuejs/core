@@ -273,19 +273,18 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: () => void
+  let cleanup: (() => void) | undefined
   const onCleanupCbs = new Set<() => void>()
   let onCleanup: OnCleanup = (fn: () => void) => {
     onCleanupCbs.add(fn)
-    if (!cleanup) {
-      cleanup = effect.onStop = () => {
-        callWithAsyncErrorHandling(
-          [...onCleanupCbs],
-          instance,
-          ErrorCodes.WATCH_CLEANUP
-        )
-        onCleanupCbs.clear()
-      }
+    cleanup = effect.onStop = () => {
+      callWithAsyncErrorHandling(
+        [...onCleanupCbs],
+        instance,
+        ErrorCodes.WATCH_CLEANUP
+      )
+      cleanup = effect.onStop = undefined
+      onCleanupCbs.clear()
     }
   }
 
