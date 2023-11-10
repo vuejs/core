@@ -80,7 +80,7 @@ const emit = defineEmits(['a', 'b'])
     expect(content).toMatch(`emits: ["foo", "bar"]`)
   })
 
-  test('w/ type (interface w/ entends)', () => {
+  test('w/ type (interface w/ extends)', () => {
     const { content } = compile(`
     <script setup lang="ts">
     interface Base { (e: 'foo'): void }
