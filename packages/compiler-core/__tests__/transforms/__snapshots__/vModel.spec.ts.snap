@@ -85,7 +85,7 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createElementBlock(\\"input\\", {
       \\"foo-value\\": model,
       \\"onUpdate:fooValue\\": $event => ((model) = $event)
-    }, null, 40 /* PROPS, HYDRATE_EVENTS */, [\\"foo-value\\", \\"onUpdate:fooValue\\"]))
+    }, null, 40 /* PROPS, NEED_HYDRATION */, [\\"foo-value\\", \\"onUpdate:fooValue\\"]))
   }
 }"
 `;

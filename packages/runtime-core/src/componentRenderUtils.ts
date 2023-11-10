@@ -73,9 +73,24 @@ export function renderComponentRoot(
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
+      // 'this' isn't available in production builds with `<script setup>`,
+      // so warn if it's used in dev.
+      const thisProxy =
+        __DEV__ && setupState.__isScriptSetup
+          ? new Proxy(proxyToUse!, {
+              get(target, key, receiver) {
+                warn(
+                  `Property '${String(
+                    key
+                  )}' was accessed via 'this'. Avoid using 'this' in templates.`
+                )
+                return Reflect.get(target, key, receiver)
+              }
+            })
+          : proxyToUse
       result = normalizeVNode(
         render!.call(
-          proxyToUse,
+          thisProxy,
           proxyToUse!,
           renderCache,
           props,

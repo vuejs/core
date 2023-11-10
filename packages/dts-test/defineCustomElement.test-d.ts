@@ -1,5 +1,9 @@
-import { defineCustomElement } from 'vue'
-import { expectType, describe } from './utils'
+import {
+  defineCustomElement,
+  defineComponent,
+  type VueElementConstructor
+} from 'vue'
+import { expectType, describe, test } from './utils'
 
 describe('inject', () => {
   // with object inject
@@ -60,5 +64,22 @@ describe('inject', () => {
       //  @ts-expect-error
       this.bar = 1
     }
+  })
+})
+
+describe('defineCustomElement using defineComponent return type', () => {
+  test('with emits', () => {
+    const Comp1Vue = defineComponent({
+      props: {
+        a: String
+      },
+      emits: {
+        click: () => true
+      }
+    })
+    const Comp = defineCustomElement(Comp1Vue)
+    expectType<VueElementConstructor>(Comp)
+
+    expectType<string | undefined>(new Comp().a)
   })
 })

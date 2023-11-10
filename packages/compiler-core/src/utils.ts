@@ -519,3 +519,5 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
     return node
   }
 }
+
+export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/

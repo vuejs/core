@@ -1089,7 +1089,7 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test('HYDRATE_EVENTS', () => {
+    test('NEED_HYDRATION for v-on', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
         directiveTransforms: {
@@ -1108,12 +1108,24 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node2.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
+      )
+    })
+
+    test('NEED_HYDRATION for v-bind.prop', () => {
+      const { node } = parseWithBind(`<div v-bind:id.prop="id" />`)
+      expect(node.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
+      )
+
+      const { node: node2 } = parseWithBind(`<div .id="id" />`)
+      expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
       )
     })
 
     // #5870
-    test('HYDRATE_EVENTS on dynamic component', () => {
+    test('NEED_HYDRATION on dynamic component', () => {
       const { node } = parseWithElementTransform(
         `<component :is="foo" @input="foo" />`,
         {
@@ -1123,7 +1135,7 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
       )
     })
   })

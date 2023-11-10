@@ -4,6 +4,7 @@ import {
   NodeTypes,
   SimpleExpressionNode,
   createRoot,
+  forAliasRE,
   parserOptions,
   transform,
   walkIdentifiers
@@ -86,8 +87,6 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   templateUsageCheckCache.set(content, code)
   return code
 }
-
-const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
 
 function processExp(exp: string, dir?: string): string {
   if (/ as\s+\w|<.*>|:/.test(exp)) {
