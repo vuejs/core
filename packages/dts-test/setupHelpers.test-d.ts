@@ -110,6 +110,7 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
     defineProps<{
       n?: number
       bool?: boolean
+      s?: string
 
       generic1?: T[] | { x: T }
       generic2?: { x: T }
@@ -128,6 +129,10 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   )
 
   res.n + 1
+  // @ts-expect-error should be readonly
+  res.n++
+  // @ts-expect-error should be readonly
+  res.s = ''
 
   expectType<T[] | { x: T }>(res.generic1)
   expectType<{ x: T }>(res.generic2)
