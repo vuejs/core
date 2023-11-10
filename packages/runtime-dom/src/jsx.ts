@@ -255,7 +255,7 @@ export type StyleValue =
 export type ClassValue =
   | undefined
   | string
-  | Record<string | number, unknown>
+  | Record<string | number, any>
   | Array<ClassValue>
 
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
