@@ -252,10 +252,16 @@ export type StyleValue =
   | CSSProperties
   | Array<StyleValue>
 
+export type ClassValue =
+  | undefined
+  | string
+  | Record<string | number, unknown>
+  | Array<ClassValue>
+
 export interface HTMLAttributes extends AriaAttributes, EventHandlers<Events> {
   innerHTML?: string
 
-  class?: any
+  class?: ClassValue
   style?: StyleValue
 
   // Standard HTML Attributes
