@@ -377,7 +377,7 @@ export interface ButtonHTMLAttributes extends HTMLAttributes {
   formtarget?: string
   name?: string
   type?: 'submit' | 'reset' | 'button'
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface CanvasHTMLAttributes extends HTMLAttributes {
@@ -395,11 +395,12 @@ export interface ColgroupHTMLAttributes extends HTMLAttributes {
 }
 
 export interface DataHTMLAttributes extends HTMLAttributes {
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface DetailsHTMLAttributes extends HTMLAttributes {
   open?: Booleanish
+  onToggle?: Event
 }
 
 export interface DelHTMLAttributes extends HTMLAttributes {
@@ -443,13 +444,17 @@ export interface IframeHTMLAttributes extends HTMLAttributes {
   allow?: string
   allowfullscreen?: Booleanish
   allowtransparency?: Booleanish
+  /** @deprecated */
   frameborder?: Numberish
   height?: Numberish
+  /** @deprecated */
   marginheight?: Numberish
+  /** @deprecated */
   marginwidth?: Numberish
   name?: string
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sandbox?: string
+  /** @deprecated */
   scrolling?: string
   seamless?: Booleanish
   src?: string
@@ -462,6 +467,7 @@ export interface ImgHTMLAttributes extends HTMLAttributes {
   crossorigin?: 'anonymous' | 'use-credentials' | ''
   decoding?: 'async' | 'auto' | 'sync'
   height?: Numberish
+  loading?: 'eager' | 'lazy'
   referrerpolicy?: HTMLAttributeReferrerPolicy
   sizes?: string
   src?: string
@@ -510,6 +516,14 @@ export interface InputHTMLAttributes extends HTMLAttributes {
   checked?: Booleanish | any[] | Set<any> // for IDE v-model multi-checkbox support
   crossorigin?: string
   disabled?: Booleanish
+  enterKeyHint?:
+    | 'enter'
+    | 'done'
+    | 'go'
+    | 'next'
+    | 'previous'
+    | 'search'
+    | 'send'
   form?: string
   formaction?: string
   formenctype?: string
@@ -553,7 +567,7 @@ export interface LabelHTMLAttributes extends HTMLAttributes {
 }
 
 export interface LiHTMLAttributes extends HTMLAttributes {
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface LinkHTMLAttributes extends HTMLAttributes {
@@ -567,6 +581,7 @@ export interface LinkHTMLAttributes extends HTMLAttributes {
   rel?: string
   sizes?: string
   type?: string
+  charset?: string
 }
 
 export interface MapHTMLAttributes extends HTMLAttributes {
@@ -604,7 +619,7 @@ export interface MeterHTMLAttributes extends HTMLAttributes {
   max?: Numberish
   min?: Numberish
   optimum?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface QuoteHTMLAttributes extends HTMLAttributes {
@@ -649,16 +664,17 @@ export interface OutputHTMLAttributes extends HTMLAttributes {
 
 export interface ParamHTMLAttributes extends HTMLAttributes {
   name?: string
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface ProgressHTMLAttributes extends HTMLAttributes {
   max?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
 }
 
 export interface ScriptHTMLAttributes extends HTMLAttributes {
   async?: Booleanish
+  /** @deprecated */
   charset?: string
   crossorigin?: string
   defer?: Booleanish
@@ -701,6 +717,7 @@ export interface TableHTMLAttributes extends HTMLAttributes {
   cellpadding?: Numberish
   cellspacing?: Numberish
   summary?: string
+  width?: Numberish
 }
 
 export interface TextareaHTMLAttributes extends HTMLAttributes {
@@ -717,7 +734,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
-  value?: string | string[] | number
+  value?: string | ReadonlyArray<string> | number
   wrap?: string
 }
 
@@ -727,6 +744,9 @@ export interface TdHTMLAttributes extends HTMLAttributes {
   headers?: string
   rowspan?: Numberish
   scope?: string
+  abbr?: string
+  height?: Numberish
+  width?: Numberish
   valign?: 'top' | 'middle' | 'bottom' | 'baseline'
 }
 
@@ -736,6 +756,7 @@ export interface ThHTMLAttributes extends HTMLAttributes {
   headers?: string
   rowspan?: Numberish
   scope?: string
+  abbr?: string
 }
 
 export interface TimeHTMLAttributes extends HTMLAttributes {
@@ -756,6 +777,7 @@ export interface VideoHTMLAttributes extends MediaHTMLAttributes {
   poster?: string
   width?: Numberish
   disablePictureInPicture?: Booleanish
+  disableRemotePlayback?: Booleanish
 }
 
 export interface WebViewHTMLAttributes extends HTMLAttributes {
@@ -804,6 +826,7 @@ export interface SVGAttributes extends AriaAttributes, EventHandlers<Events> {
   // Other HTML properties supported by SVG elements in browsers
   role?: string
   tabindex?: Numberish
+  crossOrigin?: 'anonymous' | 'use-credentials' | ''
 
   // SVG Specific attributes
   'accent-height'?: Numberish
