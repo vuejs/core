@@ -27,7 +27,7 @@ function get(
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
-    if (key !== rawKey) {
+    if (hasChanged(key, rawKey)) {
       track(rawTarget, TrackOpTypes.GET, key)
     }
     track(rawTarget, TrackOpTypes.GET, rawKey)
@@ -50,7 +50,7 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
-    if (key !== rawKey) {
+    if (hasChanged(key, rawKey)) {
       track(rawTarget, TrackOpTypes.HAS, key)
     }
     track(rawTarget, TrackOpTypes.HAS, rawKey)
@@ -226,7 +226,11 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
         toRaw(this)
       )
     }
-    return type === TriggerOpTypes.DELETE ? false : this
+    return type === TriggerOpTypes.DELETE
+      ? false
+      : type === TriggerOpTypes.CLEAR
+      ? undefined
+      : this
   }
 }
 
