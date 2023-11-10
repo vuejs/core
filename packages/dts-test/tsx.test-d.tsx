@@ -52,6 +52,23 @@ expectType<JSX.Element>(
     ]}
   />
 )
+    
+// #7955
+expectType<JSX.Element>(<div style={[undefined, '', null, false]} />)
+
+expectType<JSX.Element>(<div style={undefined} />)
+
+expectType<JSX.Element>(<div style={null} />)
+
+expectType<JSX.Element>(<div style={''} />)
+
+expectType<JSX.Element>(<div style={false} />)
+
+// @ts-expect-error
+;<div style={[0]} />
+
+// @ts-expect-error
+;<div style={0} />
 
 // @ts-expect-error unknown prop
 ;<div foo="bar" />
