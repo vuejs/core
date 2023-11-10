@@ -334,13 +334,15 @@ export function createHydrationFunctions(
         if (
           forcePatch ||
           !optimized ||
-          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           for (const key in props) {
             if (
               (forcePatch &&
                 (key.endsWith('value') || key === 'indeterminate')) ||
-              (isOn(key) && !isReservedProp(key))
+              (isOn(key) && !isReservedProp(key)) ||
+              // force hydrate v-bind with .prop modifiers
+              key[0] === '.'
             ) {
               patchProp(
                 el,

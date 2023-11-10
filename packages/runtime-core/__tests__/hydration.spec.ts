@@ -935,6 +935,18 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('force hydrate prop with `.prop` modifier', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" :indeterminate.prop="true">',
+      () =>
+        h('input', {
+          type: 'checkbox',
+          '.indeterminate': true
+        })
+    )
+    expect((container.firstChild! as any).indeterminate).toBe(true)
+  })
+
   test('force hydrate input v-model with non-string value bindings', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" value="true">',
