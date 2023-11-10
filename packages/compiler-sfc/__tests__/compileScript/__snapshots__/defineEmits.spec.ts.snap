@@ -81,7 +81,7 @@ return { emit }
 })"
 `;
 
-exports[`defineEmits > w/ type (interface w/ entends) 1`] = `
+exports[`defineEmits > w/ type (interface w/ extends) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Base { (e: 'foo'): void }
     interface Emits extends Base { (e: 'bar'): void }
