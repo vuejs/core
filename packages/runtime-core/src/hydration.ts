@@ -111,6 +111,21 @@ export function createHydrationFunctions(
     let domType = node.nodeType
     vnode.el = node
 
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      if (!('__vnode' in node)) {
+        Object.defineProperty(node, '__vnode', {
+          value: vnode,
+          enumerable: false
+        })
+      }
+      if (!('__vueParentComponent' in node)) {
+        Object.defineProperty(node, '__vueParentComponent', {
+          value: parentComponent,
+          enumerable: false
+        })
+      }
+    }
+
     if (patchFlag === PatchFlags.BAIL) {
       optimized = false
       vnode.dynamicChildren = null
