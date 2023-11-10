@@ -114,6 +114,7 @@ export type VNodeProps = {
 
 type VNodeChildAtom =
   | VNode
+  | typeof NULL_DYNAMIC_COMPONENT
   | string
   | number
   | boolean
@@ -488,7 +489,7 @@ function createBaseVNode(
     (vnode.patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
-    vnode.patchFlag !== PatchFlags.HYDRATE_EVENTS
+    vnode.patchFlag !== PatchFlags.NEED_HYDRATION
   ) {
     currentBlock.push(vnode)
   }
