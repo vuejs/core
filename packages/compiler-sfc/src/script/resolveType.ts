@@ -294,7 +294,7 @@ function mergeElements(
       }
     }
     if (calls) {
-      ;(res.calls ||= []).push(...calls)
+      ;(res.calls || (res.calls = [])).push(...calls)
     }
   }
   return res
