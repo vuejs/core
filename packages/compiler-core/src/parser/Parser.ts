@@ -103,16 +103,6 @@ const htmlIntegrationElements = new Set([
 
 export interface ParserOptions {
   /**
-   * Indicates whether special tags (`<script>`, `<style>`, and `<title>`) should get special treatment
-   * and if "empty" tags (eg. `<br>`) can have children.  If `false`, the content of special tags
-   * will be text only. For feeds and other XML content (documents that don't consist of HTML),
-   * set this to `true`.
-   *
-   * @default false
-   */
-  xmlMode?: boolean
-
-  /**
    * Decode entities within the document.
    *
    * @default true
@@ -122,14 +112,14 @@ export interface ParserOptions {
   /**
    * If set to true, all tags will be lowercased.
    *
-   * @default !xmlMode
+   * @default true
    */
   lowerCaseTags?: boolean
 
   /**
    * If set to `true`, all attribute names will be lowercased. This has noticeable impact on speed.
    *
-   * @default !xmlMode
+   * @default true
    */
   lowerCaseAttributeNames?: boolean
 
@@ -137,7 +127,7 @@ export interface ParserOptions {
    * If set to true, CDATA sections will be recognized as text even if the xmlMode option is not enabled.
    * NOTE: If xmlMode is set to `true` then CDATA sections will always be recognized as text.
    *
-   * @default xmlMode
+   * @default false
    */
   recognizeCDATA?: boolean
 
@@ -145,7 +135,7 @@ export interface ParserOptions {
    * If set to `true`, self-closing tags will trigger the onclosetag event even if xmlMode is not set to `true`.
    * NOTE: If xmlMode is set to `true` then self-closing tags will always be recognized.
    *
-   * @default xmlMode
+   * @default false
    */
   recognizeSelfClosing?: boolean
 
@@ -218,8 +208,6 @@ export class Parser implements Callbacks {
   private readonly lowerCaseTagNames: boolean
   private readonly lowerCaseAttributeNames: boolean
   private readonly recognizeSelfClosing: boolean
-  /** We are parsing HTML. Inverse of the `xmlMode` option. */
-  private readonly htmlMode: boolean
   private readonly tokenizer: Tokenizer
 
   private readonly buffers: string[] = []
@@ -234,13 +222,11 @@ export class Parser implements Callbacks {
     private readonly options: ParserOptions = {}
   ) {
     this.cbs = cbs ?? {}
-    this.htmlMode = !this.options.xmlMode
-    this.lowerCaseTagNames = options.lowerCaseTags ?? this.htmlMode
-    this.lowerCaseAttributeNames =
-      options.lowerCaseAttributeNames ?? this.htmlMode
-    this.recognizeSelfClosing = options.recognizeSelfClosing ?? !this.htmlMode
+    this.lowerCaseTagNames = options.lowerCaseTags ?? true
+    this.lowerCaseAttributeNames = options.lowerCaseAttributeNames ?? true
+    this.recognizeSelfClosing = options.recognizeSelfClosing ?? false
     this.tokenizer = new (options.Tokenizer ?? Tokenizer)(this.options, this)
-    this.foreignContext = [!this.htmlMode]
+    this.foreignContext = [false]
     this.cbs.onparserinit?.(this)
   }
 
@@ -266,7 +252,7 @@ export class Parser implements Callbacks {
    * to specify your own additional void elements.
    */
   protected isVoidElement(name: string): boolean {
-    return this.htmlMode && voidElements.has(name)
+    return voidElements.has(name)
   }
 
   /** @internal */
@@ -286,7 +272,7 @@ export class Parser implements Callbacks {
     this.openTagStart = this.startIndex
     this.tagname = name
 
-    const impliesClose = this.htmlMode && openImpliesClose.get(name)
+    const impliesClose = openImpliesClose.get(name)
 
     if (impliesClose) {
       while (this.stack.length > 0 && impliesClose.has(this.stack[0])) {
@@ -297,12 +283,10 @@ export class Parser implements Callbacks {
     if (!this.isVoidElement(name)) {
       this.stack.unshift(name)
 
-      if (this.htmlMode) {
-        if (foreignContextElements.has(name)) {
-          this.foreignContext.unshift(true)
-        } else if (htmlIntegrationElements.has(name)) {
-          this.foreignContext.unshift(false)
-        }
+      if (foreignContextElements.has(name)) {
+        this.foreignContext.unshift(true)
+      } else if (htmlIntegrationElements.has(name)) {
+        this.foreignContext.unshift(false)
       }
     }
     this.cbs.onopentagname?.(name)
@@ -342,10 +326,7 @@ export class Parser implements Callbacks {
       name = name.toLowerCase()
     }
 
-    if (
-      this.htmlMode &&
-      (foreignContextElements.has(name) || htmlIntegrationElements.has(name))
-    ) {
+    if (foreignContextElements.has(name) || htmlIntegrationElements.has(name)) {
       this.foreignContext.shift()
     }
 
@@ -357,12 +338,12 @@ export class Parser implements Callbacks {
           // We know the stack has sufficient elements.
           this.cbs.onclosetag?.(element, index !== pos)
         }
-      } else if (this.htmlMode && name === 'p') {
+      } else if (name === 'p') {
         // Implicit open before close
         this.emitOpenTag('p')
         this.closeCurrentTag(true)
       }
-    } else if (this.htmlMode && name === 'br') {
+    } else if (name === 'br') {
       // We can't use `emitOpenTag` for implicit open, as `br` would be implicitly closed.
       this.cbs.onopentagname?.('br')
       this.cbs.onopentag?.('br', {}, true)
@@ -497,7 +478,7 @@ export class Parser implements Callbacks {
     this.endIndex = endIndex
     const value = this.getSlice(start, endIndex - offset)
 
-    if (!this.htmlMode || this.options.recognizeCDATA) {
+    if (this.options.recognizeCDATA) {
       this.cbs.oncdatastart?.()
       this.cbs.ontext?.(value)
       this.cbs.oncdataend?.()
@@ -537,7 +518,7 @@ export class Parser implements Callbacks {
     this.cbs.onparserinit?.(this)
     this.buffers.length = 0
     this.foreignContext.length = 0
-    this.foreignContext.unshift(!this.htmlMode)
+    this.foreignContext.unshift(false)
     this.bufferOffset = 0
     this.writeIndex = 0
     this.ended = false
