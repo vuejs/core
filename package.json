@@ -29,7 +29,7 @@
     "dev-sfc": "run-s dev-sfc-prepare dev-sfc-run",
     "dev-sfc-prepare": "node scripts/pre-dev-sfc.js || npm run build-all-cjs",
     "dev-sfc-serve": "vite packages/sfc-playground --host",
-    "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
+    "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev vue -ipf esm-browser-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
     "serve": "serve",
     "open": "open http://localhost:3000/packages/template-explorer/local.html",
     "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-ssr-esm build-sfc-playground-self",
