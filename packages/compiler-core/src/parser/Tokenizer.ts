@@ -1,8 +1,7 @@
 import {
   EntityDecoder,
   DecodingMode,
-  htmlDecodeTree,
-  xmlDecodeTree
+  htmlDecodeTree
 } from 'entities/lib/decode.js'
 
 const enum CharCodes {
@@ -89,13 +88,6 @@ function isEndOfTagSection(c: number): boolean {
   return c === CharCodes.Slash || c === CharCodes.Gt || isWhitespace(c)
 }
 
-function isASCIIAlpha(c: number): boolean {
-  return (
-    (c >= CharCodes.LowerA && c <= CharCodes.LowerZ) ||
-    (c >= CharCodes.UpperA && c <= CharCodes.UpperZ)
-  )
-}
-
 export enum QuoteType {
   NoValue = 0,
   Unquoted = 1,
@@ -156,22 +148,16 @@ export default class Tokenizer {
   /** The offset of the current buffer. */
   private offset = 0
 
-  private readonly xmlMode: boolean
   private readonly decodeEntities: boolean
   private readonly entityDecoder: EntityDecoder
 
   constructor(
-    {
-      xmlMode = false,
-      decodeEntities = true
-    }: { xmlMode?: boolean; decodeEntities?: boolean },
+    { decodeEntities = true }: { decodeEntities?: boolean },
     private readonly cbs: Callbacks
   ) {
-    this.xmlMode = xmlMode
     this.decodeEntities = decodeEntities
-    this.entityDecoder = new EntityDecoder(
-      xmlMode ? xmlDecodeTree : htmlDecodeTree,
-      (cp, consumed) => this.emitCodePoint(cp, consumed)
+    this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
+      this.emitCodePoint(cp, consumed)
     )
   }
 
@@ -358,12 +344,12 @@ export default class Tokenizer {
 
   /**
    * HTML only allows ASCII alpha characters (a-z and A-Z) at the beginning of a tag name.
-   *
-   * XML allows a lot more characters here (@see https://www.w3.org/TR/REC-xml/#NT-NameStartChar).
-   * We allow anything that wouldn't end the tag.
    */
   private isTagStartChar(c: number) {
-    return this.xmlMode ? !isEndOfTagSection(c) : isASCIIAlpha(c)
+    return (
+      (c >= CharCodes.LowerA && c <= CharCodes.LowerZ) ||
+      (c >= CharCodes.UpperA && c <= CharCodes.UpperZ)
+    )
   }
 
   private startSpecial(sequence: Uint8Array, offset: number) {
@@ -383,11 +369,11 @@ export default class Tokenizer {
     } else if (this.isTagStartChar(c)) {
       const lower = c | 0x20
       this.sectionStart = this.index
-      if (!this.xmlMode && lower === Sequences.TitleEnd[2]) {
+      if (lower === Sequences.TitleEnd[2]) {
         this.startSpecial(Sequences.TitleEnd, 3)
       } else {
         this.state =
-          !this.xmlMode && lower === Sequences.ScriptEnd[2]
+          lower === Sequences.ScriptEnd[2]
             ? State.BeforeSpecialS
             : State.InTagName
       }
@@ -584,9 +570,7 @@ export default class Tokenizer {
     this.state = State.InEntity
     this.entityStart = this.index
     this.entityDecoder.startEntity(
-      this.xmlMode
-        ? DecodingMode.Strict
-        : this.baseState === State.Text || this.baseState === State.InSpecialTag
+      this.baseState === State.Text || this.baseState === State.InSpecialTag
         ? DecodingMode.Legacy
         : DecodingMode.Attribute
     )
