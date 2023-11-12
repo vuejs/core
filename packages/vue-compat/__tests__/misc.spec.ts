@@ -43,11 +43,12 @@ test('mode as function', () => {
     template: `<div><foo/><bar/></div>`
   }).$mount()
 
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.innerHTML).toBe(`<div>foo</div><div>bar</div>`)
 })
 
 test('WATCH_ARRAY', async () => {
-  const spy = jest.fn()
+  const spy = vi.fn()
   const vm = new Vue({
     data() {
       return {
@@ -114,11 +115,12 @@ test('PROPS_DEFAULT_THIS', () => {
 })
 
 test('V_ON_KEYCODE_MODIFIER', () => {
-  const spy = jest.fn()
+  const spy = vi.fn()
   const vm = new Vue({
     template: `<input @keyup.1="spy">`,
     methods: { spy }
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLInputElement)
   triggerEvent(vm.$el, 'keyup', e => {
     e.key = '_'
     e.keyCode = 1
@@ -131,11 +133,11 @@ test('V_ON_KEYCODE_MODIFIER', () => {
 
 test('CUSTOM_DIR', async () => {
   const myDir = {
-    bind: jest.fn(),
-    inserted: jest.fn(),
-    update: jest.fn(),
-    componentUpdated: jest.fn(),
-    unbind: jest.fn()
+    bind: vi.fn(),
+    inserted: vi.fn(),
+    update: vi.fn(),
+    componentUpdated: vi.fn(),
+    unbind: vi.fn()
   } as any
 
   const getCalls = () =>
@@ -191,6 +193,7 @@ test('ATTR_FALSE_VALUE', () => {
   const vm = new Vue({
     template: `<div :id="false" :foo="false"/>`
   }).$mount()
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.hasAttribute('id')).toBe(false)
   expect(vm.$el.hasAttribute('foo')).toBe(false)
   expect(
@@ -209,6 +212,8 @@ test('ATTR_ENUMERATED_COERCION', () => {
   const vm = new Vue({
     template: `<div :draggable="null" :spellcheck="0" contenteditable="foo" />`
   }).$mount()
+
+  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.getAttribute('draggable')).toBe('false')
   expect(vm.$el.getAttribute('spellcheck')).toBe('true')
   expect(vm.$el.getAttribute('contenteditable')).toBe('true')

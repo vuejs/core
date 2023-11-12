@@ -98,6 +98,10 @@ export const enum BindingTypes {
    */
   SETUP_CONST = 'setup-const',
   /**
+   * a const binding that does not need `unref()`, but may be mutated.
+   */
+  SETUP_REACTIVE_CONST = 'setup-reactive-const',
+  /**
    * a const binding that may be a ref.
    */
   SETUP_MAYBE_REF = 'setup-maybe-ref',
@@ -108,7 +112,11 @@ export const enum BindingTypes {
   /**
    * declared by other options, e.g. computed, inject
    */
-  OPTIONS = 'options'
+  OPTIONS = 'options',
+  /**
+   * a literal constant, e.g. 'foo', 1, true
+   */
+  LITERAL_CONST = 'literal-const'
 }
 
 export type BindingMetadata = {
@@ -248,6 +256,12 @@ export interface TransformOptions
    * needed to render inline CSS variables on component root
    */
   ssrCssVars?: string
+  /**
+   * Whether to compile the template assuming it needs to handle HMR.
+   * Some edge cases may need to generate different code for HMR to work
+   * correctly, e.g. #6938, #7138
+   */
+  hmr?: boolean
 }
 
 export interface CodegenOptions extends SharedTransformCodegenOptions {

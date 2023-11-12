@@ -15,22 +15,22 @@ export type LegacyConfig = {
   silent?: boolean
   /**
    * @deprecated use __VUE_PROD_DEVTOOLS__ compile-time feature flag instead
-   * https://github.com/vuejs/vue-next/tree/master/packages/vue#bundler-build-feature-flags
+   * https://github.com/vuejs/core/tree/main/packages/vue#bundler-build-feature-flags
    */
   devtools?: boolean
   /**
    * @deprecated use `config.isCustomElement` instead
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-ignoredelements-is-now-config-iscustomelement
+   * https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-ignoredelements-is-now-config-iscustomelement
    */
   ignoredElements?: (string | RegExp)[]
   /**
    * @deprecated
-   * https://v3.vuejs.org/guide/migration/keycode-modifiers.html
+   * https://v3-migration.vuejs.org/breaking-changes/keycode-modifiers.html
    */
   keyCodes?: Record<string, number | number[]>
   /**
    * @deprecated
-   * https://v3.vuejs.org/guide/migration/global-api.html#config-productiontip-removed
+   * https://v3-migration.vuejs.org/breaking-changes/global-api.html#config-productiontip-removed
    */
   productionTip?: boolean
 }

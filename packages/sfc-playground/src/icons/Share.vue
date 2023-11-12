@@ -2,7 +2,7 @@
   <svg width="1.4em" height="1.4em" viewBox="0 0 24 24">
     <g
       fill="none"
-      stroke="#666"
+      stroke="currentColor"
       stroke-width="2"
       stroke-linecap="round"
       stroke-linejoin="round"

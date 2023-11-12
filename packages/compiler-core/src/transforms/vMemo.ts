@@ -1,6 +1,7 @@
 import { NodeTransform } from '../transform'
-import { findDir, makeBlock } from '../utils'
+import { findDir } from '../utils'
 import {
+  convertToBlock,
   createCallExpression,
   createFunctionExpression,
   ElementTypes,
@@ -26,7 +27,7 @@ export const transformMemo: NodeTransform = (node, context) => {
       if (codegenNode && codegenNode.type === NodeTypes.VNODE_CALL) {
         // non-component sub tree should be turned into a block
         if (node.tagType !== ElementTypes.COMPONENT) {
-          makeBlock(codegenNode, context)
+          convertToBlock(codegenNode, context)
         }
         node.codegenNode = createCallExpression(context.helper(WITH_MEMO), [
           dir.exp!,

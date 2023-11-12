@@ -124,4 +124,48 @@ describe('ssr: scopeId', () => {
       }"
     `)
   })
+
+  // #7554
+  test('scopeId is correctly transform to scope attribute of transition-group ', () => {
+    expect(
+      compile(
+        `<transition-group tag="div" class="red"><span>hello</span></transition-group>`,
+        {
+          scopeId,
+          mode: 'module'
+        }
+      ).code
+    ).toMatchInlineSnapshot(`
+      "import { mergeProps as _mergeProps } from \\"vue\\"
+      import { ssrRenderAttrs as _ssrRenderAttrs } from \\"vue/server-renderer\\"
+
+      export function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_mergeProps({ class: \\"red\\" }, _attrs))} data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></div>\`)
+      }"
+    `)
+
+    // with dynamic tag
+    expect(
+      compile(
+        `<transition-group :tag="someTag" class="red"><span>hello</span></transition-group>`,
+        {
+          scopeId,
+          mode: 'module'
+        }
+      ).code
+    ).toMatchInlineSnapshot(`
+      "import { mergeProps as _mergeProps } from \\"vue\\"
+      import { ssrRenderAttrs as _ssrRenderAttrs } from \\"vue/server-renderer\\"
+
+      export function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<\${
+          _ctx.someTag
+        }\${
+          _ssrRenderAttrs(_mergeProps({ class: \\"red\\" }, _attrs))
+        } data-v-xxxxxxx><span data-v-xxxxxxx>hello</span></\${
+          _ctx.someTag
+        }>\`)
+      }"
+    `)
+  })
 })

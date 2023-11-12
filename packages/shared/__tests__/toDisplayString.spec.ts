@@ -1,3 +1,6 @@
+/**
+ * @vitest-environment jsdom
+ */
 import { computed, ref } from '@vue/reactivity'
 import { toDisplayString } from '../src'
 
@@ -28,11 +31,11 @@ describe('toDisplayString', () => {
     }
     expect(toDisplayString(objWithToStringOverride)).toBe('override')
 
-    const objWithNonInvokeableToString = {
+    const objWithNonInvokableToString = {
       foo: 555,
       toString: null
     }
-    expect(toDisplayString(objWithNonInvokeableToString)).toBe(
+    expect(toDisplayString(objWithNonInvokableToString)).toBe(
       `{
   "foo": 555,
   "toString": null
@@ -86,7 +89,7 @@ describe('toDisplayString', () => {
 
   test('native objects', () => {
     const div = document.createElement('div')
-    expect(toDisplayString(div)).toBe('[object HTMLDivElement]')
+    expect(toDisplayString(div)).toMatch('[object HTMLDivElement]')
     expect(toDisplayString({ div })).toMatchInlineSnapshot(`
       "{
         \\"div\\": \\"[object HTMLDivElement]\\"

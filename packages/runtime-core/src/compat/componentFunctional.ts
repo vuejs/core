@@ -8,11 +8,10 @@ import { InternalSlots } from '../componentSlots'
 import { getCompatListeners } from './instanceListeners'
 import { compatH } from './renderFn'
 
-const normalizedFunctionalComponentMap = new Map<
+const normalizedFunctionalComponentMap = new WeakMap<
   ComponentOptions,
   FunctionalComponent
 >()
-
 export const legacySlotProxyHandlers: ProxyHandler<InternalSlots> = {
   get(target, key: string) {
     const slot = target[key]
@@ -55,6 +54,7 @@ export function convertLegacyFunctionalComponent(comp: ComponentOptions) {
   }
   Func.props = comp.props
   Func.displayName = comp.name
+  Func.compatConfig = comp.compatConfig
   // v2 functional components do not inherit attrs
   Func.inheritAttrs = false
 

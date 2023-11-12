@@ -3,7 +3,8 @@ import {
   createObjectProperty,
   createSimpleExpression,
   TO_DISPLAY_STRING,
-  createCallExpression
+  createCallExpression,
+  getConstantType
 } from '@vue/compiler-core'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'
 
@@ -25,11 +26,13 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
       createObjectProperty(
         createSimpleExpression(`textContent`, true),
         exp
-          ? createCallExpression(
-              context.helperString(TO_DISPLAY_STRING),
-              [exp],
-              loc
-            )
+          ? getConstantType(exp, context) > 0
+            ? exp
+            : createCallExpression(
+                context.helperString(TO_DISPLAY_STRING),
+                [exp],
+                loc
+              )
           : createSimpleExpression('', true)
       )
     ]

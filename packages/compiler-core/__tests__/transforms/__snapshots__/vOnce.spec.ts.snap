@@ -1,6 +1,6 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`compiler: v-once transform as root node 1`] = `
+exports[`compiler: v-once transform > as root node 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -17,7 +17,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-once transform on component 1`] = `
+exports[`compiler: v-once transform > on component 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -38,7 +38,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-once transform on nested plain element 1`] = `
+exports[`compiler: v-once transform > on nested plain element 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -57,7 +57,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-once transform on slot outlet 1`] = `
+exports[`compiler: v-once transform > on slot outlet 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {
@@ -76,7 +76,7 @@ return function render(_ctx, _cache) {
 }"
 `;
 
-exports[`compiler: v-once transform with hoistStatic: true 1`] = `
+exports[`compiler: v-once transform > with hoistStatic: true 1`] = `
 "const _Vue = Vue
 
 return function render(_ctx, _cache) {

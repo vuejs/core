@@ -7,8 +7,11 @@ import {
   hyphenate,
   isArray,
   isFunction,
+  isObject,
+  isString,
   isOn,
-  toNumber
+  UnionToIntersection,
+  looseToNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -18,7 +21,6 @@ import {
 } from './component'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { warn } from './warning'
-import { UnionToIntersection } from './helpers/typeUtils'
 import { devtoolsComponentEmit } from './devtools'
 import { AppContext } from './apiCreateApp'
 import { emit as compatInstanceEmit } from './compat/instanceEventEmitter'
@@ -73,6 +75,7 @@ export function emit(
   event: string,
   ...rawArgs: any[]
 ) {
+  if (instance.isUnmounted) return
   const props = instance.vnode.props || EMPTY_OBJ
 
   if (__DEV__) {
@@ -121,9 +124,10 @@ export function emit(
     }Modifiers`
     const { number, trim } = props[modifiersKey] || EMPTY_OBJ
     if (trim) {
-      args = rawArgs.map(a => a.trim())
-    } else if (number) {
-      args = rawArgs.map(toNumber)
+      args = rawArgs.map(a => (isString(a) ? a.trim() : a))
+    }
+    if (number) {
+      args = rawArgs.map(looseToNumber)
     }
   }
 
@@ -170,7 +174,7 @@ export function emit(
   const onceHandler = props[handlerName + `Once`]
   if (onceHandler) {
     if (!instance.emitted) {
-      instance.emitted = {} as Record<any, boolean>
+      instance.emitted = {}
     } else if (instance.emitted[handlerName]) {
       return
     }
@@ -225,7 +229,9 @@ export function normalizeEmitsOptions(
   }
 
   if (!raw && !hasExtends) {
-    cache.set(comp, null)
+    if (isObject(comp)) {
+      cache.set(comp, null)
+    }
     return null
   }
 
@@ -235,7 +241,9 @@ export function normalizeEmitsOptions(
     extend(normalized, raw)
   }
 
-  cache.set(comp, normalized)
+  if (isObject(comp)) {
+    cache.set(comp, normalized)
+  }
   return normalized
 }
 

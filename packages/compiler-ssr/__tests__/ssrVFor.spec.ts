@@ -18,16 +18,16 @@ describe('ssr: v-for', () => {
   test('nested content', () => {
     expect(compile(`<div v-for="i in list">foo<span>bar</span></div>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<!--[-->\`)
-        _ssrRenderList(_ctx.list, (i) => {
-          _push(\`<div>foo<span>bar</span></div>\`)
-        })
-        _push(\`<!--]-->\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<!--[-->\`)
+          _ssrRenderList(_ctx.list, (i) => {
+            _push(\`<div>foo<span>bar</span></div>\`)
+          })
+          _push(\`<!--]-->\`)
+        }"
+      `)
   })
 
   test('nested v-for', () => {
@@ -61,16 +61,16 @@ describe('ssr: v-for', () => {
   test('template v-for (text)', () => {
     expect(compile(`<template v-for="i in list">{{ i }}</template>`).code)
       .toMatchInlineSnapshot(`
-      "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
+        "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require(\\"vue/server-renderer\\")
 
-      return function ssrRender(_ctx, _push, _parent, _attrs) {
-        _push(\`<!--[-->\`)
-        _ssrRenderList(_ctx.list, (i) => {
-          _push(\`<!--[-->\${_ssrInterpolate(i)}<!--]-->\`)
-        })
-        _push(\`<!--]-->\`)
-      }"
-    `)
+        return function ssrRender(_ctx, _push, _parent, _attrs) {
+          _push(\`<!--[-->\`)
+          _ssrRenderList(_ctx.list, (i) => {
+            _push(\`<!--[-->\${_ssrInterpolate(i)}<!--]-->\`)
+          })
+          _push(\`<!--]-->\`)
+        }"
+      `)
   })
 
   test('template v-for (single element)', () => {

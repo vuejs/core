@@ -32,15 +32,13 @@ export function walkIdentifiers(
     root.body[0].type === 'ExpressionStatement' &&
     root.body[0].expression
 
-  ;(walk as any)(root, {
+  walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
       parent && parentStack.push(parent)
       if (
         parent &&
         parent.type.startsWith('TS') &&
-        parent.type !== 'TSAsExpression' &&
-        parent.type !== 'TSNonNullExpression' &&
-        parent.type !== 'TSTypeAssertion'
+        !TS_NODE_TYPES.includes(parent.type)
       ) {
         return this.skip()
       }
@@ -167,6 +165,19 @@ export function walkBlockDeclarations(
     ) {
       if (stmt.declare || !stmt.id) continue
       onIdent(stmt.id)
+    } else if (
+      stmt.type === 'ForOfStatement' ||
+      stmt.type === 'ForInStatement' ||
+      stmt.type === 'ForStatement'
+    ) {
+      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
+      if (variable && variable.type === 'VariableDeclaration') {
+        for (const decl of variable.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
     }
   }
 }
@@ -400,7 +411,7 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
     case 'MetaProperty':
       return false
 
-    // yes: type X = { somePropert: NODE }
+    // yes: type X = { someProperty: NODE }
     // no: type X = { NODE: OtherType }
     case 'ObjectTypeProperty':
       return parent.key !== node
@@ -422,3 +433,11 @@ function isReferenced(node: Node, parent: Node, grandparent?: Node): boolean {
 
   return true
 }
+
+export const TS_NODE_TYPES = [
+  'TSAsExpression', // foo as number
+  'TSTypeAssertion', // (<number>foo)
+  'TSNonNullExpression', // foo!
+  'TSInstantiationExpression', // foo<string>
+  'TSSatisfiesExpression' // foo satisfies T
+]

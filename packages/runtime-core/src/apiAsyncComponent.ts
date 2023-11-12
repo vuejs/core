@@ -40,6 +40,7 @@ export interface AsyncComponentOptions<T = any> {
 export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
@@ -198,11 +199,11 @@ export function defineAsyncComponent<
         if (loaded.value && resolvedComp) {
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
-          return createVNode(errorComponent as ConcreteComponent, {
+          return createVNode(errorComponent, {
             error: error.value
           })
         } else if (loadingComponent && !delayed.value) {
-          return createVNode(loadingComponent as ConcreteComponent)
+          return createVNode(loadingComponent)
         }
       }
     }
@@ -211,10 +212,16 @@ export function defineAsyncComponent<
 
 function createInnerComp(
   comp: ConcreteComponent,
-  { vnode: { ref, props, children } }: ComponentInternalInstance
+  parent: ComponentInternalInstance
 ) {
+  const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)
   // ensure inner component inherits the async wrapper's ref owner
   vnode.ref = ref
+  // pass the custom element callback on to the inner comp
+  // and remove it from the async wrapper
+  vnode.ce = ce
+  delete parent.vnode.ce
+
   return vnode
 }

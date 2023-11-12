@@ -58,7 +58,7 @@ export function ssrProcessTeleport(
     false, // isSlot
     node.loc
   )
-  contentRenderFn.body = processChildrenAsStatement(node.children, context)
+  contentRenderFn.body = processChildrenAsStatement(node, context)
   context.pushStatement(
     createCallExpression(context.helper(SSR_RENDER_TELEPORT), [
       `_push`,

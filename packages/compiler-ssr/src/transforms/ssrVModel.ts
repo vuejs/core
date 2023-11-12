@@ -18,7 +18,8 @@ import {
 import {
   SSR_LOOSE_EQUAL,
   SSR_LOOSE_CONTAIN,
-  SSR_RENDER_DYNAMIC_MODEL
+  SSR_RENDER_DYNAMIC_MODEL,
+  SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
 import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
@@ -33,6 +34,38 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
           DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
           value.loc
         )
+      )
+    }
+  }
+
+  function processOption(plainNode: PlainElementNode) {
+    if (plainNode.tag === 'option') {
+      if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
+        const value = findValueBinding(plainNode)
+        plainNode.ssrCodegenNode!.elements.push(
+          createConditionalExpression(
+            createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
+              createConditionalExpression(
+                createCallExpression(`Array.isArray`, [model]),
+                createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                  model,
+                  value
+                ]),
+                createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                  model,
+                  value
+                ])
+              )
+            ]),
+            createSimpleExpression(' selected', true),
+            createSimpleExpression('', true),
+            false /* no newline */
+          )
+        )
+      }
+    } else if (plainNode.tag === 'optgroup') {
+      plainNode.children.forEach(option =>
+        processOption(option as PlainElementNode)
       )
     }
   }
@@ -129,8 +162,11 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      // NOOP
-      // select relies on client-side directive to set initial selected state.
+      node.children.forEach(child => {
+        if (child.type === NodeTypes.ELEMENT) {
+          processOption(child as PlainElementNode)
+        }
+      })
     } else {
       context.onError(
         createDOMCompilerError(

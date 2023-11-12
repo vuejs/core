@@ -5,15 +5,18 @@ import {
   isFunction,
   isPlainObject,
   isSet,
-  objectToString
-} from './index'
+  objectToString,
+  isString
+} from './general'
 
 /**
  * For converting {{ interpolation }} values to displayed strings.
  * @private
  */
 export const toDisplayString = (val: unknown): string => {
-  return val == null
+  return isString(val)
+    ? val
+    : val == null
     ? ''
     : isArray(val) ||
       (isObject(val) &&

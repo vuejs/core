@@ -1,4 +1,4 @@
-import { escapeHtml, stringifyStyle } from '@vue/shared'
+import { escapeHtml, isSVGTag, stringifyStyle } from '@vue/shared'
 import {
   normalizeClass,
   normalizeStyle,
@@ -12,7 +12,9 @@ import {
 } from '@vue/shared'
 
 // leading comma for empty string ""
-const shouldIgnoreProp = makeMap(`,key,ref,innerHTML,textContent`)
+const shouldIgnoreProp = makeMap(
+  `,key,ref,innerHTML,textContent,ref_key,ref_for`
+)
 
 export function ssrRenderAttrs(
   props: Record<string, unknown>,
@@ -49,8 +51,8 @@ export function ssrRenderDynamicAttr(
     return ``
   }
   const attrKey =
-    tag && tag.indexOf('-') > 0
-      ? key // preserve raw name on custom elements
+    tag && (tag.indexOf('-') > 0 || isSVGTag(tag))
+      ? key // preserve raw name on custom elements and svg
       : propsToAttrMap[key] || key.toLowerCase()
   if (isBooleanAttr(attrKey)) {
     return includeBooleanAttr(value) ? ` ${attrKey}` : ``

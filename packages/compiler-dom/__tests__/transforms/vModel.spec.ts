@@ -92,7 +92,7 @@ describe('compiler: transform v-model', () => {
 
   describe('errors', () => {
     test('plain elements with argument', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel('<input v-model:value="model" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -104,7 +104,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('invalid element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel('<span v-model="model" />', { onError })
 
       expect(onError).toHaveBeenCalledTimes(1)
@@ -116,7 +116,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('should allow usage on custom element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       const root = transformWithModel('<my-input v-model="model" />', {
         onError,
         isCustomElement: tag => tag.startsWith('my-')
@@ -127,7 +127,7 @@ describe('compiler: transform v-model', () => {
     })
 
     test('should raise error if used file input element', () => {
-      const onError = jest.fn()
+      const onError = vi.fn()
       transformWithModel(`<input type="file" v-model="test"/>`, {
         onError
       })

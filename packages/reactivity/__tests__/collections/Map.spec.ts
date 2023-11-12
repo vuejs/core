@@ -2,7 +2,7 @@ import { reactive, effect, toRaw, isReactive } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Map<any, any>, fnName: string) {
-    const spy = jest.fn()
+    const spy = vi.fn()
     let proxy = reactive(collection)
     ;(collection as any)[fnName] = spy
     return [proxy as any, spy]
@@ -13,8 +13,8 @@ describe('reactivity/collections', () => {
       const original = new Map()
       const observed = reactive(original)
       expect(isReactive(observed)).toBe(true)
-      expect(original instanceof Map).toBe(true)
-      expect(observed instanceof Map).toBe(true)
+      expect(original).toBeInstanceOf(Map)
+      expect(observed).toBeInstanceOf(Map)
     })
 
     it('should observe mutations', () => {
@@ -216,7 +216,7 @@ describe('reactivity/collections', () => {
     it('should not observe non value changing mutations', () => {
       let dummy
       const map = reactive(new Map())
-      const mapSpy = jest.fn(() => (dummy = map.get('key')))
+      const mapSpy = vi.fn(() => (dummy = map.get('key')))
       effect(mapSpy)
 
       expect(dummy).toBe(undefined)
@@ -350,7 +350,7 @@ describe('reactivity/collections', () => {
 
     it('should not be trigger when the value and the old value both are NaN', () => {
       const map = reactive(new Map([['foo', NaN]]))
-      const mapSpy = jest.fn(() => map.get('foo'))
+      const mapSpy = vi.fn(() => map.get('foo'))
       effect(mapSpy)
       map.set('foo', NaN)
       expect(mapSpy).toHaveBeenCalledTimes(1)
@@ -418,7 +418,7 @@ describe('reactivity/collections', () => {
     // #877
     it('should not trigger key iteration when setting existing keys', () => {
       const map = reactive(new Map())
-      const spy = jest.fn()
+      const spy = vi.fn()
 
       effect(() => {
         const keys = []

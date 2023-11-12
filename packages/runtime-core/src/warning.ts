@@ -31,6 +31,8 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
+  if (!__DEV__) return
+
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
@@ -158,5 +160,19 @@ function formatProp(key: string, value: unknown, raw?: boolean): any {
   } else {
     value = toRaw(value)
     return raw ? value : [`${key}=`, value]
+  }
+}
+
+/**
+ * @internal
+ */
+export function assertNumber(val: unknown, type: string) {
+  if (!__DEV__) return
+  if (val === undefined) {
+    return
+  } else if (typeof val !== 'number') {
+    warn(`${type} is not a valid number - ` + `got ${JSON.stringify(val)}.`)
+  } else if (isNaN(val)) {
+    warn(`${type} is NaN - ` + 'the duration expression might be incorrect.')
   }
 }

@@ -40,7 +40,7 @@ describe('compiler: v-html transform', () => {
   })
 
   it('should raise error and ignore children when v-html is present', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     const ast = transformWithVHtml(`<div v-html="test">hello</div>`, {
       onError
     })
@@ -59,7 +59,7 @@ describe('compiler: v-html transform', () => {
   })
 
   it('should raise error if has no expression', () => {
-    const onError = jest.fn()
+    const onError = vi.fn()
     transformWithVHtml(`<div v-html></div>`, {
       onError
     })

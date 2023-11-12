@@ -2,7 +2,7 @@ import {
   isRelativeUrl,
   isExternalUrl,
   isDataUrl
-} from '../../compiler-sfc/src/templateUtils'
+} from '../src/template/templateUtils'
 
 describe('compiler sfc:templateUtils isRelativeUrl', () => {
   test('should return true when The first character of the string path is .', () => {
@@ -33,6 +33,12 @@ describe('compiler sfc:templateUtils isExternalUrl', () => {
 
   test('should return true when String starts with https://', () => {
     const url = 'https://vuejs.org/'
+    const result = isExternalUrl(url)
+    expect(result).toBe(true)
+  })
+
+  test('should return true when String starts with //', () => {
+    const url = '//vuejs.org/'
     const result = isExternalUrl(url)
     expect(result).toBe(true)
   })

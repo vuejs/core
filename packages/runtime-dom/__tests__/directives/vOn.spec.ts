@@ -6,8 +6,10 @@ function triggerEvent(
   event: string,
   process?: (e: any) => any
 ) {
-  const e = document.createEvent('HTMLEvents')
-  e.initEvent(event, true, true)
+  const e = new Event(event, {
+    bubbles: true,
+    cancelable: true
+  })
   if (event === 'click') {
     ;(e as any).button = 0
   }
@@ -21,9 +23,9 @@ describe('runtime-dom: v-on directive', () => {
     const parent = document.createElement('div')
     const child = document.createElement('input')
     parent.appendChild(child)
-    const childNextValue = withModifiers(jest.fn(), ['prevent', 'stop'])
+    const childNextValue = withModifiers(vi.fn(), ['prevent', 'stop'])
     patchEvent(child, 'onClick', null, childNextValue, null)
-    const parentNextValue = jest.fn()
+    const parentNextValue = vi.fn()
     patchEvent(parent, 'onClick', null, parentNextValue, null)
     expect(triggerEvent(child, 'click').defaultPrevented).toBe(true)
     expect(parentNextValue).not.toBeCalled()
@@ -33,7 +35,7 @@ describe('runtime-dom: v-on directive', () => {
     const parent = document.createElement('div')
     const child = document.createElement('input')
     parent.appendChild(child)
-    const fn = jest.fn()
+    const fn = vi.fn()
     const handler = withModifiers(fn, ['self'])
     patchEvent(parent, 'onClick', null, handler, null)
     triggerEvent(child, 'click')
@@ -45,7 +47,7 @@ describe('runtime-dom: v-on directive', () => {
 
     keyNames.forEach(keyName => {
       const el = document.createElement('div')
-      const fn = jest.fn()
+      const fn = vi.fn()
       // <div @keyup[keyName].esc="test"/>
       const nextValue = withKeys(withModifiers(fn, [keyName]), [
         'esc',
@@ -79,7 +81,7 @@ describe('runtime-dom: v-on directive', () => {
   test('it should support "exact" modifier', () => {
     const el = document.createElement('div')
     // Case 1: <div @keyup.exact="test"/>
-    const fn1 = jest.fn()
+    const fn1 = vi.fn()
     const next1 = withModifiers(fn1, ['exact'])
     patchEvent(el, 'onKeyup', null, next1, null)
     triggerEvent(el, 'keyup')
@@ -87,7 +89,7 @@ describe('runtime-dom: v-on directive', () => {
     triggerEvent(el, 'keyup', e => (e.ctrlKey = true))
     expect(fn1.mock.calls.length).toBe(1)
     // Case 2: <div @keyup.ctrl.a.exact="test"/>
-    const fn2 = jest.fn()
+    const fn2 = vi.fn()
     const next2 = withKeys(withModifiers(fn2, ['ctrl', 'exact']), ['a'])
     patchEvent(el, 'onKeyup', null, next2, null)
     triggerEvent(el, 'keyup', e => (e.key = 'a'))
@@ -111,7 +113,7 @@ describe('runtime-dom: v-on directive', () => {
     const buttonCodes = { left: 0, middle: 1, right: 2 }
     buttons.forEach(button => {
       const el = document.createElement('div')
-      const fn = jest.fn()
+      const fn = vi.fn()
       const handler = withModifiers(fn, [button])
       patchEvent(el, 'onMousedown', null, handler, null)
       buttons
@@ -127,7 +129,7 @@ describe('runtime-dom: v-on directive', () => {
 
   it('should handle multiple arguments when using modifiers', () => {
     const el = document.createElement('div')
-    const fn = jest.fn()
+    const fn = vi.fn()
     const handler = withModifiers(fn, ['ctrl'])
     const event = triggerEvent(el, 'click', e => (e.ctrlKey = true))
     handler(event, 'value', true)

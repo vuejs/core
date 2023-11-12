@@ -88,7 +88,7 @@ describe('compiler: transform', () => {
         )
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -113,7 +113,7 @@ describe('compiler: transform', () => {
         context.removeNode()
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -141,7 +141,7 @@ describe('compiler: transform', () => {
         context.removeNode(context.parent!.children[0])
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -168,7 +168,7 @@ describe('compiler: transform', () => {
         context.removeNode(context.parent!.children[1])
       }
     }
-    const spy = jest.fn(plugin)
+    const spy = vi.fn(plugin)
     transform(ast, {
       nodeTransforms: [spy]
     })
@@ -209,7 +209,7 @@ describe('compiler: transform', () => {
         createCompilerError(ErrorCodes.X_INVALID_END_TAG, node.loc)
       )
     }
-    const spy = jest.fn()
+    const spy = vi.fn()
     transform(ast, {
       nodeTransforms: [plugin],
       onError: spy

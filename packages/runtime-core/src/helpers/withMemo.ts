@@ -1,3 +1,4 @@
+import { hasChanged } from '@vue/shared'
 import { currentBlock, isBlockTreeEnabled, VNode } from '../vnode'
 
 export function withMemo(
@@ -22,8 +23,9 @@ export function isMemoSame(cached: VNode, memo: any[]) {
   if (prev.length != memo.length) {
     return false
   }
+
   for (let i = 0; i < prev.length; i++) {
-    if (prev[i] !== memo[i]) {
+    if (hasChanged(prev[i], memo[i])) {
       return false
     }
   }

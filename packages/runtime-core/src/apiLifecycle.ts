@@ -2,7 +2,6 @@ import {
   ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
-  LifecycleHooks,
   setCurrentInstance,
   unsetCurrentInstance
 } from './component'
@@ -11,6 +10,7 @@ import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
 import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
 import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
+import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -68,7 +68,7 @@ export const createHook =
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     // post-create lifecycle registrations are noops during SSR (except for serverPrefetch)
     (!isInSSRComponentSetup || lifecycle === LifecycleHooks.SERVER_PREFETCH) &&
-    injectHook(lifecycle, hook, target)
+    injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)
 
 export const onBeforeMount = createHook(LifecycleHooks.BEFORE_MOUNT)
 export const onMounted = createHook(LifecycleHooks.MOUNTED)
