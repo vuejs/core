@@ -110,20 +110,6 @@ export interface ParserOptions {
   decodeEntities?: boolean
 
   /**
-   * If set to true, all tags will be lowercased.
-   *
-   * @default true
-   */
-  lowerCaseTags?: boolean
-
-  /**
-   * If set to `true`, all attribute names will be lowercased. This has noticeable impact on speed.
-   *
-   * @default true
-   */
-  lowerCaseAttributeNames?: boolean
-
-  /**
    * If set to true, CDATA sections will be recognized as text even if the xmlMode option is not enabled.
    * NOTE: If xmlMode is set to `true` then CDATA sections will always be recognized as text.
    *
@@ -138,11 +124,6 @@ export interface ParserOptions {
    * @default false
    */
   recognizeSelfClosing?: boolean
-
-  /**
-   * Allows the default tokenizer to be overwritten.
-   */
-  Tokenizer?: typeof Tokenizer
 }
 
 export interface Handler {
@@ -205,27 +186,18 @@ export class Parser implements Callbacks {
   /** Determines whether self-closing tags are recognized. */
   private readonly foreignContext: boolean[]
   private readonly cbs: Partial<Handler>
-  private readonly lowerCaseTagNames: boolean
-  private readonly lowerCaseAttributeNames: boolean
   private readonly recognizeSelfClosing: boolean
   private readonly tokenizer: Tokenizer
 
-  private readonly buffers: string[] = []
-  private bufferOffset = 0
-  /** The index of the last written buffer. Used when resuming after a `pause()`. */
-  private writeIndex = 0
-  /** Indicates whether the parser has finished running / `.end` has been called. */
-  private ended = false
+  private buffer: string = ''
 
   constructor(
     cbs?: Partial<Handler> | null,
     private readonly options: ParserOptions = {}
   ) {
     this.cbs = cbs ?? {}
-    this.lowerCaseTagNames = options.lowerCaseTags ?? true
-    this.lowerCaseAttributeNames = options.lowerCaseAttributeNames ?? true
     this.recognizeSelfClosing = options.recognizeSelfClosing ?? false
-    this.tokenizer = new (options.Tokenizer ?? Tokenizer)(this.options, this)
+    this.tokenizer = new Tokenizer(this.options, this)
     this.foreignContext = [false]
     this.cbs.onparserinit?.(this)
   }
@@ -247,25 +219,9 @@ export class Parser implements Callbacks {
     this.startIndex = endIndex
   }
 
-  /**
-   * Checks if the current tag is a void element. Override this if you want
-   * to specify your own additional void elements.
-   */
-  protected isVoidElement(name: string): boolean {
-    return voidElements.has(name)
-  }
-
   /** @internal */
   onopentagname(start: number, endIndex: number): void {
-    this.endIndex = endIndex
-
-    let name = this.getSlice(start, endIndex)
-
-    if (this.lowerCaseTagNames) {
-      name = name.toLowerCase()
-    }
-
-    this.emitOpenTag(name)
+    this.emitOpenTag(this.getSlice(start, (this.endIndex = endIndex)))
   }
 
   private emitOpenTag(name: string) {
@@ -280,7 +236,7 @@ export class Parser implements Callbacks {
         this.cbs.onclosetag?.(element, true)
       }
     }
-    if (!this.isVoidElement(name)) {
+    if (!voidElements.has(name)) {
       this.stack.unshift(name)
 
       if (foreignContextElements.has(name)) {
@@ -300,7 +256,7 @@ export class Parser implements Callbacks {
       this.cbs.onopentag?.(this.tagname, this.attribs, isImplied)
       this.attribs = null
     }
-    if (this.cbs.onclosetag && this.isVoidElement(this.tagname)) {
+    if (this.cbs.onclosetag && voidElements.has(this.tagname)) {
       this.cbs.onclosetag(this.tagname, true)
     }
 
@@ -318,19 +274,13 @@ export class Parser implements Callbacks {
 
   /** @internal */
   onclosetag(start: number, endIndex: number): void {
-    this.endIndex = endIndex
-
-    let name = this.getSlice(start, endIndex)
-
-    if (this.lowerCaseTagNames) {
-      name = name.toLowerCase()
-    }
+    const name = this.getSlice(start, (this.endIndex = endIndex))
 
     if (foreignContextElements.has(name) || htmlIntegrationElements.has(name)) {
       this.foreignContext.shift()
     }
 
-    if (!this.isVoidElement(name)) {
+    if (!voidElements.has(name)) {
       const pos = this.stack.indexOf(name)
       if (pos !== -1) {
         for (let index = 0; index <= pos; index++) {
@@ -382,10 +332,7 @@ export class Parser implements Callbacks {
 
   /** @internal */
   onattribname(start: number, endIndex: number): void {
-    this.startIndex = start
-    const name = this.getSlice(start, endIndex)
-
-    this.attribname = this.lowerCaseAttributeNames ? name.toLowerCase() : name
+    this.attribname = this.getSlice((this.startIndex = start), endIndex)
   }
 
   /** @internal */
@@ -425,13 +372,7 @@ export class Parser implements Callbacks {
 
   private getInstructionName(value: string) {
     const index = value.search(reNameEnd)
-    let name = index < 0 ? value : value.substr(0, index)
-
-    if (this.lowerCaseTagNames) {
-      name = name.toLowerCase()
-    }
-
-    return name
+    return index < 0 ? value : value.slice(0, index)
   }
 
   /** @internal */
@@ -503,6 +444,22 @@ export class Parser implements Callbacks {
     this.cbs.onend?.()
   }
 
+  private getSlice(start: number, end: number) {
+    return this.buffer.slice(start, end)
+  }
+
+  /**
+   * Parses a chunk of data and calls the corresponding callbacks.
+   *
+   * @param input string to parse.
+   */
+  public parse(input: string): void {
+    this.reset()
+    this.buffer = input
+    this.tokenizer.write(input)
+    this.tokenizer.end()
+  }
+
   /**
    * Resets the parser to a blank state, ready to parse a new HTML document
    */
@@ -516,119 +473,7 @@ export class Parser implements Callbacks {
     this.startIndex = 0
     this.endIndex = 0
     this.cbs.onparserinit?.(this)
-    this.buffers.length = 0
     this.foreignContext.length = 0
     this.foreignContext.unshift(false)
-    this.bufferOffset = 0
-    this.writeIndex = 0
-    this.ended = false
-  }
-
-  /**
-   * Resets the parser, then parses a complete document and
-   * pushes it to the handler.
-   *
-   * @param data Document to parse.
-   */
-  public parseComplete(data: string): void {
-    this.reset()
-    this.end(data)
-  }
-
-  private getSlice(start: number, end: number) {
-    while (start - this.bufferOffset >= this.buffers[0].length) {
-      this.shiftBuffer()
-    }
-
-    let slice = this.buffers[0].slice(
-      start - this.bufferOffset,
-      end - this.bufferOffset
-    )
-
-    while (end - this.bufferOffset > this.buffers[0].length) {
-      this.shiftBuffer()
-      slice += this.buffers[0].slice(0, end - this.bufferOffset)
-    }
-
-    return slice
-  }
-
-  private shiftBuffer(): void {
-    this.bufferOffset += this.buffers[0].length
-    this.writeIndex--
-    this.buffers.shift()
-  }
-
-  /**
-   * Parses a chunk of data and calls the corresponding callbacks.
-   *
-   * @param chunk Chunk to parse.
-   */
-  public write(chunk: string): void {
-    if (this.ended) {
-      this.cbs.onerror?.(new Error('.write() after done!'))
-      return
-    }
-
-    this.buffers.push(chunk)
-    if (this.tokenizer.running) {
-      this.tokenizer.write(chunk)
-      this.writeIndex++
-    }
-  }
-
-  /**
-   * Parses the end of the buffer and clears the stack, calls onend.
-   *
-   * @param chunk Optional final chunk to parse.
-   */
-  public end(chunk?: string): void {
-    if (this.ended) {
-      this.cbs.onerror?.(new Error('.end() after done!'))
-      return
-    }
-
-    if (chunk) this.write(chunk)
-    this.ended = true
-    this.tokenizer.end()
-  }
-
-  /**
-   * Pauses parsing. The parser won't emit events until `resume` is called.
-   */
-  public pause(): void {
-    this.tokenizer.pause()
-  }
-
-  /**
-   * Resumes parsing after `pause` was called.
-   */
-  public resume(): void {
-    this.tokenizer.resume()
-
-    while (this.tokenizer.running && this.writeIndex < this.buffers.length) {
-      this.tokenizer.write(this.buffers[this.writeIndex++])
-    }
-
-    if (this.ended) this.tokenizer.end()
-  }
-
-  /**
-   * Alias of `write`, for backwards compatibility.
-   *
-   * @param chunk Chunk to parse.
-   * @deprecated
-   */
-  public parseChunk(chunk: string): void {
-    this.write(chunk)
-  }
-  /**
-   * Alias of `end`, for backwards compatibility.
-   *
-   * @param chunk Optional final chunk to parse.
-   * @deprecated
-   */
-  public done(chunk?: string): void {
-    this.end(chunk)
   }
 }
