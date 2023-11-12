@@ -17,9 +17,12 @@ import {
   onUnmounted,
   onErrorCaptured,
   shallowRef,
+  SuspenseProps,
+  resolveDynamicComponent,
   Fragment
 } from '@vue/runtime-test'
 import { createApp, defineComponent } from 'vue'
+import { type RawSlots } from 'packages/runtime-core/src/componentSlots'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1522,5 +1525,76 @@ describe('Suspense', () => {
     await nextTick()
     expected = `<div>outerB</div><div>innerB</div>`
     expect(serializeInner(root)).toBe(expected)
+  })
+
+  describe('warnings', () => {
+    // base function to check if a combination of slots warns or not
+    function baseCheckWarn(
+      shouldWarn: boolean,
+      children: RawSlots,
+      props: SuspenseProps | null = null
+    ) {
+      const Comp = {
+        setup() {
+          return () => h(Suspense, props, children)
+        }
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      if (shouldWarn) {
+        expect(`<Suspense> slots expect a single root node.`).toHaveBeenWarned()
+      } else {
+        expect(
+          `<Suspense> slots expect a single root node.`
+        ).not.toHaveBeenWarned()
+      }
+    }
+
+    // actual function that we use in tests
+    const checkWarn = baseCheckWarn.bind(null, true)
+    const checkNoWarn = baseCheckWarn.bind(null, false)
+
+    test('does not warn on single child', async () => {
+      checkNoWarn({
+        default: h('div'),
+        fallback: h('div')
+      })
+    })
+
+    test('does not warn on null', async () => {
+      checkNoWarn({
+        default: null,
+        fallback: null
+      })
+    })
+
+    test('does not warn on <component :is="null" />', async () => {
+      checkNoWarn({
+        default: () => [resolveDynamicComponent(null)],
+        fallback: () => null
+      })
+    })
+
+    test('does not warn on empty array', async () => {
+      checkNoWarn({
+        default: [],
+        fallback: () => []
+      })
+    })
+
+    test('warns on multiple children in default', async () => {
+      checkWarn({
+        default: [h('div'), h('div')]
+      })
+    })
+
+    test('warns on multiple children in fallback', async () => {
+      checkWarn({
+        default: h('div'),
+        fallback: [h('div'), h('div')]
+      })
+    })
   })
 })

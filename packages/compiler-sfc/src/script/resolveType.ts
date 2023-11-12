@@ -334,11 +334,14 @@ function resolveInterfaceMembers(
         continue
       }
       try {
-        const { props } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
           }
+        }
+        if (calls) {
+          ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
         ctx.error(
@@ -778,7 +781,7 @@ function importSourceToScope(
   if (!resolved) {
     if (source.startsWith('.')) {
       // relative import - fast path
-      const filename = joinPaths(scope.filename, '..', source)
+      const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
@@ -1391,6 +1394,7 @@ export function inferRuntimeType(
             case 'WeakMap':
             case 'Date':
             case 'Promise':
+            case 'Error':
               return [node.typeName.name]
 
             // TS built-in utility types
