@@ -16,6 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const args = minimist(process.argv.slice(2))
 const target = args._[0] || 'vue'
 const format = args.f || 'global'
+const prod = args.p || false
 const inlineDeps = args.i || args.inline
 const pkg = require(`../packages/${target}/package.json`)
 
@@ -34,7 +35,7 @@ const outfile = resolve(
   __dirname,
   `../packages/${target}/dist/${
     target === 'vue-compat' ? `vue` : target
-  }.${postfix}.js`
+  }.${postfix}.${prod ? `prod.` : ``}js`
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
@@ -109,7 +110,7 @@ esbuild
     define: {
       __COMMIT__: `"dev"`,
       __VERSION__: `"${pkg.version}"`,
-      __DEV__: `true`,
+      __DEV__: prod ? `false` : `true`,
       __TEST__: `false`,
       __BROWSER__: String(
         format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches

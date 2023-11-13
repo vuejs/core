@@ -17,7 +17,7 @@ import {
   isCallOf,
   unwrapTSNode,
   toRuntimeTypeString,
-  getEscapedKey
+  getEscapedPropName
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -135,7 +135,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       const defaults: string[] = []
       for (const key in ctx.propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(ctx, key)
-        const finalKey = getEscapedKey(key)
+        const finalKey = getEscapedPropName(key)
         if (d)
           defaults.push(
             `${finalKey}: ${d.valueString}${
@@ -251,7 +251,7 @@ function genRuntimePropFromType(
     }
   }
 
-  const finalKey = getEscapedKey(key)
+  const finalKey = getEscapedPropName(key)
   if (!ctx.options.isProd) {
     return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,

@@ -81,6 +81,24 @@ return { emit }
 })"
 `;
 
+exports[`defineEmits > w/ type (interface w/ extends) 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Base { (e: 'foo'): void }
+    interface Emits extends Base { (e: 'bar'): void }
+    
+export default /*#__PURE__*/_defineComponent({
+  emits: [\\"bar\\", \\"foo\\"],
+  setup(__props, { expose: __expose, emit: __emit }) {
+  __expose();
+
+    const emit = __emit
+    
+return { emit }
+}
+
+})"
+`;
+
 exports[`defineEmits > w/ type (interface) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 interface Emits { (e: 'foo' | 'bar'): void }
