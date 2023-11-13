@@ -4,7 +4,6 @@ import {
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithoutProps,
   ComponentPropsOptions,
-  ComponentPublicInstance,
   ComputedOptions,
   EmitsOptions,
   MethodOptions,
@@ -22,6 +21,7 @@ import {
   ComponentOptions,
   ComponentInjectOptions,
   SlotsType,
+  DefineComponent,
   toHandlerKey
 } from '@vue/runtime-core'
 import {
@@ -144,9 +144,9 @@ export function defineCustomElement<
 
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`
-export function defineCustomElement(options: {
-  new (...args: any[]): ComponentPublicInstance
-}): VueElementConstructor
+export function defineCustomElement<P>(
+  options: DefineComponent<P, any, any, any>
+): VueElementConstructor<ExtractPropTypes<P>>
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
