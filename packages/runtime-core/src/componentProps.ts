@@ -61,6 +61,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
+  // validator?: (this: void, value: unknown) => boolean
   validator?(value: unknown): boolean
   /**
    * @internal

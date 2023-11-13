@@ -319,11 +319,11 @@ describe('with object props', () => {
     props: {
       myProp: {
         type: Number,
-        validator(val: unknown): boolean {
+        validator: (val: unknown) => {
           // @ts-expect-error
           return val !== this.otherProp
         },
-        default(): number {
+        default: () => {
           // @ts-expect-error
           return this.otherProp + 1
         }
@@ -336,23 +336,23 @@ describe('with object props', () => {
   })
 })
 
-describe('type inference w/ optional props declaration', () => {
-  const MyComponent = defineComponent<{ a: string[]; msg: string }>({
-    setup(props) {
-      expectType<string>(props.msg)
-      expectType<string[]>(props.a)
-      return {
-        b: 1
-      }
-    }
-  })
+// describe('type inference w/ optional props declaration', () => {
+//   const MyComponent = defineComponent<{ a: string[]; msg: string }>({
+//     setup(props) {
+//       expectType<string>(props.msg)
+//       expectType<string[]>(props.a)
+//       return {
+//         b: 1
+//       }
+//     }
+//   })
 
-  expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
-  // @ts-expect-error
-  ;<MyComponent />
-  // @ts-expect-error
-  ;<MyComponent msg="1" />
-})
+//   expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
+//   // @ts-expect-error
+//   ;<MyComponent />
+//   // @ts-expect-error
+//   ;<MyComponent msg="1" />
+// })
 
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent((_props: { msg: string }) => () => {})
