@@ -216,7 +216,7 @@ export function defineSlots<
 }
 
 /**
- * (**Experimental**) Vue `<script setup>` compiler macro for declaring a
+ * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
  * component. This will declare a prop with the same name and a corresponding
  * `update:propName` event.

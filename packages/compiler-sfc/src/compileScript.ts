@@ -104,11 +104,6 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable macro `defineModel`
-   * @default false
-   */
-  defineModel?: boolean
-  /**
    * (**Experimental**) Enable reactive destructure for `defineProps`
    * @default false
    */
