@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore, SFCOptions } from '@vue/repl'
-import { ref, watchEffect } from 'vue'
+import Monaco from '@vue/repl/monaco-editor'
+import { ref, watchEffect, onMounted } from 'vue'
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -24,9 +25,13 @@ if (hash.startsWith('__SSR__')) {
 
 const store = new ReplStore({
   serializedState: hash,
+  productionMode: !useDevMode.value,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`,
+  defaultVueRuntimeProdURL: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
   defaultVueServerRendererURL: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`
@@ -64,13 +69,22 @@ function toggleDevMode() {
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
       !dev
-  store.setFiles(store.getFiles())
+  store.toggleProduction()
 }
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
   store.setFiles(store.getFiles())
 }
+
+const theme = ref<'dark' | 'light'>('dark')
+function toggleTheme(isDark: boolean) {
+  theme.value = isDark ? 'dark' : 'light'
+}
+onMounted(() => {
+  const cls = document.documentElement.classList
+  toggleTheme(cls.contains('dark'))
+})
 </script>
 
 <template>
@@ -78,10 +92,13 @@ function toggleSSR() {
     :store="store"
     :dev="useDevMode"
     :ssr="useSSRMode"
+    @toggle-theme="toggleTheme"
     @toggle-dev="toggleDevMode"
     @toggle-ssr="toggleSSR"
   />
   <Repl
+    :theme="theme"
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
@@ -108,7 +125,7 @@ body {
 }
 
 .vue-repl {
-  height: calc(var(--vh) - var(--nav-height));
+  height: calc(var(--vh) - var(--nav-height)) !important;
 }
 
 button {
