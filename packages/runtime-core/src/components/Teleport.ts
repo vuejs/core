@@ -130,6 +130,7 @@ const resolveTarget = <T = RendererElement>(
 }
 
 export const TeleportImpl = {
+  name: 'Teleport',
   __isTeleport: true,
   process(
     n1: TeleportVNode | null,
