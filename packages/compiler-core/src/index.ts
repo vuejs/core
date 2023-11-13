@@ -70,3 +70,5 @@ export {
   warnDeprecation,
   CompilerDeprecationTypes
 } from './compat/compatConfig'
+
+export { baseParse as newParse } from './parser/index'

@@ -1,5 +1,5 @@
 import { ParserOptions } from '../src/options'
-import { baseParse, TextModes } from '../src/parse'
+import { TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
 import {
   CommentNode,
@@ -13,6 +13,8 @@ import {
   ConstantTypes,
   DirectiveNode
 } from '../src/ast'
+
+import { baseParse } from '../src/parser/index'
 
 describe('compiler: parse', () => {
   describe('Text', () => {

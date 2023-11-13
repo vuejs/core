@@ -1,3 +1,27 @@
+/**
+ * This Tokenizer is adapted from htmlparser2 under the MIT License listed at
+ * https://github.com/fb55/htmlparser2/blob/master/LICENSE
+
+Copyright 2010, 2011, Chris Winberry <chris@winberry.net>. All rights reserved.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
+ */
+
 import {
   EntityDecoder,
   DecodingMode,
@@ -143,10 +167,6 @@ export default class Tokenizer {
   private baseState = State.Text
   /** For special parsing behavior inside of script and style tags. */
   private isSpecial = false
-  /** Indicates whether the tokenizer has been paused. */
-  public running = true
-  /** The offset of the current buffer. */
-  private offset = 0
 
   private readonly decodeEntities: boolean
   private readonly entityDecoder: EntityDecoder
@@ -168,29 +188,6 @@ export default class Tokenizer {
     this.index = 0
     this.baseState = State.Text
     this.currentSequence = undefined!
-    this.running = true
-    this.offset = 0
-  }
-
-  public write(chunk: string): void {
-    this.offset += this.buffer.length
-    this.buffer = chunk
-    this.parse()
-  }
-
-  public end(): void {
-    if (this.running) this.finish()
-  }
-
-  public pause(): void {
-    this.running = false
-  }
-
-  public resume(): void {
-    this.running = true
-    if (this.index < this.buffer.length + this.offset) {
-      this.parse()
-    }
   }
 
   private stateText(c: number): void {
@@ -293,8 +290,8 @@ export default class Tokenizer {
    * @returns Whether the character was found.
    */
   private fastForwardTo(c: number): boolean {
-    while (++this.index < this.buffer.length + this.offset) {
-      if (this.buffer.charCodeAt(this.index - this.offset) === c) {
+    while (++this.index < this.buffer.length) {
+      if (this.buffer.charCodeAt(this.index) === c) {
         return true
       }
     }
@@ -305,7 +302,7 @@ export default class Tokenizer {
      *
      * TODO: Refactor `parse` to increment index before calling states.
      */
-    this.index = this.buffer.length + this.offset - 1
+    this.index = this.buffer.length - 1
 
     return false
   }
@@ -577,10 +574,7 @@ export default class Tokenizer {
   }
 
   private stateInEntity(): void {
-    const length = this.entityDecoder.write(
-      this.buffer,
-      this.index - this.offset
-    )
+    const length = this.entityDecoder.write(this.buffer, this.index)
 
     // If `length` is positive, we are done with the entity.
     if (length >= 0) {
@@ -591,35 +585,8 @@ export default class Tokenizer {
       }
     } else {
       // Mark buffer as consumed.
-      this.index = this.offset + this.buffer.length - 1
+      this.index = this.buffer.length - 1
     }
-  }
-
-  /**
-   * Remove data that has already been consumed from the buffer.
-   */
-  private cleanup() {
-    // If we are inside of text or attributes, emit what we already have.
-    if (this.running && this.sectionStart !== this.index) {
-      if (
-        this.state === State.Text ||
-        (this.state === State.InSpecialTag && this.sequenceIndex === 0)
-      ) {
-        this.cbs.ontext(this.sectionStart, this.index)
-        this.sectionStart = this.index
-      } else if (
-        this.state === State.InAttributeValueDq ||
-        this.state === State.InAttributeValueSq ||
-        this.state === State.InAttributeValueNq
-      ) {
-        this.cbs.onattribdata(this.sectionStart, this.index)
-        this.sectionStart = this.index
-      }
-    }
-  }
-
-  private shouldContinue() {
-    return this.index < this.buffer.length + this.offset && this.running
   }
 
   /**
@@ -627,9 +594,10 @@ export default class Tokenizer {
    *
    * States that are more likely to be hit are higher up, as a performance improvement.
    */
-  private parse() {
-    while (this.shouldContinue()) {
-      const c = this.buffer.charCodeAt(this.index - this.offset)
+  public parse(input: string) {
+    this.buffer = input
+    while (this.index < this.buffer.length) {
+      const c = this.buffer.charCodeAt(this.index)
       switch (this.state) {
         case State.Text: {
           this.stateText(c)
@@ -735,6 +703,30 @@ export default class Tokenizer {
       this.index++
     }
     this.cleanup()
+    this.finish()
+  }
+
+  /**
+   * Remove data that has already been consumed from the buffer.
+   */
+  private cleanup() {
+    // If we are inside of text or attributes, emit what we already have.
+    if (this.sectionStart !== this.index) {
+      if (
+        this.state === State.Text ||
+        (this.state === State.InSpecialTag && this.sequenceIndex === 0)
+      ) {
+        this.cbs.ontext(this.sectionStart, this.index)
+        this.sectionStart = this.index
+      } else if (
+        this.state === State.InAttributeValueDq ||
+        this.state === State.InAttributeValueSq ||
+        this.state === State.InAttributeValueNq
+      ) {
+        this.cbs.onattribdata(this.sectionStart, this.index)
+        this.sectionStart = this.index
+      }
+    }
   }
 
   private finish() {
@@ -750,7 +742,7 @@ export default class Tokenizer {
 
   /** Handle any trailing data. */
   private handleTrailingData() {
-    const endIndex = this.buffer.length + this.offset
+    const endIndex = this.buffer.length
 
     // If there is no remaining data, we are done.
     if (this.sectionStart >= endIndex) {

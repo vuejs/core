@@ -128,9 +128,9 @@ export interface BaseElementNode extends Node {
   ns: Namespace
   tag: string
   tagType: ElementTypes
-  isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
+  isSelfClosing?: boolean
 }
 
 export interface PlainElementNode extends BaseElementNode {
