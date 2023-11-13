@@ -45,7 +45,10 @@ const sfcOptions: SFCOptions = {
     isProd: !useDevMode.value
   },
   template: {
-    isProd: !useDevMode.value
+    isProd: !useDevMode.value,
+    compilerOptions: {
+      comments: useDevMode.value
+    }
   }
 }
 
@@ -65,6 +68,8 @@ function toggleDevMode() {
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
       !dev
+
+  sfcOptions.template.compilerOptions.comments = dev
   store.setFiles(store.getFiles())
 }
 
