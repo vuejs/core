@@ -992,7 +992,7 @@ describe('KeepAlive', () => {
     const app = createApp({
       setup() {
         return () => {
-          return [h(KeepAlive, h(current.value))]
+          return [h(KeepAlive, { lazy: true }, h(current.value))]
         }
       }
     })
