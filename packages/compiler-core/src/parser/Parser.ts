@@ -108,22 +108,6 @@ export interface ParserOptions {
    * @default true
    */
   decodeEntities?: boolean
-
-  /**
-   * If set to true, CDATA sections will be recognized as text even if the xmlMode option is not enabled.
-   * NOTE: If xmlMode is set to `true` then CDATA sections will always be recognized as text.
-   *
-   * @default false
-   */
-  recognizeCDATA?: boolean
-
-  /**
-   * If set to `true`, self-closing tags will trigger the onclosetag event even if xmlMode is not set to `true`.
-   * NOTE: If xmlMode is set to `true` then self-closing tags will always be recognized.
-   *
-   * @default false
-   */
-  recognizeSelfClosing?: boolean
 }
 
 export interface Handler {
@@ -186,7 +170,6 @@ export class Parser implements Callbacks {
   /** Determines whether self-closing tags are recognized. */
   private readonly foreignContext: boolean[]
   private readonly cbs: Partial<Handler>
-  private readonly recognizeSelfClosing: boolean
   private readonly tokenizer: Tokenizer
 
   private buffer: string = ''
@@ -196,7 +179,6 @@ export class Parser implements Callbacks {
     private readonly options: ParserOptions = {}
   ) {
     this.cbs = cbs ?? {}
-    this.recognizeSelfClosing = options.recognizeSelfClosing ?? false
     this.tokenizer = new Tokenizer(this.options, this)
     this.foreignContext = [false]
     this.cbs.onparserinit?.(this)
@@ -307,15 +289,9 @@ export class Parser implements Callbacks {
   /** @internal */
   onselfclosingtag(endIndex: number): void {
     this.endIndex = endIndex
-    if (this.recognizeSelfClosing || this.foreignContext[0]) {
-      this.closeCurrentTag(false)
-
-      // Set `startIndex` for next node
-      this.startIndex = endIndex + 1
-    } else {
-      // Ignore the fact that the tag is self-closing.
-      this.onopentagend(endIndex)
-    }
+    this.closeCurrentTag(false)
+    // Set `startIndex` for next node
+    this.startIndex = endIndex + 1
   }
 
   private closeCurrentTag(isOpenImplied: boolean) {
@@ -417,17 +393,9 @@ export class Parser implements Callbacks {
   /** @internal */
   oncdata(start: number, endIndex: number, offset: number): void {
     this.endIndex = endIndex
-    const value = this.getSlice(start, endIndex - offset)
-
-    if (this.options.recognizeCDATA) {
-      this.cbs.oncdatastart?.()
-      this.cbs.ontext?.(value)
-      this.cbs.oncdataend?.()
-    } else {
-      this.cbs.oncomment?.(`[CDATA[${value}]]`)
-      this.cbs.oncommentend?.()
-    }
-
+    this.cbs.oncdatastart?.()
+    this.cbs.ontext?.(this.getSlice(start, endIndex - offset))
+    this.cbs.oncdataend?.()
     // Set `startIndex` for next node
     this.startIndex = endIndex + 1
   }
@@ -456,8 +424,7 @@ export class Parser implements Callbacks {
   public parse(input: string): void {
     this.reset()
     this.buffer = input
-    this.tokenizer.write(input)
-    this.tokenizer.end()
+    this.tokenizer.parse(input)
   }
 
   /**
