@@ -72,7 +72,7 @@ export function compile(
       // reusing core v-bind
       bind: transformBind,
       on: transformOn,
-      // model and show has dedicated SSR handling
+      // model and show have dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
       // the following are ignored during SSR

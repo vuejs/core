@@ -1,3 +1,4 @@
+import type { ComputedRef } from './computed'
 import {
   activeEffect,
   getDepFromReactive,
@@ -115,9 +116,8 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * @param value - The "inner value" for the shallow ref.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
-export function shallowRef<T extends object>(
-  value: T
-): T extends Ref ? T : ShallowRef<T>
+export function shallowRef<T>(value: MaybeRef<T>): Ref<T> | ShallowRef<T>
+export function shallowRef<T extends Ref>(value: T): T
 export function shallowRef<T>(value: T): ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
@@ -138,7 +138,10 @@ class RefImpl<T> {
   public dep?: Dep = undefined
   public readonly __v_isRef = true
 
-  constructor(value: T, public readonly __v_isShallow: boolean) {
+  constructor(
+    value: T,
+    public readonly __v_isShallow: boolean
+  ) {
     this._rawValue = __v_isShallow ? value : toRaw(value)
     this._value = __v_isShallow ? value : toReactive(value)
   }
@@ -208,7 +211,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -228,7 +231,7 @@ export function unref<T>(ref: MaybeRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T>): T {
+export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 
@@ -342,7 +345,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
   get value() {
     const val = this._object[this._key]
-    return val === undefined ? (this._defaultValue as T[K]) : val
+    return val === undefined ? this._defaultValue! : val
   }
 
   set value(newVal) {
@@ -440,15 +443,15 @@ export function toRef(
   }
 }
 
-function propertyToRef(source: object, key: string, defaultValue?: unknown) {
-  const val = (source as any)[key]
+function propertyToRef(
+  source: Record<string, any>,
+  key: string,
+  defaultValue?: unknown
+) {
+  const val = source[key]
   return isRef(val)
     ? val
-    : (new ObjectRefImpl(
-        source as Record<string, any>,
-        key,
-        defaultValue
-      ) as any)
+    : (new ObjectRefImpl(source, key, defaultValue) as any)
 }
 
 // corner case when use narrows type

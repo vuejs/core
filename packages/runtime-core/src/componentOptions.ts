@@ -809,7 +809,7 @@ export function applyOptions(instance: ComponentInternalInstance) {
     if (isArray(hook)) {
       hook.forEach(_hook => register(_hook.bind(publicThis)))
     } else if (hook) {
-      register((hook as Function).bind(publicThis))
+      register(hook.bind(publicThis))
     }
   }
 
@@ -885,7 +885,7 @@ export function resolveInjections(
     injectOptions = normalizeInject(injectOptions)!
   }
   for (const key in injectOptions) {
-    const opt = (injectOptions as ObjectInjectOptions)[key]
+    const opt = injectOptions[key]
     let injected: unknown
     if (isObject(opt)) {
       if ('default' in opt) {

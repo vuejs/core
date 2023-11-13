@@ -113,8 +113,14 @@ export const joinPaths = (path.posix || path).join
  * key may contain symbols
  * e.g. onUpdate:modelValue -> "onUpdate:modelValue"
  */
-export const escapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+export const propNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~\-]/
 
-export function getEscapedKey(key: string) {
-  return escapeSymbolsRE.test(key) ? JSON.stringify(key) : key
+export function getEscapedPropName(key: string) {
+  return propNameEscapeSymbolsRE.test(key) ? JSON.stringify(key) : key
+}
+
+export const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
+
+export function getEscapedCssVarName(key: string) {
+  return key.replace(cssVarNameEscapeSymbolsRE, s => `\\${s}`)
 }

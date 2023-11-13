@@ -130,9 +130,10 @@ function rewriteSelector(
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated. Use :deep(<inner-selector>) instead.`
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
           )
+
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)
@@ -171,6 +172,11 @@ function rewriteSelector(
 
     if (n.type !== 'pseudo' && n.type !== 'combinator') {
       node = n
+    }
+
+    if (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where')) {
+      rewriteSelector(id, n.nodes[0], selectorRoot, slotted)
+      shouldInject = false
     }
   })
 
