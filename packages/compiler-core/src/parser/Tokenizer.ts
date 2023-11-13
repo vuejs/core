@@ -171,6 +171,11 @@ export default class Tokenizer {
   private readonly decodeEntities: boolean
   private readonly entityDecoder: EntityDecoder
 
+  public line = 1
+  public column = 1
+  public startLine = 1
+  public startColumn = 1
+
   constructor(
     { decodeEntities = true }: { decodeEntities?: boolean },
     private readonly cbs: Callbacks
@@ -184,10 +189,20 @@ export default class Tokenizer {
   public reset(): void {
     this.state = State.Text
     this.buffer = ''
-    this.sectionStart = 0
+    this.recordStart(0)
     this.index = 0
+    this.line = 1
+    this.column = 1
+    this.startLine = 1
+    this.startColumn = 1
     this.baseState = State.Text
     this.currentSequence = undefined!
+  }
+
+  private recordStart(start = this.index) {
+    this.sectionStart = start
+    this.startLine = this.line
+    this.startColumn = this.column + (start - this.index)
   }
 
   private stateText(c: number): void {
@@ -199,7 +214,7 @@ export default class Tokenizer {
         this.cbs.ontext(this.sectionStart, this.index)
       }
       this.state = State.BeforeTagName
-      this.sectionStart = this.index
+      this.recordStart()
     } else if (this.decodeEntities && c === CharCodes.Amp) {
       this.startEntity()
     }
@@ -242,7 +257,7 @@ export default class Tokenizer {
         }
 
         this.isSpecial = false
-        this.sectionStart = endOfText + 2 // Skip over the `</`
+        this.recordStart(endOfText + 2) // Skip over the `</`
         this.stateInClosingTagName(c)
         return // We are done; skip the rest of the function.
       }
@@ -274,7 +289,7 @@ export default class Tokenizer {
         this.state = State.InCommentLike
         this.currentSequence = Sequences.CdataEnd
         this.sequenceIndex = 0
-        this.sectionStart = this.index + 1
+        this.recordStart(this.index + 1)
       }
     } else {
       this.sequenceIndex = 0
@@ -325,7 +340,7 @@ export default class Tokenizer {
         }
 
         this.sequenceIndex = 0
-        this.sectionStart = this.index + 1
+        this.recordStart(this.index + 1)
         this.state = State.Text
       }
     } else if (this.sequenceIndex === 0) {
@@ -359,13 +374,13 @@ export default class Tokenizer {
   private stateBeforeTagName(c: number): void {
     if (c === CharCodes.ExclamationMark) {
       this.state = State.BeforeDeclaration
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else if (c === CharCodes.Questionmark) {
       this.state = State.InProcessingInstruction
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else if (this.isTagStartChar(c)) {
       const lower = c | 0x20
-      this.sectionStart = this.index
+      this.recordStart()
       if (lower === Sequences.TitleEnd[2]) {
         this.startSpecial(Sequences.TitleEnd, 3)
       } else {
@@ -384,7 +399,7 @@ export default class Tokenizer {
   private stateInTagName(c: number): void {
     if (isEndOfTagSection(c)) {
       this.cbs.onopentagname(this.sectionStart, this.index)
-      this.sectionStart = -1
+      this.recordStart(-1)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
     }
@@ -398,13 +413,13 @@ export default class Tokenizer {
       this.state = this.isTagStartChar(c)
         ? State.InClosingTagName
         : State.InSpecialComment
-      this.sectionStart = this.index
+      this.recordStart()
     }
   }
   private stateInClosingTagName(c: number): void {
     if (c === CharCodes.Gt || isWhitespace(c)) {
       this.cbs.onclosetag(this.sectionStart, this.index)
-      this.sectionStart = -1
+      this.recordStart(-1)
       this.state = State.AfterClosingTagName
       this.stateAfterClosingTagName(c)
     }
@@ -413,7 +428,7 @@ export default class Tokenizer {
     // Skip everything until ">"
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
       this.state = State.Text
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     }
   }
   private stateBeforeAttributeName(c: number): void {
@@ -425,19 +440,19 @@ export default class Tokenizer {
       } else {
         this.state = State.Text
       }
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
     } else if (!isWhitespace(c)) {
       this.state = State.InAttributeName
-      this.sectionStart = this.index
+      this.recordStart()
     }
   }
   private stateInSelfClosingTag(c: number): void {
     if (c === CharCodes.Gt) {
       this.cbs.onselfclosingtag(this.index)
       this.state = State.Text
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
       this.isSpecial = false // Reset special state, in case of self-closing special tags
     } else if (!isWhitespace(c)) {
       this.state = State.BeforeAttributeName
@@ -447,7 +462,7 @@ export default class Tokenizer {
   private stateInAttributeName(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.onattribname(this.sectionStart, this.index)
-      this.sectionStart = this.index
+      this.recordStart()
       this.state = State.AfterAttributeName
       this.stateAfterAttributeName(c)
     }
@@ -457,24 +472,24 @@ export default class Tokenizer {
       this.state = State.BeforeAttributeValue
     } else if (c === CharCodes.Slash || c === CharCodes.Gt) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
-      this.sectionStart = -1
+      this.recordStart(-1)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
     } else if (!isWhitespace(c)) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
       this.state = State.InAttributeName
-      this.sectionStart = this.index
+      this.recordStart()
     }
   }
   private stateBeforeAttributeValue(c: number): void {
     if (c === CharCodes.DoubleQuote) {
       this.state = State.InAttributeValueDq
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else if (c === CharCodes.SingleQuote) {
       this.state = State.InAttributeValueSq
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else if (!isWhitespace(c)) {
-      this.sectionStart = this.index
+      this.recordStart()
       this.state = State.InAttributeValueNq
       this.stateInAttributeValueNoQuotes(c) // Reconsume token
     }
@@ -482,7 +497,7 @@ export default class Tokenizer {
   private handleInAttributeValue(c: number, quote: number) {
     if (c === quote || (!this.decodeEntities && this.fastForwardTo(quote))) {
       this.cbs.onattribdata(this.sectionStart, this.index)
-      this.sectionStart = -1
+      this.recordStart(-1)
       this.cbs.onattribend(
         quote === CharCodes.DoubleQuote ? QuoteType.Double : QuoteType.Single,
         this.index + 1
@@ -501,7 +516,7 @@ export default class Tokenizer {
   private stateInAttributeValueNoQuotes(c: number): void {
     if (isWhitespace(c) || c === CharCodes.Gt) {
       this.cbs.onattribdata(this.sectionStart, this.index)
-      this.sectionStart = -1
+      this.recordStart(-1)
       this.cbs.onattribend(QuoteType.Unquoted, this.index)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
@@ -522,14 +537,14 @@ export default class Tokenizer {
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
       this.cbs.ondeclaration(this.sectionStart, this.index)
       this.state = State.Text
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     }
   }
   private stateInProcessingInstruction(c: number): void {
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
       this.cbs.onprocessinginstruction(this.sectionStart, this.index)
       this.state = State.Text
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     }
   }
   private stateBeforeComment(c: number): void {
@@ -538,7 +553,7 @@ export default class Tokenizer {
       this.currentSequence = Sequences.CommentEnd
       // Allow short comments (eg. <!-->)
       this.sequenceIndex = 2
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     } else {
       this.state = State.InDeclaration
     }
@@ -547,7 +562,7 @@ export default class Tokenizer {
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
       this.cbs.oncomment(this.sectionStart, this.index, 0)
       this.state = State.Text
-      this.sectionStart = this.index + 1
+      this.recordStart(this.index + 1)
     }
   }
   private stateBeforeSpecialS(c: number): void {
@@ -701,6 +716,13 @@ export default class Tokenizer {
         }
       }
       this.index++
+      // line / column handling
+      if (c === CharCodes.NewLine) {
+        this.line++
+        this.column = 1
+      } else {
+        this.column++
+      }
     }
     this.cleanup()
     this.finish()
@@ -717,14 +739,14 @@ export default class Tokenizer {
         (this.state === State.InSpecialTag && this.sequenceIndex === 0)
       ) {
         this.cbs.ontext(this.sectionStart, this.index)
-        this.sectionStart = this.index
+        this.recordStart()
       } else if (
         this.state === State.InAttributeValueDq ||
         this.state === State.InAttributeValueSq ||
         this.state === State.InAttributeValueNq
       ) {
         this.cbs.onattribdata(this.sectionStart, this.index)
-        this.sectionStart = this.index
+        this.recordStart()
       }
     }
   }
@@ -783,7 +805,7 @@ export default class Tokenizer {
       if (this.sectionStart < this.entityStart) {
         this.cbs.onattribdata(this.sectionStart, this.entityStart)
       }
-      this.sectionStart = this.entityStart + consumed
+      this.recordStart(this.entityStart + consumed)
       this.index = this.sectionStart - 1
 
       this.cbs.onattribentity(cp)
@@ -791,7 +813,7 @@ export default class Tokenizer {
       if (this.sectionStart < this.entityStart) {
         this.cbs.ontext(this.sectionStart, this.entityStart)
       }
-      this.sectionStart = this.entityStart + consumed
+      this.recordStart(this.entityStart + consumed)
       this.index = this.sectionStart - 1
 
       this.cbs.ontextentity(cp, this.sectionStart)

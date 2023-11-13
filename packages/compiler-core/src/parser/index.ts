@@ -135,16 +135,11 @@ const tokenizer = new Tokenizer(
   { decodeEntities: true },
   {
     ontext(start, end) {
-      const content = getSlice(start, end)
-      endIndex = end - 1
-      onText(content)
-      startIndex = end
+      onText(getSlice(start, end), start, end)
     },
 
     ontextentity(cp, end) {
-      endIndex = end - 1
-      onText(fromCodePoint(cp))
-      startIndex = end
+      onText(fromCodePoint(cp), end - 1, end)
     },
 
     onopentagname(start, end) {
@@ -206,7 +201,7 @@ const tokenizer = new Tokenizer(
     onattribentity(codepoint) {
       attribvalue += fromCodePoint(codepoint)
     },
-    onattribend(quote, end) {
+    onattribend(_quote, end) {
       endIndex = end
       if (attribs && !hasOwn(attribs, attribname)) {
         // TODO gen attributes AST nodes
@@ -299,7 +294,7 @@ function endOpenTag(isImplied: boolean) {
   tagname = ''
 }
 
-function onText(content: string) {
+function onText(content: string, start: number, end: number) {
   const parent = getParent()
   const lastNode = parent.children[parent.children.length - 1]
   if (lastNode?.type === NodeTypes.TEXT) {
@@ -310,8 +305,15 @@ function onText(content: string) {
     parent.children.push({
       type: NodeTypes.TEXT,
       content,
-      // @ts-ignore TODO
-      loc: {}
+      loc: {
+        start: {
+          offset: start,
+          line: tokenizer.startLine,
+          column: tokenizer.startColumn
+        },
+        end: { offset: end, line: tokenizer.line, column: tokenizer.column },
+        source: content
+      }
     })
   }
 }
@@ -327,8 +329,13 @@ function onOpenTag(tag: string) {
     // TODO props
     props: [],
     children: [],
-    // @ts-ignore TODO
-    loc: {},
+    loc: {
+      // @ts-expect-error TODO
+      start: {},
+      // @ts-expect-error TODO
+      end: { offset: endIndex },
+      source: ''
+    },
     codegenNode: undefined
   }
   addNode(el)
@@ -338,14 +345,25 @@ function onOpenTag(tag: string) {
 function onCloseTag() {
   const el = elementStack.pop()!
   // whitepsace management
-  const nodes = el.children
+  el.children = condenseWhitespace(el.children)
+}
+
+const windowsNewlineRE = /\r\n/g
+const consecutiveWhitespaceRE = /[\t\r\n\f ]+/g
+const nonWhitespaceRE = /[^\t\r\n\f ]/
+
+function isEmptyText(content: string) {
+  return !nonWhitespaceRE.test(content)
+}
+
+function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i]
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
-        if (!/[^\t\r\n\f ]/.test(node.content)) {
+        if (isEmptyText(node.content)) {
           const prev = nodes[i - 1]
           const next = nodes[i + 1]
           // Remove if:
@@ -376,19 +394,17 @@ function onCloseTag() {
         } else if (shouldCondense) {
           // in condense mode, consecutive whitespaces in text are condensed
           // down to a single space.
-          node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+          node.content = node.content.replace(consecutiveWhitespaceRE, ' ')
         }
       } else {
         // #6410 normalize windows newlines in <pre>:
         // in SSR, browsers normalize server-rendered \r\n into a single \n
         // in the DOM
-        node.content = node.content.replace(/\r\n/g, '\n')
+        node.content = node.content.replace(windowsNewlineRE, '\n')
       }
     }
   }
-  if (removedWhitespace) {
-    el.children = nodes.filter(Boolean)
-  }
+  return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
 function addNode(node: TemplateChildNode) {
@@ -418,12 +434,11 @@ export function baseParse(
   options: ParserOptions = {}
 ): RootNode {
   reset()
-  currentInput = input.trim()
+  currentInput = input
   currentOptions = options
   htmlMode = !!options.htmlMode
   const root = (currentRoot = createRoot([]))
   tokenizer.parse(currentInput)
-  // temp hack for ts
-  console.log(endIndex)
+  root.children = condenseWhitespace(root.children)
   return root
 }
