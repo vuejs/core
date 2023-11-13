@@ -92,6 +92,7 @@ export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
+  console.log('pr')
   return createRef(value, false)
 }
 
