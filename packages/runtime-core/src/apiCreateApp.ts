@@ -227,7 +227,7 @@ export function createAppAPI<HostElement>(
       })
     }
 
-    const installedPlugins = new Set()
+    const installedPlugins = new WeakSet()
 
     let isMounted = false
 

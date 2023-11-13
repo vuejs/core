@@ -7,15 +7,17 @@ export default {
   props: {
     \\"modelValue\\": { required: true },
     \\"count\\": {},
+    \\"toString\\": { type: Function },
   },
-  emits: [\\"update:modelValue\\", \\"update:count\\"],
+  emits: [\\"update:modelValue\\", \\"update:count\\", \\"update:toString\\"],
   setup(__props, { expose: __expose }) {
   __expose();
 
       const modelValue = _useModel(__props, \\"modelValue\\")
       const c = _useModel(__props, \\"count\\")
+      const toString = _useModel(__props, \\"toString\\")
       
-return { modelValue, c }
+return { modelValue, c, toString }
 }
 
 }"
