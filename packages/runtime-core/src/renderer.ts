@@ -72,6 +72,7 @@ import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { isCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
+import { TransitionHooks } from './components/BaseTransition'
 
 export interface Renderer<HostElement = RendererElement> {
   render: RootRenderFunction<HostElement>
@@ -90,7 +91,7 @@ export type RootRenderFunction<HostElement = RendererElement> = (
 
 export interface RendererOptions<
   HostNode = RendererNode,
-  HostElement extends RendererElement = RendererElement
+  HostElement = RendererElement
 > {
   patchProp(
     el: HostElement,
@@ -145,7 +146,7 @@ export interface RendererElement extends RendererNode {}
 // to optimize bundle size.
 export interface RendererInternals<
   HostNode = RendererNode,
-  HostElement extends RendererElement = RendererElement
+  HostElement = RendererElement
 > {
   p: PatchFn
   um: UnmountFn
@@ -295,7 +296,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
  */
 export function createRenderer<
   HostNode = RendererNode,
-  HostElement extends RendererElement = RendererElement
+  HostElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>) {
   return baseCreateRenderer<HostNode, HostElement>(options)
 }
@@ -312,7 +313,7 @@ export function createHydrationRenderer(
 // overload 1: no hydration
 function baseCreateRenderer<
   HostNode = RendererNode,
-  HostElement extends RendererElement = RendererElement
+  HostElement = RendererElement
 >(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement>
 
 // overload 2: with hydration
@@ -701,10 +702,7 @@ function baseCreateRenderer(
     }
     // #1583 For inside suspense + suspense not resolved case, enter hook should call when suspense resolved
     // #1689 For inside suspense + suspense resolved case, just call it
-    const needCallTransitionHooks =
-      (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
-      transition &&
-      !transition.persisted
+    const needCallTransitionHooks = needTransition(parentSuspense, transition)
     if (needCallTransitionHooks) {
       transition!.beforeEnter(el)
     }
@@ -2365,6 +2363,17 @@ function toggleRecurse(
   effect.allowRecurse = update.allowRecurse = allowed
 }
 
+export function needTransition(
+  parentSuspense: SuspenseBoundary | null,
+  transition: TransitionHooks | null
+) {
+  return (
+    (!parentSuspense || (parentSuspense && !parentSuspense.pendingBranch)) &&
+    transition &&
+    !transition.persisted
+  )
+}
+
 /**
  * #1156
  * When a component is HMR-enabled, we need to make sure that all static nodes
@@ -2386,7 +2395,7 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       const c1 = ch1[i] as VNode
       let c2 = ch2[i] as VNode
       if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
-        if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
+        if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.NEED_HYDRATION) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el
         }
