@@ -37,7 +37,8 @@ import {
   isTemplateNode,
   isSlotOutlet,
   injectProp,
-  findDir
+  findDir,
+  forAliasRE
 } from '../utils'
 import {
   RENDER_LIST,
@@ -308,7 +309,6 @@ export function processFor(
   }
 }
 
-const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
 // This regex doesn't cover the case if key or index aliases have destructuring,
 // but those do not make sense in the first place, so this works in practice.
 const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
