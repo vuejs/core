@@ -99,7 +99,7 @@ const enum State {
   InEntity
 }
 
-function isWhitespace(c: number): boolean {
+export function isWhitespace(c: number): boolean {
   return (
     c === CharCodes.Space ||
     c === CharCodes.NewLine ||

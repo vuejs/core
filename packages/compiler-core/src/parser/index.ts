@@ -13,9 +13,9 @@ import {
   createRoot
 } from '../ast'
 import { ParserOptions } from '../options'
-import Tokenizer, { CharCodes } from './Tokenizer'
+import Tokenizer, { CharCodes, isWhitespace } from './Tokenizer'
 import { CompilerCompatOptions } from '../compat/compatConfig'
-import { NO, extend, hasOwn } from '@vue/shared'
+import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
 
 type OptionalOptions =
@@ -55,7 +55,6 @@ export const defaultParserOptions: MergedParserOptions = {
   comments: __DEV__
 }
 
-const directiveTestRE = /^(v-[A-Za-z0-9-]|:|\.|@|#)/
 const directiveParseRE =
   /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i
 
@@ -82,7 +81,7 @@ let currentInput = ''
 let currentElement: ElementNode | null = null
 let currentProp: AttributeNode | DirectiveNode | null = null
 let currentAttrValue = ''
-let currentAttrs: Record<string, true> | null = null
+let currentAttrs: Set<string> = new Set()
 let inPre = 0
 let inVPre = 0
 const stack: ElementNode[] = []
@@ -118,7 +117,7 @@ const tokenizer = new Tokenizer(
         foreignContext.shift()
       }
 
-      if (!currentOptions.isVoidTag?.(name)) {
+      if (!currentOptions.isVoidTag(name)) {
         const pos = stack.findIndex(e => e.tag === name)
         if (pos !== -1) {
           for (let index = 0; index <= pos; index++) {
@@ -143,12 +142,12 @@ const tokenizer = new Tokenizer(
 
     onattribname(start, end) {
       const name = getSlice(start, end)
-      if (hasOwn(currentAttrs!, name)) {
+      if (currentAttrs.has(name)) {
         // TODO emit error DUPLICATE_ATTRIBUTE
       } else {
-        currentAttrs![name] = true
+        currentAttrs.add(name)
       }
-      if (!inVPre && directiveTestRE.test(name)) {
+      if (!inVPre && isDirective(name)) {
         // directive
         const match = directiveParseRE.exec(name)!
         const firstChar = name[0]
@@ -328,7 +327,7 @@ function emitOpenTag(name: string, start: number) {
     },
     codegenNode: undefined
   }
-  currentAttrs = {}
+  currentAttrs.clear()
 }
 
 function endOpenTag(end: number) {
@@ -347,7 +346,6 @@ function endOpenTag(end: number) {
     onCloseTag(currentElement!, end)
   }
   currentElement = null
-  currentAttrs = null
 }
 
 function closeCurrentTag(end: number) {
@@ -390,12 +388,6 @@ function onCloseTag(el: ElementNode, end: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-const consecutiveWhitespaceRE = /[\t\r\n\f ]+/g
-const nonWhitespaceRE = /[^\t\r\n\f ]/
-
-function isEmptyText(content: string) {
-  return !nonWhitespaceRE.test(content)
-}
 
 function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
@@ -404,27 +396,24 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
     const node = nodes[i]
     if (node.type === NodeTypes.TEXT) {
       if (!inPre) {
-        if (isEmptyText(node.content)) {
-          const prev = nodes[i - 1]
-          const next = nodes[i + 1]
+        if (isAllWhitespace(node.content)) {
+          const prev = nodes[i - 1]?.type
+          const next = nodes[i + 1]?.type
           // Remove if:
           // - the whitespace is the first or last node, or:
-          // - (condense mode) the whitespace is between twos comments, or:
+          // - (condense mode) the whitespace is between two comments, or:
           // - (condense mode) the whitespace is between comment and element, or:
           // - (condense mode) the whitespace is between two elements AND contains newline
           if (
             !prev ||
             !next ||
             (shouldCondense &&
-              ((prev.type === NodeTypes.COMMENT &&
-                next.type === NodeTypes.COMMENT) ||
-                (prev.type === NodeTypes.COMMENT &&
-                  next.type === NodeTypes.ELEMENT) ||
-                (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.COMMENT) ||
-                (prev.type === NodeTypes.ELEMENT &&
-                  next.type === NodeTypes.ELEMENT &&
-                  /[\r\n]/.test(node.content))))
+              ((prev === NodeTypes.COMMENT &&
+                (next === NodeTypes.COMMENT || next === NodeTypes.ELEMENT)) ||
+                (prev === NodeTypes.ELEMENT &&
+                  (next === NodeTypes.COMMENT ||
+                    (next === NodeTypes.ELEMENT &&
+                      hasNewlineChar(node.content))))))
           ) {
             removedWhitespace = true
             nodes[i] = null as any
@@ -435,7 +424,7 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
         } else if (shouldCondense) {
           // in condense mode, consecutive whitespaces in text are condensed
           // down to a single space.
-          node.content = node.content.replace(consecutiveWhitespaceRE, ' ')
+          node.content = condense(node.content)
         }
       } else {
         // #6410 normalize windows newlines in <pre>:
@@ -448,6 +437,42 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   return removedWhitespace ? nodes.filter(Boolean) : nodes
 }
 
+function isAllWhitespace(str: string) {
+  for (let i = 0; i < str.length; i++) {
+    if (!isWhitespace(str.charCodeAt(i))) {
+      return false
+    }
+  }
+  return true
+}
+
+function hasNewlineChar(str: string) {
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i)
+    if (c === CharCodes.NewLine || c === CharCodes.CarriageReturn) {
+      return true
+    }
+  }
+  return false
+}
+
+function condense(str: string) {
+  let ret = ''
+  let prevCharIsWhitespace = false
+  for (let i = 0; i < str.length; i++) {
+    if (isWhitespace(str.charCodeAt(i))) {
+      if (!prevCharIsWhitespace) {
+        ret += ' '
+        prevCharIsWhitespace = true
+      }
+    } else {
+      ret += str[i]
+      prevCharIsWhitespace = false
+    }
+  }
+  return ret
+}
+
 function addNode(node: TemplateChildNode) {
   getParent().children.push(node)
 }
@@ -456,11 +481,25 @@ function getParent() {
   return stack[0] || currentRoot
 }
 
+function isDirective(name: string) {
+  switch (name[0]) {
+    case ':':
+    case '.':
+    case '@':
+    case '#':
+      return true
+    case 'v':
+      return name[1] === '-'
+    default:
+      return false
+  }
+}
+
 function reset() {
   tokenizer.reset()
   currentElement = null
   currentProp = null
-  currentAttrs = null
+  currentAttrs.clear()
   currentAttrValue = ''
   stack.length = 0
   foreignContext.length = 1
