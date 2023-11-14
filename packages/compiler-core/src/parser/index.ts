@@ -1,9 +1,12 @@
 import { fromCodePoint } from 'entities/lib/decode.js'
 import {
   AttributeNode,
+  ConstantTypes,
   DirectiveNode,
   ElementNode,
   ElementTypes,
+  ExpressionNode,
+  Namespaces,
   NodeTypes,
   RootNode,
   TemplateChildNode,
@@ -11,28 +14,50 @@ import {
 } from '../ast'
 import { ParserOptions } from '../options'
 import Tokenizer, { CharCodes } from './Tokenizer'
+import { CompilerCompatOptions } from '../compat/compatConfig'
+import { NO, extend, hasOwn } from '@vue/shared'
+import { defaultOnError, defaultOnWarn } from '../errors'
 
-const voidElements = new Set([
-  'area',
-  'base',
-  'basefont',
-  'br',
-  'col',
-  'command',
-  'embed',
-  'frame',
-  'hr',
-  'img',
-  'input',
-  'isindex',
-  'keygen',
-  'link',
-  'meta',
-  'param',
-  'source',
-  'track',
-  'wbr'
-])
+type OptionalOptions =
+  | 'htmlMode'
+  | 'getTextMode' // TODO
+  | 'whitespace'
+  | 'isNativeTag'
+  | 'isBuiltInComponent'
+  | keyof CompilerCompatOptions
+
+type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
+  Pick<ParserOptions, OptionalOptions>
+
+// The default decoder only provides escapes for characters reserved as part of
+// the template syntax, and is only used if the custom renderer did not provide
+// a platform-specific decoder.
+const decodeRE = /&(gt|lt|amp|apos|quot);/g
+const decodeMap: Record<string, string> = {
+  gt: '>',
+  lt: '<',
+  amp: '&',
+  apos: "'",
+  quot: '"'
+}
+
+export const defaultParserOptions: MergedParserOptions = {
+  delimiters: [`{{`, `}}`],
+  getNamespace: () => Namespaces.HTML,
+  // getTextMode: () => TextModes.DATA,
+  isVoidTag: NO,
+  isPreTag: NO,
+  isCustomElement: NO,
+  decodeEntities: (rawText: string): string =>
+    rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
+  onError: defaultOnError,
+  onWarn: defaultOnWarn,
+  comments: __DEV__
+}
+
+const directiveTestRE = /^(v-[A-Za-z0-9-]|:|\.|@|#)/
+const directiveParseRE =
+  /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i
 
 const foreignContextElements = new Set(['math', 'svg'])
 
@@ -48,7 +73,7 @@ const htmlIntegrationElements = new Set([
   'title'
 ])
 
-let currentOptions: ParserOptions = {}
+let currentOptions: MergedParserOptions = defaultParserOptions
 let currentRoot: RootNode = createRoot([])
 
 // parser state
@@ -57,8 +82,9 @@ let currentInput = ''
 let currentElement: ElementNode | null = null
 let currentProp: AttributeNode | DirectiveNode | null = null
 let currentAttrValue = ''
+let currentAttrs: Record<string, true> | null = null
 let inPre = 0
-// let inVPre = 0
+let inVPre = 0
 const stack: ElementNode[] = []
 const foreignContext: boolean[] = [false]
 
@@ -79,7 +105,7 @@ const tokenizer = new Tokenizer(
     },
 
     onopentagend(end) {
-      endOpenTag()
+      endOpenTag(end)
     },
 
     onclosetag(start, end) {
@@ -92,7 +118,7 @@ const tokenizer = new Tokenizer(
         foreignContext.shift()
       }
 
-      if (!voidElements.has(name)) {
+      if (!currentOptions.isVoidTag?.(name)) {
         const pos = stack.findIndex(e => e.tag === name)
         if (pos !== -1) {
           for (let index = 0; index <= pos; index++) {
@@ -116,16 +142,114 @@ const tokenizer = new Tokenizer(
     },
 
     onattribname(start, end) {
-      // TODO directives
-      currentProp = {
-        type: NodeTypes.ATTRIBUTE,
-        name: getSlice(start, end),
-        value: undefined,
-        loc: {
-          start: tokenizer.getPositionForIndex(start),
-          // @ts-expect-error to be attached on attribute end
-          end: undefined,
-          source: ''
+      const name = getSlice(start, end)
+      if (hasOwn(currentAttrs!, name)) {
+        // TODO emit error DUPLICATE_ATTRIBUTE
+      } else {
+        currentAttrs![name] = true
+      }
+      if (!inVPre && directiveTestRE.test(name)) {
+        // directive
+        const match = directiveParseRE.exec(name)!
+        const firstChar = name[0]
+        const isPropShorthand = firstChar === '.'
+        const dirName =
+          match[1] ||
+          (isPropShorthand || firstChar === ':'
+            ? 'bind'
+            : firstChar === '@'
+            ? 'on'
+            : 'slot')
+
+        let arg: ExpressionNode | undefined
+        if (match[2]) {
+          const isSlot = dirName === 'slot'
+          // const startOffset = name.lastIndexOf(
+          //   match[2],
+          //   name.length - (match[3]?.length || 0)
+          // )
+          let content = match[2]
+          let isStatic = true
+
+          if (content.startsWith('[')) {
+            isStatic = false
+
+            if (!content.endsWith(']')) {
+              // TODO emitError(
+              //   context,
+              //   ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
+              // )
+              content = content.slice(1)
+            } else {
+              content = content.slice(1, content.length - 1)
+            }
+          } else if (isSlot) {
+            // #1241 special case for v-slot: vuetify relies extensively on slot
+            // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
+            // supports such usage so we are keeping it consistent with 2.x.
+            content += match[3] || ''
+          }
+
+          arg = {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content,
+            isStatic,
+            constType: isStatic
+              ? ConstantTypes.CAN_STRINGIFY
+              : ConstantTypes.NOT_CONSTANT,
+            // @ts-expect-error TODO
+            loc: {}
+          }
+        }
+
+        const modifiers = match[3] ? match[3].slice(1).split('.') : []
+        if (isPropShorthand) modifiers.push('prop')
+
+        // 2.x compat v-bind:foo.sync -> v-model:foo
+        if (__COMPAT__ && dirName === 'bind' && arg) {
+          // TODO
+          // if (
+          //   modifiers.includes('sync') &&
+          //   checkCompatEnabled(
+          //     CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
+          //     context,
+          //     loc,
+          //     arg.loc.source
+          //   )
+          // ) {
+          //   dirName = 'model'
+          //   modifiers.splice(modifiers.indexOf('sync'), 1)
+          // }
+          // if (__DEV__ && modifiers.includes('prop')) {
+          //   checkCompatEnabled(
+          //     CompilerDeprecationTypes.COMPILER_V_BIND_PROP,
+          //     context,
+          //     loc
+          //   )
+          // }
+        }
+
+        currentProp = {
+          type: NodeTypes.DIRECTIVE,
+          name: dirName,
+          exp: undefined,
+          arg,
+          modifiers,
+          // @ts-expect-error TODO
+          loc: {}
+        }
+      } else {
+        // plain attribute
+        currentProp = {
+          type: NodeTypes.ATTRIBUTE,
+          name,
+          value: undefined,
+          loc: {
+            start: tokenizer.getPositionForIndex(start),
+            // @ts-expect-error to be attached on attribute end
+            end: undefined,
+            source: ''
+          }
         }
       }
     },
@@ -137,16 +261,28 @@ const tokenizer = new Tokenizer(
     },
     onattribend(_quote, end) {
       if (currentElement) {
-        if (currentProp!.type === NodeTypes.ATTRIBUTE) {
-          // assign value
-          currentProp!.value = {
-            type: NodeTypes.TEXT,
-            content: currentAttrValue,
-            // @ts-expect-error TODO
-            loc: {}
+        if (currentAttrValue) {
+          if (currentProp!.type === NodeTypes.ATTRIBUTE) {
+            // assign value
+            currentProp!.value = {
+              type: NodeTypes.TEXT,
+              content: currentAttrValue,
+              // @ts-expect-error TODO
+              loc: {}
+            }
+          } else {
+            // directive
+            currentProp!.exp = {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: currentAttrValue,
+              isStatic: false,
+              // Treat as non-constant by default. This can be potentially set to
+              // other values by `transformExpression` to make it eligible for hoisting.
+              constType: ConstantTypes.NOT_CONSTANT,
+              // @ts-expect-error TODO
+              loc: {}
+            }
           }
-        } else {
-          // TODO
         }
         currentProp!.loc.end = tokenizer.getPositionForIndex(end)
         currentElement.props.push(currentProp!)
@@ -179,8 +315,7 @@ function emitOpenTag(name: string, start: number) {
   currentElement = {
     type: NodeTypes.ELEMENT,
     tag: name,
-    // TODO refine namespace
-    ns: 0,
+    ns: currentOptions.getNamespace(name, getParent()),
     // TODO refine tag type
     tagType: ElementTypes.ELEMENT,
     props: [],
@@ -193,12 +328,13 @@ function emitOpenTag(name: string, start: number) {
     },
     codegenNode: undefined
   }
+  currentAttrs = {}
 }
 
-function endOpenTag() {
+function endOpenTag(end: number) {
   addNode(currentElement!)
   const name = currentElement!.tag
-  if (!voidElements.has(name)) {
+  if (!currentOptions.isVoidTag(name)) {
     stack.unshift(currentElement!)
     if (htmlMode) {
       if (foreignContextElements.has(name)) {
@@ -207,13 +343,16 @@ function endOpenTag() {
         foreignContext.unshift(false)
       }
     }
+  } else {
+    onCloseTag(currentElement!, end)
   }
   currentElement = null
+  currentAttrs = null
 }
 
 function closeCurrentTag(end: number) {
   const name = currentElement!.tag
-  endOpenTag()
+  endOpenTag(end)
   if (stack[0].tag === name) {
     onCloseTag(stack.shift()!, end)
   }
@@ -321,20 +460,18 @@ function reset() {
   tokenizer.reset()
   currentElement = null
   currentProp = null
+  currentAttrs = null
   currentAttrValue = ''
   stack.length = 0
   foreignContext.length = 1
   foreignContext[0] = false
 }
 
-export function baseParse(
-  input: string,
-  options: ParserOptions = {}
-): RootNode {
+export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
   currentInput = input
-  currentOptions = options
-  htmlMode = !!options.htmlMode
+  currentOptions = extend({}, defaultParserOptions, options)
+  htmlMode = !!currentOptions.htmlMode
   const root = (currentRoot = createRoot([]))
   tokenizer.parse(currentInput)
   root.children = condenseWhitespace(root.children)
