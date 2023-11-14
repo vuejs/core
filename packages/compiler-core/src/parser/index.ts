@@ -228,20 +228,6 @@ const tokenizer = new Tokenizer(
       endIndex = end
       // TODO throw error
       startIndex = end + 1
-    },
-
-    // TODO ignore
-    ondeclaration(start, end) {
-      endIndex = end
-      // TODO onprocessinginstruction
-      startIndex = end + 1
-    },
-
-    // TODO ignore
-    onprocessinginstruction(start, end) {
-      endIndex = end
-      // TODO onprocessinginstruction
-      startIndex = end + 1
     }
   }
 )
@@ -306,12 +292,8 @@ function onText(content: string, start: number, end: number) {
       type: NodeTypes.TEXT,
       content,
       loc: {
-        start: {
-          offset: start,
-          line: tokenizer.startLine,
-          column: tokenizer.startColumn
-        },
-        end: { offset: end, line: tokenizer.line, column: tokenizer.column },
+        start: tokenizer.getPositionForIndex(start),
+        end: tokenizer.getPositionForIndex(end),
         source: content
       }
     })
