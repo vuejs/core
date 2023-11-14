@@ -291,18 +291,17 @@ describe('with object props', () => {
     />
   )
 
-  // TODO readd me!!!!!!!!!!! or fix
-  // expectType<Component>(
-  //   <MyComponent
-  //     b="b"
-  //     dd={{ n: 1 }}
-  //     ddd={['ddd']}
-  //     eee={() => ({ a: 'eee' })}
-  //     fff={(a, b) => ({ a: a > +b })}
-  //     hhh={false}
-  //     jjj={() => ''}
-  //   />
-  // )
+  expectType<Component>(
+    <MyComponent
+      b="b"
+      dd={{ n: 1 }}
+      ddd={['ddd']}
+      eee={() => ({ a: 'eee' })}
+      fff={(a, b) => ({ a: a > +b })}
+      hhh={false}
+      jjj={() => ''}
+    />
+  )
 
   // @ts-expect-error missing required props
   let c = <MyComponent />
@@ -336,23 +335,23 @@ describe('with object props', () => {
   })
 })
 
-// describe('type inference w/ optional props declaration', () => {
-//   const MyComponent = defineComponent<{ a: string[]; msg: string }>({
-//     setup(props) {
-//       expectType<string>(props.msg)
-//       expectType<string[]>(props.a)
-//       return {
-//         b: 1
-//       }
-//     }
-//   })
+describe('type inference w/ optional props declaration', () => {
+  const MyComponent = defineComponent<{ a: string[]; msg: string }>({
+    setup(props) {
+      expectType<string>(props.msg)
+      expectType<string[]>(props.a)
+      return {
+        b: 1
+      }
+    }
+  })
 
-//   expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
-//   // @ts-expect-error
-//   ;<MyComponent />
-//   // @ts-expect-error
-//   ;<MyComponent msg="1" />
-// })
+  expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
+  // @ts-expect-error
+  ;<MyComponent />
+  // @ts-expect-error
+  ;<MyComponent msg="1" />
+})
 
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent(
@@ -1258,10 +1257,6 @@ describe('prop starting with `on*` is broken', () => {
 })
 
 describe('function syntax w/ generics', () => {
-  const aa = defineComponent(<T extends string | number>(props: { msg: T }) => {
-    return () => h('div')
-  })
-
   const Comp = defineComponent(
     // TODO: babel plugin to auto infer runtime props options from type
     // similar to defineProps<{...}>()
@@ -1504,6 +1499,9 @@ describe('should work when props type is incompatible with setup returned type '
   expectType<ComponentPublicInstance>(CompA)
   expectType<number>(CompA.size)
   expectType<SizeType>(CompA.$props.size)
+
+  const temp = {} as DefineComponent<{ size: SizeType }>
+  new temp().$props.size
 })
 
 import {
