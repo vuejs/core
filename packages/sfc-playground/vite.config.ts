@@ -4,7 +4,7 @@ import { defineConfig, Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { execaSync } from 'execa'
 
-const commit = execaSync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
 
 export default defineConfig({
   plugins: [
@@ -49,6 +49,7 @@ function copyVuePlugin(): Plugin {
       }
 
       copyFile(`../vue/dist/vue.runtime.esm-browser.js`)
+      copyFile(`../vue/dist/vue.runtime.esm-browser.prod.js`)
       copyFile(`../server-renderer/dist/server-renderer.esm-browser.js`)
     }
   }

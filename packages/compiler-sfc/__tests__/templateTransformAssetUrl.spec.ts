@@ -166,4 +166,34 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
   })
+
+  test('transform with stringify with space in absolute filename', () => {
+    const { code } = compileWithAssetUrls(
+      `<div><img src="/foo bar.png"/></div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createElementVNode`)
+    expect(code).toContain(`import _imports_0 from '/foo bar.png'`)
+  })
+
+  test('transform with stringify with space in relative filename', () => {
+    const { code } = compileWithAssetUrls(
+      `<div><img src="./foo bar.png"/></div>`,
+      {
+        includeAbsolute: true
+      },
+      {
+        hoistStatic: true,
+        transformHoist: stringifyStatic
+      }
+    )
+    expect(code).toMatch(`_createElementVNode`)
+    expect(code).toContain(`import _imports_0 from './foo bar.png'`)
+  })
 })

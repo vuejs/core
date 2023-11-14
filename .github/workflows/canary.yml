@@ -17,10 +17,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           registry-url: 'https://registry.npmjs.org'
           cache: 'pnpm'
 

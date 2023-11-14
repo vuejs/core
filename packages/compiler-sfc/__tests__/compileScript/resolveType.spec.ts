@@ -1,3 +1,4 @@
+import { normalize } from 'node:path'
 import { Identifier } from '@babel/types'
 import { SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
@@ -478,6 +479,36 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
+      const files = {
+        'C:\\Test\\FolderA\\foo.ts': 'export type P = { foo: number }',
+        'C:\\Test\\FolderA\\bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean',
+        'C:\\Test\\FolderB\\buz.ts': 'export type Z = { buz: string }'
+      }
+      const { props, deps } = resolve(
+        `
+      import { P } from './foo'
+      import { Y as PP } from './bar'
+      import { Z as PPP } from '../FolderB/buz'
+      defineProps<P & PP & PPP>()
+    `,
+        files,
+        {},
+        'C:\\Test\\FolderA\\Test.vue'
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+        buz: ['String']
+      })
+      expect(deps && [...deps].map(normalize)).toStrictEqual(
+        Object.keys(files).map(normalize)
+      )
+    })
+
     // #8244
     test('utility type in external file', () => {
       const files = {
@@ -898,19 +929,20 @@ describe('resolveType', () => {
 function resolve(
   code: string,
   files: Record<string, string> = {},
-  options?: Partial<SFCScriptCompileOptions>
+  options?: Partial<SFCScriptCompileOptions>,
+  sourceFileName: string = '/Test.vue'
 ) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
-    filename: '/Test.vue'
+    filename: sourceFileName
   })
   const ctx = new ScriptCompileContext(descriptor, {
     id: 'test',
     fs: {
       fileExists(file) {
-        return !!files[file]
+        return !!(files[file] ?? files[normalize(file)])
       },
       readFile(file) {
-        return files[file]
+        return files[file] ?? files[normalize(file)]
       }
     },
     ...options
