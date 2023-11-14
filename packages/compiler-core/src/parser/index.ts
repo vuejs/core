@@ -142,11 +142,6 @@ const tokenizer = new Tokenizer(
 
     onattribname(start, end) {
       const name = getSlice(start, end)
-      if (currentAttrs.has(name)) {
-        // TODO emit error DUPLICATE_ATTRIBUTE
-      } else {
-        currentAttrs.add(name)
-      }
       if (!inVPre && isDirective(name)) {
         // directive
         const match = directiveParseRE.exec(name)!
@@ -259,34 +254,51 @@ const tokenizer = new Tokenizer(
       currentAttrValue += fromCodePoint(codepoint)
     },
     onattribend(_quote, end) {
-      if (currentElement) {
-        if (currentAttrValue) {
-          if (currentProp!.type === NodeTypes.ATTRIBUTE) {
-            // assign value
-            currentProp!.value = {
-              type: NodeTypes.TEXT,
-              content: currentAttrValue,
-              // @ts-expect-error TODO
-              loc: {}
-            }
-          } else {
-            // directive
-            currentProp!.exp = {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: currentAttrValue,
-              isStatic: false,
-              // Treat as non-constant by default. This can be potentially set to
-              // other values by `transformExpression` to make it eligible for hoisting.
-              constType: ConstantTypes.NOT_CONSTANT,
-              // @ts-expect-error TODO
-              loc: {}
-            }
-          }
-        }
-        currentProp!.loc.end = tokenizer.getPositionForIndex(end)
-        currentElement.props.push(currentProp!)
-      }
+      // TODO check duplicate
+      // if (currentAttrs.has(name)) {
+      //   // emit error DUPLICATE_ATTRIBUTE
+      // } else {
+      //   currentAttrs.add(name)
+      // }
+      // if (currentElement) {
+      //   if (currentAttrValue) {
+      //     if (currentProp!.type === NodeTypes.ATTRIBUTE) {
+      //       // assign value
+      //       currentProp!.value = {
+      //         type: NodeTypes.TEXT,
+      //         content: currentAttrValue,
+      //         // @ts-expect-error TODO
+      //         loc: {}
+      //       }
+      //     } else {
+      //       // directive
+      //       currentProp!.exp = {
+      //         type: NodeTypes.SIMPLE_EXPRESSION,
+      //         content: currentAttrValue,
+      //         isStatic: false,
+      //         // Treat as non-constant by default. This can be potentially set to
+      //         // other values by `transformExpression` to make it eligible for hoisting.
+      //         constType: ConstantTypes.NOT_CONSTANT,
+      //         // @ts-expect-error TODO
+      //         loc: {}
+      //       }
+      //     }
+      //   }
+      //   currentProp!.loc.end = tokenizer.getPositionForIndex(end)
+      //   currentElement.props.push(currentProp!)
+      // }
       currentAttrValue = ''
+    },
+
+    ondirname(start, end) {
+      // console.log('name ' + getSlice(start, end))
+      currentProp
+    },
+    ondirarg(start, end) {
+      // console.log('arg ' + getSlice(start, end))
+    },
+    ondirmodifier(start, end) {
+      // console.log('.' + getSlice(start, end))
     },
 
     oncomment(start, end, offset) {
@@ -294,7 +306,7 @@ const tokenizer = new Tokenizer(
     },
 
     onend() {
-      const end = currentInput.length
+      const end = currentInput.length - 1
       for (let index = 0; index < stack.length; index++) {
         onCloseTag(stack[index], end)
       }
