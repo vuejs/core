@@ -1202,6 +1202,7 @@ describe('DefineComponent should infer correct types when assigning to Component
       expectType<[]>(slots)
     }
   })
+
   expectType<Component>(component)
 })
 

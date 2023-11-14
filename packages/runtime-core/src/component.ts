@@ -181,7 +181,8 @@ export type Component<
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M>
   | ComponentPublicInstanceConstructor<Props>
-// | ComponentPublicInstance<Props>
+  // | Record<string, any>
+  | ComponentPublicInstance<Props>
 
 export type { ComponentOptions }
 

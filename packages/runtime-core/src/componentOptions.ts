@@ -134,7 +134,7 @@ export interface ComponentOptionsBase<
   // the return expression contains reference to `this`.
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
-  render?: Function
+  render?: Function | ((...args: any[]) => any)
   components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
