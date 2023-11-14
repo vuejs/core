@@ -29,7 +29,7 @@ import {
 } from 'entities/lib/decode.js'
 import { Position } from '../ast'
 
-const enum CharCodes {
+export const enum CharCodes {
   Tab = 0x9, // "\t"
   NewLine = 0xa, // "\n"
   FormFeed = 0xc, // "\f"
@@ -216,9 +216,9 @@ export default class Tokenizer {
       }
     }
     return {
-      offset: index,
+      column,
       line,
-      column
+      offset: index
     }
   }
 
