@@ -193,7 +193,7 @@ describe('with object props', () => {
     provide() {
       return {}
     },
-    render() {
+    render(): null {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
@@ -576,7 +576,7 @@ describe('with mixins', () => {
       expectType<any>(props.bP2)
       expectType<string>(props.z)
     },
-    render() {
+    render(): null {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -671,7 +671,7 @@ describe('with extends', () => {
         required: true
       }
     },
-    render() {
+    render(): null {
       const props = this.$props
       // props
       expectType<boolean | undefined>(props.aP1)
@@ -762,7 +762,7 @@ describe('extends with mixins', () => {
         required: true
       }
     },
-    render() {
+    render(): null {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -1532,3 +1532,39 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
+
+// match return type of router.resolve: RouteLocation & { href: string }
+const defaultRoute = {
+  path: '/',
+  name: undefined as string | undefined,
+  redirectedFrom: undefined as object | undefined,
+  params: {},
+  query: {},
+  hash: '',
+  fullPath: '/',
+  matched: [] as object[],
+  meta: {},
+  href: '/'
+}
+
+// TODO: Borrow typings from vue-router-next
+export const RouterLinkStub = defineComponent({
+  name: 'RouterLinkStub',
+
+  compatConfig: { MODE: 3 },
+
+  props: {
+    to: {
+      type: [String, Object],
+      required: true
+    },
+    custom: {
+      type: Boolean,
+      default: false
+    }
+  },
+
+  render() {
+    return this.custom ? {} : {}
+  }
+})
