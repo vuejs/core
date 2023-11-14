@@ -1,25 +1,9 @@
-import {
-  ComponentInjectOptions,
-  ComponentOptionsBase,
-  ComponentOptionsMixin,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithoutProps,
-  ComputedOptions,
-  MethodOptions,
-  RenderFunction
-} from './componentOptions'
+import { ComponentOptionsBase } from './componentOptions'
 import { RawOptionsSymbol } from './apiDefineComponent'
 import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
-import {
-  ComponentObjectPropsOptions,
-  ComponentPropsOptions,
-  ExtractPropTypes,
-  Prop,
-  PropType
-} from './componentProps'
-import { Slot, Slots, SlotsType } from './componentSlots'
-import { SetupContext, VNode, h } from '.'
+import { ExtractPropTypes } from './componentProps'
+import { Slot, Slots } from './componentSlots'
+import { VNode } from '.'
 import { IntersectionMixin, UnwrapMixinsType } from './componentPublicInstance'
 
 export type ExtractComponentOptions<T> = T extends {

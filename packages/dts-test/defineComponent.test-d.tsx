@@ -355,7 +355,9 @@ describe('with object props', () => {
 // })
 
 describe('type inference w/ direct setup function', () => {
-  const MyComponent = defineComponent((_props: { msg: string }) => () => {})
+  const MyComponent = defineComponent(
+    (_props: { msg: string }) => () => h('div')
+  )
   expectType<JSX.Element>(<MyComponent msg="foo" />)
   // @ts-expect-error
   ;<MyComponent />

@@ -17,21 +17,17 @@ import {
 } from './component'
 import {
   ExtractPropTypes,
-  ComponentPropsOptions,
   ExtractDefaultPropTypes,
-  ComponentObjectPropsOptions,
-  Prop,
-  PropType
+  ComponentObjectPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
-import { Prettify, extend, isFunction } from '@vue/shared'
+import { extend, isFunction } from '@vue/shared'
 import { VNodeProps } from './vnode'
 import {
   CreateComponentPublicInstance,
   ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
 import { SlotsType } from './componentSlots'
-import { h } from '.'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -48,11 +44,14 @@ export type PublicProps = VNodeProps &
 // > &
 //   ({} extends E ? {} : EmitsToProps<E>)
 
-type ResolveProps<Props, E extends EmitsOptions> = [Props] extends [string]
-  ? Readonly<{ [key in Props]?: any } & EmitsToProps<E>>
-  : [Props] extends [ComponentObjectPropsOptions]
-  ? Readonly<ExtractPropTypes<Props>> & EmitsToProps<E>
-  : {}
+type ResolveProps<Props, E extends EmitsOptions> = Readonly<
+  ([Props] extends [string]
+    ? { [key in Props]?: any }
+    : [Props] extends [ComponentObjectPropsOptions]
+    ? ExtractPropTypes<Props>
+    : {}) &
+    ({} extends E ? {} : EmitsToProps<E>)
+>
 
 export declare const RawOptionsSymbol: '__rawOptions'
 
@@ -513,150 +512,3 @@ export function defineComponent(options: unknown, extraOptions?: unknown) {
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }
-// const a = defineComponent({
-//   setup() {
-//     return () => h('div')
-//   }
-// })
-const b = defineComponent({
-  props: ['a', 'b'],
-  setup(props) {
-    props.a
-  }
-})
-const { $props } = new b()
-$props.a
-$props.b
-// @ts-expect-error
-$props.c
-
-// const o = defineComponent({
-//   props: {
-//     a: String,
-//     b: null,
-//     c: {
-//       type: String,
-//       required: true
-//     }
-//   },
-//   setup(props) {},
-//   ssss(props, _opo) {
-//     props.a, props.b, props.c
-//     _opo.a, _opo.b, _opo.c
-//   }
-// })
-
-const a = defineComponent({
-  short: true,
-  props: {
-    a: Number
-    // bb: {
-    //   testXXX: 1,
-    //   validator(b: any) {
-    //     return true
-    //   }
-    // validator(b: unknown) {
-    //   return true
-    // }
-    // type: String
-    // validator(b: unknown) {
-    //   return true
-    // }
-    // validator: (b: unknown) => {
-    //   return true
-    // }
-    // validator(b: string) {
-    //   this.
-    //   return true
-    // }
-    // // required should make property non-void
-    // b: {
-    //   type: String,
-    //   required: true as true
-    // },
-    // e: Function,
-    // h: Boolean,
-    // j: Function as PropType<undefined | (() => string | undefined)>,
-    // // default value should infer type and make it non-void
-    // bb: {
-    //   default: 'hello'
-    // },
-    // bbb: {
-    //   // Note: default function value requires arrow syntax + explicit
-    //   // annotation
-    //   default: (props: any) => (props.bb as string) || 'foo'
-    // },
-    // bbbb: {
-    //   type: String,
-    //   default: undefined
-    // },
-    // bbbbb: {
-    //   type: String,
-    //   default: () => undefined
-    // },
-    // // explicit type casting
-    // cc: Array as PropType<string[]>,
-    // // required + type casting
-    // dd: {
-    //   type: Object as PropType<{ n: 1 }>,
-    //   required: true as true
-    // },
-    // // return type
-    // ee: Function as PropType<() => string>,
-    // // arguments + object return
-    // ff: Function as PropType<(a: number, b: string) => { a: boolean }>,
-    // // explicit type casting with constructor
-    // ccc: Array as () => string[],
-    // // required + constructor type casting
-    // ddd: {
-    //   type: Array as () => string[],
-    //   required: true as true
-    // },
-    // // required + object return
-    // eee: {
-    //   type: Function as PropType<() => { a: string }>,
-    //   required: true as true
-    // },
-    // // required + arguments + object return
-    // fff: {
-    //   type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-    //   required: true as true
-    // },
-    // hhh: {
-    //   type: Boolean,
-    //   required: true as true
-    // },
-    // // default + type casting
-    // ggg: {
-    //   type: String as PropType<'foo' | 'bar'>,
-    //   default: 'foo'
-    // },
-    // // default + function
-    // ffff: {
-    //   type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-    //   default: (a: number, b: string) => ({ a: a > +b })
-    // },
-    // // union + function with different return types
-    // iii: Function as PropType<(() => string) | (() => number)>,
-    // // union + function with different args & same return type
-    // jjj: {
-    //   type: Function as PropType<
-    //     ((arg1: string) => string) | ((arg1: string, arg2: string) => string)
-    //   >,
-    //   required: true as true
-    // },
-    // kkk: null,
-    // validated: {
-    //   type: String,
-    //   // validator requires explicit annotation
-    //   validator: (val: unknown) => val !== ''
-    // },
-    // date: Date,
-    // l: [Date],
-    // ll: [Date, Number],
-    // lll: [String, Number]
-  },
-  setup(props, ctx) {
-    props.a
-  }
-})

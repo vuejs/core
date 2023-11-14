@@ -164,7 +164,8 @@ export type ConcreteComponent<
   I extends ComponentInjectOptions = any,
   S extends SlotsType = any
 > =
-  | ComponentOptions<Props, RawBindings, D, C, M, any, any, E, I, S>
+  | (ComponentOptions<Props, RawBindings, D, C, M, any, any, E, I, S> &
+      Record<string, any>)
   | FunctionalComponent<Props, E, S>
 
 /**

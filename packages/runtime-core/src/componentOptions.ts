@@ -51,9 +51,7 @@ import {
 import {
   ExtractPropTypes,
   ExtractDefaultPropTypes,
-  ComponentPropsOptions,
-  ComponentObjectPropsOptions,
-  Prop
+  ComponentPropsOptions
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { Directive } from './directives'
@@ -136,7 +134,7 @@ export interface ComponentOptionsBase<
   // the return expression contains reference to `this`.
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
-  render?: RenderFunction
+  render?: Function
   components?: Record<string, Component>
   directives?: Record<string, Directive>
   inheritAttrs?: boolean
