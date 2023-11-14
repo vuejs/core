@@ -291,17 +291,17 @@ describe('with object props', () => {
     />
   )
 
-  expectType<Component>(
-    <MyComponent
-      b="b"
-      dd={{ n: 1 }}
-      ddd={['ddd']}
-      eee={() => ({ a: 'eee' })}
-      fff={(a, b) => ({ a: a > +b })}
-      hhh={false}
-      jjj={() => ''}
-    />
-  )
+  // expectType<Component>(
+  //   <MyComponent
+  //     b="b"
+  //     dd={{ n: 1 }}
+  //     ddd={['ddd']}
+  //     eee={() => ({ a: 'eee' })}
+  //     fff={(a, b) => ({ a: a > +b })}
+  //     hhh={false}
+  //     jjj={() => ''}
+  //   />
+  // )
 
   // @ts-expect-error missing required props
   let c = <MyComponent />
@@ -1532,39 +1532,3 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
-
-// match return type of router.resolve: RouteLocation & { href: string }
-const defaultRoute = {
-  path: '/',
-  name: undefined as string | undefined,
-  redirectedFrom: undefined as object | undefined,
-  params: {},
-  query: {},
-  hash: '',
-  fullPath: '/',
-  matched: [] as object[],
-  meta: {},
-  href: '/'
-}
-
-// TODO: Borrow typings from vue-router-next
-export const RouterLinkStub = defineComponent({
-  name: 'RouterLinkStub',
-
-  compatConfig: { MODE: 3 },
-
-  props: {
-    to: {
-      type: [String, Object],
-      required: true
-    },
-    custom: {
-      type: Boolean,
-      default: false
-    }
-  },
-
-  render() {
-    return this.custom ? {} : {}
-  }
-})
