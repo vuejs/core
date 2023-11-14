@@ -56,7 +56,13 @@ export const enum CharCodes {
   UpperZ = 0x5a, // "Z"
   LowerZ = 0x7a, // "z"
   LowerX = 0x78, // "x"
-  OpeningSquareBracket = 0x5b // "["
+  OpeningSquareBracket = 0x5b, // "["
+  LowerV = 0x76, // "v"
+  Dot = 0x2e, // "."
+  Colon = 0x3a, // ":"
+  At = 0x40, // "@"
+  LeftSqaure = 91, // "["
+  RightSquare = 93 // "]"
 }
 
 /** All the states the tokenizer can be in. */
@@ -72,6 +78,10 @@ const enum State {
   // Attributes
   BeforeAttributeName,
   InAttributeName,
+  InDirectiveName,
+  InDirectiveArg,
+  InDirectiveDynamicArg,
+  InDirectiveModifier,
   AfterAttributeName,
   BeforeAttributeValue,
   InAttributeValueDq, // "
@@ -133,6 +143,10 @@ export interface Callbacks {
   onattribentity(codepoint: number): void
   onattribend(quote: QuoteType, endIndex: number): void
   onattribname(start: number, endIndex: number): void
+
+  ondirname(start: number, endIndex: number): void
+  ondirarg(start: number, endIndex: number): void
+  ondirmodifier(start: number, endIndex: number): void
 
   oncomment(start: number, endIndex: number, endOffset: number): void
   oncdata(start: number, endIndex: number, endOffset: number): void
@@ -461,6 +475,26 @@ export default class Tokenizer {
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
     } else if (!isWhitespace(c)) {
+      this.enterAttribute(c)
+    }
+  }
+  private enterAttribute(c: number) {
+    if (
+      c === CharCodes.LowerV &&
+      this.buffer.charCodeAt(this.index + 1) === CharCodes.Dash
+    ) {
+      this.state = State.InDirectiveName
+      this.sectionStart = this.index
+    } else if (
+      c === CharCodes.Dot ||
+      c === CharCodes.Colon ||
+      c === CharCodes.At ||
+      c === CharCodes.Number
+    ) {
+      this.cbs.ondirname(this.index, this.index + 1)
+      this.state = State.InDirectiveArg
+      this.sectionStart = this.index + 1
+    } else {
       this.state = State.InAttributeName
       this.sectionStart = this.index
     }
@@ -484,6 +518,54 @@ export default class Tokenizer {
       this.stateAfterAttributeName(c)
     }
   }
+  private stateInDirectiveName(c: number): void {
+    if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      this.cbs.ondirname(this.sectionStart, this.index)
+      this.sectionStart = this.index
+      this.state = State.AfterAttributeName
+      this.stateAfterAttributeName(c)
+    } else if (c === CharCodes.Colon) {
+      this.cbs.ondirname(this.sectionStart, this.index)
+      this.state = State.InDirectiveArg
+      this.sectionStart = this.index + 1
+    } else if (c === CharCodes.Dot) {
+      this.cbs.ondirname(this.sectionStart, this.index)
+      this.state = State.InDirectiveModifier
+      this.sectionStart = this.index + 1
+    }
+  }
+  private stateInDirectiveArg(c: number): void {
+    if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      this.cbs.ondirarg(this.sectionStart, this.index)
+      this.sectionStart = this.index
+      this.state = State.AfterAttributeName
+      this.stateAfterAttributeName(c)
+    } else if (c === CharCodes.LeftSqaure) {
+      this.state = State.InDirectiveDynamicArg
+    } else if (c === CharCodes.Dot) {
+      this.cbs.ondirarg(this.sectionStart, this.index)
+      this.state = State.InDirectiveModifier
+      this.sectionStart = this.index + 1
+    }
+  }
+  private stateInDynamicDirectiveArg(c: number): void {
+    if (c === CharCodes.RightSquare) {
+      this.state = State.InDirectiveArg
+    } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      // TODO emit error
+    }
+  }
+  private stateInDirectiveModifier(c: number): void {
+    if (c === CharCodes.Eq || isEndOfTagSection(c)) {
+      this.cbs.ondirmodifier(this.sectionStart, this.index)
+      this.sectionStart = this.index
+      this.state = State.AfterAttributeName
+      this.stateAfterAttributeName(c)
+    } else if (c === CharCodes.Dot) {
+      this.cbs.ondirmodifier(this.sectionStart, this.index)
+      this.sectionStart = this.index + 1
+    }
+  }
   private stateAfterAttributeName(c: number): void {
     if (c === CharCodes.Eq) {
       this.state = State.BeforeAttributeValue
@@ -494,8 +576,7 @@ export default class Tokenizer {
       this.stateBeforeAttributeName(c)
     } else if (!isWhitespace(c)) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
-      this.state = State.InAttributeName
-      this.sectionStart = this.index
+      this.enterAttribute(c)
     }
   }
   private stateBeforeAttributeValue(c: number): void {
@@ -655,6 +736,22 @@ export default class Tokenizer {
           this.stateInAttributeName(c)
           break
         }
+        case State.InDirectiveName: {
+          this.stateInDirectiveName(c)
+          break
+        }
+        case State.InDirectiveArg: {
+          this.stateInDirectiveArg(c)
+          break
+        }
+        case State.InDirectiveDynamicArg: {
+          this.stateInDynamicDirectiveArg(c)
+          break
+        }
+        case State.InDirectiveModifier: {
+          this.stateInDirectiveModifier(c)
+          break
+        }
         case State.InCommentLike: {
           this.stateInCommentLike(c)
           break
@@ -796,6 +893,10 @@ export default class Tokenizer {
       this.state === State.BeforeAttributeValue ||
       this.state === State.AfterAttributeName ||
       this.state === State.InAttributeName ||
+      this.state === State.InDirectiveName ||
+      this.state === State.InDirectiveArg ||
+      this.state === State.InDirectiveDynamicArg ||
+      this.state === State.InDirectiveModifier ||
       this.state === State.InAttributeValueSq ||
       this.state === State.InAttributeValueDq ||
       this.state === State.InAttributeValueNq ||
