@@ -171,6 +171,14 @@ export function h<P>(
   children?: RawChildren | RawSlots
 ): VNode
 
+// vnode
+export function h(type: VNode, children?: RawChildren): VNode
+export function h<P>(
+  type: VNode<any, any, P>,
+  props?: (RawProps & P) | ({} extends P ? null : never),
+  children?: RawChildren | RawSlots
+): VNode
+
 // catch all types
 export function h(type: string | Constructor, children?: RawChildren): VNode
 export function h<P>(

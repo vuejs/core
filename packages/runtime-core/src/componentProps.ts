@@ -49,9 +49,10 @@ export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
   | string[]
 
-export type ComponentObjectPropsOptions<P = Data> = {
+type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
+export default ComponentObjectPropsOptions
 
 export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
@@ -61,7 +62,6 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  // validator?: (this: void, value: unknown) => boolean
   validator?(value: unknown): boolean
   /**
    * @internal

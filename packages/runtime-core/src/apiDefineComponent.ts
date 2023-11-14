@@ -15,10 +15,9 @@ import {
   AllowedComponentProps,
   ComponentCustomProps
 } from './component'
-import {
+import ComponentObjectPropsOptions, {
   ExtractPropTypes,
-  ExtractDefaultPropTypes,
-  ComponentObjectPropsOptions
+  ExtractDefaultPropTypes
 } from './componentProps'
 import { EmitsOptions, EmitsToProps } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
@@ -32,17 +31,6 @@ import { SlotsType } from './componentSlots'
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
-
-// type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
-//   PropsOrPropOptions extends ComponentObjectPropsOptions
-//     ? ExtractPropTypes<PropsOrPropOptions>
-//     : [PropsOrPropOptions] extends [string]
-//     ? Prettify<
-//         Readonly<{ [key in PropsOrPropOptions]?: any } & EmitsToProps<E>>
-//       > & { aaaa: 1 }
-//     : never
-// > &
-//   ({} extends E ? {} : EmitsToProps<E>)
 
 type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
@@ -163,24 +151,34 @@ export type ComponentDefineOptions<
             II,
             S
           >
-        : {
-            props: ComponentObjectPropsOptions
-          } & (Props extends ComponentObjectPropsOptions
-            ? ComponentOptionsWithObjectProps<
-                Props,
-                RawBindings,
-                D,
-                C,
-                M,
-                Mixin,
-                Extends,
-                E,
-                EE,
-                I,
-                II,
-                S
-              >
-            : never)))
+        : Props extends ComponentObjectPropsOptions
+        ? ComponentOptionsWithObjectProps<
+            Props,
+            RawBindings,
+            D,
+            C,
+            M,
+            Mixin,
+            Extends,
+            E,
+            EE,
+            I,
+            II,
+            S
+          >
+        : // adding support for ComponentOProp
+          ComponentOptions<
+            Readonly<Record<string, any> & EmitsToProps<E>>,
+            RawBindings,
+            D,
+            C,
+            M,
+            Mixin,
+            Extends,
+            E,
+            I,
+            S
+          >))
   | (((
       props: Props,
       ctx: SetupContext<E, S>
@@ -486,6 +484,56 @@ export function defineComponent<
   >
 ): DefineComponent<
   [Props] extends [string] ? Props[] : undefined extends Props ? {} : Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  I,
+  II,
+  S,
+  Options
+>
+
+// Overload for {props: ComponentPropsOptions}
+export function defineComponent<
+  Props = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  Options = {}
+>(
+  options: Options &
+    ComponentOptionsWithObjectProps<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      I,
+      II,
+      S
+    >
+): DefineComponent<
+  Props,
   RawBindings,
   D,
   C,

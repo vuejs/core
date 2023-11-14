@@ -21,9 +21,8 @@ import {
   ComputedOptions,
   MethodOptions
 } from './componentOptions'
-import {
+import ComponentObjectPropsOptions, {
   ComponentPropsOptions,
-  ComponentObjectPropsOptions,
   ExtractPropTypes,
   NormalizedProps,
   PropOptions

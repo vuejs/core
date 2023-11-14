@@ -11,7 +11,9 @@ import {
   h,
   SlotsType,
   Slots,
-  VNode
+  VNode,
+  ComponentPropsOptions,
+  ComponentObjectPropsOptions
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1532,3 +1534,11 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
+
+defineComponent({
+  props: {} as ComponentPropsOptions,
+
+  emits: ['a'],
+
+  setup(props) {}
+})

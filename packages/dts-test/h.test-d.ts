@@ -253,3 +253,7 @@ describe('h should work with multiple types', () => {
   h(sampleComponent, {})
   h(sampleComponent, {}, [])
 })
+
+describe('should allow to assign vnode', () => {
+  h(h('div', 'test'))
+})

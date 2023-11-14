@@ -262,7 +262,7 @@ export type {
   Prop,
   PropType,
   ComponentPropsOptions,
-  ComponentObjectPropsOptions,
+  default as ComponentObjectPropsOptions,
   ExtractPropTypes,
   ExtractPublicPropTypes,
   ExtractDefaultPropTypes
