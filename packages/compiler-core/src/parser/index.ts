@@ -1,5 +1,7 @@
 import { fromCodePoint } from 'entities/lib/decode.js'
 import {
+  AttributeNode,
+  DirectiveNode,
   ElementNode,
   ElementTypes,
   NodeTypes,
@@ -8,72 +10,7 @@ import {
   createRoot
 } from '../ast'
 import { ParserOptions } from '../options'
-import Tokenizer from './Tokenizer'
-import { hasOwn } from '@vue/shared'
-
-const formTags = new Set([
-  'input',
-  'option',
-  'optgroup',
-  'select',
-  'button',
-  'datalist',
-  'textarea'
-])
-const pTag = new Set(['p'])
-const tableSectionTags = new Set(['thead', 'tbody'])
-const ddtTags = new Set(['dd', 'dt'])
-const rtpTags = new Set(['rt', 'rp'])
-
-const openImpliesClose = new Map<string, Set<string>>([
-  ['tr', new Set(['tr', 'th', 'td'])],
-  ['th', new Set(['th'])],
-  ['td', new Set(['thead', 'th', 'td'])],
-  ['body', new Set(['head', 'link', 'script'])],
-  ['li', new Set(['li'])],
-  ['p', pTag],
-  ['h1', pTag],
-  ['h2', pTag],
-  ['h3', pTag],
-  ['h4', pTag],
-  ['h5', pTag],
-  ['h6', pTag],
-  ['select', formTags],
-  ['input', formTags],
-  ['output', formTags],
-  ['button', formTags],
-  ['datalist', formTags],
-  ['textarea', formTags],
-  ['option', new Set(['option'])],
-  ['optgroup', new Set(['optgroup', 'option'])],
-  ['dd', ddtTags],
-  ['dt', ddtTags],
-  ['address', pTag],
-  ['article', pTag],
-  ['aside', pTag],
-  ['blockquote', pTag],
-  ['details', pTag],
-  ['div', pTag],
-  ['dl', pTag],
-  ['fieldset', pTag],
-  ['figcaption', pTag],
-  ['figure', pTag],
-  ['footer', pTag],
-  ['form', pTag],
-  ['header', pTag],
-  ['hr', pTag],
-  ['main', pTag],
-  ['nav', pTag],
-  ['ol', pTag],
-  ['pre', pTag],
-  ['section', pTag],
-  ['table', pTag],
-  ['ul', pTag],
-  ['rt', rtpTags],
-  ['rp', rtpTags],
-  ['tbody', tableSectionTags],
-  ['tfoot', tableSectionTags]
-])
+import Tokenizer, { CharCodes } from './Tokenizer'
 
 const voidElements = new Set([
   'area',
@@ -113,21 +50,16 @@ const htmlIntegrationElements = new Set([
 
 let currentOptions: ParserOptions = {}
 let currentRoot: RootNode = createRoot([])
-let elementStack: ElementNode[] = []
 
 // parser state
 let htmlMode = false
 let currentInput = ''
-let openTagStart = 0
-let tagname = ''
-let attribname = ''
-let attribvalue = ''
-let attribs: Record<string, string> | null = null
-let startIndex = 0
-let endIndex = 0
+let currentElement: ElementNode | null = null
+let currentProp: AttributeNode | DirectiveNode | null = null
+let currentAttrValue = ''
 let inPre = 0
 // let inVPre = 0
-const stack: string[] = []
+const stack: ElementNode[] = []
 const foreignContext: boolean[] = [false]
 
 const tokenizer = new Tokenizer(
@@ -143,17 +75,14 @@ const tokenizer = new Tokenizer(
     },
 
     onopentagname(start, end) {
-      emitOpenTag(getSlice(start, (endIndex = end)))
+      emitOpenTag(getSlice(start, end), start)
     },
 
     onopentagend(end) {
-      endIndex = end
-      endOpenTag(false)
-      startIndex = end + 1
+      endOpenTag()
     },
 
     onclosetag(start, end) {
-      endIndex = end
       const name = getSlice(start, end)
 
       if (
@@ -164,16 +93,15 @@ const tokenizer = new Tokenizer(
       }
 
       if (!voidElements.has(name)) {
-        const pos = stack.indexOf(name)
+        const pos = stack.findIndex(e => e.tag === name)
         if (pos !== -1) {
           for (let index = 0; index <= pos; index++) {
-            stack.shift()
-            onCloseTag()
+            onCloseTag(stack.shift()!, end)
           }
         } else if (htmlMode && name === 'p') {
           // Implicit open before close
-          emitOpenTag('p')
-          closeCurrentTag(true)
+          emitOpenTag('p', start)
+          closeCurrentTag(end)
         }
       } else if (htmlMode && name === 'br') {
         // TODO
@@ -181,53 +109,64 @@ const tokenizer = new Tokenizer(
         // this.cbs.onopentag?.('br', {}, true)
         // this.cbs.onclosetag?.('br', false)
       }
-
-      // Set `startIndex` for next node
-      startIndex = end + 1
     },
 
     onselfclosingtag(end) {
-      endIndex = end
-      closeCurrentTag(false)
-      startIndex = end + 1
+      closeCurrentTag(end)
     },
 
     onattribname(start, end) {
-      attribname = getSlice((startIndex = start), end)
+      // TODO directives
+      currentProp = {
+        type: NodeTypes.ATTRIBUTE,
+        name: getSlice(start, end),
+        value: undefined,
+        loc: {
+          start: tokenizer.getPositionForIndex(start),
+          // @ts-expect-error to be attached on attribute end
+          end: undefined,
+          source: ''
+        }
+      }
     },
     onattribdata(start, end) {
-      attribvalue += getSlice(start, end)
+      currentAttrValue += getSlice(start, end)
     },
     onattribentity(codepoint) {
-      attribvalue += fromCodePoint(codepoint)
+      currentAttrValue += fromCodePoint(codepoint)
     },
     onattribend(_quote, end) {
-      endIndex = end
-      if (attribs && !hasOwn(attribs, attribname)) {
-        // TODO gen attributes AST nodes
-        attribs[attribname] = attribvalue
+      if (currentElement) {
+        if (currentProp!.type === NodeTypes.ATTRIBUTE) {
+          // assign value
+          currentProp!.value = {
+            type: NodeTypes.TEXT,
+            content: currentAttrValue,
+            // @ts-expect-error TODO
+            loc: {}
+          }
+        } else {
+          // TODO
+        }
+        currentProp!.loc.end = tokenizer.getPositionForIndex(end)
+        currentElement.props.push(currentProp!)
       }
-      attribvalue = ''
+      currentAttrValue = ''
     },
 
     oncomment(start, end, offset) {
-      endIndex = end
       // TODO oncomment
-      startIndex = end + 1
     },
 
     onend() {
-      // Set the end index for all remaining tags
-      endIndex = startIndex
+      const end = currentInput.length
       for (let index = 0; index < stack.length; index++) {
-        onCloseTag()
+        onCloseTag(stack[index], end)
       }
     },
 
     oncdata(start, end, offset) {
-      endIndex = end
       // TODO throw error
-      startIndex = end + 1
     }
   }
 )
@@ -236,18 +175,31 @@ function getSlice(start: number, end: number) {
   return currentInput.slice(start, end)
 }
 
-function emitOpenTag(name: string) {
-  openTagStart = startIndex
-  tagname = name
-  const impliesClose = htmlMode && openImpliesClose.get(name)
-  if (impliesClose) {
-    while (stack.length > 0 && impliesClose.has(stack[0])) {
-      stack.shift()
-      onCloseTag()
-    }
+function emitOpenTag(name: string, start: number) {
+  currentElement = {
+    type: NodeTypes.ELEMENT,
+    tag: name,
+    // TODO refine namespace
+    ns: 0,
+    // TODO refine tag type
+    tagType: ElementTypes.ELEMENT,
+    props: [],
+    children: [],
+    loc: {
+      start: tokenizer.getPositionForIndex(start - 1),
+      // @ts-expect-error to be attached on tag close
+      end: undefined,
+      source: ''
+    },
+    codegenNode: undefined
   }
+}
+
+function endOpenTag() {
+  addNode(currentElement!)
+  const name = currentElement!.tag
   if (!voidElements.has(name)) {
-    stack.unshift(name)
+    stack.unshift(currentElement!)
     if (htmlMode) {
       if (foreignContextElements.has(name)) {
         foreignContext.unshift(true)
@@ -256,28 +208,15 @@ function emitOpenTag(name: string) {
       }
     }
   }
-  attribs = {}
+  currentElement = null
 }
 
-function closeCurrentTag(isOpenImplied: boolean) {
-  const name = tagname
-  endOpenTag(isOpenImplied)
-  if (stack[0] === name) {
-    onCloseTag()
-    stack.shift()
+function closeCurrentTag(end: number) {
+  const name = currentElement!.tag
+  endOpenTag()
+  if (stack[0].tag === name) {
+    onCloseTag(stack.shift()!, end)
   }
-}
-
-function endOpenTag(isImplied: boolean) {
-  startIndex = openTagStart
-  if (attribs) {
-    onOpenTag(tagname)
-    attribs = null
-  }
-  if (voidElements.has(tagname)) {
-    onCloseTag()
-  }
-  tagname = ''
 }
 
 function onText(content: string, start: number, end: number) {
@@ -300,32 +239,13 @@ function onText(content: string, start: number, end: number) {
   }
 }
 
-function onOpenTag(tag: string) {
-  const el: ElementNode = {
-    type: NodeTypes.ELEMENT,
-    tag,
-    // TODO namespace
-    ns: 0,
-    // TODO refine tag type
-    tagType: ElementTypes.ELEMENT,
-    // TODO props
-    props: [],
-    children: [],
-    loc: {
-      // @ts-expect-error TODO
-      start: {},
-      // @ts-expect-error TODO
-      end: { offset: endIndex },
-      source: ''
-    },
-    codegenNode: undefined
+function onCloseTag(el: ElementNode, end: number) {
+  // attach end position
+  let offset = 0
+  while (currentInput.charCodeAt(end + offset) !== CharCodes.Gt) {
+    offset++
   }
-  addNode(el)
-  elementStack.push(el)
-}
-
-function onCloseTag() {
-  const el = elementStack.pop()!
+  el.loc.end = tokenizer.getPositionForIndex(end + offset + 1)
   // whitepsace management
   el.children = condenseWhitespace(el.children)
 }
@@ -394,19 +314,15 @@ function addNode(node: TemplateChildNode) {
 }
 
 function getParent() {
-  return elementStack[elementStack.length - 1] || currentRoot
+  return stack[0] || currentRoot
 }
 
 function reset() {
   tokenizer.reset()
-  tagname = ''
-  attribname = ''
-  attribvalue = ''
-  attribs = null
-  startIndex = 0
-  endIndex = 0
+  currentElement = null
+  currentProp = null
+  currentAttrValue = ''
   stack.length = 0
-  elementStack.length = 0
   foreignContext.length = 1
   foreignContext[0] = false
 }
