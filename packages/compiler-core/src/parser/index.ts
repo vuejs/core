@@ -116,7 +116,6 @@ const tokenizer = new Tokenizer(
     },
 
     ondirname(start, end) {
-      // console.log('name ' + getSlice(start, end))
       const raw = getSlice(start, end)
       const name =
         raw === '.' || raw === ':'
@@ -135,8 +134,8 @@ const tokenizer = new Tokenizer(
         loc: getLoc(start)
       }
     },
+
     ondirarg(start, end) {
-      // console.log('arg ' + getSlice(start, end))
       const arg = getSlice(start, end)
       const isStatic = arg[0] !== `[`
       ;(currentProp as DirectiveNode).arg = {
@@ -158,19 +157,28 @@ const tokenizer = new Tokenizer(
       if (currentAttrStartIndex < 0) currentAttrStartIndex = start
       currentAttrEndIndex = end
     },
+
     onattribentity(codepoint) {
       currentAttrValue += fromCodePoint(codepoint)
     },
+
+    onattribnameend(end) {
+      // check duplicate attrs
+      const start = currentProp!.loc.start.offset
+      const name = getSlice(start, end)
+      if (currentAttrs.has(name)) {
+        currentProp = null
+        // TODO emit error DUPLICATE_ATTRIBUTE
+        throw new Error(`duplicate attr ${name}`)
+      } else {
+        currentAttrs.add(name)
+      }
+    },
+
     onattribend(quote, end) {
-      // TODO check duplicate
-      // if (currentAttrs.has(name)) {
-      //   // emit error DUPLICATE_ATTRIBUTE
-      // } else {
-      //   currentAttrs.add(name)
-      // }
-      if (currentElement) {
+      if (currentElement && currentProp) {
         if (currentAttrValue) {
-          if (currentProp!.type === NodeTypes.ATTRIBUTE) {
+          if (currentProp.type === NodeTypes.ATTRIBUTE) {
             // assign value
             currentProp!.value = {
               type: NodeTypes.TEXT,
@@ -182,7 +190,7 @@ const tokenizer = new Tokenizer(
             }
           } else {
             // directive
-            currentProp!.exp = {
+            currentProp.exp = {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: currentAttrValue,
               isStatic: false,
@@ -194,7 +202,7 @@ const tokenizer = new Tokenizer(
             }
           }
         }
-        currentProp!.loc.end = tokenizer.getPositionForIndex(end)
+        currentProp.loc.end = tokenizer.getPos(end)
         currentElement.props.push(currentProp!)
       }
       currentAttrValue = ''
@@ -232,7 +240,7 @@ function emitOpenTag(name: string, start: number) {
     props: [],
     children: [],
     loc: {
-      start: tokenizer.getPositionForIndex(start - 1),
+      start: tokenizer.getPos(start - 1),
       // @ts-expect-error to be attached on tag close
       end: undefined,
       source: ''
@@ -273,8 +281,8 @@ function onText(content: string, start: number, end: number) {
       type: NodeTypes.TEXT,
       content,
       loc: {
-        start: tokenizer.getPositionForIndex(start),
-        end: tokenizer.getPositionForIndex(end),
+        start: tokenizer.getPos(start),
+        end: tokenizer.getPos(end),
         source: content
       }
     })
@@ -287,7 +295,7 @@ function onCloseTag(el: ElementNode, end: number) {
   while (currentInput.charCodeAt(end + offset) !== CharCodes.Gt) {
     offset++
   }
-  el.loc.end = tokenizer.getPositionForIndex(end + offset + 1)
+  el.loc.end = tokenizer.getPos(end + offset + 1)
   // whitepsace management
   el.children = condenseWhitespace(el.children)
 }
@@ -388,9 +396,9 @@ function getParent() {
 
 function getLoc(start: number, end?: number): SourceLocation {
   return {
-    start: tokenizer.getPositionForIndex(start),
+    start: tokenizer.getPos(start),
     // @ts-expect-error allow late attachment
-    end: end && tokenizer.getPositionForIndex(end)
+    end: end && tokenizer.getPos(end)
   }
 }
 
@@ -411,6 +419,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
   currentOptions = extend({}, defaultParserOptions, options)
   const root = (currentRoot = createRoot([]))
   tokenizer.parse(currentInput)
+  root.loc.end = tokenizer.getPos(input.length)
   root.children = condenseWhitespace(root.children)
   return root
 }
