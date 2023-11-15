@@ -5,10 +5,10 @@ import {
   DirectiveNode,
   ElementNode,
   ElementTypes,
-  ExpressionNode,
   Namespaces,
   NodeTypes,
   RootNode,
+  SourceLocation,
   TemplateChildNode,
   createRoot
 } from '../ast'
@@ -55,9 +55,6 @@ export const defaultParserOptions: MergedParserOptions = {
   comments: __DEV__
 }
 
-const directiveParseRE =
-  /(?:^v-([a-z0-9-]+))?(?:(?::|^\.|^@|^#)(\[[^\]]+\]|[^\.]+))?(.+)?$/i
-
 const foreignContextElements = new Set(['math', 'svg'])
 
 const htmlIntegrationElements = new Set([
@@ -81,9 +78,11 @@ let currentInput = ''
 let currentElement: ElementNode | null = null
 let currentProp: AttributeNode | DirectiveNode | null = null
 let currentAttrValue = ''
+let currentAttrStartIndex = -1
+let currentAttrEndIndex = -1
 let currentAttrs: Set<string> = new Set()
 let inPre = 0
-let inVPre = 0
+// let inVPre = 0
 const stack: ElementNode[] = []
 const foreignContext: boolean[] = [false]
 
@@ -141,114 +140,57 @@ const tokenizer = new Tokenizer(
     },
 
     onattribname(start, end) {
-      const name = getSlice(start, end)
-      if (!inVPre && isDirective(name)) {
-        // directive
-        const match = directiveParseRE.exec(name)!
-        const firstChar = name[0]
-        const isPropShorthand = firstChar === '.'
-        const dirName =
-          match[1] ||
-          (isPropShorthand || firstChar === ':'
-            ? 'bind'
-            : firstChar === '@'
-            ? 'on'
-            : 'slot')
-
-        let arg: ExpressionNode | undefined
-        if (match[2]) {
-          const isSlot = dirName === 'slot'
-          // const startOffset = name.lastIndexOf(
-          //   match[2],
-          //   name.length - (match[3]?.length || 0)
-          // )
-          let content = match[2]
-          let isStatic = true
-
-          if (content.startsWith('[')) {
-            isStatic = false
-
-            if (!content.endsWith(']')) {
-              // TODO emitError(
-              //   context,
-              //   ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END
-              // )
-              content = content.slice(1)
-            } else {
-              content = content.slice(1, content.length - 1)
-            }
-          } else if (isSlot) {
-            // #1241 special case for v-slot: vuetify relies extensively on slot
-            // names containing dots. v-slot doesn't have any modifiers and Vue 2.x
-            // supports such usage so we are keeping it consistent with 2.x.
-            content += match[3] || ''
-          }
-
-          arg = {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content,
-            isStatic,
-            constType: isStatic
-              ? ConstantTypes.CAN_STRINGIFY
-              : ConstantTypes.NOT_CONSTANT,
-            // @ts-expect-error TODO
-            loc: {}
-          }
-        }
-
-        const modifiers = match[3] ? match[3].slice(1).split('.') : []
-        if (isPropShorthand) modifiers.push('prop')
-
-        // 2.x compat v-bind:foo.sync -> v-model:foo
-        if (__COMPAT__ && dirName === 'bind' && arg) {
-          // TODO
-          // if (
-          //   modifiers.includes('sync') &&
-          //   checkCompatEnabled(
-          //     CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
-          //     context,
-          //     loc,
-          //     arg.loc.source
-          //   )
-          // ) {
-          //   dirName = 'model'
-          //   modifiers.splice(modifiers.indexOf('sync'), 1)
-          // }
-          // if (__DEV__ && modifiers.includes('prop')) {
-          //   checkCompatEnabled(
-          //     CompilerDeprecationTypes.COMPILER_V_BIND_PROP,
-          //     context,
-          //     loc
-          //   )
-          // }
-        }
-
-        currentProp = {
-          type: NodeTypes.DIRECTIVE,
-          name: dirName,
-          exp: undefined,
-          arg,
-          modifiers,
-          // @ts-expect-error TODO
-          loc: {}
-        }
-      } else {
-        // plain attribute
-        currentProp = {
-          type: NodeTypes.ATTRIBUTE,
-          name,
-          value: undefined,
-          loc: {
-            start: tokenizer.getPositionForIndex(start),
-            // @ts-expect-error to be attached on attribute end
-            end: undefined,
-            source: ''
-          }
-        }
+      // plain attribute
+      currentProp = {
+        type: NodeTypes.ATTRIBUTE,
+        name: getSlice(start, end),
+        value: undefined,
+        loc: getLoc(start)
       }
     },
+
+    ondirname(start, end) {
+      // console.log('name ' + getSlice(start, end))
+      const raw = getSlice(start, end)
+      const name =
+        raw === '.' || raw === ':'
+          ? 'bind'
+          : raw === '@'
+          ? 'on'
+          : raw === '#'
+          ? 'slot'
+          : raw.slice(2)
+      currentProp = {
+        type: NodeTypes.DIRECTIVE,
+        name,
+        exp: undefined,
+        arg: undefined,
+        modifiers: [],
+        loc: getLoc(start)
+      }
+    },
+    ondirarg(start, end) {
+      // console.log('arg ' + getSlice(start, end))
+      const arg = getSlice(start, end)
+      const isStatic = arg[0] !== `[`
+      ;(currentProp as DirectiveNode).arg = {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: arg,
+        isStatic,
+        constType: isStatic
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
+        loc: getLoc(start, end)
+      }
+    },
+    ondirmodifier(start, end) {
+      // console.log('.' + getSlice(start, end))
+    },
+
     onattribdata(start, end) {
       currentAttrValue += getSlice(start, end)
+      if (currentAttrStartIndex < 0) currentAttrStartIndex = start - 1
+      currentAttrEndIndex = end + 1
     },
     onattribentity(codepoint) {
       currentAttrValue += fromCodePoint(codepoint)
@@ -260,45 +202,34 @@ const tokenizer = new Tokenizer(
       // } else {
       //   currentAttrs.add(name)
       // }
-      // if (currentElement) {
-      //   if (currentAttrValue) {
-      //     if (currentProp!.type === NodeTypes.ATTRIBUTE) {
-      //       // assign value
-      //       currentProp!.value = {
-      //         type: NodeTypes.TEXT,
-      //         content: currentAttrValue,
-      //         // @ts-expect-error TODO
-      //         loc: {}
-      //       }
-      //     } else {
-      //       // directive
-      //       currentProp!.exp = {
-      //         type: NodeTypes.SIMPLE_EXPRESSION,
-      //         content: currentAttrValue,
-      //         isStatic: false,
-      //         // Treat as non-constant by default. This can be potentially set to
-      //         // other values by `transformExpression` to make it eligible for hoisting.
-      //         constType: ConstantTypes.NOT_CONSTANT,
-      //         // @ts-expect-error TODO
-      //         loc: {}
-      //       }
-      //     }
-      //   }
-      //   currentProp!.loc.end = tokenizer.getPositionForIndex(end)
-      //   currentElement.props.push(currentProp!)
-      // }
+      if (currentElement) {
+        if (currentAttrValue) {
+          if (currentProp!.type === NodeTypes.ATTRIBUTE) {
+            // assign value
+            currentProp!.value = {
+              type: NodeTypes.TEXT,
+              content: currentAttrValue,
+              loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
+            }
+          } else {
+            // directive
+            currentProp!.exp = {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: currentAttrValue,
+              isStatic: false,
+              // Treat as non-constant by default. This can be potentially set
+              // to other values by `transformExpression` to make it eligible
+              // for hoisting.
+              constType: ConstantTypes.NOT_CONSTANT,
+              loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
+            }
+          }
+        }
+        currentProp!.loc.end = tokenizer.getPositionForIndex(end)
+        currentElement.props.push(currentProp!)
+      }
       currentAttrValue = ''
-    },
-
-    ondirname(start, end) {
-      // console.log('name ' + getSlice(start, end))
-      currentProp
-    },
-    ondirarg(start, end) {
-      // console.log('arg ' + getSlice(start, end))
-    },
-    ondirmodifier(start, end) {
-      // console.log('.' + getSlice(start, end))
+      currentAttrStartIndex = currentAttrEndIndex = -1
     },
 
     oncomment(start, end, offset) {
@@ -493,17 +424,11 @@ function getParent() {
   return stack[0] || currentRoot
 }
 
-function isDirective(name: string) {
-  switch (name[0]) {
-    case ':':
-    case '.':
-    case '@':
-    case '#':
-      return true
-    case 'v':
-      return name[1] === '-'
-    default:
-      return false
+function getLoc(start: number, end?: number): SourceLocation {
+  return {
+    start: tokenizer.getPositionForIndex(start),
+    // @ts-expect-error allow late attachment
+    end: end && tokenizer.getPositionForIndex(end)
   }
 }
 
@@ -513,6 +438,8 @@ function reset() {
   currentProp = null
   currentAttrs.clear()
   currentAttrValue = ''
+  currentAttrStartIndex = -1
+  currentAttrEndIndex = -1
   stack.length = 0
   foreignContext.length = 1
   foreignContext[0] = false

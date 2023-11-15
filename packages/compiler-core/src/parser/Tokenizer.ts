@@ -475,10 +475,10 @@ export default class Tokenizer {
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
     } else if (!isWhitespace(c)) {
-      this.enterAttribute(c)
+      this.handleAttributeStart(c)
     }
   }
-  private enterAttribute(c: number) {
+  private handleAttributeStart(c: number) {
     if (
       c === CharCodes.LowerV &&
       this.buffer.charCodeAt(this.index + 1) === CharCodes.Dash
@@ -576,7 +576,7 @@ export default class Tokenizer {
       this.stateBeforeAttributeName(c)
     } else if (!isWhitespace(c)) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
-      this.enterAttribute(c)
+      this.handleAttributeStart(c)
     }
   }
   private stateBeforeAttributeValue(c: number): void {
