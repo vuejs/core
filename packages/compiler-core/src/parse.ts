@@ -40,7 +40,6 @@ import {
 } from './compat/compatConfig'
 
 type OptionalOptions =
-  | 'htmlMode'
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
