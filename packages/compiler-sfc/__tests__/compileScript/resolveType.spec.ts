@@ -481,25 +481,28 @@ describe('resolveType', () => {
 
     test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
       const files = {
-        'C:\\Test\\foo.ts': 'export type P = { foo: number }',
-        'C:\\Test\\bar.d.ts':
+        'C:\\Test\\FolderA\\foo.ts': 'export type P = { foo: number }',
+        'C:\\Test\\FolderA\\bar.d.ts':
           'type X = { bar: string }; export { X as Y };' +
           // verify that we can parse syntax that is only valid in d.ts
-          'export const baz: boolean'
+          'export const baz: boolean',
+        'C:\\Test\\FolderB\\buz.ts': 'export type Z = { buz: string }'
       }
       const { props, deps } = resolve(
         `
       import { P } from './foo'
       import { Y as PP } from './bar'
-      defineProps<P & PP>()
+      import { Z as PPP } from '../FolderB/buz'
+      defineProps<P & PP & PPP>()
     `,
         files,
         {},
-        'C:\\Test\\Test.vue'
+        'C:\\Test\\FolderA\\Test.vue'
       )
       expect(props).toStrictEqual({
         foo: ['Number'],
-        bar: ['String']
+        bar: ['String'],
+        buz: ['String']
       })
       expect(deps && [...deps].map(normalize)).toStrictEqual(
         Object.keys(files).map(normalize)
