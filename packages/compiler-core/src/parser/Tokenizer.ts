@@ -143,6 +143,7 @@ export interface Callbacks {
   onattribentity(codepoint: number): void
   onattribend(quote: QuoteType, endIndex: number): void
   onattribname(start: number, endIndex: number): void
+  onattribnameend(endIndex: number): void
 
   ondirname(start: number, endIndex: number): void
   ondirarg(start: number, endIndex: number): void
@@ -218,7 +219,7 @@ export default class Tokenizer {
    * processed index, so all the newlines up to this index should have been
    * recorded.
    */
-  public getPositionForIndex(index: number): Position {
+  public getPos(index: number): Position {
     let line = 1
     let column = index + 1
     for (let i = this.newlines.length - 1; i >= 0; i--) {
@@ -513,17 +514,13 @@ export default class Tokenizer {
   private stateInAttributeName(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.onattribname(this.sectionStart, this.index)
-      this.sectionStart = this.index
-      this.state = State.AfterAttributeName
-      this.stateAfterAttributeName(c)
+      this.handleAttributeNameEnd(c)
     }
   }
   private stateInDirectiveName(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirname(this.sectionStart, this.index)
-      this.sectionStart = this.index
-      this.state = State.AfterAttributeName
-      this.stateAfterAttributeName(c)
+      this.handleAttributeNameEnd(c)
     } else if (c === CharCodes.Colon) {
       this.cbs.ondirname(this.sectionStart, this.index)
       this.state = State.InDirectiveArg
@@ -537,9 +534,7 @@ export default class Tokenizer {
   private stateInDirectiveArg(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index)
-      this.sectionStart = this.index
-      this.state = State.AfterAttributeName
-      this.stateAfterAttributeName(c)
+      this.handleAttributeNameEnd(c)
     } else if (c === CharCodes.LeftSqaure) {
       this.state = State.InDirectiveDynamicArg
     } else if (c === CharCodes.Dot) {
@@ -558,13 +553,17 @@ export default class Tokenizer {
   private stateInDirectiveModifier(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
-      this.sectionStart = this.index
-      this.state = State.AfterAttributeName
-      this.stateAfterAttributeName(c)
+      this.handleAttributeNameEnd(c)
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
       this.sectionStart = this.index + 1
     }
+  }
+  private handleAttributeNameEnd(c: number): void {
+    this.sectionStart = this.index
+    this.state = State.AfterAttributeName
+    this.cbs.onattribnameend(this.index)
+    this.stateAfterAttributeName(c)
   }
   private stateAfterAttributeName(c: number): void {
     if (c === CharCodes.Eq) {
