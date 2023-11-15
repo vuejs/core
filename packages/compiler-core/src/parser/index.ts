@@ -274,10 +274,13 @@ function emitOpenTag(name: string, start: number) {
 function endOpenTag(end: number) {
   addNode(currentElement!)
   const name = currentElement!.tag
-  if (!currentOptions.isVoidTag(name)) {
-    stack.unshift(currentElement!)
-  } else {
+  if (currentOptions.isPreTag(name)) {
+    inPre++
+  }
+  if (currentOptions.isVoidTag(name)) {
     onCloseTag(currentElement!, end)
+  } else {
+    stack.unshift(currentElement!)
   }
   currentElement = null
 }
@@ -319,6 +322,9 @@ function onCloseTag(el: ElementNode, end: number) {
   el.loc.end = tokenizer.getPos(end + offset + 1)
   // whitepsace management
   el.children = condenseWhitespace(el.children)
+  if (currentOptions.isPreTag(el.tag)) {
+    inPre--
+  }
 }
 
 const windowsNewlineRE = /\r\n/g
