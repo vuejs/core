@@ -13,7 +13,7 @@ import {
   createRoot
 } from '../ast'
 import { ParserOptions } from '../options'
-import Tokenizer, { CharCodes, isWhitespace } from './Tokenizer'
+import Tokenizer, { CharCodes, QuoteType, isWhitespace } from './Tokenizer'
 import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
@@ -184,18 +184,18 @@ const tokenizer = new Tokenizer(
       }
     },
     ondirmodifier(start, end) {
-      // console.log('.' + getSlice(start, end))
+      ;(currentProp as DirectiveNode).modifiers.push(getSlice(start, end))
     },
 
     onattribdata(start, end) {
       currentAttrValue += getSlice(start, end)
-      if (currentAttrStartIndex < 0) currentAttrStartIndex = start - 1
-      currentAttrEndIndex = end + 1
+      if (currentAttrStartIndex < 0) currentAttrStartIndex = start
+      currentAttrEndIndex = end
     },
     onattribentity(codepoint) {
       currentAttrValue += fromCodePoint(codepoint)
     },
-    onattribend(_quote, end) {
+    onattribend(quote, end) {
       // TODO check duplicate
       // if (currentAttrs.has(name)) {
       //   // emit error DUPLICATE_ATTRIBUTE
@@ -209,7 +209,10 @@ const tokenizer = new Tokenizer(
             currentProp!.value = {
               type: NodeTypes.TEXT,
               content: currentAttrValue,
-              loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
+              loc:
+                quote === QuoteType.Unquoted
+                  ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
+                  : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
             }
           } else {
             // directive
