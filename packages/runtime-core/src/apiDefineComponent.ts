@@ -74,7 +74,8 @@ export type DefineComponent<
     Defaults,
     true,
     I,
-    S
+    S,
+    Options
   >
 > &
   Omit<

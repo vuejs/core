@@ -116,19 +116,48 @@ export type UnwrapMixinsType<
 
 type EnsureNonVoid<T> = T extends void ? {} : T
 
+/**
+ * 
+  P = {}, // props type extracted from props option
+  B = {}, // raw bindings returned from setup()
+  D = {}, // return from data()
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  E extends EmitsOptions = {},
+  PublicProps = P,
+  Defaults = {},
+  MakeDefaultsOptional extends boolean = false,
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
+ */
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance<
     Props,
     RawBindings,
     D,
     C,
-    M
+    M,
+    E,
+    PublicProps,
+    Defaults,
+    MakeDefaultsOptional,
+    Options,
+    I,
+    S
   > = ComponentPublicInstance<any>,
   Props = any,
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  E extends EmitsOptions = {},
+  PublicProps = {},
+  Defaults = {},
+  MakeDefaultsOptional extends boolean = false,
+  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {}
 > = {
   __isFragment?: never
   __isTeleport?: never
@@ -150,6 +179,21 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
+  Options = ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -170,21 +214,7 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<
-    P,
-    B,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    string,
-    Defaults,
-    {},
-    string,
-    S
-  >,
+  Options,
   I,
   S
 >
@@ -200,7 +230,7 @@ export type ComponentPublicInstance<
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
+  Options = any,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {}
 > = {

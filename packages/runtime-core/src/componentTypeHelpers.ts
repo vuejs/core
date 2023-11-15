@@ -3,8 +3,13 @@ import { RawOptionsSymbol } from './apiDefineComponent'
 import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import { ExtractPropTypes } from './componentProps'
 import { Slot, Slots } from './componentSlots'
-import { VNode } from '.'
-import { IntersectionMixin, UnwrapMixinsType } from './componentPublicInstance'
+import { Component, FunctionalComponent, VNode } from '.'
+import {
+  ComponentPublicInstance,
+  ComponentPublicInstanceConstructor,
+  IntersectionMixin,
+  UnwrapMixinsType
+} from './componentPublicInstance'
 
 export type ExtractComponentOptions<T> = T extends {
   [RawOptionsSymbol]: infer Options
@@ -87,6 +92,10 @@ export type ExtractComponentEmits<T> = T extends ComponentOptionsBase<
   ? E
   : T extends (props: any, opts: { emits: infer E extends EmitsOptions }) => any
   ? E
+  : T extends { $options: infer Options }
+  ? Options extends { emits: infer E }
+    ? E
+    : {}
   : {}
 
 type ResolveMixin<T> = [T] extends [
@@ -123,15 +132,17 @@ export type ComponentProps<
       : unknown
     : unknown
   : {}) &
-  (ExtractComponentProp<T> extends infer P
-    ? P extends Readonly<Array<infer V>>
-      ? [V] extends [string]
-        ? Readonly<{ [key in V]?: any }>
-        : {}
-      : ExtractPropTypes<P>
-    : {}) &
-  // props to be omitted since we don't need them here
-  ResolveMixinProps<Omit<T, 'props'>>
+  (T extends { $props: infer P }
+    ? P
+    : (ExtractComponentProp<T> extends infer P
+        ? P extends Readonly<Array<infer V>>
+          ? [V] extends [string]
+            ? Readonly<{ [key in V]?: any }>
+            : {}
+          : ExtractPropTypes<P>
+        : {}) &
+        // props to be omitted since we don't need them here
+        ResolveMixinProps<Omit<T, 'props'>>)
 
 export type ComponentSlots<T> = ExtractComponentSlots<T> extends infer S
   ? {
@@ -145,213 +156,64 @@ export type ComponentEmits<T> = ExtractComponentEmits<T> extends infer E
     : EmitFn<E>
   : () => void
 
-// export type ComponentDefineOptions<
-//   // OriginalProps = never,
-//   Props = never,
-//   RawBindings = {},
-//   D = {},
-//   C extends ComputedOptions = {},
-//   M extends MethodOptions = {},
-//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   E extends EmitsOptions = {},
-//   EE extends string = string,
-//   I extends ComponentInjectOptions = {},
-//   II extends string = string,
-//   S extends SlotsType = {},
-//   Options = {},
-//   // test stuff
-//   // PropNames extends string = Props extends string ? Props : never,
-//   PropOptions extends ComponentObjectPropsOptions<
-//     Record<keyof Props, any>
-//   > = ComponentObjectPropsOptions<Record<keyof Props, any>>
-// > =
-//   | (Options & {
-//       props?: [Props] extends [string] ? Props[] : PropOptions
-//       // [K: string] :any
-//     } & (Props extends string
-//         ? ComponentOptionsWithArrayProps<
-//             Props,
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : [Props] extends [undefined]
-//         ? ComponentOptionsWithoutProps<
-//             {},
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : [Props] extends [ComponentObjectPropsOptions]
-//         ? ComponentOptionsWithObjectProps<
-//             Props,
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : never))
-//   | (((
-//       props: Props,
-//       ctx: SetupContext<E, S>
-//     ) => RenderFunction | Promise<RenderFunction>) &
-//       Options)
+// from other PR https://github.com/vuejs/core/pull/5408
+export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+  ? InstanceType<T>
+  : T extends FunctionalComponent<infer Props, infer Emits>
+  ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
+  : T extends ComponentPublicInstanceConstructor
+  ? InstanceType<T>
+  : T extends Component<
+      infer Props,
+      infer RawBindings,
+      infer D,
+      infer C,
+      infer M
+    >
+  ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+    ComponentPublicInstance<
+      unknown extends Props ? {} : Props,
+      unknown extends RawBindings ? {} : RawBindings,
+      unknown extends D ? {} : D,
+      C,
+      M
+    >
+  : never // not a vue Component
 
-// declare function supa<
-//   Props = undefined,
-//   RawBindings = {},
-//   D = {},
-//   C extends ComputedOptions = {},
-//   M extends MethodOptions = {},
-//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   E extends EmitsOptions = {},
-//   EE extends string = string,
-//   I extends ComponentInjectOptions = {},
-//   II extends string = string,
-//   S extends SlotsType = {},
-//   Options = {}
-// >(
-//   options: ComponentDefineOptions<
-//     Props,
-//     RawBindings,
-//     D,
-//     C,
-//     M,
-//     Mixin,
-//     Extends,
-//     E,
-//     EE,
-//     I,
-//     II,
-//     S,
-//     Options
-//   >
-// ): Options
+// declare function getInstance<T>(component: T): ComponentInstance<T>
+// declare function getProps<T>(vm: T): ComponentProps<T>
+// declare function getEmits<T>(vm: T): ExtractComponentEmits<T>
 
-// const a = supa({
-//   NonExistentOption: 'assa',
-//   setup(props) {}
-// })
-
-// const e = supa({})
-
-// const b = supa({
-//   props: ['a'],
-//   setup(props) {
-//     props.a
-//     //@ts-expect-error
-//     props.b
-//   }
-// })
-
-// const c = supa({
+// const o = defineComponent({
 //   props: {
-//     a: String,
-//     b: {
-//       type: String,
-//       required: true
-//     }
+//     a: String
 //   },
-//   setup(props) {
-//     props.a
-//     props.b
-//     //@ts-expect-error
-//     props.c
-//   }
+//   emits: ['modelValueChange']
 // })
 
-// const f = supa(() => () => '')
-// const aa = supa({
-//   // props: undefined,
-//   // props: undefined as never,
-//   setup(props) {
-//     return () => h('div')
-//   }
-// })
+// // const oo = new o()
+// // oo.$props.$attrs.test
 
-// const v = supa({
+// const c = defineComponent({
 //   props: {
-//     a: String,
-//     aa: null,
-//     b: {
-//       type: String,
-//       required: true,
-//       validator: (b: unknown) => {
-//         // this.
-//         return true
-//       }
-//     },
-//     c: {
-//       type: Boolean
-//       // validator(b: unknown) {
-//       //   return false
-//       // }
-//     }
-//     // d: {
-//     //   type: String,
-//     //   validator(b: unknown): boolean {
-//     //     return false
-//     //   },
-//     //   required: true
-//     // }
+//     a: String
 //   },
-//   setup(props) {
-//     props.b, props.c
-//   },
-//   ssss(p, c) {
-//     c
+//   // emits: ['modelValueChange']
+//   emits: {
+//     test: (v: string) => true
 //   }
 // })
 
-// const pp = ComponentObjectProps({
-//   props: {
-//     a: String,
-//     b: {
-//       type: String,
-//       validator(b) {
-//         return true
-//       }
-//     }
-//   }
-// })
+// const a = getInstance(c)
+// // a.bb
+// // a.aa
+// // a.cc
+// // a.dd
 
-// declare function propValidation<T>(options: ComponentObjectPropsOptions<T>): T
+// // a.$props.$attrs.tesr
+// // const p = getProps(a)
+// // p.$attrs.test
+// // p.
 
-// propValidation({
-//   a: String,
-//   b: {
-//     type: String,
-//     validator(b) {
-//       return true
-//     }
-//   }
-// })
-
-// declare function ComponentObjectProps<T extends ComponentObjectPropsOptions>(
-//   options: ComponentOptionsWithObjectProps<T>
-// ): T
+// const ee = getEmits(c)
+// const e = getEmits(a)
