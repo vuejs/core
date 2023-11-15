@@ -374,6 +374,23 @@ describe('reactivity/ref', () => {
     expect(refs[1].value).toBe('2')
   })
 
+  test('toRefs should add new properties', () => {
+    const a = reactive<{ foo: string; bar?: string }>({
+      foo: 'foo'
+    })
+
+    const { foo, bar } = toRefs(a)
+    expect(isRef(foo)).toBe(true)
+    expect(isRef(bar)).toBe(true)
+
+    expect(foo.value).toBe('foo')
+    expect(bar.value).toBe(undefined)
+
+    bar.value = 'bar'
+
+    expect(a.bar).toBe('bar')
+  })
+
   test('customRef', () => {
     let value = 1
     let _trigger: () => void
