@@ -47,6 +47,7 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
+  // TODO handle entities
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
@@ -69,162 +70,182 @@ let inPre = 0
 // let inVPre = 0
 const stack: ElementNode[] = []
 
-const tokenizer = new Tokenizer(
-  // TODO handle entities
-  { decodeEntities: true },
-  {
-    ontext(start, end) {
-      onText(getSlice(start, end), start, end)
-    },
+const tokenizer = new Tokenizer({
+  ontext(start, end) {
+    onText(getSlice(start, end), start, end)
+  },
 
-    ontextentity(cp, end) {
-      onText(fromCodePoint(cp), end - 1, end)
-    },
+  ontextentity(cp, end) {
+    onText(fromCodePoint(cp), end - 1, end)
+  },
 
-    onopentagname(start, end) {
-      emitOpenTag(getSlice(start, end), start)
-    },
-
-    onopentagend(end) {
-      endOpenTag(end)
-    },
-
-    onclosetag(start, end) {
-      const name = getSlice(start, end)
-      if (!currentOptions.isVoidTag(name)) {
-        const pos = stack.findIndex(e => e.tag === name)
-        if (pos !== -1) {
-          for (let index = 0; index <= pos; index++) {
-            onCloseTag(stack.shift()!, end)
-          }
-        }
-      }
-    },
-
-    onselfclosingtag(end) {
-      closeCurrentTag(end)
-    },
-
-    onattribname(start, end) {
-      // plain attribute
-      currentProp = {
-        type: NodeTypes.ATTRIBUTE,
-        name: getSlice(start, end),
-        value: undefined,
-        loc: getLoc(start)
-      }
-    },
-
-    ondirname(start, end) {
-      const raw = getSlice(start, end)
-      const name =
-        raw === '.' || raw === ':'
-          ? 'bind'
-          : raw === '@'
-          ? 'on'
-          : raw === '#'
-          ? 'slot'
-          : raw.slice(2)
-      currentProp = {
-        type: NodeTypes.DIRECTIVE,
-        name,
-        exp: undefined,
-        arg: undefined,
-        modifiers: [],
-        loc: getLoc(start)
-      }
-    },
-
-    ondirarg(start, end) {
-      const arg = getSlice(start, end)
-      const isStatic = arg[0] !== `[`
-      ;(currentProp as DirectiveNode).arg = {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: arg,
-        isStatic,
-        constType: isStatic
-          ? ConstantTypes.CAN_STRINGIFY
-          : ConstantTypes.NOT_CONSTANT,
-        loc: getLoc(start, end)
-      }
-    },
-    ondirmodifier(start, end) {
-      ;(currentProp as DirectiveNode).modifiers.push(getSlice(start, end))
-    },
-
-    onattribdata(start, end) {
-      currentAttrValue += getSlice(start, end)
-      if (currentAttrStartIndex < 0) currentAttrStartIndex = start
-      currentAttrEndIndex = end
-    },
-
-    onattribentity(codepoint) {
-      currentAttrValue += fromCodePoint(codepoint)
-    },
-
-    onattribnameend(end) {
-      // check duplicate attrs
-      const start = currentProp!.loc.start.offset
-      const name = getSlice(start, end)
-      if (currentAttrs.has(name)) {
-        currentProp = null
-        // TODO emit error DUPLICATE_ATTRIBUTE
-        throw new Error(`duplicate attr ${name}`)
-      } else {
-        currentAttrs.add(name)
-      }
-    },
-
-    onattribend(quote, end) {
-      if (currentElement && currentProp) {
-        if (currentAttrValue) {
-          if (currentProp.type === NodeTypes.ATTRIBUTE) {
-            // assign value
-            currentProp!.value = {
-              type: NodeTypes.TEXT,
-              content: currentAttrValue,
-              loc:
-                quote === QuoteType.Unquoted
-                  ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
-                  : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
-            }
-          } else {
-            // directive
-            currentProp.exp = {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: currentAttrValue,
-              isStatic: false,
-              // Treat as non-constant by default. This can be potentially set
-              // to other values by `transformExpression` to make it eligible
-              // for hoisting.
-              constType: ConstantTypes.NOT_CONSTANT,
-              loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
-            }
-          }
-        }
-        currentProp.loc.end = tokenizer.getPos(end)
-        currentElement.props.push(currentProp!)
-      }
-      currentAttrValue = ''
-      currentAttrStartIndex = currentAttrEndIndex = -1
-    },
-
-    oncomment(start, end, offset) {
-      // TODO oncomment
-    },
-
-    onend() {
-      const end = currentInput.length - 1
-      for (let index = 0; index < stack.length; index++) {
-        onCloseTag(stack[index], end)
-      }
-    },
-
-    oncdata(start, end, offset) {
-      // TODO throw error
+  oninterpolation(start, end) {
+    let innerStart = start + tokenizer.delimiterOpen.length
+    let innerEnd = end - tokenizer.delimiterClose.length
+    while (isWhitespace(currentInput.charCodeAt(innerStart))) {
+      innerStart++
     }
+    while (isWhitespace(currentInput.charCodeAt(innerEnd - 1))) {
+      innerEnd--
+    }
+    addNode({
+      type: NodeTypes.INTERPOLATION,
+      content: {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        isStatic: false,
+        // Set `isConstant` to false by default and will decide in transformExpression
+        constType: ConstantTypes.NOT_CONSTANT,
+        content: getSlice(innerStart, innerEnd),
+        loc: getLoc(innerStart, innerEnd)
+      },
+      loc: getLoc(start, end)
+    })
+  },
+
+  onopentagname(start, end) {
+    emitOpenTag(getSlice(start, end), start)
+  },
+
+  onopentagend(end) {
+    endOpenTag(end)
+  },
+
+  onclosetag(start, end) {
+    const name = getSlice(start, end)
+    if (!currentOptions.isVoidTag(name)) {
+      const pos = stack.findIndex(e => e.tag === name)
+      if (pos !== -1) {
+        for (let index = 0; index <= pos; index++) {
+          onCloseTag(stack.shift()!, end)
+        }
+      }
+    }
+  },
+
+  onselfclosingtag(end) {
+    closeCurrentTag(end)
+  },
+
+  onattribname(start, end) {
+    // plain attribute
+    currentProp = {
+      type: NodeTypes.ATTRIBUTE,
+      name: getSlice(start, end),
+      value: undefined,
+      loc: getLoc(start)
+    }
+  },
+
+  ondirname(start, end) {
+    const raw = getSlice(start, end)
+    const name =
+      raw === '.' || raw === ':'
+        ? 'bind'
+        : raw === '@'
+        ? 'on'
+        : raw === '#'
+        ? 'slot'
+        : raw.slice(2)
+    currentProp = {
+      type: NodeTypes.DIRECTIVE,
+      name,
+      exp: undefined,
+      arg: undefined,
+      modifiers: [],
+      loc: getLoc(start)
+    }
+  },
+
+  ondirarg(start, end) {
+    const arg = getSlice(start, end)
+    const isStatic = arg[0] !== `[`
+    ;(currentProp as DirectiveNode).arg = {
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: arg,
+      isStatic,
+      constType: isStatic
+        ? ConstantTypes.CAN_STRINGIFY
+        : ConstantTypes.NOT_CONSTANT,
+      loc: getLoc(start, end)
+    }
+  },
+
+  ondirmodifier(start, end) {
+    ;(currentProp as DirectiveNode).modifiers.push(getSlice(start, end))
+  },
+
+  onattribdata(start, end) {
+    currentAttrValue += getSlice(start, end)
+    if (currentAttrStartIndex < 0) currentAttrStartIndex = start
+    currentAttrEndIndex = end
+  },
+
+  onattribentity(codepoint) {
+    currentAttrValue += fromCodePoint(codepoint)
+  },
+
+  onattribnameend(end) {
+    // check duplicate attrs
+    const start = currentProp!.loc.start.offset
+    const name = getSlice(start, end)
+    if (currentAttrs.has(name)) {
+      currentProp = null
+      // TODO emit error DUPLICATE_ATTRIBUTE
+      throw new Error(`duplicate attr ${name}`)
+    } else {
+      currentAttrs.add(name)
+    }
+  },
+
+  onattribend(quote, end) {
+    if (currentElement && currentProp) {
+      if (currentAttrValue) {
+        if (currentProp.type === NodeTypes.ATTRIBUTE) {
+          // assign value
+          currentProp!.value = {
+            type: NodeTypes.TEXT,
+            content: currentAttrValue,
+            loc:
+              quote === QuoteType.Unquoted
+                ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
+                : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
+          }
+        } else {
+          // directive
+          currentProp.exp = {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: currentAttrValue,
+            isStatic: false,
+            // Treat as non-constant by default. This can be potentially set
+            // to other values by `transformExpression` to make it eligible
+            // for hoisting.
+            constType: ConstantTypes.NOT_CONSTANT,
+            loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
+          }
+        }
+      }
+      currentProp.loc.end = tokenizer.getPos(end)
+      currentElement.props.push(currentProp!)
+    }
+    currentAttrValue = ''
+    currentAttrStartIndex = currentAttrEndIndex = -1
+  },
+
+  oncomment(start, end, offset) {
+    // TODO oncomment
+  },
+
+  onend() {
+    const end = currentInput.length - 1
+    for (let index = 0; index < stack.length; index++) {
+      onCloseTag(stack[index], end)
+    }
+  },
+
+  oncdata(start, end, offset) {
+    // TODO throw error
   }
-)
+})
 
 function getSlice(start: number, end: number) {
   return currentInput.slice(start, end)
@@ -283,7 +304,7 @@ function onText(content: string, start: number, end: number) {
       loc: {
         start: tokenizer.getPos(start),
         end: tokenizer.getPos(end),
-        source: content
+        source: ''
       }
     })
   }
@@ -413,8 +434,17 @@ function reset() {
   stack.length = 0
 }
 
+function toCharCodes(str: string): number[] {
+  return str.split('').map(c => c.charCodeAt(0))
+}
+
 export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
+  const delimiters = options?.delimiters
+  if (delimiters) {
+    tokenizer.delimiterOpen = toCharCodes(delimiters[0])
+    tokenizer.delimiterClose = toCharCodes(delimiters[1])
+  }
   currentInput = input
   currentOptions = extend({}, defaultParserOptions, options)
   const root = (currentRoot = createRoot([]))

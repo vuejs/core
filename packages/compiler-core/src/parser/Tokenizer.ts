@@ -65,9 +65,15 @@ export const enum CharCodes {
   RightSquare = 93 // "]"
 }
 
+const defaultDelimitersOpen = [123, 123] // "{{"
+const defaultDelimitersClose = [125, 125] // "}}"
+
 /** All the states the tokenizer can be in. */
 const enum State {
   Text = 1,
+  Interpolation,
+
+  // Tags
   BeforeTagName, // After <
   InTagName,
   InSelfClosingTag,
@@ -134,6 +140,8 @@ export interface Callbacks {
   ontext(start: number, endIndex: number): void
   ontextentity(codepoint: number, endIndex: number): void
 
+  oninterpolation(start: number, endIndex: number): void
+
   onopentagname(start: number, endIndex: number): void
   onopentagend(endIndex: number): void
   onselfclosingtag(endIndex: number): void
@@ -190,14 +198,9 @@ export default class Tokenizer {
   /** Reocrd newline positions for fast line / column calculation */
   private newlines: number[] = []
 
-  private readonly decodeEntities: boolean
   private readonly entityDecoder: EntityDecoder
 
-  constructor(
-    { decodeEntities = true }: { decodeEntities?: boolean },
-    private readonly cbs: Callbacks
-  ) {
-    this.decodeEntities = decodeEntities
+  constructor(private readonly cbs: Callbacks) {
     this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
       this.emitCodePoint(cp, consumed)
     )
@@ -211,6 +214,8 @@ export default class Tokenizer {
     this.baseState = State.Text
     this.currentSequence = undefined!
     this.newlines.length = 0
+    this.delimiterOpen = defaultDelimitersOpen
+    this.delimiterClose = defaultDelimitersClose
   }
 
   /**
@@ -238,17 +243,45 @@ export default class Tokenizer {
   }
 
   private stateText(c: number): void {
-    if (
-      c === CharCodes.Lt ||
-      (!this.decodeEntities && this.fastForwardTo(CharCodes.Lt))
-    ) {
+    if (c === CharCodes.Lt) {
       if (this.index > this.sectionStart) {
         this.cbs.ontext(this.sectionStart, this.index)
       }
       this.state = State.BeforeTagName
       this.sectionStart = this.index
-    } else if (this.decodeEntities && c === CharCodes.Amp) {
+    } else if (c === CharCodes.Amp) {
       this.startEntity()
+    } else if (this.matchDelimiter(c, this.delimiterOpen)) {
+      if (this.index > this.sectionStart) {
+        this.cbs.ontext(this.sectionStart, this.index)
+      }
+      this.state = State.Interpolation
+      this.sectionStart = this.index
+      this.index += this.delimiterOpen.length
+    }
+  }
+
+  public delimiterOpen: number[] = defaultDelimitersOpen
+  public delimiterClose: number[] = defaultDelimitersClose
+  private matchDelimiter(c: number, delimiter: number[]): boolean {
+    if (c === delimiter[0]) {
+      const l = delimiter.length
+      for (let i = 1; i < l; i++) {
+        if (this.buffer.charCodeAt(this.index + i) !== delimiter[i]) {
+          return false
+        }
+      }
+      return true
+    }
+    return false
+  }
+
+  private stateInterpolation(c: number): void {
+    if (this.matchDelimiter(c, this.delimiterClose)) {
+      this.index += this.delimiterClose.length
+      this.cbs.oninterpolation(this.sectionStart, this.index)
+      this.state = State.Text
+      this.sectionStart = this.index
     }
   }
 
@@ -302,7 +335,7 @@ export default class Tokenizer {
     } else if (this.sequenceIndex === 0) {
       if (this.currentSequence === Sequences.TitleEnd) {
         // We have to parse entities in <title> tags.
-        if (this.decodeEntities && c === CharCodes.Amp) {
+        if (c === CharCodes.Amp) {
           this.startEntity()
         }
       } else if (this.fastForwardTo(CharCodes.Lt)) {
@@ -592,7 +625,7 @@ export default class Tokenizer {
     }
   }
   private handleInAttributeValue(c: number, quote: number) {
-    if (c === quote || (!this.decodeEntities && this.fastForwardTo(quote))) {
+    if (c === quote) {
       this.cbs.onattribdata(this.sectionStart, this.index)
       this.sectionStart = -1
       this.cbs.onattribend(
@@ -600,7 +633,7 @@ export default class Tokenizer {
         this.index + 1
       )
       this.state = State.BeforeAttributeName
-    } else if (this.decodeEntities && c === CharCodes.Amp) {
+    } else if (c === CharCodes.Amp) {
       this.startEntity()
     }
   }
@@ -617,7 +650,7 @@ export default class Tokenizer {
       this.cbs.onattribend(QuoteType.Unquoted, this.index)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
-    } else if (this.decodeEntities && c === CharCodes.Amp) {
+    } else if (c === CharCodes.Amp) {
       this.startEntity()
     }
   }
@@ -713,6 +746,10 @@ export default class Tokenizer {
       switch (this.state) {
         case State.Text: {
           this.stateText(c)
+          break
+        }
+        case State.Interpolation: {
+          this.stateInterpolation(c)
           break
         }
         case State.SpecialStartSequence: {
