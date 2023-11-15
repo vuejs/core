@@ -8,7 +8,8 @@ import {
   Suspense,
   Component,
   resolveComponent,
-  ConcreteComponent
+  ConcreteComponent,
+  VNode
 } from 'vue'
 import { describe, expectAssignable, expectType } from './utils'
 
@@ -254,6 +255,8 @@ describe('h should work with multiple types', () => {
   h(sampleComponent, {}, [])
 })
 
+// usage in test-utils
 describe('should allow to assign vnode', () => {
   h(h('div', 'test'))
+  h({} as unknown as VNode | string | { render: Function } | Component)
 })

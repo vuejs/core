@@ -180,9 +180,12 @@ export function h<P>(
 ): VNode
 
 // catch all types
-export function h(type: string | Constructor, children?: RawChildren): VNode
+export function h(
+  type: VNode | string | Constructor,
+  children?: RawChildren
+): VNode
 export function h<P>(
-  type: string | Component<P>,
+  type: VNode | string | Component<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
   children?: RawChildren | RawSlots
 ): VNode
