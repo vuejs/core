@@ -8,6 +8,7 @@ import {
   Namespaces,
   NodeTypes,
   RootNode,
+  SimpleExpressionNode,
   SourceLocation,
   TemplateChildNode,
   createRoot
@@ -67,7 +68,8 @@ let currentAttrStartIndex = -1
 let currentAttrEndIndex = -1
 let currentAttrs: Set<string> = new Set()
 let inPre = 0
-// let inVPre = 0
+let inVPre = false
+let currentElementIsVPreBoundary = false
 const stack: ElementNode[] = []
 
 const tokenizer = new Tokenizer({
@@ -80,6 +82,9 @@ const tokenizer = new Tokenizer({
   },
 
   oninterpolation(start, end) {
+    if (inVPre) {
+      return onText(getSlice(start, end), start, end)
+    }
     let innerStart = start + tokenizer.delimiterOpen.length
     let innerEnd = end - tokenizer.delimiterClose.length
     while (isWhitespace(currentInput.charCodeAt(innerStart))) {
@@ -103,7 +108,24 @@ const tokenizer = new Tokenizer({
   },
 
   onopentagname(start, end) {
-    emitOpenTag(getSlice(start, end), start)
+    const name = getSlice(start, end)
+    currentElement = {
+      type: NodeTypes.ELEMENT,
+      tag: name,
+      ns: currentOptions.getNamespace(name, getParent()),
+      // TODO refine tag type
+      tagType: ElementTypes.ELEMENT,
+      props: [],
+      children: [],
+      loc: {
+        start: tokenizer.getPos(start - 1),
+        // @ts-expect-error to be attached on tag close
+        end: undefined,
+        source: ''
+      },
+      codegenNode: undefined
+    }
+    currentAttrs.clear()
   },
 
   onopentagend(end) {
@@ -138,40 +160,72 @@ const tokenizer = new Tokenizer({
 
   ondirname(start, end) {
     const raw = getSlice(start, end)
-    const name =
-      raw === '.' || raw === ':'
-        ? 'bind'
-        : raw === '@'
-        ? 'on'
-        : raw === '#'
-        ? 'slot'
-        : raw.slice(2)
-    currentProp = {
-      type: NodeTypes.DIRECTIVE,
-      name,
-      exp: undefined,
-      arg: undefined,
-      modifiers: [],
-      loc: getLoc(start)
+    if (inVPre) {
+      currentProp = {
+        type: NodeTypes.ATTRIBUTE,
+        name: raw,
+        value: undefined,
+        loc: getLoc(start)
+      }
+    } else {
+      const name =
+        raw === '.' || raw === ':'
+          ? 'bind'
+          : raw === '@'
+          ? 'on'
+          : raw === '#'
+          ? 'slot'
+          : raw.slice(2)
+      currentProp = {
+        type: NodeTypes.DIRECTIVE,
+        name,
+        raw,
+        exp: undefined,
+        arg: undefined,
+        modifiers: [],
+        loc: getLoc(start)
+      }
+      if (name === 'pre') {
+        inVPre = true
+        currentElementIsVPreBoundary = true
+        // force current element type
+        currentElement!.tagType = ElementTypes.ELEMENT
+        // convert dirs before this one to attributes
+        const props = currentElement!.props
+        for (let i = 0; i < props.length; i++) {
+          if (props[i].type === NodeTypes.DIRECTIVE) {
+            props[i] = dirToAttr(props[i] as DirectiveNode)
+          }
+        }
+      }
     }
   },
 
   ondirarg(start, end) {
     const arg = getSlice(start, end)
-    const isStatic = arg[0] !== `[`
-    ;(currentProp as DirectiveNode).arg = {
-      type: NodeTypes.SIMPLE_EXPRESSION,
-      content: arg,
-      isStatic,
-      constType: isStatic
-        ? ConstantTypes.CAN_STRINGIFY
-        : ConstantTypes.NOT_CONSTANT,
-      loc: getLoc(start, end)
+    if (inVPre) {
+      ;(currentProp as AttributeNode).name += arg
+    } else {
+      const isStatic = arg[0] !== `[`
+      ;(currentProp as DirectiveNode).arg = {
+        type: NodeTypes.SIMPLE_EXPRESSION,
+        content: arg,
+        isStatic,
+        constType: isStatic
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
+        loc: getLoc(start, end)
+      }
     }
   },
 
   ondirmodifier(start, end) {
-    ;(currentProp as DirectiveNode).modifiers.push(getSlice(start, end))
+    const mod = getSlice(start, end)
+    if (inVPre) {
+      ;(currentProp as AttributeNode).name += '.' + mod
+    } else {
+      ;(currentProp as DirectiveNode).modifiers.push(mod)
+    }
   },
 
   onattribdata(start, end) {
@@ -188,6 +242,9 @@ const tokenizer = new Tokenizer({
     // check duplicate attrs
     const start = currentProp!.loc.start.offset
     const name = getSlice(start, end)
+    if (currentProp!.type === NodeTypes.DIRECTIVE) {
+      currentProp!.raw = name
+    }
     if (currentAttrs.has(name)) {
       currentProp = null
       // TODO emit error DUPLICATE_ATTRIBUTE
@@ -225,7 +282,12 @@ const tokenizer = new Tokenizer({
         }
       }
       currentProp.loc.end = tokenizer.getPos(end)
-      currentElement.props.push(currentProp!)
+      if (
+        currentProp.type !== NodeTypes.DIRECTIVE ||
+        currentProp.name !== 'pre'
+      ) {
+        currentElement.props.push(currentProp)
+      }
     }
     currentAttrValue = ''
     currentAttrStartIndex = currentAttrEndIndex = -1
@@ -249,26 +311,6 @@ const tokenizer = new Tokenizer({
 
 function getSlice(start: number, end: number) {
   return currentInput.slice(start, end)
-}
-
-function emitOpenTag(name: string, start: number) {
-  currentElement = {
-    type: NodeTypes.ELEMENT,
-    tag: name,
-    ns: currentOptions.getNamespace(name, getParent()),
-    // TODO refine tag type
-    tagType: ElementTypes.ELEMENT,
-    props: [],
-    children: [],
-    loc: {
-      start: tokenizer.getPos(start - 1),
-      // @ts-expect-error to be attached on tag close
-      end: undefined,
-      source: ''
-    },
-    codegenNode: undefined
-  }
-  currentAttrs.clear()
 }
 
 function endOpenTag(end: number) {
@@ -299,7 +341,7 @@ function onText(content: string, start: number, end: number) {
   if (lastNode?.type === NodeTypes.TEXT) {
     // merge
     lastNode.content += content
-    // TODO update loc
+    lastNode.loc.end = tokenizer.getPos(end)
   } else {
     parent.children.push({
       type: NodeTypes.TEXT,
@@ -324,6 +366,10 @@ function onCloseTag(el: ElementNode, end: number) {
   el.children = condenseWhitespace(el.children)
   if (currentOptions.isPreTag(el.tag)) {
     inPre--
+  }
+  if (currentElementIsVPreBoundary) {
+    inVPre = false
+    currentElementIsVPreBoundary = false
   }
 }
 
@@ -427,6 +473,31 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     end: end && tokenizer.getPos(end)
   }
+}
+
+function dirToAttr(dir: DirectiveNode): AttributeNode {
+  const attr: AttributeNode = {
+    type: NodeTypes.ATTRIBUTE,
+    name: dir.raw!,
+    value: undefined,
+    loc: dir.loc
+  }
+  if (dir.exp) {
+    // account for quotes
+    const loc = dir.exp.loc
+    if (loc.end.offset < dir.loc.end.offset) {
+      loc.start.offset--
+      loc.start.column--
+      loc.end.offset++
+      loc.end.column++
+    }
+    attr.value = {
+      type: NodeTypes.TEXT,
+      content: (dir.exp as SimpleExpressionNode).content,
+      loc
+    }
+  }
+  return attr
 }
 
 function reset() {

@@ -282,6 +282,7 @@ export default class Tokenizer {
       this.cbs.oninterpolation(this.sectionStart, this.index)
       this.state = State.Text
       this.sectionStart = this.index
+      this.stateText(this.buffer.charCodeAt(this.index))
     }
   }
 
