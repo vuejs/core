@@ -18,10 +18,6 @@ export interface ParserOptions
   extends ErrorHandlingOptions,
     CompilerCompatOptions {
   /**
-   * Parse as HTML. Default: false
-   */
-  htmlMode?: boolean
-  /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
   isNativeTag?: (tag: string) => boolean

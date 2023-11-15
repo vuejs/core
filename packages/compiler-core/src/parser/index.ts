@@ -19,7 +19,6 @@ import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
 
 type OptionalOptions =
-  | 'htmlMode'
   | 'getTextMode' // TODO
   | 'whitespace'
   | 'isNativeTag'
@@ -59,7 +58,6 @@ let currentOptions: MergedParserOptions = defaultParserOptions
 let currentRoot: RootNode = createRoot([])
 
 // parser state
-let htmlMode = false
 let currentInput = ''
 let currentElement: ElementNode | null = null
 let currentProp: AttributeNode | DirectiveNode | null = null
@@ -99,16 +97,7 @@ const tokenizer = new Tokenizer(
           for (let index = 0; index <= pos; index++) {
             onCloseTag(stack.shift()!, end)
           }
-        } else if (htmlMode && name === 'p') {
-          // Implicit open before close
-          emitOpenTag('p', start)
-          closeCurrentTag(end)
         }
-      } else if (htmlMode && name === 'br') {
-        // TODO
-        // We can't use `emitOpenTag` for implicit open, as `br` would be implicitly closed.
-        // this.cbs.onopentag?.('br', {}, true)
-        // this.cbs.onclosetag?.('br', false)
       }
     },
 
@@ -420,7 +409,6 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
   currentInput = input
   currentOptions = extend({}, defaultParserOptions, options)
-  htmlMode = !!currentOptions.htmlMode
   const root = (currentRoot = createRoot([]))
   tokenizer.parse(currentInput)
   root.children = condenseWhitespace(root.children)
