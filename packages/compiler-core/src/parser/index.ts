@@ -55,20 +55,6 @@ export const defaultParserOptions: MergedParserOptions = {
   comments: __DEV__
 }
 
-const foreignContextElements = new Set(['math', 'svg'])
-
-const htmlIntegrationElements = new Set([
-  'mi',
-  'mo',
-  'mn',
-  'ms',
-  'mtext',
-  'annotation-xml',
-  'foreignobject',
-  'desc',
-  'title'
-])
-
 let currentOptions: MergedParserOptions = defaultParserOptions
 let currentRoot: RootNode = createRoot([])
 
@@ -84,7 +70,6 @@ let currentAttrs: Set<string> = new Set()
 let inPre = 0
 // let inVPre = 0
 const stack: ElementNode[] = []
-const foreignContext: boolean[] = [false]
 
 const tokenizer = new Tokenizer(
   // TODO handle entities
@@ -108,14 +93,6 @@ const tokenizer = new Tokenizer(
 
     onclosetag(start, end) {
       const name = getSlice(start, end)
-
-      if (
-        htmlMode &&
-        (foreignContextElements.has(name) || htmlIntegrationElements.has(name))
-      ) {
-        foreignContext.shift()
-      }
-
       if (!currentOptions.isVoidTag(name)) {
         const pos = stack.findIndex(e => e.tag === name)
         if (pos !== -1) {
@@ -281,13 +258,6 @@ function endOpenTag(end: number) {
   const name = currentElement!.tag
   if (!currentOptions.isVoidTag(name)) {
     stack.unshift(currentElement!)
-    if (htmlMode) {
-      if (foreignContextElements.has(name)) {
-        foreignContext.unshift(true)
-      } else if (htmlIntegrationElements.has(name)) {
-        foreignContext.unshift(false)
-      }
-    }
   } else {
     onCloseTag(currentElement!, end)
   }
@@ -444,8 +414,6 @@ function reset() {
   currentAttrStartIndex = -1
   currentAttrEndIndex = -1
   stack.length = 0
-  foreignContext.length = 1
-  foreignContext[0] = false
 }
 
 export function baseParse(input: string, options?: ParserOptions): RootNode {
