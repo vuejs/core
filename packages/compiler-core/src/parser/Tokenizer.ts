@@ -29,6 +29,12 @@ import {
 } from 'entities/lib/decode.js'
 import { Position } from '../ast'
 
+export const enum ParseMode {
+  BASE,
+  HTML,
+  SFC
+}
+
 export const enum CharCodes {
   Tab = 0x9, // "\t"
   NewLine = 0xa, // "\n"
@@ -109,6 +115,7 @@ const enum State {
 
   // Special tags
   BeforeSpecialS, // Decide if we deal with `<script` or `<style`
+  BeforeSpecialT, // Decide if we deal with `<title` or `<textarea`
   SpecialStartSequence,
   InSpecialTag,
 
@@ -188,7 +195,10 @@ const Sequences = {
   CommentEnd: new Uint8Array([0x2d, 0x2d, 0x3e]), // `-->`
   ScriptEnd: new Uint8Array([0x3c, 0x2f, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74]), // `</script`
   StyleEnd: new Uint8Array([0x3c, 0x2f, 0x73, 0x74, 0x79, 0x6c, 0x65]), // `</style`
-  TitleEnd: new Uint8Array([0x3c, 0x2f, 0x74, 0x69, 0x74, 0x6c, 0x65]) // `</title`
+  TitleEnd: new Uint8Array([0x3c, 0x2f, 0x74, 0x69, 0x74, 0x6c, 0x65]), // `</title`
+  TextareaEnd: new Uint8Array([
+    0x3c, 0x2f, 116, 101, 120, 116, 97, 114, 101, 97
+  ]) // `</textarea
 }
 
 export default class Tokenizer {
@@ -345,13 +355,16 @@ export default class Tokenizer {
     if ((c | 0x20) === this.currentSequence[this.sequenceIndex]) {
       this.sequenceIndex += 1
     } else if (this.sequenceIndex === 0) {
-      if (this.currentSequence === Sequences.TitleEnd) {
-        // We have to parse entities in <title> tags.
+      if (
+        this.currentSequence === Sequences.TitleEnd ||
+        this.currentSequence === Sequences.TextareaEnd
+      ) {
+        // We have to parse entities in <title> and <textarea> tags.
         if (c === CharCodes.Amp) {
           this.startEntity()
         }
       } else if (this.fastForwardTo(CharCodes.Lt)) {
-        // Outside of <title> tags, we can fast-forward.
+        // Outside of <title> and <textarea> tags, we can fast-forward.
         this.sequenceIndex = 1
       }
     } else {
@@ -449,7 +462,7 @@ export default class Tokenizer {
       const lower = c | 0x20
       this.sectionStart = this.index
       if (lower === Sequences.TitleEnd[2]) {
-        this.startSpecial(Sequences.TitleEnd, 3)
+        this.state = State.BeforeSpecialT
       } else {
         this.state =
           lower === Sequences.ScriptEnd[2]
@@ -708,6 +721,17 @@ export default class Tokenizer {
       this.stateInTagName(c) // Consume the token again
     }
   }
+  private stateBeforeSpecialT(c: number): void {
+    const lower = c | 0x20
+    if (lower === Sequences.TitleEnd[3]) {
+      this.startSpecial(Sequences.TitleEnd, 4)
+    } else if (lower === Sequences.TextareaEnd[3]) {
+      this.startSpecial(Sequences.TextareaEnd, 4)
+    } else {
+      this.state = State.InTagName
+      this.stateInTagName(c) // Consume the token again
+    }
+  }
 
   private startEntity() {
     this.baseState = this.state
@@ -836,6 +860,10 @@ export default class Tokenizer {
         }
         case State.BeforeSpecialS: {
           this.stateBeforeSpecialS(c)
+          break
+        }
+        case State.BeforeSpecialT: {
+          this.stateBeforeSpecialT(c)
           break
         }
         case State.InAttributeValueNq: {
