@@ -18,6 +18,7 @@ import Tokenizer, { CharCodes, QuoteType, isWhitespace } from './Tokenizer'
 import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
+import { isCoreComponent } from '../utils'
 
 type OptionalOptions =
   | 'getTextMode' // TODO
@@ -113,8 +114,7 @@ const tokenizer = new Tokenizer({
       type: NodeTypes.ELEMENT,
       tag: name,
       ns: currentOptions.getNamespace(name, getParent()),
-      // TODO refine tag type
-      tagType: ElementTypes.ELEMENT,
+      tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
       loc: {
@@ -188,8 +188,6 @@ const tokenizer = new Tokenizer({
       if (name === 'pre') {
         inVPre = true
         currentElementIsVPreBoundary = true
-        // force current element type
-        currentElement!.tagType = ElementTypes.ELEMENT
         // convert dirs before this one to attributes
         const props = currentElement!.props
         for (let i = 0; i < props.length; i++) {
@@ -362,9 +360,23 @@ function onCloseTag(el: ElementNode, end: number) {
     offset++
   }
   el.loc.end = tokenizer.getPos(end + offset + 1)
+
+  // refine element type
+  const tag = el.tag
+  if (!inVPre) {
+    if (tag === 'slot') {
+      el.tagType = ElementTypes.SLOT
+    } else if (isFragmentTemplate(el)) {
+      el.tagType = ElementTypes.TEMPLATE
+    } else if (isComponent(el)) {
+      el.tagType = ElementTypes.COMPONENT
+    }
+  }
+
   // whitepsace management
   el.children = condenseWhitespace(el.children)
-  if (currentOptions.isPreTag(el.tag)) {
+
+  if (currentOptions.isPreTag(tag)) {
     inPre--
   }
   if (currentElementIsVPreBoundary) {
@@ -373,8 +385,77 @@ function onCloseTag(el: ElementNode, end: number) {
   }
 }
 
-const windowsNewlineRE = /\r\n/g
+const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
+function isFragmentTemplate({ tag, props }: ElementNode): boolean {
+  if (tag === 'template') {
+    for (let i = 0; i < props.length; i++) {
+      if (
+        props[i].type === NodeTypes.DIRECTIVE &&
+        specialTemplateDir.has(props[i].name)
+      ) {
+        return true
+      }
+    }
+  }
+  return false
+}
 
+function isComponent({ tag, props }: ElementNode): boolean {
+  if (currentOptions.isCustomElement(tag)) {
+    return false
+  }
+  if (
+    tag === 'component' ||
+    isUpperCase(tag.charCodeAt(0)) ||
+    isCoreComponent(tag) ||
+    currentOptions.isBuiltInComponent?.(tag) ||
+    !currentOptions.isNativeTag?.(tag)
+  ) {
+    return true
+  }
+  // at this point the tag should be a native tag, but check for potential "is"
+  // casting
+  for (let i = 0; i < props.length; i++) {
+    const p = props[i]
+    if (p.type === NodeTypes.ATTRIBUTE) {
+      if (p.name === 'is' && p.value) {
+        if (p.value.content.startsWith('vue:')) {
+          return true
+        }
+        // TODO else if (
+        //   __COMPAT__ &&
+        //   checkCompatEnabled(
+        //     CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+        //     context,
+        //     p.loc
+        //   )
+        // ) {
+        //   return true
+        // }
+      }
+    }
+    // TODO else if (
+    //   __COMPAT__ &&
+    //   // :is on plain element - only treat as component in compat mode
+    //   p.name === 'bind' &&
+    //   isStaticArgOf(p.arg, 'is') &&
+    //   checkCompatEnabled(
+    //     CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+    //     context,
+    //     p.loc
+    //   )
+    // ) {
+    //   return true
+    // }
+  }
+  return false
+}
+
+function isUpperCase(c: number) {
+  return c > 64 && c < 91
+}
+
+const windowsNewlineRE = /\r\n/g
 function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false

@@ -49,14 +49,19 @@ export const isBuiltInType = (tag: string, expected: string): boolean =>
   tag === expected || tag === hyphenate(expected)
 
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Teleport')) {
-    return TELEPORT
-  } else if (isBuiltInType(tag, 'Suspense')) {
-    return SUSPENSE
-  } else if (isBuiltInType(tag, 'KeepAlive')) {
-    return KEEP_ALIVE
-  } else if (isBuiltInType(tag, 'BaseTransition')) {
-    return BASE_TRANSITION
+  switch (tag) {
+    case 'Teleport':
+    case 'teleport':
+      return TELEPORT
+    case 'Suspense':
+    case 'suspense':
+      return SUSPENSE
+    case 'KeepAlive':
+    case 'keep-alive':
+      return KEEP_ALIVE
+    case 'BaseTransition':
+    case 'base-transition':
+      return BASE_TRANSITION
   }
 }
 
