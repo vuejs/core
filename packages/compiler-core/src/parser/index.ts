@@ -19,9 +19,9 @@ import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
 import { isCoreComponent } from '../utils'
+import { TextModes } from '../parse'
 
 type OptionalOptions =
-  | 'getTextMode' // TODO
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
@@ -45,7 +45,7 @@ const decodeMap: Record<string, string> = {
 export const defaultParserOptions: MergedParserOptions = {
   delimiters: [`{{`, `}}`],
   getNamespace: () => Namespaces.HTML,
-  // getTextMode: () => TextModes.DATA,
+  getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
@@ -598,8 +598,12 @@ function reset() {
   stack.length = 0
 }
 
-function toCharCodes(str: string): number[] {
-  return str.split('').map(c => c.charCodeAt(0))
+function toCharCodes(str: string): Uint8Array {
+  const ret = new Uint8Array()
+  for (let i = 0; i < str.length; i++) {
+    ret[i] = str.charCodeAt(i)
+  }
+  return ret
 }
 
 export function baseParse(input: string, options?: ParserOptions): RootNode {
