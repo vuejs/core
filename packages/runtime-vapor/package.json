@@ -2,17 +2,24 @@
   "name": "@vue/runtime-vapor",
   "version": "0.0.0",
   "description": "@vue/runtime-vapor",
-  "main": "dist/runtime-vapor.cjs.js",
+  "main": "index.js",
+  "module": "dist/runtime-vapor.esm-bundler.js",
+  "types": "dist/runtime-vapor.d.ts",
+  "unpkg": "dist/runtime-vapor.global.js",
   "files": [
+    "index.js",
     "dist"
   ],
+  "sideEffects": false,
   "buildOptions": {
+    "name": "VueRuntimeVapor",
     "formats": [
-      "cjs"
-    ],
-    "prod": false
+      "esm-bundler",
+      "esm-browser",
+      "cjs",
+      "global"
+    ]
   },
-  "types": "dist/runtime-vapor.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/core-vapor.git",

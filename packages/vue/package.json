@@ -53,6 +53,26 @@
         "default": "./compiler-sfc/index.js"
       }
     },
+    "./vapor": {
+      "import": {
+        "types": "./vapor/index.d.mts",
+        "default": "./vapor/index.mjs"
+      },
+      "require": {
+        "types": "./vapor/index.d.ts",
+        "default": "./vapor/index.js"
+      }
+    },
+    "./compiler-vapor": {
+      "import": {
+        "types": "./compiler-vapor/index.d.mts",
+        "default": "./compiler-vapor/index.mjs"
+      },
+      "require": {
+        "types": "./compiler-vapor/index.d.ts",
+        "default": "./compiler-vapor/index.js"
+      }
+    },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
       "import": "./jsx-runtime/index.mjs",
@@ -99,6 +119,8 @@
     "@vue/shared": "3.3.8",
     "@vue/compiler-dom": "3.3.8",
     "@vue/runtime-dom": "3.3.8",
+    "@vue/runtime-vapor": "workspace:*",
+    "@vue/compiler-vapor": "workspace:*",
     "@vue/compiler-sfc": "3.3.8",
     "@vue/server-renderer": "3.3.8"
   },
