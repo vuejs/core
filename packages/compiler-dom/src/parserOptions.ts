@@ -2,8 +2,7 @@ import {
   TextModes,
   ParserOptions,
   ElementNode,
-  NodeTypes,
-  isBuiltInType
+  NodeTypes
 } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
@@ -23,9 +22,9 @@ export const parserOptions: ParserOptions = {
   decodeEntities: __BROWSER__ ? decodeHtmlBrowser : decodeHtml,
 
   isBuiltInComponent: (tag: string): symbol | undefined => {
-    if (isBuiltInType(tag, `Transition`)) {
+    if (tag === 'Transition' || tag === 'transition') {
       return TRANSITION
-    } else if (isBuiltInType(tag, `TransitionGroup`)) {
+    } else if (tag === 'TransitionGroup' || tag === 'transition-group') {
       return TRANSITION_GROUP
     }
   },
