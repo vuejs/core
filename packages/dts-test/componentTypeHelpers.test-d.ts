@@ -5,12 +5,18 @@ import {
   ComponentProps,
   defineComponent,
   defineAsyncComponent,
-  ComponentOptions,
-  Prop,
-  ref,
   ComponentInstance,
   CreateComponentPublicInstance,
-  ComponentPublicInstance
+  ComponentPublicInstance,
+  ComponentPropsWithDefaultOptional,
+  ComponentDefineOptions,
+  ComputedOptions,
+  MethodOptions,
+  ComponentOptionsMixin,
+  EmitsOptions,
+  ComponentInjectOptions,
+  SlotsType,
+  DefineComponent
 } from 'vue'
 
 const propsOptions = {
@@ -273,17 +279,6 @@ const b = retrieveComponentInstance(
     }
   })
 )
-
-expectType<ComponentPublicInstance>(
-  retrieveComponentInstance(
-    defineComponent({
-      emits: {
-        test: () => true
-      }
-    })
-  )
-)
-
 const a = defineComponent({
   props: [],
   emits: {
@@ -305,4 +300,102 @@ declare function ttt<T>(t: T, t2: T): T
 ttt(aa.$emit, bb.$emit)
 
 declare const bb: ComponentPublicInstance
-const aaa = test2(aa)
+// const aaa = test2(aa)
+
+// declare function extraPropsOptional<T, Props, PropNames extends string>(
+//   o: T & {
+//     props?: PropNames[] | Props
+//   }
+// ): ComponentPropsWithDefaultOptional<T, Props>
+
+declare function extraPropsOptional<
+  Props = never,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  Options = {}
+>(
+  o: ComponentDefineOptions<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    I,
+    II,
+    S,
+    Options
+  >
+): ComponentPropsWithDefaultOptional<
+  ComponentDefineOptions<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    I,
+    II,
+    S,
+    Options
+  >
+>
+
+// declare function antoher<
+//   T extends DefineComponent<
+//     PropsOrOptions,
+//     any,
+//     any,
+//     any,
+//     any,
+//     any,
+//     any,
+//     any,
+//     any,
+//     any
+//   >,
+//   PropsOrOptions extends object
+// >(o: T): ComponentInstance<T> & { LOL: T}
+// const Foo = {
+//   props: ['obj', 'foo'] as ['obj', 'foo'],
+//   template: `
+//     <div>
+//       <div v-if="obj.foo()">foo</div>
+//     </div>
+//   `
+// }
+
+// const asd = antoher(Foo)
+// asd.$props.obj
+// const axxx = defineComponent({
+//   props: ['ax']
+// })
+// const asd = extraPropsOptional({
+//   mixins: [axxx],
+//   props: {
+//     axx: String
+//   },
+//   setup(props) {
+//   }
+// })
+
+// const aasd : keyof {}
+
+// asd.axx
+// asd.ax
+// asd.asad

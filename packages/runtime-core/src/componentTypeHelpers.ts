@@ -1,5 +1,9 @@
 import { ComponentOptionsBase } from './componentOptions'
-import { RawOptionsSymbol } from './apiDefineComponent'
+import {
+  ComponentDefineOptions,
+  RawOptionsSymbol,
+  defineComponent
+} from './apiDefineComponent'
 import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import {
   ComponentPropsOptions,
@@ -123,12 +127,22 @@ type ResolveMixin<T> = [T] extends [
 ]
   ? IntersectionMixin<M> & IntersectionMixin<E>
   : {}
-
-export type ComponentPropsWithDefaultOptional<T> = ExtractDefaultPropTypes<
-  ExtractComponentProp<T>
-> extends infer Defaults
-  ? Partial<Defaults> & Omit<ComponentProps<T>, keyof Defaults>
-  : {}
+export type ComponentPropsWithDefaultOptional<T> = ((
+  T extends { props: infer P }
+    ? [P] extends [Array<infer PA>]
+      ? [PA] extends [string]
+        ? { [key in PA]?: any }
+        : never // not supported because is an array of non-string
+      : P
+    : T
+) extends infer Props
+  ? ExtractDefaultPropTypes<T> extends infer Defaults
+    ? Partial<Defaults> & Omit<ExtractPropTypes<Props>, keyof Defaults>
+    : {}
+  : {}) &
+  (T extends { props: any }
+    ? ResolveMixinProps<Omit<T, 'props'>>
+    : ResolveMixinProps<T>)
 
 type ResolveMixinProps<T> = UnwrapMixinsType<ResolveMixin<T>, 'P'>
 
@@ -154,7 +168,9 @@ export type ComponentProps<
           : P
         : {}) &
         // props to be omitted since we don't need them here
-        (T extends { props: any } ? ResolveMixinProps<Omit<T, 'props'>> : {}))
+        (T extends { props: any }
+          ? ResolveMixinProps<Omit<T, 'props'>>
+          : ResolveMixinProps<T>))
 
 export type ComponentSlots<T> = ExtractComponentSlots<T> extends infer S
   ? {
@@ -170,11 +186,50 @@ export type ComponentEmits<T> = ExtractComponentEmits<T> extends infer E
 
 // from other PR https://github.com/vuejs/core/pull/5408
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
-  ? InstanceType<T> //& { a: 1 }
+  ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
-  ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits> //& { b: 1 }
+  ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
   : T extends ComponentPublicInstanceConstructor
-  ? InstanceType<T> //& { c: 1 }
+  ? InstanceType<T>
+  : T extends ComponentDefineOptions<
+      infer Props,
+      infer RawBindings,
+      infer D,
+      infer C,
+      infer M,
+      infer Mixin,
+      infer Extends,
+      infer E,
+      infer EE,
+      infer I,
+      infer II,
+      infer S,
+      infer Options
+    >
+  ? InstanceType<
+      ReturnType<
+        typeof defineComponent<
+          //just need to treat the props a little bit
+          Options extends { props: infer P }
+            ? P extends Array<infer PA>
+              ? PA
+              : P
+            : Props,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          EE,
+          I,
+          II,
+          S,
+          Options
+        >
+      >
+    >
   : T extends Component<
       infer Props,
       infer RawBindings,
@@ -189,7 +244,7 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
       unknown extends D ? {} : D,
       C,
       M
-    > & { d: 1 }
+    >
   : never // not a vue Component
 
 // declare function getInstance<T>(component: T): ComponentInstance<T>

@@ -175,7 +175,7 @@ const enum BooleanFlags {
 }
 
 // extract props which defined with default from prop options
-export type ExtractDefaultPropTypes<O> = O extends object
+export type ExtractDefaultPropTypes<O> = [O] extends [object]
   ? // use `keyof Pick<O, DefaultKeys<O>>` instead of `DefaultKeys<O>` to support IDE features
     { [K in keyof Pick<O, DefaultKeys<O>>]: InferPropType<O[K]> }
   : {}

@@ -32,7 +32,7 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-type ResolveProps<Props, E extends EmitsOptions> = Readonly<
+export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
