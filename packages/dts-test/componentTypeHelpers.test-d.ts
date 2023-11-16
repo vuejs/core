@@ -4,7 +4,13 @@ import {
   ExtractComponentOptions,
   ComponentProps,
   defineComponent,
-  defineAsyncComponent
+  defineAsyncComponent,
+  ComponentOptions,
+  Prop,
+  ref,
+  ComponentInstance,
+  CreateComponentPublicInstance,
+  ComponentPublicInstance
 } from 'vue'
 
 const propsOptions = {
@@ -52,6 +58,10 @@ const noPropsOptions = {
       test: 1
     }
   }
+}
+
+const fakeClassComponent = {} as {
+  new (): { $props: { a: string }; someMethod: (a: number) => void }
 }
 
 // const mixIn = {
@@ -121,6 +131,12 @@ describe('Extract Component Options', () => {
     expectType<ExtractComponentOptions<typeof noPropsOptions>>(noPropsOptions)
     // @ts-expect-error checking if is not any
     expectType<ExtractComponentOptions<typeof noPropsOptions>>({ bar: 'foo' })
+  })
+
+  describe('class component', () => {
+    expectType<ExtractComponentOptions<typeof fakeClassComponent>>(
+      fakeClassComponent
+    )
   })
 })
 
@@ -224,4 +240,69 @@ describe('Component Props', () => {
       bb: boolean
     }>({} as ComponentProps<typeof mixin>)
   })
+
+  describe('class component', () => {
+    expectType<{ a: string }>({} as ComponentProps<typeof fakeClassComponent>)
+  })
 })
+
+// Component Instance
+
+declare function retrieveComponentInstance<T>(
+  component: T
+): ComponentInstance<T>
+
+expectType<ComponentPublicInstance>(
+  retrieveComponentInstance(defineComponent({}))
+)
+
+expectType<ComponentPublicInstance>(
+  retrieveComponentInstance(
+    defineComponent({
+      props: {
+        a: String
+      }
+    })
+  )
+)
+
+const b = retrieveComponentInstance(
+  defineComponent({
+    emits: {
+      test: () => true
+    }
+  })
+)
+
+expectType<ComponentPublicInstance>(
+  retrieveComponentInstance(
+    defineComponent({
+      emits: {
+        test: () => true
+      }
+    })
+  )
+)
+
+const a = defineComponent({
+  props: [],
+  emits: {
+    a: (v: string) => true
+  }
+})
+
+declare function test<T>(t: T): ComponentInstance<T>
+declare function test2<T extends ComponentPublicInstance>(
+  t: T
+): CreateComponentPublicInstance<T>
+
+const aa = test(a)
+
+aa.$emit
+bb.$emit
+
+declare function ttt<T>(t: T, t2: T): T
+ttt(aa.$emit, bb.$emit)
+
+declare const bb: ComponentPublicInstance
+const aaa = test2(aa)

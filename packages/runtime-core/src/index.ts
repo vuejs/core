@@ -226,7 +226,7 @@ export type {
   ComponentCustomProps,
   AllowedComponentProps
 } from './component'
-export type { DefineComponent } from './apiDefineComponent'
+export type { DefineComponent, ComponentDefineOptions } from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
