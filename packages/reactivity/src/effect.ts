@@ -69,6 +69,10 @@ export class ReactiveEffect<T = any> {
    */
   private deferStop?: boolean
 
+  private _isPaused = false
+
+  private _isCalled = false
+
   onStop?: () => void
   // dev only
   onTrack?: (event: DebuggerEvent) => void
@@ -83,7 +87,24 @@ export class ReactiveEffect<T = any> {
     recordEffectScope(this, scope)
   }
 
+  pause() {
+    this._isPaused = true
+  }
+
+  resume(runOnce = false) {
+    if (this._isPaused) {
+      this._isPaused = false
+      if (this._isCalled && runOnce) {
+        this.run()
+      }
+      this._isCalled = false
+    }
+  }
   run() {
+    if (this._isPaused) {
+      this._isCalled = true
+      return
+    }
     if (!this.active) {
       return this.fn()
     }

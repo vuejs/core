@@ -132,7 +132,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (props.lazy) {
         // on activation, resume the effect of the component instance and immediately execute the call during the pause process
-        instance.effect.resume(true)
+        instance.scope.resume(true)
       }
 
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
@@ -170,7 +170,7 @@ const KeepAliveImpl: ComponentOptions = {
 
       if (props.lazy) {
         // on deactivation, pause the effect of the component instance
-        instance.effect.pause()
+        instance.scope.pause()
       }
 
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
