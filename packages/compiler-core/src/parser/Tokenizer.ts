@@ -157,8 +157,8 @@ export interface Callbacks {
   ondirarg(start: number, endIndex: number): void
   ondirmodifier(start: number, endIndex: number): void
 
-  oncomment(start: number, endIndex: number, endOffset: number): void
-  oncdata(start: number, endIndex: number, endOffset: number): void
+  oncomment(start: number, endIndex: number): void
+  oncdata(start: number, endIndex: number): void
 
   // onprocessinginstruction(start: number, endIndex: number): void
   // ondeclaration(start: number, endIndex: number): void
@@ -400,9 +400,9 @@ export default class Tokenizer {
     if (c === this.currentSequence[this.sequenceIndex]) {
       if (++this.sequenceIndex === this.currentSequence.length) {
         if (this.currentSequence === Sequences.CdataEnd) {
-          this.cbs.oncdata(this.sectionStart, this.index, 2)
+          this.cbs.oncdata(this.sectionStart, this.index - 2)
         } else {
-          this.cbs.oncomment(this.sectionStart, this.index, 2)
+          this.cbs.oncomment(this.sectionStart, this.index - 2)
         }
 
         this.sequenceIndex = 0
@@ -691,7 +691,7 @@ export default class Tokenizer {
   }
   private stateInSpecialComment(c: number): void {
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
-      this.cbs.oncomment(this.sectionStart, this.index, 0)
+      this.cbs.oncomment(this.sectionStart, this.index)
       this.state = State.Text
       this.sectionStart = this.index + 1
     }
@@ -920,9 +920,9 @@ export default class Tokenizer {
 
     if (this.state === State.InCommentLike) {
       if (this.currentSequence === Sequences.CdataEnd) {
-        this.cbs.oncdata(this.sectionStart, endIndex, 0)
+        this.cbs.oncdata(this.sectionStart, endIndex)
       } else {
-        this.cbs.oncomment(this.sectionStart, endIndex, 0)
+        this.cbs.oncomment(this.sectionStart, endIndex)
       }
     } else if (
       this.state === State.InTagName ||

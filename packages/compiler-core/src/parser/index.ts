@@ -291,8 +291,14 @@ const tokenizer = new Tokenizer({
     currentAttrStartIndex = currentAttrEndIndex = -1
   },
 
-  oncomment(start, end, offset) {
-    // TODO oncomment
+  oncomment(start, end) {
+    if (currentOptions.comments) {
+      addNode({
+        type: NodeTypes.COMMENT,
+        content: getSlice(start, end),
+        loc: getLoc(start - 4, end + 3)
+      })
+    }
   },
 
   onend() {
@@ -302,7 +308,7 @@ const tokenizer = new Tokenizer({
     }
   },
 
-  oncdata(start, end, offset) {
+  oncdata(start, end) {
     // TODO throw error
   }
 })
