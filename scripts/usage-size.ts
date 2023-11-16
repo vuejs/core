@@ -7,17 +7,23 @@ import replace from '@rollup/plugin-replace'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 
 const sizeDir = path.resolve('temp/size')
-const entry = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
+const vapor = path.resolve('./packages/vue/vapor/index.mjs')
 
 interface Preset {
   name: string
-  imports: string[]
+  imports: '*' | string[]
+  from: string
 }
 
 const presets: Preset[] = [
-  { name: 'createApp', imports: ['createApp'] },
-  { name: 'createSSRApp', imports: ['createSSRApp'] },
-  { name: 'defineCustomElement', imports: ['defineCustomElement'] },
+  { name: 'createApp', imports: ['createApp'], from: vue },
+  { name: 'createSSRApp', imports: ['createSSRApp'], from: vue },
+  {
+    name: 'defineCustomElement',
+    imports: ['defineCustomElement'],
+    from: vue
+  },
   {
     name: 'overall',
     imports: [
@@ -27,8 +33,10 @@ const presets: Preset[] = [
       'Transition',
       'KeepAlive',
       'Suspense'
-    ]
-  }
+    ],
+    from: vue
+  },
+  { name: 'vapor', imports: '*', from: vapor }
 ]
 
 main()
@@ -53,7 +61,11 @@ async function main() {
 
 async function generateBundle(preset: Preset) {
   const id = 'virtual:entry'
-  const content = `export { ${preset.imports.join(', ')} } from '${entry}'`
+  const exportSpecifiers =
+    preset.imports === '*'
+      ? `* as ${preset.name}`
+      : `{ ${preset.imports.join(', ')} }`
+  const content = `export ${exportSpecifiers} from '${preset.from}'`
   const result = await rollup({
     input: id,
     plugins: [

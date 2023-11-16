@@ -11,7 +11,7 @@
     "size": "run-s \"size-*\" && tsx scripts/usage-size.ts",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p --size",
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
-    "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
+    "size-esm": "node scripts/build.js runtime-dom runtime-vapor runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
     "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
     "format": "prettier --write --cache \"**/*.[tj]s?(x)\"",
