@@ -65,8 +65,8 @@ export const enum CharCodes {
   RightSquare = 93 // "]"
 }
 
-const defaultDelimitersOpen = [123, 123] // "{{"
-const defaultDelimitersClose = [125, 125] // "}}"
+const defaultDelimitersOpen = new Uint8Array([123, 123]) // "{{"
+const defaultDelimitersClose = new Uint8Array([125, 125]) // "}}"
 
 /** All the states the tokenizer can be in. */
 const enum State {
@@ -113,6 +113,17 @@ const enum State {
   InSpecialTag,
 
   InEntity
+}
+
+/**
+ * HTML only allows ASCII alpha characters (a-z and A-Z) at the beginning of a
+ * tag name.
+ */
+function isTagStartChar(c: number): boolean {
+  return (
+    (c >= CharCodes.LowerA && c <= CharCodes.LowerZ) ||
+    (c >= CharCodes.UpperA && c <= CharCodes.UpperZ)
+  )
 }
 
 export function isWhitespace(c: number): boolean {
@@ -261,9 +272,9 @@ export default class Tokenizer {
     }
   }
 
-  public delimiterOpen: number[] = defaultDelimitersOpen
-  public delimiterClose: number[] = defaultDelimitersClose
-  private matchDelimiter(c: number, delimiter: number[]): boolean {
+  public delimiterOpen: Uint8Array = defaultDelimitersOpen
+  public delimiterClose: Uint8Array = defaultDelimitersClose
+  private matchDelimiter(c: number, delimiter: Uint8Array): boolean {
     if (c === delimiter[0]) {
       const l = delimiter.length
       for (let i = 1; i < l; i++) {
@@ -420,16 +431,6 @@ export default class Tokenizer {
     }
   }
 
-  /**
-   * HTML only allows ASCII alpha characters (a-z and A-Z) at the beginning of a tag name.
-   */
-  private isTagStartChar(c: number) {
-    return (
-      (c >= CharCodes.LowerA && c <= CharCodes.LowerZ) ||
-      (c >= CharCodes.UpperA && c <= CharCodes.UpperZ)
-    )
-  }
-
   private startSpecial(sequence: Uint8Array, offset: number) {
     this.isSpecial = true
     this.currentSequence = sequence
@@ -444,7 +445,7 @@ export default class Tokenizer {
     } else if (c === CharCodes.Questionmark) {
       this.state = State.InProcessingInstruction
       this.sectionStart = this.index + 1
-    } else if (this.isTagStartChar(c)) {
+    } else if (isTagStartChar(c)) {
       const lower = c | 0x20
       this.sectionStart = this.index
       if (lower === Sequences.TitleEnd[2]) {
@@ -476,7 +477,7 @@ export default class Tokenizer {
     } else if (c === CharCodes.Gt) {
       this.state = State.Text
     } else {
-      this.state = this.isTagStartChar(c)
+      this.state = isTagStartChar(c)
         ? State.InClosingTagName
         : State.InSpecialComment
       this.sectionStart = this.index

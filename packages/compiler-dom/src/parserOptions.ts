@@ -5,15 +5,10 @@ import {
   NodeTypes,
   isBuiltInType
 } from '@vue/compiler-core'
-import { makeMap, isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
+import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtml } from './decodeHtml'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
-
-const isRawTextContainer = /*#__PURE__*/ makeMap(
-  'style,iframe,script,noscript',
-  true
-)
 
 export const enum DOMNamespaces {
   HTML = 0 /* Namespaces.HTML */,
@@ -38,7 +33,6 @@ export const parserOptions: ParserOptions = {
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
   getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
     let ns = parent ? parent.ns : DOMNamespaces.HTML
-
     if (parent && ns === DOMNamespaces.MATH_ML) {
       if (parent.tag === 'annotation-xml') {
         if (tag === 'svg') {
@@ -90,7 +84,7 @@ export const parserOptions: ParserOptions = {
       if (tag === 'textarea' || tag === 'title') {
         return TextModes.RCDATA
       }
-      if (isRawTextContainer(tag)) {
+      if (tag === 'style' || tag === 'script') {
         return TextModes.RAWTEXT
       }
     }
