@@ -7,7 +7,7 @@ const count = ref(0)
 <template>
   <div>
     <h1 class="red">Hello world</h1>
-    {{ count }}
+    <!-- {{ count }} -->
     <button style="font-weight: bold">Inc</button>
   </div>
 </template>

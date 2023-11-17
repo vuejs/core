@@ -18,8 +18,8 @@ export function generate(
   const isSetupInlined = !!options.inline
 
   preamble += ast.template
-    .map((template, i) => `const t${i} = template(\`${template.template}\`)`)
-    .join('\n')
+    .map((template, i) => `const t${i} = template(\`${template.template}\`)\n`)
+    .join('')
 
   code += 'const root = t0()\n'
   code += 'return root'
@@ -28,7 +28,7 @@ export function generate(
   if (isSetupInlined) {
     code = `(() => {\n${code}\n})();`
   } else {
-    code = `${preamble}\nexport function ${functionName}() {\n${code}\n}`
+    code = `${preamble}export function ${functionName}() {\n${code}\n}`
   }
 
   return {

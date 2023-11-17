@@ -65,11 +65,16 @@ function transformChildren(children: TemplateChildNode[]) {
       case 2 satisfies NodeTypes.TEXT:
         template += node.content
         break
+      case 3 satisfies NodeTypes.COMMENT:
+        template += `<!--${node.content}-->`
+        break
       case 5 satisfies NodeTypes.INTERPOLATION:
         template += transformInterpolation(node)
         break
-      case 12 satisfies NodeTypes.TEXT_CALL:
-        template += node.content
+      // case 12 satisfies NodeTypes.TEXT_CALL:
+      //   template += node.content
+      default:
+        template += `[${node.type}]`
     }
   }
 }
