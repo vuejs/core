@@ -4,7 +4,9 @@ import {
   ElementTypes,
   findProp,
   NodeTypes,
-  hasDynamicKeyVBind
+  hasDynamicKeyVBind,
+  findDir,
+  isStaticArgOf
 } from '@vue/compiler-core'
 import { createDOMCompilerError, DOMErrorCodes } from '../errors'
 import {
@@ -32,8 +34,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   }
 
   function checkDuplicatedValue() {
-    const value = findProp(node, 'value')
-    if (value) {
+    const value = findDir(node, 'bind')
+    if (value && isStaticArgOf(value.arg, 'value')) {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,

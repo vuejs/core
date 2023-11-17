@@ -137,6 +137,27 @@ describe('compiler: transform v-model', () => {
         })
       )
     })
+
+    test('should error on dynamic value binding alongside v-model', () => {
+      const onError = vi.fn()
+      transformWithModel(`<input v-model="test" :value="test" />`, {
+        onError
+      })
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE
+        })
+      )
+    })
+
+    // #3596
+    test('should NOT error on static value binding alongside v-model', () => {
+      const onError = vi.fn()
+      transformWithModel(`<input v-model="test" value="test" />`, {
+        onError
+      })
+      expect(onError).not.toHaveBeenCalled()
+    })
   })
 
   describe('modifiers', () => {
