@@ -1,5 +1,6 @@
 import { SourceLocation } from '../ast'
 import { CompilerError } from '../errors'
+// @ts-expect-error TODO
 import { ParserContext } from '../parse'
 import { TransformContext } from '../transform'
 

@@ -1,5 +1,4 @@
 import { isString } from '@vue/shared'
-import { ForParseResult } from './transforms/vFor'
 import {
   RENDER_SLOT,
   CREATE_SLOTS,
@@ -76,7 +75,6 @@ export interface Node {
 export interface SourceLocation {
   start: Position
   end: Position
-  source: string
 }
 
 export interface Position {
@@ -102,6 +100,7 @@ export type TemplateChildNode =
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
+  source: string
   children: TemplateChildNode[]
   helpers: Set<symbol>
   components: string[]
@@ -182,20 +181,33 @@ export interface CommentNode extends Node {
 export interface AttributeNode extends Node {
   type: NodeTypes.ATTRIBUTE
   name: string
+  nameLoc: SourceLocation
   value: TextNode | undefined
 }
 
 export interface DirectiveNode extends Node {
   type: NodeTypes.DIRECTIVE
+  /**
+   * the normalized name without prefix or shorthands, e.g. "bind", "on"
+   */
   name: string
+  /**
+   * the raw attribute name, preserving shorthand, and including arg & modifiers
+   * this is only used during parse.
+   */
+  rawName?: string
   exp: ExpressionNode | undefined
+  /**
+   * the raw expression as a string
+   * only required on directives parsed from templates
+   */
+  rawExp?: string
   arg: ExpressionNode | undefined
   modifiers: string[]
-  raw?: string
   /**
    * optional property to cache the expression parse result for v-for
    */
-  parseResult?: ForParseResult
+  forParseResult?: ForParseResult
 }
 
 /**
@@ -275,6 +287,14 @@ export interface ForNode extends Node {
   parseResult: ForParseResult
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
+}
+
+export interface ForParseResult {
+  source: ExpressionNode
+  value: ExpressionNode | undefined
+  key: ExpressionNode | undefined
+  index: ExpressionNode | undefined
+  finalized: boolean
 }
 
 export interface TextCallNode extends Node {
@@ -548,17 +568,17 @@ export interface ForIteratorExpression extends FunctionExpression {
 // associated with template nodes, so their source locations are just a stub.
 // Container types like CompoundExpression also don't need a real location.
 export const locStub: SourceLocation = {
-  source: '',
   start: { line: 1, column: 1, offset: 0 },
   end: { line: 1, column: 1, offset: 0 }
 }
 
 export function createRoot(
   children: TemplateChildNode[],
-  loc = locStub
+  source = ''
 ): RootNode {
   return {
     type: NodeTypes.ROOT,
+    source,
     children,
     helpers: new Set(),
     components: [],
@@ -568,7 +588,7 @@ export function createRoot(
     cached: 0,
     temps: 0,
     codegenNode: undefined,
-    loc
+    loc: locStub
   }
 }
 

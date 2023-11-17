@@ -3,7 +3,6 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  TextModes,
   BindingMetadata
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
@@ -128,31 +127,7 @@ export function parse(
 
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
-    // there are no components at SFC parsing level
-    isNativeTag: () => true,
-    // preserve all whitespaces
-    isPreTag: () => true,
-    getTextMode: ({ tag, props }, parent) => {
-      // all top level elements except <template> are parsed as raw text
-      // containers
-      if (
-        (!parent && tag !== 'template') ||
-        // <template lang="xxx"> should also be treated as raw text
-        (tag === 'template' &&
-          props.some(
-            p =>
-              p.type === NodeTypes.ATTRIBUTE &&
-              p.name === 'lang' &&
-              p.value &&
-              p.value.content &&
-              p.value.content !== 'html'
-          ))
-      ) {
-        return TextModes.RAWTEXT
-      } else {
-        return TextModes.DATA
-      }
-    },
+    parseMode: 'sfc',
     onError: e => {
       errors.push(e)
     }
@@ -188,7 +163,9 @@ export function parse(
                 `difference from stateful ones. Just use a normal <template> ` +
                 `instead.`
             ) as CompilerError
-            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            err.loc = node.props.find(
+              p => p.type === NodeTypes.ATTRIBUTE && p.name === 'functional'
+            )!.loc
             errors.push(err)
           }
         } else {
@@ -314,7 +291,7 @@ function createBlock(
     end = node.children[node.children.length - 1].loc.end
     content = source.slice(start.offset, end.offset)
   } else {
-    const offset = node.loc.source.indexOf(`</`)
+    const offset = source.indexOf(`</`, start.offset)
     if (offset > -1) {
       start = {
         line: start.line,
@@ -341,18 +318,19 @@ function createBlock(
   }
   node.props.forEach(p => {
     if (p.type === NodeTypes.ATTRIBUTE) {
-      attrs[p.name] = p.value ? p.value.content || true : true
-      if (p.name === 'lang') {
+      const name = p.name
+      attrs[name] = p.value ? p.value.content || true : true
+      if (name === 'lang') {
         block.lang = p.value && p.value.content
-      } else if (p.name === 'src') {
+      } else if (name === 'src') {
         block.src = p.value && p.value.content
       } else if (type === 'style') {
-        if (p.name === 'scoped') {
+        if (name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'module') {
-          ;(block as SFCStyleBlock).module = attrs[p.name]
+        } else if (name === 'module') {
+          ;(block as SFCStyleBlock).module = attrs[name]
         }
-      } else if (type === 'script' && p.name === 'setup') {
+      } else if (type === 'script' && name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }

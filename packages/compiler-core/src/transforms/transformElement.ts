@@ -49,7 +49,6 @@ import {
   GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
-  getInnerRange,
   toValidAssetId,
   findProp,
   isCoreComponent,
@@ -160,8 +159,7 @@ export const transformElement: NodeTransform = (node, context) => {
           context.onError(
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
               start: node.children[0].loc.start,
-              end: node.children[node.children.length - 1].loc.end,
-              source: ''
+              end: node.children[node.children.length - 1].loc.end
             })
           )
         }
@@ -489,7 +487,7 @@ export function buildProps(
     // static attribute
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
-      const { loc, name, value } = prop
+      const { loc, name, nameLoc, value } = prop
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
@@ -536,11 +534,7 @@ export function buildProps(
       }
       properties.push(
         createObjectProperty(
-          createSimpleExpression(
-            name,
-            true,
-            getInnerRange(loc, 0, name.length)
-          ),
+          createSimpleExpression(name, true, nameLoc),
           createSimpleExpression(
             value ? value.content : '',
             isStatic,

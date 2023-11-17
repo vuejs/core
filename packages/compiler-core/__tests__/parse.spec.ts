@@ -1,5 +1,4 @@
 import { ParserOptions } from '../src/options'
-import { TextModes } from '../src/parse'
 import { ErrorCodes } from '../src/errors'
 import {
   CommentNode,
@@ -1913,35 +1912,38 @@ describe('compiler: parse', () => {
   })
 
   test.skip('parse with correct location info', () => {
+    const fooSrc = `foo
+  is `
+    const barSrc = `{{ bar }}`
+    const butSrc = ` but `
+    const bazSrc = `{{ baz }}`
     const [foo, bar, but, baz] = baseParse(
-      `
-foo
- is {{ bar }} but {{ baz }}`.trim()
+      fooSrc + barSrc + butSrc + bazSrc
     ).children
 
     let offset = 0
     expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
-    offset += foo.loc.source.length
+    offset += fooSrc.length
     expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
 
     expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
     const barInner = (bar as InterpolationNode).content
     offset += 3
     expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
-    offset += barInner.loc.source.length
+    offset += 3
     expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
     offset += 3
     expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
 
     expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
-    offset += but.loc.source.length
+    offset += butSrc.length
     expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
 
     expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
     const bazInner = (baz as InterpolationNode).content
     offset += 3
     expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
-    offset += bazInner.loc.source.length
+    offset += 3
     expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
     offset += 3
     expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
@@ -2073,8 +2075,7 @@ foo
 
     test.skip('should NOT condense whitespaces in RCDATA text mode', () => {
       const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
-        getTextMode: ({ tag }) =>
-          tag === 'textarea' ? TextModes.RCDATA : TextModes.DATA
+        parseMode: 'html'
       })
       const preElement = ast.children[0] as ElementNode
       expect(preElement.children).toHaveLength(1)
@@ -3069,24 +3070,7 @@ foo
             () => {
               const spy = vi.fn()
               const ast = baseParse(code, {
-                getNamespace: (tag, parent) => {
-                  const ns = parent ? parent.ns : Namespaces.HTML
-                  if (ns === Namespaces.HTML) {
-                    if (tag === 'svg') {
-                      return (Namespaces.HTML + 1) as any
-                    }
-                  }
-                  return ns
-                },
-                getTextMode: ({ tag }) => {
-                  if (tag === 'textarea') {
-                    return TextModes.RCDATA
-                  }
-                  if (tag === 'script') {
-                    return TextModes.RAWTEXT
-                  }
-                  return TextModes.DATA
-                },
+                parseMode: 'html',
                 ...options,
                 onError: spy
               })

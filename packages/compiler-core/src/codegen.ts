@@ -116,7 +116,7 @@ function createCodegenContext(
     ssr,
     isTS,
     inSSR,
-    source: ast.loc.source,
+    source: ast.source,
     code: ``,
     column: 1,
     line: 1,
