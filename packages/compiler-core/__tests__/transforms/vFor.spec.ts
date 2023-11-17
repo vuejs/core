@@ -674,8 +674,8 @@ describe('compiler: v-for', () => {
         patchFlag: !disableTracking
           ? genFlagText(PatchFlags.STABLE_FRAGMENT)
           : keyed
-          ? genFlagText(PatchFlags.KEYED_FRAGMENT)
-          : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
+            ? genFlagText(PatchFlags.KEYED_FRAGMENT)
+            : genFlagText(PatchFlags.UNKEYED_FRAGMENT),
         children: {
           type: NodeTypes.JS_CALL_EXPRESSION,
           callee: RENDER_LIST,
