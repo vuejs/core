@@ -91,5 +91,3 @@ registerRuntimeCompiler(compileToFunction)
 
 export { compileToFunction as compile }
 export * from '@vue/runtime-dom'
-
-export { newParse } from '@vue/compiler-dom'

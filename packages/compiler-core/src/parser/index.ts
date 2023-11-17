@@ -5,13 +5,15 @@ import {
   DirectiveNode,
   ElementNode,
   ElementTypes,
+  ForParseResult,
   Namespaces,
   NodeTypes,
   RootNode,
   SimpleExpressionNode,
   SourceLocation,
   TemplateChildNode,
-  createRoot
+  createRoot,
+  createSimpleExpression
 } from '../ast'
 import { ParserOptions } from '../options'
 import Tokenizer, {
@@ -24,13 +26,12 @@ import Tokenizer, {
 import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
-import { isCoreComponent } from '../utils'
+import { forAliasRE, isCoreComponent } from '../utils'
 
 type OptionalOptions =
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
-  | 'getTextMode'
   | keyof CompilerCompatOptions
 
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
@@ -64,7 +65,7 @@ export const defaultParserOptions: MergedParserOptions = {
 }
 
 let currentOptions: MergedParserOptions = defaultParserOptions
-let currentRoot: RootNode = createRoot([])
+let currentRoot: RootNode | null = null
 
 // parser state
 let currentInput = ''
@@ -102,14 +103,11 @@ const tokenizer = new Tokenizer(stack, {
     }
     addNode({
       type: NodeTypes.INTERPOLATION,
-      content: {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        isStatic: false,
-        // Set `isConstant` to false by default and will decide in transformExpression
-        constType: ConstantTypes.NOT_CONSTANT,
-        content: getSlice(innerStart, innerEnd),
-        loc: getLoc(innerStart, innerEnd)
-      },
+      content: createSimpleExpression(
+        getSlice(innerStart, innerEnd),
+        false,
+        getLoc(innerStart, innerEnd)
+      ),
       loc: getLoc(start, end)
     })
   },
@@ -123,12 +121,7 @@ const tokenizer = new Tokenizer(stack, {
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
-      loc: {
-        start: tokenizer.getPos(start - 1),
-        // @ts-expect-error to be attached on tag close
-        end: undefined,
-        source: ''
-      },
+      loc: getLoc(start - 1),
       codegenNode: undefined
     }
     currentAttrs.clear()
@@ -159,6 +152,7 @@ const tokenizer = new Tokenizer(stack, {
     currentProp = {
       type: NodeTypes.ATTRIBUTE,
       name: getSlice(start, end),
+      nameLoc: getLoc(start, end),
       value: undefined,
       loc: getLoc(start)
     }
@@ -170,6 +164,7 @@ const tokenizer = new Tokenizer(stack, {
       currentProp = {
         type: NodeTypes.ATTRIBUTE,
         name: raw,
+        nameLoc: getLoc(start, end),
         value: undefined,
         loc: getLoc(start)
       }
@@ -185,7 +180,7 @@ const tokenizer = new Tokenizer(stack, {
       currentProp = {
         type: NodeTypes.DIRECTIVE,
         name,
-        raw,
+        rawName: raw,
         exp: undefined,
         arg: undefined,
         modifiers: [],
@@ -209,17 +204,15 @@ const tokenizer = new Tokenizer(stack, {
     const arg = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += arg
+      ;(currentProp as AttributeNode).nameLoc.end = tokenizer.getPos(end)
     } else {
       const isStatic = arg[0] !== `[`
-      ;(currentProp as DirectiveNode).arg = {
-        type: NodeTypes.SIMPLE_EXPRESSION,
-        content: arg,
+      ;(currentProp as DirectiveNode).arg = createSimpleExpression(
+        arg,
         isStatic,
-        constType: isStatic
-          ? ConstantTypes.CAN_STRINGIFY
-          : ConstantTypes.NOT_CONSTANT,
-        loc: getLoc(start, end)
-      }
+        getLoc(start, end),
+        isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
+      )
     }
   },
 
@@ -227,6 +220,7 @@ const tokenizer = new Tokenizer(stack, {
     const mod = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += '.' + mod
+      ;(currentProp as AttributeNode).nameLoc.end = tokenizer.getPos(end)
     } else {
       ;(currentProp as DirectiveNode).modifiers.push(mod)
     }
@@ -247,7 +241,7 @@ const tokenizer = new Tokenizer(stack, {
     const start = currentProp!.loc.start.offset
     const name = getSlice(start, end)
     if (currentProp!.type === NodeTypes.DIRECTIVE) {
-      currentProp!.raw = name
+      currentProp!.rawName = name
     }
     if (currentAttrs.has(name)) {
       currentProp = null
@@ -273,15 +267,14 @@ const tokenizer = new Tokenizer(stack, {
           }
         } else {
           // directive
-          currentProp.exp = {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: currentAttrValue,
-            isStatic: false,
-            // Treat as non-constant by default. This can be potentially set
-            // to other values by `transformExpression` to make it eligible
-            // for hoisting.
-            constType: ConstantTypes.NOT_CONSTANT,
-            loc: getLoc(currentAttrStartIndex, currentAttrEndIndex)
+          currentProp.rawExp = currentAttrValue
+          currentProp.exp = createSimpleExpression(
+            currentAttrValue,
+            false,
+            getLoc(currentAttrStartIndex, currentAttrEndIndex)
+          )
+          if (currentProp.name === 'for') {
+            currentProp.forParseResult = parseForExpression(currentProp.exp)
           }
         }
       }
@@ -318,6 +311,73 @@ const tokenizer = new Tokenizer(stack, {
     // TODO throw error
   }
 })
+
+// This regex doesn't cover the case if key or index aliases have destructuring,
+// but those do not make sense in the first place, so this works in practice.
+const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+const stripParensRE = /^\(|\)$/g
+
+function parseForExpression(
+  input: SimpleExpressionNode
+): ForParseResult | undefined {
+  const loc = input.loc
+  const exp = input.content
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+
+  const [, LHS, RHS] = inMatch
+
+  const createAliasExpression = (content: string, offset: number) => {
+    const start = loc.start.offset + offset
+    const end = start + content.length
+    return createSimpleExpression(content, false, getLoc(start, end))
+  }
+
+  const result: ForParseResult = {
+    source: createAliasExpression(RHS.trim(), exp.indexOf(RHS, LHS.length)),
+    value: undefined,
+    key: undefined,
+    index: undefined,
+    finalized: false
+  }
+
+  let valueContent = LHS.trim().replace(stripParensRE, '').trim()
+  const trimmedOffset = LHS.indexOf(valueContent)
+
+  const iteratorMatch = valueContent.match(forIteratorRE)
+  if (iteratorMatch) {
+    valueContent = valueContent.replace(forIteratorRE, '').trim()
+
+    const keyContent = iteratorMatch[1].trim()
+    let keyOffset: number | undefined
+    if (keyContent) {
+      keyOffset = exp.indexOf(keyContent, trimmedOffset + valueContent.length)
+      result.key = createAliasExpression(keyContent, keyOffset)
+    }
+
+    if (iteratorMatch[2]) {
+      const indexContent = iteratorMatch[2].trim()
+
+      if (indexContent) {
+        result.index = createAliasExpression(
+          indexContent,
+          exp.indexOf(
+            indexContent,
+            result.key
+              ? keyOffset! + keyContent.length
+              : trimmedOffset + valueContent.length
+          )
+        )
+      }
+    }
+  }
+
+  if (valueContent) {
+    result.value = createAliasExpression(valueContent, trimmedOffset)
+  }
+
+  return result
+}
 
 function getSlice(start: number, end: number) {
   return currentInput.slice(start, end)
@@ -356,11 +416,7 @@ function onText(content: string, start: number, end: number) {
     parent.children.push({
       type: NodeTypes.TEXT,
       content,
-      loc: {
-        start: tokenizer.getPos(start),
-        end: tokenizer.getPos(end),
-        source: ''
-      }
+      loc: getLoc(start, end)
     })
   }
 }
@@ -403,7 +459,7 @@ function isFragmentTemplate({ tag, props }: ElementNode): boolean {
     for (let i = 0; i < props.length; i++) {
       if (
         props[i].type === NodeTypes.DIRECTIVE &&
-        specialTemplateDir.has(props[i].name)
+        specialTemplateDir.has((props[i] as DirectiveNode).name)
       ) {
         return true
       }
@@ -571,7 +627,11 @@ function getLoc(start: number, end?: number): SourceLocation {
 function dirToAttr(dir: DirectiveNode): AttributeNode {
   const attr: AttributeNode = {
     type: NodeTypes.ATTRIBUTE,
-    name: dir.raw!,
+    name: dir.rawName!,
+    nameLoc: getLoc(
+      dir.loc.start.offset,
+      dir.loc.start.offset + dir.rawName!.length
+    ),
     value: undefined,
     loc: dir.loc
   }
@@ -622,9 +682,9 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     tokenizer.delimiterClose = toCharCodes(delimiters[1])
   }
 
-  const root = (currentRoot = createRoot([]))
+  const root = (currentRoot = createRoot([], input))
   tokenizer.parse(currentInput)
-  root.loc.end = tokenizer.getPos(input.length)
   root.children = condenseWhitespace(root.children)
+  currentRoot = null
   return root
 }

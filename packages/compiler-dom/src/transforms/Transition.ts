@@ -27,8 +27,7 @@ export const transformTransition: NodeTransform = (node, context) => {
               DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN,
               {
                 start: node.children[0].loc.start,
-                end: node.children[node.children.length - 1].loc.end,
-                source: ''
+                end: node.children[node.children.length - 1].loc.end
               }
             )
           )
@@ -43,6 +42,7 @@ export const transformTransition: NodeTransform = (node, context) => {
               node.props.push({
                 type: NodeTypes.ATTRIBUTE,
                 name: 'persisted',
+                nameLoc: node.loc,
                 value: undefined,
                 loc: node.loc
               })

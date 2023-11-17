@@ -1,9 +1,4 @@
-import {
-  TextModes,
-  ParserOptions,
-  ElementNode,
-  NodeTypes
-} from '@vue/compiler-core'
+import { ParserOptions, ElementNode, NodeTypes } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtml } from './decodeHtml'
@@ -16,6 +11,7 @@ export const enum DOMNamespaces {
 }
 
 export const parserOptions: ParserOptions = {
+  parseMode: 'html',
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
   isPreTag: tag => tag === 'pre',
@@ -75,18 +71,5 @@ export const parserOptions: ParserOptions = {
       }
     }
     return ns
-  },
-
-  // https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments
-  getTextMode({ tag, ns }: ElementNode): TextModes {
-    if (ns === DOMNamespaces.HTML) {
-      if (tag === 'textarea' || tag === 'title') {
-        return TextModes.RCDATA
-      }
-      if (tag === 'style' || tag === 'script') {
-        return TextModes.RAWTEXT
-      }
-    }
-    return TextModes.DATA
   }
 }

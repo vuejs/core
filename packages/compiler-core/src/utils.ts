@@ -1,5 +1,4 @@
 import {
-  SourceLocation,
   Position,
   ElementNode,
   NodeTypes,
@@ -175,31 +174,6 @@ export const isMemberExpressionNode = __BROWSER__
 export const isMemberExpression = __BROWSER__
   ? isMemberExpressionBrowser
   : isMemberExpressionNode
-
-export function getInnerRange(
-  loc: SourceLocation,
-  offset: number,
-  length: number
-): SourceLocation {
-  __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.slice(offset, offset + length)
-  const newLoc: SourceLocation = {
-    source,
-    start: advancePositionWithClone(loc.start, loc.source, offset),
-    end: loc.end
-  }
-
-  if (length != null) {
-    __TEST__ && assert(offset + length <= loc.source.length)
-    newLoc.end = advancePositionWithClone(
-      loc.start,
-      loc.source,
-      offset + length
-    )
-  }
-
-  return newLoc
-}
 
 export function advancePositionWithClone(
   pos: Position,

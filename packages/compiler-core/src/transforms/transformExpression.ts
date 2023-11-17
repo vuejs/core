@@ -336,7 +336,6 @@ export function processExpression(
         id.name,
         false,
         {
-          source,
           start: advancePositionWithClone(node.loc.start, source, start),
           end: advancePositionWithClone(node.loc.start, source, end)
         },

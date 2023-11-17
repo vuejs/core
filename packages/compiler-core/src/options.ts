@@ -1,5 +1,4 @@
 import { ElementNode, Namespace, TemplateChildNode, ParentNode } from './ast'
-import { TextModes } from './parse'
 import { CompilerError } from './errors'
 import {
   NodeTransform,
@@ -42,13 +41,6 @@ export interface ParserOptions
    * Get tag namespace
    */
   getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
-  /**
-   * Get text parsing mode for this element
-   */
-  getTextMode?: (
-    node: ElementNode,
-    parent: ElementNode | undefined
-  ) => TextModes
   /**
    * @default ['{{', '}}']
    */
