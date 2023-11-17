@@ -18,10 +18,14 @@ import {
   createVNode,
   withDirectives,
   vModelCheckbox,
-  renderSlot
+  renderSlot,
+  Transition,
+  createCommentVNode,
+  vShow
 } from '@vue/runtime-dom'
 import { renderToString, SSRContext } from '@vue/server-renderer'
-import { PatchFlags } from '../../shared/src'
+import { PatchFlags } from '@vue/shared'
+import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -931,6 +935,18 @@ describe('SSR hydration', () => {
     )
   })
 
+  test('force hydrate prop with `.prop` modifier', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" :indeterminate.prop="true">',
+      () =>
+        h('input', {
+          type: 'checkbox',
+          '.indeterminate': true
+        })
+    )
+    expect((container.firstChild! as any).indeterminate).toBe(true)
+  })
+
   test('force hydrate input v-model with non-string value bindings', () => {
     const { container } = mountWithHydration(
       '<input type="checkbox" value="true">',
@@ -947,6 +963,20 @@ describe('SSR hydration', () => {
         )
     )
     expect((container.firstChild as any)._trueValue).toBe(true)
+  })
+
+  test('force hydrate checkbox with indeterminate', () => {
+    const { container } = mountWithHydration(
+      '<input type="checkbox" indeterminate>',
+      () =>
+        createVNode(
+          'input',
+          { type: 'checkbox', indeterminate: '' },
+          null,
+          PatchFlags.HOISTED
+        )
+    )
+    expect((container.firstChild as any).indeterminate).toBe(true)
   })
 
   test('force hydrate select option with non-string value bindings', () => {
@@ -1013,6 +1043,74 @@ describe('SSR hydration', () => {
     mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
       createStaticVNode(`<div></div>`, 1)
     )
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear', () => {
+    const { vnode, container } = mountWithHydration(
+      `<template><div>foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => h('div', 'foo')
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+      >
+        foo
+      </div>
+    `)
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-if', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><!----></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () => (show ? h('div', 'foo') : createCommentVNode(''))
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot('<!---->')
+    expect(vnode.el).toBe(container.firstChild)
+    expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear with v-show', () => {
+    const show = false
+    const { vnode, container } = mountWithHydration(
+      `<template><div style="display: none;">foo</div></template>`,
+      () =>
+        h(
+          Transition,
+          { appear: true },
+          {
+            default: () =>
+              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]])
+          }
+        )
+    )
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <div
+        class="v-enter-from v-enter-active"
+        style="display: none;"
+      >
+        foo
+      </div>
+    `)
+    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
@@ -1104,6 +1202,22 @@ describe('SSR hydration', () => {
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
+    })
+
+    test('comment mismatch (element)', () => {
+      const { container } = mountWithHydration(`<div><span></span></div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
+    })
+
+    test('comment mismatch (text)', () => {
+      const { container } = mountWithHydration(`<div>foobar</div>`, () =>
+        h('div', [createCommentVNode('hi')])
+      )
+      expect(container.innerHTML).toBe('<div><!--hi--></div>')
+      expect(`Hydration node mismatch`).toHaveBeenWarned()
     })
   })
 })

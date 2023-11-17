@@ -16,7 +16,8 @@ import {
   isString,
   isFunction,
   UnionToIntersection,
-  Prettify
+  Prettify,
+  IfAny
 } from '@vue/shared'
 import {
   toRaw,
@@ -228,11 +229,9 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: Prettify<
-    MakeDefaultsOptional extends true
-      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-      : P & PublicProps
-  >
+  $props: MakeDefaultsOptional extends true
+    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
+    : Prettify<P> & PublicProps
   $attrs: Data
   $refs: Data
   $slots: UnwrapSlotsType<S>
@@ -251,7 +250,7 @@ export type ComponentPublicInstance<
     options?: WatchOptions
   ): WatchStopHandle
 } & ExposedKeys<
-  P &
+  IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
     ShallowUnwrapRef<B> &
     UnwrapNestedRefs<D> &
     ExtractComputedReturns<C> &

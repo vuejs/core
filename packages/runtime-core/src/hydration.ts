@@ -15,7 +15,7 @@ import { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import { PatchFlags, ShapeFlags, isReservedProp, isOn } from '@vue/shared'
-import { RendererInternals } from './renderer'
+import { needTransition, RendererInternals } from './renderer'
 import { setRef } from './rendererTemplateRef'
 import {
   SuspenseImpl,
@@ -111,6 +111,21 @@ export function createHydrationFunctions(
     let domType = node.nodeType
     vnode.el = node
 
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      if (!('__vnode' in node)) {
+        Object.defineProperty(node, '__vnode', {
+          value: vnode,
+          enumerable: false
+        })
+      }
+      if (!('__vueParentComponent' in node)) {
+        Object.defineProperty(node, '__vueParentComponent', {
+          value: parentComponent,
+          enumerable: false
+        })
+      }
+    }
+
     if (patchFlag === PatchFlags.BAIL) {
       optimized = false
       vnode.dynamicChildren = null
@@ -145,7 +160,16 @@ export function createHydrationFunctions(
         }
         break
       case Comment:
-        if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
+        if (isTemplateNode(node)) {
+          nextNode = nextSibling(node)
+          // wrapped <transition appear>
+          // replace <template> node with inner child
+          replaceNode(
+            (vnode.el = node.content.firstChild!),
+            node,
+            parentComponent
+          )
+        } else if (domType !== DOMNodeTypes.COMMENT || isFragmentStart) {
           nextNode = onMismatch()
         } else {
           nextNode = nextSibling(node)
@@ -196,9 +220,10 @@ export function createHydrationFunctions(
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
           if (
-            domType !== DOMNodeTypes.ELEMENT ||
-            (vnode.type as string).toLowerCase() !==
-              (node as Element).tagName.toLowerCase()
+            (domType !== DOMNodeTypes.ELEMENT ||
+              (vnode.type as string).toLowerCase() !==
+                (node as Element).tagName.toLowerCase()) &&
+            !isTemplateNode(node)
           ) {
             nextNode = onMismatch()
           } else {
@@ -217,15 +242,6 @@ export function createHydrationFunctions(
           // on its sub-tree.
           vnode.slotScopeIds = slotScopeIds
           const container = parentNode(node)!
-          mountComponent(
-            vnode,
-            container,
-            null,
-            parentComponent,
-            parentSuspense,
-            isSVGContainer(container),
-            optimized
-          )
 
           // Locate the next node.
           if (isFragmentStart) {
@@ -240,6 +256,16 @@ export function createHydrationFunctions(
           } else {
             nextNode = nextSibling(node)
           }
+
+          mountComponent(
+            vnode,
+            container,
+            null,
+            parentComponent,
+            parentSuspense,
+            isSVGContainer(container),
+            optimized
+          )
 
           // #3787
           // if component is async, it may get moved / unmounted before its
@@ -307,27 +333,31 @@ export function createHydrationFunctions(
     optimized: boolean
   ) => {
     optimized = optimized || !!vnode.dynamicChildren
-    const { type, props, patchFlag, shapeFlag, dirs } = vnode
+    const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
-    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
+    // #7476 <input indeterminate>
+    const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
-          forcePatchValue ||
+          forcePatch ||
           !optimized ||
-          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           for (const key in props) {
             if (
-              (forcePatchValue && key.endsWith('value')) ||
-              (isOn(key) && !isReservedProp(key))
+              (forcePatch &&
+                (key.endsWith('value') || key === 'indeterminate')) ||
+              (isOn(key) && !isReservedProp(key)) ||
+              // force hydrate v-bind with .prop modifiers
+              key[0] === '.'
             ) {
               patchProp(
                 el,
@@ -359,12 +389,40 @@ export function createHydrationFunctions(
       if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
       }
+
+      // handle appear transition
+      let needCallTransitionHooks = false
+      if (isTemplateNode(el)) {
+        needCallTransitionHooks =
+          needTransition(parentSuspense, transition) &&
+          parentComponent &&
+          parentComponent.vnode.props &&
+          parentComponent.vnode.props.appear
+
+        const content = (el as HTMLTemplateElement).content
+          .firstChild as Element
+
+        if (needCallTransitionHooks) {
+          transition!.beforeEnter(content)
+        }
+
+        // replace <template> node with inner children
+        replaceNode(content, el, parentComponent)
+        vnode.el = el = content
+      }
+
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeMount')
       }
-      if ((vnodeHooks = props && props.onVnodeMounted) || dirs) {
+
+      if (
+        (vnodeHooks = props && props.onVnodeMounted) ||
+        dirs ||
+        needCallTransitionHooks
+      ) {
         queueEffectWithSuspense(() => {
           vnodeHooks && invokeVNodeHook(vnodeHooks, parentComponent, vnode)
+          needCallTransitionHooks && transition!.enter(el)
           dirs && invokeDirectiveHook(vnode, null, parentComponent, 'mounted')
         }, parentSuspense)
       }
@@ -580,6 +638,34 @@ export function createHydrationFunctions(
       }
     }
     return node
+  }
+
+  const replaceNode = (
+    newNode: Node,
+    oldNode: Node,
+    parentComponent: ComponentInternalInstance | null
+  ): void => {
+    // replace node
+    const parentNode = oldNode.parentNode
+    if (parentNode) {
+      parentNode.replaceChild(newNode, oldNode)
+    }
+
+    // update vnode
+    let parent = parentComponent
+    while (parent) {
+      if (parent.vnode.el === oldNode) {
+        parent.vnode.el = parent.subTree.el = newNode
+      }
+      parent = parent.parent
+    }
+  }
+
+  const isTemplateNode = (node: Node): node is HTMLTemplateElement => {
+    return (
+      node.nodeType === DOMNodeTypes.ELEMENT &&
+      (node as Element).tagName.toLowerCase() === 'template'
+    )
   }
 
   return [hydrate, hydrateNode] as const

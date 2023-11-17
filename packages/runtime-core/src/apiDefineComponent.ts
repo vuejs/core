@@ -82,8 +82,7 @@ export type DefineComponent<
     LC & GlobalComponents,
     Directives & GlobalDirectives,
     Exposed
-  > &
-    Props
+  > 
 > &
   ComponentOptionsBase<
     Props,

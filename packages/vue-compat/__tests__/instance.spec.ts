@@ -1,4 +1,4 @@
-import { vi, Mock } from 'vitest'
+import { type Mock } from 'vitest'
 import Vue from '@vue/compat'
 import { Slots } from '../../runtime-core/src/componentSlots'
 import { Text } from '../../runtime-core/src/vnode'

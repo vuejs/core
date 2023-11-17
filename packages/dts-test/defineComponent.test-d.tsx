@@ -1476,6 +1476,31 @@ describe('slots', () => {
   expectType<Slots | undefined>(new comp2().$slots)
 })
 
+// #5885
+describe('should work when props type is incompatible with setup returned type ', () => {
+  type SizeType = 'small' | 'big'
+  const Comp = defineComponent({
+    props: {
+      size: {
+        type: String as PropType<SizeType>,
+        required: true
+      }
+    },
+    setup(props) {
+      expectType<SizeType>(props.size)
+      return {
+        size: 1
+      }
+    }
+  })
+  type CompInstance = InstanceType<typeof Comp>
+
+  const CompA = {} as CompInstance
+  expectType<ComponentPublicInstance>(CompA)
+  expectType<number>(CompA.size)
+  expectType<SizeType>(CompA.$props.size)
+})
+
 // #3367 expose components types
 describe('expose component types', () => {
   const child = defineComponent({
