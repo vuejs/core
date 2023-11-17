@@ -4,6 +4,7 @@ exports[`basic 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { template } from 'vue/vapor'
 const t0 = template(\`<h1 id=\\"title\\">Counter</h1>\`)
+
 export default /*#__PURE__*/_defineComponent({
   setup(__props) {
 
