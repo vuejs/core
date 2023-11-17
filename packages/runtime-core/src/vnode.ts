@@ -10,7 +10,9 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
-  isOn
+  isOn,
+  isBoolean,
+  isNumber
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
@@ -404,7 +406,7 @@ const normalizeRef = ({
   ref_key,
   ref_for
 }: VNodeProps): VNodeNormalizedRefAtom | null => {
-  if (typeof ref === 'number') {
+  if (isNumber(ref)) {
     ref = '' + ref
   }
   return (
@@ -732,7 +734,7 @@ export function createCommentVNode(
 }
 
 export function normalizeVNode(child: VNodeChild): VNode {
-  if (child == null || typeof child === 'boolean') {
+  if (child == null || isBoolean(child)) {
     // empty placeholder
     return createVNode(Comment)
   } else if (isArray(child)) {
