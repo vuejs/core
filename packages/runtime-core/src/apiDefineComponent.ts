@@ -114,11 +114,6 @@ export type ComponentDefineOptions<
   II extends string = string,
   S extends SlotsType = {},
   Options = {}
-  // test stuff
-  // PropNames extends string = Props extends string ? Props : never,
-  // PropOptions extends ComponentObjectPropsOptions<
-  //   Record<keyof Props, any>
-  // > = ComponentObjectPropsOptions<Record<keyof Props, any>>
 > =
   | (Options & {
       props?: [Props] extends [never]

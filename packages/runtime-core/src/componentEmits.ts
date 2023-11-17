@@ -61,7 +61,10 @@ export type EmitFn<
 > = Options extends Array<infer V>
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-  ? (event: string, ...args: any[]) => void
+  ? (
+      event: any,
+      ...args: any[]
+    ) => any | ((event: string, ...args: any[]) => void) // (event:any, ...args:[])=> void is there, to allow $emit('myEvent') to work
   : UnionToIntersection<
       {
         [key in Event]: Options[key] extends (...args: infer Args) => any

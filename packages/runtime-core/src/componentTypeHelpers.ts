@@ -11,7 +11,8 @@ import {
   ExtractPropTypes
 } from './componentProps'
 import { Slot, Slots } from './componentSlots'
-import { Component, FunctionalComponent, VNode } from '.'
+import { VNode } from './vnode'
+import { FunctionalComponent, Component } from './component'
 import {
   ComponentPublicInstance,
   ComponentPublicInstanceConstructor,
@@ -184,7 +185,6 @@ export type ComponentEmits<T> = ExtractComponentEmits<T> extends infer E
     : EmitFn<E>
   : () => void
 
-// from other PR https://github.com/vuejs/core/pull/5408
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
