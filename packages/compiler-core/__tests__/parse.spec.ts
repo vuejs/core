@@ -19,7 +19,7 @@ import { baseParse } from '../src/parser/index'
 
 describe('compiler: parse', () => {
   describe('Text', () => {
-    test.skip('simple text', () => {
+    test('simple text', () => {
       const ast = baseParse('some text')
       const text = ast.children[0] as TextNode
 
@@ -28,8 +28,7 @@ describe('compiler: parse', () => {
         content: 'some text',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
@@ -47,13 +46,12 @@ describe('compiler: parse', () => {
         content: 'some text',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: 'some text'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('text with interpolation', () => {
+    test('text with interpolation', () => {
       const ast = baseParse('some {{ foo + bar }} text')
       const text1 = ast.children[0] as TextNode
       const text2 = ast.children[2] as TextNode
@@ -63,8 +61,7 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
+          end: { offset: 5, line: 1, column: 6 }
         }
       })
       expect(text2).toStrictEqual({
@@ -72,13 +69,12 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 20, line: 1, column: 21 },
-          end: { offset: 25, line: 1, column: 26 },
-          source: ' text'
+          end: { offset: 25, line: 1, column: 26 }
         }
       })
     })
 
-    test.skip('text with interpolation which has `<`', () => {
+    test('text with interpolation which has `<`', () => {
       const ast = baseParse('some {{ a<b && c>d }} text')
       const text1 = ast.children[0] as TextNode
       const text2 = ast.children[2] as TextNode
@@ -88,8 +84,7 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
+          end: { offset: 5, line: 1, column: 6 }
         }
       })
       expect(text2).toStrictEqual({
@@ -97,13 +92,12 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 21, line: 1, column: 22 },
-          end: { offset: 26, line: 1, column: 27 },
-          source: ' text'
+          end: { offset: 26, line: 1, column: 27 }
         }
       })
     })
 
-    test.skip('text with mix of tags and interpolations', () => {
+    test('text with mix of tags and interpolations', () => {
       const ast = baseParse('some <span>{{ foo < bar + foo }} text</span>')
       const text1 = ast.children[0] as TextNode
       const text2 = (ast.children[1] as ElementNode).children![1] as TextNode
@@ -113,8 +107,7 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: 'some '
+          end: { offset: 5, line: 1, column: 6 }
         }
       })
       expect(text2).toStrictEqual({
@@ -122,13 +115,12 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 32, line: 1, column: 33 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: ' text'
+          end: { offset: 37, line: 1, column: 38 }
         }
       })
     })
 
-    test.skip('lonely "<" doesn\'t separate nodes', () => {
+    test('lonely "<" doesn\'t separate nodes', () => {
       const ast = baseParse('a < b', {
         onError: err => {
           if (err.code !== ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME) {
@@ -143,13 +135,12 @@ describe('compiler: parse', () => {
         content: 'a < b',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: 'a < b'
+          end: { offset: 5, line: 1, column: 6 }
         }
       })
     })
 
-    test.skip('lonely "{{" doesn\'t separate nodes', () => {
+    test('lonely "{{" doesn\'t separate nodes', () => {
       const ast = baseParse('a {{ b', {
         onError: error => {
           if (error.code !== ErrorCodes.X_MISSING_INTERPOLATION_END) {
@@ -164,15 +155,14 @@ describe('compiler: parse', () => {
         content: 'a {{ b',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: 'a {{ b'
+          end: { offset: 6, line: 1, column: 7 }
         }
       })
     })
   })
 
   describe('Interpolation', () => {
-    test.skip('simple interpolation', () => {
+    test('simple interpolation', () => {
       const ast = baseParse('{{message}}')
       const interpolation = ast.children[0] as InterpolationNode
 
@@ -185,19 +175,17 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 2, line: 1, column: 3 },
-            end: { offset: 9, line: 1, column: 10 },
-            source: `message`
+            end: { offset: 9, line: 1, column: 10 }
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '{{message}}'
+          end: { offset: 11, line: 1, column: 12 }
         }
       })
     })
 
-    test.skip('it can have tag-like notation', () => {
+    test('it can have tag-like notation', () => {
       const ast = baseParse('{{ a<b }}')
       const interpolation = ast.children[0] as InterpolationNode
 
@@ -210,19 +198,17 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
-            end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
+            end: { offset: 6, line: 1, column: 7 }
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('it can have tag-like notation (2)', () => {
+    test('it can have tag-like notation (2)', () => {
       const ast = baseParse('{{ a<b }}{{ c>d }}')
       const interpolation1 = ast.children[0] as InterpolationNode
       const interpolation2 = ast.children[1] as InterpolationNode
@@ -236,14 +222,12 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
-            end: { offset: 6, line: 1, column: 7 },
-            source: 'a<b'
+            end: { offset: 6, line: 1, column: 7 }
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '{{ a<b }}'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
 
@@ -256,19 +240,17 @@ describe('compiler: parse', () => {
           content: 'c>d',
           loc: {
             start: { offset: 12, line: 1, column: 13 },
-            end: { offset: 15, line: 1, column: 16 },
-            source: 'c>d'
+            end: { offset: 15, line: 1, column: 16 }
           }
         },
         loc: {
           start: { offset: 9, line: 1, column: 10 },
-          end: { offset: 18, line: 1, column: 19 },
-          source: '{{ c>d }}'
+          end: { offset: 18, line: 1, column: 19 }
         }
       })
     })
 
-    test.skip('it can have tag-like notation (3)', () => {
+    test('it can have tag-like notation (3)', () => {
       const ast = baseParse('<div>{{ "</div>" }}</div>')
       const element = ast.children[0] as ElementNode
       const interpolation = element.children[0] as InterpolationNode
@@ -283,19 +265,17 @@ describe('compiler: parse', () => {
           content: '"</div>"',
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 16, line: 1, column: 17 },
-            source: '"</div>"'
+            end: { offset: 16, line: 1, column: 17 }
           }
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '{{ "</div>" }}'
+          end: { offset: 19, line: 1, column: 20 }
         }
       })
     })
 
-    test.skip('custom delimiters', () => {
+    test('custom delimiters', () => {
       const ast = baseParse('<p>{msg}</p>', {
         delimiters: ['{', '}']
       })
@@ -311,21 +291,19 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 4, line: 1, column: 5 },
-            end: { offset: 7, line: 1, column: 8 },
-            source: 'msg'
+            end: { offset: 7, line: 1, column: 8 }
           }
         },
         loc: {
           start: { offset: 3, line: 1, column: 4 },
-          end: { offset: 8, line: 1, column: 9 },
-          source: '{msg}'
+          end: { offset: 8, line: 1, column: 9 }
         }
       })
     })
   })
 
   describe('Comment', () => {
-    test.skip('empty comment', () => {
+    test('empty comment', () => {
       const ast = baseParse('<!---->')
       const comment = ast.children[0] as CommentNode
 
@@ -334,13 +312,12 @@ describe('compiler: parse', () => {
         content: '',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 7, line: 1, column: 8 },
-          source: '<!---->'
+          end: { offset: 7, line: 1, column: 8 }
         }
       })
     })
 
-    test.skip('simple comment', () => {
+    test('simple comment', () => {
       const ast = baseParse('<!--abc-->')
       const comment = ast.children[0] as CommentNode
 
@@ -349,13 +326,12 @@ describe('compiler: parse', () => {
         content: 'abc',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
+          end: { offset: 10, line: 1, column: 11 }
         }
       })
     })
 
-    test.skip('two comments', () => {
+    test('two comments', () => {
       const ast = baseParse('<!--abc--><!--def-->')
       const comment1 = ast.children[0] as CommentNode
       const comment2 = ast.children[1] as CommentNode
@@ -365,8 +341,7 @@ describe('compiler: parse', () => {
         content: 'abc',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 10, line: 1, column: 11 },
-          source: '<!--abc-->'
+          end: { offset: 10, line: 1, column: 11 }
         }
       })
       expect(comment2).toStrictEqual({
@@ -374,13 +349,12 @@ describe('compiler: parse', () => {
         content: 'def',
         loc: {
           start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 20, line: 1, column: 21 },
-          source: '<!--def-->'
+          end: { offset: 20, line: 1, column: 21 }
         }
       })
     })
 
-    test.skip('comments option', () => {
+    test('comments option', () => {
       const astOptionNoComment = baseParse('<!--abc-->', { comments: false })
       const astOptionWithComments = baseParse('<!--abc-->', { comments: true })
 
@@ -389,7 +363,7 @@ describe('compiler: parse', () => {
     })
 
     // #2217
-    test.skip('comments in the <pre> tag should be removed when comments option requires it', () => {
+    test('comments in the <pre> tag should be removed when comments option requires it', () => {
       const rawText = `<p/><!-- foo --><p/>`
 
       const astWithComments = baseParse(`<pre>${rawText}</pre>`, {
@@ -430,7 +404,7 @@ describe('compiler: parse', () => {
   })
 
   describe('Element', () => {
-    test.skip('simple div', () => {
+    test('simple div', () => {
       const ast = baseParse('<div>hello</div>')
       const element = ast.children[0] as ElementNode
 
@@ -441,27 +415,24 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-        isSelfClosing: false,
         children: [
           {
             type: NodeTypes.TEXT,
             content: 'hello',
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 },
-              source: 'hello'
+              end: { offset: 10, line: 1, column: 11 }
             }
           }
         ],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 16, line: 1, column: 17 },
-          source: '<div>hello</div>'
+          end: { offset: 16, line: 1, column: 17 }
         }
       })
     })
 
-    test.skip('empty', () => {
+    test('empty', () => {
       const ast = baseParse('<div></div>')
       const element = ast.children[0] as ElementNode
 
@@ -472,17 +443,15 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '<div></div>'
+          end: { offset: 11, line: 1, column: 12 }
         }
       })
     })
 
-    test.skip('self closing', () => {
+    test('self closing', () => {
       const ast = baseParse('<div/>after')
       const element = ast.children[0] as ElementNode
 
@@ -493,18 +462,15 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-
-        isSelfClosing: true,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: '<div/>'
+          end: { offset: 6, line: 1, column: 7 }
         }
       })
     })
 
-    test.skip('void element', () => {
+    test('void element', () => {
       const ast = baseParse('<img>after', {
         isVoidTag: tag => tag === 'img'
       })
@@ -517,18 +483,15 @@ describe('compiler: parse', () => {
         tagType: ElementTypes.ELEMENT,
         codegenNode: undefined,
         props: [],
-
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: '<img>'
+          end: { offset: 5, line: 1, column: 6 }
         }
       })
     })
 
-    test.skip('template element with directives', () => {
+    test('template element with directives', () => {
       const ast = baseParse('<template v-if="ok"></template>')
       const element = ast.children[0]
       expect(element).toMatchObject({
@@ -537,7 +500,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('template element without directives', () => {
+    test('template element without directives', () => {
       const ast = baseParse('<template></template>')
       const element = ast.children[0]
       expect(element).toMatchObject({
@@ -546,7 +509,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('native element with `isNativeTag`', () => {
+    test('native element with `isNativeTag`', () => {
       const ast = baseParse('<div></div><comp></comp><Comp></Comp>', {
         isNativeTag: tag => tag === 'div'
       })
@@ -570,7 +533,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('native element without `isNativeTag`', () => {
+    test('native element without `isNativeTag`', () => {
       const ast = baseParse('<div></div><comp></comp><Comp></Comp>')
 
       expect(ast.children[0]).toMatchObject({
@@ -592,9 +555,9 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('v-is with `isNativeTag`', () => {
+    test('is casting with `isNativeTag`', () => {
       const ast = baseParse(
-        `<div></div><div v-is="'foo'"></div><Comp></Comp>`,
+        `<div></div><div is="vue:foo"></div><Comp></Comp>`,
         {
           isNativeTag: tag => tag === 'div'
         }
@@ -619,8 +582,8 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('v-is without `isNativeTag`', () => {
-      const ast = baseParse(`<div></div><div v-is="'foo'"></div><Comp></Comp>`)
+    test('is casting without `isNativeTag`', () => {
+      const ast = baseParse(`<div></div><div is="vue:foo"></div><Comp></Comp>`)
 
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
@@ -641,7 +604,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('custom element', () => {
+    test('custom element', () => {
       const ast = baseParse('<div></div><comp></comp>', {
         isNativeTag: tag => tag === 'div',
         isCustomElement: tag => tag === 'comp'
@@ -660,7 +623,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('built-in component', () => {
+    test('built-in component', () => {
       const ast = baseParse('<div></div><comp></comp>', {
         isBuiltInComponent: tag => (tag === 'comp' ? Symbol() : void 0)
       })
@@ -678,7 +641,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('slot element', () => {
+    test('slot element', () => {
       const ast = baseParse('<slot></slot><Comp></Comp>')
 
       expect(ast.children[0]).toMatchObject({
@@ -694,7 +657,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('attribute with no value', () => {
+    test('attribute with no value', () => {
       const ast = baseParse('<div id></div>')
       const element = ast.children[0] as ElementNode
 
@@ -708,26 +671,27 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: undefined,
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 },
-              source: 'id'
+              end: { offset: 7, line: 1, column: 8 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 14, line: 1, column: 15 },
-          source: '<div id></div>'
+          end: { offset: 14, line: 1, column: 15 }
         }
       })
     })
 
-    test.skip('attribute with empty value, double quote', () => {
+    test('attribute with empty value, double quote', () => {
       const ast = baseParse('<div id=""></div>')
       const element = ast.children[0] as ElementNode
 
@@ -741,34 +705,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 },
-                source: '""'
+                end: { offset: 10, line: 1, column: 11 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 },
-              source: 'id=""'
+              end: { offset: 10, line: 1, column: 11 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=""></div>'
+          end: { offset: 17, line: 1, column: 18 }
         }
       })
     })
 
-    test.skip('attribute with empty value, single quote', () => {
+    test('attribute with empty value, single quote', () => {
       const ast = baseParse("<div id=''></div>")
       const element = ast.children[0] as ElementNode
 
@@ -782,34 +746,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 },
-                source: "''"
+                end: { offset: 10, line: 1, column: 11 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 },
-              source: "id=''"
+              end: { offset: 10, line: 1, column: 11 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 },
-          source: "<div id=''></div>"
+          end: { offset: 17, line: 1, column: 18 }
         }
       })
     })
 
-    test.skip('attribute with value, double quote', () => {
+    test('attribute with value, double quote', () => {
       const ast = baseParse('<div id=">\'"></div>')
       const element = ast.children[0] as ElementNode
 
@@ -823,34 +787,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: ">'",
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 12, line: 1, column: 13 },
-                source: '">\'"'
+                end: { offset: 12, line: 1, column: 13 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 12, line: 1, column: 13 },
-              source: 'id=">\'"'
+              end: { offset: 12, line: 1, column: 13 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '<div id=">\'"></div>'
+          end: { offset: 19, line: 1, column: 20 }
         }
       })
     })
 
-    test.skip('attribute with value, single quote', () => {
+    test('attribute with value, single quote', () => {
       const ast = baseParse("<div id='>\"'></div>")
       const element = ast.children[0] as ElementNode
 
@@ -864,34 +828,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '>"',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 12, line: 1, column: 13 },
-                source: "'>\"'"
+                end: { offset: 12, line: 1, column: 13 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 12, line: 1, column: 13 },
-              source: "id='>\"'"
+              end: { offset: 12, line: 1, column: 13 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: "<div id='>\"'></div>"
+          end: { offset: 19, line: 1, column: 20 }
         }
       })
     })
 
-    test.skip('attribute with value, unquoted', () => {
+    test('attribute with value, unquoted', () => {
       const ast = baseParse('<div id=a/></div>')
       const element = ast.children[0] as ElementNode
 
@@ -905,34 +869,34 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'a/',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 },
-                source: 'a/'
+                end: { offset: 10, line: 1, column: 11 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 },
-              source: 'id=a/'
+              end: { offset: 10, line: 1, column: 11 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 },
-          source: '<div id=a/></div>'
+          end: { offset: 17, line: 1, column: 18 }
         }
       })
     })
 
-    test.skip('multiple attributes', () => {
+    test('multiple attributes', () => {
       const ast = baseParse('<div id=a class="c" inert style=\'\'></div>')
       const element = ast.children[0] as ElementNode
 
@@ -946,135 +910,118 @@ describe('compiler: parse', () => {
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'id',
+            nameLoc: {
+              start: { offset: 5, line: 1, column: 6 },
+              end: { offset: 7, line: 1, column: 8 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'a',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 9, line: 1, column: 10 },
-                source: 'a'
+                end: { offset: 9, line: 1, column: 10 }
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 9, line: 1, column: 10 },
-              source: 'id=a'
+              end: { offset: 9, line: 1, column: 10 }
             }
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'class',
+            nameLoc: {
+              start: { offset: 10, line: 1, column: 11 },
+              end: { offset: 15, line: 1, column: 16 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: 'c',
               loc: {
                 start: { offset: 16, line: 1, column: 17 },
-                end: { offset: 19, line: 1, column: 20 },
-                source: '"c"'
+                end: { offset: 19, line: 1, column: 20 }
               }
             },
             loc: {
               start: { offset: 10, line: 1, column: 11 },
-              end: { offset: 19, line: 1, column: 20 },
-              source: 'class="c"'
+              end: { offset: 19, line: 1, column: 20 }
             }
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'inert',
+            nameLoc: {
+              start: { offset: 20, line: 1, column: 21 },
+              end: { offset: 25, line: 1, column: 26 }
+            },
             value: undefined,
             loc: {
               start: { offset: 20, line: 1, column: 21 },
-              end: { offset: 25, line: 1, column: 26 },
-              source: 'inert'
+              end: { offset: 25, line: 1, column: 26 }
             }
           },
           {
             type: NodeTypes.ATTRIBUTE,
             name: 'style',
+            nameLoc: {
+              start: { offset: 26, line: 1, column: 27 },
+              end: { offset: 31, line: 1, column: 32 }
+            },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 32, line: 1, column: 33 },
-                end: { offset: 34, line: 1, column: 35 },
-                source: "''"
+                end: { offset: 34, line: 1, column: 35 }
               }
             },
             loc: {
               start: { offset: 26, line: 1, column: 27 },
-              end: { offset: 34, line: 1, column: 35 },
-              source: "style=''"
+              end: { offset: 34, line: 1, column: 35 }
             }
           }
         ],
 
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 41, line: 1, column: 42 },
-          source: '<div id=a class="c" inert style=\'\'></div>'
+          end: { offset: 41, line: 1, column: 42 }
         }
       })
     })
 
     // https://github.com/vuejs/core/issues/4251
-    test.skip('class attribute should ignore whitespace when parsed', () => {
+    test('class attribute should ignore whitespace when parsed', () => {
       const ast = baseParse('<div class=" \n\t c \t\n "></div>')
       const element = ast.children[0] as ElementNode
 
       expect(element).toStrictEqual({
         children: [],
         codegenNode: undefined,
-        isSelfClosing: false,
         loc: {
-          end: {
-            column: 10,
-            line: 3,
-            offset: 29
-          },
-          source: '<div class=" \n\t c \t\n "></div>',
-          start: {
-            column: 1,
-            line: 1,
-            offset: 0
-          }
+          start: { column: 1, line: 1, offset: 0 },
+          end: { column: 10, line: 3, offset: 29 }
         },
         ns: Namespaces.HTML,
         props: [
           {
-            loc: {
-              end: {
-                column: 3,
-                line: 3,
-                offset: 22
-              },
-              source: 'class=" \n\t c \t\n "',
-              start: {
-                column: 6,
-                line: 1,
-                offset: 5
-              }
-            },
             name: 'class',
+            nameLoc: {
+              start: { column: 6, line: 1, offset: 5 },
+              end: { column: 11, line: 1, offset: 10 }
+            },
             type: NodeTypes.ATTRIBUTE,
             value: {
               content: 'c',
               loc: {
-                end: {
-                  column: 3,
-                  line: 3,
-                  offset: 22
-                },
-                source: '" \n\t c \t\n "',
-                start: {
-                  column: 12,
-                  line: 1,
-                  offset: 11
-                }
+                start: { column: 12, line: 1, offset: 11 },
+                end: { column: 3, line: 3, offset: 22 }
               },
               type: NodeTypes.TEXT
+            },
+            loc: {
+              start: { column: 6, line: 1, offset: 5 },
+              end: { column: 3, line: 3, offset: 22 }
             }
           }
         ],
@@ -1084,31 +1031,33 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('directive with no value', () => {
+    test('directive with no value', () => {
       const ast = baseParse('<div v-if/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'if',
+        rawName: 'v-if',
         arg: undefined,
         modifiers: [],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: 'v-if'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('directive with value', () => {
+    test('directive with value', () => {
       const ast = baseParse('<div v-if="a"/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'if',
+        rawName: 'v-if',
         arg: undefined,
         modifiers: [],
         exp: {
@@ -1118,229 +1067,194 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 11, line: 1, column: 12 },
-            end: { offset: 12, line: 1, column: 13 },
-            source: 'a'
+            end: { offset: 12, line: 1, column: 13 }
           }
         },
+        rawExp: 'a',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 13, line: 1, column: 14 },
-          source: 'v-if="a"'
+          end: { offset: 13, line: 1, column: 14 }
         }
       })
     })
 
-    test.skip('directive with argument', () => {
+    test('directive with argument', () => {
       const ast = baseParse('<div v-on:click/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:click',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'click',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 }
           }
         },
         modifiers: [],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on:click'
+          end: { offset: 15, line: 1, column: 16 }
         }
       })
     })
 
     // #3494
-    test.skip('directive argument edge case', () => {
+    test('directive argument edge case', () => {
       const ast = baseParse('<div v-slot:slot />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
       expect(directive.arg).toMatchObject({
         loc: {
           start: { offset: 12, line: 1, column: 13 },
-          end: { offset: 16, line: 1, column: 17 },
-          source: 'slot'
+          end: { offset: 16, line: 1, column: 17 }
         }
       })
     })
 
     // https://github.com/vuejs/language-tools/issues/2710
-    test.skip('directive argument edge case (2)', () => {
+    test('directive argument edge case (2)', () => {
       const ast = baseParse('<div #item.item />')
       const directive = (ast.children[0] as ElementNode)
         .props[0] as DirectiveNode
       expect(directive.arg).toMatchObject({
+        content: 'item.item',
         loc: {
           start: { offset: 6, line: 1, column: 7 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: 'item.item'
+          end: { offset: 15, line: 1, column: 16 }
         }
       })
     })
 
-    test.skip('directive with dynamic argument', () => {
+    test('directive with dynamic argument', () => {
       const ast = baseParse('<div v-on:[event]/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:[event]',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'event',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
-            source: '[event]',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 18,
-              line: 1,
-              offset: 17
-            }
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 18, line: 1, offset: 17 }
           }
         },
         modifiers: [],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 17, line: 1, column: 18 },
-          source: 'v-on:[event]'
+          end: { offset: 17, line: 1, column: 18 }
         }
       })
     })
 
-    test.skip('directive with a modifier', () => {
+    test('directive with a modifier', () => {
       const ast = baseParse('<div v-on.enter/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on.enter',
         arg: undefined,
         modifiers: ['enter'],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: 'v-on.enter'
+          end: { offset: 15, line: 1, column: 16 }
         }
       })
     })
 
-    test.skip('directive with two modifiers', () => {
+    test('directive with two modifiers', () => {
       const ast = baseParse('<div v-on.enter.exact/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on.enter.exact',
         arg: undefined,
         modifiers: ['enter', 'exact'],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on.enter.exact'
+          end: { offset: 21, line: 1, column: 22 }
         }
       })
     })
 
-    test.skip('directive with argument and modifiers', () => {
+    test('directive with argument and modifiers', () => {
       const ast = baseParse('<div v-on:click.enter.exact/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:click.enter.exact',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'click',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'click',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 }
           }
         },
         modifiers: ['enter', 'exact'],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 27, line: 1, column: 28 },
-          source: 'v-on:click.enter.exact'
+          end: { offset: 27, line: 1, column: 28 }
         }
       })
     })
 
-    test.skip('directive with dynamic argument and modifiers', () => {
+    test('directive with dynamic argument and modifiers', () => {
       const ast = baseParse('<div v-on:[a.b].camel/>')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: 'v-on:[a.b].camel',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a.b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
-            source: '[a.b]',
-            start: {
-              column: 11,
-              line: 1,
-              offset: 10
-            },
-            end: {
-              column: 16,
-              line: 1,
-              offset: 15
-            }
+            start: { column: 11, line: 1, offset: 10 },
+            end: { column: 16, line: 1, offset: 15 }
           }
         },
         modifiers: ['camel'],
         exp: undefined,
+        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 21, line: 1, column: 22 },
-          source: 'v-on:[a.b].camel'
+          end: { offset: 21, line: 1, column: 22 }
         }
       })
     })
+
     test.skip('directive with no name', () => {
       let errorCode = -1
       const ast = baseParse('<div v-/>', {
@@ -1357,37 +1271,27 @@ describe('compiler: parse', () => {
         value: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 7, line: 1, column: 8 },
-          source: 'v-'
+          end: { offset: 7, line: 1, column: 8 }
         }
       })
     })
 
-    test.skip('v-bind shorthand', () => {
+    test('v-bind shorthand', () => {
       const ast = baseParse('<div :a=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: ':a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 }
           }
         },
         modifiers: [],
@@ -1396,46 +1300,35 @@ describe('compiler: parse', () => {
           content: 'b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
+            end: { offset: 9, line: 1, column: 10 }
           }
         },
+        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: ':a=b'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('v-bind .prop shorthand', () => {
+    test('v-bind .prop shorthand', () => {
       const ast = baseParse('<div .a=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: '.a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 }
           }
         },
         modifiers: ['prop'],
@@ -1444,46 +1337,35 @@ describe('compiler: parse', () => {
           content: 'b',
           isStatic: false,
           constType: ConstantTypes.NOT_CONSTANT,
-
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
+            end: { offset: 9, line: 1, column: 10 }
           }
         },
+        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '.a=b'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('v-bind shorthand with modifier', () => {
+    test('v-bind shorthand with modifier', () => {
       const ast = baseParse('<div :a.sync=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'bind',
+        rawName: ':a.sync',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 }
           }
         },
         modifiers: ['sync'],
@@ -1495,43 +1377,33 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 13, line: 1, column: 14 },
-            end: { offset: 14, line: 1, column: 15 },
-            source: 'b'
+            end: { offset: 14, line: 1, column: 15 }
           }
         },
+        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 14, line: 1, column: 15 },
-          source: ':a.sync=b'
+          end: { offset: 14, line: 1, column: 15 }
         }
       })
     })
 
-    test.skip('v-on shorthand', () => {
+    test('v-on shorthand', () => {
       const ast = baseParse('<div @a=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: '@a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 }
           }
         },
         modifiers: [],
@@ -1543,43 +1415,33 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 },
-            source: 'b'
+            end: { offset: 9, line: 1, column: 10 }
           }
         },
+        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 },
-          source: '@a=b'
+          end: { offset: 9, line: 1, column: 10 }
         }
       })
     })
 
-    test.skip('v-on shorthand with modifier', () => {
+    test('v-on shorthand with modifier', () => {
       const ast = baseParse('<div @a.enter=b />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'on',
+        rawName: '@a.enter',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
-
           loc: {
-            source: 'a',
-            start: {
-              column: 7,
-              line: 1,
-              offset: 6
-            },
-            end: {
-              column: 8,
-              line: 1,
-              offset: 7
-            }
+            start: { column: 7, line: 1, offset: 6 },
+            end: { column: 8, line: 1, offset: 7 }
           }
         },
         modifiers: ['enter'],
@@ -1591,42 +1453,33 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 14, line: 1, column: 15 },
-            end: { offset: 15, line: 1, column: 16 },
-            source: 'b'
+            end: { offset: 15, line: 1, column: 16 }
           }
         },
+        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: '@a.enter=b'
+          end: { offset: 15, line: 1, column: 16 }
         }
       })
     })
 
-    test.skip('v-slot shorthand', () => {
+    test('v-slot shorthand', () => {
       const ast = baseParse('<Comp #a="{ b }" />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toStrictEqual({
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
+        rawName: '#a',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'a',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
-            source: 'a',
-            start: {
-              column: 8,
-              line: 1,
-              offset: 7
-            },
-            end: {
-              column: 9,
-              line: 1,
-              offset: 8
-            }
+            start: { column: 8, line: 1, offset: 7 },
+            end: { column: 9, line: 1, offset: 8 }
           }
         },
         modifiers: [],
@@ -1638,33 +1491,32 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 10, line: 1, column: 11 },
-            end: { offset: 15, line: 1, column: 16 },
-            source: '{ b }'
+            end: { offset: 15, line: 1, column: 16 }
           }
         },
+        rawExp: '{ b }',
         loc: {
           start: { offset: 6, line: 1, column: 7 },
-          end: { offset: 16, line: 1, column: 17 },
-          source: '#a="{ b }"'
+          end: { offset: 16, line: 1, column: 17 }
         }
       })
     })
 
     // #1241 special case for 2.x compat
-    test.skip('v-slot arg containing dots', () => {
+    test('v-slot arg containing dots', () => {
       const ast = baseParse('<Comp v-slot:foo.bar="{ a }" />')
       const directive = (ast.children[0] as ElementNode).props[0]
 
       expect(directive).toMatchObject({
         type: NodeTypes.DIRECTIVE,
         name: 'slot',
+        rawName: 'v-slot:foo.bar',
         arg: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'foo.bar',
           isStatic: true,
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
-            source: 'foo.bar',
             start: {
               column: 14,
               line: 1,
@@ -1680,7 +1532,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('v-pre', () => {
+    test('v-pre', () => {
       const ast = baseParse(
         `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
           `<div :id="foo"><Comp/>{{ bar }}</div>`
@@ -1696,15 +1548,8 @@ describe('compiler: parse', () => {
             content: `foo`
           },
           loc: {
-            source: `:id="foo"`,
-            start: {
-              line: 1,
-              column: 12
-            },
-            end: {
-              line: 1,
-              column: 21
-            }
+            start: { line: 1, column: 12 },
+            end: { line: 1, column: 21 }
           }
         }
       ])
@@ -1735,7 +1580,6 @@ describe('compiler: parse', () => {
             content: `foo`
           },
           loc: {
-            source: `:id="foo"`,
             start: {
               line: 2,
               column: 6
@@ -1762,7 +1606,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('self-closing v-pre', () => {
+    test('self-closing v-pre', () => {
       const ast = baseParse(
         `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
       )
@@ -1783,7 +1627,6 @@ describe('compiler: parse', () => {
             content: `foo`
           },
           loc: {
-            source: `:id="foo"`,
             start: {
               line: 2,
               column: 6
@@ -1810,7 +1653,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('end tags are case-insensitive.', () => {
+    test('end tags are case-insensitive.', () => {
       const ast = baseParse('<div>hello</DIV>after')
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
@@ -1820,21 +1663,20 @@ describe('compiler: parse', () => {
         content: 'hello',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 10, line: 1, column: 11 },
-          source: 'hello'
+          end: { offset: 10, line: 1, column: 11 }
         }
       })
     })
   })
 
-  test.skip('self closing single tag', () => {
+  test('self closing single tag', () => {
     const ast = baseParse('<div :class="{ some: condition }" />')
 
     expect(ast.children).toHaveLength(1)
     expect(ast.children[0]).toMatchObject({ tag: 'div' })
   })
 
-  test.skip('self closing multiple tag', () => {
+  test('self closing multiple tag', () => {
     const ast = baseParse(
       `<div :class="{ some: condition }" />\n` +
         `<p v-bind:style="{ color: 'red' }"/>`
@@ -1847,7 +1689,7 @@ describe('compiler: parse', () => {
     expect(ast.children[1]).toMatchObject({ tag: 'p' })
   })
 
-  test.skip('valid html', () => {
+  test('valid html', () => {
     const ast = baseParse(
       `<div :class="{ some: condition }">\n` +
         `  <p v-bind:style="{ color: 'red' }"/>\n` +
@@ -1911,9 +1753,9 @@ describe('compiler: parse', () => {
     expect(ast).toMatchSnapshot()
   })
 
-  test.skip('parse with correct location info', () => {
+  test('parse with correct location info', () => {
     const fooSrc = `foo
-  is `
+ is `
     const barSrc = `{{ bar }}`
     const butSrc = ` but `
     const bazSrc = `{{ baz }}`
@@ -1977,18 +1819,18 @@ describe('compiler: parse', () => {
         ...options
       })
 
-    test.skip('should remove whitespaces at start/end inside an element', () => {
+    test('should remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
-    test.skip('should remove whitespaces w/ newline between elements', () => {
+    test('should remove whitespaces w/ newline between elements', () => {
       const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children.every(c => c.type === NodeTypes.ELEMENT)).toBe(true)
     })
 
-    test.skip('should remove whitespaces adjacent to comments', () => {
+    test('should remove whitespaces adjacent to comments', () => {
       const ast = parse(`<div/> \n <!--foo--> <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
@@ -1996,7 +1838,7 @@ describe('compiler: parse', () => {
       expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
     })
 
-    test.skip('should remove whitespaces w/ newline between comments and elements', () => {
+    test('should remove whitespaces w/ newline between comments and elements', () => {
       const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.ELEMENT)
@@ -2004,7 +1846,7 @@ describe('compiler: parse', () => {
       expect(ast.children[2].type).toBe(NodeTypes.ELEMENT)
     })
 
-    test.skip('should NOT remove whitespaces w/ newline between interpolations', () => {
+    test('should NOT remove whitespaces w/ newline between interpolations', () => {
       const ast = parse(`{{ foo }} \n {{ bar }}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
@@ -2015,7 +1857,7 @@ describe('compiler: parse', () => {
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    test.skip('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
+    test('should NOT remove whitespaces w/ newline between interpolation and comment', () => {
       const ast = parse(`<!-- foo --> \n {{msg}}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.COMMENT)
@@ -2026,7 +1868,7 @@ describe('compiler: parse', () => {
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    test.skip('should NOT remove whitespaces w/o newline between elements', () => {
+    test('should NOT remove whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2038,12 +1880,12 @@ describe('compiler: parse', () => {
       ])
     })
 
-    test.skip('should condense consecutive whitespaces in text', () => {
+    test('should condense consecutive whitespaces in text', () => {
       const ast = parse(`   foo  \n    bar     baz     `)
       expect((ast.children[0] as TextNode).content).toBe(` foo bar baz `)
     })
 
-    test.skip('should remove leading newline character immediately following the pre element start tag', () => {
+    test('should remove leading newline character immediately following the pre element start tag', () => {
       const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre'
       })
@@ -2053,7 +1895,7 @@ describe('compiler: parse', () => {
       expect((preElement.children[0] as TextNode).content).toBe(`  foo  bar  `)
     })
 
-    test.skip('should NOT remove leading newline character immediately following child-tag of pre element', () => {
+    test('should NOT remove leading newline character immediately following child-tag of pre element', () => {
       const ast = baseParse(`<pre><span></span>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre'
       })
@@ -2064,7 +1906,7 @@ describe('compiler: parse', () => {
       )
     })
 
-    test.skip('self-closing pre tag', () => {
+    test('self-closing pre tag', () => {
       const ast = baseParse(`<pre/><span>\n  foo   bar</span>`, {
         isPreTag: tag => tag === 'pre'
       })
@@ -2073,7 +1915,7 @@ describe('compiler: parse', () => {
       expect((elementAfterPre.children[0] as TextNode).content).toBe(` foo bar`)
     })
 
-    test.skip('should NOT condense whitespaces in RCDATA text mode', () => {
+    test('should NOT condense whitespaces in RCDATA text mode', () => {
       const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
         parseMode: 'html'
       })
@@ -2090,12 +1932,12 @@ describe('compiler: parse', () => {
         ...options
       })
 
-    test.skip('should still remove whitespaces at start/end inside an element', () => {
+    test('should still remove whitespaces at start/end inside an element', () => {
       const ast = parse(`<div>   <span/>    </div>`)
       expect((ast.children[0] as ElementNode).children.length).toBe(1)
     })
 
-    test.skip('should preserve whitespaces w/ newline between elements', () => {
+    test('should preserve whitespaces w/ newline between elements', () => {
       const ast = parse(`<div/> \n <div/> \n <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2107,7 +1949,7 @@ describe('compiler: parse', () => {
       ])
     })
 
-    test.skip('should preserve whitespaces adjacent to comments', () => {
+    test('should preserve whitespaces adjacent to comments', () => {
       const ast = parse(`<div/> \n <!--foo--> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2119,7 +1961,7 @@ describe('compiler: parse', () => {
       ])
     })
 
-    test.skip('should preserve whitespaces w/ newline between comments and elements', () => {
+    test('should preserve whitespaces w/ newline between comments and elements', () => {
       const ast = parse(`<div/> \n <!--foo--> \n <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2131,7 +1973,7 @@ describe('compiler: parse', () => {
       ])
     })
 
-    test.skip('should preserve whitespaces w/ newline between interpolations', () => {
+    test('should preserve whitespaces w/ newline between interpolations', () => {
       const ast = parse(`{{ foo }} \n {{ bar }}`)
       expect(ast.children.length).toBe(3)
       expect(ast.children[0].type).toBe(NodeTypes.INTERPOLATION)
@@ -2142,7 +1984,7 @@ describe('compiler: parse', () => {
       expect(ast.children[2].type).toBe(NodeTypes.INTERPOLATION)
     })
 
-    test.skip('should preserve whitespaces w/o newline between elements', () => {
+    test('should preserve whitespaces w/o newline between elements', () => {
       const ast = parse(`<div/> <div/> <div/>`)
       expect(ast.children.length).toBe(5)
       expect(ast.children.map(c => c.type)).toMatchObject([
@@ -2154,7 +1996,7 @@ describe('compiler: parse', () => {
       ])
     })
 
-    test.skip('should preserve consecutive whitespaces in text', () => {
+    test('should preserve consecutive whitespaces in text', () => {
       const content = `   foo  \n    bar     baz     `
       const ast = parse(content)
       expect((ast.children[0] as TextNode).content).toBe(content)
