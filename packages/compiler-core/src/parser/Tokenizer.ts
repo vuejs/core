@@ -225,7 +225,7 @@ export default class Tokenizer {
   /** Some behavior, eg. when decoding entities, is done while we are in another state. This keeps track of the other state type. */
   private baseState = State.Text
   /** For special parsing behavior inside of script and style tags. */
-  private isSpecial = false
+  public inRCDATA = false
   /** Reocrd newline positions for fast line / column calculation */
   private newlines: number[] = []
 
@@ -334,7 +334,7 @@ export default class Tokenizer {
         (c | 0x20) === this.currentSequence[this.sequenceIndex]
 
     if (!isMatch) {
-      this.isSpecial = false
+      this.inRCDATA = false
     } else if (!isEnd) {
       this.sequenceIndex++
       return
@@ -359,9 +359,9 @@ export default class Tokenizer {
           this.index = actualIndex
         }
 
-        this.isSpecial = false
         this.sectionStart = endOfText + 2 // Skip over the `</`
         this.stateInClosingTagName(c)
+        this.inRCDATA = false
         return // We are done; skip the rest of the function.
       }
 
@@ -462,7 +462,7 @@ export default class Tokenizer {
   }
 
   private startSpecial(sequence: Uint8Array, offset: number) {
-    this.isSpecial = true
+    this.inRCDATA = true
     this.currentSequence = sequence
     this.sequenceIndex = offset
     this.state = State.SpecialStartSequence
@@ -513,7 +513,7 @@ export default class Tokenizer {
     if (isEndOfTagSection(c)) {
       const tag = this.buffer.slice(this.sectionStart, this.index)
       if (tag !== 'template') {
-        this.isSpecial = true
+        this.inRCDATA = true
         this.currentSequence = toCharCodes(`</` + tag)
       }
       this.handleTagName(c)
@@ -555,7 +555,7 @@ export default class Tokenizer {
   private stateBeforeAttributeName(c: number): void {
     if (c === CharCodes.Gt) {
       this.cbs.onopentagend(this.index)
-      if (this.isSpecial) {
+      if (this.inRCDATA) {
         this.state = State.InSpecialTag
         this.sequenceIndex = 0
       } else {
@@ -594,7 +594,7 @@ export default class Tokenizer {
       this.cbs.onselfclosingtag(this.index)
       this.state = State.Text
       this.sectionStart = this.index + 1
-      this.isSpecial = false // Reset special state, in case of self-closing special tags
+      this.inRCDATA = false // Reset special state, in case of self-closing special tags
     } else if (!isWhitespace(c)) {
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)

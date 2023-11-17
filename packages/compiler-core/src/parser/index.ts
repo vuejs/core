@@ -77,7 +77,7 @@ let currentAttrEndIndex = -1
 let currentAttrs: Set<string> = new Set()
 let inPre = 0
 let inVPre = false
-let currentElementIsVPreBoundary = false
+let currentVPreBoundary: ElementNode | null = null
 const stack: ElementNode[] = []
 
 const tokenizer = new Tokenizer(stack, {
@@ -134,10 +134,13 @@ const tokenizer = new Tokenizer(stack, {
   onclosetag(start, end) {
     const name = getSlice(start, end)
     if (!currentOptions.isVoidTag(name)) {
-      const pos = stack.findIndex(e => e.tag === name)
-      if (pos !== -1) {
-        for (let index = 0; index <= pos; index++) {
-          onCloseTag(stack.shift()!, end)
+      for (let i = 0; i < stack.length; i++) {
+        const e = stack[i]
+        if (e.tag.toLowerCase() === name.toLowerCase()) {
+          for (let j = 0; j <= i; j++) {
+            onCloseTag(stack.shift()!, end)
+          }
+          break
         }
       }
     }
@@ -182,13 +185,14 @@ const tokenizer = new Tokenizer(stack, {
         name,
         rawName: raw,
         exp: undefined,
+        rawExp: undefined,
         arg: undefined,
-        modifiers: [],
+        modifiers: raw === '.' ? ['prop'] : [],
         loc: getLoc(start)
       }
       if (name === 'pre') {
         inVPre = true
-        currentElementIsVPreBoundary = true
+        currentVPreBoundary = currentElement
         // convert dirs before this one to attributes
         const props = currentElement!.props
         for (let i = 0; i < props.length; i++) {
@@ -208,7 +212,7 @@ const tokenizer = new Tokenizer(stack, {
     } else {
       const isStatic = arg[0] !== `[`
       ;(currentProp as DirectiveNode).arg = createSimpleExpression(
-        arg,
+        isStatic ? arg : arg.slice(1, -1),
         isStatic,
         getLoc(start, end),
         isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
@@ -221,6 +225,14 @@ const tokenizer = new Tokenizer(stack, {
     if (inVPre) {
       ;(currentProp as AttributeNode).name += '.' + mod
       ;(currentProp as AttributeNode).nameLoc.end = tokenizer.getPos(end)
+    } else if ((currentProp as DirectiveNode).name === 'slot') {
+      // slot has no modifiers, special case for edge cases like
+      // https://github.com/vuejs/language-tools/issues/2710
+      const arg = (currentProp as DirectiveNode).arg
+      if (arg) {
+        ;(arg as SimpleExpressionNode).content += '.' + mod
+        arg.loc.end = tokenizer.getPos(end)
+      }
     } else {
       ;(currentProp as DirectiveNode).modifiers.push(mod)
     }
@@ -254,9 +266,15 @@ const tokenizer = new Tokenizer(stack, {
 
   onattribend(quote, end) {
     if (currentElement && currentProp) {
-      if (currentAttrValue) {
+      if (quote !== QuoteType.NoValue) {
         if (currentProp.type === NodeTypes.ATTRIBUTE) {
           // assign value
+
+          // condense whitespaces in class
+          if (currentProp!.name === 'class') {
+            currentAttrValue = condense(currentAttrValue).trim()
+          }
+
           currentProp!.value = {
             type: NodeTypes.TEXT,
             content: currentAttrValue,
@@ -265,7 +283,7 @@ const tokenizer = new Tokenizer(stack, {
                 ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
                 : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
           }
-        } else {
+        } else if (currentAttrValue) {
           // directive
           currentProp.rawExp = currentAttrValue
           currentProp.exp = createSimpleExpression(
@@ -442,14 +460,16 @@ function onCloseTag(el: ElementNode, end: number) {
   }
 
   // whitepsace management
-  el.children = condenseWhitespace(el.children)
+  if (!tokenizer.inRCDATA) {
+    el.children = condenseWhitespace(el.children, el.tag)
+  }
 
   if (currentOptions.isPreTag(tag)) {
     inPre--
   }
-  if (currentElementIsVPreBoundary) {
+  if (currentVPreBoundary === el) {
     inVPre = false
-    currentElementIsVPreBoundary = false
+    currentVPreBoundary = null
   }
 }
 
@@ -477,7 +497,7 @@ function isComponent({ tag, props }: ElementNode): boolean {
     isUpperCase(tag.charCodeAt(0)) ||
     isCoreComponent(tag) ||
     currentOptions.isBuiltInComponent?.(tag) ||
-    !currentOptions.isNativeTag?.(tag)
+    (currentOptions.isNativeTag && !currentOptions.isNativeTag(tag))
   ) {
     return true
   }
@@ -524,7 +544,10 @@ function isUpperCase(c: number) {
 }
 
 const windowsNewlineRE = /\r\n/g
-function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
+function condenseWhitespace(
+  nodes: TemplateChildNode[],
+  tag?: string
+): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
   for (let i = 0; i < nodes.length; i++) {
@@ -567,6 +590,14 @@ function condenseWhitespace(nodes: TemplateChildNode[]): TemplateChildNode[] {
         // in the DOM
         node.content = node.content.replace(windowsNewlineRE, '\n')
       }
+    }
+  }
+  if (inPre && tag && currentOptions.isPreTag(tag)) {
+    // remove leading newline per html spec
+    // https://html.spec.whatwg.org/multipage/grouping-content.html#the-pre-element
+    const first = nodes[0]
+    if (first && first.type === NodeTypes.TEXT) {
+      first.content = first.content.replace(/^\r?\n/, '')
     }
   }
   return removedWhitespace ? nodes.filter(Boolean) : nodes
