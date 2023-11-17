@@ -14,17 +14,23 @@ import {
   createRoot
 } from '../ast'
 import { ParserOptions } from '../options'
-import Tokenizer, { CharCodes, QuoteType, isWhitespace } from './Tokenizer'
+import Tokenizer, {
+  CharCodes,
+  ParseMode,
+  QuoteType,
+  isWhitespace,
+  toCharCodes
+} from './Tokenizer'
 import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
 import { isCoreComponent } from '../utils'
-import { TextModes } from '../parse'
 
 type OptionalOptions =
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
+  | 'getTextMode'
   | keyof CompilerCompatOptions
 
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
@@ -43,9 +49,9 @@ const decodeMap: Record<string, string> = {
 }
 
 export const defaultParserOptions: MergedParserOptions = {
+  parseMode: 'base',
   delimiters: [`{{`, `}}`],
   getNamespace: () => Namespaces.HTML,
-  getTextMode: () => TextModes.DATA,
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
@@ -73,7 +79,7 @@ let inVPre = false
 let currentElementIsVPreBoundary = false
 const stack: ElementNode[] = []
 
-const tokenizer = new Tokenizer({
+const tokenizer = new Tokenizer(stack, {
   ontext(start, end) {
     onText(getSlice(start, end), start, end)
   },
@@ -598,23 +604,24 @@ function reset() {
   stack.length = 0
 }
 
-function toCharCodes(str: string): Uint8Array {
-  const ret = new Uint8Array()
-  for (let i = 0; i < str.length; i++) {
-    ret[i] = str.charCodeAt(i)
-  }
-  return ret
-}
-
 export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
+  currentInput = input
+  currentOptions = extend({}, defaultParserOptions, options)
+
+  tokenizer.mode =
+    currentOptions.parseMode === 'html'
+      ? ParseMode.HTML
+      : currentOptions.parseMode === 'sfc'
+      ? ParseMode.SFC
+      : ParseMode.BASE
+
   const delimiters = options?.delimiters
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
     tokenizer.delimiterClose = toCharCodes(delimiters[1])
   }
-  currentInput = input
-  currentOptions = extend({}, defaultParserOptions, options)
+
   const root = (currentRoot = createRoot([]))
   tokenizer.parse(currentInput)
   root.loc.end = tokenizer.getPos(input.length)
