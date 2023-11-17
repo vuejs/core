@@ -75,15 +75,30 @@ async function run() {
   }
 }
 
+/**
+ * Builds all the targets in parallel.
+ * @param {Array<string>} targets - An array of targets to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function buildAll(targets) {
   await runParallel(cpus().length, targets, build)
 }
 
+/**
+ * Runs iterator function in parallel.
+ * @template T - The type of items in the data source
+ * @param {number} maxConcurrency - The maximum concurrency.
+ * @param {Array<T>} source - The data source
+ * @param {(item: T) => Promise<void>} iteratorFn - The iteratorFn
+ * @returns {Promise<void[]>} - A Promise array containing all iteration results.
+ */
 async function runParallel(maxConcurrency, source, iteratorFn) {
+  /**@type {Promise<void>[]} */
   const ret = []
+  /**@type {Promise<void>[]} */
   const executing = []
   for (const item of source) {
-    const p = Promise.resolve().then(() => iteratorFn(item, source))
+    const p = Promise.resolve().then(() => iteratorFn(item))
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
@@ -96,7 +111,11 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
   }
   return Promise.all(ret)
 }
-
+/**
+ * Builds the target.
+ * @param {string} target - The target to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   const pkg = require(`${pkgDir}/package.json`)
@@ -134,6 +153,11 @@ async function build(target) {
   )
 }
 
+/**
+ * Checks the sizes of all targets.
+ * @param {string[]} targets - The targets to check sizes for.
+ * @returns {Promise<void>}
+ */
 async function checkAllSizes(targets) {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
@@ -145,6 +169,11 @@ async function checkAllSizes(targets) {
   console.log()
 }
 
+/**
+ * Checks the size of a target.
+ * @param {string} target - The target to check the size for.
+ * @returns {Promise<void>}
+ */
 async function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
@@ -153,6 +182,11 @@ async function checkSize(target) {
   }
 }
 
+/**
+ * Checks the file size.
+ * @param {string} filePath - The path of the file to check the size for.
+ * @returns {Promise<void>}
+ */
 async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return
