@@ -40,6 +40,7 @@ import {
 } from './compat/compatConfig'
 
 type OptionalOptions =
+  | 'parseMode'
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'

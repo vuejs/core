@@ -27,7 +27,7 @@ import {
   DecodingMode,
   htmlDecodeTree
 } from 'entities/lib/decode.js'
-import { Position } from '../ast'
+import { ElementNode, Position } from '../ast'
 
 export const enum ParseMode {
   BASE,
@@ -119,7 +119,9 @@ const enum State {
   SpecialStartSequence,
   InSpecialTag,
 
-  InEntity
+  InEntity,
+
+  InSFCRootTagName
 }
 
 /**
@@ -145,6 +147,14 @@ export function isWhitespace(c: number): boolean {
 
 function isEndOfTagSection(c: number): boolean {
   return c === CharCodes.Slash || c === CharCodes.Gt || isWhitespace(c)
+}
+
+export function toCharCodes(str: string): Uint8Array {
+  const ret = new Uint8Array(str.length)
+  for (let i = 0; i < str.length; i++) {
+    ret[i] = str.charCodeAt(i)
+  }
+  return ret
 }
 
 export enum QuoteType {
@@ -221,14 +231,20 @@ export default class Tokenizer {
 
   private readonly entityDecoder: EntityDecoder
 
-  constructor(private readonly cbs: Callbacks) {
+  constructor(
+    private readonly stack: ElementNode[],
+    private readonly cbs: Callbacks
+  ) {
     this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
       this.emitCodePoint(cp, consumed)
     )
   }
 
+  public mode = ParseMode.BASE
+
   public reset(): void {
     this.state = State.Text
+    this.mode = ParseMode.BASE
     this.buffer = ''
     this.sectionStart = 0
     this.index = 0
@@ -329,7 +345,7 @@ export default class Tokenizer {
     this.stateInTagName(c)
   }
 
-  /** Look for an end tag. For <title> tags, also decode entities. */
+  /** Look for an end tag. For <title> and <textarea>, also decode entities. */
   private stateInSpecialTag(c: number): void {
     if (this.sequenceIndex === this.currentSequence.length) {
       if (c === CharCodes.Gt || isWhitespace(c)) {
@@ -357,7 +373,8 @@ export default class Tokenizer {
     } else if (this.sequenceIndex === 0) {
       if (
         this.currentSequence === Sequences.TitleEnd ||
-        this.currentSequence === Sequences.TextareaEnd
+        (this.currentSequence === Sequences.TextareaEnd &&
+          !(this.mode === ParseMode.SFC && this.stack.length === 0))
       ) {
         // We have to parse entities in <title> and <textarea> tags.
         if (c === CharCodes.Amp) {
@@ -459,15 +476,26 @@ export default class Tokenizer {
       this.state = State.InProcessingInstruction
       this.sectionStart = this.index + 1
     } else if (isTagStartChar(c)) {
-      const lower = c | 0x20
       this.sectionStart = this.index
-      if (lower === Sequences.TitleEnd[2]) {
-        this.state = State.BeforeSpecialT
+      if (this.mode === ParseMode.BASE) {
+        // no special tags in base mode
+        this.state = State.InTagName
+      } else if (this.mode === ParseMode.SFC && this.stack.length === 0) {
+        // SFC mode + root level
+        // - everything except <template> is RAWTEXT
+        // - <template> with lang other than html is also RAWTEXT
+        this.state = State.InSFCRootTagName
       } else {
-        this.state =
-          lower === Sequences.ScriptEnd[2]
-            ? State.BeforeSpecialS
-            : State.InTagName
+        // HTML mode
+        // - <script>, <style> RAWTEXT
+        // - <title>, <textarea> RCDATA
+        const lower = c | 0x20
+        if (lower === 116 /* t */) {
+          this.state = State.BeforeSpecialT
+        } else {
+          this.state =
+            lower === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
+        }
       }
     } else if (c === CharCodes.Slash) {
       this.state = State.BeforeClosingTagName
@@ -478,11 +506,24 @@ export default class Tokenizer {
   }
   private stateInTagName(c: number): void {
     if (isEndOfTagSection(c)) {
-      this.cbs.onopentagname(this.sectionStart, this.index)
-      this.sectionStart = -1
-      this.state = State.BeforeAttributeName
-      this.stateBeforeAttributeName(c)
+      this.handleTagName(c)
     }
+  }
+  private stateInSFCRootTagName(c: number): void {
+    if (isEndOfTagSection(c)) {
+      const tag = this.buffer.slice(this.sectionStart, this.index)
+      if (tag !== 'template') {
+        this.isSpecial = true
+        this.currentSequence = toCharCodes(`</` + tag)
+      }
+      this.handleTagName(c)
+    }
+  }
+  private handleTagName(c: number) {
+    this.cbs.onopentagname(this.sectionStart, this.index)
+    this.sectionStart = -1
+    this.state = State.BeforeAttributeName
+    this.stateBeforeAttributeName(c)
   }
   private stateBeforeClosingTagName(c: number): void {
     if (isWhitespace(c)) {
@@ -828,6 +869,10 @@ export default class Tokenizer {
         }
         case State.InTagName: {
           this.stateInTagName(c)
+          break
+        }
+        case State.InSFCRootTagName: {
+          this.stateInSFCRootTagName(c)
           break
         }
         case State.InClosingTagName: {

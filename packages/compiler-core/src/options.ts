@@ -17,6 +17,7 @@ export interface ErrorHandlingOptions {
 export interface ParserOptions
   extends ErrorHandlingOptions,
     CompilerCompatOptions {
+  parseMode?: 'base' | 'html' | 'sfc'
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
