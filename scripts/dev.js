@@ -92,7 +92,7 @@ const plugins = [
   }
 ]
 
-if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
+if (format !== 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
   plugins.push(polyfillNode())
 }
 
