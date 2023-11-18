@@ -77,7 +77,11 @@ const defaultDelimitersClose = new Uint8Array([125, 125]) // "}}"
 /** All the states the tokenizer can be in. */
 const enum State {
   Text = 1,
+
+  // interpolation
+  InterpolationOpen,
   Interpolation,
+  InterpolationClose,
 
   // Tags
   BeforeTagName, // After <
@@ -288,38 +292,55 @@ export default class Tokenizer {
       this.sectionStart = this.index
     } else if (c === CharCodes.Amp) {
       this.startEntity()
-    } else if (this.matchDelimiter(c, this.delimiterOpen)) {
-      if (this.index > this.sectionStart) {
-        this.cbs.ontext(this.sectionStart, this.index)
-      }
-      this.state = State.Interpolation
-      this.sectionStart = this.index
-      this.index += this.delimiterOpen.length - 1
+    } else if (c === this.delimiterOpen[0]) {
+      this.state = State.InterpolationOpen
+      this.delimiterIndex = 0
+      this.stateInterpolationOpen(c)
     }
   }
 
   public delimiterOpen: Uint8Array = defaultDelimitersOpen
   public delimiterClose: Uint8Array = defaultDelimitersClose
-  private matchDelimiter(c: number, delimiter: Uint8Array): boolean {
-    if (c === delimiter[0]) {
-      const l = delimiter.length
-      for (let i = 1; i < l; i++) {
-        if (this.buffer.charCodeAt(this.index + i) !== delimiter[i]) {
-          return false
+  private delimiterIndex = -1
+
+  private stateInterpolationOpen(c: number): void {
+    if (c === this.delimiterOpen[this.delimiterIndex]) {
+      if (this.delimiterIndex === this.delimiterOpen.length - 1) {
+        const start = this.index + 1 - this.delimiterOpen.length
+        if (start > this.sectionStart) {
+          this.cbs.ontext(this.sectionStart, start)
         }
+        this.state = State.Interpolation
+        this.sectionStart = start
+      } else {
+        this.delimiterIndex++
       }
-      return true
+    } else {
+      this.state = State.Text
+      this.stateText(c)
     }
-    return false
   }
 
   private stateInterpolation(c: number): void {
-    if (this.matchDelimiter(c, this.delimiterClose)) {
-      this.index += this.delimiterClose.length
-      this.cbs.oninterpolation(this.sectionStart, this.index)
-      this.state = State.Text
-      this.sectionStart = this.index
-      this.stateText(this.buffer.charCodeAt(this.index))
+    if (c === this.delimiterClose[0]) {
+      this.state = State.InterpolationClose
+      this.delimiterIndex = 0
+      this.stateInterpolationClose(c)
+    }
+  }
+
+  private stateInterpolationClose(c: number) {
+    if (c === this.delimiterClose[this.delimiterIndex]) {
+      if (this.delimiterIndex === this.delimiterClose.length - 1) {
+        this.cbs.oninterpolation(this.sectionStart, this.index + 1)
+        this.state = State.Text
+        this.sectionStart = this.index + 1
+      } else {
+        this.delimiterIndex++
+      }
+    } else {
+      this.state = State.Interpolation
+      this.stateInterpolation(c)
     }
   }
 
@@ -815,8 +836,16 @@ export default class Tokenizer {
           this.stateText(c)
           break
         }
+        case State.InterpolationOpen: {
+          this.stateInterpolationOpen(c)
+          break
+        }
         case State.Interpolation: {
           this.stateInterpolation(c)
+          break
+        }
+        case State.InterpolationClose: {
+          this.stateInterpolationClose(c)
           break
         }
         case State.SpecialStartSequence: {
