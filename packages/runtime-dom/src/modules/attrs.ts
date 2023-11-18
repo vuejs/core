@@ -57,8 +57,8 @@ export function compatCoerceAttr(
       value === null
         ? 'false'
         : typeof value !== 'boolean' && value !== undefined
-        ? 'true'
-        : null
+          ? 'true'
+          : null
     if (
       v2CoercedValue &&
       compatUtils.softAssertCompatEnabled(
