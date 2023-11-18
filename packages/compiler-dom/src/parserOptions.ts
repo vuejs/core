@@ -1,7 +1,6 @@
 import { ParserOptions, ElementNode, NodeTypes } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
-import { decodeHtml } from './decodeHtml'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
 export const enum DOMNamespaces {
@@ -15,7 +14,7 @@ export const parserOptions: ParserOptions = {
   isVoidTag,
   isNativeTag: tag => isHTMLTag(tag) || isSVGTag(tag),
   isPreTag: tag => tag === 'pre',
-  decodeEntities: __BROWSER__ ? decodeHtmlBrowser : decodeHtml,
+  decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 
   isBuiltInComponent: (tag: string): symbol | undefined => {
     if (tag === 'Transition' || tag === 'transition') {
