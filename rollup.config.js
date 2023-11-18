@@ -215,7 +215,12 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
+    const treeShakenDeps = [
+      'source-map-js',
+      '@babel/parser',
+      'estree-walker',
+      'entities/lib/decode.js'
+    ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {

@@ -1,4 +1,3 @@
-import { fromCodePoint } from 'entities/lib/decode.js'
 import {
   AttributeNode,
   ConstantTypes,
@@ -29,6 +28,7 @@ import { defaultOnError, defaultOnWarn } from '../errors'
 import { forAliasRE, isCoreComponent } from '../utils'
 
 type OptionalOptions =
+  | 'decodeEntities'
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
@@ -37,18 +37,6 @@ type OptionalOptions =
 type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
   Pick<ParserOptions, OptionalOptions>
 
-// The default decoder only provides escapes for characters reserved as part of
-// the template syntax, and is only used if the custom renderer did not provide
-// a platform-specific decoder.
-const decodeRE = /&(gt|lt|amp|apos|quot);/g
-const decodeMap: Record<string, string> = {
-  gt: '>',
-  lt: '<',
-  amp: '&',
-  apos: "'",
-  quot: '"'
-}
-
 export const defaultParserOptions: MergedParserOptions = {
   parseMode: 'base',
   delimiters: [`{{`, `}}`],
@@ -56,9 +44,6 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
-  // TODO handle entities
-  decodeEntities: (rawText: string): string =>
-    rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
   onWarn: defaultOnWarn,
   comments: __DEV__
@@ -84,8 +69,8 @@ const tokenizer = new Tokenizer(stack, {
     onText(getSlice(start, end), start, end)
   },
 
-  ontextentity(cp, end) {
-    onText(fromCodePoint(cp), end - 1, end)
+  ontextentity(char, end) {
+    onText(char, end - 1, end)
   },
 
   oninterpolation(start, end) {
@@ -242,8 +227,8 @@ const tokenizer = new Tokenizer(stack, {
     currentAttrEndIndex = end
   },
 
-  onattribentity(codepoint) {
-    currentAttrValue += fromCodePoint(codepoint)
+  onattribentity(char) {
+    currentAttrValue += char
   },
 
   onattribnameend(end) {
@@ -265,6 +250,13 @@ const tokenizer = new Tokenizer(stack, {
   onattribend(quote, end) {
     if (currentElement && currentProp) {
       if (quote !== QuoteType.NoValue) {
+        if (__BROWSER__ && currentAttrValue.includes('&')) {
+          // TODO should not do this in <script> or <style>
+          currentAttrValue = currentOptions.decodeEntities!(
+            currentAttrValue,
+            true
+          )
+        }
         if (currentProp.type === NodeTypes.ATTRIBUTE) {
           // assign value
 
@@ -422,6 +414,10 @@ function closeCurrentTag(end: number) {
 }
 
 function onText(content: string, start: number, end: number) {
+  if (__BROWSER__ && content.includes('&')) {
+    // TODO do not do this in <script> or <style>
+    content = currentOptions.decodeEntities!(content, false)
+  }
   const parent = getParent()
   const lastNode = parent.children[parent.children.length - 1]
   if (lastNode?.type === NodeTypes.TEXT) {
@@ -696,6 +692,19 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
   currentInput = input
   currentOptions = extend({}, defaultParserOptions, options)
+
+  if (__DEV__) {
+    if (!__BROWSER__ && currentOptions.decodeEntities) {
+      console.warn(
+        `[@vue/compiler-core] decodeEntities option is passed but will be ` +
+          `ignored in non-browser builds.`
+      )
+    } else if (__BROWSER__ && !currentOptions.decodeEntities) {
+      throw new Error(
+        `[@vue/compiler-core] decodeEntities option is required in browser builds.`
+      )
+    }
+  }
 
   tokenizer.mode =
     currentOptions.parseMode === 'html'

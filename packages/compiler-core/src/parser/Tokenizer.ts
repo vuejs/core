@@ -22,12 +22,20 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
  */
 
+import { ElementNode, Position } from '../ast'
+
+/**
+ * Note: entities is a non-browser-build-only dependency.
+ * In the browser, we use an HTML element to do the decoding.
+ * Make sure all imports from entities are only used in non-browser branches
+ * so that it can be properly treeshaken.
+ */
 import {
   EntityDecoder,
   DecodingMode,
-  htmlDecodeTree
+  htmlDecodeTree,
+  fromCodePoint
 } from 'entities/lib/decode.js'
-import { ElementNode, Position } from '../ast'
 
 export const enum ParseMode {
   BASE,
@@ -170,7 +178,7 @@ export enum QuoteType {
 
 export interface Callbacks {
   ontext(start: number, endIndex: number): void
-  ontextentity(codepoint: number, endIndex: number): void
+  ontextentity(char: string, endIndex: number): void
 
   oninterpolation(start: number, endIndex: number): void
 
@@ -180,7 +188,7 @@ export interface Callbacks {
   onclosetag(start: number, endIndex: number): void
 
   onattribdata(start: number, endIndex: number): void
-  onattribentity(codepoint: number): void
+  onattribentity(char: string): void
   onattribend(quote: QuoteType, endIndex: number): void
   onattribname(start: number, endIndex: number): void
   onattribnameend(endIndex: number): void
@@ -233,15 +241,17 @@ export default class Tokenizer {
   /** Reocrd newline positions for fast line / column calculation */
   private newlines: number[] = []
 
-  private readonly entityDecoder: EntityDecoder
+  private readonly entityDecoder?: EntityDecoder
 
   constructor(
     private readonly stack: ElementNode[],
     private readonly cbs: Callbacks
   ) {
-    this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
-      this.emitCodePoint(cp, consumed)
-    )
+    if (!__BROWSER__) {
+      this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
+        this.emitCodePoint(cp, consumed)
+      )
+    }
   }
 
   public mode = ParseMode.BASE
@@ -290,7 +300,7 @@ export default class Tokenizer {
       }
       this.state = State.BeforeTagName
       this.sectionStart = this.index
-    } else if (c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
     } else if (c === this.delimiterOpen[0]) {
       this.state = State.InterpolationOpen
@@ -398,7 +408,7 @@ export default class Tokenizer {
           !(this.mode === ParseMode.SFC && this.stack.length === 0))
       ) {
         // We have to parse entities in <title> and <textarea> tags.
-        if (c === CharCodes.Amp) {
+        if (!__BROWSER__ && c === CharCodes.Amp) {
           this.startEntity()
         }
       } else if (this.fastForwardTo(CharCodes.Lt)) {
@@ -702,7 +712,7 @@ export default class Tokenizer {
     }
   }
   private handleInAttributeValue(c: number, quote: number) {
-    if (c === quote) {
+    if (c === quote || (__BROWSER__ && this.fastForwardTo(quote))) {
       this.cbs.onattribdata(this.sectionStart, this.index)
       this.sectionStart = -1
       this.cbs.onattribend(
@@ -710,7 +720,7 @@ export default class Tokenizer {
         this.index + 1
       )
       this.state = State.BeforeAttributeName
-    } else if (c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
     }
   }
@@ -727,7 +737,7 @@ export default class Tokenizer {
       this.cbs.onattribend(QuoteType.Unquoted, this.index)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
-    } else if (c === CharCodes.Amp) {
+    } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
     }
   }
@@ -796,29 +806,33 @@ export default class Tokenizer {
   }
 
   private startEntity() {
-    this.baseState = this.state
-    this.state = State.InEntity
-    this.entityStart = this.index
-    this.entityDecoder.startEntity(
-      this.baseState === State.Text || this.baseState === State.InSpecialTag
-        ? DecodingMode.Legacy
-        : DecodingMode.Attribute
-    )
+    if (!__BROWSER__) {
+      this.baseState = this.state
+      this.state = State.InEntity
+      this.entityStart = this.index
+      this.entityDecoder!.startEntity(
+        this.baseState === State.Text || this.baseState === State.InSpecialTag
+          ? DecodingMode.Legacy
+          : DecodingMode.Attribute
+      )
+    }
   }
 
   private stateInEntity(): void {
-    const length = this.entityDecoder.write(this.buffer, this.index)
+    if (!__BROWSER__) {
+      const length = this.entityDecoder!.write(this.buffer, this.index)
 
-    // If `length` is positive, we are done with the entity.
-    if (length >= 0) {
-      this.state = this.baseState
+      // If `length` is positive, we are done with the entity.
+      if (length >= 0) {
+        this.state = this.baseState
 
-      if (length === 0) {
-        this.index = this.entityStart
+        if (length === 0) {
+          this.index = this.entityStart
+        }
+      } else {
+        // Mark buffer as consumed.
+        this.index = this.buffer.length - 1
       }
-    } else {
-      // Mark buffer as consumed.
-      this.index = this.buffer.length - 1
     }
   }
 
@@ -1002,8 +1016,8 @@ export default class Tokenizer {
   }
 
   private finish() {
-    if (this.state === State.InEntity) {
-      this.entityDecoder.end()
+    if (!__BROWSER__ && this.state === State.InEntity) {
+      this.entityDecoder!.end()
       this.state = this.baseState
     }
 
@@ -1052,25 +1066,27 @@ export default class Tokenizer {
   }
 
   private emitCodePoint(cp: number, consumed: number): void {
-    if (
-      this.baseState !== State.Text &&
-      this.baseState !== State.InSpecialTag
-    ) {
-      if (this.sectionStart < this.entityStart) {
-        this.cbs.onattribdata(this.sectionStart, this.entityStart)
-      }
-      this.sectionStart = this.entityStart + consumed
-      this.index = this.sectionStart - 1
+    if (!__BROWSER__) {
+      if (
+        this.baseState !== State.Text &&
+        this.baseState !== State.InSpecialTag
+      ) {
+        if (this.sectionStart < this.entityStart) {
+          this.cbs.onattribdata(this.sectionStart, this.entityStart)
+        }
+        this.sectionStart = this.entityStart + consumed
+        this.index = this.sectionStart - 1
 
-      this.cbs.onattribentity(cp)
-    } else {
-      if (this.sectionStart < this.entityStart) {
-        this.cbs.ontext(this.sectionStart, this.entityStart)
-      }
-      this.sectionStart = this.entityStart + consumed
-      this.index = this.sectionStart - 1
+        this.cbs.onattribentity(fromCodePoint(cp))
+      } else {
+        if (this.sectionStart < this.entityStart) {
+          this.cbs.ontext(this.sectionStart, this.entityStart)
+        }
+        this.sectionStart = this.entityStart + consumed
+        this.index = this.sectionStart - 1
 
-      this.cbs.ontextentity(cp, this.sectionStart)
+        this.cbs.ontextentity(fromCodePoint(cp), this.sectionStart)
+      }
     }
   }
 }

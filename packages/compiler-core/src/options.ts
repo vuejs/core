@@ -50,7 +50,8 @@ export interface ParserOptions
    */
   whitespace?: 'preserve' | 'condense'
   /**
-   * Only needed for DOM compilers
+   * Only used for DOM compilers that runs in the browser.
+   * In non-browser builds, this option is ignored.
    */
   decodeEntities?: (rawText: string, asAttr: boolean) => string
   /**
