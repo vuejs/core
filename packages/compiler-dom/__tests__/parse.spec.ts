@@ -26,13 +26,12 @@ describe('DOM parser', () => {
         content: 'some<div>text</div>and<!--comment-->',
         loc: {
           start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 46, line: 1, column: 47 },
-          source: 'some<div>text</div>and<!--comment-->'
+          end: { offset: 46, line: 1, column: 47 }
         }
       })
     })
 
-    test('textarea handles character references', () => {
+    test('textarea handles entities', () => {
       const ast = parse('<textarea>&amp;</textarea>', parserOptions)
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
@@ -42,8 +41,7 @@ describe('DOM parser', () => {
         content: '&',
         loc: {
           start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 15, line: 1, column: 16 },
-          source: '&amp;'
+          end: { offset: 15, line: 1, column: 16 }
         }
       })
     })
@@ -77,8 +75,7 @@ describe('DOM parser', () => {
         content: 'some<div>text</div>and<!--comment-->',
         loc: {
           start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 43, line: 1, column: 44 },
-          source: 'some<div>text</div>and<!--comment-->'
+          end: { offset: 43, line: 1, column: 44 }
         }
       })
     })
@@ -93,8 +90,7 @@ describe('DOM parser', () => {
         content: '&amp;',
         loc: {
           start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 12, line: 1, column: 13 },
-          source: '&amp;'
+          end: { offset: 12, line: 1, column: 13 }
         }
       })
     })
@@ -108,8 +104,7 @@ describe('DOM parser', () => {
         content: 'some text',
         loc: {
           start: { offset: 14, line: 1, column: 15 },
-          end: { offset: 23, line: 1, column: 24 },
-          source: 'some text'
+          end: { offset: 23, line: 1, column: 24 }
         }
       })
     })
@@ -180,8 +175,7 @@ describe('DOM parser', () => {
         content: '&ersand;',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 },
-          source: '&ampersand;'
+          end: { offset: 11, line: 1, column: 12 }
         }
       })
     })
@@ -202,8 +196,7 @@ describe('DOM parser', () => {
         content: '&ampersand;',
         loc: {
           start: { offset: 7, line: 1, column: 8 },
-          end: { offset: 20, line: 1, column: 21 },
-          source: '"&ampersand;"'
+          end: { offset: 20, line: 1, column: 21 }
         }
       })
       expect(text2).toStrictEqual({
@@ -211,8 +204,7 @@ describe('DOM parser', () => {
         content: '&ersand;',
         loc: {
           start: { offset: 23, line: 1, column: 24 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: '"&amp;ersand;"'
+          end: { offset: 37, line: 1, column: 38 }
         }
       })
       expect(text3).toStrictEqual({
@@ -220,8 +212,7 @@ describe('DOM parser', () => {
         content: '&!',
         loc: {
           start: { offset: 40, line: 1, column: 41 },
-          end: { offset: 47, line: 1, column: 48 },
-          source: '"&amp!"'
+          end: { offset: 47, line: 1, column: 48 }
         }
       })
     })
@@ -235,8 +226,7 @@ describe('DOM parser', () => {
         content: '†',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 },
-          source: '&#x86;'
+          end: { offset: 6, line: 1, column: 7 }
         }
       })
     })
@@ -257,14 +247,12 @@ describe('DOM parser', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 16, line: 1, column: 17 },
-            source: 'a &lt; b'
+            end: { offset: 16, line: 1, column: 17 }
           }
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 },
-          source: '{{ a &lt; b }}'
+          end: { offset: 19, line: 1, column: 20 }
         }
       })
     })
@@ -281,12 +269,10 @@ describe('DOM parser', () => {
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
         props: [],
-        isSelfClosing: false,
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 },
-          source: '<img>'
+          end: { offset: 5, line: 1, column: 6 }
         },
         codegenNode: undefined
       })
@@ -335,8 +321,7 @@ describe('DOM parser', () => {
         content: 'hello</textarea</textarea0>',
         loc: {
           start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 37, line: 1, column: 38 },
-          source: 'hello</textarea</textarea0>'
+          end: { offset: 37, line: 1, column: 38 }
         }
       })
     })

@@ -53,7 +53,6 @@ import {
   findProp,
   isCoreComponent,
   isStaticArgOf,
-  findDir,
   isStaticExp
 } from '../utils'
 import { buildSlots } from './vSlot'
@@ -281,19 +280,6 @@ export function resolveComponentType(
       // compat mode where all is values are considered components
       tag = isProp.value!.content.slice(4)
     }
-  }
-
-  // 1.5 v-is (TODO: remove in 3.4)
-  const isDir = !isExplicitDynamic && findDir(node, 'is')
-  if (isDir && isDir.exp) {
-    if (__DEV__) {
-      context.onWarn(
-        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
-      )
-    }
-    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-      isDir.exp
-    ])
   }
 
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)

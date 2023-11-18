@@ -283,7 +283,7 @@ const tokenizer = new Tokenizer(stack, {
                 ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
                 : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
           }
-        } else if (currentAttrValue) {
+        } else {
           // directive
           currentProp.rawExp = currentAttrValue
           currentProp.exp = createSimpleExpression(
@@ -715,6 +715,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
 
   const root = (currentRoot = createRoot([], input))
   tokenizer.parse(currentInput)
+  root.loc = getLoc(0, input.length)
   root.children = condenseWhitespace(root.children)
   currentRoot = null
   return root

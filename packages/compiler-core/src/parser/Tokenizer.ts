@@ -294,7 +294,7 @@ export default class Tokenizer {
       }
       this.state = State.Interpolation
       this.sectionStart = this.index
-      this.index += this.delimiterOpen.length
+      this.index += this.delimiterOpen.length - 1
     }
   }
 
