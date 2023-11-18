@@ -74,7 +74,6 @@ let currentProp: AttributeNode | DirectiveNode | null = null
 let currentAttrValue = ''
 let currentAttrStartIndex = -1
 let currentAttrEndIndex = -1
-let currentAttrs: Set<string> = new Set()
 let inPre = 0
 let inVPre = false
 let currentVPreBoundary: ElementNode | null = null
@@ -124,7 +123,6 @@ const tokenizer = new Tokenizer(stack, {
       loc: getLoc(start - 1),
       codegenNode: undefined
     }
-    currentAttrs.clear()
   },
 
   onopentagend(end) {
@@ -249,18 +247,18 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onattribnameend(end) {
-    // check duplicate attrs
     const start = currentProp!.loc.start.offset
     const name = getSlice(start, end)
     if (currentProp!.type === NodeTypes.DIRECTIVE) {
       currentProp!.rawName = name
     }
-    if (currentAttrs.has(name)) {
-      currentProp = null
-      // TODO emit error DUPLICATE_ATTRIBUTE
-      throw new Error(`duplicate attr ${name}`)
-    } else {
-      currentAttrs.add(name)
+    // check duplicate attrs
+    if (
+      currentElement!.props.some(
+        p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name
+      )
+    ) {
+      // TODO duplicate
     }
   },
 
@@ -688,7 +686,6 @@ function reset() {
   tokenizer.reset()
   currentElement = null
   currentProp = null
-  currentAttrs.clear()
   currentAttrValue = ''
   currentAttrStartIndex = -1
   currentAttrEndIndex = -1
