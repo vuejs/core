@@ -9,7 +9,7 @@ import {
   CreateComponentPublicInstance,
   ComponentPublicInstance,
   ComponentPropsWithDefaultOptional,
-  ComponentDefineOptions,
+  DefineComponentOptions,
   ComputedOptions,
   MethodOptions,
   ComponentOptionsMixin,
@@ -69,6 +69,8 @@ const noPropsOptions = {
 const fakeClassComponent = {} as {
   new (): { $props: { a: string }; someMethod: (a: number) => void }
 }
+
+const functionalComponent = (props: { a: string }) => () => {}
 
 // const mixIn = {
 //   props: ['a1'],
@@ -374,7 +376,18 @@ describe('#ComponentPropsWithDefaultOptional', () => {
   })
 
   describe('class component', () => {
-    expectType<{ a: string }>({} as ComponentProps<typeof fakeClassComponent>)
+    const cc = getOptionalProps(fakeClassComponent)
+    expectType<{ a: string }>(cc)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(cc)
+  })
+
+  describe('functional component', () => {
+    const fc = getOptionalProps(functionalComponent)
+    expectType<{ a: string }>(fc)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(fc)
   })
 })
 
@@ -462,7 +475,7 @@ declare function extraPropsOptional<
   S extends SlotsType = {},
   Options = {}
 >(
-  o: ComponentDefineOptions<
+  o: DefineComponentOptions<
     Props,
     RawBindings,
     D,
@@ -478,7 +491,7 @@ declare function extraPropsOptional<
     Options
   >
 ): ComponentPropsWithDefaultOptional<
-  ComponentDefineOptions<
+  DefineComponentOptions<
     Props,
     RawBindings,
     D,

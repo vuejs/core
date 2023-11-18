@@ -228,7 +228,8 @@ export type {
 } from './component'
 export type {
   DefineComponent,
-  ComponentDefineOptions
+  DefineComponentOptions,
+  DefineComponentFromOptions
 } from './apiDefineComponent'
 export type {
   ComponentOptions,

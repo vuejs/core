@@ -1,6 +1,6 @@
 import { ComponentOptionsBase } from './componentOptions'
 import {
-  ComponentDefineOptions,
+  DefineComponentOptions,
   RawOptionsSymbol,
   defineComponent
 } from './apiDefineComponent'
@@ -8,7 +8,8 @@ import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
 import {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
-  ExtractPropTypes
+  ExtractPropTypes,
+  PropType
 } from './componentProps'
 import { Slot, Slots } from './componentSlots'
 import { VNode } from './vnode'
@@ -145,15 +146,29 @@ type ResolveMixin<T> = [T] extends [
   ? IntersectionMixin<M> & IntersectionMixin<E>
   : {}
 
+export type ObjectToComponentProps<T> = T extends Record<string, any>
+  ? {
+      [K in keyof T]: {
+        type: PropType<T[K]>
+        required: T[K] extends undefined ? false : true
+      }
+    }
+  : {}
+
 /**
  * Extracts Original props from options
  */
 export type ResolvePropsFromOptions<T> = T extends { props: infer P }
   ? [P] extends [Array<infer PA>]
     ? [PA] extends [string]
-      ? { [key in PA]?: any }
+      ? ObjectToComponentProps<Record<PA, any>>
       : never // not supported because is an array of non-string
     : P
+  : // if functional component build props
+  T extends (props: infer P) => any
+  ? ObjectToComponentProps<P>
+  : T extends { new (): { $props: infer P } }
+  ? ObjectToComponentProps<P>
   : T
 
 /**
@@ -168,6 +183,9 @@ export type ComponentPropsWithDefaultOptional<T> =
     : {}) &
     (T extends { props: any }
       ? ResolveMixinProps<Omit<T, 'props'>>
+      : // if is functional or class no need for mixin
+      T extends ((...args: any) => any) | (abstract new (...args: any) => any)
+      ? {}
       : ResolveMixinProps<T>)
 
 type ResolveMixinProps<T> = UnwrapMixinsType<ResolveMixin<T>, 'P'>
@@ -244,7 +262,7 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
   : T extends ComponentPublicInstanceConstructor
   ? InstanceType<T>
-  : T extends ComponentDefineOptions<
+  : T extends DefineComponentOptions<
       infer Props,
       infer RawBindings,
       infer D,

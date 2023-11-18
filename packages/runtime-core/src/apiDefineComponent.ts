@@ -100,7 +100,7 @@ export type DefineComponent<
   > & { props: PropsOrPropOptions } & Omit<Options, 'props'> & {
     [RawOptionsSymbol]: Options
   } & PP
-export type ComponentDefineOptions<
+export type DefineComponentOptions<
   Props = never,
   RawBindings = {},
   D = {},
@@ -187,6 +187,44 @@ export type ComponentDefineOptions<
     ) => RenderFunction | Promise<RenderFunction>) &
       Options)
 
+export type DefineComponentFromOptions<
+  Props = never,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  Options = {}
+> = DefineComponent<
+  [Props] extends [string]
+    ? Props[]
+    : undefined extends Props
+    ? {}
+    : Props extends never[]
+    ? string[]
+    : Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  PublicProps,
+  ResolveProps<Props, E>,
+  ExtractDefaultPropTypes<Props>,
+  I,
+  II,
+  S,
+  Options
+>
 // export type ComponentDefineOptions<
 //   Props = undefined,
 //   RawBindings = {},
@@ -467,9 +505,10 @@ export function defineComponent<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {}
+  Options = {},
+  DefineOptions = {}
 >(
-  options: ComponentDefineOptions<
+  options: DefineComponentOptions<
     Props,
     RawBindings,
     D,
@@ -484,14 +523,8 @@ export function defineComponent<
     S,
     Options
   >
-): DefineComponent<
-  [Props] extends [string]
-    ? Props[]
-    : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : Props,
+): DefineComponentFromOptions<
+  Props,
   RawBindings,
   D,
   C,
@@ -500,9 +533,6 @@ export function defineComponent<
   Extends,
   E,
   EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
   I,
   II,
   S,
