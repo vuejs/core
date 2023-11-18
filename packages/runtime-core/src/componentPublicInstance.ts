@@ -219,6 +219,18 @@ export type CreateComponentPublicInstance<
   S
 >
 
+/**
+ * Resolves props
+ */
+export type ComponentPropsWithDefault<
+  P,
+  Defaults,
+  PublicProps,
+  MakeDefaultsOptional extends boolean = false
+> = MakeDefaultsOptional extends true
+  ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
+  : Prettify<P> & PublicProps
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -237,9 +249,12 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
-    : Prettify<P> & PublicProps
+  $props: ComponentPropsWithDefault<
+    P,
+    Defaults,
+    PublicProps,
+    MakeDefaultsOptional
+  >
   $attrs: Data
   $refs: Data
   $slots: UnwrapSlotsType<S>

@@ -20,6 +20,9 @@ import {
   UnwrapMixinsType
 } from './componentPublicInstance'
 
+/**
+ * Extracts the component original options
+ */
 export type ExtractComponentOptions<T> = T extends {
   [RawOptionsSymbol]: infer Options
 }
@@ -48,6 +51,12 @@ export type ExtractComponentOptions<T> = T extends {
   ? T
   : T
 
+/*
+ * Extracts the component props as the component was created,
+ * or the props from the ComponentPublicInstance
+ *
+ * This is useful to get the props from defineComponent or options component
+ */
 export type ExtractComponentProp<T> = T extends { props: infer P }
   ? P
   : T extends (props: infer P) => any
@@ -56,6 +65,9 @@ export type ExtractComponentProp<T> = T extends { props: infer P }
   ? P
   : {}
 
+/**
+ * Extracts the component slots as the component was created
+ */
 export type ExtractComponentSlots<T> = T extends ComponentOptionsBase<
   any,
   any,
@@ -82,6 +94,9 @@ export type ExtractComponentSlots<T> = T extends ComponentOptionsBase<
   ? S
   : {}
 
+/**
+ * Extracts the component emits as the component was created
+ */
 export type ExtractComponentEmits<T> = T extends ComponentOptionsBase<
   any,
   any,
@@ -107,6 +122,7 @@ export type ExtractComponentEmits<T> = T extends ComponentOptionsBase<
     : {}
   : {}
 
+// Helper to resolve mixins
 type ResolveMixin<T> = [T] extends [
   Readonly<
     ComponentOptionsBase<
@@ -128,51 +144,77 @@ type ResolveMixin<T> = [T] extends [
 ]
   ? IntersectionMixin<M> & IntersectionMixin<E>
   : {}
-export type ComponentPropsWithDefaultOptional<T> = ((
-  T extends { props: infer P }
-    ? [P] extends [Array<infer PA>]
-      ? [PA] extends [string]
-        ? { [key in PA]?: any }
-        : never // not supported because is an array of non-string
-      : P
-    : T
-) extends infer Props
-  ? ExtractDefaultPropTypes<T> extends infer Defaults
-    ? Partial<Defaults> & Omit<ExtractPropTypes<Props>, keyof Defaults>
-    : {}
-  : {}) &
-  (T extends { props: any }
-    ? ResolveMixinProps<Omit<T, 'props'>>
-    : ResolveMixinProps<T>)
+
+/**
+ * Extracts Original props from options
+ */
+export type ResolvePropsFromOptions<T> = T extends { props: infer P }
+  ? [P] extends [Array<infer PA>]
+    ? [PA] extends [string]
+      ? { [key in PA]?: any }
+      : never // not supported because is an array of non-string
+    : P
+  : T
+
+/**
+ * Get the Component props making the default optional
+ * Used mainly on the render component
+ */
+export type ComponentPropsWithDefaultOptional<T> =
+  (ResolvePropsFromOptions<T> extends infer Props
+    ? ExtractDefaultPropTypes<Props> extends infer Defaults
+      ? Partial<Defaults> & Omit<ExtractPropTypes<Props>, keyof Defaults>
+      : {}
+    : {}) &
+    (T extends { props: any }
+      ? ResolveMixinProps<Omit<T, 'props'>>
+      : ResolveMixinProps<T>)
 
 type ResolveMixinProps<T> = UnwrapMixinsType<ResolveMixin<T>, 'P'>
 
-export type ComponentProps<
-  T,
-  excludeEmits extends boolean = false
-> = (excludeEmits extends false
-  ? ExtractComponentEmits<T> extends infer E
-    ? E extends EmitsOptions
-      ? EmitsToProps<E>
-      : unknown
+/**
+ * Returns the emits as props
+ */
+export type ComponentEmitsProps<T> = ExtractComponentEmits<T> extends infer E
+  ? E extends EmitsOptions
+    ? EmitsToProps<E>
     : unknown
-  : {}) &
-  (T extends { $props: infer P }
-    ? P
-    : (ExtractComponentProp<T> extends infer P
-        ? P extends Readonly<Array<infer V>>
-          ? [V] extends [string]
-            ? Readonly<{ [key in V]?: any }>
-            : {}
-          : P extends ComponentPropsOptions
-          ? ExtractPropTypes<P>
-          : P
-        : {}) &
-        // props to be omitted since we don't need them here
-        (T extends { props: any }
-          ? ResolveMixinProps<Omit<T, 'props'>>
-          : ResolveMixinProps<T>))
+  : unknown
 
+/**
+ * Returns runtime props definition for a component
+ *
+ *  @see Include emits {@linkcode ComponentEmitsProps}
+ *  @see Get the render props {@linkcode ComponentPropsWithDefaultOptional}
+ *
+ * @example
+ * ```ts
+ * import { Comp } from './Comp.vue'
+ *
+ * function useProps(): ComponentProps<typeof Comp> {
+ *  // ...
+ * }
+ * ```
+ */
+export type ComponentProps<T> = T extends { $props: infer P }
+  ? P
+  : (ExtractComponentProp<T> extends infer P
+      ? P extends Readonly<Array<infer V>>
+        ? [V] extends [string]
+          ? Readonly<{ [key in V]?: any }>
+          : {}
+        : P extends ComponentPropsOptions
+        ? ExtractPropTypes<P>
+        : P
+      : {}) &
+      // props to be omitted since we don't need them here
+      (T extends { props: any }
+        ? ResolveMixinProps<Omit<T, 'props'>>
+        : ResolveMixinProps<T>)
+
+/**
+ * Returns runtime type for `slots`
+ */
 export type ComponentSlots<T> = ExtractComponentSlots<T> extends infer S
   ? {
       [K in keyof S]: S[K] extends Slot<infer V> ? (arg: V) => VNode : never
@@ -185,6 +227,17 @@ export type ComponentEmits<T> = ExtractComponentEmits<T> extends infer E
     : EmitFn<E>
   : () => void
 
+/**
+ * Retrieves the component public instance
+ *
+ * @example
+ * ```ts
+ * const Comp = defineComponent({ props: { a: String }, emits: ['test'] })
+ *
+ * const instance = ref<ComponentInstance<typeof Comp>>()
+ * instance.$props.a // string | undefined
+ * ```
+ */
 export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
   ? InstanceType<T>
   : T extends FunctionalComponent<infer Props, infer Emits>
@@ -246,53 +299,3 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
       M
     >
   : never // not a vue Component
-
-// declare function getInstance<T>(component: T): ComponentInstance<T>
-// declare function getProps<T>(vm: T): ComponentProps<T>
-// declare function getEmits<T>(vm: T): ExtractComponentEmits<T>
-
-// declare function getDefaults<T>(vm: T): ComponentPropsWithDefaultOptional<T>
-
-// const o = defineComponent({
-//   // props: {
-//   //   a: Boolean,
-
-//   //   s: String
-//   // },
-//   // emits: ['modelValueChange']
-// })
-// const ComponentWithEmits = defineComponent({
-//   emits: {
-//     hi: () => true
-//   },
-//   props: [],
-//   template: ''
-// })
-// const aa = getDefaults(o)
-
-// // const oo = new o()
-// // oo.$props.$attrs.test
-
-// const c = defineComponent({
-//   props: {
-//     a: String
-//   },
-//   // emits: ['modelValueChange']
-//   emits: {
-//     test: (v: string) => true
-//   }
-// })
-
-// const a = getInstance(c)
-// // a.bb
-// // a.aa
-// // a.cc
-// // a.dd
-
-// // a.$props.$attrs.tesr
-// // const p = getProps(a)
-// // p.$attrs.test
-// // p.
-
-// const ee = getEmits(c)
-// const e = getEmits(a)

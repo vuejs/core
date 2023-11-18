@@ -25,6 +25,237 @@ describe('defineComponent', () => {
   expectType<string | undefined>(compSetup.test)
   expectType<number>(compSetup.a)
   expectType<ComponentPublicInstance>(compSetup)
+
+  describe('ComponentInstance is ComponentPublicInstance', () => {
+    const EmptyObj = getComponentInstance(defineComponent({}))
+    expectType<ComponentPublicInstance>(EmptyObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyObj)
+
+    const EmptyPropsObj = getComponentInstance(
+      defineComponent({
+        props: {}
+      })
+    )
+    expectType<ComponentPublicInstance>(EmptyPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ a?: any }>(EmptyPropsObj.$props)
+
+    const EmptyArrayPropsObj = getComponentInstance(
+      defineComponent({
+        props: []
+      })
+    )
+    expectType<ComponentPublicInstance>(EmptyArrayPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyArrayPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ a?: any }>(EmptyArrayPropsObj.$props)
+
+    const ArrayPropsStringObj = getComponentInstance(
+      defineComponent({
+        props: [] as string[]
+      })
+    )
+    expectType<ComponentPublicInstance>(ArrayPropsStringObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(ArrayPropsStringObj)
+    // props could not be resolved
+    expectType<{ a?: any }>(ArrayPropsStringObj.$props)
+
+    const PropsObject = getComponentInstance(
+      defineComponent({
+        props: {
+          a: String
+        }
+      })
+    )
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(PropsObject)
+    expectType<ComponentPublicInstance>(PropsObject)
+    expectType<{ a?: string | undefined }>(PropsObject.$props)
+    expectType<{
+      a: StringConstructor
+    }>(PropsObject.$options.props)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(PropsObject.$props)
+
+    const PropsArray = getComponentInstance(
+      defineComponent({
+        props: ['a']
+      })
+    )
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(PropsArray)
+
+    expectType<ComponentPublicInstance>(PropsArray)
+    expectType<{ a?: any }>(PropsArray.$props)
+    expectType<'a'[]>(PropsArray.$options.props)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(PropsArray.$props)
+
+    const EmitsArray = getComponentInstance(
+      defineComponent({
+        emits: ['a']
+      })
+    )
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsArray)
+
+    expectType<ComponentPublicInstance>(EmitsArray)
+    expectType<(event: 'a', ...args: any[]) => void>(EmitsArray.$emit)
+    expectType<'a'[]>(EmitsArray.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsArray.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsArray.$emit)
+
+    const EmitsArrayCast = getComponentInstance(
+      defineComponent({
+        emits: ['a'] as ['a']
+      })
+    )
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsArrayCast)
+
+    expectType<ComponentPublicInstance>(EmitsArrayCast)
+    expectType<(event: 'a', ...args: any[]) => void>(EmitsArrayCast.$emit)
+    expectType<['a']>(EmitsArrayCast.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsArrayCast.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsArrayCast.$emit)
+
+    const EmitsOptions = getComponentInstance(
+      defineComponent({
+        emits: {
+          foo: (a: string) => true
+        }
+      })
+    )
+
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsOptions)
+    expectType<ComponentPublicInstance>(EmitsOptions)
+
+    expectType<(event: 'foo', a: string) => void>(EmitsOptions.$emit)
+    expectType<{
+      foo: (a: string) => true
+    }>(EmitsOptions.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsOptions.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(EmitsOptions.$emit)
+
+    // full Component
+
+    const MixinFoo = defineComponent({
+      props: {
+        foo: { type: String, required: true }
+      },
+      data() {
+        return {
+          fooExtra: 'foo'
+        }
+      },
+      methods: {
+        fooMethod() {
+          return true
+        }
+      },
+      computed: {
+        fooComputed() {
+          return 'fooX'
+        }
+      }
+    })
+    const MixinBar = defineComponent({
+      props: ['bar']
+    })
+
+    const fullComponent = getComponentInstance(
+      defineComponent({
+        props: {
+          a: String
+        },
+        mixins: [MixinFoo, MixinBar],
+
+        randomOption: true,
+
+        data() {
+          return {
+            b: 1
+          }
+        },
+
+        setup() {
+          return {
+            c: 1
+          }
+        },
+
+        methods: {
+          testMethod(r: number) {
+            return this.bar + r
+          }
+        },
+        computed: {
+          testComputed() {
+            return `${this.a}:${this.b}`
+          }
+        }
+      })
+    )
+    expectType<ComponentPublicInstance>(fullComponent)
+
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(fullComponent)
+
+    expectType<{ a?: string | undefined; bar?: any; foo: string }>(
+      fullComponent.$props
+    )
+    expectType<{ b: number; fooExtra: string }>(fullComponent.$data)
+
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(fullComponent.$options.props)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(fullComponent.$props)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(fullComponent.$options.emits)
+    //@ts-expect-error not valid
+    expectType<{ __a?: any }>(fullComponent.$emit)
+
+    expectType<{
+      fooMethod(): boolean
+      testMethod(r: number): any
+
+      fooComputed: string
+      testComputed: string
+
+      c: number
+      b: number
+    }>(fullComponent)
+
+    expectType<{
+      props: {
+        a: StringConstructor
+      }
+      randomOption: boolean
+
+      methods: {
+        testMethod(r: number): any
+      }
+      computed: {
+        testComputed: any
+      }
+
+      mixins: Array<typeof MixinFoo | typeof MixinBar>
+
+      setup: () => { c: number }
+    }>(fullComponent.$options)
+  })
 })
 describe('functional component', () => {
   // Functional
@@ -76,6 +307,187 @@ describe('options component', () => {
   expectType<number>(compOptions.a)
   expectType<(a: string) => boolean>(compOptions.func)
   expectType<ComponentPublicInstance>(compOptions)
+
+  describe('ComponentInstance is ComponentPublicInstance', () => {
+    const EmptyObj = getComponentInstance({})
+    expectType<ComponentPublicInstance>(EmptyObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyObj)
+
+    const EmptyPropsObj = getComponentInstance({
+      props: {}
+    })
+    expectType<ComponentPublicInstance>(EmptyPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ a?: any }>(EmptyPropsObj.$props)
+
+    const EmptyArrayPropsObj = getComponentInstance({
+      props: []
+    })
+    expectType<ComponentPublicInstance>(EmptyArrayPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmptyArrayPropsObj)
+    //@ts-expect-error not valid
+    expectType<{ a?: any }>(EmptyArrayPropsObj.$props)
+
+    const ArrayPropsStringObj = getComponentInstance({
+      props: [] as string[]
+    })
+    expectType<ComponentPublicInstance>(ArrayPropsStringObj)
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(ArrayPropsStringObj)
+    // props could not be resolved
+    expectType<{ a?: any }>(ArrayPropsStringObj.$props)
+
+    const PropsObject = getComponentInstance({
+      props: {
+        a: String
+      }
+    })
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(PropsObject)
+    expectType<ComponentPublicInstance>(PropsObject)
+    expectType<{ a?: string | undefined }>(PropsObject.$props)
+    expectType<{
+      a: StringConstructor
+    }>(PropsObject.$options.props)
+
+    const PropsArray = getComponentInstance({
+      props: ['a'] as ['a']
+    })
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(PropsArray)
+
+    expectType<ComponentPublicInstance>(PropsArray)
+    expectType<{ a?: any }>(PropsArray.$props)
+    expectType<'a'[]>(PropsArray.$options.props)
+
+    const EmitsArray = getComponentInstance({
+      emits: ['a'] as ['a']
+    })
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsArray)
+
+    expectType<ComponentPublicInstance>(EmitsArray)
+    expectType<(event: 'a', ...args: any[]) => void>(EmitsArray.$emit)
+    expectType<'a'[]>(EmitsArray.$options.emits)
+
+    const EmitsArrayCast = getComponentInstance({
+      emits: ['a'] as ['a']
+    })
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsArrayCast)
+
+    expectType<ComponentPublicInstance>(EmitsArrayCast)
+    expectType<(event: 'a', ...args: any[]) => void>(EmitsArrayCast.$emit)
+    expectType<['a']>(EmitsArrayCast.$options.emits)
+
+    const EmitsOptions = getComponentInstance({
+      emits: {
+        foo: (a: string) => true
+      }
+    })
+
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(EmitsOptions)
+    expectType<ComponentPublicInstance>(EmitsOptions)
+
+    expectType<(event: 'foo', a: string) => void>(EmitsOptions.$emit)
+    expectType<{
+      foo: (a: string) => true
+    }>(EmitsOptions.$options.emits)
+
+    // full Component
+
+    const MixinFoo = defineComponent({
+      props: {
+        foo: { type: String, required: true }
+      },
+      data() {
+        return {
+          fooExtra: 'foo'
+        }
+      },
+      methods: {
+        fooMethod() {
+          return true
+        }
+      },
+      computed: {
+        fooComputed() {
+          return 'fooX'
+        }
+      }
+    })
+    const MixinBar = defineComponent({
+      props: ['bar']
+    })
+
+    const fullComponent = getComponentInstance({
+      props: {
+        a: String
+      },
+      mixins: [MixinFoo, MixinBar],
+
+      randomOption: true,
+
+      data() {
+        return {
+          b: 1
+        }
+      },
+
+      methods: {
+        // @ts-expect-error cannot infer this, using `defineComponent`
+        testMethod(r: number) {
+          // @ts-expect-error cannot infer this, using `defineComponent`
+          return this.bar + r
+        }
+      },
+      computed: {
+        // @ts-expect-error cannot infer this, using `defineComponent`
+        testComputed() {
+          // @ts-expect-error cannot infer this, using `defineComponent`
+          return `${this.a}:${this.b}`
+        }
+      }
+    })
+    expectType<ComponentPublicInstance>(fullComponent)
+
+    //@ts-expect-error not valid
+    expectType<{ error: true }>(fullComponent)
+
+    expectType<{ a?: string | undefined; bar?: any; foo: string }>(
+      fullComponent.$props
+    )
+    expectType<{ b: number; fooExtra: string }>(fullComponent.$data)
+
+    expectType<{
+      fooMethod(): boolean
+      testMethod(r: number): any
+
+      fooComputed: string
+      testComputed: string
+    }>(fullComponent)
+
+    expectType<{
+      props: {
+        a: StringConstructor
+      }
+      randomOption: boolean
+
+      methods: {
+        testMethod(r: number): any
+      }
+      computed: {
+        testComputed: any
+      }
+
+      mixins: Array<typeof MixinFoo | typeof MixinBar>
+    }>(fullComponent.$options)
+  })
 })
 
 describe('object no defineComponent', () => {
@@ -149,165 +561,3 @@ describe('Generic component', () => {
 })
 
 // extra
-
-describe('ComponentInstance is ComponentPublicInstance', () => {
-  const EmptyObj = getComponentInstance(defineComponent({}))
-  expectType<ComponentPublicInstance>(EmptyObj)
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(EmptyObj)
-
-  const PropsObject = getComponentInstance(
-    defineComponent({
-      props: {
-        a: String
-      }
-    })
-  )
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(PropsObject)
-  expectType<ComponentPublicInstance>(PropsObject)
-  expectType<{ a?: string | undefined }>(PropsObject.$props)
-  expectType<{
-    a: StringConstructor
-  }>(PropsObject.$options.props)
-
-  const PropsArray = getComponentInstance(
-    defineComponent({
-      props: ['a']
-    })
-  )
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(PropsArray)
-
-  expectType<ComponentPublicInstance>(PropsArray)
-  expectType<{ a?: any }>(PropsArray.$props)
-  expectType<'a'[]>(PropsArray.$options.props)
-
-  const EmitsArray = getComponentInstance(
-    defineComponent({
-      emits: ['a']
-    })
-  )
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(EmitsArray)
-
-  expectType<ComponentPublicInstance>(EmitsArray)
-  expectType<(event: 'a', ...args: any[]) => void>(EmitsArray.$emit)
-  expectType<'a'[]>(EmitsArray.$options.emits)
-
-  const EmitsArrayCast = getComponentInstance(
-    defineComponent({
-      emits: ['a'] as ['a']
-    })
-  )
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(EmitsArrayCast)
-
-  expectType<ComponentPublicInstance>(EmitsArrayCast)
-  expectType<(event: 'a', ...args: any[]) => void>(EmitsArrayCast.$emit)
-  expectType<['a']>(EmitsArrayCast.$options.emits)
-
-  const EmitsOptions = getComponentInstance(
-    defineComponent({
-      emits: {
-        foo: (a: string) => true
-      }
-    })
-  )
-
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(EmitsOptions)
-  expectType<ComponentPublicInstance>(EmitsOptions)
-
-  expectType<(event: 'foo', a: string) => void>(EmitsOptions.$emit)
-  expectType<{
-    foo: (a: string) => true
-  }>(EmitsOptions.$options.emits)
-
-  // full Component
-
-  const MixinFoo = defineComponent({
-    props: {
-      foo: { type: String, required: true }
-    },
-    data() {
-      return {
-        fooExtra: 'foo'
-      }
-    },
-    methods: {
-      fooMethod() {
-        return true
-      }
-    },
-    computed: {
-      fooComputed() {
-        return 'fooX'
-      }
-    }
-  })
-  const MixinBar = defineComponent({
-    props: ['bar']
-  })
-
-  const fullComponent = getComponentInstance(
-    defineComponent({
-      props: {
-        a: String
-      },
-      mixins: [MixinFoo, MixinBar],
-
-      randomOption: true,
-
-      data() {
-        return {
-          b: 1
-        }
-      },
-
-      methods: {
-        testMethod(r: number) {
-          return this.bar + r
-        }
-      },
-      computed: {
-        testComputed() {
-          return `${this.a}:${this.b}`
-        }
-      }
-    })
-  )
-  expectType<ComponentPublicInstance>(fullComponent)
-
-  //@ts-expect-error not valid
-  expectType<{ error: true }>(fullComponent)
-
-  expectType<{ a?: string | undefined; bar?: any; foo: string }>(
-    fullComponent.$props
-  )
-  expectType<{ b: number; fooExtra: string }>(fullComponent.$data)
-
-  expectType<{
-    fooMethod(): boolean
-    testMethod(r: number): any
-
-    fooComputed: string
-    testComputed: string
-  }>(fullComponent)
-
-  expectType<{
-    props: {
-      a: StringConstructor
-    }
-    randomOption: boolean
-
-    methods: {
-      testMethod(r: number): any
-    }
-    computed: {
-      testComputed: any
-    }
-
-    mixins: Array<typeof MixinFoo | typeof MixinBar>
-  }>(fullComponent.$options)
-})

@@ -26,7 +26,7 @@ const propsOptions = {
 
     bb: {
       type: Boolean,
-      required: true
+      required: true as true
     }
   },
   slots: {
@@ -252,6 +252,132 @@ describe('Component Props', () => {
   })
 })
 
+declare function getOptionalProps<T>(o: T): ComponentPropsWithDefaultOptional<T>
+describe('#ComponentPropsWithDefaultOptional', () => {
+  describe('defineComponent', () => {
+    // Component with props
+    const CompProps = defineComponent(propsOptions)
+    const compProps = getOptionalProps(CompProps)
+    expectType<{
+      a?: string | undefined
+      b?: boolean | undefined
+      bb: boolean
+    }>(compProps)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ random: true }>(compProps)
+
+    // component array props
+    const CompPropsArray = defineComponent(arrayOptions)
+    const compPropsArray = getOptionalProps(CompPropsArray)
+    expectType<{
+      a?: any
+      b?: any
+      c?: any
+    }>(compPropsArray)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(compPropsArray)
+
+    // component no props
+    const CompNoProps = defineComponent(noPropsOptions)
+    const compNoProps = getOptionalProps(CompNoProps)
+    expectType<{}>(compNoProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(compNoProps)
+
+    const Mixin = defineComponent({
+      props: ['a1'],
+      mixins: [CompProps, CompPropsArray, CompNoProps],
+
+      setup(props) {
+        props.a, props.a1
+        props.bb
+      }
+    })
+    const mixin = getOptionalProps(Mixin)
+    expectType<{
+      a1?: any
+      a?: any
+      b?: any
+      c?: any
+      bb: boolean
+    }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: true }>(mixin)
+  })
+
+  describe('async component', () => {
+    const Component = defineAsyncComponent({
+      loader: () =>
+        Promise.resolve(
+          defineComponent({
+            props: {
+              foo: String
+            }
+          })
+        )
+    })
+    const component = getOptionalProps(Component)
+
+    // NOTE not sure if this is the intention since Component.foo is undefined
+    expectType<{
+      foo?: string | undefined
+    }>(component)
+  })
+
+  describe('options object', () => {
+    const options = getOptionalProps(propsOptions)
+
+    expectType<{
+      a?: string | undefined
+      b?: boolean | undefined
+      bb: boolean
+    }>(options)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>(options)
+
+    // component array props
+
+    const array = getOptionalProps(arrayOptions)
+    expectType<{
+      a?: any
+      b?: any
+      c?: any
+    }>(array)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(array)
+
+    // component no props
+    const noProps = getOptionalProps(noPropsOptions)
+    expectType<{}>(noProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(noProps)
+
+    const mixin = getOptionalProps({
+      props: ['a1'] as ['a1'],
+      // using defineComponent, otherwise is not guaranteed to work
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ]
+    })
+    expectType<{
+      a1?: any
+      a?: any
+      b?: any
+      c?: any
+      bb: boolean
+    }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(mixin)
+  })
+
+  describe('class component', () => {
+    expectType<{ a: string }>({} as ComponentProps<typeof fakeClassComponent>)
+  })
+})
+
 // Component Instance
 
 declare function retrieveComponentInstance<T>(
@@ -307,6 +433,19 @@ declare const bb: ComponentPublicInstance
 //     props?: PropNames[] | Props
 //   }
 // ): ComponentPropsWithDefaultOptional<T, Props>
+
+declare function gettingDefineComponentProps<
+  T extends Parameters<typeof defineComponent>[0]
+>(opt: T): DefineComponent<T>
+
+const axxx = extraPropsOptional({
+  props: {
+    a: String
+  },
+  setup(props) {
+    props
+  }
+})
 
 declare function extraPropsOptional<
   Props = never,
