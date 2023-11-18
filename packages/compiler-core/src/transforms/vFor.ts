@@ -329,6 +329,13 @@ export function finalizeForParseResult(
         true
       )
     }
+    if (result.value) {
+      result.value = processExpression(
+        result.value as SimpleExpressionNode,
+        context,
+        true
+      )
+    }
   }
   if (__DEV__ && __BROWSER__) {
     validateBrowserExpression(result.source as SimpleExpressionNode, context)

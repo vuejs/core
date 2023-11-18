@@ -128,51 +128,24 @@ describe('compiler: expression transform', () => {
         {
           content: `_ctx.foo`,
           loc: {
-            source: `foo`,
-            start: {
-              offset: 3,
-              line: 1,
-              column: 4
-            },
-            end: {
-              offset: 6,
-              line: 1,
-              column: 7
-            }
+            start: { offset: 3, line: 1, column: 4 },
+            end: { offset: 6, line: 1, column: 7 }
           }
         },
         `(`,
         {
           content: `_ctx.baz`,
           loc: {
-            source: `baz`,
-            start: {
-              offset: 7,
-              line: 1,
-              column: 8
-            },
-            end: {
-              offset: 10,
-              line: 1,
-              column: 11
-            }
+            start: { offset: 7, line: 1, column: 8 },
+            end: { offset: 10, line: 1, column: 11 }
           }
         },
         ` + 1, { key: `,
         {
           content: `_ctx.kuz`,
           loc: {
-            source: `kuz`,
-            start: {
-              offset: 23,
-              line: 1,
-              column: 24
-            },
-            end: {
-              offset: 26,
-              line: 1,
-              column: 27
-            }
+            start: { offset: 23, line: 1, column: 24 },
+            end: { offset: 26, line: 1, column: 27 }
           }
         },
         ` })`
@@ -539,7 +512,7 @@ describe('compiler: expression transform', () => {
         `<div @click="() => {
           for (const x in list) {
             log(x)
-          }         
+          }
         }"/>`
       )
       expect(code).not.toMatch(`_ctx.x`)
@@ -551,7 +524,7 @@ describe('compiler: expression transform', () => {
         `<div @click="() => {
           for (const x of list) {
             log(x)
-          }         
+          }
         }"/>`
       )
       expect(code).not.toMatch(`_ctx.x`)
@@ -563,7 +536,7 @@ describe('compiler: expression transform', () => {
         `<div @click="() => {
           for (let i = 0; i < list.length; i++) {
             log(i)
-          }         
+          }
         }"/>`
       )
       expect(code).not.toMatch(`_ctx.i`)
