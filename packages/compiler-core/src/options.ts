@@ -1,4 +1,10 @@
-import { ElementNode, Namespace, TemplateChildNode, ParentNode } from './ast'
+import {
+  ElementNode,
+  Namespace,
+  TemplateChildNode,
+  ParentNode,
+  Namespaces
+} from './ast'
 import { CompilerError } from './errors'
 import {
   NodeTransform,
@@ -16,7 +22,24 @@ export interface ErrorHandlingOptions {
 export interface ParserOptions
   extends ErrorHandlingOptions,
     CompilerCompatOptions {
+  /**
+   * Base mode is platform agnostic and only parses HTML-like template syntax,
+   * treating all tags the same way. Specific tag parsing behavior can be
+   * configured by higher-level compilers.
+   *
+   * HTML mode adds additional logic for handling special parsing behavior in
+   * `<script>`, `<style>`,`<title>` and `<html>`, plus SVG and MathML
+   * namespaces. The logic is handled inside compiler-core for efficiency.
+   *
+   * SFC mode treats content of all root-level tags except `<template>` as plain
+   * text.
+   */
   parseMode?: 'base' | 'html' | 'sfc'
+  /**
+   * Specify the root namepsace to use when parsing a tempalte.
+   * Defaults to `Namepsaces.HTML` (0).
+   */
+  ns?: Namespaces
   /**
    * e.g. platform native elements, e.g. `<div>` for browsers
    */
@@ -40,7 +63,11 @@ export interface ParserOptions
   /**
    * Get tag namespace
    */
-  getNamespace?: (tag: string, parent: ElementNode | undefined) => Namespace
+  getNamespace?: (
+    tag: string,
+    parent: ElementNode | undefined,
+    rootNamespace: Namespace
+  ) => Namespace
   /**
    * @default ['{{', '}}']
    */

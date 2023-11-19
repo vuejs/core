@@ -40,6 +40,7 @@ type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
 
 export const defaultParserOptions: MergedParserOptions = {
   parseMode: 'base',
+  ns: Namespaces.HTML,
   delimiters: [`{{`, `}}`],
   getNamespace: () => Namespaces.HTML,
   isVoidTag: NO,
@@ -107,7 +108,7 @@ const tokenizer = new Tokenizer(stack, {
     currentElement = {
       type: NodeTypes.ELEMENT,
       tag: name,
-      ns: currentOptions.getNamespace(name, stack[0]),
+      ns: currentOptions.getNamespace(name, stack[0], currentOptions.ns),
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],

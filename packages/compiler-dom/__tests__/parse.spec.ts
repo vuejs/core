@@ -6,9 +6,10 @@ import {
   ElementTypes,
   InterpolationNode,
   AttributeNode,
-  ConstantTypes
+  ConstantTypes,
+  Namespaces
 } from '@vue/compiler-core'
-import { parserOptions, DOMNamespaces } from '../src/parserOptions'
+import { parserOptions } from '../src/parserOptions'
 
 describe('DOM parser', () => {
   describe('Text', () => {
@@ -264,7 +265,7 @@ describe('DOM parser', () => {
 
       expect(element).toStrictEqual({
         type: NodeTypes.ELEMENT,
-        ns: DOMNamespaces.HTML,
+        ns: Namespaces.HTML,
         tag: 'img',
         tagType: ElementTypes.ELEMENT,
         props: [],
@@ -324,21 +325,21 @@ describe('DOM parser', () => {
       const ast = parse('<html>test</html>', parserOptions)
       const element = ast.children[0] as ElementNode
 
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('SVG namespace', () => {
       const ast = parse('<svg>test</svg>', parserOptions)
       const element = ast.children[0] as ElementNode
 
-      expect(element.ns).toBe(DOMNamespaces.SVG)
+      expect(element.ns).toBe(Namespaces.SVG)
     })
 
     test('MATH_ML namespace', () => {
       const ast = parse('<math>test</math>', parserOptions)
       const element = ast.children[0] as ElementNode
 
-      expect(element.ns).toBe(DOMNamespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.MATH_ML)
     })
 
     test('SVG in MATH_ML namespace', () => {
@@ -350,8 +351,8 @@ describe('DOM parser', () => {
       const elementAnnotation = elementMath.children[0] as ElementNode
       const elementSvg = elementAnnotation.children[0] as ElementNode
 
-      expect(elementMath.ns).toBe(DOMNamespaces.MATH_ML)
-      expect(elementSvg.ns).toBe(DOMNamespaces.SVG)
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(elementSvg.ns).toBe(Namespaces.SVG)
     })
 
     test('html text/html in MATH_ML namespace', () => {
@@ -364,8 +365,8 @@ describe('DOM parser', () => {
       const elementAnnotation = elementMath.children[0] as ElementNode
       const element = elementAnnotation.children[0] as ElementNode
 
-      expect(elementMath.ns).toBe(DOMNamespaces.MATH_ML)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('html application/xhtml+xml in MATH_ML namespace', () => {
@@ -377,8 +378,8 @@ describe('DOM parser', () => {
       const elementAnnotation = elementMath.children[0] as ElementNode
       const element = elementAnnotation.children[0] as ElementNode
 
-      expect(elementMath.ns).toBe(DOMNamespaces.MATH_ML)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('mtext malignmark in MATH_ML namespace', () => {
@@ -390,8 +391,8 @@ describe('DOM parser', () => {
       const elementText = elementMath.children[0] as ElementNode
       const element = elementText.children[0] as ElementNode
 
-      expect(elementMath.ns).toBe(DOMNamespaces.MATH_ML)
-      expect(element.ns).toBe(DOMNamespaces.MATH_ML)
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.MATH_ML)
     })
 
     test('mtext and not malignmark tag in MATH_ML namespace', () => {
@@ -400,8 +401,8 @@ describe('DOM parser', () => {
       const elementText = elementMath.children[0] as ElementNode
       const element = elementText.children[0] as ElementNode
 
-      expect(elementMath.ns).toBe(DOMNamespaces.MATH_ML)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementMath.ns).toBe(Namespaces.MATH_ML)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('foreignObject tag in SVG namespace', () => {
@@ -413,8 +414,8 @@ describe('DOM parser', () => {
       const elementForeignObject = elementSvg.children[0] as ElementNode
       const element = elementForeignObject.children[0] as ElementNode
 
-      expect(elementSvg.ns).toBe(DOMNamespaces.SVG)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementSvg.ns).toBe(Namespaces.SVG)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('desc tag in SVG namespace', () => {
@@ -423,8 +424,8 @@ describe('DOM parser', () => {
       const elementDesc = elementSvg.children[0] as ElementNode
       const element = elementDesc.children[0] as ElementNode
 
-      expect(elementSvg.ns).toBe(DOMNamespaces.SVG)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementSvg.ns).toBe(Namespaces.SVG)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('title tag in SVG namespace', () => {
@@ -433,8 +434,8 @@ describe('DOM parser', () => {
       const elementTitle = elementSvg.children[0] as ElementNode
       const element = elementTitle.children[0] as ElementNode
 
-      expect(elementSvg.ns).toBe(DOMNamespaces.SVG)
-      expect(element.ns).toBe(DOMNamespaces.HTML)
+      expect(elementSvg.ns).toBe(Namespaces.SVG)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
 
     test('SVG in HTML namespace', () => {
@@ -442,8 +443,8 @@ describe('DOM parser', () => {
       const elementHtml = ast.children[0] as ElementNode
       const element = elementHtml.children[0] as ElementNode
 
-      expect(elementHtml.ns).toBe(DOMNamespaces.HTML)
-      expect(element.ns).toBe(DOMNamespaces.SVG)
+      expect(elementHtml.ns).toBe(Namespaces.HTML)
+      expect(element.ns).toBe(Namespaces.SVG)
     })
 
     test('MATH in HTML namespace', () => {
@@ -451,8 +452,20 @@ describe('DOM parser', () => {
       const elementHtml = ast.children[0] as ElementNode
       const element = elementHtml.children[0] as ElementNode
 
-      expect(elementHtml.ns).toBe(DOMNamespaces.HTML)
-      expect(element.ns).toBe(DOMNamespaces.MATH_ML)
+      expect(elementHtml.ns).toBe(Namespaces.HTML)
+      expect(element.ns).toBe(Namespaces.MATH_ML)
+    })
+
+    test('root ns', () => {
+      const ast = parse('<foreignObject><test/></foreignObject>', {
+        ...parserOptions,
+        ns: Namespaces.SVG
+      })
+      const elementForieng = ast.children[0] as ElementNode
+      const element = elementForieng.children[0] as ElementNode
+
+      expect(elementForieng.ns).toBe(Namespaces.SVG)
+      expect(element.ns).toBe(Namespaces.HTML)
     })
   })
 })
