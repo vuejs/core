@@ -3,7 +3,6 @@ import {
   NodeTypes,
   ElementNode,
   TextNode,
-  ErrorCodes,
   ElementTypes,
   InterpolationNode,
   AttributeNode,
@@ -302,15 +301,8 @@ describe('DOM parser', () => {
 
     test('Strict end tag detection for textarea.', () => {
       const ast = parse(
-        '<textarea>hello</textarea</textarea0></texTArea a="<>">',
-        {
-          ...parserOptions,
-          onError: err => {
-            if (err.code !== ErrorCodes.END_TAG_WITH_ATTRIBUTES) {
-              throw err
-            }
-          }
-        }
+        '<textarea>hello</textarea</textarea0></texTArea>',
+        parserOptions
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode

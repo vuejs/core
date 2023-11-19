@@ -178,7 +178,7 @@ export enum QuoteType {
 
 export interface Callbacks {
   ontext(start: number, endIndex: number): void
-  ontextentity(char: string, endIndex: number): void
+  ontextentity(char: string, start: number, endIndex: number): void
 
   oninterpolation(start: number, endIndex: number): void
 
@@ -188,7 +188,7 @@ export interface Callbacks {
   onclosetag(start: number, endIndex: number): void
 
   onattribdata(start: number, endIndex: number): void
-  onattribentity(char: string): void
+  onattribentity(char: string, start: number, end: number): void
   onattribend(quote: QuoteType, endIndex: number): void
   onattribname(start: number, endIndex: number): void
   onattribnameend(endIndex: number): void
@@ -325,6 +325,9 @@ export default class Tokenizer {
       } else {
         this.delimiterIndex++
       }
+    } else if (this.inRCDATA) {
+      this.state = State.InSpecialTag
+      this.stateInSpecialTag(c)
     } else {
       this.state = State.Text
       this.stateText(c)
@@ -343,7 +346,11 @@ export default class Tokenizer {
     if (c === this.delimiterClose[this.delimiterIndex]) {
       if (this.delimiterIndex === this.delimiterClose.length - 1) {
         this.cbs.oninterpolation(this.sectionStart, this.index + 1)
-        this.state = State.Text
+        if (this.inRCDATA) {
+          this.state = State.InSpecialTag
+        } else {
+          this.state = State.Text
+        }
         this.sectionStart = this.index + 1
       } else {
         this.delimiterIndex++
@@ -410,6 +417,11 @@ export default class Tokenizer {
         // We have to parse entities in <title> and <textarea> tags.
         if (!__BROWSER__ && c === CharCodes.Amp) {
           this.startEntity()
+        } else if (c === this.delimiterOpen[0]) {
+          // We also need to handle interpolation
+          this.state = State.InterpolationOpen
+          this.delimiterIndex = 0
+          this.stateInterpolationOpen(c)
         }
       } else if (this.fastForwardTo(CharCodes.Lt)) {
         // Outside of <title> and <textarea> tags, we can fast-forward.
@@ -1077,7 +1089,11 @@ export default class Tokenizer {
         this.sectionStart = this.entityStart + consumed
         this.index = this.sectionStart - 1
 
-        this.cbs.onattribentity(fromCodePoint(cp))
+        this.cbs.onattribentity(
+          fromCodePoint(cp),
+          this.entityStart,
+          this.sectionStart
+        )
       } else {
         if (this.sectionStart < this.entityStart) {
           this.cbs.ontext(this.sectionStart, this.entityStart)
@@ -1085,7 +1101,11 @@ export default class Tokenizer {
         this.sectionStart = this.entityStart + consumed
         this.index = this.sectionStart - 1
 
-        this.cbs.ontextentity(fromCodePoint(cp), this.sectionStart)
+        this.cbs.ontextentity(
+          fromCodePoint(cp),
+          this.entityStart,
+          this.sectionStart
+        )
       }
     }
   }

@@ -26,6 +26,7 @@ import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import { defaultOnError, defaultOnWarn } from '../errors'
 import { forAliasRE, isCoreComponent } from '../utils'
+import { decodeHTML } from 'entities/lib/decode.js'
 
 type OptionalOptions =
   | 'decodeEntities'
@@ -69,8 +70,8 @@ const tokenizer = new Tokenizer(stack, {
     onText(getSlice(start, end), start, end)
   },
 
-  ontextentity(char, end) {
-    onText(char, end - 1, end)
+  ontextentity(char, start, end) {
+    onText(char, start, end)
   },
 
   oninterpolation(start, end) {
@@ -85,13 +86,18 @@ const tokenizer = new Tokenizer(stack, {
     while (isWhitespace(currentInput.charCodeAt(innerEnd - 1))) {
       innerEnd--
     }
+    let exp = getSlice(innerStart, innerEnd)
+    // decode entities for backwards compat
+    if (exp.includes('&')) {
+      if (__BROWSER__) {
+        exp = currentOptions.decodeEntities!(exp, false)
+      } else {
+        exp = decodeHTML(exp)
+      }
+    }
     addNode({
       type: NodeTypes.INTERPOLATION,
-      content: createSimpleExpression(
-        getSlice(innerStart, innerEnd),
-        false,
-        getLoc(innerStart, innerEnd)
-      ),
+      content: createSimpleExpression(exp, false, getLoc(innerStart, innerEnd)),
       loc: getLoc(start, end)
     })
   },
@@ -101,7 +107,7 @@ const tokenizer = new Tokenizer(stack, {
     currentElement = {
       type: NodeTypes.ELEMENT,
       tag: name,
-      ns: currentOptions.getNamespace(name, getParent()),
+      ns: currentOptions.getNamespace(name, stack[0]),
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
@@ -227,8 +233,10 @@ const tokenizer = new Tokenizer(stack, {
     currentAttrEndIndex = end
   },
 
-  onattribentity(char) {
+  onattribentity(char, start, end) {
     currentAttrValue += char
+    if (currentAttrStartIndex < 0) currentAttrStartIndex = start
+    currentAttrEndIndex = end
   },
 
   onattribnameend(end) {
@@ -316,7 +324,11 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   oncdata(start, end) {
-    // TODO throw error
+    if (stack[0].ns !== Namespaces.HTML) {
+      onText(getSlice(start, end), start, end)
+    } else {
+      // TODO throw error if ns is html
+    }
   }
 })
 
@@ -418,7 +430,7 @@ function onText(content: string, start: number, end: number) {
     // TODO do not do this in <script> or <style>
     content = currentOptions.decodeEntities!(content, false)
   }
-  const parent = getParent()
+  const parent = stack[0] || currentRoot
   const lastNode = parent.children[parent.children.length - 1]
   if (lastNode?.type === NodeTypes.TEXT) {
     // merge
@@ -436,7 +448,10 @@ function onText(content: string, start: number, end: number) {
 function onCloseTag(el: ElementNode, end: number) {
   // attach end position
   let offset = 0
-  while (currentInput.charCodeAt(end + offset) !== CharCodes.Gt) {
+  while (
+    currentInput.charCodeAt(end + offset) !== CharCodes.Gt &&
+    end + offset < currentInput.length
+  ) {
     offset++
   }
   el.loc.end = tokenizer.getPos(end + offset + 1)
@@ -634,11 +649,7 @@ function condense(str: string) {
 }
 
 function addNode(node: TemplateChildNode) {
-  getParent().children.push(node)
-}
-
-function getParent() {
-  return stack[0] || currentRoot
+  ;(stack[0] || currentRoot).children.push(node)
 }
 
 function getLoc(start: number, end?: number): SourceLocation {
