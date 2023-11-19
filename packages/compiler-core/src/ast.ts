@@ -16,12 +16,13 @@ import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
-// More namespaces like SVG and MathML are declared by platform specific
-// compilers.
+// More namespaces can be declared by platform specific compilers.
 export type Namespace = number
 
 export const enum Namespaces {
-  HTML
+  HTML,
+  SVG,
+  MATH_ML
 }
 
 export const enum NodeTypes {

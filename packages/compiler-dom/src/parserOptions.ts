@@ -1,13 +1,7 @@
-import { ParserOptions, ElementNode, NodeTypes } from '@vue/compiler-core'
+import { ParserOptions, NodeTypes, Namespaces } from '@vue/compiler-core'
 import { isVoidTag, isHTMLTag, isSVGTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
-
-export const enum DOMNamespaces {
-  HTML = 0 /* Namespaces.HTML */,
-  SVG,
-  MATH_ML
-}
 
 export const parserOptions: ParserOptions = {
   parseMode: 'html',
@@ -16,7 +10,7 @@ export const parserOptions: ParserOptions = {
   isPreTag: tag => tag === 'pre',
   decodeEntities: __BROWSER__ ? decodeHtmlBrowser : undefined,
 
-  isBuiltInComponent: (tag: string): symbol | undefined => {
+  isBuiltInComponent: tag => {
     if (tag === 'Transition' || tag === 'transition') {
       return TRANSITION
     } else if (tag === 'TransitionGroup' || tag === 'transition-group') {
@@ -25,12 +19,12 @@ export const parserOptions: ParserOptions = {
   },
 
   // https://html.spec.whatwg.org/multipage/parsing.html#tree-construction-dispatcher
-  getNamespace(tag: string, parent: ElementNode | undefined): DOMNamespaces {
-    let ns = parent ? parent.ns : DOMNamespaces.HTML
-    if (parent && ns === DOMNamespaces.MATH_ML) {
+  getNamespace(tag, parent, rootNamespace) {
+    let ns = parent ? parent.ns : rootNamespace
+    if (parent && ns === Namespaces.MATH_ML) {
       if (parent.tag === 'annotation-xml') {
         if (tag === 'svg') {
-          return DOMNamespaces.SVG
+          return Namespaces.SVG
         }
         if (
           parent.props.some(
@@ -42,31 +36,31 @@ export const parserOptions: ParserOptions = {
                 a.value.content === 'application/xhtml+xml')
           )
         ) {
-          ns = DOMNamespaces.HTML
+          ns = Namespaces.HTML
         }
       } else if (
         /^m(?:[ions]|text)$/.test(parent.tag) &&
         tag !== 'mglyph' &&
         tag !== 'malignmark'
       ) {
-        ns = DOMNamespaces.HTML
+        ns = Namespaces.HTML
       }
-    } else if (parent && ns === DOMNamespaces.SVG) {
+    } else if (parent && ns === Namespaces.SVG) {
       if (
         parent.tag === 'foreignObject' ||
         parent.tag === 'desc' ||
         parent.tag === 'title'
       ) {
-        ns = DOMNamespaces.HTML
+        ns = Namespaces.HTML
       }
     }
 
-    if (ns === DOMNamespaces.HTML) {
+    if (ns === Namespaces.HTML) {
       if (tag === 'svg') {
-        return DOMNamespaces.SVG
+        return Namespaces.SVG
       }
       if (tag === 'math') {
-        return DOMNamespaces.MATH_ML
+        return Namespaces.MATH_ML
       }
     }
     return ns
