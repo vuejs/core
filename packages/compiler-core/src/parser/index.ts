@@ -406,14 +406,17 @@ function getSlice(start: number, end: number) {
 
 function endOpenTag(end: number) {
   addNode(currentElement!)
-  const name = currentElement!.tag
-  if (currentOptions.isPreTag(name)) {
+  const { tag, ns } = currentElement!
+  if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre++
   }
-  if (currentOptions.isVoidTag(name)) {
+  if (currentOptions.isVoidTag(tag)) {
     onCloseTag(currentElement!, end)
   } else {
     stack.unshift(currentElement!)
+    if (ns === Namespaces.SVG || ns === Namespaces.MATH_ML) {
+      tokenizer.inXML = true
+    }
   }
   currentElement = null
 }
@@ -458,7 +461,7 @@ function onCloseTag(el: ElementNode, end: number) {
   el.loc.end = tokenizer.getPos(end + offset + 1)
 
   // refine element type
-  const tag = el.tag
+  const { tag, ns } = el
   if (!inVPre) {
     if (tag === 'slot') {
       el.tagType = ElementTypes.SLOT
@@ -473,13 +476,18 @@ function onCloseTag(el: ElementNode, end: number) {
   if (!tokenizer.inRCDATA) {
     el.children = condenseWhitespace(el.children, el.tag)
   }
-
-  if (currentOptions.isPreTag(tag)) {
+  if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre--
   }
   if (currentVPreBoundary === el) {
     inVPre = false
     currentVPreBoundary = null
+  }
+  if (
+    tokenizer.inXML &&
+    (stack[0] ? stack[0].ns : currentOptions.ns) === Namespaces.HTML
+  ) {
+    tokenizer.inXML = false
   }
 }
 
