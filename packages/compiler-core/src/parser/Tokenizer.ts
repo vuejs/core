@@ -238,6 +238,8 @@ export default class Tokenizer {
   private baseState = State.Text
   /** For special parsing behavior inside of script and style tags. */
   public inRCDATA = false
+  /** For disabling RCDATA tags handling */
+  public inXML = false
   /** Reocrd newline positions for fast line / column calculation */
   private newlines: number[] = []
 
@@ -528,7 +530,7 @@ export default class Tokenizer {
         // - everything except <template> is RAWTEXT
         // - <template> with lang other than html is also RAWTEXT
         this.state = State.InSFCRootTagName
-      } else {
+      } else if (!this.inXML) {
         // HTML mode
         // - <script>, <style> RAWTEXT
         // - <title>, <textarea> RCDATA
@@ -539,6 +541,8 @@ export default class Tokenizer {
           this.state =
             lower === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
         }
+      } else {
+        this.state = State.InTagName
       }
     } else if (c === CharCodes.Slash) {
       this.state = State.BeforeClosingTagName
