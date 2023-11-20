@@ -76,8 +76,8 @@ export function getId(node: Expression) {
   return node.type === 'Identifier'
     ? node.name
     : node.type === 'StringLiteral'
-    ? node.value
-    : null
+      ? node.value
+      : null
 }
 
 const identity = (str: string) => str
