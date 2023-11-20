@@ -34,6 +34,7 @@
     "packages/*/__tests__",
     "packages/dts-test",
     "packages/vue/jsx-runtime",
-    "scripts/setupVitest.ts"
+    "scripts/setupVitest.ts",
+    "playground"
   ]
 }

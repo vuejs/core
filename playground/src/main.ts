@@ -1,5 +1,5 @@
 import { render } from 'vue/vapor'
-// @ts-expect-error
 import App from './App.vue'
 
+// @ts-expect-error
 render(App.render, '#app')

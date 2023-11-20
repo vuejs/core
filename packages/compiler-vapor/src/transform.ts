@@ -5,9 +5,9 @@ import {
   AttributeNode,
   SourceLocation,
   NodeTypes,
-  InterpolationNode
+  InterpolationNode,
+  TransformOptions
 } from '@vue/compiler-dom'
-import { TransformOptions } from 'vite'
 
 export const enum IRNodeTypes {
   ROOT,
@@ -53,13 +53,13 @@ export function transform(
 
 function transformChildren(children: TemplateChildNode[]) {
   let template: string = ''
-  children.forEach((child, i) => walkNode(child, children.length > i + 1))
+  children.forEach((child, i) => walkNode(child))
   return template
 
-  function walkNode(node: TemplateChildNode, hasSibling: boolean) {
+  function walkNode(node: TemplateChildNode) {
     switch (node.type) {
       case 1 satisfies NodeTypes.ELEMENT: {
-        template += transformElement(node, hasSibling)
+        template += transformElement(node)
         break
       }
       case 2 satisfies NodeTypes.TEXT:
@@ -88,7 +88,7 @@ function transformInterpolation(node: InterpolationNode) {
   // return `{{${node.content.content}}}`
 }
 
-function transformElement(node: ElementNode, hasSibling: boolean) {
+function transformElement(node: ElementNode) {
   const { tag, props, children } = node
   let template = `<${tag}`
   const propsTemplate = props
