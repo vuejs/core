@@ -19,7 +19,9 @@ import {
   DefineComponent,
   ComponentData,
   ComponentSlots,
-  SetupContext
+  SetupContext,
+  DeclareComponent,
+  PropType
 } from 'vue'
 
 const propsOptions = {
@@ -757,6 +759,43 @@ describe('ComponentSlots', () => {
     // @ts-expect-error checking if is not any
     expectType<{ random: number }>(fc)
   })
+})
+
+describe('DeclareComponent', () => {
+  const CompProps = {} as DeclareComponent<{ test: string | undefined }>
+
+  expectType<{
+    type: PropType<string>
+    required: false
+  }>(CompProps.props.test)
+
+  // @ts-expect-error not any
+  expectType<{ a: 1 }>(CompProps.$props.test)
+
+  const GenericCompDeclaration = defineComponent({
+    props: {
+      test: {
+        type: String,
+        required: true
+      }
+    }
+  }) as DeclareComponent<{
+    new <T extends string>(): {
+      $props: {
+        test: T
+      }
+    }
+  }>
+
+  expectType<{
+    type: PropType<string>
+    required: true
+  }>(GenericCompDeclaration.props.test)
+
+  const GenericComp = new GenericCompDeclaration<'bar'>()
+  expectType<'bar'>(GenericComp.$props.test)
+  // @ts-expect-error not any
+  expectType<{ a: 1 }>(GenericComp.$props.test)
 })
 
 // Component Instance

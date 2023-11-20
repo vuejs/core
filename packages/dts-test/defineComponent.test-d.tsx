@@ -13,8 +13,8 @@ import {
   Slots,
   VNode,
   ComponentPropsOptions,
-  ComponentObjectPropsOptions,
-  ComponentData
+  ComponentData,
+  ComponentInstance
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1496,7 +1496,7 @@ describe('should work when props type is incompatible with setup returned type '
       }
     }
   })
-  type CompInstance = InstanceType<typeof Comp>
+  type CompInstance = ComponentInstance<typeof Comp>
 
   const CompA = {} as CompInstance
   expectType<ComponentPublicInstance>(CompA)
@@ -1505,6 +1505,37 @@ describe('should work when props type is incompatible with setup returned type '
 
   const temp = {} as DefineComponent<{ size: SizeType }>
   new temp().$props.size
+})
+
+describe('overriding public instance props should still allow it to work', () => {
+  const Comp = defineComponent({
+    props: {
+      test: String
+    },
+
+    slots: {} as SlotsType<{
+      default: (arg: { foo: string }) => VNode[]
+    }>
+  })
+
+  const GenericComp = Comp as typeof Comp & {
+    new <T>(): {
+      $props: { test: T }
+      $slots: { default: (arg: { foo: T }) => VNode[] }
+    }
+  }
+
+  const GenericInstance = new GenericComp<'bar'>()
+  GenericInstance.$props.test
+  const CompInstance = {} as ComponentInstance<typeof GenericInstance>
+
+  expectType<ComponentPublicInstance>(CompInstance)
+  expectType<'bar'>(CompInstance.$props.test)
+  expectType<(arg: { foo: 'bar' }) => any>(CompInstance.$slots.default)
+  // @ts-expect-error not any
+  expectType<number>(CompInstance)
+  expectType<'bar'>(GenericInstance.$props.test)
+  expectType<(arg: { foo: 'bar' }) => any>(GenericInstance.$slots.default)
 })
 
 import {
@@ -1535,18 +1566,3 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
-
-const c = defineComponent({
-  props: {} as ComponentPropsOptions,
-
-  emits: ['a'],
-
-  setup(props) {
-    return {
-      tst: 1
-    }
-  }
-})
-declare function getData<T>(o: T): ComponentData<T>
-
-const aaa = getData(c)
