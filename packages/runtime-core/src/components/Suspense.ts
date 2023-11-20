@@ -29,6 +29,7 @@ import {
   assertNumber
 } from '../warning'
 import { handleError, ErrorCodes } from '../errorHandling'
+import { NULL_DYNAMIC_COMPONENT } from '../helpers/resolveAssets'
 
 export interface SuspenseProps {
   onResolve?: () => void
@@ -795,7 +796,11 @@ function normalizeSuspenseSlot(s: any) {
   }
   if (isArray(s)) {
     const singleChild = filterSingleRoot(s)
-    if (__DEV__ && !singleChild) {
+    if (
+      __DEV__ &&
+      !singleChild &&
+      s.filter(child => child !== NULL_DYNAMIC_COMPONENT).length > 0
+    ) {
       warn(`<Suspense> slots expect a single root node.`)
     }
     s = singleChild
