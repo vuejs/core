@@ -245,8 +245,10 @@ export function parse(
         )
       }
     }
-    // no need to genMap for template as its AST already accounts for the
-    // position in the SFC
+    // only genMap for template when it needs preprocessor
+    if (descriptor.template && descriptor.template.lang) {
+      genMap(descriptor.template)
+    }
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
     descriptor.customBlocks.forEach(genMap)

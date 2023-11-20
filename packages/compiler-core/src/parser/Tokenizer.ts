@@ -129,7 +129,7 @@ const enum State {
   BeforeSpecialS, // Decide if we deal with `<script` or `<style`
   BeforeSpecialT, // Decide if we deal with `<title` or `<textarea`
   SpecialStartSequence,
-  InSpecialTag,
+  InRCDATA,
 
   InEntity,
 
@@ -245,6 +245,11 @@ export default class Tokenizer {
 
   private readonly entityDecoder?: EntityDecoder
 
+  public mode = ParseMode.BASE
+  public get inSFCRoot() {
+    return this.mode === ParseMode.SFC && this.stack.length === 0
+  }
+
   constructor(
     private readonly stack: ElementNode[],
     private readonly cbs: Callbacks
@@ -255,8 +260,6 @@ export default class Tokenizer {
       )
     }
   }
-
-  public mode = ParseMode.BASE
 
   public reset(): void {
     this.state = State.Text
@@ -328,8 +331,8 @@ export default class Tokenizer {
         this.delimiterIndex++
       }
     } else if (this.inRCDATA) {
-      this.state = State.InSpecialTag
-      this.stateInSpecialTag(c)
+      this.state = State.InRCDATA
+      this.stateInRCDATA(c)
     } else {
       this.state = State.Text
       this.stateText(c)
@@ -349,7 +352,7 @@ export default class Tokenizer {
       if (this.delimiterIndex === this.delimiterClose.length - 1) {
         this.cbs.oninterpolation(this.sectionStart, this.index + 1)
         if (this.inRCDATA) {
-          this.state = State.InSpecialTag
+          this.state = State.InRCDATA
         } else {
           this.state = State.Text
         }
@@ -386,7 +389,7 @@ export default class Tokenizer {
   }
 
   /** Look for an end tag. For <title> and <textarea>, also decode entities. */
-  private stateInSpecialTag(c: number): void {
+  private stateInRCDATA(c: number): void {
     if (this.sequenceIndex === this.currentSequence.length) {
       if (c === CharCodes.Gt || isWhitespace(c)) {
         const endOfText = this.index - this.currentSequence.length
@@ -413,8 +416,7 @@ export default class Tokenizer {
     } else if (this.sequenceIndex === 0) {
       if (
         this.currentSequence === Sequences.TitleEnd ||
-        (this.currentSequence === Sequences.TextareaEnd &&
-          !(this.mode === ParseMode.SFC && this.stack.length === 0))
+        (this.currentSequence === Sequences.TextareaEnd && !this.inSFCRoot)
       ) {
         // We have to parse entities in <title> and <textarea> tags.
         if (!__BROWSER__ && c === CharCodes.Amp) {
@@ -507,10 +509,14 @@ export default class Tokenizer {
   }
 
   private startSpecial(sequence: Uint8Array, offset: number) {
+    this.enterRCDATA(sequence, offset)
+    this.state = State.SpecialStartSequence
+  }
+
+  public enterRCDATA(sequence: Uint8Array, offset: number) {
     this.inRCDATA = true
     this.currentSequence = sequence
     this.sequenceIndex = offset
-    this.state = State.SpecialStartSequence
   }
 
   private stateBeforeTagName(c: number): void {
@@ -525,7 +531,7 @@ export default class Tokenizer {
       if (this.mode === ParseMode.BASE) {
         // no special tags in base mode
         this.state = State.InTagName
-      } else if (this.mode === ParseMode.SFC && this.stack.length === 0) {
+      } else if (this.inSFCRoot) {
         // SFC mode + root level
         // - everything except <template> is RAWTEXT
         // - <template> with lang other than html is also RAWTEXT
@@ -560,8 +566,7 @@ export default class Tokenizer {
     if (isEndOfTagSection(c)) {
       const tag = this.buffer.slice(this.sectionStart, this.index)
       if (tag !== 'template') {
-        this.inRCDATA = true
-        this.currentSequence = toCharCodes(`</` + tag)
+        this.enterRCDATA(toCharCodes(`</` + tag), 0)
       }
       this.handleTagName(c)
     }
@@ -603,8 +608,7 @@ export default class Tokenizer {
     if (c === CharCodes.Gt) {
       this.cbs.onopentagend(this.index)
       if (this.inRCDATA) {
-        this.state = State.InSpecialTag
-        this.sequenceIndex = 0
+        this.state = State.InRCDATA
       } else {
         this.state = State.Text
       }
@@ -827,7 +831,7 @@ export default class Tokenizer {
       this.state = State.InEntity
       this.entityStart = this.index
       this.entityDecoder!.startEntity(
-        this.baseState === State.Text || this.baseState === State.InSpecialTag
+        this.baseState === State.Text || this.baseState === State.InRCDATA
           ? DecodingMode.Legacy
           : DecodingMode.Attribute
       )
@@ -885,8 +889,8 @@ export default class Tokenizer {
           this.stateSpecialStartSequence(c)
           break
         }
-        case State.InSpecialTag: {
-          this.stateInSpecialTag(c)
+        case State.InRCDATA: {
+          this.stateInRCDATA(c)
           break
         }
         case State.CDATASequence: {
@@ -1016,7 +1020,7 @@ export default class Tokenizer {
     if (this.sectionStart !== this.index) {
       if (
         this.state === State.Text ||
-        (this.state === State.InSpecialTag && this.sequenceIndex === 0)
+        (this.state === State.InRCDATA && this.sequenceIndex === 0)
       ) {
         this.cbs.ontext(this.sectionStart, this.index)
         this.sectionStart = this.index
@@ -1083,10 +1087,7 @@ export default class Tokenizer {
 
   private emitCodePoint(cp: number, consumed: number): void {
     if (!__BROWSER__) {
-      if (
-        this.baseState !== State.Text &&
-        this.baseState !== State.InSpecialTag
-      ) {
+      if (this.baseState !== State.Text && this.baseState !== State.InRCDATA) {
         if (this.sectionStart < this.entityStart) {
           this.cbs.onattribdata(this.sectionStart, this.entityStart)
         }
