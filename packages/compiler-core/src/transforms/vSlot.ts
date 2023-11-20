@@ -97,7 +97,7 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
 
 export type SlotFnBuilder = (
   slotProps: ExpressionNode | undefined,
-  vForExp: ExpressionNode | undefined,
+  vFor: DirectiveNode | undefined,
   slotChildren: TemplateChildNode[],
   loc: SourceLocation
 ) => FunctionExpression
@@ -200,12 +200,7 @@ export function buildSlots(
     }
 
     const vFor = findDir(slotElement, 'for')
-    const slotFunction = buildSlotFn(
-      slotProps,
-      vFor?.exp,
-      slotChildren,
-      slotLoc
-    )
+    const slotFunction = buildSlotFn(slotProps, vFor, slotChildren, slotLoc)
 
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined

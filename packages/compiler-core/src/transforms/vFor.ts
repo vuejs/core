@@ -353,6 +353,13 @@ export function finalizeForParseResult(
         true
       )
     }
+    if (result.value) {
+      validateBrowserExpression(
+        result.value as SimpleExpressionNode,
+        context,
+        true
+      )
+    }
   }
   result.finalized = true
 }
