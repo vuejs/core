@@ -1813,7 +1813,7 @@ describe('compiler: parse', () => {
   })
 
   describe('decodeEntities option', () => {
-    test.skip('use default map', () => {
+    test('use decode by default', () => {
       const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')
 
       expect(ast.children.length).toBe(1)
@@ -1821,15 +1821,14 @@ describe('compiler: parse', () => {
       expect(ast.children[0].content).toBe('><&\'"&foo;')
     })
 
-    test.skip('use the given map', () => {
-      const ast: any = baseParse('&amp;&cups;', {
+    test('should warn in non-browser build', () => {
+      baseParse('&amp;&cups;', {
         decodeEntities: text => text.replace('&cups;', '\u222A\uFE00'),
         onError: () => {} // Ignore errors
       })
-
-      expect(ast.children.length).toBe(1)
-      expect(ast.children[0].type).toBe(NodeTypes.TEXT)
-      expect(ast.children[0].content).toBe('&amp;\u222A\uFE00')
+      expect(
+        `decodeEntities option is passed but will be ignored`
+      ).toHaveBeenWarned()
     })
   })
 
