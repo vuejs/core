@@ -491,6 +491,27 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('self-closing void element', () => {
+      const ast = baseParse('<img/>after', {
+        isVoidTag: tag => tag === 'img'
+      })
+      const element = ast.children[0] as ElementNode
+
+      expect(element).toStrictEqual({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'img',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        props: [],
+        children: [],
+        loc: {
+          start: { offset: 0, line: 1, column: 1 },
+          end: { offset: 6, line: 1, column: 7 }
+        }
+      })
+    })
+
     test('template element with directives', () => {
       const ast = baseParse('<template v-if="ok"></template>')
       const element = ast.children[0]

@@ -1,5 +1,5 @@
 import { parse } from '../src'
-import { baseParse, baseCompile } from '@vue/compiler-core'
+import { baseCompile, createRoot } from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler:sfc', () => {
@@ -122,8 +122,7 @@ h1 { color: red }
         line: 3,
         column: 1,
         offset: 10 + content.length
-      },
-      source: content
+      }
     })
   })
 
@@ -132,9 +131,8 @@ h1 { color: red }
     expect(descriptor.template).toBeTruthy()
     expect(descriptor.template!.content).toBeFalsy()
     expect(descriptor.template!.loc).toMatchObject({
-      start: { line: 1, column: 1, offset: 0 },
-      end: { line: 1, column: 1, offset: 0 },
-      source: ''
+      start: { line: 1, column: 12, offset: 11 },
+      end: { line: 1, column: 12, offset: 11 }
     })
   })
 
@@ -144,8 +142,7 @@ h1 { color: red }
     expect(descriptor.template!.content).toBeFalsy()
     expect(descriptor.template!.loc).toMatchObject({
       start: { line: 1, column: 11, offset: 10 },
-      end: { line: 1, column: 11, offset: 10 },
-      source: ''
+      end: { line: 1, column: 11, offset: 10 }
     })
   })
 
@@ -176,14 +173,12 @@ h1 { color: red }
     )
     expect(descriptor.script).toBeTruthy()
     expect(descriptor.script!.loc).toMatchObject({
-      source: '',
       start: { line: 1, column: 9, offset: 8 },
       end: { line: 1, column: 9, offset: 8 }
     })
 
     expect(descriptor.scriptSetup).toBeTruthy()
     expect(descriptor.scriptSetup!.loc).toMatchObject({
-      source: '\n',
       start: { line: 2, column: 15, offset: 32 },
       end: { line: 3, column: 1, offset: 33 }
     })
@@ -260,11 +255,18 @@ h1 { color: red }
   test('custom compiler', () => {
     const { errors } = parse(`<template><input></template>`, {
       compiler: {
-        parse: baseParse,
+        parse: (_, options) => {
+          options.onError!(new Error('foo') as any)
+          return createRoot([])
+        },
         compile: baseCompile
       }
     })
-    expect(errors.length).toBe(1)
+    expect(errors.length).toBe(2)
+    // error thrown by the custom parse
+    expect(errors[0].message).toBe('foo')
+    // error thrown based on the returned root
+    expect(errors[1].message).toMatch('At least one')
   })
 
   test('treat custom blocks as raw text', () => {
