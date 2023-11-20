@@ -226,8 +226,8 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
     return type === TriggerOpTypes.DELETE
       ? false
       : type === TriggerOpTypes.CLEAR
-      ? undefined
-      : this
+        ? undefined
+        : this
   }
 }
 
@@ -341,8 +341,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-    ? readonlyInstrumentations
-    : mutableInstrumentations
+      ? readonlyInstrumentations
+      : mutableInstrumentations
 
   return (
     target: CollectionTypes,
