@@ -136,7 +136,8 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    // we only want to keep the nodes that are not empty
+    // (when the tag is not a template)
     if (
       ignoreEmpty &&
       node.tag !== 'template' &&
@@ -284,33 +285,11 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  let { start, end } = node.loc
-  let content = ''
-  if (node.children.length) {
-    start = node.children[0].loc.start
-    end = node.children[node.children.length - 1].loc.end
-    content = source.slice(start.offset, end.offset)
-  } else {
-    const offset = source.indexOf(`</`, start.offset)
-    if (offset > -1) {
-      start = {
-        line: start.line,
-        column: start.column + offset,
-        offset: start.offset + offset
-      }
-    }
-    end = { ...start }
-  }
-  const loc = {
-    source: content,
-    start,
-    end
-  }
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content,
-    loc,
+    content: source.slice(node.loc.start.offset, node.loc.end.offset),
+    loc: node.loc,
     attrs
   }
   if (pad) {

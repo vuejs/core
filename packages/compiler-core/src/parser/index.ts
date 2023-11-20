@@ -24,7 +24,12 @@ import Tokenizer, {
 } from './Tokenizer'
 import { CompilerCompatOptions } from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
-import { defaultOnError, defaultOnWarn } from '../errors'
+import {
+  ErrorCodes,
+  createCompilerError,
+  defaultOnError,
+  defaultOnWarn
+} from '../errors'
 import { forAliasRE, isCoreComponent } from '../utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 
@@ -105,6 +110,11 @@ const tokenizer = new Tokenizer(stack, {
 
   onopentagname(start, end) {
     const name = getSlice(start, end)
+    // in SFC mode, root-level tags locations are for its inner content.
+    const startIndex =
+      tokenizer.mode === ParseMode.SFC && stack.length === 0
+        ? end + fastForward(end, CharCodes.Gt) + 1
+        : start - 1
     currentElement = {
       type: NodeTypes.ELEMENT,
       tag: name,
@@ -112,7 +122,7 @@ const tokenizer = new Tokenizer(stack, {
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
-      loc: getLoc(start - 1),
+      loc: getLoc(startIndex),
       codegenNode: undefined
     }
   },
@@ -137,7 +147,11 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onselfclosingtag(end) {
-    closeCurrentTag(end)
+    const name = currentElement!.tag
+    endOpenTag(end)
+    if (stack[0]?.tag === name) {
+      onCloseTag(stack.shift()!, end)
+    }
   },
 
   onattribname(start, end) {
@@ -318,6 +332,13 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onend() {
+    if (stack.length > 0) {
+      // has unclosed tag
+      currentOptions.onError(
+        // TODO loc info
+        createCompilerError(ErrorCodes.MISSING_END_TAG_NAME)
+      )
+    }
     const end = currentInput.length - 1
     for (let index = 0; index < stack.length; index++) {
       onCloseTag(stack[index], end)
@@ -421,14 +442,6 @@ function endOpenTag(end: number) {
   currentElement = null
 }
 
-function closeCurrentTag(end: number) {
-  const name = currentElement!.tag
-  endOpenTag(end)
-  if (stack[0].tag === name) {
-    onCloseTag(stack.shift()!, end)
-  }
-}
-
 function onText(content: string, start: number, end: number) {
   if (__BROWSER__ && content.includes('&')) {
     // TODO do not do this in <script> or <style>
@@ -451,14 +464,16 @@ function onText(content: string, start: number, end: number) {
 
 function onCloseTag(el: ElementNode, end: number) {
   // attach end position
-  let offset = 0
-  while (
-    currentInput.charCodeAt(end + offset) !== CharCodes.Gt &&
-    end + offset < currentInput.length
-  ) {
-    offset++
+  if (tokenizer.mode === ParseMode.SFC && stack.length === 0) {
+    // SFC root tag, end position should be inner end
+    if (el.children.length) {
+      el.loc.end = extend({}, el.children[el.children.length - 1].loc.end)
+    } else {
+      el.loc.end = extend({}, el.loc.start)
+    }
+  } else {
+    el.loc.end = tokenizer.getPos(end + fastForward(end, CharCodes.Gt) + 1)
   }
-  el.loc.end = tokenizer.getPos(end + offset + 1)
 
   // refine element type
   const { tag, ns } = el
@@ -489,6 +504,17 @@ function onCloseTag(el: ElementNode, end: number) {
   ) {
     tokenizer.inXML = false
   }
+}
+
+function fastForward(start: number, c: number) {
+  let offset = 0
+  while (
+    currentInput.charCodeAt(start + offset) !== CharCodes.Gt &&
+    start + offset < currentInput.length
+  ) {
+    offset++
+  }
+  return offset
 }
 
 const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])

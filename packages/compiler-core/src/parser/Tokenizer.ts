@@ -861,6 +861,9 @@ export default class Tokenizer {
     this.buffer = input
     while (this.index < this.buffer.length) {
       const c = this.buffer.charCodeAt(this.index)
+      if (c === CharCodes.NewLine) {
+        this.newlines.push(this.index)
+      }
       switch (this.state) {
         case State.Text: {
           this.stateText(c)
@@ -998,9 +1001,6 @@ export default class Tokenizer {
           this.stateInEntity()
           break
         }
-      }
-      if (c === CharCodes.NewLine) {
-        this.newlines.push(this.index)
       }
       this.index++
     }
