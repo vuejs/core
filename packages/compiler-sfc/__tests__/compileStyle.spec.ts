@@ -85,6 +85,16 @@ describe('SFC scoped CSS', () => {
       ".baz .qux[data-v-test] .foo .bar { color: red;
       }"
     `)
+    expect(compileScoped(`:is(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
   })
 
   test('::v-slotted', () => {
