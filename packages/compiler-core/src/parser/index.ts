@@ -111,10 +111,9 @@ const tokenizer = new Tokenizer(stack, {
   onopentagname(start, end) {
     const name = getSlice(start, end)
     // in SFC mode, root-level tags locations are for its inner content.
-    const startIndex =
-      tokenizer.mode === ParseMode.SFC && stack.length === 0
-        ? end + fastForward(end, CharCodes.Gt) + 1
-        : start - 1
+    const startIndex = tokenizer.inSFCRoot
+      ? end + fastForward(end, CharCodes.Gt) + 1
+      : start - 1
     currentElement = {
       type: NodeTypes.ELEMENT,
       tag: name,
@@ -296,6 +295,16 @@ const tokenizer = new Tokenizer(stack, {
                 ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
                 : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
           }
+          if (
+            currentAttrValue &&
+            tokenizer.inSFCRoot &&
+            currentElement.tag === 'template' &&
+            currentProp.name === 'lang'
+          ) {
+            // SFC root template with preprocessor lang, force tokenizer to
+            // RCDATA mode
+            tokenizer.enterRCDATA(toCharCodes(`</template`), 0)
+          }
         } else {
           // directive
           currentProp.rawExp = currentAttrValue
@@ -464,7 +473,7 @@ function onText(content: string, start: number, end: number) {
 
 function onCloseTag(el: ElementNode, end: number) {
   // attach end position
-  if (tokenizer.mode === ParseMode.SFC && stack.length === 0) {
+  if (tokenizer.inSFCRoot) {
     // SFC root tag, end position should be inner end
     if (el.children.length) {
       el.loc.end = extend({}, el.children[el.children.length - 1].loc.end)

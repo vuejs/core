@@ -132,7 +132,8 @@ export function compileTemplate(
     try {
       return doCompileTemplate({
         ...options,
-        source: preprocess(options, preprocessor)
+        source: preprocess(options, preprocessor),
+        ast: undefined // invalidate AST if template goes through preprocessor
       })
     } catch (e: any) {
       return {

@@ -203,13 +203,15 @@ h1 { color: red }
   })
 
   // #1120
-  test('alternative template lang should be treated as plain text', () => {
-    const content = `p(v-if="1 < 2") test`
+  test('template with preprocessor lang should be treated as plain text', () => {
+    const content = `p(v-if="1 < 2") test <div/>`
     const { descriptor, errors } = parse(
       `<template lang="pug">` + content + `</template>`
     )
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
+    // should not attempt to parse the content
+    expect(descriptor.template!.ast.children.length).toBe(1)
   })
 
   //#2566
