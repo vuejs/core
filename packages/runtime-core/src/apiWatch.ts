@@ -74,7 +74,8 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean | number
+  deep?: boolean
+  depth?: number
 }
 
 export type WatchStopHandle = () => void
@@ -172,7 +173,14 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  {
+    immediate,
+    deep,
+    flush,
+    depth,
+    onTrack,
+    onTrigger
+  }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
@@ -270,7 +278,7 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter(), deep)
+    getter = () => traverse(baseGetter(), depth)
   }
 
   let cleanup: () => void
@@ -439,7 +447,7 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  deep?: boolean | number,
+  depth?: number,
   currentDepth = 0,
   seen?: Set<unknown>
 ) {
@@ -447,8 +455,8 @@ export function traverse(
     return value
   }
 
-  if (typeof deep === 'number') {
-    if (currentDepth >= deep) {
+  if (depth && depth > 0) {
+    if (currentDepth >= depth) {
       return value
     }
     currentDepth++
@@ -460,18 +468,18 @@ export function traverse(
   }
   seen.add(value)
   if (isRef(value)) {
-    traverse(value.value, deep, currentDepth, seen)
+    traverse(value.value, depth, currentDepth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], deep, currentDepth, seen)
+      traverse(value[i], depth, currentDepth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, deep, currentDepth, seen)
+      traverse(v, depth, currentDepth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], deep, currentDepth, seen)
+      traverse(value[key], depth, currentDepth, seen)
     }
   }
   return value
