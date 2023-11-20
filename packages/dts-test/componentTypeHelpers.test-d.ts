@@ -16,7 +16,10 @@ import {
   EmitsOptions,
   ComponentInjectOptions,
   SlotsType,
-  DefineComponent
+  DefineComponent,
+  ComponentData,
+  ComponentSlots,
+  SetupContext
 } from 'vue'
 
 const propsOptions = {
@@ -49,7 +52,7 @@ const arrayOptions = {
   foo: 'bar',
   data() {
     return {
-      test: 1
+      testA: 1
     }
   }
 }
@@ -61,16 +64,38 @@ const noPropsOptions = {
   foo: 'bar',
   data() {
     return {
-      test: 1
+      testN: 1
     }
   }
 }
 
 const fakeClassComponent = {} as {
-  new (): { $props: { a: string }; someMethod: (a: number) => void }
+  new (): {
+    $props: { a: string }
+
+    $slots: {
+      default: (arg: { msg: string }) => any
+    }
+
+    someMethod: (a: number) => void
+    foo: number
+
+    data(): { test: number }
+  }
 }
 
-const functionalComponent = (props: { a: string }) => () => {}
+defineComponent
+const functionalComponent =
+  (
+    props: { a: string },
+    ctx: SetupContext<
+      {},
+      SlotsType<{
+        foo: (arg: { bar: string }) => any
+      }>
+    >
+  ) =>
+  () => {}
 
 // const mixIn = {
 //   props: ['a1'],
@@ -255,7 +280,7 @@ describe('Component Props', () => {
 })
 
 declare function getOptionalProps<T>(o: T): ComponentPropsWithDefaultOptional<T>
-describe('#ComponentPropsWithDefaultOptional', () => {
+describe('ComponentPropsWithDefaultOptional', () => {
   describe('defineComponent', () => {
     // Component with props
     const CompProps = defineComponent(propsOptions)
@@ -391,6 +416,320 @@ describe('#ComponentPropsWithDefaultOptional', () => {
   })
 })
 
+declare function getData<T>(o: T): ComponentData<T>
+describe('ComponentData', () => {
+  describe('defineComponent', () => {
+    // Component with props
+    const CompProps = defineComponent(propsOptions)
+    const compProps = getData(CompProps)
+    expectType<{ test: number }>(compProps)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ random: true }>(compProps)
+
+    // component array props
+    const CompPropsArray = defineComponent(arrayOptions)
+    const compPropsArray = getData(CompPropsArray)
+    expectType<{ testA: number }>(compPropsArray)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(compPropsArray)
+
+    // component no props
+    const CompNoProps = defineComponent(noPropsOptions)
+    const compNoProps = getData(CompNoProps)
+    expectType<{
+      testN: number
+    }>(compNoProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(compNoProps)
+
+    const Mixin = defineComponent({
+      props: ['a1'],
+      mixins: [CompProps, CompPropsArray, CompNoProps],
+
+      setup(props) {
+        props.a, props.a1
+        props.bb
+      }
+    })
+    const mixin = getData(Mixin)
+    expectType<{
+      test: number
+      testA: number
+      testN: number
+    }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: true }>(mixin)
+  })
+
+  // describe('async component', () => {
+  //   const Component = defineAsyncComponent({
+  //     loader: () =>
+  //       Promise.resolve(
+  //         defineComponent({
+  //           props: {
+  //             foo: String
+  //           }
+  //         })
+  //       )
+  //   })
+  //   const component = getData(Component)
+
+  //   // NOTE not sure if this is the intention since Component.foo is undefined
+  //   expectType<{
+  //     foo?: string | undefined
+  //   }>(component)
+  // })
+
+  describe('options object', () => {
+    const options = getData(propsOptions)
+
+    expectType<{ test: number }>(options)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>(options)
+
+    // component array props
+
+    const array = getData(arrayOptions)
+    expectType<{ testA: number }>(array)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(array)
+
+    // component no props
+    const noProps = getData(noPropsOptions)
+    expectType<{
+      testN: number
+    }>(noProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(noProps)
+
+    const mixin = getData({
+      props: ['a1'] as ['a1'],
+      // using defineComponent, otherwise is not guaranteed to work
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ]
+    })
+    expectType<{ test: number; testA: number; testN: number }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(mixin)
+  })
+
+  describe('class component', () => {
+    const cc = getData(fakeClassComponent)
+    expectType<{ test: number }>(cc)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(cc)
+  })
+
+  describe('functional component', () => {
+    const fc = getData(functionalComponent)
+    expectType<{}>(fc)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(fc)
+  })
+})
+
+declare function getSlots<T>(o: T): ComponentSlots<T>
+describe('ComponentSlots', () => {
+  describe('defineComponent', () => {
+    // Component with props
+    const CompProps = defineComponent(propsOptions)
+    const compProps = getSlots(CompProps)
+
+    expectType<{
+      default: (arg: { msg: string }) => any
+    }>(compProps)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ default: true }>(compProps)
+
+    // component array props
+    const CompPropsArray = defineComponent(arrayOptions)
+    const compPropsArray = getSlots(CompPropsArray)
+    expectType<{
+      default: (arg: { msg: string }) => any
+    }>(compPropsArray)
+    // @ts-expect-error checking if is not any
+    expectType<{ default: true }>(compPropsArray)
+
+    // component no props
+    const CompNoProps = defineComponent(noPropsOptions)
+    const compNoProps = getSlots(CompNoProps)
+    expectType<{}>(compNoProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(compNoProps)
+
+    const Mixin = defineComponent({
+      props: ['a1'],
+      mixins: [CompProps, CompPropsArray, CompNoProps],
+
+      slots: {} as SlotsType<{
+        default: (arg: { test: number }) => any
+        test: { foo: string }
+      }>,
+
+      setup(props) {
+        props.a, props.a1
+        props.bb
+      }
+    })
+    const mixin = getSlots(Mixin)
+    expectType<{
+      default: (arg: { test: number }) => any
+      test: (arg: { foo: string }) => any
+    }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: true }>(mixin)
+
+    // slotType
+
+    const slotType = getSlots(
+      defineComponent({
+        slots: {} as SlotsType<{
+          default: { foo: number }
+          test: { bar?: string }
+        }>
+      })
+    )
+
+    expectType<{
+      default: (arg: { foo: number }) => any
+      test: (arg: { bar?: string }) => any
+    }>(slotType)
+
+    // object based slots
+
+    const objSlots = getSlots(
+      defineComponent({
+        slots: {
+          test: {} as { a: number }
+        }
+      })
+    )
+
+    expectType<{
+      test: (arg: { a: number }) => any
+    }>(objSlots)
+
+    expectType<{
+      test: (arg: number) => any
+      // @ts-expect-error not any
+    }>(objSlots)
+  })
+
+  describe('async component', () => {
+    const Component = defineAsyncComponent({
+      loader: () =>
+        Promise.resolve(
+          defineComponent({
+            slots: {} as SlotsType<{
+              test: { foo: number }
+            }>
+          })
+        )
+    })
+    const component = getSlots(Component)
+
+    // NOTE not sure if this is the intention since Component.foo is undefined
+    expectType<{
+      test: (arg: { foo: number }) => any
+    }>(component)
+  })
+
+  describe('options object', () => {
+    const options = getSlots(propsOptions)
+
+    expectType<{ default: (arg: { msg: string }) => any }>(options)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>(options)
+
+    // component array props
+
+    const array = getSlots(arrayOptions)
+    expectType<{
+      default: (arg: { msg: string }) => any
+    }>(array)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(array)
+
+    // component no props
+    const noProps = getSlots(noPropsOptions)
+    expectType<{}>(noProps)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(noProps)
+
+    const mixin = getSlots({
+      props: ['a1'] as ['a1'],
+      // using defineComponent, otherwise is not guaranteed to work
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      slots: {} as SlotsType<{
+        default: (arg: { test: number }) => any
+        test: { foo: string }
+      }>
+    })
+    expectType<{
+      default: (arg: { test: number }) => any
+      test: (arg: { foo: string }) => any
+    }>(mixin)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>(mixin)
+
+    // slotType
+
+    const slotType = getSlots({
+      slots: {} as SlotsType<{
+        default: { foo: number }
+        test: { bar?: string }
+      }>
+    })
+
+    expectType<{
+      default: (arg: { foo: number }) => any
+      test: (arg: { bar?: string }) => any
+    }>(slotType)
+
+    // object based slots
+
+    const objSlots = getSlots({
+      slots: {
+        test: {} as { a: number }
+      }
+    })
+
+    expectType<{
+      test: (arg: { a: number }) => any
+    }>(objSlots)
+
+    expectType<{
+      test: (arg: number) => any
+      // @ts-expect-error not any
+    }>(objSlots)
+  })
+
+  describe('class component', () => {
+    const cc = getSlots(fakeClassComponent)
+    expectType<{ default: (arg: { msg: string }) => any }>(cc)
+
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(cc)
+  })
+
+  describe('functional component', () => {
+    const fc = getSlots(functionalComponent)
+    expectType<{ foo: (arg: { bar: string }) => any }>(fc)
+    // @ts-expect-error checking if is not any
+    expectType<{ random: number }>(fc)
+  })
+})
+
 // Component Instance
 
 declare function retrieveComponentInstance<T>(
@@ -439,13 +778,6 @@ declare function ttt<T>(t: T, t2: T): T
 ttt(aa.$emit, bb.$emit)
 
 declare const bb: ComponentPublicInstance
-// const aaa = test2(aa)
-
-// declare function extraPropsOptional<T, Props, PropNames extends string>(
-//   o: T & {
-//     props?: PropNames[] | Props
-//   }
-// ): ComponentPropsWithDefaultOptional<T, Props>
 
 declare function gettingDefineComponentProps<
   T extends Parameters<typeof defineComponent>[0]

@@ -13,7 +13,8 @@ import {
   Slots,
   VNode,
   ComponentPropsOptions,
-  ComponentObjectPropsOptions
+  ComponentObjectPropsOptions,
+  ComponentData
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1535,10 +1536,17 @@ declare const MyButton: DefineComponent<
 >
 ;<MyButton class="x" />
 
-defineComponent({
+const c = defineComponent({
   props: {} as ComponentPropsOptions,
 
   emits: ['a'],
 
-  setup(props) {}
+  setup(props) {
+    return {
+      tst: 1
+    }
+  }
 })
+declare function getData<T>(o: T): ComponentData<T>
+
+const aaa = getData(c)
