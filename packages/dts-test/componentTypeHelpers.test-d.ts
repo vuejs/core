@@ -720,6 +720,35 @@ describe('ComponentSlots', () => {
 
     // @ts-expect-error checking if is not any
     expectType<{ random: number }>(cc)
+
+    // Volar
+    const volar = getSlots(
+      {} as {
+        new (): {
+          $slots: {
+            default?(_: {}): any
+            named?(_: {}): any
+            withDefault?(_: {}): any
+            scoped?(_: { aBoolean: any; aString: any; anObject: any }): any
+            insideTable?(_: {}): any
+            scopedWithDefault?(_: {
+              aBoolean: any
+              aString: any
+              anObject: any
+            }): any
+          }
+        }
+      }
+    )
+
+    expectType<{
+      default?(_: {}): any
+      named?(_: {}): any
+      withDefault?(_: {}): any
+      scoped?(_: { aBoolean: any; aString: any; anObject: any }): any
+      insideTable?(_: {}): any
+      scopedWithDefault?(_: { aBoolean: any; aString: any; anObject: any }): any
+    }>(volar)
   })
 
   describe('functional component', () => {
