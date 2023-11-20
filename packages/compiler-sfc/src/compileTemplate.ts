@@ -30,7 +30,7 @@ import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
 
 export interface TemplateCompiler {
-  compile(template: string, options: CompilerOptions): CodegenResult
+  compile(source: string | RootNode, options: CompilerOptions): CodegenResult
   parse(template: string, options: ParserOptions): RootNode
 }
 
@@ -46,6 +46,7 @@ export interface SFCTemplateCompileResults {
 
 export interface SFCTemplateCompileOptions {
   source: string
+  ast?: RootNode
   filename: string
   id: string
   scoped?: boolean
@@ -164,6 +165,7 @@ function doCompileTemplate({
   slotted,
   inMap,
   source,
+  ast: inAST,
   ssr = false,
   ssrCssVars,
   isProd = false,
@@ -199,7 +201,7 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
-  let { code, ast, preamble, map } = compiler.compile(source, {
+  let { code, ast, preamble, map } = compiler.compile(inAST || source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
@@ -235,7 +237,7 @@ function doCompileTemplate({
     let msg = w.message
     if (w.loc) {
       msg += `\n${generateCodeFrame(
-        source,
+        inAST?.source || source,
         w.loc.start.offset,
         w.loc.end.offset
       )}`

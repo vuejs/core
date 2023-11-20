@@ -3,7 +3,6 @@ import { SFCDescriptor } from '../parse'
 import {
   NodeTypes,
   SimpleExpressionNode,
-  createRoot,
   forAliasRE,
   parserOptions,
   transform,
@@ -35,7 +34,7 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   }
 
   let code = ''
-  transform(createRoot([ast]), {
+  transform(ast, {
     nodeTransforms: [
       node => {
         if (node.type === NodeTypes.ELEMENT) {

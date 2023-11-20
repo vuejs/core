@@ -3,7 +3,9 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  BindingMetadata
+  BindingMetadata,
+  RootNode,
+  createRoot
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -36,7 +38,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  ast: ElementNode
+  ast: RootNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -154,7 +156,7 @@ export function parse(
             source,
             false
           ) as SFCTemplateBlock)
-          templateBlock.ast = node
+          templateBlock.ast = createRoot(node.children, source)
 
           // warn against 2.x <template functional>
           if (templateBlock.attrs.functional) {
@@ -243,7 +245,8 @@ export function parse(
         )
       }
     }
-    genMap(descriptor.template)
+    // no need to genMap for template as its AST already accounts for the
+    // position in the SFC
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
     descriptor.customBlocks.forEach(genMap)

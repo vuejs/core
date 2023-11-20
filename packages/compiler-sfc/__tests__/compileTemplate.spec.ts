@@ -1,3 +1,4 @@
+import { RawSourceMap, SourceMapConsumer } from 'source-map-js'
 import {
   compileTemplate,
   SFCTemplateCompileOptions
@@ -107,18 +108,54 @@ test('source map', () => {
   const template = parse(
     `
 <template>
-  <div><p>{{ render }}</p></div>
+  <div><p>{{ foobar }}</p></div>
 </template>
 `,
     { filename: 'example.vue', sourceMap: true }
-  ).descriptor.template as SFCTemplateBlock
+  ).descriptor.template!
 
-  const result = compile({
+  const { code, map } = compile({
     filename: 'example.vue',
     source: template.content
   })
 
-  expect(result.map).toMatchSnapshot()
+  expect(map!.sources).toEqual([`example.vue`])
+  expect(map!.sourcesContent).toEqual([template.content])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(template.content, `foobar`))
+})
+
+test('should work w/ AST from descriptor', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  expect(template.ast.source).toBe(source)
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  // when reusing AST from SFC parse for template compile,
+  // the source corresponds to the entire SFC
+  expect(map!.sourcesContent).toEqual([source])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(source, `foobar`))
 })
 
 test('template errors', () => {
@@ -199,3 +236,36 @@ test('dynamic v-on + static v-on should merged', () => {
 
   expect(result.code).toMatchSnapshot()
 })
+
+interface Pos {
+  line: number
+  column: number
+  name?: string
+}
+
+function getPositionInCode(
+  code: string,
+  token: string,
+  expectName: string | boolean = false
+): Pos {
+  const generatedOffset = code.indexOf(token)
+  let line = 1
+  let lastNewLinePos = -1
+  for (let i = 0; i < generatedOffset; i++) {
+    if (code.charCodeAt(i) === 10 /* newline char code */) {
+      line++
+      lastNewLinePos = i
+    }
+  }
+  const res: Pos = {
+    line,
+    column:
+      lastNewLinePos === -1
+        ? generatedOffset
+        : generatedOffset - lastNewLinePos - 1
+  }
+  if (expectName) {
+    res.name = typeof expectName === 'string' ? expectName : token
+  }
+  return res
+}
