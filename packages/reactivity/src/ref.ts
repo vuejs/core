@@ -497,17 +497,17 @@ export type UnwrapRefSimple<T> = T extends
   | { [RawSymbol]?: true }
   ? T
   : T extends Map<infer K, infer V>
-  ? Map<K, UnwrapRefSimple<V>>
-  : T extends WeakMap<infer K, infer V>
-  ? WeakMap<K, UnwrapRefSimple<V>>
-  : T extends Set<infer V>
-  ? Set<UnwrapRefSimple<V>>
-  : T extends WeakSet<infer V>
-  ? WeakSet<UnwrapRefSimple<V>>
-  : T extends ReadonlyArray<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object & { [ShallowReactiveMarker]?: never }
-      ? {
-          [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-        }
-      : T
+    ? Map<K, UnwrapRefSimple<V>>
+    : T extends WeakMap<infer K, infer V>
+      ? WeakMap<K, UnwrapRefSimple<V>>
+      : T extends Set<infer V>
+        ? Set<UnwrapRefSimple<V>>
+        : T extends WeakSet<infer V>
+          ? WeakSet<UnwrapRefSimple<V>>
+          : T extends ReadonlyArray<any>
+            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+            : T extends object & { [ShallowReactiveMarker]?: never }
+              ? {
+                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                }
+              : T
