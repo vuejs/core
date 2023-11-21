@@ -33,7 +33,15 @@ const skipGit = args.skipGit || args.canary
 
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
-  .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
+  .filter(p => {
+    const pkgRoot = path.resolve(__dirname, '../packages', p)
+    if (fs.statSync(pkgRoot).isDirectory()) {
+      const pkg = JSON.parse(
+        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8')
+      )
+      return !pkg.private
+    }
+  })
 
 const isCorePackage = pkgName => {
   if (!pkgName) return
@@ -386,12 +394,6 @@ async function publishPackage(pkgName, version) {
   if (skippedPackages.includes(pkgName)) {
     return
   }
-  const pkgRoot = getPkgRoot(pkgName)
-  const pkgPath = path.resolve(pkgRoot, 'package.json')
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  if (pkg.private) {
-    return
-  }
 
   let releaseTag = null
   if (args.tag) {
@@ -419,7 +421,7 @@ async function publishPackage(pkgName, version) {
         ...(skipGit ? ['--no-git-checks'] : [])
       ],
       {
-        cwd: pkgRoot,
+        cwd: getPkgRoot(pkgName),
         stdio: 'pipe'
       }
     )

@@ -1,8 +1,8 @@
 {
   "name": "@vue/runtime-test",
-  "version": "3.3.8",
-  "description": "@vue/runtime-test",
   "private": true,
+  "version": "0.0.0",
+  "description": "@vue/runtime-test",
   "main": "index.js",
   "module": "dist/runtime-test.esm-bundler.js",
   "types": "dist/runtime-test.d.ts",
