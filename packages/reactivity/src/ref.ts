@@ -1,3 +1,4 @@
+import type { ComputedRef } from './computed'
 import {
   activeEffect,
   getDepFromReactive,
@@ -210,7 +211,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @param ref - Ref or plain value to be converted into the plain value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
-export function unref<T>(ref: MaybeRef<T>): T {
+export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
   return isRef(ref) ? ref.value : ref
 }
 
@@ -230,7 +231,7 @@ export function unref<T>(ref: MaybeRef<T>): T {
  * @param source - A getter, an existing ref, or a non-function value.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#tovalue}
  */
-export function toValue<T>(source: MaybeRefOrGetter<T>): T {
+export function toValue<T>(source: MaybeRefOrGetter<T> | ComputedRef<T>): T {
   return isFunction(source) ? source() : unref(source)
 }
 
@@ -415,8 +416,8 @@ export function toRef<T>(
 ): T extends () => infer R
   ? Readonly<Ref<R>>
   : T extends Ref
-  ? T
-  : Ref<UnwrapRef<T>>
+    ? T
+    : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -477,17 +478,17 @@ export type ShallowUnwrapRef<T> = {
   [K in keyof T]: T[K] extends Ref<infer V>
     ? V // if `V` is `unknown` that means it does not extend `Ref` and is undefined
     : T[K] extends Ref<infer V> | undefined
-    ? unknown extends V
-      ? undefined
-      : V | undefined
-    : T[K]
+      ? unknown extends V
+        ? undefined
+        : V | undefined
+      : T[K]
 }
 
 export type UnwrapRef<T> = T extends ShallowRef<infer V>
   ? V
   : T extends Ref<infer V>
-  ? UnwrapRefSimple<V>
-  : UnwrapRefSimple<T>
+    ? UnwrapRefSimple<V>
+    : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
@@ -498,9 +499,9 @@ export type UnwrapRefSimple<T> = T extends
   | { [RawSymbol]?: true }
   ? T
   : T extends ReadonlyArray<any>
-  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-  : T extends object & { [ShallowReactiveMarker]?: never }
-  ? {
-      [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-    }
-  : T
+    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+    : T extends object & { [ShallowReactiveMarker]?: never }
+      ? {
+          [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+        }
+      : T
