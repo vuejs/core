@@ -3,7 +3,6 @@ import {
   createObjectProperty,
   createSimpleExpression,
   ExpressionNode,
-  locStub,
   NodeTypes
 } from '../ast'
 import { createCompilerError, ErrorCodes } from '../errors'
@@ -17,6 +16,16 @@ import { processExpression } from './transformExpression'
 export const transformBind: DirectiveTransform = (dir, _node, context) => {
   const { modifiers, loc } = dir
   const arg = dir.arg!
+
+  // :arg is replaced by :arg="arg"
+  let { exp } = dir
+  if (!exp && arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+    const propName = camelize(arg.content)
+    exp = dir.exp = createSimpleExpression(propName, false, arg.loc)
+    if (!__BROWSER__) {
+      exp = dir.exp = processExpression(exp, context)
+    }
+  }
 
   if (arg.type !== NodeTypes.SIMPLE_EXPRESSION) {
     arg.children.unshift(`(`)
@@ -46,18 +55,6 @@ export const transformBind: DirectiveTransform = (dir, _node, context) => {
     if (modifiers.includes('attr')) {
       injectPrefix(arg, '^')
     }
-  }
-
-  // :arg is replaced by :arg="arg"
-  let { exp } = dir
-  if (!exp && arg.type === NodeTypes.SIMPLE_EXPRESSION) {
-    const propName = camelize(arg.loc.source)
-    const simpleExpression = createSimpleExpression(propName, false, {
-      ...locStub,
-      source: propName
-    })
-
-    exp = dir.exp = processExpression(simpleExpression, context)
   }
 
   if (
