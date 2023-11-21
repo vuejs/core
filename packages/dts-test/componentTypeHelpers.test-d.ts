@@ -6,17 +6,9 @@ import {
   defineComponent,
   defineAsyncComponent,
   ComponentInstance,
-  CreateComponentPublicInstance,
   ComponentPublicInstance,
-  ComponentPropsWithDefaultOptional,
-  DefineComponentOptions,
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsMixin,
-  EmitsOptions,
-  ComponentInjectOptions,
+  ComponentExpectedProps,
   SlotsType,
-  DefineComponent,
   ComponentData,
   ComponentSlots,
   SetupContext,
@@ -98,11 +90,6 @@ const functionalComponent =
     >
   ) =>
   () => {}
-
-// const mixIn = {
-//   props: ['a1'],
-//   mixins: [propsOptions, arrayOptions, noPropsOptions]
-// }
 
 describe('Extract Component Options', () => {
   describe('defineComponent', () => {
@@ -281,7 +268,7 @@ describe('Component Props', () => {
   })
 })
 
-declare function getOptionalProps<T>(o: T): ComponentPropsWithDefaultOptional<T>
+declare function getOptionalProps<T>(o: T): ComponentExpectedProps<T>
 describe('ComponentPropsWithDefaultOptional', () => {
   describe('defineComponent', () => {
     // Component with props
@@ -794,6 +781,7 @@ describe('DeclareComponent', () => {
 
   const GenericComp = new GenericCompDeclaration<'bar'>()
   expectType<'bar'>(GenericComp.$props.test)
+
   // @ts-expect-error not any
   expectType<{ a: 1 }>(GenericComp.$props.test)
 })
@@ -817,137 +805,3 @@ expectType<ComponentPublicInstance>(
     })
   )
 )
-
-const b = retrieveComponentInstance(
-  defineComponent({
-    emits: {
-      test: () => true
-    }
-  })
-)
-const a = defineComponent({
-  props: [],
-  emits: {
-    a: (v: string) => true
-  }
-})
-
-declare function test<T>(t: T): ComponentInstance<T>
-declare function test2<T extends ComponentPublicInstance>(
-  t: T
-): CreateComponentPublicInstance<T>
-
-const aa = test(a)
-
-aa.$emit
-bb.$emit
-
-declare function ttt<T>(t: T, t2: T): T
-ttt(aa.$emit, bb.$emit)
-
-declare const bb: ComponentPublicInstance
-
-declare function gettingDefineComponentProps<
-  T extends Parameters<typeof defineComponent>[0]
->(opt: T): DefineComponent<T>
-
-const axxx = extraPropsOptional({
-  props: {
-    a: String
-  },
-  setup(props) {
-    props
-  }
-})
-
-declare function extraPropsOptional<
-  Props = never,
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  Options = {}
->(
-  o: DefineComponentOptions<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    Options
-  >
-): ComponentPropsWithDefaultOptional<
-  DefineComponentOptions<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    Options
-  >
->
-
-// declare function antoher<
-//   T extends DefineComponent<
-//     PropsOrOptions,
-//     any,
-//     any,
-//     any,
-//     any,
-//     any,
-//     any,
-//     any,
-//     any,
-//     any
-//   >,
-//   PropsOrOptions extends object
-// >(o: T): ComponentInstance<T> & { LOL: T}
-// const Foo = {
-//   props: ['obj', 'foo'] as ['obj', 'foo'],
-//   template: `
-//     <div>
-//       <div v-if="obj.foo()">foo</div>
-//     </div>
-//   `
-// }
-
-// const asd = antoher(Foo)
-// asd.$props.obj
-// const axxx = defineComponent({
-//   props: ['ax']
-// })
-// const asd = extraPropsOptional({
-//   mixins: [axxx],
-//   props: {
-//     axx: String
-//   },
-//   setup(props) {
-//   }
-// })
-
-// const aasd : keyof {}
-
-// asd.axx
-// asd.ax
-// asd.asad

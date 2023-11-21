@@ -60,10 +60,10 @@ type MapSources<T, Immediate> = {
       ? V | undefined
       : V
     : T[K] extends object
-      ? Immediate extends true
-        ? T[K] | undefined
-        : T[K]
-      : never
+    ? Immediate extends true
+      ? T[K] | undefined
+      : T[K]
+    : never
 }
 
 type OnCleanup = (cleanupFn: () => void) => void
@@ -334,8 +334,8 @@ function doWatch(
           oldValue === INITIAL_WATCHER_VALUE
             ? undefined
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-              ? []
-              : oldValue,
+            ? []
+            : oldValue,
           onCleanup
         ])
         oldValue = newValue

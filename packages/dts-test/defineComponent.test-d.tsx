@@ -12,8 +12,6 @@ import {
   SlotsType,
   Slots,
   VNode,
-  ComponentPropsOptions,
-  ComponentData,
   ComponentInstance
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'

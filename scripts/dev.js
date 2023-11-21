@@ -24,8 +24,8 @@ const pkg = require(`../packages/${target}/package.json`)
 const outputFormat = format.startsWith('global')
   ? 'iife'
   : format === 'cjs'
-    ? 'cjs'
-    : 'esm'
+  ? 'cjs'
+  : 'esm'
 
 const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`

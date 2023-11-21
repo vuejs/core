@@ -478,8 +478,8 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
       __DEV__ && vnode.component
       ? vnode.component.subTree
       : vnode.children
-        ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
-        : undefined
+      ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
+      : undefined
     : vnode
 }
 

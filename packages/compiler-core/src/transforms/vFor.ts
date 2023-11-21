@@ -95,8 +95,8 @@ export const transformFor = createStructuralDirectiveTransform(
       const fragmentFlag = isStableFragment
         ? PatchFlags.STABLE_FRAGMENT
         : keyProp
-          ? PatchFlags.KEYED_FRAGMENT
-          : PatchFlags.UNKEYED_FRAGMENT
+        ? PatchFlags.KEYED_FRAGMENT
+        : PatchFlags.UNKEYED_FRAGMENT
 
       forNode.codegenNode = createVNodeCall(
         context,
@@ -141,10 +141,10 @@ export const transformFor = createStructuralDirectiveTransform(
         const slotOutlet = isSlotOutlet(node)
           ? node
           : isTemplate &&
-              node.children.length === 1 &&
-              isSlotOutlet(node.children[0])
-            ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
-            : null
+            node.children.length === 1 &&
+            isSlotOutlet(node.children[0])
+          ? (node.children[0] as SlotOutletNode) // api-extractor somehow fails to infer this
+          : null
 
         if (slotOutlet) {
           // <slot v-for="..."> or <template v-for="..."><slot/></template>

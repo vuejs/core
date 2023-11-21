@@ -22,7 +22,7 @@ afterEach(() => {
 })
 
 describe('COMPONENT_V_MODEL', () => {
-  async function runTest(CustomInput: ComponentOptions) {
+  async function runTest(CustomInput: ComponentOptions & Record<string, any>) {
     const vm = new Vue({
       data() {
         return {

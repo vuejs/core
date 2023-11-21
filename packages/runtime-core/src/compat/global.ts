@@ -251,8 +251,8 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
-          : superValue
+        ? extend(Object.create(null), superValue)
+        : superValue
     }
 
     SubVue.options = mergeOptions(

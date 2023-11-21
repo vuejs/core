@@ -11,6 +11,8 @@ import {
 import { warn } from '../warning'
 
 export interface ComponentOptionsCompat extends ComponentOptions {
+  [K: string]: any
+
   model?: any
   el?: any
 
