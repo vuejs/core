@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-ssr#readme",
   "dependencies": {
-    "@vue/shared": "3.4.0-alpha.1",
-    "@vue/compiler-dom": "3.4.0-alpha.1"
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-dom": "workspace:*"
   }
 }

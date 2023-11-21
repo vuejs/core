@@ -39,8 +39,9 @@ import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
 import type TS from 'typescript'
-import { extname, dirname } from 'path'
+import { extname, dirname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
+import * as process from 'process'
 
 export type SimpleTypeResolveOptions = Partial<
   Pick<
@@ -356,11 +357,14 @@ function resolveInterfaceMembers(
         continue
       }
       try {
-        const { props } = resolveTypeElements(ctx, ext, scope)
+        const { props, calls } = resolveTypeElements(ctx, ext, scope)
         for (const key in props) {
           if (!hasOwn(base.props, key)) {
             base.props[key] = props[key]
           }
+        }
+        if (calls) {
+          ;(base.calls || (base.calls = [])).push(...calls)
         }
       } catch (e) {
         ctx.error(
@@ -653,8 +657,8 @@ function innerResolveTypeReference(
             ? scope.exportedDeclares
             : scope.declares
           : onlyExported
-          ? scope.exportedTypes
-          : scope.types
+            ? scope.exportedTypes
+            : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
       } else {
@@ -697,10 +701,10 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
     node.type === 'TSTypeReference'
       ? node.typeName
       : node.type === 'TSExpressionWithTypeArguments'
-      ? node.expression
-      : node.type === 'TSImportType'
-      ? node.qualifier
-      : node.exprName
+        ? node.expression
+        : node.type === 'TSImportType'
+          ? node.qualifier
+          : node.exprName
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -798,7 +802,12 @@ function importSourceToScope(
 
   let resolved: string | undefined = scope.resolvedImportSources[source]
   if (!resolved) {
-    if (source.startsWith('.')) {
+    if (source.startsWith('..')) {
+      const osSpecificJoinFn = process.platform === 'win32' ? join : joinPaths
+
+      const filename = osSpecificJoinFn(dirname(scope.filename), source)
+      resolved = resolveExt(filename, fs)
+    } else if (source.startsWith('.')) {
       // relative import - fast path
       const filename = joinPaths(dirname(scope.filename), source)
       resolved = resolveExt(filename, fs)
@@ -1069,8 +1078,8 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
     'ast' in ctx
       ? ctx.ast
       : ctx.scriptAst
-      ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
-      : ctx.scriptSetupAst!.body
+        ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+        : ctx.scriptSetupAst!.body
 
   const scope = new TypeScope(
     ctx.filename,
@@ -1413,6 +1422,7 @@ export function inferRuntimeType(
             case 'WeakMap':
             case 'Date':
             case 'Promise':
+            case 'Error':
               return [node.typeName.name]
 
             // TS built-in utility types

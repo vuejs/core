@@ -36,6 +36,6 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/reactivity#readme",
   "dependencies": {
-    "@vue/shared": "3.4.0-alpha.1"
+    "@vue/shared": "workspace:*"
   }
 }
