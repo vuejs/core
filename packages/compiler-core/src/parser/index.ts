@@ -179,10 +179,10 @@ const tokenizer = new Tokenizer(stack, {
         raw === '.' || raw === ':'
           ? 'bind'
           : raw === '@'
-          ? 'on'
-          : raw === '#'
-          ? 'slot'
-          : raw.slice(2)
+            ? 'on'
+            : raw === '#'
+              ? 'slot'
+              : raw.slice(2)
       currentProp = {
         type: NodeTypes.DIRECTIVE,
         name,
@@ -296,10 +296,11 @@ const tokenizer = new Tokenizer(stack, {
                 : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
           }
           if (
-            currentAttrValue &&
             tokenizer.inSFCRoot &&
             currentElement.tag === 'template' &&
-            currentProp.name === 'lang'
+            currentProp.name === 'lang' &&
+            currentAttrValue &&
+            currentAttrValue !== 'html'
           ) {
             // SFC root template with preprocessor lang, force tokenizer to
             // RCDATA mode
@@ -765,8 +766,8 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     currentOptions.parseMode === 'html'
       ? ParseMode.HTML
       : currentOptions.parseMode === 'sfc'
-      ? ParseMode.SFC
-      : ParseMode.BASE
+        ? ParseMode.SFC
+        : ParseMode.BASE
 
   const delimiters = options?.delimiters
   if (delimiters) {
