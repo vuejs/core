@@ -36,10 +36,10 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-    ? ExtractPropTypes<Props>
-    : Props extends never[]
-    ? {}
-    : Props) &
+      ? ExtractPropTypes<Props>
+      : Props extends never[]
+        ? {}
+        : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -119,8 +119,8 @@ export type DefineComponentOptions<
       props?: [Props] extends [never]
         ? string[]
         : [Props] extends [string]
-        ? Array<Props>
-        : Props
+          ? Array<Props>
+          : Props
     } & ([Props] extends [string]
         ? ComponentOptionsWithArrayProps<
             Props,
@@ -137,50 +137,50 @@ export type DefineComponentOptions<
             S
           >
         : [Props] extends [undefined]
-        ? {
-            props?: undefined
-          } & ComponentOptionsWithoutProps<
-            {},
-            RawBindings,
-            D,
-            C,
-            M,
-            Mixin,
-            Extends,
-            E,
-            EE,
-            I,
-            II,
-            S
-          >
-        : Props extends ComponentObjectPropsOptions
-        ? ComponentOptionsWithObjectProps<
-            Props,
-            RawBindings,
-            D,
-            C,
-            M,
-            Mixin,
-            Extends,
-            E,
-            EE,
-            I,
-            II,
-            S
-          >
-        : // adding support for ComponentOProp
-          ComponentOptions<
-            Readonly<Record<string, any> & EmitsToProps<E>>,
-            RawBindings,
-            D,
-            C,
-            M,
-            Mixin,
-            Extends,
-            E,
-            I,
-            S
-          >))
+          ? {
+              props?: undefined
+            } & ComponentOptionsWithoutProps<
+              {},
+              RawBindings,
+              D,
+              C,
+              M,
+              Mixin,
+              Extends,
+              E,
+              EE,
+              I,
+              II,
+              S
+            >
+          : Props extends ComponentObjectPropsOptions
+            ? ComponentOptionsWithObjectProps<
+                Props,
+                RawBindings,
+                D,
+                C,
+                M,
+                Mixin,
+                Extends,
+                E,
+                EE,
+                I,
+                II,
+                S
+              >
+            : // adding support for ComponentOProp
+              ComponentOptions<
+                Readonly<Record<string, any> & EmitsToProps<E>>,
+                RawBindings,
+                D,
+                C,
+                M,
+                Mixin,
+                Extends,
+                E,
+                I,
+                S
+              >))
   | (((
       props: Props,
       ctx: SetupContext<E, S>
@@ -205,10 +205,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : Props,
+      ? {}
+      : Props extends never[]
+        ? string[]
+        : Props,
   RawBindings,
   D,
   C,
