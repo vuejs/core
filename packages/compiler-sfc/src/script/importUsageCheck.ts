@@ -5,8 +5,8 @@ import {
   SimpleExpressionNode,
   forAliasRE,
   parserOptions,
-  transform,
-  walkIdentifiers
+  walkIdentifiers,
+  TemplateChildNode
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
@@ -34,53 +34,54 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   }
 
   let code = ''
-  transform(ast, {
-    nodeTransforms: [
-      node => {
-        if (node.type === NodeTypes.ELEMENT) {
-          if (
-            !parserOptions.isNativeTag!(node.tag) &&
-            !parserOptions.isBuiltInComponent!(node.tag)
-          ) {
-            code += `,${camelize(node.tag)},${capitalize(camelize(node.tag))}`
-          }
-          for (let i = 0; i < node.props.length; i++) {
-            const prop = node.props[i]
-            if (prop.type === NodeTypes.DIRECTIVE) {
-              if (!isBuiltInDirective(prop.name)) {
-                code += `,v${capitalize(camelize(prop.name))}`
-              }
 
-              // process dynamic directive arguments
-              if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
-                code += `,${stripStrings(
-                  (prop.arg as SimpleExpressionNode).content
-                )}`
-              }
+  ast!.children.forEach(walk)
 
-              if (prop.exp) {
-                code += `,${processExp(
-                  (prop.exp as SimpleExpressionNode).content,
-                  prop.name
-                )}`
-              }
-            }
-            if (
-              prop.type === NodeTypes.ATTRIBUTE &&
-              prop.name === 'ref' &&
-              prop.value?.content
-            ) {
-              code += `,${prop.value.content}`
-            }
-          }
-        } else if (node.type === NodeTypes.INTERPOLATION) {
-          code += `,${processExp(
-            (node.content as SimpleExpressionNode).content
-          )}`
+  function walk(node: TemplateChildNode) {
+    switch (node.type) {
+      case NodeTypes.ELEMENT:
+        if (
+          !parserOptions.isNativeTag!(node.tag) &&
+          !parserOptions.isBuiltInComponent!(node.tag)
+        ) {
+          code += `,${camelize(node.tag)},${capitalize(camelize(node.tag))}`
         }
-      }
-    ]
-  })
+        for (let i = 0; i < node.props.length; i++) {
+          const prop = node.props[i]
+          if (prop.type === NodeTypes.DIRECTIVE) {
+            if (!isBuiltInDirective(prop.name)) {
+              code += `,v${capitalize(camelize(prop.name))}`
+            }
+
+            // process dynamic directive arguments
+            if (prop.arg && !(prop.arg as SimpleExpressionNode).isStatic) {
+              code += `,${stripStrings(
+                (prop.arg as SimpleExpressionNode).content
+              )}`
+            }
+
+            if (prop.exp) {
+              code += `,${processExp(
+                (prop.exp as SimpleExpressionNode).content,
+                prop.name
+              )}`
+            }
+          }
+          if (
+            prop.type === NodeTypes.ATTRIBUTE &&
+            prop.name === 'ref' &&
+            prop.value?.content
+          ) {
+            code += `,${prop.value.content}`
+          }
+        }
+        node.children.forEach(walk)
+        break
+      case NodeTypes.INTERPOLATION:
+        code += `,${processExp((node.content as SimpleExpressionNode).content)}`
+        break
+    }
+  }
 
   code += ';'
   templateUsageCheckCache.set(content, code)
