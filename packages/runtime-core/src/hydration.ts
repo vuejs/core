@@ -111,6 +111,21 @@ export function createHydrationFunctions(
     let domType = node.nodeType
     vnode.el = node
 
+    if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      if (!('__vnode' in node)) {
+        Object.defineProperty(node, '__vnode', {
+          value: vnode,
+          enumerable: false
+        })
+      }
+      if (!('__vueParentComponent' in node)) {
+        Object.defineProperty(node, '__vueParentComponent', {
+          value: parentComponent,
+          enumerable: false
+        })
+      }
+    }
+
     if (patchFlag === PatchFlags.BAIL) {
       optimized = false
       vnode.dynamicChildren = null
@@ -321,24 +336,28 @@ export function createHydrationFunctions(
     const { type, props, patchFlag, shapeFlag, dirs, transition } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
-    const forcePatchValue = (type === 'input' && dirs) || type === 'option'
+    // #7476 <input indeterminate>
+    const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatchValue || patchFlag !== PatchFlags.HOISTED) {
+    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
       // props
       if (props) {
         if (
-          forcePatchValue ||
+          forcePatch ||
           !optimized ||
-          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.HYDRATE_EVENTS)
+          patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           for (const key in props) {
             if (
-              (forcePatchValue && key.endsWith('value')) ||
-              (isOn(key) && !isReservedProp(key))
+              (forcePatch &&
+                (key.endsWith('value') || key === 'indeterminate')) ||
+              (isOn(key) && !isReservedProp(key)) ||
+              // force hydrate v-bind with .prop modifiers
+              key[0] === '.'
             ) {
               patchProp(
                 el,
@@ -563,8 +582,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-          ? `(start of fragment)`
-          : ``
+            ? `(start of fragment)`
+            : ``
       )
     vnode.el = null
 
