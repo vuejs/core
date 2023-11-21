@@ -38,7 +38,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  ast: RootNode
+  ast?: RootNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -156,7 +156,10 @@ export function parse(
             source,
             false
           ) as SFCTemplateBlock)
-          templateBlock.ast = createRoot(node.children, source)
+
+          if (!templateBlock.attrs.src) {
+            templateBlock.ast = createRoot(node.children, source)
+          }
 
           // warn against 2.x <template functional>
           if (templateBlock.attrs.functional) {
