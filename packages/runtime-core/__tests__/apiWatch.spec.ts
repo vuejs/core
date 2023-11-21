@@ -1272,4 +1272,41 @@ describe('api: watch', () => {
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(2)
   })
+
+  it('observation array depth', async () => {
+    const arr = ref([
+      {
+        a: {
+          b: 2
+        }
+      },
+      {
+        a: {
+          b: 3
+        }
+      }
+    ])
+    const cb = vi.fn()
+    watch(arr, cb, { deep: true, depth: 2 })
+
+    arr.value[0].a.b = 3
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    arr.value[0].a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    arr.value[1].a = { b: 4 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    arr.value.push({ a: { b: 5 } })
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+
+    arr.value.pop()
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(4)
+  })
 })
