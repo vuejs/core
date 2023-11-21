@@ -91,10 +91,14 @@ export class ReactiveEffect<T = any> {
     this._isPaused = true
   }
 
-  resume(runOnce = false) {
+  /**
+   * Resumes the execution of the reactive effect.
+   * @param {boolean} immediate - If true, executes the saved run method immediately upon resuming.
+   */
+  resume(immediate: boolean = false) {
     if (this._isPaused) {
       this._isPaused = false
-      if (this._isCalled && runOnce) {
+      if (this._isCalled && immediate) {
         this.run()
       }
       this._isCalled = false
