@@ -25,7 +25,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/runtime-test#readme",
   "dependencies": {
-    "@vue/shared": "3.3.8",
-    "@vue/runtime-core": "3.3.8"
+    "@vue/shared": "workspace:*",
+    "@vue/runtime-core": "workspace:*"
   }
 }

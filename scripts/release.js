@@ -325,10 +325,22 @@ async function isInSyncWithRemote() {
       `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
     )
     const data = await res.json()
-    return data.sha === sha
+    if (data.sha === sha) {
+      return true
+    } else {
+      // @ts-ignore
+      const { yes } = await prompt({
+        type: 'confirm',
+        name: 'yes',
+        message: pico.red(
+          `Local HEAD is not up-to-date with remote. Are you sure you want to continue?`
+        )
+      })
+      return yes
+    }
   } catch (e) {
     console.error(
-      'Failed to check whether local HEAD is up-to-date with remote.'
+      pico.red('Failed to check whether local HEAD is up-to-date with remote.')
     )
     return false
   }
@@ -348,8 +360,10 @@ function updatePackage(pkgRoot, version, getNewPackageName) {
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
-  updateDeps(pkg, 'dependencies', version, getNewPackageName)
-  updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
+  if (isCanary) {
+    updateDeps(pkg, 'dependencies', version, getNewPackageName)
+    updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
+  }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
@@ -357,9 +371,6 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
   const deps = pkg[depType]
   if (!deps) return
   Object.keys(deps).forEach(dep => {
-    if (deps[dep] === 'workspace:*') {
-      return
-    }
     if (isCorePackage(dep)) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
@@ -395,6 +406,8 @@ async function publishPackage(pkgName, version) {
 
   step(`Publishing ${pkgName}...`)
   try {
+    // Don't change the package manager here as we rely on pnpm to handle
+    // workspace:* deps
     await run(
       'pnpm',
       [
