@@ -4,7 +4,10 @@ import {
   CompilerError,
   NodeTransform,
   ParserOptions,
-  RootNode
+  RootNode,
+  NodeTypes,
+  ElementNode,
+  createRoot
 } from '@vue/compiler-core'
 import {
   SourceMapConsumer,
@@ -201,6 +204,19 @@ function doCompileTemplate({
 
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
+
+  if (inAST?.codegenNode) {
+    // input AST has codegenNode - it has already been transformed and cannot
+    // be reused. We need to parse a fresh one.
+    const newAST = compiler.parse(inAST.source, {
+      parseMode: 'sfc',
+      onError: e => errors.push(e)
+    })
+    const template = newAST.children.find(
+      node => node.type === NodeTypes.ELEMENT && node.tag === 'template'
+    ) as ElementNode
+    inAST = createRoot(template.children, inAST.source)
+  }
 
   let { code, ast, preamble, map } = compiler.compile(inAST || source, {
     mode: 'module',
