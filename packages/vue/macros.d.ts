@@ -48,10 +48,10 @@ type DestructureRefs<T extends object> = {
   [K in keyof T]: T[K] extends ComputedRef<infer V>
     ? ComputedRefValue<V>
     : T[K] extends WritableComputedRef<infer V>
-    ? WritableComputedRefValue<V>
-    : T[K] extends Ref<infer V>
-    ? RefValue<V>
-    : T[K]
+      ? WritableComputedRefValue<V>
+      : T[K] extends Ref<infer V>
+        ? RefValue<V>
+        : T[K]
 }
 
 /**
@@ -68,19 +68,19 @@ type ToRawRefs<T extends object> = {
   [K in keyof T]: T[K] extends RefValue<infer V>
     ? Ref<V>
     : T[K] extends ComputedRefValue<infer V>
-    ? ComputedRef<V>
-    : T[K] extends WritableComputedRefValue<infer V>
-    ? WritableComputedRef<V>
-    : T[K] extends object
-    ? T[K] extends
-        | Function
-        | Map<any, any>
-        | Set<any>
-        | WeakMap<any, any>
-        | WeakSet<any>
-      ? T[K]
-      : ToRawRefs<T[K]>
-    : T[K]
+      ? ComputedRef<V>
+      : T[K] extends WritableComputedRefValue<infer V>
+        ? WritableComputedRef<V>
+        : T[K] extends object
+          ? T[K] extends
+              | Function
+              | Map<any, any>
+              | Set<any>
+              | WeakMap<any, any>
+              | WeakSet<any>
+            ? T[K]
+            : ToRawRefs<T[K]>
+          : T[K]
 }
 
 export declare function $ref<T>(): RefValue<T | undefined>
