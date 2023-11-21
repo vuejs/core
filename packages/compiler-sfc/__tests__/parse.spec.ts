@@ -164,6 +164,11 @@ h1 { color: red }
     expect(descriptor.script!.attrs['src']).toBe('com')
   })
 
+  test('should not expose ast on template node if has src import', () => {
+    const { descriptor } = parse(`<template src="./foo.html"/>`)
+    expect(descriptor.template!.ast).toBeUndefined()
+  })
+
   test('ignoreEmpty: false', () => {
     const { descriptor } = parse(
       `<script></script>\n<script setup>\n</script>`,
@@ -211,7 +216,7 @@ h1 { color: red }
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
     // should not attempt to parse the content
-    expect(descriptor.template!.ast.children.length).toBe(1)
+    expect(descriptor.template!.ast!.children.length).toBe(1)
   })
 
   //#2566

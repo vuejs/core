@@ -139,7 +139,7 @@ test('should work w/ AST from descriptor', () => {
     sourceMap: true
   }).descriptor.template!
 
-  expect(template.ast.source).toBe(source)
+  expect(template.ast!.source).toBe(source)
 
   const { code, map } = compile({
     filename: 'example.vue',
