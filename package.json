@@ -33,7 +33,7 @@
     "serve": "serve",
     "open": "open http://localhost:3000/packages/template-explorer/local.html",
     "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-ssr-esm build-sfc-playground-self",
-    "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity reactivity-transform shared -af cjs",
+    "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity shared -af cjs",
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
     "build-ssr-esm": "node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages/sfc-playground && npm run build",

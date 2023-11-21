@@ -12,13 +12,6 @@ import { SFCParseResult, parseCache as _parseCache } from './parse'
 // #9521 export parseCache as a simple map to avoid exposing LRU types
 export const parseCache = _parseCache as Map<string, SFCParseResult>
 
-// TODO remove in 3.4
-export {
-  shouldTransform as shouldTransformRef,
-  transform as transformRef,
-  transformAST as transformRefAST
-} from '@vue/reactivity-transform'
-
 // Utilities
 export { parse as babelParse } from '@babel/parser'
 import MagicString from 'magic-string'

@@ -198,9 +198,6 @@ importers:
       '@vue/compiler-ssr':
         specifier: workspace:*
         version: link:../compiler-ssr
-      '@vue/reactivity-transform':
-        specifier: workspace:*
-        version: link:../reactivity-transform
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -283,31 +280,6 @@ importers:
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
-
-  packages/reactivity-transform:
-    dependencies:
-      '@babel/parser':
-        specifier: ^7.23.3
-        version: 7.23.3
-      '@vue/compiler-core':
-        specifier: workspace:*
-        version: link:../compiler-core
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-      estree-walker:
-        specifier: ^2.0.2
-        version: 2.0.2
-      magic-string:
-        specifier: ^0.30.5
-        version: 0.30.5
-    devDependencies:
-      '@babel/core':
-        specifier: ^7.23.3
-        version: 7.23.3
-      '@babel/types':
-        specifier: ^7.23.3
-        version: 7.23.3
 
   packages/runtime-core:
     dependencies:
