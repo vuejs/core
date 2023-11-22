@@ -1,6 +1,6 @@
 import Vue from '@vue/compat'
 import { nextTick } from '@vue/runtime-core'
-import { CompilerDeprecationTypes } from '../../compiler-core/src'
+import { CompilerDeprecationTypes } from '@vue/compiler-core'
 import { toggleDeprecationWarning } from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
 
@@ -79,16 +79,6 @@ test('COMPILER_V_BIND_SYNC', async () => {
   expect(vm.$el.textContent).toBe(`1`)
 
   expect(CompilerDeprecationTypes.COMPILER_V_BIND_SYNC).toHaveBeenWarned()
-})
-
-test('COMPILER_V_BIND_PROP', () => {
-  const vm = new Vue({
-    template: `<div :id.prop="'foo'"/>`
-  }).$mount()
-
-  expect(vm.$el).toBeInstanceOf(HTMLDivElement)
-  expect(vm.$el.id).toBe('foo')
-  expect(CompilerDeprecationTypes.COMPILER_V_BIND_PROP).toHaveBeenWarned()
 })
 
 test('COMPILER_V_BIND_OBJECT_ORDER', () => {

@@ -24,7 +24,13 @@ import Tokenizer, {
   isWhitespace,
   toCharCodes
 } from './Tokenizer'
-import { CompilerCompatOptions } from '../compat/compatConfig'
+import {
+  CompilerCompatOptions,
+  CompilerDeprecationTypes,
+  checkCompatEnabled,
+  isCompatEnabled,
+  warnDeprecation
+} from '../compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import {
   ErrorCodes,
@@ -32,7 +38,7 @@ import {
   defaultOnError,
   defaultOnWarn
 } from '../errors'
-import { forAliasRE, isCoreComponent } from '../utils'
+import { forAliasRE, isCoreComponent, isStaticArgOf } from '../utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 
 type OptionalOptions =
@@ -42,7 +48,10 @@ type OptionalOptions =
   | 'isBuiltInComponent'
   | keyof CompilerCompatOptions
 
-type MergedParserOptions = Omit<Required<ParserOptions>, OptionalOptions> &
+export type MergedParserOptions = Omit<
+  Required<ParserOptions>,
+  OptionalOptions
+> &
   Pick<ParserOptions, OptionalOptions>
 
 export const defaultParserOptions: MergedParserOptions = {
@@ -63,7 +72,7 @@ let currentRoot: RootNode | null = null
 
 // parser state
 let currentInput = ''
-let currentElement: ElementNode | null = null
+let currentOpenTag: ElementNode | null = null
 let currentProp: AttributeNode | DirectiveNode | null = null
 let currentAttrValue = ''
 let currentAttrStartIndex = -1
@@ -118,7 +127,7 @@ const tokenizer = new Tokenizer(stack, {
     const startIndex = tokenizer.inSFCRoot
       ? end + fastForward(end, CharCodes.Gt) + 1
       : start - 1
-    currentElement = {
+    currentOpenTag = {
       type: NodeTypes.ELEMENT,
       tag: name,
       ns: currentOptions.getNamespace(name, stack[0], currentOptions.ns),
@@ -159,7 +168,7 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onselfclosingtag(end) {
-    const name = currentElement!.tag
+    const name = currentOpenTag!.tag
     endOpenTag(end)
     if (stack[0]?.tag === name) {
       onCloseTag(stack.shift()!, end)
@@ -213,9 +222,9 @@ const tokenizer = new Tokenizer(stack, {
       }
       if (name === 'pre') {
         inVPre = true
-        currentVPreBoundary = currentElement
+        currentVPreBoundary = currentOpenTag
         // convert dirs before this one to attributes
-        const props = currentElement!.props
+        const props = currentOpenTag!.props
         for (let i = 0; i < props.length; i++) {
           if (props[i].type === NodeTypes.DIRECTIVE) {
             props[i] = dirToAttr(props[i] as DirectiveNode)
@@ -279,7 +288,7 @@ const tokenizer = new Tokenizer(stack, {
     }
     // check duplicate attrs
     if (
-      currentElement!.props.some(
+      currentOpenTag!.props.some(
         p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name
       )
     ) {
@@ -288,7 +297,10 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onattribend(quote, end) {
-    if (currentElement && currentProp) {
+    if (currentOpenTag && currentProp) {
+      // finalize end pos
+      currentProp.loc.end = tokenizer.getPos(end)
+
       if (quote !== QuoteType.NoValue) {
         if (__BROWSER__ && currentAttrValue.includes('&')) {
           currentAttrValue = currentOptions.decodeEntities!(
@@ -296,6 +308,7 @@ const tokenizer = new Tokenizer(stack, {
             true
           )
         }
+
         if (currentProp.type === NodeTypes.ATTRIBUTE) {
           // assign value
 
@@ -318,7 +331,7 @@ const tokenizer = new Tokenizer(stack, {
           }
           if (
             tokenizer.inSFCRoot &&
-            currentElement.tag === 'template' &&
+            currentOpenTag.tag === 'template' &&
             currentProp.name === 'lang' &&
             currentAttrValue &&
             currentAttrValue !== 'html'
@@ -338,14 +351,29 @@ const tokenizer = new Tokenizer(stack, {
           if (currentProp.name === 'for') {
             currentProp.forParseResult = parseForExpression(currentProp.exp)
           }
+          // 2.x compat v-bind:foo.sync -> v-model:foo
+          let syncIndex = -1
+          if (
+            __COMPAT__ &&
+            currentProp.name === 'bind' &&
+            (syncIndex = currentProp.modifiers.indexOf('sync')) > -1 &&
+            checkCompatEnabled(
+              CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
+              currentOptions,
+              currentProp.loc,
+              currentProp.rawName
+            )
+          ) {
+            currentProp.name = 'model'
+            currentProp.modifiers.splice(syncIndex, 1)
+          }
         }
       }
-      currentProp.loc.end = tokenizer.getPos(end)
       if (
         currentProp.type !== NodeTypes.DIRECTIVE ||
         currentProp.name !== 'pre'
       ) {
-        currentElement.props.push(currentProp)
+        currentOpenTag.props.push(currentProp)
       }
     }
     currentAttrValue = ''
@@ -503,20 +531,20 @@ function getSlice(start: number, end: number) {
 }
 
 function endOpenTag(end: number) {
-  addNode(currentElement!)
-  const { tag, ns } = currentElement!
+  addNode(currentOpenTag!)
+  const { tag, ns } = currentOpenTag!
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
     inPre++
   }
   if (currentOptions.isVoidTag(tag)) {
-    onCloseTag(currentElement!, end)
+    onCloseTag(currentOpenTag!, end)
   } else {
-    stack.unshift(currentElement!)
+    stack.unshift(currentOpenTag!)
     if (ns === Namespaces.SVG || ns === Namespaces.MATH_ML) {
       tokenizer.inXML = true
     }
   }
-  currentElement = null
+  currentOpenTag = null
 }
 
 function onText(content: string, start: number, end: number) {
@@ -586,6 +614,81 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   ) {
     tokenizer.inXML = false
   }
+
+  // 2.x compat / deprecation checks
+  if (__COMPAT__) {
+    const props = el.props
+    if (
+      __DEV__ &&
+      isCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
+        currentOptions
+      )
+    ) {
+      let hasIf = false
+      let hasFor = false
+      for (let i = 0; i < props.length; i++) {
+        const p = props[i]
+        if (p.type === NodeTypes.DIRECTIVE) {
+          if (p.name === 'if') {
+            hasIf = true
+          } else if (p.name === 'for') {
+            hasFor = true
+          }
+        }
+        if (hasIf && hasFor) {
+          warnDeprecation(
+            CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
+            currentOptions,
+            el.loc
+          )
+          break
+        }
+      }
+    }
+
+    if (
+      isCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
+        currentOptions
+      ) &&
+      el.tag === 'template' &&
+      !isFragmentTemplate(el)
+    ) {
+      __DEV__ &&
+        warnDeprecation(
+          CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
+          currentOptions,
+          el.loc
+        )
+      // unwrap
+      const parent = stack[0] || currentRoot
+      const index = parent.children.indexOf(el)
+      parent.children.splice(index, 1, ...el.children)
+    }
+
+    const inlineTemplateProp = props.find(
+      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template'
+    ) as AttributeNode
+    if (
+      inlineTemplateProp &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE,
+        currentOptions,
+        inlineTemplateProp.loc
+      ) &&
+      el.children.length
+    ) {
+      inlineTemplateProp.value = {
+        type: NodeTypes.TEXT,
+        content: getSlice(
+          el.children[0].loc.start.offset,
+          el.children[el.children.length - 1].loc.end.offset
+        ),
+        loc: inlineTemplateProp.loc
+      }
+    }
+  }
 }
 
 function fastForward(start: number, c: number) {
@@ -641,32 +744,30 @@ function isComponent({ tag, props }: ElementNode): boolean {
       if (p.name === 'is' && p.value) {
         if (p.value.content.startsWith('vue:')) {
           return true
+        } else if (
+          __COMPAT__ &&
+          checkCompatEnabled(
+            CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+            currentOptions,
+            p.loc
+          )
+        ) {
+          return true
         }
-        // TODO else if (
-        //   __COMPAT__ &&
-        //   checkCompatEnabled(
-        //     CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-        //     context,
-        //     p.loc
-        //   )
-        // ) {
-        //   return true
-        // }
       }
+    } else if (
+      __COMPAT__ &&
+      // :is on plain element - only treat as component in compat mode
+      p.name === 'bind' &&
+      isStaticArgOf(p.arg, 'is') &&
+      checkCompatEnabled(
+        CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
+        currentOptions,
+        p.loc
+      )
+    ) {
+      return true
     }
-    // TODO else if (
-    //   __COMPAT__ &&
-    //   // :is on plain element - only treat as component in compat mode
-    //   p.name === 'bind' &&
-    //   isStaticArgOf(p.arg, 'is') &&
-    //   checkCompatEnabled(
-    //     CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-    //     context,
-    //     p.loc
-    //   )
-    // ) {
-    //   return true
-    // }
   }
   return false
 }
@@ -818,7 +919,7 @@ function emitError(code: ErrorCodes, index: number) {
 
 function reset() {
   tokenizer.reset()
-  currentElement = null
+  currentOpenTag = null
   currentProp = null
   currentAttrValue = ''
   currentAttrStartIndex = -1
@@ -829,7 +930,17 @@ function reset() {
 export function baseParse(input: string, options?: ParserOptions): RootNode {
   reset()
   currentInput = input
-  currentOptions = extend({}, defaultParserOptions, options)
+  currentOptions = extend({}, defaultParserOptions)
+
+  if (options) {
+    let key: keyof ParserOptions
+    for (key in options) {
+      if (options[key] != null) {
+        // @ts-ignore
+        currentOptions[key] = options[key]
+      }
+    }
+  }
 
   if (__DEV__) {
     if (!__BROWSER__ && currentOptions.decodeEntities) {
