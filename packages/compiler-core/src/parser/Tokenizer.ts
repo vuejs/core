@@ -22,6 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
  */
 
+import { ErrorCodes } from '../errors'
 import { ElementNode, Position } from '../ast'
 
 /**
@@ -54,6 +55,7 @@ export const enum CharCodes {
   Amp = 0x26, // "&"
   SingleQuote = 0x27, // "'"
   DoubleQuote = 0x22, // '"'
+  GraveAccent = 96, // "`"
   Dash = 0x2d, // "-"
   Slash = 0x2f, // "/"
   Zero = 0x30, // "0"
@@ -83,7 +85,7 @@ const defaultDelimitersOpen = new Uint8Array([123, 123]) // "{{"
 const defaultDelimitersClose = new Uint8Array([125, 125]) // "}}"
 
 /** All the states the tokenizer can be in. */
-const enum State {
+export const enum State {
   Text = 1,
 
   // interpolation
@@ -200,9 +202,10 @@ export interface Callbacks {
   oncomment(start: number, endIndex: number): void
   oncdata(start: number, endIndex: number): void
 
-  // onprocessinginstruction(start: number, endIndex: number): void
+  onprocessinginstruction(start: number, endIndex: number): void
   // ondeclaration(start: number, endIndex: number): void
   onend(): void
+  onerr(code: ErrorCodes, index: number): void
 }
 
 /**
@@ -211,7 +214,7 @@ export interface Callbacks {
  * We don't have `Script`, `Style`, or `Title` here. Instead, we re-use the *End
  * sequences with an increased offset.
  */
-const Sequences = {
+export const Sequences = {
   Cdata: new Uint8Array([0x43, 0x44, 0x41, 0x54, 0x41, 0x5b]), // CDATA[
   CdataEnd: new Uint8Array([0x5d, 0x5d, 0x3e]), // ]]>
   CommentEnd: new Uint8Array([0x2d, 0x2d, 0x3e]), // `-->`
@@ -225,11 +228,11 @@ const Sequences = {
 
 export default class Tokenizer {
   /** The current state the tokenizer is in. */
-  private state = State.Text
+  public state = State.Text
   /** The read buffer. */
   private buffer = ''
   /** The beginning of the section that is currently being read. */
-  private sectionStart = 0
+  public sectionStart = 0
   /** The index within the buffer that we are currently looking at. */
   private index = 0
   /** The start of the last entity. */
@@ -366,7 +369,7 @@ export default class Tokenizer {
     }
   }
 
-  private currentSequence: Uint8Array = undefined!
+  public currentSequence: Uint8Array = undefined!
   private sequenceIndex = 0
   private stateSpecialStartSequence(c: number): void {
     const isEnd = this.sequenceIndex === this.currentSequence.length
@@ -581,7 +584,12 @@ export default class Tokenizer {
     if (isWhitespace(c)) {
       // Ignore
     } else if (c === CharCodes.Gt) {
+      if (__DEV__ || !__BROWSER__) {
+        this.cbs.onerr(ErrorCodes.MISSING_END_TAG_NAME, this.index)
+      }
       this.state = State.Text
+      // Ignore
+      this.sectionStart = this.index + 1
     } else {
       this.state = isTagStartChar(c)
         ? State.InClosingTagName
@@ -599,7 +607,7 @@ export default class Tokenizer {
   }
   private stateAfterClosingTagName(c: number): void {
     // Skip everything until ">"
-    if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
+    if (c === CharCodes.Gt) {
       this.state = State.Text
       this.sectionStart = this.index + 1
     }
@@ -615,7 +623,19 @@ export default class Tokenizer {
       this.sectionStart = this.index + 1
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
+      if (
+        (__DEV__ || !__BROWSER__) &&
+        this.buffer.charCodeAt(this.index + 1) !== CharCodes.Gt
+      ) {
+        this.cbs.onerr(ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG, this.index)
+      }
     } else if (!isWhitespace(c)) {
+      if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
+        this.cbs.onerr(
+          ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
+          this.index
+        )
+      }
       this.handleAttributeStart(c)
     }
   }
@@ -655,6 +675,16 @@ export default class Tokenizer {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.onattribname(this.sectionStart, this.index)
       this.handleAttributeNameEnd(c)
+    } else if (
+      (__DEV__ || !__BROWSER__) &&
+      (c === CharCodes.DoubleQuote ||
+        c === CharCodes.SingleQuote ||
+        c === CharCodes.Lt)
+    ) {
+      this.cbs.onerr(
+        ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
+        this.index
+      )
     }
   }
   private stateInDirectiveName(c: number): void {
@@ -687,7 +717,14 @@ export default class Tokenizer {
     if (c === CharCodes.RightSquare) {
       this.state = State.InDirectiveArg
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
-      // TODO emit error
+      this.cbs.ondirarg(this.sectionStart, this.index + 1)
+      this.handleAttributeNameEnd(c)
+      if (__DEV__ || !__BROWSER__) {
+        this.cbs.onerr(
+          ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
+          this.index
+        )
+      }
     }
   }
   private stateInDirectiveModifier(c: number): void {
@@ -757,6 +794,17 @@ export default class Tokenizer {
       this.cbs.onattribend(QuoteType.Unquoted, this.index)
       this.state = State.BeforeAttributeName
       this.stateBeforeAttributeName(c)
+    } else if (
+      ((__DEV__ || !__BROWSER__) && c === CharCodes.DoubleQuote) ||
+      c === CharCodes.SingleQuote ||
+      c === CharCodes.Lt ||
+      c === CharCodes.Eq ||
+      c === CharCodes.GraveAccent
+    ) {
+      this.cbs.onerr(
+        ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
+        this.index
+      )
     } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
     }
@@ -779,7 +827,7 @@ export default class Tokenizer {
   }
   private stateInProcessingInstruction(c: number): void {
     if (c === CharCodes.Gt || this.fastForwardTo(CharCodes.Gt)) {
-      // this.cbs.onprocessinginstruction(this.sectionStart, this.index)
+      this.cbs.onprocessinginstruction(this.sectionStart, this.index)
       this.state = State.Text
       this.sectionStart = this.index + 1
     }
