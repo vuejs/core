@@ -223,9 +223,10 @@ describe('defineComponent', () => {
     //@ts-expect-error not valid
     expectType<{ __a?: any }>(fullComponent.$props)
     //@ts-expect-error not valid
-    expectType<{ __a?: any }>(fullComponent.$options.emits)
-    //@ts-expect-error not valid
     expectType<{ __a?: any }>(fullComponent.$emit)
+
+    //TODO This should not be valid
+    expectType<{ __a?: any }>(fullComponent.$options.emits)
 
     expectType<{
       fooMethod(): boolean

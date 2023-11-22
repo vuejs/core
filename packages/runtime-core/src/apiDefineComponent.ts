@@ -37,10 +37,10 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-      ? ExtractPropTypes<Props>
-      : Props extends never[]
-        ? {}
-        : Props) &
+    ? ExtractPropTypes<Props>
+    : Props extends never[]
+    ? {}
+    : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -120,8 +120,8 @@ export type DefineComponentOptions<
       props?: [Props] extends [never]
         ? string[]
         : [Props] extends [string]
-          ? Array<Props>
-          : Props
+        ? Array<Props>
+        : Props
     } & ([Props] extends [string]
         ? ComponentOptionsWithArrayProps<
             Props,
@@ -138,50 +138,50 @@ export type DefineComponentOptions<
             S
           >
         : [Props] extends [undefined]
-          ? {
-              props?: undefined
-            } & ComponentOptionsWithoutProps<
-              {},
-              RawBindings,
-              D,
-              C,
-              M,
-              Mixin,
-              Extends,
-              E,
-              EE,
-              I,
-              II,
-              S
-            >
-          : Props extends ComponentObjectPropsOptions
-            ? ComponentOptionsWithObjectProps<
-                Props,
-                RawBindings,
-                D,
-                C,
-                M,
-                Mixin,
-                Extends,
-                E,
-                EE,
-                I,
-                II,
-                S
-              >
-            : // adding support for ComponentOProp
-              ComponentOptions<
-                Readonly<Record<string, any> & EmitsToProps<E>>,
-                RawBindings,
-                D,
-                C,
-                M,
-                Mixin,
-                Extends,
-                E,
-                I,
-                S
-              >))
+        ? {
+            props?: undefined
+          } & ComponentOptionsWithoutProps<
+            {},
+            RawBindings,
+            D,
+            C,
+            M,
+            Mixin,
+            Extends,
+            E,
+            EE,
+            I,
+            II,
+            S
+          >
+        : Props extends ComponentObjectPropsOptions
+        ? ComponentOptionsWithObjectProps<
+            Props,
+            RawBindings,
+            D,
+            C,
+            M,
+            Mixin,
+            Extends,
+            E,
+            EE,
+            I,
+            II,
+            S
+          >
+        : // adding support for ComponentOProp
+          ComponentOptions<
+            Readonly<Record<string, any> & EmitsToProps<E>>,
+            RawBindings,
+            D,
+            C,
+            M,
+            Mixin,
+            Extends,
+            E,
+            I,
+            S
+          >))
   | (((
       props: Props,
       ctx: SetupContext<E, S>
@@ -206,10 +206,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-      ? {}
-      : Props extends never[]
-        ? string[]
-        : Props,
+    ? {}
+    : Props extends never[]
+    ? string[]
+    : Props,
   RawBindings,
   D,
   C,
@@ -226,73 +226,6 @@ export type DefineComponentFromOptions<
   S,
   Options
 >
-// export type ComponentDefineOptions<
-//   Props = undefined,
-//   RawBindings = {},
-//   D = {},
-//   C extends ComputedOptions = {},
-//   M extends MethodOptions = {},
-//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   E extends EmitsOptions = {},
-//   EE extends string = string,
-//   I extends ComponentInjectOptions = {},
-//   II extends string = string,
-//   S extends SlotsType = {},
-//   Options = {}
-// > =
-//   | (Options &
-//       (undefined extends Props
-//         ? ComponentOptionsWithoutProps<
-//             {},
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : [Props] extends [string]
-//         ? ComponentOptionsWithArrayProps<
-//             Props,
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : [Props] extends [Readonly<ComponentPropsOptions>]
-//         ? ComponentOptionsWithObjectProps<
-//             Props,
-//             RawBindings,
-//             D,
-//             C,
-//             M,
-//             Mixin,
-//             Extends,
-//             E,
-//             EE,
-//             I,
-//             II,
-//             S
-//           >
-//         : false))
-//   | (((
-//       props: Props,
-//       ctx: SetupContext<E, S>
-//     ) => RenderFunction | Promise<RenderFunction>) &
-//       Options)
 
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
@@ -385,114 +318,7 @@ export function defineComponent<
   Options
 >
 
-// // overload 3: object format with array props declaration
-// // props inferred as { [key in PropNames]?: any }
-// // return type is for Vetur and TSX support
-
-// export function defineComponent<
-//   PropNames extends string,
-//   RawBindings,
-//   D,
-//   C extends ComputedOptions = {},
-//   M extends MethodOptions = {},
-//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   E extends EmitsOptions = {},
-//   EE extends string = string,
-//   S extends SlotsType = {},
-//   I extends ComponentInjectOptions = {},
-//   II extends string = string,
-//   Props = Readonly<{ [key in PropNames]?: any }>,
-//   Options = {}
-// >(
-//   options: Options &
-//     ComponentOptionsWithArrayProps<
-//       PropNames,
-//       RawBindings,
-//       D,
-//       C,
-//       M,
-//       Mixin,
-//       Extends,
-//       E,
-//       EE,
-//       I,
-//       II,
-//       S
-//     >
-// ): DefineComponent<
-//   Props,
-//   RawBindings,
-//   D,
-//   C,
-//   M,
-//   Mixin,
-//   Extends,
-//   E,
-//   EE,
-//   PublicProps,
-//   ResolveProps<Props, E>,
-//   ExtractDefaultPropTypes<Props>,
-//   I,
-//   II,
-//   S,
-//   Options
-// >
-
-// // overload 4: object format with object props declaration
-// // see `ExtractPropTypes` in ./componentProps.ts
-// export function defineComponent<
-//   // the Readonly constraint allows TS to treat the type of { required: true }
-//   // as constant instead of boolean.
-//   PropsOptions extends Readonly<ComponentPropsOptions>,
-//   RawBindings,
-//   D,
-//   C extends ComputedOptions = {},
-//   M extends MethodOptions = {},
-//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-//   E extends EmitsOptions = {},
-//   EE extends string = string,
-//   I extends ComponentInjectOptions = {},
-//   II extends string = string,
-//   S extends SlotsType = {},
-//   Options = {},
-//   Props = {} extends PropsOptions ? {} : PropsOptions
-// >(
-//   options: Options &
-//     ComponentOptionsWithObjectProps<
-//       PropsOptions,
-//       RawBindings,
-//       D,
-//       C,
-//       M,
-//       Mixin,
-//       Extends,
-//       E,
-//       EE,
-//       I,
-//       II,
-//       S
-//     >
-// ): DefineComponent<
-//   PropsOptions,
-//   RawBindings,
-//   D,
-//   C,
-//   M,
-//   Mixin,
-//   Extends,
-//   E,
-//   EE,
-//   PublicProps,
-//   ResolveProps<PropsOptions, E>,
-//   ExtractDefaultPropTypes<PropsOptions>,
-//   I,
-//   II,
-//   S,
-//   Options
-// >
-
+// overload 3: DefineComponentOptions
 export function defineComponent<
   Props = undefined,
   RawBindings = {},
@@ -540,7 +366,7 @@ export function defineComponent<
   Options
 >
 
-// Overload for {props: ComponentPropsOptions}
+// Overload 4: {props: ComponentPropsOptions}
 export function defineComponent<
   Props = {},
   RawBindings = {},
