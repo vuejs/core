@@ -21,7 +21,7 @@ describe('vmodel', () => {
     vModelText
   )
   // @ts-expect-error
-  expectType<ObjectDirective<any, any, 'trim' | 'number', string>>(vModelText)
+  expectType<ObjectDirective<any, any, 'not-valid', string>>(vModelText)
 })
 
 describe('custom', () => {
