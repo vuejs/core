@@ -101,18 +101,18 @@ export const enum State {
   InClosingTagName,
   AfterClosingTagName,
 
-  // Attributes
-  BeforeAttributeName,
-  InAttributeName,
-  InDirectiveName,
-  InDirectiveArg,
-  InDirectiveDynamicArg,
-  InDirectiveModifier,
-  AfterAttributeName,
-  BeforeAttributeValue,
-  InAttributeValueDq, // "
-  InAttributeValueSq, // '
-  InAttributeValueNq,
+  // Attrs
+  BeforeAttrName,
+  InAttrName,
+  InDirName,
+  InDirArg,
+  InDirDynamicArg,
+  InDirModifier,
+  AfterAttrName,
+  BeforeAttrValue,
+  InAttrValueDq, // "
+  InAttrValueSq, // '
+  InAttrValueNq,
 
   // Declarations
   BeforeDeclaration, // !
@@ -577,8 +577,8 @@ export default class Tokenizer {
   private handleTagName(c: number) {
     this.cbs.onopentagname(this.sectionStart, this.index)
     this.sectionStart = -1
-    this.state = State.BeforeAttributeName
-    this.stateBeforeAttributeName(c)
+    this.state = State.BeforeAttrName
+    this.stateBeforeAttrName(c)
   }
   private stateBeforeClosingTagName(c: number): void {
     if (isWhitespace(c)) {
@@ -612,7 +612,7 @@ export default class Tokenizer {
       this.sectionStart = this.index + 1
     }
   }
-  private stateBeforeAttributeName(c: number): void {
+  private stateBeforeAttrName(c: number): void {
     if (c === CharCodes.Gt) {
       this.cbs.onopentagend(this.index)
       if (this.inRCDATA) {
@@ -636,15 +636,15 @@ export default class Tokenizer {
           this.index
         )
       }
-      this.handleAttributeStart(c)
+      this.handleAttrStart(c)
     }
   }
-  private handleAttributeStart(c: number) {
+  private handleAttrStart(c: number) {
     if (
       c === CharCodes.LowerV &&
       this.buffer.charCodeAt(this.index + 1) === CharCodes.Dash
     ) {
-      this.state = State.InDirectiveName
+      this.state = State.InDirName
       this.sectionStart = this.index
     } else if (
       c === CharCodes.Dot ||
@@ -653,10 +653,10 @@ export default class Tokenizer {
       c === CharCodes.Number
     ) {
       this.cbs.ondirname(this.index, this.index + 1)
-      this.state = State.InDirectiveArg
+      this.state = State.InDirArg
       this.sectionStart = this.index + 1
     } else {
-      this.state = State.InAttributeName
+      this.state = State.InAttrName
       this.sectionStart = this.index
     }
   }
@@ -667,14 +667,14 @@ export default class Tokenizer {
       this.sectionStart = this.index + 1
       this.inRCDATA = false // Reset special state, in case of self-closing special tags
     } else if (!isWhitespace(c)) {
-      this.state = State.BeforeAttributeName
-      this.stateBeforeAttributeName(c)
+      this.state = State.BeforeAttrName
+      this.stateBeforeAttrName(c)
     }
   }
-  private stateInAttributeName(c: number): void {
+  private stateInAttrName(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.onattribname(this.sectionStart, this.index)
-      this.handleAttributeNameEnd(c)
+      this.handleAttrNameEnd(c)
     } else if (
       (__DEV__ || !__BROWSER__) &&
       (c === CharCodes.DoubleQuote ||
@@ -687,38 +687,38 @@ export default class Tokenizer {
       )
     }
   }
-  private stateInDirectiveName(c: number): void {
+  private stateInDirName(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirname(this.sectionStart, this.index)
-      this.handleAttributeNameEnd(c)
+      this.handleAttrNameEnd(c)
     } else if (c === CharCodes.Colon) {
       this.cbs.ondirname(this.sectionStart, this.index)
-      this.state = State.InDirectiveArg
+      this.state = State.InDirArg
       this.sectionStart = this.index + 1
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirname(this.sectionStart, this.index)
-      this.state = State.InDirectiveModifier
+      this.state = State.InDirModifier
       this.sectionStart = this.index + 1
     }
   }
-  private stateInDirectiveArg(c: number): void {
+  private stateInDirArg(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index)
-      this.handleAttributeNameEnd(c)
+      this.handleAttrNameEnd(c)
     } else if (c === CharCodes.LeftSqaure) {
-      this.state = State.InDirectiveDynamicArg
+      this.state = State.InDirDynamicArg
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
-      this.state = State.InDirectiveModifier
+      this.state = State.InDirModifier
       this.sectionStart = this.index + 1
     }
   }
-  private stateInDynamicDirectiveArg(c: number): void {
+  private stateInDynamicDirArg(c: number): void {
     if (c === CharCodes.RightSquare) {
-      this.state = State.InDirectiveArg
+      this.state = State.InDirArg
     } else if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index + 1)
-      this.handleAttributeNameEnd(c)
+      this.handleAttrNameEnd(c)
       if (__DEV__ || !__BROWSER__) {
         this.cbs.onerr(
           ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
@@ -727,48 +727,48 @@ export default class Tokenizer {
       }
     }
   }
-  private stateInDirectiveModifier(c: number): void {
+  private stateInDirModifier(c: number): void {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
-      this.handleAttributeNameEnd(c)
+      this.handleAttrNameEnd(c)
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirmodifier(this.sectionStart, this.index)
       this.sectionStart = this.index + 1
     }
   }
-  private handleAttributeNameEnd(c: number): void {
+  private handleAttrNameEnd(c: number): void {
     this.sectionStart = this.index
-    this.state = State.AfterAttributeName
+    this.state = State.AfterAttrName
     this.cbs.onattribnameend(this.index)
-    this.stateAfterAttributeName(c)
+    this.stateAfterAttrName(c)
   }
-  private stateAfterAttributeName(c: number): void {
+  private stateAfterAttrName(c: number): void {
     if (c === CharCodes.Eq) {
-      this.state = State.BeforeAttributeValue
+      this.state = State.BeforeAttrValue
     } else if (c === CharCodes.Slash || c === CharCodes.Gt) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
       this.sectionStart = -1
-      this.state = State.BeforeAttributeName
-      this.stateBeforeAttributeName(c)
+      this.state = State.BeforeAttrName
+      this.stateBeforeAttrName(c)
     } else if (!isWhitespace(c)) {
       this.cbs.onattribend(QuoteType.NoValue, this.sectionStart)
-      this.handleAttributeStart(c)
+      this.handleAttrStart(c)
     }
   }
-  private stateBeforeAttributeValue(c: number): void {
+  private stateBeforeAttrValue(c: number): void {
     if (c === CharCodes.DoubleQuote) {
-      this.state = State.InAttributeValueDq
+      this.state = State.InAttrValueDq
       this.sectionStart = this.index + 1
     } else if (c === CharCodes.SingleQuote) {
-      this.state = State.InAttributeValueSq
+      this.state = State.InAttrValueSq
       this.sectionStart = this.index + 1
     } else if (!isWhitespace(c)) {
       this.sectionStart = this.index
-      this.state = State.InAttributeValueNq
-      this.stateInAttributeValueNoQuotes(c) // Reconsume token
+      this.state = State.InAttrValueNq
+      this.stateInAttrValueNoQuotes(c) // Reconsume token
     }
   }
-  private handleInAttributeValue(c: number, quote: number) {
+  private handleInAttrValue(c: number, quote: number) {
     if (c === quote || (__BROWSER__ && this.fastForwardTo(quote))) {
       this.cbs.onattribdata(this.sectionStart, this.index)
       this.sectionStart = -1
@@ -776,24 +776,24 @@ export default class Tokenizer {
         quote === CharCodes.DoubleQuote ? QuoteType.Double : QuoteType.Single,
         this.index + 1
       )
-      this.state = State.BeforeAttributeName
+      this.state = State.BeforeAttrName
     } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
     }
   }
-  private stateInAttributeValueDoubleQuotes(c: number): void {
-    this.handleInAttributeValue(c, CharCodes.DoubleQuote)
+  private stateInAttrValueDoubleQuotes(c: number): void {
+    this.handleInAttrValue(c, CharCodes.DoubleQuote)
   }
-  private stateInAttributeValueSingleQuotes(c: number): void {
-    this.handleInAttributeValue(c, CharCodes.SingleQuote)
+  private stateInAttrValueSingleQuotes(c: number): void {
+    this.handleInAttrValue(c, CharCodes.SingleQuote)
   }
-  private stateInAttributeValueNoQuotes(c: number): void {
+  private stateInAttrValueNoQuotes(c: number): void {
     if (isWhitespace(c) || c === CharCodes.Gt) {
       this.cbs.onattribdata(this.sectionStart, this.index)
       this.sectionStart = -1
       this.cbs.onattribend(QuoteType.Unquoted, this.index)
-      this.state = State.BeforeAttributeName
-      this.stateBeforeAttributeName(c)
+      this.state = State.BeforeAttrName
+      this.stateBeforeAttrName(c)
     } else if (
       ((__DEV__ || !__BROWSER__) && c === CharCodes.DoubleQuote) ||
       c === CharCodes.SingleQuote ||
@@ -945,28 +945,28 @@ export default class Tokenizer {
           this.stateCDATASequence(c)
           break
         }
-        case State.InAttributeValueDq: {
-          this.stateInAttributeValueDoubleQuotes(c)
+        case State.InAttrValueDq: {
+          this.stateInAttrValueDoubleQuotes(c)
           break
         }
-        case State.InAttributeName: {
-          this.stateInAttributeName(c)
+        case State.InAttrName: {
+          this.stateInAttrName(c)
           break
         }
-        case State.InDirectiveName: {
-          this.stateInDirectiveName(c)
+        case State.InDirName: {
+          this.stateInDirName(c)
           break
         }
-        case State.InDirectiveArg: {
-          this.stateInDirectiveArg(c)
+        case State.InDirArg: {
+          this.stateInDirArg(c)
           break
         }
-        case State.InDirectiveDynamicArg: {
-          this.stateInDynamicDirectiveArg(c)
+        case State.InDirDynamicArg: {
+          this.stateInDynamicDirArg(c)
           break
         }
-        case State.InDirectiveModifier: {
-          this.stateInDirectiveModifier(c)
+        case State.InDirModifier: {
+          this.stateInDirModifier(c)
           break
         }
         case State.InCommentLike: {
@@ -977,8 +977,8 @@ export default class Tokenizer {
           this.stateInSpecialComment(c)
           break
         }
-        case State.BeforeAttributeName: {
-          this.stateBeforeAttributeName(c)
+        case State.BeforeAttrName: {
+          this.stateBeforeAttrName(c)
           break
         }
         case State.InTagName: {
@@ -997,16 +997,16 @@ export default class Tokenizer {
           this.stateBeforeTagName(c)
           break
         }
-        case State.AfterAttributeName: {
-          this.stateAfterAttributeName(c)
+        case State.AfterAttrName: {
+          this.stateAfterAttrName(c)
           break
         }
-        case State.InAttributeValueSq: {
-          this.stateInAttributeValueSingleQuotes(c)
+        case State.InAttrValueSq: {
+          this.stateInAttrValueSingleQuotes(c)
           break
         }
-        case State.BeforeAttributeValue: {
-          this.stateBeforeAttributeValue(c)
+        case State.BeforeAttrValue: {
+          this.stateBeforeAttrValue(c)
           break
         }
         case State.BeforeClosingTagName: {
@@ -1025,8 +1025,8 @@ export default class Tokenizer {
           this.stateBeforeSpecialT(c)
           break
         }
-        case State.InAttributeValueNq: {
-          this.stateInAttributeValueNoQuotes(c)
+        case State.InAttrValueNq: {
+          this.stateInAttrValueNoQuotes(c)
           break
         }
         case State.InSelfClosingTag: {
@@ -1073,9 +1073,9 @@ export default class Tokenizer {
         this.cbs.ontext(this.sectionStart, this.index)
         this.sectionStart = this.index
       } else if (
-        this.state === State.InAttributeValueDq ||
-        this.state === State.InAttributeValueSq ||
-        this.state === State.InAttributeValueNq
+        this.state === State.InAttrValueDq ||
+        this.state === State.InAttrValueSq ||
+        this.state === State.InAttrValueNq
       ) {
         this.cbs.onattribdata(this.sectionStart, this.index)
         this.sectionStart = this.index
@@ -1111,17 +1111,17 @@ export default class Tokenizer {
       }
     } else if (
       this.state === State.InTagName ||
-      this.state === State.BeforeAttributeName ||
-      this.state === State.BeforeAttributeValue ||
-      this.state === State.AfterAttributeName ||
-      this.state === State.InAttributeName ||
-      this.state === State.InDirectiveName ||
-      this.state === State.InDirectiveArg ||
-      this.state === State.InDirectiveDynamicArg ||
-      this.state === State.InDirectiveModifier ||
-      this.state === State.InAttributeValueSq ||
-      this.state === State.InAttributeValueDq ||
-      this.state === State.InAttributeValueNq ||
+      this.state === State.BeforeAttrName ||
+      this.state === State.BeforeAttrValue ||
+      this.state === State.AfterAttrName ||
+      this.state === State.InAttrName ||
+      this.state === State.InDirName ||
+      this.state === State.InDirArg ||
+      this.state === State.InDirDynamicArg ||
+      this.state === State.InDirModifier ||
+      this.state === State.InAttrValueSq ||
+      this.state === State.InAttrValueDq ||
+      this.state === State.InAttrValueNq ||
       this.state === State.InClosingTagName
     ) {
       /*
