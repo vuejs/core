@@ -1046,6 +1046,7 @@ describe('api: options', () => {
       extends: defineComponent(Extends),
       mixins: [defineComponent(Mixin)],
       render() {
+        // @ts-expect-error options not styled properly
         return `${this.$options.msg1},${this.$options.msg2}`
       }
     })

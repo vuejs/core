@@ -49,6 +49,7 @@ import {
   WritableComputedOptions
 } from '@vue/reactivity'
 import {
+  ComponentObjectPropsOptions,
   ExtractPropTypes,
   ExtractDefaultPropTypes,
   ComponentPropsOptions
@@ -223,8 +224,9 @@ export type ComponentOptionsWithoutProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  PE = Props & EmitsToProps<E>
-> = ComponentOptionsBase<
+  PE = Props & EmitsToProps<E>,
+  Options = {}
+> = (ComponentOptionsBase<
   PE,
   RawBindings,
   D,
@@ -240,9 +242,10 @@ export type ComponentOptionsWithoutProps<
   S
 > & {
   props?: undefined
-} & ThisType<
+}) &
+  ThisType<
     CreateComponentPublicInstance<
-      PE,
+      EmitsToProps<E>,
       RawBindings,
       D,
       C,
@@ -250,11 +253,12 @@ export type ComponentOptionsWithoutProps<
       Mixin,
       Extends,
       E,
-      PE,
+      EmitsToProps<E>,
       {},
       false,
       I,
-      S
+      S,
+      Options
     >
   >
 
@@ -433,8 +437,8 @@ export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
     ? TReturn
     : T[key] extends (...args: any[]) => infer TReturn
-      ? TReturn
-      : never
+    ? TReturn
+    : never
 }
 
 export type ObjectWatchOptionItem = {
@@ -464,10 +468,10 @@ export type InjectToObject<T extends ComponentInjectOptions> =
         [K in T[number]]?: unknown
       }
     : T extends ObjectInjectOptions
-      ? {
-          [K in keyof T]?: unknown
-        }
-      : never
+    ? {
+        [K in keyof T]?: unknown
+      }
+    : never
 
 interface LegacyOptions<
   Props,
@@ -480,7 +484,10 @@ interface LegacyOptions<
   II extends string
 > {
   compatConfig?: CompatConfig
-  props?: ComponentPropsOptions | Readonly<ComponentPropsOptions>
+  props?:
+    | ComponentPropsOptions
+    | Readonly<ComponentPropsOptions>
+    | ComponentObjectPropsOptions
 
   // state
   // Limitation: we cannot expose RawBindings on the `this` context for data
@@ -764,8 +771,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
       const get = isFunction(opt)
         ? opt.bind(publicThis, publicThis)
         : isFunction(opt.get)
-          ? opt.get.bind(publicThis, publicThis)
-          : NOOP
+        ? opt.get.bind(publicThis, publicThis)
+        : NOOP
       if (__DEV__ && get === NOOP) {
         warn(`Computed property "${key}" has no getter.`)
       }
@@ -773,12 +780,12 @@ export function applyOptions(instance: ComponentInternalInstance) {
         !isFunction(opt) && isFunction(opt.set)
           ? opt.set.bind(publicThis)
           : __DEV__
-            ? () => {
-                warn(
-                  `Write operation failed: computed property "${key}" is readonly.`
-                )
-              }
-            : NOOP
+          ? () => {
+              warn(
+                `Write operation failed: computed property "${key}" is readonly.`
+              )
+            }
+          : NOOP
       const c = computed({
         get,
         set

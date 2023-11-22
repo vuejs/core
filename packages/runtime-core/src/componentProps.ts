@@ -49,17 +49,15 @@ export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
   | string[]
 
-type ComponentObjectPropsOptions<P = Data> = {
+export type ComponentObjectPropsOptions<P = Data> = {
   [K in keyof P]: Prop<P[K]> | null
 }
-export default ComponentObjectPropsOptions
-
 export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
 export interface PropOptions<T = any, D = T> {
-  type?: PropType<T> | true | null
+  type?: PropType<T> | true
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
@@ -73,11 +71,14 @@ export interface PropOptions<T = any, D = T> {
   skipFactory?: boolean
 }
 
-export type PropType<T> = PropConstructor<T> | PropConstructor<T>[]
+export type PropType<T> =
+  | PropConstructor<T>
+  | null
+  | Array<PropConstructor<T> | null>
 
 type PropConstructor<T = any> =
   | { new (...args: any[]): T & {} }
-  | { (): T }
+  | { (v?: any): T }
   | PropMethod<T>
 
 type PropMethod<T, TConstructor = any> = [T] extends [
@@ -116,22 +117,22 @@ type DefaultKeys<T> = {
 type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
   : [T] extends [{ type: null | true }]
-    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
-      ? Record<string, any>
-      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
-        ? boolean
-        : [T] extends [DateConstructor | { type: DateConstructor }]
-          ? Date
-          : [T] extends [(infer U)[] | { type: (infer U)[] }]
-            ? U extends DateConstructor
-              ? Date | InferPropType<U>
-              : InferPropType<U>
-            : [T] extends [Prop<infer V, infer D>]
-              ? unknown extends V
-                ? IfAny<V, V, D>
-                : V
-              : T
+  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+  ? Record<string, any>
+  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+  ? boolean
+  : [T] extends [DateConstructor | { type: DateConstructor }]
+  ? Date
+  : [T] extends [(infer U)[] | { type: (infer U)[] }]
+  ? U extends DateConstructor
+    ? Date | InferPropType<U>
+    : InferPropType<U>
+  : [T] extends [Prop<infer V, infer D>]
+  ? unknown extends V
+    ? IfAny<V, V, D>
+    : V
+  : T
 
 /**
  * Extract prop types from a runtime props options object.
@@ -697,7 +698,10 @@ type AssertionResult = {
 /**
  * dev only
  */
-function assertType(value: unknown, type: PropConstructor): AssertionResult {
+function assertType(
+  value: unknown,
+  type: PropConstructor | null
+): AssertionResult {
   let valid
   const expectedType = getType(type)
   if (isSimpleType(expectedType)) {
@@ -705,7 +709,7 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
     valid = t === expectedType.toLowerCase()
     // for primitive wrapper objects
     if (!valid && t === 'object') {
-      valid = value instanceof type
+      valid = value instanceof type!
     }
   } else if (expectedType === 'Object') {
     valid = isObject(value)
@@ -714,7 +718,7 @@ function assertType(value: unknown, type: PropConstructor): AssertionResult {
   } else if (expectedType === 'null') {
     valid = value === null
   } else {
-    valid = value instanceof type
+    valid = value instanceof type!
   }
   return {
     valid,

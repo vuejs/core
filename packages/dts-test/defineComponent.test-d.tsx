@@ -1536,6 +1536,45 @@ describe('overriding public instance props should still allow it to work', () =>
   expectType<(arg: { foo: 'bar' }) => any>(GenericInstance.$slots.default)
 })
 
+describe('should work with props null', () => {
+  defineComponent({
+    props: {
+      test: null
+    }
+  })
+
+  defineComponent({
+    props: {
+      test: {
+        type: null
+      }
+    }
+  })
+
+  defineComponent({
+    props: {
+      test: [Boolean, null]
+    }
+  })
+
+  defineComponent({
+    props: {
+      test: {
+        type: [Boolean, null]
+      }
+    }
+  })
+
+  defineComponent({
+    props: {
+      bar: BigInt,
+      foo: {
+        type: BigInt
+      }
+    }
+  })
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,

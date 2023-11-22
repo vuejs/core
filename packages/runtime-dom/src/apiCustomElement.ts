@@ -21,11 +21,11 @@ import {
   ComponentOptions,
   ComponentInjectOptions,
   SlotsType,
-  DefineComponent,
-  ComponentObjectPropsOptions
+  DefineComponent
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
+import { ComponentObjectPropsOptions } from 'packages/runtime-core/src/componentProps'
 
 export type VueElementConstructor<P = {}> = {
   new (initialProps?: Record<string, any>): VueElement & P

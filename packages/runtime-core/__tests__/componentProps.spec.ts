@@ -497,6 +497,17 @@ describe('component props', () => {
       }
     }
 
+    defineComponent({
+      props: {
+        foo: { type: BigInt }
+      }
+    })
+    defineComponent({
+      props: {
+        foo: BigInt
+      }
+    })
+
     const root = nodeOps.createElement('div')
     render(
       h(Comp, {
@@ -629,6 +640,13 @@ describe('component props', () => {
       },
       render() {}
     }
+
+    defineComponent({
+      props: {
+        foo: [Function, null]
+      }
+    })
+
     const root = nodeOps.createElement('div')
     expect(() => {
       render(h(Comp, { foo: () => {} }), root)
