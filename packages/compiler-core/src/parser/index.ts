@@ -19,6 +19,8 @@ import Tokenizer, {
   CharCodes,
   ParseMode,
   QuoteType,
+  Sequences,
+  State,
   isWhitespace,
   toCharCodes
 } from './Tokenizer'
@@ -72,6 +74,8 @@ let currentVPreBoundary: ElementNode | null = null
 const stack: ElementNode[] = []
 
 const tokenizer = new Tokenizer(stack, {
+  onerr: emitError,
+
   ontext(start, end) {
     onText(getSlice(start, end), start, end)
   },
@@ -121,7 +125,7 @@ const tokenizer = new Tokenizer(stack, {
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
-      loc: getLoc(startIndex),
+      loc: getLoc(startIndex, end),
       codegenNode: undefined
     }
   },
@@ -133,14 +137,23 @@ const tokenizer = new Tokenizer(stack, {
   onclosetag(start, end) {
     const name = getSlice(start, end)
     if (!currentOptions.isVoidTag(name)) {
+      let found = false
       for (let i = 0; i < stack.length; i++) {
         const e = stack[i]
         if (e.tag.toLowerCase() === name.toLowerCase()) {
+          found = true
+          if (i > 0) {
+            emitError(ErrorCodes.X_MISSING_END_TAG, stack[0].loc.start.offset)
+          }
           for (let j = 0; j <= i; j++) {
-            onCloseTag(stack.shift()!, end)
+            const el = stack.shift()!
+            onCloseTag(el, end, j < i)
           }
           break
         }
+      }
+      if (!found) {
+        emitError(ErrorCodes.X_INVALID_END_TAG, backTrack(start, CharCodes.Lt))
       }
     }
   },
@@ -166,7 +179,20 @@ const tokenizer = new Tokenizer(stack, {
 
   ondirname(start, end) {
     const raw = getSlice(start, end)
-    if (inVPre) {
+    const name =
+      raw === '.' || raw === ':'
+        ? 'bind'
+        : raw === '@'
+          ? 'on'
+          : raw === '#'
+            ? 'slot'
+            : raw.slice(2)
+
+    if (!inVPre && name === '') {
+      emitError(ErrorCodes.X_MISSING_DIRECTIVE_NAME, start)
+    }
+
+    if (inVPre || name === '') {
       currentProp = {
         type: NodeTypes.ATTRIBUTE,
         name: raw,
@@ -175,14 +201,6 @@ const tokenizer = new Tokenizer(stack, {
         loc: getLoc(start)
       }
     } else {
-      const name =
-        raw === '.' || raw === ':'
-          ? 'bind'
-          : raw === '@'
-            ? 'on'
-            : raw === '#'
-              ? 'slot'
-              : raw.slice(2)
       currentProp = {
         type: NodeTypes.DIRECTIVE,
         name,
@@ -265,7 +283,7 @@ const tokenizer = new Tokenizer(stack, {
         p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name
       )
     ) {
-      // TODO duplicate
+      emitError(ErrorCodes.DUPLICATE_ATTRIBUTE, start)
     }
   },
 
@@ -285,6 +303,10 @@ const tokenizer = new Tokenizer(stack, {
           // condense whitespaces in class
           if (currentProp!.name === 'class') {
             currentAttrValue = condense(currentAttrValue).trim()
+          }
+
+          if (quote === QuoteType.Unquoted && !currentAttrValue) {
+            emitError(ErrorCodes.MISSING_ATTRIBUTE_VALUE, end)
           }
 
           currentProp!.value = {
@@ -342,16 +364,52 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onend() {
-    if (stack.length > 0) {
-      // has unclosed tag
-      currentOptions.onError(
-        // TODO loc info
-        createCompilerError(ErrorCodes.MISSING_END_TAG_NAME)
-      )
+    const end = currentInput.length
+    // EOF ERRORS
+    if ((__DEV__ || !__BROWSER__) && tokenizer.state !== State.Text) {
+      switch (tokenizer.state) {
+        case State.BeforeTagName:
+        case State.BeforeClosingTagName:
+          emitError(ErrorCodes.EOF_BEFORE_TAG_NAME, end)
+          break
+        case State.Interpolation:
+        case State.InterpolationClose:
+          emitError(
+            ErrorCodes.X_MISSING_INTERPOLATION_END,
+            tokenizer.sectionStart
+          )
+          break
+        case State.InCommentLike:
+          if (tokenizer.currentSequence === Sequences.CdataEnd) {
+            emitError(ErrorCodes.EOF_IN_CDATA, end)
+          } else {
+            emitError(ErrorCodes.EOF_IN_COMMENT, end)
+          }
+          break
+        case State.InTagName:
+        case State.InSelfClosingTag:
+        case State.InClosingTagName:
+        case State.BeforeAttributeName:
+        case State.InAttributeName:
+        case State.InDirectiveName:
+        case State.InDirectiveArg:
+        case State.InDirectiveDynamicArg:
+        case State.InDirectiveModifier:
+        case State.AfterAttributeName:
+        case State.BeforeAttributeValue:
+        case State.InAttributeValueDq: // "
+        case State.InAttributeValueSq: // '
+        case State.InAttributeValueNq:
+          emitError(ErrorCodes.EOF_IN_TAG, end)
+          break
+        default:
+          // console.log(tokenizer.state)
+          break
+      }
     }
-    const end = currentInput.length - 1
     for (let index = 0; index < stack.length; index++) {
-      onCloseTag(stack[index], end)
+      onCloseTag(stack[index], end - 1)
+      emitError(ErrorCodes.X_MISSING_END_TAG, stack[index].loc.start.offset)
     }
   },
 
@@ -359,7 +417,17 @@ const tokenizer = new Tokenizer(stack, {
     if (stack[0].ns !== Namespaces.HTML) {
       onText(getSlice(start, end), start, end)
     } else {
-      // TODO throw error if ns is html
+      emitError(ErrorCodes.CDATA_IN_HTML_CONTENT, start - 9)
+    }
+  },
+
+  onprocessinginstruction(start) {
+    // ignore as we do not have runtime handling for this, only check error
+    if ((stack[0] ? stack[0].ns : currentOptions.ns) === Namespaces.HTML) {
+      emitError(
+        ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
+        start - 1
+      )
     }
   }
 })
@@ -453,9 +521,11 @@ function endOpenTag(end: number) {
 }
 
 function onText(content: string, start: number, end: number) {
-  if (__BROWSER__ && content.includes('&')) {
-    // TODO do not do this in <script> or <style>
-    content = currentOptions.decodeEntities!(content, false)
+  if (__BROWSER__) {
+    const tag = stack[0]?.tag
+    if (tag !== 'script' && tag !== 'style' && content.includes('&')) {
+      content = currentOptions.decodeEntities!(content, false)
+    }
   }
   const parent = stack[0] || currentRoot
   const lastNode = parent.children[parent.children.length - 1]
@@ -472,7 +542,7 @@ function onText(content: string, start: number, end: number) {
   }
 }
 
-function onCloseTag(el: ElementNode, end: number) {
+function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   // attach end position
   if (tokenizer.inSFCRoot) {
     // SFC root tag, end position should be inner end
@@ -481,6 +551,9 @@ function onCloseTag(el: ElementNode, end: number) {
     } else {
       el.loc.end = extend({}, el.loc.start)
     }
+  } else if (isImplied) {
+    // implied close, end should be backtracked to close
+    el.loc.end = tokenizer.getPos(backTrack(end, CharCodes.Lt))
   } else {
     el.loc.end = tokenizer.getPos(end + fastForward(end, CharCodes.Gt) + 1)
   }
@@ -525,6 +598,12 @@ function fastForward(start: number, c: number) {
     offset++
   }
   return offset
+}
+
+function backTrack(index: number, c: number) {
+  let i = index
+  while (currentInput.charCodeAt(i) !== c && i >= 0) i--
+  return i
 }
 
 const specialTemplateDir = new Set(['if', 'else', 'else-if', 'for', 'slot'])
@@ -732,6 +811,10 @@ function dirToAttr(dir: DirectiveNode): AttributeNode {
     }
   }
   return attr
+}
+
+function emitError(code: ErrorCodes, index: number) {
+  currentOptions.onError(createCompilerError(code, getLoc(index, index)))
 }
 
 function reset() {

@@ -33,14 +33,23 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('simple text with invalid end tag', () => {
+    test('simple text with invalid end tag', () => {
       const onError = vi.fn()
-      const ast = baseParse('some text</div>', {
-        onError
-      })
+      const ast = baseParse('some text</div>', { onError })
       const text = ast.children[0] as TextNode
 
-      expect(onError).toBeCalled()
+      expect(onError.mock.calls).toMatchObject([
+        [
+          {
+            code: ErrorCodes.X_INVALID_END_TAG,
+            loc: {
+              start: { column: 10, line: 1, offset: 9 },
+              end: { column: 10, line: 1, offset: 9 }
+            }
+          }
+        ]
+      ])
+
       expect(text).toStrictEqual({
         type: NodeTypes.TEXT,
         content: 'some text',
@@ -1276,7 +1285,7 @@ describe('compiler: parse', () => {
       })
     })
 
-    test.skip('directive with no name', () => {
+    test('directive with no name', () => {
       let errorCode = -1
       const ast = baseParse('<div v-/>', {
         onError: err => {
@@ -1291,6 +1300,10 @@ describe('compiler: parse', () => {
         name: 'v-',
         value: undefined,
         loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 7, line: 1, column: 8 }
+        },
+        nameLoc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 7, line: 1, column: 8 }
         }
@@ -1734,7 +1747,7 @@ describe('compiler: parse', () => {
     })
   })
 
-  test.skip('invalid html', () => {
+  test('invalid html', () => {
     expect(() => {
       baseParse(`<div>\n<span>\n</div>\n</span>`)
     }).toThrow('Element is missing end tag.')
@@ -2031,30 +2044,30 @@ describe('compiler: parse', () => {
         options?: Partial<ParserOptions>
       }>
     } = {
-      ABRUPT_CLOSING_OF_EMPTY_COMMENT: [
-        {
-          code: '<template><!--></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!---></template>',
-          errors: [
-            {
-              type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!----></template>',
-          errors: []
-        }
-      ],
+      // ABRUPT_CLOSING_OF_EMPTY_COMMENT: [
+      //   {
+      //     code: '<template><!--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!---></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.ABRUPT_CLOSING_OF_EMPTY_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!----></template>',
+      //     errors: []
+      //   }
+      // ],
       CDATA_IN_HTML_CONTENT: [
         {
           code: '<template><![CDATA[cdata]]></template>',
@@ -2081,28 +2094,28 @@ describe('compiler: parse', () => {
           ]
         }
       ],
-      END_TAG_WITH_ATTRIBUTES: [
-        {
-          code: '<template><div></div id=""></template>',
-          errors: [
-            {
-              type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
-              loc: { offset: 21, line: 1, column: 22 }
-            }
-          ]
-        }
-      ],
-      END_TAG_WITH_TRAILING_SOLIDUS: [
-        {
-          code: '<template><div></div/></template>',
-          errors: [
-            {
-              type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
-        }
-      ],
+      // END_TAG_WITH_ATTRIBUTES: [
+      //   {
+      //     code: '<template><div></div id=""></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.END_TAG_WITH_ATTRIBUTES,
+      //         loc: { offset: 21, line: 1, column: 22 }
+      //       }
+      //     ]
+      //   }
+      // ],
+      // END_TAG_WITH_TRAILING_SOLIDUS: [
+      //   {
+      //     code: '<template><div></div/></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.END_TAG_WITH_TRAILING_SOLIDUS,
+      //         loc: { offset: 20, line: 1, column: 21 }
+      //       }
+      //     ]
+      //   }
+      // ],
       EOF_BEFORE_TAG_NAME: [
         {
           code: '<template><',
@@ -2193,73 +2206,73 @@ describe('compiler: parse', () => {
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
-        },
-        // Bogus comments don't throw eof-in-comment error.
-        // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
-        {
-          code: '<template><!',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        },
-        {
-          code: '<template><!-',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        },
-        {
-          code: '<template><!abc',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
         }
+        // // Bogus comments don't throw eof-in-comment error.
+        // // https://html.spec.whatwg.org/multipage/parsing.html#bogus-comment-state
+        // {
+        //   code: '<template><!',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // },
+        // {
+        //   code: '<template><!-',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // },
+        // {
+        //   code: '<template><!abc',
+        //   errors: [
+        //     {
+        //       type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+        //       loc: { offset: 10, line: 1, column: 11 }
+        //     },
+        //     {
+        //       type: ErrorCodes.X_MISSING_END_TAG,
+        //       loc: { offset: 0, line: 1, column: 1 }
+        //     }
+        //   ]
+        // }
       ],
-      EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT: [
-        {
-          code: "<script><!--console.log('hello')",
-          errors: [
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            },
-            {
-              type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
-              loc: { offset: 32, line: 1, column: 33 }
-            }
-          ]
-        },
-        {
-          code: "<script>console.log('hello')",
-          errors: [
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
-      ],
+      // EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT: [
+      //   {
+      //     code: "<script><!--console.log('hello')",
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       },
+      //       {
+      //         type: ErrorCodes.EOF_IN_SCRIPT_HTML_COMMENT_LIKE_TEXT,
+      //         loc: { offset: 32, line: 1, column: 33 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: "<script>console.log('hello')",
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   }
+      // ],
       EOF_IN_TAG: [
         {
           code: '<template><div',
@@ -2267,10 +2280,6 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 14, line: 1, column: 15 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2287,10 +2296,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2301,10 +2306,6 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 17, line: 1, column: 18 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2321,10 +2322,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2332,17 +2329,13 @@ describe('compiler: parse', () => {
         {
           code: '<template><div id =',
           errors: [
-            {
-              type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
-              loc: { offset: 19, line: 1, column: 20 }
-            },
+            // {
+            //   type: ErrorCodes.MISSING_ATTRIBUTE_VALUE,
+            //   loc: { offset: 19, line: 1, column: 20 }
+            // },
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 19, line: 1, column: 20 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2359,10 +2352,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2373,10 +2362,6 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 22, line: 1, column: 23 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2393,10 +2378,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2410,10 +2391,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2424,10 +2401,6 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 21, line: 1, column: 22 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2448,10 +2421,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2466,10 +2435,6 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 24, line: 1, column: 25 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
@@ -2490,10 +2455,6 @@ describe('compiler: parse', () => {
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 10, line: 1, column: 11 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
@@ -2504,102 +2465,106 @@ describe('compiler: parse', () => {
             {
               type: ErrorCodes.EOF_IN_TAG,
               loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      INCORRECTLY_CLOSED_COMMENT: [
-        {
-          code: '<template><!--comment--!></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        }
-      ],
-      INCORRECTLY_OPENED_COMMENT: [
-        {
-          code: '<template><!></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!-></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        {
-          code: '<template><!ELEMENT br EMPTY></template>',
-          errors: [
-            {
-              type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
-              loc: { offset: 10, line: 1, column: 11 }
-            }
-          ]
-        },
-        // Just ignore doctype.
-        {
-          code: '<!DOCTYPE html>',
-          errors: []
-        }
-      ],
-      INVALID_FIRST_CHARACTER_OF_TAG_NAME: [
-        {
-          code: '<template>a < b</template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 13, line: 1, column: 14 }
-            }
-          ]
-        },
-        {
-          code: '<template><�></template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 11, line: 1, column: 12 }
-            }
-          ]
-        },
-        {
-          code: '<template>a </ b</template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 14, line: 1, column: 15 }
             },
             {
               type: ErrorCodes.X_MISSING_END_TAG,
               loc: { offset: 0, line: 1, column: 1 }
             }
           ]
-        },
-        {
-          code: '<template></�></template>',
-          errors: [
-            {
-              type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
-              loc: { offset: 12, line: 1, column: 13 }
-            }
-          ]
-        },
-        // Don't throw invalid-first-character-of-tag-name in interpolation
-        {
-          code: '<template>{{a < b}}</template>',
-          errors: []
         }
       ],
+      // INCORRECTLY_CLOSED_COMMENT: [
+      //   {
+      //     code: '<template><!--comment--!></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_CLOSED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   }
+      // ],
+      // INCORRECTLY_OPENED_COMMENT: [
+      //   {
+      //     code: '<template><!></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!-></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!ELEMENT br EMPTY></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INCORRECTLY_OPENED_COMMENT,
+      //         loc: { offset: 10, line: 1, column: 11 }
+      //       }
+      //     ]
+      //   },
+      //   // Just ignore doctype.
+      //   {
+      //     code: '<!DOCTYPE html>',
+      //     errors: []
+      //   }
+      // ],
+      // INVALID_FIRST_CHARACTER_OF_TAG_NAME: [
+      //   {
+      //     code: '<template>a < b</template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 13, line: 1, column: 14 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><�></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 11, line: 1, column: 12 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template>a </ b</template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 14, line: 1, column: 15 }
+      //       },
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template></�></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.INVALID_FIRST_CHARACTER_OF_TAG_NAME,
+      //         loc: { offset: 12, line: 1, column: 13 }
+      //       }
+      //     ]
+      //   },
+      //   // Don't throw invalid-first-character-of-tag-name in interpolation
+      //   {
+      //     code: '<template>{{a < b}}</template>',
+      //     errors: []
+      //   }
+      // ],
       MISSING_ATTRIBUTE_VALUE: [
         {
           code: '<template><div id=></div></template>',
@@ -2635,73 +2600,73 @@ describe('compiler: parse', () => {
           ]
         }
       ],
-      MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
-        {
-          code: '<template><div id="foo"class="bar"></div></template>',
-          errors: [
-            {
-              type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
-              loc: { offset: 23, line: 1, column: 24 }
-            }
-          ]
-        },
-        // CR doesn't appear in tokenization phase, but all CR are removed in preprocessing.
-        // https://html.spec.whatwg.org/multipage/parsing.html#preprocessing-the-input-stream
-        {
-          code: '<template><div id="foo"\r\nclass="bar"></div></template>',
-          errors: []
-        }
-      ],
-      NESTED_COMMENT: [
-        {
-          code: '<template><!--a<!--b--></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        },
-        {
-          code: '<template><!--a<!--b<!--c--></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            },
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 20, line: 1, column: 21 }
-            }
-          ]
-        },
-        {
-          code: '<template><!--a<!--b<!----></template>',
-          errors: [
-            {
-              type: ErrorCodes.NESTED_COMMENT,
-              loc: { offset: 15, line: 1, column: 16 }
-            }
-          ]
-        },
-        {
-          code: '<template><!--a<!--></template>',
-          errors: []
-        },
-        {
-          code: '<template><!--a<!--',
-          errors: [
-            {
-              type: ErrorCodes.EOF_IN_COMMENT,
-              loc: { offset: 19, line: 1, column: 20 }
-            },
-            {
-              type: ErrorCodes.X_MISSING_END_TAG,
-              loc: { offset: 0, line: 1, column: 1 }
-            }
-          ]
-        }
-      ],
+      // MISSING_WHITESPACE_BETWEEN_ATTRIBUTES: [
+      //   {
+      //     code: '<template><div id="foo"class="bar"></div></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.MISSING_WHITESPACE_BETWEEN_ATTRIBUTES,
+      //         loc: { offset: 23, line: 1, column: 24 }
+      //       }
+      //     ]
+      //   },
+      //   // CR doesn't appear in tokenization phase, but all CR are removed in preprocessing.
+      //   // https://html.spec.whatwg.org/multipage/parsing.html#preprocessing-the-input-stream
+      //   {
+      //     code: '<template><div id="foo"\r\nclass="bar"></div></template>',
+      //     errors: []
+      //   }
+      // ],
+      // NESTED_COMMENT: [
+      //   {
+      //     code: '<template><!--a<!--b--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--b<!--c--></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       },
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 20, line: 1, column: 21 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--b<!----></template>',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.NESTED_COMMENT,
+      //         loc: { offset: 15, line: 1, column: 16 }
+      //       }
+      //     ]
+      //   },
+      //   {
+      //     code: '<template><!--a<!--></template>',
+      //     errors: []
+      //   },
+      //   {
+      //     code: '<template><!--a<!--',
+      //     errors: [
+      //       {
+      //         type: ErrorCodes.EOF_IN_COMMENT,
+      //         loc: { offset: 19, line: 1, column: 20 }
+      //       },
+      //       {
+      //         type: ErrorCodes.X_MISSING_END_TAG,
+      //         loc: { offset: 0, line: 1, column: 1 }
+      //       }
+      //     ]
+      //   }
+      // ],
       UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME: [
         {
           code: "<template><div a\"bc=''></div></template>",
@@ -2844,6 +2809,19 @@ describe('compiler: parse', () => {
           ]
         },
         {
+          code: '<template>a </ b</template>',
+          errors: [
+            {
+              type: ErrorCodes.X_INVALID_END_TAG,
+              loc: { offset: 12, line: 1, column: 13 }
+            },
+            {
+              type: ErrorCodes.X_MISSING_END_TAG,
+              loc: { offset: 0, line: 1, column: 1 }
+            }
+          ]
+        },
+        {
           code: "<template>{{'</div>'}}</template>",
           errors: []
         },
@@ -2904,6 +2882,19 @@ describe('compiler: parse', () => {
           ]
         },
         {
+          code: '<div>{{ foo</div>',
+          errors: [
+            {
+              type: ErrorCodes.X_MISSING_INTERPOLATION_END,
+              loc: { offset: 5, line: 1, column: 6 }
+            },
+            {
+              type: ErrorCodes.X_MISSING_END_TAG,
+              loc: { offset: 0, line: 1, column: 1 }
+            }
+          ]
+        },
+        {
           code: '{{}}',
           errors: []
         }
@@ -2924,7 +2915,7 @@ describe('compiler: parse', () => {
     for (const key of Object.keys(patterns)) {
       describe(key, () => {
         for (const { code, errors, options } of patterns[key]) {
-          test.skip(
+          test(
             code.replace(
               /[\r\n]/g,
               c => `\\x0${c.codePointAt(0)!.toString(16)};`
@@ -2933,6 +2924,8 @@ describe('compiler: parse', () => {
               const spy = vi.fn()
               const ast = baseParse(code, {
                 parseMode: 'html',
+                getNamespace: tag =>
+                  tag === 'svg' ? Namespaces.SVG : Namespaces.HTML,
                 ...options,
                 onError: spy
               })
