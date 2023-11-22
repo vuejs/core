@@ -2037,6 +2037,10 @@ describe('compiler: parse', () => {
   })
 
   describe('Errors', () => {
+    // HTML parsing errors as specified at
+    // https://html.spec.whatwg.org/multipage/parsing.html#parse-errors
+    // We ignore some errors that do NOT affect parse result in meaningful ways
+    // but have non-trivial implementation cost.
     const patterns: {
       [key: string]: Array<{
         code: string
