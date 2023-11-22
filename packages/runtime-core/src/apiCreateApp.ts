@@ -43,7 +43,7 @@ export interface App<HostElement = any> {
   component(name: string): Component | undefined
   component(name: string, component: Component | DefineComponent): this
   directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): this
+  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
