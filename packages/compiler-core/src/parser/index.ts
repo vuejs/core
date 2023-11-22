@@ -291,7 +291,6 @@ const tokenizer = new Tokenizer(stack, {
     if (currentElement && currentProp) {
       if (quote !== QuoteType.NoValue) {
         if (__BROWSER__ && currentAttrValue.includes('&')) {
-          // TODO should not do this in <script> or <style>
           currentAttrValue = currentOptions.decodeEntities!(
             currentAttrValue,
             true
