@@ -389,17 +389,17 @@ const tokenizer = new Tokenizer(stack, {
         case State.InTagName:
         case State.InSelfClosingTag:
         case State.InClosingTagName:
-        case State.BeforeAttributeName:
-        case State.InAttributeName:
-        case State.InDirectiveName:
-        case State.InDirectiveArg:
-        case State.InDirectiveDynamicArg:
-        case State.InDirectiveModifier:
-        case State.AfterAttributeName:
-        case State.BeforeAttributeValue:
-        case State.InAttributeValueDq: // "
-        case State.InAttributeValueSq: // '
-        case State.InAttributeValueNq:
+        case State.BeforeAttrName:
+        case State.InAttrName:
+        case State.InDirName:
+        case State.InDirArg:
+        case State.InDirDynamicArg:
+        case State.InDirModifier:
+        case State.AfterAttrName:
+        case State.BeforeAttrValue:
+        case State.InAttrValueDq: // "
+        case State.InAttrValueSq: // '
+        case State.InAttrValueNq:
           emitError(ErrorCodes.EOF_IN_TAG, end)
           break
         default:
