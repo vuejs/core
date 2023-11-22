@@ -248,10 +248,7 @@ export function parse(
         )
       }
     }
-    // only genMap for template when it needs preprocessor
-    if (descriptor.template && descriptor.template.lang) {
-      genMap(descriptor.template)
-    }
+    genMap(descriptor.template)
     genMap(descriptor.script)
     descriptor.styles.forEach(genMap)
     descriptor.customBlocks.forEach(genMap)

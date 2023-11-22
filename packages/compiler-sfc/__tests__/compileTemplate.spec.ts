@@ -158,6 +158,33 @@ test('should work w/ AST from descriptor', () => {
   ).toMatchObject(getPositionInCode(source, `foobar`))
 })
 
+test('should not reuse AST if using custom compiler', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compiler: {
+      parse: () => null as any,
+      // @ts-ignore
+      compile: input => ({ code: input })
+    }
+  })
+
+  // what we really want to assert is that the `input` received by the custom
+  // compiler is the source string, not the AST.
+  expect(code).toBe(template.content)
+})
+
 test('template errors', () => {
   const result = compile({
     filename: 'example.vue',
