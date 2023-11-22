@@ -471,10 +471,12 @@ describe('api: createApp', () => {
 
   test('config.optionMergeStrategies', () => {
     let merged: string
+    const fooMixin = defineComponent({ foo: 'mixin' })
+    const extendsMixin = defineComponent({ foo: 'extends' })
     const App = defineComponent({
       render() {},
-      mixins: [{ foo: 'mixin' }],
-      extends: { foo: 'extends' },
+      mixins: [fooMixin],
+      extends: extendsMixin,
       foo: 'local',
       beforeCreate() {
         merged = this.$options.foo

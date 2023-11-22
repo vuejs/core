@@ -23,7 +23,7 @@ import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
 import { isFunction, NO, isObject, extend } from '@vue/shared'
-import { DefineComponent, version } from '.'
+import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'
 import { ObjectEmitsOptions } from './componentEmits'
@@ -38,7 +38,7 @@ export interface App<HostElement = any> {
   ): this
   use<Options>(plugin: Plugin<Options>, options: Options): this
 
-  mixin(mixin: ComponentOptions): this
+  mixin(mixin: ComponentOptions & Record<string, any>): this
   component(name: string): Component | undefined
   component(name: string, component: Component): this
   directive(name: string): Directive | undefined

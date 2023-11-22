@@ -262,7 +262,7 @@ export type ComponentPublicInstance<
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
   $el: any
-  $options: Options & MergedComponentOptionsOverride
+  $options: Options & Record<string, any> & MergedComponentOptionsOverride
   $forceUpdate: () => void
   $nextTick: typeof nextTick
   $watch<T extends string | ((...args: any) => any)>(
