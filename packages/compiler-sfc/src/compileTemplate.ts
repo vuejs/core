@@ -173,7 +173,7 @@ function doCompileTemplate({
   ssr = false,
   ssrCssVars,
   isProd = false,
-  compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
+  compiler,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
@@ -205,9 +205,19 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
+  const defaultCompiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM
+  compiler = compiler || defaultCompiler
+
+  if (compiler !== defaultCompiler) {
+    // user using custom compiler, this means we cannot reuse the AST from
+    // the descriptor as they might be different.
+    inAST = undefined
+  }
+
   if (inAST?.codegenNode) {
     // input AST has codegenNode - it has already been transformed and cannot
-    // be reused. We need to parse a fresh one.
+    // be reused. We need to parse a fresh one. Can't just use `source` here
+    // since we need the AST location info to be relative to the entire SFC.
     const newAST = compiler.parse(inAST.source, {
       parseMode: 'sfc',
       onError: e => errors.push(e)
@@ -241,7 +251,7 @@ function doCompileTemplate({
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
   // reflect the original line numbers.
-  if (inMap) {
+  if (inMap && !inAST) {
     if (map) {
       map = mapLines(inMap, map)
     }
