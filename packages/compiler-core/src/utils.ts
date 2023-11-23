@@ -36,7 +36,7 @@ import {
   GUARD_REACTIVE_PROPS,
   WITH_MEMO
 } from './runtimeHelpers'
-import { isString, isObject, extend, NOOP } from '@vue/shared'
+import { isString, isObject, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -181,7 +181,11 @@ export function advancePositionWithClone(
   numberOfCharacters: number = source.length
 ): Position {
   return advancePositionWithMutation(
-    extend({}, pos),
+    {
+      offset: pos.offset,
+      line: pos.line,
+      column: pos.column
+    },
     source,
     numberOfCharacters
   )
