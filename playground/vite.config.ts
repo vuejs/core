@@ -7,8 +7,10 @@ export default defineConfig({
   build: {
     target: 'esnext'
   },
+  clearScreen: false,
   plugins: [
     Vue({
+      isProduction: true,
       template: {
         compiler: CompilerVapor
       }

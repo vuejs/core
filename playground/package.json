@@ -10,8 +10,8 @@
     "vue": "workspace:*"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^4.4.0",
-    "vite": "^4.5.0",
+    "@vitejs/plugin-vue": "link:/Users/kevin/Developer/open-source/vite-plugin-vue/packages/plugin-vue",
+    "vite": "^5.0.2",
     "vite-plugin-inspect": "^0.7.42"
   }
 }

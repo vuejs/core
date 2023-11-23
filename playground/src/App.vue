@@ -1,19 +1,42 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const count = ref(0)
+const double = computed(() => count.value * 2)
+
+const inc = () => count.value++
+const dec = () => count.value--
+
+// @ts-expect-error
+globalThis.count = count
+// @ts-expect-error
+globalThis.double = double
+// @ts-expect-error
+globalThis.inc = inc
+// @ts-expect-error
+globalThis.dec = dec
 </script>
 
 <template>
   <div>
-    <h1 class="red">Hello world</h1>
-    <!-- {{ count }} -->
-    <button style="font-weight: bold">Inc</button>
+    <h1 class="red">Counter</h1>
+    <div>The number is {{ count }}.</div>
+    <div>{{ count }} * 2 = {{ double }}</div>
+    <div style="display: flex; gap: 8px">
+      <button @click="inc">inc</button>
+      <button @click="dec">dec</button>
+    </div>
   </div>
 </template>
 
 <style>
 .red {
   color: red;
+}
+
+html {
+  color-scheme: dark;
+  background-color: #000;
+  padding: 10px;
 }
 </style>

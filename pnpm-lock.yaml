@@ -395,6 +395,9 @@ importers:
 
   packages/template-explorer:
     dependencies:
+      '@vue/compiler-vapor':
+        specifier: workspace:^
+        version: link:../compiler-vapor
       monaco-editor:
         specifier: ^0.44.0
         version: 0.44.0
@@ -451,14 +454,14 @@ importers:
         version: link:../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: ^4.4.0
-        version: 4.4.0(vite@4.5.0)(vue@packages+vue)
+        specifier: link:/Users/kevin/Developer/open-source/vite-plugin-vue/packages/plugin-vue
+        version: link:../../../vite-plugin-vue/packages/plugin-vue
       vite:
-        specifier: ^4.5.0
-        version: 4.5.0(@types/node@20.9.0)(terser@5.22.0)
+        specifier: ^5.0.2
+        version: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
       vite-plugin-inspect:
         specifier: ^0.7.42
-        version: 0.7.42(rollup@4.1.4)(vite@4.5.0)
+        version: 0.7.42(rollup@4.1.4)(vite@5.0.2)
 
 packages:
 
@@ -1726,17 +1729,6 @@ packages:
 
   /@ungap/structured-clone@1.2.0:
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
-    dev: true
-
-  /@vitejs/plugin-vue@4.4.0(vite@4.5.0)(vue@packages+vue):
-    resolution: {integrity: sha512-xdguqb+VUwiRpSg+nsc2HtbAUSGak25DXYvpQQi4RVU1Xq1uworyoH/md9Rfd8zMmPR/pSghr309QNcftUVseg==}
-    engines: {node: ^14.18.0 || >=16.0.0}
-    peerDependencies:
-      vite: ^4.0.0
-      vue: ^3.2.25
-    dependencies:
-      vite: 4.5.0(@types/node@20.9.0)(terser@5.22.0)
-      vue: link:packages/vue
     dev: true
 
   /@vitejs/plugin-vue@4.4.0(vite@5.0.0)(vue@packages+vue):
@@ -5337,14 +5329,6 @@ packages:
       rollup: 4.1.4
     dev: true
 
-  /rollup@3.29.4:
-    resolution: {integrity: sha512-oWzmBZwvYrU0iJHtDmhsm662rC15FRXmcjCk1xD771dFDx5jJ02ufAQQTn0etB2emNk4J9EZg/yWKpsn9BWGRw==}
-    engines: {node: '>=14.18.0', npm: '>=8.0.0'}
-    hasBin: true
-    optionalDependencies:
-      fsevents: 2.3.3
-    dev: true
-
   /rollup@4.1.4:
     resolution: {integrity: sha512-U8Yk1lQRKqCkDBip/pMYT+IKaN7b7UesK3fLSTuHBoBJacCE+oBqo/dfG/gkUdQNNB2OBmRP98cn2C2bkYZkyw==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -6187,7 +6171,7 @@ packages:
       mlly: 1.4.2
       pathe: 1.1.1
       picocolors: 1.0.0
-      vite: 5.0.0(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -6199,7 +6183,7 @@ packages:
       - terser
     dev: true
 
-  /vite-plugin-inspect@0.7.42(rollup@4.1.4)(vite@4.5.0):
+  /vite-plugin-inspect@0.7.42(rollup@4.1.4)(vite@5.0.2):
     resolution: {integrity: sha512-JCyX86wr3siQc+p9Kd0t8VkFHAJag0RaQVIpdFGSv5FEaePEVB6+V/RGtz2dQkkGSXQzRWrPs4cU3dRKg32bXw==}
     engines: {node: '>=14'}
     peerDependencies:
@@ -6217,18 +6201,18 @@ packages:
       open: 9.1.0
       picocolors: 1.0.0
       sirv: 2.0.3
-      vite: 4.5.0(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
     transitivePeerDependencies:
       - rollup
       - supports-color
     dev: true
 
-  /vite@4.5.0(@types/node@20.9.0)(terser@5.22.0):
-    resolution: {integrity: sha512-ulr8rNLA6rkyFAlVWw2q5YJ91v098AFQ2R0PRFwPzREXOUJQPtFUG0t+/ZikhaOCDqFoDhN6/v8Sq0o4araFAw==}
-    engines: {node: ^14.18.0 || >=16.0.0}
+  /vite@5.0.0(@types/node@20.9.0)(terser@5.22.0):
+    resolution: {integrity: sha512-ESJVM59mdyGpsiNAeHQOR/0fqNoOyWPYesFto8FFZugfmhdHx8Fzd8sF3Q/xkVhZsyOxHfdM7ieiVAorI9RjFw==}
+    engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     peerDependencies:
-      '@types/node': '>= 14'
+      '@types/node': ^18.0.0 || >=20.0.0
       less: '*'
       lightningcss: ^1.21.0
       sass: '*'
@@ -6252,16 +6236,16 @@ packages:
         optional: true
     dependencies:
       '@types/node': 20.9.0
-      esbuild: 0.18.20
+      esbuild: 0.19.5
       postcss: 8.4.31
-      rollup: 3.29.4
+      rollup: 4.4.1
       terser: 5.22.0
     optionalDependencies:
       fsevents: 2.3.3
     dev: true
 
-  /vite@5.0.0(@types/node@20.9.0)(terser@5.22.0):
-    resolution: {integrity: sha512-ESJVM59mdyGpsiNAeHQOR/0fqNoOyWPYesFto8FFZugfmhdHx8Fzd8sF3Q/xkVhZsyOxHfdM7ieiVAorI9RjFw==}
+  /vite@5.0.2(@types/node@20.9.0)(terser@5.22.0):
+    resolution: {integrity: sha512-6CCq1CAJCNM1ya2ZZA7+jS2KgnhbzvxakmlIjN24cF/PXhRMzpM/z8QgsVJA/Dm5fWUWnVEsmtBoMhmerPxT0g==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     peerDependencies:
