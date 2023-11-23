@@ -2,16 +2,35 @@
 
 exports[`basic 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { template } from 'vue/vapor'
-const t0 = template(\`<h1 id=\\"title\\">Counter</h1>\`)
+import { watchEffect } from 'vue'
+import { template, setAttr, setText, children, on, insert } from 'vue/vapor'
+const t0 = template(\`<h1 id=\\"title\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button>\`)
+import { ref, computed } from 'vue'
+
 
 export default /*#__PURE__*/_defineComponent({
   setup(__props) {
 
-console.log('script')
+const count = ref(0)
+const double = computed(() => count.value * 2)
+
+const increment = () => count.value++
 
 return (() => {
 const root = t0()
+const n1 = document.createTextNode(count.value)
+insert(n1, n0)
+const n3 = document.createTextNode(double.value)
+insert(n3, n2)
+watchEffect(() => {
+setText(n1, undefined, count.value)
+})
+watchEffect(() => {
+setText(n3, undefined, double.value)
+})
+watchEffect(() => {
+on(n4, \\"click\\", increment)
+})
 return root
 })();
 }

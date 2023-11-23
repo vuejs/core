@@ -8,7 +8,7 @@ test('basic', async () => {
   const script = compileScript(descriptor, {
     id: 'counter.vue',
     inlineTemplate: true,
-    templateOptions: { compiler: CompilerVapor }
+    templateOptions: { compiler: CompilerVapor },
   })
   expect(script.content).matchSnapshot()
 })

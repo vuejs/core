@@ -198,8 +198,6 @@ export function transform(
   ctx.registerTemplate()
   ir.children = ctx.children
 
-  console.log(JSON.stringify(ir, undefined, 2))
-
   return ir
 }
 
