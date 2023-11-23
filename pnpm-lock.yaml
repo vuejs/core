@@ -36,8 +36,8 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       '@types/node':
-        specifier: ^20.9.0
-        version: 20.9.0
+        specifier: ^20.9.2
+        version: 20.9.4
       '@typescript-eslint/parser':
         specifier: ^6.11.0
         version: 6.11.0(eslint@8.54.0)(typescript@5.2.2)
@@ -144,14 +144,14 @@ importers:
         specifier: ^2.6.2
         version: 2.6.2
       tsx:
-        specifier: ^4.1.3
-        version: 4.1.3
+        specifier: ^4.1.4
+        version: 4.4.0
       typescript:
         specifier: ^5.2.2
         version: 5.2.2
       vite:
         specifier: ^5.0.0
-        version: 5.0.0(@types/node@20.9.0)(terser@5.22.0)
+        version: 5.0.0(@types/node@20.9.4)(terser@5.22.0)
       vitest:
         specifier: ^0.34.6
         version: 0.34.6(jsdom@22.1.0)(terser@5.22.0)
@@ -162,7 +162,7 @@ importers:
         specifier: ^7.23.3
         version: 7.23.3
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -178,10 +178,10 @@ importers:
   packages/compiler-dom:
     dependencies:
       '@vue/compiler-core':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-core
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
 
   packages/compiler-sfc:
@@ -190,19 +190,19 @@ importers:
         specifier: ^7.23.3
         version: 7.23.3
       '@vue/compiler-core':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-core
       '@vue/compiler-dom':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-dom
       '@vue/compiler-ssr':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-ssr
       '@vue/reactivity-transform':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../reactivity-transform
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -227,8 +227,8 @@ importers:
         specifier: ^2.0.0
         version: 2.0.0
       lru-cache:
-        specifier: ^10.0.2
-        version: 10.0.2
+        specifier: ^10.0.3
+        version: 10.1.0
       merge-source-map:
         specifier: ^1.1.0
         version: 1.1.0
@@ -251,10 +251,10 @@ importers:
   packages/compiler-ssr:
     dependencies:
       '@vue/compiler-dom':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-dom
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
 
   packages/compiler-vapor:
@@ -297,7 +297,7 @@ importers:
   packages/reactivity:
     dependencies:
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
 
   packages/reactivity-transform:
@@ -306,10 +306,10 @@ importers:
         specifier: ^7.23.3
         version: 7.23.3
       '@vue/compiler-core':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-core
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       estree-walker:
         specifier: ^2.0.2
@@ -328,19 +328,19 @@ importers:
   packages/runtime-core:
     dependencies:
       '@vue/reactivity':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../reactivity
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
 
   packages/runtime-dom:
     dependencies:
       '@vue/runtime-core':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../runtime-core
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       csstype:
         specifier: ^3.1.2
@@ -349,10 +349,10 @@ importers:
   packages/runtime-test:
     dependencies:
       '@vue/runtime-core':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../runtime-core
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
 
   packages/runtime-vapor: {}
@@ -360,13 +360,13 @@ importers:
   packages/server-renderer:
     dependencies:
       '@vue/compiler-ssr':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-ssr
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       vue:
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../vue
 
   packages/sfc-playground:
@@ -389,7 +389,7 @@ importers:
         version: 4.4.0(vite@5.0.0)(vue@packages+vue)
       vite:
         specifier: ^5.0.0
-        version: 5.0.0(@types/node@20.9.0)(terser@5.22.0)
+        version: 5.0.0(@types/node@20.9.4)(terser@5.22.0)
 
   packages/shared: {}
 
@@ -408,25 +408,25 @@ importers:
   packages/vue:
     dependencies:
       '@vue/compiler-dom':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-dom
       '@vue/compiler-sfc':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../compiler-sfc
       '@vue/compiler-vapor':
         specifier: workspace:*
         version: link:../compiler-vapor
       '@vue/runtime-dom':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../runtime-dom
       '@vue/runtime-vapor':
         specifier: workspace:*
         version: link:../runtime-vapor
       '@vue/server-renderer':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../server-renderer
       '@vue/shared':
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../shared
       typescript:
         specifier: '*'
@@ -444,7 +444,7 @@ importers:
         specifier: ^1.0.2
         version: 1.0.2
       vue:
-        specifier: 3.3.8
+        specifier: workspace:*
         version: link:../vue
 
   playground:
@@ -458,7 +458,7 @@ importers:
         version: link:../../../vite-plugin-vue/packages/plugin-vue
       vite:
         specifier: ^5.0.2
-        version: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
+        version: 5.0.2(@types/node@20.9.4)(terser@5.22.0)
       vite-plugin-inspect:
         specifier: ^0.7.42
         version: 0.7.42(rollup@4.1.4)(vite@5.0.2)
@@ -1576,8 +1576,8 @@ packages:
     resolution: {integrity: sha512-U3PUjAudAdJBeC2pgN8uTIKgxrb4nlDF3SF0++EldXQvQBGkpFZMSnwQiIoDU77tv45VgNkl/L4ouD+rEomujw==}
     dev: true
 
-  /@types/node@20.9.0:
-    resolution: {integrity: sha512-nekiGu2NDb1BcVofVcEKMIwzlx4NjHlcjhoxxKBNLtz15Y1z7MYf549DFvkHSId02Ax6kGwWntIBPC3l/JZcmw==}
+  /@types/node@20.9.4:
+    resolution: {integrity: sha512-wmyg8HUhcn6ACjsn8oKYjkN/zUzQeNtMy44weTJSM6p4MMzEOuKbA3OjJ267uPCOW7Xex9dyrNTful8XTQYoDA==}
     dependencies:
       undici-types: 5.26.5
     dev: true
@@ -1598,7 +1598,7 @@ packages:
     resolution: {integrity: sha512-Km7XAtUIduROw7QPgvcft0lIupeG8a8rdKL8RiSyKvlE7dYY31fEn41HVuQsRFDuROA8tA4K2UVL+WdfFmErBA==}
     requiresBuild: true
     dependencies:
-      '@types/node': 20.9.0
+      '@types/node': 20.9.4
     dev: true
     optional: true
 
@@ -1738,7 +1738,7 @@ packages:
       vite: ^4.0.0
       vue: ^3.2.25
     dependencies:
-      vite: 5.0.0(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.0(@types/node@20.9.4)(terser@5.22.0)
       vue: link:packages/vue
     dev: true
 
@@ -3573,7 +3573,7 @@ packages:
     resolution: {integrity: sha512-+K84LB1DYwMHoHSgaOY/Jfhw3ucPmSET5v98Ke/HdNSw4a0UktWzyW1mjhjpuxxTqOOsfWT/7iVshHmVZ4IpOA==}
     engines: {node: ^16.14.0 || >=18.0.0}
     dependencies:
-      lru-cache: 10.0.2
+      lru-cache: 10.1.0
     dev: true
 
   /html-encoding-sniffer@3.0.0:
@@ -4283,11 +4283,9 @@ packages:
       get-func-name: 2.0.2
     dev: true
 
-  /lru-cache@10.0.2:
-    resolution: {integrity: sha512-Yj9mA8fPiVgOUpByoTZO5pNrcl5Yk37FcSHsUINpAsaBIEZIuqcCclDZJCVxqQShDsmYX8QG63svJiTbOATZwg==}
+  /lru-cache@10.1.0:
+    resolution: {integrity: sha512-/1clY/ui8CzjKFyjdvwPWJUYKiFVXG2I2cY0ssG7h4+hwk+XOIX7ZSG9Q7TW8TW3Kp3BUSqgFWBLgL4PJ+Blag==}
     engines: {node: 14 || >=16.14}
-    dependencies:
-      semver: 7.5.4
     dev: true
 
   /lru-cache@5.1.1:
@@ -4774,7 +4772,7 @@ packages:
     resolution: {integrity: sha512-MkhCqzzBEpPvxxQ71Md0b1Kk51W01lrYvlMzSUaIzNsODdd7mqhiimSZlr+VegAz5Z6Vzt9Xg2ttE//XBhH3EQ==}
     engines: {node: '>=16 || 14 >=14.17'}
     dependencies:
-      lru-cache: 10.0.2
+      lru-cache: 10.1.0
       minipass: 7.0.4
     dev: true
 
@@ -5967,14 +5965,13 @@ packages:
       typescript: 5.2.2
     dev: true
 
-  /tsx@4.1.3:
-    resolution: {integrity: sha512-DLiTy1eri4nhqgVVy+15YKC6Ij2BMFxGdDMkVrSDkNuISUJLv7n0NgZpFLpdM+qmwXar34XllgYi4cxkNMbDwQ==}
+  /tsx@4.4.0:
+    resolution: {integrity: sha512-4fwcEjRUxW20ciSaMB8zkpGwCPxuRGnadDuj/pBk5S9uT29zvWz15PK36GrKJo45mSJomDxVejZ73c6lr3811Q==}
     engines: {node: '>=18.0.0'}
     hasBin: true
     dependencies:
       esbuild: 0.18.20
       get-tsconfig: 4.7.2
-      source-map-support: 0.5.21
     optionalDependencies:
       fsevents: 2.3.3
     dev: true
@@ -6161,7 +6158,7 @@ packages:
     engines: {node: '>= 0.8'}
     dev: true
 
-  /vite-node@0.34.6(@types/node@20.9.0)(terser@5.22.0):
+  /vite-node@0.34.6(@types/node@20.9.4)(terser@5.22.0):
     resolution: {integrity: sha512-nlBMJ9x6n7/Amaz6F3zJ97EBwR2FkzhBRxF5e+jE6LA3yi6Wtc2lyTij1OnDMIr34v5g/tVQtsVAzhT0jc5ygA==}
     engines: {node: '>=v14.18.0'}
     hasBin: true
@@ -6171,7 +6168,7 @@ packages:
       mlly: 1.4.2
       pathe: 1.1.1
       picocolors: 1.0.0
-      vite: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.2(@types/node@20.9.4)(terser@5.22.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -6201,13 +6198,13 @@ packages:
       open: 9.1.0
       picocolors: 1.0.0
       sirv: 2.0.3
-      vite: 5.0.2(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.2(@types/node@20.9.4)(terser@5.22.0)
     transitivePeerDependencies:
       - rollup
       - supports-color
     dev: true
 
-  /vite@5.0.0(@types/node@20.9.0)(terser@5.22.0):
+  /vite@5.0.0(@types/node@20.9.4)(terser@5.22.0):
     resolution: {integrity: sha512-ESJVM59mdyGpsiNAeHQOR/0fqNoOyWPYesFto8FFZugfmhdHx8Fzd8sF3Q/xkVhZsyOxHfdM7ieiVAorI9RjFw==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -6235,7 +6232,7 @@ packages:
       terser:
         optional: true
     dependencies:
-      '@types/node': 20.9.0
+      '@types/node': 20.9.4
       esbuild: 0.19.5
       postcss: 8.4.31
       rollup: 4.4.1
@@ -6244,7 +6241,7 @@ packages:
       fsevents: 2.3.3
     dev: true
 
-  /vite@5.0.2(@types/node@20.9.0)(terser@5.22.0):
+  /vite@5.0.2(@types/node@20.9.4)(terser@5.22.0):
     resolution: {integrity: sha512-6CCq1CAJCNM1ya2ZZA7+jS2KgnhbzvxakmlIjN24cF/PXhRMzpM/z8QgsVJA/Dm5fWUWnVEsmtBoMhmerPxT0g==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
@@ -6272,7 +6269,7 @@ packages:
       terser:
         optional: true
     dependencies:
-      '@types/node': 20.9.0
+      '@types/node': 20.9.4
       esbuild: 0.19.5
       postcss: 8.4.31
       rollup: 4.4.1
@@ -6314,7 +6311,7 @@ packages:
     dependencies:
       '@types/chai': 4.3.9
       '@types/chai-subset': 1.3.4
-      '@types/node': 20.9.0
+      '@types/node': 20.9.4
       '@vitest/expect': 0.34.6
       '@vitest/runner': 0.34.6
       '@vitest/snapshot': 0.34.6
@@ -6334,8 +6331,8 @@ packages:
       strip-literal: 1.3.0
       tinybench: 2.5.1
       tinypool: 0.7.0
-      vite: 5.0.0(@types/node@20.9.0)(terser@5.22.0)
-      vite-node: 0.34.6(@types/node@20.9.0)(terser@5.22.0)
+      vite: 5.0.0(@types/node@20.9.4)(terser@5.22.0)
+      vite-node: 0.34.6(@types/node@20.9.4)(terser@5.22.0)
       why-is-node-running: 2.2.2
     transitivePeerDependencies:
       - less

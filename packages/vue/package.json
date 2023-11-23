@@ -116,13 +116,13 @@
   },
   "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/vue#readme",
   "dependencies": {
-    "@vue/shared": "3.3.8",
-    "@vue/compiler-dom": "3.3.8",
-    "@vue/runtime-dom": "3.3.8",
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-dom": "workspace:*",
+    "@vue/runtime-dom": "workspace:*",
     "@vue/runtime-vapor": "workspace:*",
     "@vue/compiler-vapor": "workspace:*",
-    "@vue/compiler-sfc": "3.3.8",
-    "@vue/server-renderer": "3.3.8"
+    "@vue/compiler-sfc": "workspace:*",
+    "@vue/server-renderer": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "*"
