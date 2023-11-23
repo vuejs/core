@@ -112,3 +112,8 @@ export function setDynamicProp(el: Element, key: string, val: any) {
     setAttr(el, key, void 0, val)
   }
 }
+
+type Children = Record<number, [ChildNode, Children]>
+export function children(n: ChildNode): Children {
+  return { ...Array.from(n.childNodes).map(n => [n, children(n)]) }
+}
