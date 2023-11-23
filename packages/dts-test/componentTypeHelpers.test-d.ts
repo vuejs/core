@@ -78,7 +78,6 @@ const fakeClassComponent = {} as {
   }
 }
 
-defineComponent
 const functionalComponent =
   (
     props: { a: string },
@@ -519,6 +518,180 @@ describe('ComponentData', () => {
     expectType<{}>(fc)
     // @ts-expect-error checking if is not any
     expectType<{ random: number }>(fc)
+  })
+
+  describe('complex cases', () => {
+    const setup = getData(
+      defineComponent({
+        setup() {
+          return {
+            a: 1
+          }
+        }
+      })
+    )
+    expectType<{ a: number }>(setup)
+    // @ts-expect-error
+    expectType<{ a: string }>(setup)
+
+    const dataSetup = getData(
+      defineComponent({
+        data: () => ({ a: 1 }),
+        setup() {
+          return {
+            b: 1
+          }
+        }
+      })
+    )
+    expectType<{ a: number; b: number }>(dataSetup)
+    // @ts-expect-error
+    expectType<{ a: string }>(dataSetup)
+
+    const setupOverride = getData(
+      defineComponent({
+        data: () => ({ foo: 1 }),
+
+        setup() {
+          return {
+            foo: '1'
+          }
+        }
+      })
+    )
+    expectType<{ foo: string }>(setupOverride)
+    // @ts-expect-error
+    expectType<{ foo: number }>(setupOverride)
+
+    const mixin = getData(
+      defineComponent({
+        mixins: [
+          defineComponent(propsOptions),
+          defineComponent(arrayOptions),
+          defineComponent(noPropsOptions)
+        ]
+      })
+    )
+
+    expectType<{
+      test: number
+      testN: number
+      testA: number
+    }>(mixin)
+    // @ts-expect-error
+    expectType<{ test: 'string' }>(mixin)
+
+    const mixinData = getData({
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      data() {
+        return { foo: 1 }
+      }
+    })
+    expectType<{
+      test: number
+      testN: number
+      testA: number
+      foo: number
+    }>(mixinData)
+    // @ts-expect-error
+    expectType<{ test: string }>(mixinData)
+
+    const mixinDataOverride = getData({
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      data() {
+        return { test: 'string' }
+      }
+    })
+    expectType<{
+      test: string
+      testN: number
+      testA: number
+    }>(mixinDataOverride)
+    // @ts-expect-error
+    expectType<{ test: number }>(mixinDataOverride)
+
+    const mixinSetup = getData({
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      setup() {
+        return { foo: 1 }
+      }
+    })
+    expectType<{
+      test: number
+      testN: number
+      testA: number
+      foo: number
+    }>(mixinSetup)
+    // @ts-expect-error
+    expectType<{ test: string }>(mixinSetup)
+
+    const mixinSetupOverride = getData({
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      setup() {
+        return { test: 'string' }
+      }
+    })
+
+    expectType<{
+      test: string
+      testN: number
+      testA: number
+    }>(mixinSetupOverride)
+    // @ts-expect-error
+    expectType<{ test: number }>(mixinSetupOverride)
+
+    const mixinOverride = getData({
+      mixins: [
+        defineComponent(propsOptions),
+        defineComponent(arrayOptions),
+        defineComponent(noPropsOptions)
+      ],
+      setup() {
+        return { test: 'string' }
+      },
+      data() {
+        return { test: { a: 1 } }
+      }
+    })
+
+    expectType<{
+      test: string
+      testN: number
+      testA: number
+    }>(mixinOverride)
+    // @ts-expect-error
+    expectType<{ test: number }>(mixinOverride)
+
+    const extend = getData(
+      defineComponent({
+        extends: defineComponent(propsOptions),
+        data() {
+          return { foo: 1 }
+        }
+      })
+    )
+    expectType<{
+      test: number
+      foo: number
+    }>(extend)
+    // @ts-expect-error
+    expectType<{ test: string }>(extend)
   })
 })
 
