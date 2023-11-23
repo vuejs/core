@@ -986,8 +986,6 @@ export function compileScript(
     )
   }
 
-  ctx.s.trim()
-
   return {
     ...scriptSetup,
     bindings: ctx.bindingMetadata,

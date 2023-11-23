@@ -14,7 +14,8 @@ return { a }
 `;
 
 exports[`SFC analyze <script> bindings > auto name inference > do not overwrite manual name (call) 1`] = `
-"import { defineComponent } from 'vue'
+"
+        import { defineComponent } from 'vue'
         const __default__ = defineComponent({
           name: 'Baz'
         })
@@ -30,7 +31,8 @@ return { a, defineComponent }
 `;
 
 exports[`SFC analyze <script> bindings > auto name inference > do not overwrite manual name (object) 1`] = `
-"const __default__ = {
+"
+        const __default__ = {
           name: 'Baz'
         }
         
@@ -45,7 +47,8 @@ return { a }
 `;
 
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > export call expression as default 1`] = `
-"function fn() {
+"
+      function fn() {
         return \\"hello, world\\";
       }
       const __default__ = fn();
@@ -63,7 +66,8 @@ return { fn }
 `;
 
 exports[`SFC compile <script setup> > <script> and <script setup> co-usage > keep original semi style 1`] = `
-"export default {
+"
+export default {
   props: ['item'],
   emits: ['change'],
   setup(__props, { expose: __expose, emit: __emit }) {
@@ -535,7 +539,8 @@ return { get a() { return a }, set a(v) { a = v } }
 `;
 
 exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 1`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
   __expose();
 async function foo() { await bar }
@@ -546,7 +551,8 @@ return { foo }
 `;
 
 exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 2`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const foo = async () => { await bar }
@@ -557,7 +563,8 @@ return { foo }
 `;
 
 exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 3`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const obj = { async method() { await bar }}
@@ -568,7 +575,8 @@ return { obj }
 `;
 
 exports[`SFC compile <script setup> > async/await detection > should ignore await inside functions 4`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
   __expose();
 const cls = class Foo { async method() { await bar }}
@@ -618,7 +626,8 @@ return { a }
 `;
 
 exports[`SFC compile <script setup> > binding analysis for destructure 1`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
@@ -838,7 +847,9 @@ return { msg, useCssVars, ref }
 `;
 
 exports[`SFC compile <script setup> > imports > import dedupe between <script> and <script setup> 1`] = `
-"import { x } from './x'
+"
+        
+        import { x } from './x'
         
 export default {
   setup(__props, { expose: __expose }) {
@@ -902,7 +913,9 @@ return { ref }
 `;
 
 exports[`SFC compile <script setup> > imports > should support module string names syntax 1`] = `
-"import { \\"😏\\" as foo } from './foo'
+"
+      
+        import { \\"😏\\" as foo } from './foo'
       
 export default {
   setup(__props, { expose: __expose }) {
@@ -1189,7 +1202,8 @@ return (_ctx, _cache) => {
 `;
 
 exports[`SFC compile <script setup> > inlineTemplate mode > with defineExpose() 1`] = `
-"export default {
+"
+export default {
   setup(__props, { expose: __expose }) {
 
         const count = ref(0)
@@ -1352,7 +1366,8 @@ return { a }
 `;
 
 exports[`SFC genDefaultAs > <script> + <script setup> 1`] = `
-"const __default__ = {}
+"
+      const __default__ = {}
       
 const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
@@ -1367,7 +1382,8 @@ return { a }
 `;
 
 exports[`SFC genDefaultAs > <script> + <script setup> 2`] = `
-"const __default__ = {}
+"
+      const __default__ = {}
       
 const _sfc_ = /*#__PURE__*/Object.assign(__default__, {
   setup(__props, { expose: __expose }) {
