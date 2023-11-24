@@ -22,8 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
  */
 
-import { ErrorCodes } from '../errors'
-import { ElementNode, Position } from '../ast'
+import { ErrorCodes } from './errors'
+import { ElementNode, Position } from './ast'
 
 /**
  * Note: entities is a non-browser-build-only dependency.

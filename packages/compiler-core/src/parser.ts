@@ -13,8 +13,8 @@ import {
   TemplateChildNode,
   createRoot,
   createSimpleExpression
-} from '../ast'
-import { ParserOptions } from '../options'
+} from './ast'
+import { ParserOptions } from './options'
 import Tokenizer, {
   CharCodes,
   ParseMode,
@@ -23,22 +23,22 @@ import Tokenizer, {
   State,
   isWhitespace,
   toCharCodes
-} from './Tokenizer'
+} from './tokenizer'
 import {
   CompilerCompatOptions,
   CompilerDeprecationTypes,
   checkCompatEnabled,
   isCompatEnabled,
   warnDeprecation
-} from '../compat/compatConfig'
+} from './compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
   defaultOnError,
   defaultOnWarn
-} from '../errors'
-import { forAliasRE, isCoreComponent, isStaticArgOf } from '../utils'
+} from './errors'
+import { forAliasRE, isCoreComponent, isStaticArgOf } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 
 type OptionalOptions =

@@ -28,8 +28,8 @@ export interface ParserOptions
    * configured by higher-level compilers.
    *
    * HTML mode adds additional logic for handling special parsing behavior in
-   * `<script>`, `<style>`,`<title>` and `<html>`, plus SVG and MathML
-   * namespaces. The logic is handled inside compiler-core for efficiency.
+   * `<script>`, `<style>`,`<title>` and `<textarea>`.
+   * The logic is handled inside compiler-core for efficiency.
    *
    * SFC mode treats content of all root-level tags except `<template>` as plain
    * text.
