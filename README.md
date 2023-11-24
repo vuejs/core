@@ -16,7 +16,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [x] `v-once`
   - [x] `v-html`
   - [x] `v-text`
-  - [ ] `v-pre`
+  - [x] `v-pre`
   - [ ] `v-cloak`
   - [ ] `v-on` / `v-bind`
     - [x] simple expression

@@ -17,4 +17,5 @@ const html = '<b>HTML</b>'
   <div v-html="html" />
   <input type="text" />
   <p v-once>once: {{ count }}</p>
+  <p v-pre>{{ count }}</p>
 </template>
