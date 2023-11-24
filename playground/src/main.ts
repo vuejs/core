@@ -1,9 +1,11 @@
 import { render } from 'vue/vapor'
-import App from './App.vue'
 
-render(() => {
-  // @ts-expect-error
-  const returned = App.setup({}, { expose() {} })
-  // @ts-expect-error
-  return App.render(returned)
-}, '#app')
+const modules = import.meta.glob<any>('./*.vue')
+const mod = (modules['.' + location.pathname] || modules['./App.vue'])()
+
+mod.then(({ default: m }) => {
+  render(() => {
+    const returned = m.setup({}, { expose() {} })
+    return m.render(returned)
+  }, '#app')
+})

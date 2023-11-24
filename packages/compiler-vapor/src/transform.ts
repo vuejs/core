@@ -121,7 +121,7 @@ function createContext<T extends TemplateChildNode>(
       if (ctx.once) {
         return ctx.registerOpration(operation)
       }
-      parent.registerEffect(expr, operation)
+      return parent.registerEffect(expr, operation)
     },
   }
   return ctx
@@ -167,6 +167,9 @@ function transformChildren(
     const child = createContext(node, ctx, index)
     const isFirst = i === 0
     const isLast = i === children.length - 1
+
+    // TODO: multiple root elements
+    if (root) child.store = true
 
     switch (node.type) {
       case 1 satisfies NodeTypes.ELEMENT: {

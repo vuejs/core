@@ -10,12 +10,14 @@ const html = '<b>HTML</b>'
 </script>
 
 <template>
-  <h1 id="title">Counter</h1>
-  <p>Count: {{ count }}</p>
-  <p>Double: {{ double }}</p>
-  <button @click="increment">Increment</button>
-  <div v-html="html" />
-  <input type="text" />
-  <p v-once>once: {{ count }}</p>
-  <p v-pre>{{ count }}</p>
+  <div>
+    <h1 id="title">Counter</h1>
+    <p>Count: {{ count }}</p>
+    <p>Double: {{ double }}</p>
+    <button @click="increment">Increment</button>
+    <div v-html="html" />
+    <input type="text" />
+    <p v-once>once: {{ count }}</p>
+    <p v-pre>{{ count }}</p>
+  </div>
 </template>

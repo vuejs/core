@@ -27,29 +27,32 @@ export function generate(
     vaporHelpers.add('template')
   }
 
-  // TODO multiple-template
-  code += `const root = t0()\n`
-  if (ir.children[0] && Object.keys(ir.children[0].children).length) {
-    code += `const {${genChildren(ir.children[0].children)}} = children(root)\n`
-    vaporHelpers.add('children')
-  }
+  for (const [, { id, children }] of Object.entries(ir.children)) {
+    code += `const n${id} = t0()\n`
 
-  for (const operation of ir.operation) {
-    code += genOperation(operation)
-  }
-
-  for (const [_expr, operations] of Object.entries(ir.effect)) {
-    // TODO don't use watchEffect from vue/core, implement `effect` function in runtime-vapor package
-    let scope = `watchEffect(() => {\n`
-    helpers.add('watchEffect')
-    for (const operation of operations) {
-      scope += genOperation(operation)
+    if (Object.keys(children).length) {
+      code += `const {${genChildren(children)}} = children(n${id})\n`
+      vaporHelpers.add('children')
     }
-    scope += '})\n'
-    code += scope
-  }
 
-  code += 'return root'
+    for (const operation of ir.operation) {
+      code += genOperation(operation)
+    }
+
+    for (const [_expr, operations] of Object.entries(ir.effect)) {
+      // TODO don't use watchEffect from vue/core, implement `effect` function in runtime-vapor package
+      let scope = `watchEffect(() => {\n`
+      helpers.add('watchEffect')
+      for (const operation of operations) {
+        scope += genOperation(operation)
+      }
+      scope += '})\n'
+      code += scope
+    }
+
+    // TODO multiple-template
+    code += `return n${id}\n`
+  }
 
   if (vaporHelpers.size)
     preamble =
