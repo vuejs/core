@@ -13,7 +13,7 @@ import {
   DirectiveNode
 } from '../src/ast'
 
-import { baseParse } from '../src/parser/index'
+import { baseParse } from '../src/parser'
 
 /* eslint jest/no-disabled-tests: "off" */
 

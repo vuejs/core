@@ -1,5 +1,5 @@
 import { CompilerOptions } from './options'
-import { baseParse } from './parser/index'
+import { baseParse } from './parser'
 import { transform, NodeTransform, DirectiveTransform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
