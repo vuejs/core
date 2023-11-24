@@ -11,7 +11,7 @@ import { generate } from './generate'
 // code/AST -> IR -> JS codegen
 export function compile(
   template: string | RootNode,
-  options: CompilerOptions,
+  options: CompilerOptions = {},
 ): CodegenResult {
   const ast = isString(template) ? baseParse(template, options) : template
   const ir = transform(ast, options)
