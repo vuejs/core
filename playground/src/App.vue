@@ -33,6 +33,7 @@ globalThis.html = html
     <div v-text="html" />
     <div v-once>once: {{ count }}</div>
     <div v-pre>{{ count }}</div>
+    <div v-cloak>{{ count }}</div>
   </div>
 </template>
 

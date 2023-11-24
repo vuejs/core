@@ -17,7 +17,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [x] `v-html`
   - [x] `v-text`
   - [x] `v-pre`
-  - [ ] `v-cloak`
+  - [x] `v-cloak`
   - [ ] `v-on` / `v-bind`
     - [x] simple expression
     - [ ] compound expression

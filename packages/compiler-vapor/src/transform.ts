@@ -385,6 +385,10 @@ function transformProp(
       ctx.once = true
       break
     }
+    case 'cloak': {
+      // do nothing
+      break
+    }
   }
 }
 
