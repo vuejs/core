@@ -206,25 +206,28 @@ function createCodegenContext(
     context.push('\n' + `  `.repeat(n), NewlineType.Start)
   }
 
-  function addMapping(loc: Position, name?: string) {
-    context.map!.addMapping({
-      name,
-      source: context.filename,
-      original: {
-        line: loc.line,
-        column: loc.column - 1 // source-map column is 0 based
-      },
-      generated: {
-        line: context.line,
-        column: context.column - 1
-      }
+  function addMapping(loc: Position, name: string | null = null) {
+    // @ts-ignore we use the private property to directly add the mapping
+    // because the addMapping() implementation in source-map-js has a bunch of
+    // unnecessary arg and validation checks that are pure overhead in our case.
+    const { _names, _mappings } = context.map
+    if (name !== null && !_names.has(name)) _names.add(name)
+    _mappings.add({
+      originalLine: loc.line,
+      originalColumn: loc.column - 1, // source-map column is 0 based
+      generatedLine: context.line,
+      generatedColumn: context.column - 1,
+      source: filename,
+      name
     })
   }
 
   if (!__BROWSER__ && sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
     context.map = new SourceMapGenerator()
-    context.map!.setSourceContent(filename, context.source)
+    context.map.setSourceContent(filename, context.source)
+    // @ts-ignore
+    context.map._sources.add(filename)
   }
 
   return context
