@@ -29,7 +29,8 @@ globalThis.html = html
       <button @click="inc">inc</button>
       <button @click="dec">dec</button>
     </div>
-    <div v-html="html" />
+    <div v-html="html"></div>
+    <div v-text="html"></div>
   </div>
 </template>
 

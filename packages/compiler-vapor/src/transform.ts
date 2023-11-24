@@ -216,6 +216,7 @@ function transformElement(ctx: TransformContext<ElementNode>) {
   if (children.length) transformChildren(ctx)
 
   // TODO remove unnecessary close tag
+  // TODO: [bug] self closing <div />
   if (!node.isSelfClosing) ctx.template += `</${tag}>`
 }
 
@@ -350,6 +351,13 @@ function transformProp(
     case 'html':
       ctx.registerEffect(expr, {
         type: IRNodeTypes.SET_HTML,
+        loc: node.loc,
+        element: ctx.getElementId(),
+      })
+      break
+    case 'text':
+      ctx.registerEffect(expr, {
+        type: IRNodeTypes.SET_TEXT,
         loc: node.loc,
         element: ctx.getElementId(),
       })

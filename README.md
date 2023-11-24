@@ -20,7 +20,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [ ] `v-for`
   - [ ] `v-once`
   - [x] `v-html`
-  - [ ] `v-text`
+  - [x] `v-text`
   - [ ] `v-show`
   - [ ] `v-pre`
   - [ ] `v-cloak`
