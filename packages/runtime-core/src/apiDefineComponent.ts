@@ -37,10 +37,10 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-    ? ExtractPropTypes<Props>
-    : Props extends never[]
-    ? {}
-    : Props) &
+      ? ExtractPropTypes<Props>
+      : Props extends never[]
+        ? {}
+        : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -178,10 +178,10 @@ export type DefineComponentOptions<
       [Props] extends [string]
         ? { [K in Props]: any }
         : [Props] extends [never]
-        ? {}
-        : [Props] extends [undefined]
-        ? {}
-        : Props
+          ? {}
+          : [Props] extends [undefined]
+            ? {}
+            : Props
     > &
       EmitsToProps<E>
   >
@@ -311,10 +311,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : Props,
+      ? {}
+      : Props extends never[]
+        ? string[]
+        : Props,
   RawBindings,
   D,
   C,
