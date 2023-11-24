@@ -18,7 +18,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [ ] `v-model`
   - [ ] `v-if` / `v-else` / `v-else-if`
   - [ ] `v-for`
-  - [ ] `v-once`
+  - [x] `v-once`
   - [x] `v-html`
   - [x] `v-text`
   - [ ] `v-show`

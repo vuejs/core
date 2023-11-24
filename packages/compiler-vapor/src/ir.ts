@@ -21,7 +21,8 @@ export interface RootIRNode extends IRNode {
   type: IRNodeTypes.ROOT
   template: Array<TemplateGeneratorIRNode>
   children: DynamicChildren
-  effect: Record<string, EffectNode[]>
+  // TODO multi-expression effect
+  effect: Record<string /* expr */, OperationNode[]>
   operation: OperationNode[]
   helpers: Set<string>
   vaporHelpers: Set<string>
@@ -36,34 +37,32 @@ export interface SetPropIRNode extends IRNode {
   type: IRNodeTypes.SET_PROP
   element: number
   name: string
+  value: string
 }
 
 export interface SetTextIRNode extends IRNode {
   type: IRNodeTypes.SET_TEXT
   element: number
+  value: string
 }
 
 export interface SetEventIRNode extends IRNode {
   type: IRNodeTypes.SET_EVENT
   element: number
   name: string
+  value: string
 }
 
 export interface SetHtmlIRNode extends IRNode {
   type: IRNodeTypes.SET_HTML
   element: number
+  value: string
 }
-
-export type EffectNode =
-  | SetPropIRNode
-  | SetTextIRNode
-  | SetEventIRNode
-  | SetHtmlIRNode
 
 export interface TextNodeIRNode extends IRNode {
   type: IRNodeTypes.TEXT_NODE
   id: number
-  content: string
+  value: string
 }
 
 export interface InsertNodeIRNode extends IRNode {
@@ -73,7 +72,13 @@ export interface InsertNodeIRNode extends IRNode {
   anchor: number | 'first' | 'last'
 }
 
-export type OperationNode = TextNodeIRNode | InsertNodeIRNode
+export type OperationNode =
+  | SetPropIRNode
+  | SetTextIRNode
+  | SetEventIRNode
+  | SetHtmlIRNode
+  | TextNodeIRNode
+  | InsertNodeIRNode
 
 export interface DynamicChild {
   id: number | null

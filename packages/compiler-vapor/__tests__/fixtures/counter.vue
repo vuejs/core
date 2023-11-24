@@ -16,4 +16,5 @@ const html = '<b>HTML</b>'
   <button @click="increment">Increment</button>
   <div v-html="html" />
   <input type="text" />
+  <p v-once>once: {{ count }}</p>
 </template>

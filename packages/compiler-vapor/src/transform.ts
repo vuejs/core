@@ -8,10 +8,10 @@ import type {
   InterpolationNode,
   TransformOptions,
   DirectiveNode,
+  ExpressionNode,
 } from '@vue/compiler-dom'
 import {
   type DynamicChildren,
-  type EffectNode,
   type OperationNode,
   type RootIRNode,
   IRNodeTypes,
@@ -29,10 +29,11 @@ export interface TransformContext<T extends Node = Node> {
   children: DynamicChildren
   store: boolean
   ghost: boolean
+  once: boolean
 
   getElementId(): number
   registerTemplate(): number
-  registerEffect(expr: string, effectNode: EffectNode): void
+  registerEffect(expr: string, operation: OperationNode): void
   registerOpration(...oprations: OperationNode[]): void
   helper(name: string): string
 }
@@ -54,11 +55,12 @@ function createRootContext(
     children: {},
     store: false,
     ghost: false,
+    once: false,
 
     getElementId: () => i++,
-    registerEffect(expr, effectNode) {
+    registerEffect(expr, operation) {
       if (!effect[expr]) effect[expr] = []
-      effect[expr].push(effectNode)
+      effect[expr].push(operation)
     },
 
     template: '',
@@ -115,6 +117,12 @@ function createContext<T extends TemplateChildNode>(
 
     children,
     store: false,
+    registerEffect(expr, operation) {
+      if (ctx.once) {
+        return ctx.registerOpration(operation)
+      }
+      parent.registerEffect(expr, operation)
+    },
   }
   return ctx
 }
@@ -230,7 +238,7 @@ function transformInterpolation(
   const { node } = ctx
 
   if (node.content.type === (4 satisfies NodeTypes.SIMPLE_EXPRESSION)) {
-    const expr = processExpression(ctx, node.content.content)
+    const expr = processExpression(ctx, node.content)!
 
     const parent = ctx.parent!
     const parentId = parent.getElementId()
@@ -241,6 +249,7 @@ function transformInterpolation(
         type: IRNodeTypes.SET_TEXT,
         loc: node.loc,
         element: parentId,
+        value: expr,
       })
     } else {
       let id: number
@@ -262,7 +271,7 @@ function transformInterpolation(
           type: IRNodeTypes.TEXT_NODE,
           loc: node.loc,
           id,
-          content: expr,
+          value: expr,
         },
         {
           type: IRNodeTypes.INSERT_NODE,
@@ -277,6 +286,7 @@ function transformInterpolation(
         type: IRNodeTypes.SET_TEXT,
         loc: node.loc,
         element: id,
+        value: expr,
       })
     }
     return
@@ -300,20 +310,15 @@ function transformProp(
     return
   }
 
-  if (!node.exp) {
-    // TODO: Vue 3.4 supported shorthand syntax
-    // https://github.com/vuejs/core/pull/9451
-    return
-  } else if (node.exp.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
-    // TODO: CompoundExpressionNode: :foo="count + 1"
-    return
-  }
-
   ctx.store = true
-  const expr = processExpression(ctx, node.exp.content)
+  const expr = processExpression(ctx, node.exp)
   switch (name) {
     case 'bind': {
-      if (!node.arg) {
+      if (expr === null) {
+        // TODO: Vue 3.4 supported shorthand syntax
+        // https://github.com/vuejs/core/pull/9451
+        return
+      } else if (!node.arg) {
         // TODO support v-bind="{}"
         return
       } else if (
@@ -328,6 +333,7 @@ function transformProp(
         loc: node.loc,
         element: ctx.getElementId(),
         name: node.arg.content,
+        value: expr,
       })
       break
     }
@@ -340,6 +346,10 @@ function transformProp(
       ) {
         // TODO support @[foo]="bar"
         return
+      } else if (expr === null) {
+        // TODO: support @foo
+        // https://github.com/vuejs/core/pull/9451
+        return
       }
 
       ctx.registerEffect(expr, {
@@ -347,30 +357,50 @@ function transformProp(
         loc: node.loc,
         element: ctx.getElementId(),
         name: node.arg.content,
+        value: expr,
       })
       break
     }
-    case 'html':
-      ctx.registerEffect(expr, {
+    case 'html': {
+      const value = expr || '""'
+      ctx.registerEffect(value, {
         type: IRNodeTypes.SET_HTML,
         loc: node.loc,
         element: ctx.getElementId(),
+        value,
       })
       break
-    case 'text':
-      ctx.registerEffect(expr, {
+    }
+    case 'text': {
+      const value = expr || '""'
+      ctx.registerEffect(value, {
         type: IRNodeTypes.SET_TEXT,
         loc: node.loc,
         element: ctx.getElementId(),
+        value,
       })
       break
+    }
+    case 'once': {
+      ctx.once = true
+      break
+    }
   }
 }
 
 // TODO: reuse packages/compiler-core/src/transforms/transformExpression.ts
-function processExpression(ctx: TransformContext, expr: string) {
-  if (ctx.options.bindingMetadata?.[expr] === 'setup-ref') {
-    expr += '.value'
+function processExpression(
+  ctx: TransformContext,
+  expr: ExpressionNode | undefined,
+): string | null {
+  if (!expr) return null
+  if (expr.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
+    // TODO
+    return ''
   }
-  return expr
+  const { content } = expr
+  if (ctx.options.bindingMetadata?.[content] === 'setup-ref') {
+    return content + '.value'
+  }
+  return content
 }

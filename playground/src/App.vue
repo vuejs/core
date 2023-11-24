@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-const count = ref(0)
+const count = ref(1)
 const double = computed(() => count.value * 2)
 const html = computed(() => `<button>HTML! ${count.value}</button>`)
 
@@ -31,6 +31,7 @@ globalThis.html = html
     </div>
     <div v-html="html" />
     <div v-text="html" />
+    <div v-once>once: {{ count }}</div>
   </div>
 </template>
 
