@@ -13,18 +13,22 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [x] simple events
 - [ ] TODO-MVC
 - [ ] directives
-  - [ ] `v-on`
-  - [ ] `v-bind`
-  - [ ] `v-model`
-  - [ ] `v-if` / `v-else` / `v-else-if`
-  - [ ] `v-for`
   - [x] `v-once`
   - [x] `v-html`
   - [x] `v-text`
-  - [ ] `v-show`
   - [ ] `v-pre`
   - [ ] `v-cloak`
+  - [ ] `v-on` / `v-bind`
+    - [x] simple expression
+    - [ ] compound expression
+    - [ ] modifiers
   - [ ] `v-memo`
+  - [ ] `v-model`
+  - [ ] `v-if` / `v-else` / `v-else-if`
+  - [ ] `v-for`
+  - [ ] `v-show`
+    - [ ] runtime directive
+    - [ ] compiler
 - [ ] Remove DOM API in codegen
 - [ ] Fragment
 - [ ] Built-in Components
