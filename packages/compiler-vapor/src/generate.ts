@@ -29,7 +29,7 @@ export function generate(
 
   // TODO multiple-template
   code += `const root = t0()\n`
-  if (ir.children[0]) {
+  if (ir.children[0] && Object.keys(ir.children[0].children).length) {
     code += `const {${genChildren(ir.children[0].children)}} = children(root)\n`
     vaporHelpers.add('children')
   }

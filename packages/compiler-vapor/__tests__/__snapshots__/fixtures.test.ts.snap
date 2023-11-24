@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`basic 1`] = `
+exports[`fixtures 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { watchEffect } from 'vue'
 import { template, insert, setText, on, setHtml } from 'vue/vapor'

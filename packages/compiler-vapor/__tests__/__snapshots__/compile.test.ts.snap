@@ -1,0 +1,23 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`comile > bindings 1`] = `
+"import { watchEffect } from 'vue'
+import { template, setText } from 'vue/vapor'
+const t0 = template(\`<div></div>\`)
+export function render() {
+const root = t0()
+watchEffect(() => {
+setText(n0, undefined, count.value)
+})
+return root
+}"
+`;
+
+exports[`comile > static template 1`] = `
+"import { template } from 'vue/vapor'
+const t0 = template(\`<div><p>hello</p><input></div>\`)
+export function render() {
+const root = t0()
+return root
+}"
+`;
