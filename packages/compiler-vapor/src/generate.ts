@@ -1,16 +1,10 @@
-import type {
-  CodegenContext,
-  CodegenOptions,
-  CodegenResult,
-} from '@vue/compiler-dom'
+import type { CodegenOptions, CodegenResult } from '@vue/compiler-dom'
 import { type DynamicChildren, type RootIRNode, IRNodeTypes } from './ir'
 
 // IR -> JS codegen
 export function generate(
   ir: RootIRNode,
-  options: CodegenOptions & {
-    onContextCreated?: (context: CodegenContext) => void
-  } = {},
+  options: CodegenOptions = {},
 ): CodegenResult {
   let code = ''
   let preamble = ''
@@ -25,6 +19,7 @@ export function generate(
     vaporHelpers.add('template')
   }
 
+  // TODO multiple-template
   code += `const root = t0()\n`
   if (ir.children[0]) {
     code += `const {${genChildren(ir.children[0].children)}} = children(root)\n`
