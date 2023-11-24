@@ -1,7 +1,7 @@
 import {
-  CodegenResult,
-  CompilerOptions,
-  RootNode,
+  type CodegenResult,
+  type CompilerOptions,
+  type RootNode,
   baseParse,
 } from '@vue/compiler-dom'
 import { isString } from '@vue/shared'

@@ -1,9 +1,9 @@
-import {
+import type {
   CodegenContext,
   CodegenOptions,
   CodegenResult,
 } from '@vue/compiler-dom'
-import { DynamicChildren, IRNodeTypes, RootIRNode } from './transform'
+import { type DynamicChildren, type RootIRNode, IRNodeTypes } from './ir'
 
 // IR -> JS codegen
 export function generate(
@@ -13,26 +13,28 @@ export function generate(
   } = {},
 ): CodegenResult {
   let code = ''
-  let preamble = `import { watchEffect } from 'vue'
-import { template, setAttr, setText, children, on, insert } from 'vue/vapor'\n`
+  let preamble = ''
 
-  const isSetupInlined = !!options.inline
-
-  preamble += ir.template
-    .map((template, i) => `const t${i} = template(\`${template.template}\`)\n`)
-    .join('')
+  const { helpers, vaporHelpers } = ir
+  if (ir.template.length) {
+    preamble += ir.template
+      .map(
+        (template, i) => `const t${i} = template(\`${template.template}\`)\n`,
+      )
+      .join('')
+    vaporHelpers.add('template')
+  }
 
   code += `const root = t0()\n`
-
   if (ir.children[0]) {
-    code += `const {${genChildrens(
-      ir.children[0].children,
-    )}} = children(root)\n`
+    code += `const {${genChildren(ir.children[0].children)}} = children(root)\n`
+    vaporHelpers.add('children')
   }
 
   for (const opration of ir.opration) {
     switch (opration.type) {
       case IRNodeTypes.TEXT_NODE: {
+        // TODO handle by runtime: document.createTextNode
         code += `const n${opration.id} = document.createTextNode(${opration.content})\n`
         break
       }
@@ -46,6 +48,7 @@ import { template, setAttr, setText, children, on, insert } from 'vue/vapor'\n`
             anchor = `, 0 /* InsertPosition.FIRST */`
           }
           code += `insert(n${opration.element}, n${opration.parent}${anchor})\n`
+          vaporHelpers.add('insert')
         }
         break
     }
@@ -53,21 +56,28 @@ import { template, setAttr, setText, children, on, insert } from 'vue/vapor'\n`
 
   for (const [expr, effects] of Object.entries(ir.effect)) {
     let scope = `watchEffect(() => {\n`
+    helpers.add('watchEffect')
     for (const effect of effects) {
       switch (effect.type) {
-        case IRNodeTypes.SET_PROP:
+        case IRNodeTypes.SET_PROP: {
           scope += `setAttr(n${effect.element}, ${JSON.stringify(
             effect.name,
           )}, undefined, ${expr})\n`
+          vaporHelpers.add('setAttr')
           break
-        case IRNodeTypes.SET_TEXT:
+        }
+        case IRNodeTypes.SET_TEXT: {
           scope += `setText(n${effect.element}, undefined, ${expr})\n`
+          vaporHelpers.add('setText')
           break
-        case IRNodeTypes.SET_EVENT:
+        }
+        case IRNodeTypes.SET_EVENT: {
           scope += `on(n${effect.element}, ${JSON.stringify(
             effect.name,
           )}, ${expr})\n`
+          vaporHelpers.add('on')
           break
+        }
       }
     }
     scope += '})\n'
@@ -76,7 +86,14 @@ import { template, setAttr, setText, children, on, insert } from 'vue/vapor'\n`
 
   code += 'return root'
 
+  if (vaporHelpers.size)
+    preamble =
+      `import { ${[...vaporHelpers].join(', ')} } from 'vue/vapor'\n` + preamble
+  if (helpers.size)
+    preamble = `import { ${[...helpers].join(', ')} } from 'vue'\n` + preamble
+
   const functionName = options.ssr ? `ssrRender` : `render`
+  const isSetupInlined = !!options.inline
   if (isSetupInlined) {
     code = `(() => {\n${code}\n})();`
   } else {
@@ -90,7 +107,7 @@ import { template, setAttr, setText, children, on, insert } from 'vue/vapor'\n`
   }
 }
 
-function genChildrens(children: DynamicChildren) {
+function genChildren(children: DynamicChildren) {
   let str = ''
   for (const [index, child] of Object.entries(children)) {
     str += ` ${index}: [`
@@ -98,7 +115,7 @@ function genChildrens(children: DynamicChildren) {
       str += `n${child.id}`
     }
     if (Object.keys(child.children).length) {
-      str += `, {${genChildrens(child.children)}}`
+      str += `, {${genChildren(child.children)}}`
     }
     str += '],'
   }

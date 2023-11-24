@@ -3,7 +3,7 @@
 exports[`basic 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { watchEffect } from 'vue'
-import { template, setAttr, setText, children, on, insert } from 'vue/vapor'
+import { template, insert, setText, on } from 'vue/vapor'
 const t0 = template(\`<h1 id=\\"title\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button>\`)
 import { ref, computed } from 'vue'
 

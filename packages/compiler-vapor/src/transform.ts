@@ -1,85 +1,21 @@
-import {
-  type NodeTypes,
+import type {
+  NodeTypes,
   RootNode,
   Node,
   TemplateChildNode,
   ElementNode,
   AttributeNode,
-  SourceLocation,
   InterpolationNode,
   TransformOptions,
   DirectiveNode,
 } from '@vue/compiler-dom'
-
-export const enum IRNodeTypes {
-  ROOT,
-  TEMPLATE_GENERATOR,
-  SET_PROP,
-  SET_TEXT,
-  SET_EVENT,
-
-  INSERT_NODE,
-  TEXT_NODE,
-}
-
-export interface IRNode {
-  type: IRNodeTypes
-  loc: SourceLocation
-}
-
-export interface RootIRNode extends IRNode {
-  type: IRNodeTypes.ROOT
-  template: Array<TemplateGeneratorIRNode>
-  children: DynamicChildren
-  effect: Record<string, EffectNode[]>
-  opration: OprationNode[]
-  helpers: Set<string>
-}
-
-export interface TemplateGeneratorIRNode extends IRNode {
-  type: IRNodeTypes.TEMPLATE_GENERATOR
-  template: string
-}
-
-export interface SetPropIRNode extends IRNode {
-  type: IRNodeTypes.SET_PROP
-  element: number
-  name: string
-}
-
-export interface SetTextIRNode extends IRNode {
-  type: IRNodeTypes.SET_TEXT
-  element: number
-}
-
-export interface SetEventIRNode extends IRNode {
-  type: IRNodeTypes.SET_EVENT
-  element: number
-  name: string
-}
-
-export interface TextNodeIRNode extends IRNode {
-  type: IRNodeTypes.TEXT_NODE
-  id: number
-  content: string
-}
-
-export interface InsertNodeIRNode extends IRNode {
-  type: IRNodeTypes.INSERT_NODE
-  element: number
-  parent: number
-  anchor: number | 'first' | 'last'
-}
-
-export type EffectNode = SetPropIRNode | SetTextIRNode | SetEventIRNode
-export type OprationNode = TextNodeIRNode | InsertNodeIRNode
-
-export interface DynamicChild {
-  id: number | null
-  store: boolean
-  children: DynamicChildren
-}
-export type DynamicChildren = Record<number, DynamicChild>
+import {
+  type DynamicChildren,
+  type EffectNode,
+  type OprationNode,
+  type RootIRNode,
+  IRNodeTypes,
+} from './ir'
 
 export interface TransformContext<T extends Node = Node> {
   node: T
@@ -87,15 +23,17 @@ export interface TransformContext<T extends Node = Node> {
   root: TransformContext<RootNode>
   index: number
   options: TransformOptions
-  ir: RootIRNode
+  // ir: RootIRNode
   template: string
   children: DynamicChildren
   store: boolean
   ghost: boolean
 
   getElementId(): number
-  registerEffect(expr: string, effectNode: EffectNode): void
   registerTemplate(): number
+  registerEffect(expr: string, effectNode: EffectNode): void
+  registerOpration(...oprations: OprationNode[]): void
+  helper(name: string): string
 }
 
 function createRootContext(
@@ -104,7 +42,7 @@ function createRootContext(
   options: TransformOptions,
 ): TransformContext<RootNode> {
   let i = 0
-  const { effect: bindings } = ir
+  const { effect, opration, helpers, vaporHelpers } = ir
 
   const ctx: TransformContext<RootNode> = {
     node,
@@ -112,15 +50,14 @@ function createRootContext(
     index: 0,
     root: undefined as any, // set later
     options,
-    ir,
     children: {},
     store: false,
     ghost: false,
 
     getElementId: () => i++,
     registerEffect(expr, effectNode) {
-      if (!bindings[expr]) bindings[expr] = []
-      bindings[expr].push(effectNode)
+      if (!effect[expr]) effect[expr] = []
+      effect[expr].push(effectNode)
     },
 
     template: '',
@@ -136,6 +73,14 @@ function createRootContext(
         loc: node.loc,
       })
       return ir.template.length - 1
+    },
+    registerOpration(...node) {
+      opration.push(...node)
+    },
+    // TODO not used yet
+    helper(name, vapor = true) {
+      ;(vapor ? vaporHelpers : helpers).add(name)
+      return name
     },
   }
   ctx.root = ctx
@@ -178,12 +123,6 @@ export function transform(
   root: RootNode,
   options: TransformOptions = {},
 ): RootIRNode {
-  // {
-  //   type: IRNodeTypes.TEMPLATE_GENERATOR,
-  //   template,
-  //   loc: root.loc
-  // }
-
   const ir: RootIRNode = {
     type: IRNodeTypes.ROOT,
     loc: root.loc,
@@ -191,7 +130,8 @@ export function transform(
     children: {},
     effect: Object.create(null),
     opration: [],
-    helpers: new Set(['template']),
+    helpers: new Set([]),
+    vaporHelpers: new Set([]),
   }
   const ctx = createRootContext(ir, root, options)
   transformChildren(ctx, true)
@@ -303,7 +243,7 @@ function transformInterpolation(
         anchor = isFirst ? 'first' : 'last'
       }
 
-      ctx.ir.opration.push(
+      ctx.registerOpration(
         {
           type: IRNodeTypes.TEXT_NODE,
           loc: node.loc,
@@ -379,6 +319,7 @@ function transformProp(
   }
 }
 
+// TODO: reference packages/compiler-core/src/transforms/transformExpression.ts
 function processExpression(ctx: TransformContext, expr: string) {
   if (ctx.options.bindingMetadata?.[expr] === 'setup-ref') {
     expr += '.value'
