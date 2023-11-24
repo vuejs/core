@@ -50,6 +50,7 @@ export function generate(
   }
 
   for (const [expr, effects] of Object.entries(ir.effect)) {
+    // TODO don't use watchEffect from vue/core, implement `effect` function in runtime-vapor package
     let scope = `watchEffect(() => {\n`
     helpers.add('watchEffect')
     for (const effect of effects) {

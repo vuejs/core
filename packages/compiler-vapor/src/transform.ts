@@ -134,17 +134,14 @@ export function transform(
     vaporHelpers: new Set([]),
   }
   const ctx = createRootContext(ir, root, options)
-  transformChildren(ctx, true)
+  transformChildren(ctx)
   ctx.registerTemplate()
   ir.children = ctx.children
 
   return ir
 }
 
-function transformChildren(
-  ctx: TransformContext<RootNode | ElementNode>,
-  root?: boolean,
-) {
+function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
   const {
     node: { children },
   } = ctx
@@ -177,7 +174,15 @@ function transformChildren(
         )
         break
       }
+      case 12 satisfies NodeTypes.TEXT_CALL:
+        // never?
+        break
       default: {
+        // TODO handle other types
+        // CompoundExpressionNode
+        // IfNode
+        // IfBranchNode
+        // ForNode
         ctx.template += `[type: ${node.type}]`
       }
     }
@@ -202,9 +207,9 @@ function transformElement(ctx: TransformContext<ElementNode>) {
   props.forEach((prop) => transformProp(prop, ctx))
   ctx.template += node.isSelfClosing ? '/>' : `>`
 
-  if (children.length > 0) {
-    transformChildren(ctx)
-  }
+  if (children.length) transformChildren(ctx)
+
+  // TODO remove unnecessary close tag
   if (!node.isSelfClosing) ctx.template += `</${tag}>`
 }
 
@@ -265,10 +270,10 @@ function transformInterpolation(
         element: id,
       })
     }
-  } else {
-    // TODO
+    return
   }
-  // TODO
+
+  // TODO: CompoundExpressionNode: {{ count + 1 }}
 }
 
 function transformProp(
@@ -287,16 +292,17 @@ function transformProp(
   }
 
   if (!node.exp) {
-    // TODO
+    // TODO: Vue 3.4 supported shorthand syntax
+    // https://github.com/vuejs/core/pull/9451
     return
   } else if (node.exp.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
-    // TODO
+    // TODO: CompoundExpressionNode: :foo="count + 1"
     return
-  } else if (
-    !node.arg ||
-    node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)
-  ) {
-    // TODO
+  } else if (!node.arg) {
+    // TODO support v-bind="{}"
+    return
+  } else if (node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
+    // TODO support :[foo]="bar"
     return
   }
 
@@ -319,7 +325,7 @@ function transformProp(
   }
 }
 
-// TODO: reference packages/compiler-core/src/transforms/transformExpression.ts
+// TODO: reuse packages/compiler-core/src/transforms/transformExpression.ts
 function processExpression(ctx: TransformContext, expr: string) {
   if (ctx.options.bindingMetadata?.[expr] === 'setup-ref') {
     expr += '.value'
