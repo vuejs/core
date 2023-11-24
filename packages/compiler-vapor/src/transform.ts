@@ -169,7 +169,11 @@ function transformChildren(
     const isLast = i === children.length - 1
 
     // TODO: multiple root elements
-    if (root) child.store = true
+    if (root) {
+      child.store = true
+      // generate id for root element early
+      child.getElementId()
+    }
 
     switch (node.type) {
       case 1 satisfies NodeTypes.ELEMENT: {

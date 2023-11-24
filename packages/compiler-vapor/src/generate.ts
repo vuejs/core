@@ -77,6 +77,7 @@ export function generate(
   function genOperation(operation: OperationNode) {
     let code = ''
 
+    // TODO: cache old value
     switch (operation.type) {
       case IRNodeTypes.SET_PROP: {
         code = `setAttr(n${operation.element}, ${JSON.stringify(
