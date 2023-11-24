@@ -1,6 +1,9 @@
 import type { CodegenOptions, CodegenResult } from '@vue/compiler-dom'
 import { type DynamicChildren, type RootIRNode, IRNodeTypes } from './ir'
 
+// remove when stable
+function checkNever(x: never): void {}
+
 // IR -> JS codegen
 export function generate(
   ir: RootIRNode,
@@ -74,6 +77,13 @@ export function generate(
           vaporHelpers.add('on')
           break
         }
+        case IRNodeTypes.SET_HTML: {
+          scope += `setHtml(n${effect.element}, undefined, ${expr})\n`
+          vaporHelpers.add('setHtml')
+          break
+        }
+        default:
+          checkNever(effect)
       }
     }
     scope += '})\n'

@@ -74,6 +74,12 @@ export function setText(el: Element, oldVal: any, newVal: any) {
   }
 }
 
+export function setHtml(el: Element, oldVal: any, newVal: any) {
+  if (newVal !== oldVal) {
+    el.innerHTML = newVal
+  }
+}
+
 export function setClass(el: Element, oldVal: any, newVal: any) {
   if ((newVal = normalizeClass(newVal)) !== oldVal && (newVal || oldVal)) {
     el.className = newVal

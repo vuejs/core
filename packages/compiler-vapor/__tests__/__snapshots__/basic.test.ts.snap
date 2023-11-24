@@ -3,10 +3,11 @@
 exports[`basic 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { watchEffect } from 'vue'
-import { template, insert, setText, on } from 'vue/vapor'
-const t0 = template(\`<h1 id=\\"title\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button>\`)
+import { template, insert, setText, on, setHtml } from 'vue/vapor'
+const t0 = template(\`<h1 id=\\"title\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div/>\`)
 import { ref, computed } from 'vue'
 
+const html = '<b>HTML</b>'
 
 export default /*#__PURE__*/_defineComponent({
   setup(__props) {
@@ -15,6 +16,7 @@ const count = ref(0)
 const double = computed(() => count.value * 2)
 
 const increment = () => count.value++
+
 
 return (() => {
 const root = t0()
@@ -30,6 +32,9 @@ setText(n3, undefined, double.value)
 })
 watchEffect(() => {
 on(n4, \\"click\\", increment)
+})
+watchEffect(() => {
+setHtml(n5, undefined, html)
 })
 return root
 })();

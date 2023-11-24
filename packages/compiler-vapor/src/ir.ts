@@ -6,6 +6,7 @@ export const enum IRNodeTypes {
   SET_PROP,
   SET_TEXT,
   SET_EVENT,
+  SET_HTML,
 
   INSERT_NODE,
   TEXT_NODE,
@@ -48,6 +49,17 @@ export interface SetEventIRNode extends IRNode {
   name: string
 }
 
+export interface SetHtmlIRNode extends IRNode {
+  type: IRNodeTypes.SET_HTML
+  element: number
+}
+
+export type EffectNode =
+  | SetPropIRNode
+  | SetTextIRNode
+  | SetEventIRNode
+  | SetHtmlIRNode
+
 export interface TextNodeIRNode extends IRNode {
   type: IRNodeTypes.TEXT_NODE
   id: number
@@ -61,7 +73,6 @@ export interface InsertNodeIRNode extends IRNode {
   anchor: number | 'first' | 'last'
 }
 
-export type EffectNode = SetPropIRNode | SetTextIRNode | SetEventIRNode
 export type OprationNode = TextNodeIRNode | InsertNodeIRNode
 
 export interface DynamicChild {

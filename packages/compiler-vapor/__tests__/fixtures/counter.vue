@@ -5,6 +5,8 @@ const count = ref(0)
 const double = computed(() => count.value * 2)
 
 const increment = () => count.value++
+
+const html = '<b>HTML</b>'
 </script>
 
 <template>
@@ -12,4 +14,5 @@ const increment = () => count.value++
   <p>Count: {{ count }}</p>
   <p>Double: {{ double }}</p>
   <button @click="increment">Increment</button>
+  <div v-html="html" />
 </template>

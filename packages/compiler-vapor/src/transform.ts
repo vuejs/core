@@ -134,19 +134,25 @@ export function transform(
     vaporHelpers: new Set([]),
   }
   const ctx = createRootContext(ir, root, options)
-  transformChildren(ctx)
-  ctx.registerTemplate()
+
+  // TODO: transform presets, see packages/compiler-core/src/transforms
+  transformChildren(ctx, true)
   ir.children = ctx.children
 
   return ir
 }
 
-function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
+function transformChildren(
+  ctx: TransformContext<RootNode | ElementNode>,
+  root?: boolean,
+) {
   const {
     node: { children },
   } = ctx
   let index = 0
   children.forEach((child, i) => walkNode(child, i))
+
+  if (root) ctx.registerTemplate()
 
   function walkNode(node: TemplateChildNode, i: number) {
     const child = createContext(node, ctx, index)
@@ -298,30 +304,56 @@ function transformProp(
   } else if (node.exp.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
     // TODO: CompoundExpressionNode: :foo="count + 1"
     return
-  } else if (!node.arg) {
-    // TODO support v-bind="{}"
-    return
-  } else if (node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
-    // TODO support :[foo]="bar"
-    return
   }
 
-  const expr = processExpression(ctx, node.exp.content)
   ctx.store = true
-  if (name === 'bind') {
-    ctx.registerEffect(expr, {
-      type: IRNodeTypes.SET_PROP,
-      loc: node.loc,
-      element: ctx.getElementId(),
-      name: node.arg.content,
-    })
-  } else if (name === 'on') {
-    ctx.registerEffect(expr, {
-      type: IRNodeTypes.SET_EVENT,
-      loc: node.loc,
-      element: ctx.getElementId(),
-      name: node.arg.content,
-    })
+  const expr = processExpression(ctx, node.exp.content)
+  switch (name) {
+    case 'bind': {
+      if (!node.arg) {
+        // TODO support v-bind="{}"
+        return
+      } else if (
+        node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)
+      ) {
+        // TODO support :[foo]="bar"
+        return
+      }
+
+      ctx.registerEffect(expr, {
+        type: IRNodeTypes.SET_PROP,
+        loc: node.loc,
+        element: ctx.getElementId(),
+        name: node.arg.content,
+      })
+      break
+    }
+    case 'on': {
+      if (!node.arg) {
+        // TODO support v-on="{}"
+        return
+      } else if (
+        node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)
+      ) {
+        // TODO support @[foo]="bar"
+        return
+      }
+
+      ctx.registerEffect(expr, {
+        type: IRNodeTypes.SET_EVENT,
+        loc: node.loc,
+        element: ctx.getElementId(),
+        name: node.arg.content,
+      })
+      break
+    }
+    case 'html':
+      ctx.registerEffect(expr, {
+        type: IRNodeTypes.SET_HTML,
+        loc: node.loc,
+        element: ctx.getElementId(),
+      })
+      break
   }
 }
 
