@@ -15,4 +15,5 @@ const html = '<b>HTML</b>'
   <p>Double: {{ double }}</p>
   <button @click="increment">Increment</button>
   <div v-html="html" />
+  <input type="text" />
 </template>

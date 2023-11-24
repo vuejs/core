@@ -16,6 +16,7 @@ import {
   type RootIRNode,
   IRNodeTypes,
 } from './ir'
+import { isVoidTag } from '@vue/shared'
 
 export interface TransformContext<T extends Node = Node> {
   node: T
@@ -211,13 +212,14 @@ function transformElement(ctx: TransformContext<ElementNode>) {
   ctx.template += `<${tag}`
 
   props.forEach((prop) => transformProp(prop, ctx))
-  ctx.template += node.isSelfClosing ? '/>' : `>`
+  ctx.template += `>`
 
   if (children.length) transformChildren(ctx)
 
-  // TODO remove unnecessary close tag
-  // TODO: [bug] self closing <div />
-  if (!node.isSelfClosing) ctx.template += `</${tag}>`
+  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
+  if (!node.isSelfClosing || !isVoidTag(tag)) {
+    ctx.template += `</${tag}>`
+  }
 }
 
 function transformInterpolation(
