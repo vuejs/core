@@ -415,14 +415,7 @@ export type DeclareComponent<
 > =
   // short-circuit to allow Generics
   Props extends { new (): infer PublicInstance extends { $props?: any } }
-    ? DeclareComponent<
-        PublicInstance['$props'],
-        RawBindings,
-        Emits,
-        Slots,
-        Options
-      > &
-        Props
+    ? DeclareComponent<{}, RawBindings, Emits, Slots, Options> & Props
     : DefineComponent<
         ObjectToComponentProps<Props>,
         RawBindings,
@@ -443,9 +436,9 @@ export type DeclareComponent<
       >
 
 const Comp = defineComponent({
-  props: {
-    foo: String
+  emits: {
+    foo: (test: string) => true
   }
 })
-const props = {} as ComponentProps<typeof Comp>
-props.foo // string | undefined
+const emits = {} as ExtractComponentEmitOptions<typeof Comp>
+emits.foo // (test: string) => true

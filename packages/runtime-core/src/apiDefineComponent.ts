@@ -37,10 +37,10 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-      ? ExtractPropTypes<Props>
-      : Props extends never[]
-        ? {}
-        : Props) &
+    ? ExtractPropTypes<Props>
+    : Props extends never[]
+    ? {}
+    : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -54,14 +54,14 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
-  I extends ComponentInjectOptions = {},
+  I extends ComponentInjectOptions = any,
   II extends string = string,
-  S extends SlotsType = {},
+  S extends SlotsType = any,
   Options = {}
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
@@ -101,6 +101,64 @@ export type DefineComponent<
   > & { props: PropsOrPropOptions } & Omit<Options, 'props'> & {
     [RawOptionsSymbol]: Options
   } & PP
+
+type BuildComponentInstance<
+  MakeDefaultsOptional extends boolean = false,
+  Props = never,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
+  Defaults extends Record<string, any> = {},
+  Options = {}
+> = CreateComponentPublicInstance<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  Props,
+  Defaults,
+  MakeDefaultsOptional,
+  I,
+  S,
+  Options
+>
+
+type NamedProps<PropNames> = [PropNames] extends [string] ? PropNames[] : never
+type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
+  ? Props
+  : never
+
+// export type Test<Props = never> = {
+//   props: NamedProps<Props> | OptionProps<Props>
+//   test(a: Props): void
+// }
+
+// declare function test<Props = never>(options: Test<Props>): void
+
+// test({
+//   props: ['a', 'b'],
+//   test(a) {
+//     // @ts-expect-error
+//     a = 'asd'
+//   }
+// })
+// test({
+//   props: { a: String },
+//   test(a) {
+//     a.
+//   }
+// })
+
 export type DefineComponentOptions<
   Props = never,
   RawBindings = {},
@@ -114,74 +172,121 @@ export type DefineComponentOptions<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {}
+  Options = {},
+  PrettyProps = Readonly<
+    ExtractPropTypes<
+      [Props] extends [string]
+        ? { [K in Props]: any }
+        : [Props] extends [never]
+        ? {}
+        : [Props] extends [undefined]
+        ? {}
+        : Props
+    > &
+      EmitsToProps<E>
+  >
 > =
   | (Options & {
-      props?: [Props] extends [never]
-        ? string[]
-        : [Props] extends [string]
-          ? Array<Props>
-          : Props
-    } & ([Props] extends [string]
-        ? ComponentOptionsWithArrayProps<
-            Props,
-            RawBindings,
-            D,
-            C,
-            M,
-            Mixin,
-            Extends,
-            E,
-            EE,
-            I,
-            II,
-            S
-          >
-        : [Props] extends [undefined]
-          ? {
-              props?: undefined
-            } & ComponentOptionsWithoutProps<
-              {},
-              RawBindings,
-              D,
-              C,
-              M,
-              Mixin,
-              Extends,
-              E,
-              EE,
-              I,
-              II,
-              S
-            >
-          : Props extends ComponentObjectPropsOptions
-            ? ComponentOptionsWithObjectProps<
-                Props,
-                RawBindings,
-                D,
-                C,
-                M,
-                Mixin,
-                Extends,
-                E,
-                EE,
-                I,
-                II,
-                S
-              >
-            : // adding support for ComponentOProp
-              ComponentOptions<
-                Readonly<Record<string, any> & EmitsToProps<E>>,
-                RawBindings,
-                D,
-                C,
-                M,
-                Mixin,
-                Extends,
-                E,
-                I,
-                S
-              >))
+      props?: NamedProps<Props> | OptionProps<Props> | undefined
+    } & Omit<
+        ComponentOptionsBase<
+          PrettyProps,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          EE,
+          {},
+          I,
+          II,
+          S
+        >,
+        'props'
+      > &
+      ThisType<
+        BuildComponentInstance<
+          false,
+          PrettyProps,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          I,
+          S,
+          ExtractPropTypes<Props>,
+          Options
+        >
+      >)
+  // ([Props] extends [string]
+  //   ? {} /*ComponentOptionsWithArrayProps<
+  //       Props,
+  //       RawBindings,
+  //       D,
+  //       C,
+  //       M,
+  //       Mixin,
+  //       Extends,
+  //       E,
+  //       EE,
+  //       I,
+  //       II,
+  //       S
+  //     >*/
+  //   : [Props] extends [undefined]
+  //   ? {
+  //       // props?: undefined
+  //     }
+  //   : // {
+  //   //     props?: undefined
+  //   //   } & ComponentOptionsWithoutProps<
+  //   //     {},
+  //   //     RawBindings,
+  //   //     D,
+  //   //     C,
+  //   //     M,
+  //   //     Mixin,
+  //   //     Extends,
+  //   //     E,
+  //   //     EE,
+  //   //     I,
+  //   //     II,
+  //   //     S
+  //   //   >
+  //   Props extends ComponentObjectPropsOptions
+  //   ? {}
+  //   : // ComponentOptionsWithObjectProps<
+  //     //     Props,
+  //     //     RawBindings,
+  //     //     D,
+  //     //     C,
+  //     //     M,
+  //     //     Mixin,
+  //     //     Extends,
+  //     //     E,
+  //     //     EE,
+  //     //     I,
+  //     //     II,
+  //     //     S
+  //     //   >
+  //     // adding support for ComponentOProp
+  //     ComponentOptions<
+  //       Readonly<Record<string, any> & EmitsToProps<E>>,
+  //       RawBindings,
+  //       D,
+  //       C,
+  //       M,
+  //       Mixin,
+  //       Extends,
+  //       E,
+  //       I,
+  //       S
+  //     >)
   | (((
       props: Props,
       ctx: SetupContext<E, S>
@@ -206,10 +311,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-      ? {}
-      : Props extends never[]
-        ? string[]
-        : Props,
+    ? {}
+    : Props extends never[]
+    ? string[]
+    : Props,
   RawBindings,
   D,
   C,
@@ -266,57 +371,57 @@ export function defineComponent<
   }
 ): (props: Props & EmitsToProps<E>) => any
 
-// overload 2: object format with no props
-// (uses user defined props interface)
-// return type is for Vetur and TSX support
-export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  Options = {}
->(
-  options: Options &
-    ComponentOptionsWithoutProps<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      I,
-      II,
-      S
-    >
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  I,
-  II,
-  S,
-  Options
->
+// // overload 2: object format with no props
+// // (uses user defined props interface)
+// // return type is for Vetur and TSX support
+// export function defineComponent<
+//   Props = {},
+//   RawBindings = {},
+//   D = {},
+//   C extends ComputedOptions = {},
+//   M extends MethodOptions = {},
+//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+//   E extends EmitsOptions = {},
+//   EE extends string = string,
+//   I extends ComponentInjectOptions = {},
+//   II extends string = string,
+//   S extends SlotsType = {},
+//   Options = {}
+// >(
+//   options: Options &
+//     ComponentOptionsWithoutProps<
+//       Props,
+//       RawBindings,
+//       D,
+//       C,
+//       M,
+//       Mixin,
+//       Extends,
+//       E,
+//       EE,
+//       I,
+//       II,
+//       S
+//     >
+// ): DefineComponent<
+//   Props,
+//   RawBindings,
+//   D,
+//   C,
+//   M,
+//   Mixin,
+//   Extends,
+//   E,
+//   EE,
+//   PublicProps,
+//   ResolveProps<Props, E>,
+//   ExtractDefaultPropTypes<Props>,
+//   I,
+//   II,
+//   S,
+//   Options
+// >
 
 // overload 3: DefineComponentOptions
 export function defineComponent<
@@ -332,8 +437,7 @@ export function defineComponent<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {},
-  DefineOptions = {}
+  Options = {}
 >(
   options: DefineComponentOptions<
     Props,
@@ -366,55 +470,57 @@ export function defineComponent<
   Options
 >
 
-// Overload 4: {props: ComponentPropsOptions}
-export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  Options = {}
->(
-  options: Options &
-    ComponentOptionsWithObjectProps<
-      Props,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      I,
-      II,
-      S
-    >
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  I,
-  II,
-  S,
-  Options
->
+// // Overload 4: {props: ComponentPropsOptions}
+// export function defineComponent<
+//   Props = {},
+//   RawBindings = {},
+//   D = {},
+//   C extends ComputedOptions = {},
+//   M extends MethodOptions = {},
+//   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+//   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+//   E extends EmitsOptions = {},
+//   EE extends string = string,
+//   I extends ComponentInjectOptions = {},
+//   II extends string = string,
+//   S extends SlotsType = {},
+//   Options = {},
+//   PrettyProps = {}
+// >(
+//   options: Options &
+//     ComponentOptionsWithObjectProps<
+//       Props,
+//       RawBindings,
+//       D,
+//       C,
+//       M,
+//       Mixin,
+//       Extends,
+//       E,
+//       EE,
+//       I,
+//       II,
+//       S,
+//       PrettyProps
+//     >
+// ): DefineComponent<
+//   Props,
+//   RawBindings,
+//   D,
+//   C,
+//   M,
+//   Mixin,
+//   Extends,
+//   E,
+//   EE,
+//   PublicProps,
+//   ResolveProps<Props, E>,
+//   ExtractDefaultPropTypes<Props>,
+//   I,
+//   II,
+//   S,
+//   Options
+// >
 
 // implementation, close to no-op
 /*! #__NO_SIDE_EFFECTS__ */
@@ -426,3 +532,39 @@ export function defineComponent(options: unknown, extraOptions?: unknown) {
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }
+
+const a = defineComponent({
+  props: ['a', 'b'],
+
+  mounted() {
+    this.$emit('test')
+  },
+
+  setup(props) {
+    props.a
+    props.b
+    // @ts-expect-error
+    props.c
+  }
+})
+
+const b = defineComponent({
+  mounted() {
+    this.$emit('test')
+  },
+  setup(props, ctx) {}
+})
+
+const c = defineComponent({
+  props: { a: String },
+
+  mounted() {
+    this.$emit('test')
+  },
+
+  setup(props) {
+    props.a
+    // @ts-expect-error
+    props.b
+  }
+})

@@ -1,5 +1,13 @@
-import { defineComponent } from 'vue'
+import {
+  DeclareComponent,
+  DefineComponent,
+  ExtractComponentEmitOptions,
+  defineComponent,
+  h
+} from 'vue'
 import { expectType } from './utils'
+import { SlotsType } from 'vue'
+import { EmitsToProps } from 'packages/runtime-core/src/componentEmits'
 
 declare module 'vue' {
   interface ComponentCustomOptions {
@@ -61,3 +69,30 @@ expectType<JSX.Element>(<Custom />)
 ;<Custom baz={1} notExist={1} />
 // @ts-expect-error
 ;<Custom baz={1} custom="custom" />
+
+type ErrorLevel = 'debug' | 'warning' | 'error'
+
+declare function ErrorComponent<T>(options: T): T &
+  DeclareComponent<{
+    new <T extends ErrorLevel = 'debug'>(): {
+      $props: { type: T } & EmitsToProps<{
+        [K in `on${Capitalize<T>}`]: (msg: string) => void
+      }>
+      $slots: SlotsType<Record<T, (msg: string) => any[]>>
+    }
+  }>
+
+const Comp = ErrorComponent(
+  defineComponent({
+    props: {
+      type: {
+        type: String as () => ErrorLevel,
+        default: 'debug'
+      }
+    },
+    emits: ['debug', 'warning', 'error']
+  })
+)
+;<Comp type="debug" onDebug={() => {}} />
+// @ts-expect-error onError is not there
+;<Comp type="debug" onError={v => {}} />

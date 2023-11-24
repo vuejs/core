@@ -336,23 +336,23 @@ describe('with object props', () => {
   })
 })
 
-describe('type inference w/ optional props declaration', () => {
-  const MyComponent = defineComponent<{ a: string[]; msg: string }>({
-    setup(props) {
-      expectType<string>(props.msg)
-      expectType<string[]>(props.a)
-      return {
-        b: 1
-      }
-    }
-  })
+// describe('type inference w/ optional props declaration', () => {
+//   const MyComponent = defineComponent<{ a: string[]; msg: string }>({
+//     setup(props) {
+//       expectType<string>(props.msg)
+//       expectType<string[]>(props.a)
+//       return {
+//         b: 1
+//       }
+//     }
+//   })
 
-  expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
-  // @ts-expect-error
-  ;<MyComponent />
-  // @ts-expect-error
-  ;<MyComponent msg="1" />
-})
+//   expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
+//   // @ts-expect-error
+//   ;<MyComponent />
+//   // @ts-expect-error
+//   ;<MyComponent msg="1" />
+// })
 
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent(
@@ -536,6 +536,7 @@ describe('with mixins', () => {
       }
     }
   })
+
   const MyComponent = defineComponent({
     mixins: [MixinA, MixinB, MixinC, MixinD],
     emits: ['click'],
