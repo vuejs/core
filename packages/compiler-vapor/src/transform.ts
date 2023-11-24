@@ -12,7 +12,7 @@ import type {
 import {
   type DynamicChildren,
   type EffectNode,
-  type OprationNode,
+  type OperationNode,
   type RootIRNode,
   IRNodeTypes,
 } from './ir'
@@ -33,7 +33,7 @@ export interface TransformContext<T extends Node = Node> {
   getElementId(): number
   registerTemplate(): number
   registerEffect(expr: string, effectNode: EffectNode): void
-  registerOpration(...oprations: OprationNode[]): void
+  registerOpration(...oprations: OperationNode[]): void
   helper(name: string): string
 }
 
@@ -43,7 +43,7 @@ function createRootContext(
   options: TransformOptions,
 ): TransformContext<RootNode> {
   let i = 0
-  const { effect, opration, helpers, vaporHelpers } = ir
+  const { effect, operation: operation, helpers, vaporHelpers } = ir
 
   const ctx: TransformContext<RootNode> = {
     node,
@@ -76,7 +76,7 @@ function createRootContext(
       return ir.template.length - 1
     },
     registerOpration(...node) {
-      opration.push(...node)
+      operation.push(...node)
     },
     // TODO not used yet
     helper(name, vapor = true) {
@@ -130,7 +130,7 @@ export function transform(
     template: [],
     children: {},
     effect: Object.create(null),
-    opration: [],
+    operation: [],
     helpers: new Set([]),
     vaporHelpers: new Set([]),
   }

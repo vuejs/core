@@ -29,23 +29,23 @@ export function generate(
     vaporHelpers.add('children')
   }
 
-  for (const opration of ir.opration) {
-    switch (opration.type) {
+  for (const operation of ir.operation) {
+    switch (operation.type) {
       case IRNodeTypes.TEXT_NODE: {
         // TODO handle by runtime: document.createTextNode
-        code += `const n${opration.id} = document.createTextNode(${opration.content})\n`
+        code += `const n${operation.id} = document.createTextNode(${operation.content})\n`
         break
       }
 
       case IRNodeTypes.INSERT_NODE:
         {
           let anchor = ''
-          if (typeof opration.anchor === 'number') {
-            anchor = `, n${opration.anchor}`
-          } else if (opration.anchor === 'first') {
+          if (typeof operation.anchor === 'number') {
+            anchor = `, n${operation.anchor}`
+          } else if (operation.anchor === 'first') {
             anchor = `, 0 /* InsertPosition.FIRST */`
           }
-          code += `insert(n${opration.element}, n${opration.parent}${anchor})\n`
+          code += `insert(n${operation.element}, n${operation.parent}${anchor})\n`
           vaporHelpers.add('insert')
         }
         break

@@ -22,7 +22,7 @@ export interface RootIRNode extends IRNode {
   template: Array<TemplateGeneratorIRNode>
   children: DynamicChildren
   effect: Record<string, EffectNode[]>
-  opration: OprationNode[]
+  operation: OperationNode[]
   helpers: Set<string>
   vaporHelpers: Set<string>
 }
@@ -73,7 +73,7 @@ export interface InsertNodeIRNode extends IRNode {
   anchor: number | 'first' | 'last'
 }
 
-export type OprationNode = TextNodeIRNode | InsertNodeIRNode
+export type OperationNode = TextNodeIRNode | InsertNodeIRNode
 
 export interface DynamicChild {
   id: number | null
