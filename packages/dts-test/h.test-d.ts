@@ -32,6 +32,7 @@ describe('h inference w/ element', () => {
   // slots
   const slots = { default: () => {} } // RawSlots
   h('div', {}, slots)
+  h('div', {}, () => 'hello')
 })
 
 describe('h inference w/ Fragment', () => {
@@ -47,6 +48,7 @@ describe('h inference w/ Fragment', () => {
 describe('h inference w/ Teleport', () => {
   h(Teleport, { to: '#foo' }, 'hello')
   h(Teleport, { to: '#foo' }, { default() {} })
+  h(Teleport, { to: '#foo' }, () => 'hello')
   // @ts-expect-error
   h(Teleport)
   // @ts-expect-error
