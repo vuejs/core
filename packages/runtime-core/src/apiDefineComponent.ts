@@ -34,16 +34,16 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-    ? ExtractPropTypes<Props>
-    : Props extends never[]
-    ? {}
-    : [Props] extends [string[]]
-    ? { [key: string]: any }
-    : [Props] extends [never]
-    ? {}
-    : [Props] extends [undefined]
-    ? {}
-    : Props) &
+      ? ExtractPropTypes<Props>
+      : Props extends never[]
+        ? {}
+        : [Props] extends [string[]]
+          ? { [key: string]: any }
+          : [Props] extends [never]
+            ? {}
+            : [Props] extends [undefined]
+              ? {}
+              : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -139,10 +139,10 @@ type BuildComponentInstance<
 type NamedProps<PropNames> = [PropNames] extends [string]
   ? PropNames[]
   : PropNames extends string[]
-  ? PropNames
-  : PropNames extends never[]
-  ? PropNames
-  : never
+    ? PropNames
+    : PropNames extends never[]
+      ? PropNames
+      : never
 type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
   ? Props
   : never
@@ -166,14 +166,14 @@ export type DefineComponentOptions<
       [Props] extends [string]
         ? { [K in Props]: any }
         : [Props] extends [string[]]
-        ? { [K in string]: any }
-        : [Props] extends [never]
-        ? {}
-        : [Props] extends [undefined]
-        ? {}
-        : [Props] extends [never[]]
-        ? {}
-        : Props
+          ? { [K in string]: any }
+          : [Props] extends [never]
+            ? {}
+            : [Props] extends [undefined]
+              ? {}
+              : [Props] extends [never[]]
+                ? {}
+                : Props
     > &
       EmitsToProps<E>
   >
@@ -303,10 +303,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : Props,
+      ? {}
+      : Props extends never[]
+        ? string[]
+        : Props,
   RawBindings,
   D,
   C,
