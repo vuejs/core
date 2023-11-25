@@ -1143,7 +1143,6 @@ describe('compiler: parse', () => {
         arg: undefined,
         modifiers: [],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
@@ -1173,7 +1172,6 @@ describe('compiler: parse', () => {
             source: 'a'
           }
         },
-        rawExp: 'a',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 13, line: 1, column: 14 },
@@ -1203,7 +1201,6 @@ describe('compiler: parse', () => {
         },
         modifiers: [],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
@@ -1260,7 +1257,6 @@ describe('compiler: parse', () => {
         },
         modifiers: [],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 17, line: 1, column: 18 },
@@ -1280,7 +1276,6 @@ describe('compiler: parse', () => {
         arg: undefined,
         modifiers: ['enter'],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
@@ -1300,7 +1295,6 @@ describe('compiler: parse', () => {
         arg: undefined,
         modifiers: ['enter', 'exact'],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
@@ -1330,7 +1324,6 @@ describe('compiler: parse', () => {
         },
         modifiers: ['enter', 'exact'],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 27, line: 1, column: 28 },
@@ -1360,7 +1353,6 @@ describe('compiler: parse', () => {
         },
         modifiers: ['camel'],
         exp: undefined,
-        rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 21, line: 1, column: 22 },
@@ -1427,7 +1419,6 @@ describe('compiler: parse', () => {
             source: 'b'
           }
         },
-        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
@@ -1467,7 +1458,6 @@ describe('compiler: parse', () => {
             source: 'b'
           }
         },
-        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
@@ -1508,7 +1498,6 @@ describe('compiler: parse', () => {
             source: 'b'
           }
         },
-        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 14, line: 1, column: 15 },
@@ -1549,7 +1538,6 @@ describe('compiler: parse', () => {
             source: 'b'
           }
         },
-        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 9, line: 1, column: 10 },
@@ -1590,7 +1578,6 @@ describe('compiler: parse', () => {
             source: 'b'
           }
         },
-        rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 15, line: 1, column: 16 },
@@ -1631,7 +1618,6 @@ describe('compiler: parse', () => {
             source: '{ b }'
           }
         },
-        rawExp: '{ b }',
         loc: {
           start: { offset: 6, line: 1, column: 7 },
           end: { offset: 16, line: 1, column: 17 },
