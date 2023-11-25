@@ -34,6 +34,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
     - [ ] compiler
 - [ ] Remove DOM API in codegen
 - [ ] Fragment
+  - [x] multiple root nodes
 - [ ] Built-in Components
   - [ ] Transition
   - [ ] TransitionGroup

@@ -135,17 +135,22 @@ export function transform(
     type: IRNodeTypes.ROOT,
     loc: root.loc,
     template: [],
-    children: {},
+    children: {} as any,
     effect: Object.create(null),
     operation: [],
     helpers: new Set([]),
     vaporHelpers: new Set([]),
   }
   const ctx = createRootContext(ir, root, options)
+  const rootId = ctx.getElementId()
 
   // TODO: transform presets, see packages/compiler-core/src/transforms
   transformChildren(ctx, true)
-  ir.children = ctx.children
+  ir.children = {
+    store: true,
+    id: rootId,
+    children: ctx.children,
+  }
 
   return ir
 }

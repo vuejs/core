@@ -27,18 +27,14 @@ export function generate(
     vaporHelpers.add('template')
   }
 
-  for (const [, { id, children }] of Object.entries(ir.children)) {
-    code += `const n${id} = t0()\n`
-
-    if (Object.keys(children).length) {
-      code += `const {${genChildren(children)}} = children(n${id})\n`
-      vaporHelpers.add('children')
-    }
+  {
+    code += `const root = t0()\n`
+    code += `const {${genChildren(ir.children.children)}} = children(root)\n`
+    vaporHelpers.add('children')
 
     for (const operation of ir.operation) {
       code += genOperation(operation)
     }
-
     for (const [_expr, operations] of Object.entries(ir.effect)) {
       // TODO don't use watchEffect from vue/core, implement `effect` function in runtime-vapor package
       let scope = `watchEffect(() => {\n`
@@ -49,9 +45,8 @@ export function generate(
       scope += '})\n'
       code += scope
     }
-
     // TODO multiple-template
-    code += `return n${id}\n`
+    code += `return root\n`
   }
 
   if (vaporHelpers.size)

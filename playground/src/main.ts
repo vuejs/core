@@ -5,7 +5,7 @@ const mod = (modules['.' + location.pathname] || modules['./App.vue'])()
 
 mod.then(({ default: m }) => {
   render(() => {
-    const returned = m.setup({}, { expose() {} })
+    const returned = m.setup?.({}, { expose() {} })
     return m.render(returned)
   }, '#app')
 })

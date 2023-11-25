@@ -28,6 +28,11 @@ describe('comile', () => {
     expect(code).matchSnapshot()
   })
 
+  test('fragment', async () => {
+    const code = await compile(`<p/><span/><div/>`)
+    expect(code).matchSnapshot()
+  })
+
   test('bindings', async () => {
     const code = await compile(`<div>count is {{ count }}.</div>`, {
       bindingMetadata: {

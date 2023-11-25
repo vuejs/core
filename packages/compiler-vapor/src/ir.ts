@@ -20,7 +20,7 @@ export interface IRNode {
 export interface RootIRNode extends IRNode {
   type: IRNodeTypes.ROOT
   template: Array<TemplateGeneratorIRNode>
-  children: DynamicChildren
+  children: DynamicChild
   // TODO multi-expression effect
   effect: Record<string /* expr */, OperationNode[]>
   operation: OperationNode[]

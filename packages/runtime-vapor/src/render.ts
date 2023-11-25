@@ -7,7 +7,7 @@ import {
 import { isArray } from '@vue/shared'
 
 export type Block = Node | Fragment | Block[]
-export type Fragment = { nodes: Block; anchor?: Node }
+export type Fragment = { nodes: Block; anchor: Node }
 export type BlockFn = (props?: any) => Block
 
 export function render(
@@ -52,7 +52,7 @@ export function insert(
     for (const child of block) insert(child, parent, anchor)
   } else {
     insert(block.nodes, parent, anchor)
-    block.anchor && parent.insertBefore(block.anchor, anchor)
+    parent.insertBefore(block.anchor, anchor)
   }
   // }
 }
