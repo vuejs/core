@@ -24,7 +24,6 @@ export interface TransformContext<T extends Node = Node> {
   root: TransformContext<RootNode>
   index: number
   options: TransformOptions
-  // ir: RootIRNode
   template: string
   children: DynamicChildren
   store: boolean

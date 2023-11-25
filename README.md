@@ -14,6 +14,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
 - [ ] TODO-MVC
 - [ ] directives
   - [x] `v-once`
+    - [ ] unit tests
   - [x] `v-html`
   - [x] `v-text`
   - [x] `v-pre`
@@ -22,6 +23,8 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
     - [x] simple expression
     - [ ] compound expression
     - [ ] modifiers
+    - [ ] unit tests
+  - [ ] runtime
   - [ ] `v-memo`
   - [ ] `v-model`
   - [ ] `v-if` / `v-else` / `v-else-if`
