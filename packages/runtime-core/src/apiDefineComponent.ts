@@ -147,32 +147,6 @@ type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
   ? Props
   : never
 
-export type Test<Props = never> = {
-  props: NamedProps<Props> | OptionProps<Props>
-  test?(a: Props): void
-}
-
-declare function test<Props = never>(options: Test<Props>): void
-
-test({
-  props: ['a'] as string[],
-  test(a) {}
-})
-
-// test({
-//   props: ['a', 'b'],
-//   test(a) {
-//     // @ts-expect-error
-//     a = 'asd'
-//   }
-// })
-// test({
-//   props: { a: String },
-//   test(a) {
-//     a.
-//   }
-// })
-
 export type DefineComponentOptions<
   Props = never,
   RawBindings = {},

@@ -1606,9 +1606,3 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
-
-const a = defineComponent({
-  props: {
-    test: { type: String, required: true }
-  }
-})
