@@ -75,7 +75,21 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-once 1`] = `
+exports[`comile > directives > v-once > as root node 1`] = `
+"import { watchEffect } from 'vue';
+import { template, setAttr } from 'vue/vapor';
+const t0 = template(\`<div></div>\`);
+export function render() {
+  const n0 = t0();
+  watchEffect(() => {
+    setAttr(n0, 'id', undefined, foo);
+  });
+  return n0;
+}
+"
+`;
+
+exports[`comile > directives > v-once > basic 1`] = `
 "import { template, children, insert, setText, setAttr } from 'vue/vapor';
 const t0 = template(\`<div> <span></span></div>\`);
 export function render() {

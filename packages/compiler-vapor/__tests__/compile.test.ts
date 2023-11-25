@@ -92,20 +92,28 @@ describe('comile', () => {
       })
     })
 
-    test('v-once', async () => {
-      const code = await compile(
-        `<div v-once>
+    describe('v-once', () => {
+      test('basic', async () => {
+        const code = await compile(
+          `<div v-once>
           {{ msg }}
           <span :class="clz" />
         </div>`,
-        {
-          bindingMetadata: {
-            msg: BindingTypes.SETUP_REF,
-            clz: BindingTypes.SETUP_REF,
+          {
+            bindingMetadata: {
+              msg: BindingTypes.SETUP_REF,
+              clz: BindingTypes.SETUP_REF,
+            },
           },
-        },
-      )
-      expect(code).matchSnapshot()
+        )
+        expect(code).matchSnapshot()
+      })
+
+      test.fails('as root node', async () => {
+        const code = await compile(`<div :id="foo" v-once />`)
+        expect(code).toMatchSnapshot()
+        expect(code).not.contains('watchEffect')
+      })
     })
   })
 })
