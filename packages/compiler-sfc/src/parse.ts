@@ -290,11 +290,12 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
+  const loc = node.innerLoc!
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content: source.slice(node.loc.start.offset, node.loc.end.offset),
-    loc: node.loc,
+    content: source.slice(loc.start.offset, loc.end.offset),
+    loc,
     attrs
   }
   if (pad) {

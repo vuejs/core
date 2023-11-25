@@ -123,10 +123,6 @@ const tokenizer = new Tokenizer(stack, {
 
   onopentagname(start, end) {
     const name = getSlice(start, end)
-    // in SFC mode, root-level tags locations are for its inner content.
-    const startIndex = tokenizer.inSFCRoot
-      ? end + fastForward(end, CharCodes.Gt) + 1
-      : start - 1
     currentOpenTag = {
       type: NodeTypes.ELEMENT,
       tag: name,
@@ -134,8 +130,15 @@ const tokenizer = new Tokenizer(stack, {
       tagType: ElementTypes.ELEMENT, // will be refined on tag close
       props: [],
       children: [],
-      loc: getLoc(startIndex, end),
+      loc: getLoc(start - 1, end),
       codegenNode: undefined
+    }
+    if (tokenizer.inSFCRoot) {
+      // in SFC mode, generate locations for root-level tags' inner content.
+      currentOpenTag.innerLoc = getLoc(
+        end + fastForward(end, CharCodes.Gt) + 1,
+        end
+      )
     }
   },
 
@@ -571,18 +574,20 @@ function onText(content: string, start: number, end: number) {
 
 function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   // attach end position
-  if (tokenizer.inSFCRoot) {
-    // SFC root tag, end position should be inner end
-    if (el.children.length) {
-      el.loc.end = extend({}, el.children[el.children.length - 1].loc.end)
-    } else {
-      el.loc.end = extend({}, el.loc.start)
-    }
-  } else if (isImplied) {
+  if (isImplied) {
     // implied close, end should be backtracked to close
     el.loc.end = tokenizer.getPos(backTrack(end, CharCodes.Lt))
   } else {
     el.loc.end = tokenizer.getPos(end + fastForward(end, CharCodes.Gt) + 1)
+  }
+
+  if (tokenizer.inSFCRoot) {
+    // SFC root tag, resolve inner end
+    if (el.children.length) {
+      el.innerLoc!.end = extend({}, el.children[el.children.length - 1].loc.end)
+    } else {
+      el.innerLoc!.end = extend({}, el.innerLoc!.start)
+    }
   }
 
   // refine element type
