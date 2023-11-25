@@ -123,3 +123,7 @@ type Children = Record<number, [ChildNode, Children]>
 export function children(n: ChildNode): Children {
   return { ...Array.from(n.childNodes).map(n => [n, children(n)]) }
 }
+
+export function createTextNode(data: string): Text {
+  return document.createTextNode(data)
+}

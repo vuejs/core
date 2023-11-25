@@ -9,7 +9,7 @@ export const enum IRNodeTypes {
   SET_HTML,
 
   INSERT_NODE,
-  TEXT_NODE,
+  CREATE_TEXT_NODE,
 }
 
 export interface IRNode {
@@ -59,8 +59,8 @@ export interface SetHtmlIRNode extends IRNode {
   value: string
 }
 
-export interface TextNodeIRNode extends IRNode {
-  type: IRNodeTypes.TEXT_NODE
+export interface CreateTextNodeIRNode extends IRNode {
+  type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
   value: string
 }
@@ -77,7 +77,7 @@ export type OperationNode =
   | SetTextIRNode
   | SetEventIRNode
   | SetHtmlIRNode
-  | TextNodeIRNode
+  | CreateTextNodeIRNode
   | InsertNodeIRNode
 
 export interface DynamicChild {

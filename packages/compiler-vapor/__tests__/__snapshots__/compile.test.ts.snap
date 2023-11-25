@@ -2,7 +2,7 @@
 
 exports[`comile > bindings 1`] = `
 "import { watchEffect } from 'vue';
-import { template, children, insert, setText } from 'vue/vapor';
+import { template, children, createTextNode, insert, setText } from 'vue/vapor';
 const t0 = template(\`<div>count is <!>.</div>\`);
 export function render() {
   const n0 = t0();
@@ -14,7 +14,7 @@ export function render() {
       },
     ],
   } = children(root);
-  const n2 = document.createTextNode(count.value);
+  const n2 = createTextNode(count.value);
   insert(n2, n1, n3);
   watchEffect(() => {
     setText(n2, undefined, count.value);
@@ -110,7 +110,7 @@ export function render() {
 `;
 
 exports[`comile > directives > v-once > basic 1`] = `
-"import { template, children, insert, setText, setAttr } from 'vue/vapor';
+"import { template, children, createTextNode, insert, setText, setAttr } from 'vue/vapor';
 const t0 = template(\`<div> <span></span></div>\`);
 export function render() {
   const n0 = t0();
@@ -122,7 +122,7 @@ export function render() {
       },
     ],
   } = children(root);
-  const n2 = document.createTextNode(msg.value);
+  const n2 = createTextNode(msg.value);
   insert(n2, n1, 0 /* InsertPosition.FIRST */);
   setText(n2, undefined, msg.value);
   setAttr(n3, 'class', undefined, clz.value);
@@ -177,13 +177,13 @@ export function render() {
 
 exports[`comile > static + dynamic root 1`] = `
 "import { watchEffect } from 'vue';
-import { template, insert, setText } from 'vue/vapor';
+import { template, createTextNode, insert, setText } from 'vue/vapor';
 const t0 = template(\`2\`);
 export function render() {
   const n0 = t0();
-  const n1 = document.createTextNode(1);
+  const n1 = createTextNode(1);
   insert(n1, n0, 0 /* InsertPosition.FIRST */);
-  const n2 = document.createTextNode(3);
+  const n2 = createTextNode(3);
   insert(n2, n0);
   watchEffect(() => {
     setText(n1, undefined, 1);

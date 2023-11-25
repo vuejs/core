@@ -275,7 +275,7 @@ function transformInterpolation(
 
       ctx.registerOpration(
         {
-          type: IRNodeTypes.TEXT_NODE,
+          type: IRNodeTypes.CREATE_TEXT_NODE,
           loc: node.loc,
           id,
           value: expr,

@@ -104,9 +104,9 @@ export function generate(
         break
       }
 
-      case IRNodeTypes.TEXT_NODE: {
-        // TODO handle by runtime: document.createTextNode
-        code = `const n${operation.id} = document.createTextNode(${operation.value})\n`
+      case IRNodeTypes.CREATE_TEXT_NODE: {
+        code = `const n${operation.id} = createTextNode(${operation.value})\n`
+        vaporHelpers.add('createTextNode')
         break
       }
 
