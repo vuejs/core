@@ -30,7 +30,9 @@ export function generate(
   {
     code += `const n${ir.children.id} = t0()\n`
     if (Object.keys(ir.children.children).length) {
-      code += `const {${genChildren(ir.children.children)}} = children(root)\n`
+      code += `const {${genChildren(ir.children.children)}} = children(n${
+        ir.children.id
+      })\n`
       vaporHelpers.add('children')
     }
 

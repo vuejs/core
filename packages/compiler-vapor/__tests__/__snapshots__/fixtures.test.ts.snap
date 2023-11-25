@@ -20,7 +20,7 @@ const increment = () => count.value++
 
 return (() => {
 const n0 = t0()
-const { 1: [n1], 2: [n3], 3: [n5], 4: [n6], 6: [n7],} = children(root)
+const { 1: [n1], 2: [n3], 3: [n5], 4: [n6], 6: [n7],} = children(n0)
 const n2 = createTextNode(count.value)
 insert(n2, n1)
 const n4 = createTextNode(double.value)
