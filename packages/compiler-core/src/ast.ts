@@ -131,6 +131,7 @@ export interface BaseElementNode extends Node {
   tagType: ElementTypes
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
+  isSelfClosing?: boolean
   innerLoc?: SourceLocation // only for SFC root level elements
 }
 

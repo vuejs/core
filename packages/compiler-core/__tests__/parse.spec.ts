@@ -501,6 +501,7 @@ describe('compiler: parse', () => {
         codegenNode: undefined,
         props: [],
         children: [],
+        isSelfClosing: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
@@ -545,6 +546,7 @@ describe('compiler: parse', () => {
         codegenNode: undefined,
         props: [],
         children: [],
+        isSelfClosing: true,
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },

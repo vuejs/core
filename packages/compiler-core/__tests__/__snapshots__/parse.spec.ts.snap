@@ -3831,6 +3831,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
     {
       "children": [],
       "codegenNode": undefined,
+      "isSelfClosing": true,
       "loc": {
         "end": {
           "column": 25,
@@ -4417,6 +4418,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
     {
       "children": [],
       "codegenNode": undefined,
+      "isSelfClosing": true,
       "loc": {
         "end": {
           "column": 37,
@@ -4497,6 +4499,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
     {
       "children": [],
       "codegenNode": undefined,
+      "isSelfClosing": true,
       "loc": {
         "end": {
           "column": 37,
@@ -4611,6 +4614,7 @@ exports[`compiler: parse > valid html 1`] = `
         {
           "children": [],
           "codegenNode": undefined,
+          "isSelfClosing": true,
           "loc": {
             "end": {
               "column": 39,

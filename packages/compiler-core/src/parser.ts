@@ -172,6 +172,7 @@ const tokenizer = new Tokenizer(stack, {
 
   onselfclosingtag(end) {
     const name = currentOpenTag!.tag
+    currentOpenTag!.isSelfClosing = true
     endOpenTag(end)
     if (stack[0]?.tag === name) {
       onCloseTag(stack.shift()!, end)
