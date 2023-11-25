@@ -57,7 +57,7 @@ export type Prop<T, D = T> = PropOptions<T, D> | PropType<T>
 type DefaultFactory<T> = (props: Data) => T | null | undefined
 
 export interface PropOptions<T = any, D = T> {
-  type?: PropType<T> | true
+  type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
   validator?(value: unknown): boolean
@@ -100,7 +100,7 @@ type RequiredKeys<T> = {
     : never
 }[keyof T]
 
-type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
+// type OptionalKeys<T> = Exclude<keyof T, RequiredKeys<T>>
 
 type DefaultKeys<T> = {
   [K in keyof T]: T[K] extends
@@ -117,22 +117,22 @@ type DefaultKeys<T> = {
 type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
   : [T] extends [{ type: null | true }]
-    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
-      ? Record<string, any>
-      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
-        ? boolean
-        : [T] extends [DateConstructor | { type: DateConstructor }]
-          ? Date
-          : [T] extends [(infer U)[] | { type: (infer U)[] }]
-            ? U extends DateConstructor
-              ? Date | InferPropType<U>
-              : InferPropType<U>
-            : [T] extends [Prop<infer V, infer D>]
-              ? unknown extends V
-                ? IfAny<V, V, D>
-                : V
-              : T
+  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+  ? Record<string, any>
+  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+  ? boolean
+  : [T] extends [DateConstructor | { type: DateConstructor }]
+  ? Date
+  : [T] extends [(infer U)[] | { type: (infer U)[] }]
+  ? U extends DateConstructor
+    ? Date | InferPropType<U>
+    : InferPropType<U>
+  : [T] extends [Prop<infer V, infer D>]
+  ? unknown extends V
+    ? IfAny<V, V, D>
+    : V
+  : T
 
 /**
  * Extract prop types from a runtime props options object.
@@ -144,13 +144,9 @@ type InferPropType<T> = [T] extends [null]
  * To extract accepted props from the parent, use {@link ExtractPublicPropTypes}.
  */
 export type ExtractPropTypes<O> = {
-  // use `keyof Pick<O, RequiredKeys<O>>` instead of `RequiredKeys<O>` to
-  // support IDE features
-  [K in keyof Pick<O, RequiredKeys<O>>]: InferPropType<O[K]>
-} & {
-  // use `keyof Pick<O, OptionalKeys<O>>` instead of `OptionalKeys<O>` to
-  // support IDE features
-  [K in keyof Pick<O, OptionalKeys<O>>]?: InferPropType<O[K]>
+  [K in keyof O]:
+    | InferPropType<O[K]>
+    | (K extends RequiredKeys<O> ? never : undefined)
 }
 
 type PublicRequiredKeys<T> = {

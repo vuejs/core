@@ -319,7 +319,7 @@ describe('with object props', () => {
     props: {
       myProp: {
         type: Number,
-        validator(val) {
+        validator: (val: unknown) => {
           // @ts-expect-error
           return val !== this.otherProp
         },
@@ -737,6 +737,8 @@ describe('extends with mixins', () => {
         type: Number,
         default: 2
       },
+
+      // should be something
       p3: {
         type: Boolean,
         required: true
@@ -1604,3 +1606,9 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
+
+const a = defineComponent({
+  props: {
+    test: { type: String, required: true }
+  }
+})

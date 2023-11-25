@@ -1,9 +1,6 @@
 import {
   ComputedOptions,
   MethodOptions,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
   ComponentOptionsMixin,
   RenderFunction,
   ComponentInjectOptions,
@@ -37,10 +34,16 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-      ? ExtractPropTypes<Props>
-      : Props extends never[]
-        ? {}
-        : Props) &
+    ? ExtractPropTypes<Props>
+    : Props extends never[]
+    ? {}
+    : [Props] extends [string[]]
+    ? { [key: string]: any }
+    : [Props] extends [never]
+    ? {}
+    : [Props] extends [undefined]
+    ? {}
+    : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -133,17 +136,28 @@ type BuildComponentInstance<
   Options
 >
 
-type NamedProps<PropNames> = [PropNames] extends [string] ? PropNames[] : never
+type NamedProps<PropNames> = [PropNames] extends [string]
+  ? PropNames[]
+  : PropNames extends string[]
+  ? PropNames
+  : PropNames extends never[]
+  ? PropNames
+  : never
 type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
   ? Props
   : never
 
-// export type Test<Props = never> = {
-//   props: NamedProps<Props> | OptionProps<Props>
-//   test(a: Props): void
-// }
+export type Test<Props = never> = {
+  props: NamedProps<Props> | OptionProps<Props>
+  test?(a: Props): void
+}
 
-// declare function test<Props = never>(options: Test<Props>): void
+declare function test<Props = never>(options: Test<Props>): void
+
+test({
+  props: ['a'] as string[],
+  test(a) {}
+})
 
 // test({
 //   props: ['a', 'b'],
@@ -177,11 +191,15 @@ export type DefineComponentOptions<
     ExtractPropTypes<
       [Props] extends [string]
         ? { [K in Props]: any }
+        : [Props] extends [string[]]
+        ? { [K in string]: any }
         : [Props] extends [never]
-          ? {}
-          : [Props] extends [undefined]
-            ? {}
-            : Props
+        ? {}
+        : [Props] extends [undefined]
+        ? {}
+        : [Props] extends [never[]]
+        ? {}
+        : Props
     > &
       EmitsToProps<E>
   >
@@ -311,10 +329,10 @@ export type DefineComponentFromOptions<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-      ? {}
-      : Props extends never[]
-        ? string[]
-        : Props,
+    ? {}
+    : Props extends never[]
+    ? string[]
+    : Props,
   RawBindings,
   D,
   C,
@@ -532,7 +550,7 @@ export function defineComponent(options: unknown, extraOptions?: unknown) {
         extend({ name: options.name }, extraOptions, { setup: options }))()
     : options
 }
-
+/*
 const a = defineComponent({
   props: ['a', 'b'],
 
@@ -568,3 +586,4 @@ const c = defineComponent({
     props.b
   }
 })
+*/

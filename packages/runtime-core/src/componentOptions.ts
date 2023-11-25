@@ -226,23 +226,24 @@ export type ComponentOptionsWithoutProps<
   S extends SlotsType = {},
   PE = Props & EmitsToProps<E>,
   Options = {}
-> = (ComponentOptionsBase<
-  PE,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  {},
-  I,
-  II,
-  S
-> & {
-  props?: undefined
-}) &
+> = Record<string, any> &
+  (ComponentOptionsBase<
+    PE,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    {},
+    I,
+    II,
+    S
+  > & {
+    props?: undefined
+  }) &
   ThisType<
     CreateComponentPublicInstance<
       EmitsToProps<E>,
@@ -276,26 +277,27 @@ export type ComponentOptionsWithArrayProps<
   II extends string = string,
   S extends SlotsType = {},
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>
-> = Omit<
-  ComponentOptionsBase<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    {},
-    I,
-    II,
-    S
-  >,
-  'props'
-> & {
-  props: PropNames[]
-} & ThisType<
+> = Record<string, any> &
+  Omit<
+    ComponentOptionsBase<
+      Props,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      {},
+      I,
+      II,
+      S
+    >,
+    'props'
+  > & {
+    props: PropNames[]
+  } & ThisType<
     CreateComponentPublicInstance<
       Props,
       RawBindings,
@@ -330,23 +332,24 @@ export type ComponentOptionsWithObjectProps<
     ? Prettify<EmitsToProps<E>>
     : Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  Defaults,
-  I,
-  II,
-  S
-> & {
-  props: PropsOptions & ThisType<PropsOptions>
-} & ThisType<
+> = Record<string, any> &
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    Defaults,
+    I,
+    II,
+    S
+  > & {
+    props: PropsOptions & ThisType<PropsOptions>
+  } & ThisType<
     CreateComponentPublicInstance<
       Props,
       RawBindings,

@@ -1,13 +1,6 @@
-import {
-  DeclareComponent,
-  DefineComponent,
-  ExtractComponentEmitOptions,
-  defineComponent,
-  h
-} from 'vue'
+import { DeclareComponent, defineComponent } from 'vue'
 import { expectType } from './utils'
 import { SlotsType } from 'vue'
-import { EmitsToProps } from 'packages/runtime-core/src/componentEmits'
 
 declare module 'vue' {
   interface ComponentCustomOptions {
@@ -75,9 +68,9 @@ type ErrorLevel = 'debug' | 'warning' | 'error'
 declare function ErrorComponent<T>(options: T): T &
   DeclareComponent<{
     new <T extends ErrorLevel = 'debug'>(): {
-      $props: { type: T } & EmitsToProps<{
+      $props: { type: T } & {
         [K in `on${Capitalize<T>}`]: (msg: string) => void
-      }>
+      }
       $slots: SlotsType<Record<T, (msg: string) => any[]>>
     }
   }>

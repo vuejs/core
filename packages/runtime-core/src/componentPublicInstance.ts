@@ -16,7 +16,8 @@ import {
   isFunction,
   UnionToIntersection,
   Prettify,
-  IfAny
+  IfAny,
+  LooseOptional
 } from '@vue/shared'
 import {
   toRaw,
@@ -218,7 +219,6 @@ export type CreateComponentPublicInstance<
   I,
   S
 >
-
 /**
  * Resolves props
  */
@@ -228,8 +228,20 @@ export type ComponentPropsWithDefault<
   PublicProps,
   MakeDefaultsOptional extends boolean = false
 > = MakeDefaultsOptional extends true
-  ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
+  ? LooseOptional<P> extends infer OptionalProps
+    ? Omit<Prettify<P> & PublicProps, keyof Defaults | keyof OptionalProps> &
+        Omit<OptionalProps, keyof Defaults> &
+        Partial<Defaults>
+    : Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
   : Prettify<P> & PublicProps
+
+// declare const a: ComponentPropsWithDefault<
+//   { a: string; b: boolean },
+//   'b',
+//   PublicProps,
+//   true
+// >
+// a.b
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
