@@ -29,8 +29,10 @@ export interface TransformContext<T extends Node = Node> {
   store: boolean
   ghost: boolean
   once: boolean
+  id: number | null
 
-  getElementId(): number
+  getId(): number
+  incraseId(): number
   registerTemplate(): number
   registerEffect(expr: string, operation: OperationNode): void
   registerOpration(...oprations: OperationNode[]): void
@@ -42,7 +44,7 @@ function createRootContext(
   node: RootNode,
   options: TransformOptions,
 ): TransformContext<RootNode> {
-  let i = 0
+  let globalId = 0
   const { effect, operation: operation, helpers, vaporHelpers } = ir
 
   const ctx: TransformContext<RootNode> = {
@@ -56,7 +58,12 @@ function createRootContext(
     ghost: false,
     once: false,
 
-    getElementId: () => i++,
+    id: null,
+    incraseId: () => globalId++,
+    getId() {
+      if (this.id !== null) return this.id
+      return (this.id = this.incraseId())
+    },
     registerEffect(expr, operation) {
       if (!effect[expr]) effect[expr] = []
       effect[expr].push(operation)
@@ -94,15 +101,11 @@ function createContext<T extends TemplateChildNode>(
   parent: TransformContext,
   index: number,
 ): TransformContext<T> {
-  let id: number | undefined
-  const getElementId = () => {
-    if (id !== undefined) return id
-    return (id = parent.root.getElementId())
-  }
   const children = {}
 
   const ctx: TransformContext<T> = {
     ...parent,
+    id: null,
     node,
     parent,
     index,
@@ -112,8 +115,6 @@ function createContext<T extends TemplateChildNode>(
     set template(t) {
       parent.template = t
     },
-    getElementId,
-
     children,
     store: false,
     registerEffect(expr, operation) {
@@ -142,13 +143,14 @@ export function transform(
     vaporHelpers: new Set([]),
   }
   const ctx = createRootContext(ir, root, options)
-  const rootId = ctx.getElementId()
+  const rootId = ctx.getId()
 
   // TODO: transform presets, see packages/compiler-core/src/transforms
   transformChildren(ctx, true)
   ir.children = {
-    store: true,
     id: rootId,
+    store: true,
+    ghost: false,
     children: ctx.children,
   }
 
@@ -171,13 +173,6 @@ function transformChildren(
     const child = createContext(node, ctx, index)
     const isFirst = i === 0
     const isLast = i === children.length - 1
-
-    // TODO: multiple root elements
-    if (root) {
-      child.store = true
-      // generate id for root element early
-      child.getElementId()
-    }
 
     switch (node.type) {
       case 1 satisfies NodeTypes.ELEMENT: {
@@ -215,9 +210,10 @@ function transformChildren(
 
     if (Object.keys(child.children).length > 0 || child.store)
       ctx.children[index] = {
-        id: child.store ? child.getElementId() : null,
+        id: child.store ? child.getId() : null,
         store: child.store,
         children: child.children,
+        ghost: child.ghost,
       }
 
     if (!child.ghost) index++
@@ -252,7 +248,7 @@ function transformInterpolation(
     const expr = processExpression(ctx, node.content)!
 
     const parent = ctx.parent!
-    const parentId = parent.getElementId()
+    const parentId = parent.getId()
     parent.store = true
 
     if (isFirst && isLast) {
@@ -267,12 +263,12 @@ function transformInterpolation(
       let anchor: number | 'first' | 'last'
 
       if (!isFirst && !isLast) {
-        id = ctx.root.getElementId()
-        anchor = ctx.getElementId()
+        id = ctx.incraseId()
+        anchor = ctx.getId()
         ctx.template += '<!>'
         ctx.store = true
       } else {
-        id = ctx.getElementId()
+        id = ctx.getId()
         ctx.ghost = true
         anchor = isFirst ? 'first' : 'last'
       }
@@ -342,7 +338,7 @@ function transformProp(
       ctx.registerEffect(expr, {
         type: IRNodeTypes.SET_PROP,
         loc: node.loc,
-        element: ctx.getElementId(),
+        element: ctx.getId(),
         name: node.arg.content,
         value: expr,
       })
@@ -366,7 +362,7 @@ function transformProp(
       ctx.registerEffect(expr, {
         type: IRNodeTypes.SET_EVENT,
         loc: node.loc,
-        element: ctx.getElementId(),
+        element: ctx.getId(),
         name: node.arg.content,
         value: expr,
       })
@@ -377,7 +373,7 @@ function transformProp(
       ctx.registerEffect(value, {
         type: IRNodeTypes.SET_HTML,
         loc: node.loc,
-        element: ctx.getElementId(),
+        element: ctx.getId(),
         value,
       })
       break
@@ -387,7 +383,7 @@ function transformProp(
       ctx.registerEffect(value, {
         type: IRNodeTypes.SET_TEXT,
         loc: node.loc,
-        element: ctx.getElementId(),
+        element: ctx.getId(),
         value,
       })
       break

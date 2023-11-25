@@ -83,6 +83,7 @@ export type OperationNode =
 export interface DynamicChild {
   id: number | null
   store: boolean
+  ghost: boolean
   children: DynamicChildren
 }
 export type DynamicChildren = Record<number, DynamicChild>

@@ -28,9 +28,11 @@ export function generate(
   }
 
   {
-    code += `const root = t0()\n`
-    code += `const {${genChildren(ir.children.children)}} = children(root)\n`
-    vaporHelpers.add('children')
+    code += `const n${ir.children.id} = t0()\n`
+    if (Object.keys(ir.children.children).length) {
+      code += `const {${genChildren(ir.children.children)}} = children(root)\n`
+      vaporHelpers.add('children')
+    }
 
     for (const operation of ir.operation) {
       code += genOperation(operation)
@@ -46,7 +48,7 @@ export function generate(
       code += scope
     }
     // TODO multiple-template
-    code += `return root\n`
+    code += `return n${ir.children.id}\n`
   }
 
   if (vaporHelpers.size)

@@ -28,6 +28,11 @@ describe('comile', () => {
     expect(code).matchSnapshot()
   })
 
+  test('static + dynamic root', async () => {
+    const code = await compile(`{{ 1 }}2{{ 3 }}`)
+    expect(code).matchSnapshot()
+  })
+
   test('fragment', async () => {
     const code = await compile(`<p/><span/><div/>`)
     expect(code).matchSnapshot()

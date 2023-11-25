@@ -19,28 +19,28 @@ const increment = () => count.value++
 
 
 return (() => {
-const root = t0()
-const { 0: [n1], 1: [n2], 2: [n4], 3: [n6], 4: [n7], 5: [n8], 6: [n9], 7: [n11],} = children(root)
-const n3 = document.createTextNode(count.value)
-insert(n3, n2)
-const n5 = document.createTextNode(double.value)
-insert(n5, n4)
-const n10 = document.createTextNode(count.value)
-insert(n10, n9)
-setText(n10, undefined, count.value)
+const n0 = t0()
+const { 1: [n1], 2: [n3], 3: [n5], 4: [n6], 6: [n7],} = children(root)
+const n2 = document.createTextNode(count.value)
+insert(n2, n1)
+const n4 = document.createTextNode(double.value)
+insert(n4, n3)
+const n8 = document.createTextNode(count.value)
+insert(n8, n7)
+setText(n8, undefined, count.value)
 watchEffect(() => {
-setText(n3, undefined, count.value)
+setText(n2, undefined, count.value)
 })
 watchEffect(() => {
-setText(n5, undefined, double.value)
+setText(n4, undefined, double.value)
 })
 watchEffect(() => {
-on(n6, \\"click\\", increment)
+on(n5, \\"click\\", increment)
 })
 watchEffect(() => {
-setHtml(n7, undefined, html)
+setHtml(n6, undefined, html)
 })
-return root
+return n0
 
 })();
 }
