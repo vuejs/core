@@ -13,6 +13,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
           "line": 1,
           "offset": 38,
         },
+        "source": "<template><![CDATA[cdata]]></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -38,6 +39,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[c
       "line": 1,
       "offset": 38,
     },
+    "source": "<template><![CDATA[cdata]]></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -66,6 +68,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
                   "line": 1,
                   "offset": 29,
                 },
+                "source": "cdata",
                 "start": {
                   "column": 25,
                   "line": 1,
@@ -82,6 +85,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
               "line": 1,
               "offset": 38,
             },
+            "source": "<svg><![CDATA[cdata]]></svg>",
             "start": {
               "column": 11,
               "line": 1,
@@ -102,6 +106,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
           "line": 1,
           "offset": 49,
         },
+        "source": "<template><svg><![CDATA[cdata]]></svg></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -127,6 +132,7 @@ exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><svg><![CD
       "line": 1,
       "offset": 49,
     },
+    "source": "<template><svg><![CDATA[cdata]]></svg></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -154,6 +160,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
               "line": 1,
               "offset": 33,
             },
+            "source": "<div id=\\"\\" id=\\"\\"></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -169,6 +176,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 20,
                 },
+                "source": "id=\\"\\"",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -182,6 +190,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 17,
                 },
+                "source": "id",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -197,6 +206,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 20,
                   },
+                  "source": "\\"\\"",
                   "start": {
                     "column": 19,
                     "line": 1,
@@ -213,6 +223,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 26,
                 },
+                "source": "id=\\"\\"",
                 "start": {
                   "column": 22,
                   "line": 1,
@@ -226,6 +237,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 23,
                 },
+                "source": "id",
                 "start": {
                   "column": 22,
                   "line": 1,
@@ -241,6 +253,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 26,
                   },
+                  "source": "\\"\\"",
                   "start": {
                     "column": 25,
                     "line": 1,
@@ -263,6 +276,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
           "line": 1,
           "offset": 44,
         },
+        "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -288,6 +302,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
       "line": 1,
       "offset": 44,
     },
+    "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -314,6 +329,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
               "line": 1,
               "offset": 11,
             },
+            "source": "<",
             "start": {
               "column": 11,
               "line": 1,
@@ -330,6 +346,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
           "line": 1,
           "offset": 12,
         },
+        "source": "<template><",
         "start": {
           "column": 1,
           "line": 1,
@@ -355,6 +372,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
       "line": 1,
       "offset": 11,
     },
+    "source": "<template><",
     "start": {
       "column": 1,
       "line": 1,
@@ -381,6 +399,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
               "line": 1,
               "offset": 12,
             },
+            "source": "</",
             "start": {
               "column": 11,
               "line": 1,
@@ -397,6 +416,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
           "line": 1,
           "offset": 13,
         },
+        "source": "<template></",
         "start": {
           "column": 1,
           "line": 1,
@@ -422,6 +442,7 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
       "line": 1,
       "offset": 12,
     },
+    "source": "<template></",
     "start": {
       "column": 1,
       "line": 1,
@@ -449,6 +470,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
               "line": 1,
               "offset": 25,
             },
+            "source": "<svg><![CDATA[",
             "start": {
               "column": 11,
               "line": 1,
@@ -469,6 +491,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
           "line": 1,
           "offset": 25,
         },
+        "source": "<template><svg><![CDATA[",
         "start": {
           "column": 1,
           "line": 1,
@@ -494,6 +517,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
       "line": 1,
       "offset": 24,
     },
+    "source": "<template><svg><![CDATA[",
     "start": {
       "column": 1,
       "line": 1,
@@ -522,6 +546,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
                   "line": 1,
                   "offset": 29,
                 },
+                "source": "cdata",
                 "start": {
                   "column": 25,
                   "line": 1,
@@ -538,6 +563,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
               "line": 1,
               "offset": 30,
             },
+            "source": "<svg><![CDATA[cdata",
             "start": {
               "column": 11,
               "line": 1,
@@ -558,6 +584,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
           "line": 1,
           "offset": 30,
         },
+        "source": "<template><svg><![CDATA[cdata",
         "start": {
           "column": 1,
           "line": 1,
@@ -583,6 +610,7 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
       "line": 1,
       "offset": 29,
     },
+    "source": "<template><svg><![CDATA[cdata",
     "start": {
       "column": 1,
       "line": 1,
@@ -608,6 +636,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
           "line": 1,
           "offset": 15,
         },
+        "source": "<template><!--",
         "start": {
           "column": 1,
           "line": 1,
@@ -633,6 +662,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
       "line": 1,
       "offset": 14,
     },
+    "source": "<template><!--",
     "start": {
       "column": 1,
       "line": 1,
@@ -659,6 +689,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
               "line": 1,
               "offset": 24,
             },
+            "source": "<!--comment",
             "start": {
               "column": 11,
               "line": 1,
@@ -675,6 +706,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
           "line": 1,
           "offset": 22,
         },
+        "source": "<template><!--comment",
         "start": {
           "column": 1,
           "line": 1,
@@ -700,6 +732,7 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
       "line": 1,
       "offset": 21,
     },
+    "source": "<template><!--comment",
     "start": {
       "column": 1,
       "line": 1,
@@ -725,6 +758,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
           "line": 1,
           "offset": 11,
         },
+        "source": "<div></div",
         "start": {
           "column": 1,
           "line": 1,
@@ -750,6 +784,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
       "line": 1,
       "offset": 10,
     },
+    "source": "<div></div",
     "start": {
       "column": 1,
       "line": 1,
@@ -775,6 +810,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
           "line": 1,
           "offset": 16,
         },
+        "source": "<template><div ",
         "start": {
           "column": 1,
           "line": 1,
@@ -800,6 +836,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
       "line": 1,
       "offset": 15,
     },
+    "source": "<template><div ",
     "start": {
       "column": 1,
       "line": 1,
@@ -825,6 +862,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
           "line": 1,
           "offset": 15,
         },
+        "source": "<template><div",
         "start": {
           "column": 1,
           "line": 1,
@@ -850,6 +888,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
       "line": 1,
       "offset": 14,
     },
+    "source": "<template><div",
     "start": {
       "column": 1,
       "line": 1,
@@ -875,6 +914,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
           "line": 1,
           "offset": 19,
         },
+        "source": "<template><div id ",
         "start": {
           "column": 1,
           "line": 1,
@@ -900,6 +940,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
       "line": 1,
       "offset": 18,
     },
+    "source": "<template><div id ",
     "start": {
       "column": 1,
       "line": 1,
@@ -925,6 +966,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
           "line": 1,
           "offset": 20,
         },
+        "source": "<template><div id =",
         "start": {
           "column": 1,
           "line": 1,
@@ -950,6 +992,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
       "line": 1,
       "offset": 19,
     },
+    "source": "<template><div id =",
     "start": {
       "column": 1,
       "line": 1,
@@ -975,6 +1018,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
           "line": 1,
           "offset": 18,
         },
+        "source": "<template><div id",
         "start": {
           "column": 1,
           "line": 1,
@@ -1000,6 +1044,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
       "line": 1,
       "offset": 17,
     },
+    "source": "<template><div id",
     "start": {
       "column": 1,
       "line": 1,
@@ -1025,6 +1070,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
           "line": 1,
           "offset": 23,
         },
+        "source": "<template><div id=\\"abc",
         "start": {
           "column": 1,
           "line": 1,
@@ -1050,6 +1096,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
       "line": 1,
       "offset": 22,
     },
+    "source": "<template><div id=\\"abc",
     "start": {
       "column": 1,
       "line": 1,
@@ -1075,6 +1122,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
           "line": 1,
           "offset": 24,
         },
+        "source": "<template><div id=\\"abc\\"",
         "start": {
           "column": 1,
           "line": 1,
@@ -1100,6 +1148,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
       "line": 1,
       "offset": 23,
     },
+    "source": "<template><div id=\\"abc\\"",
     "start": {
       "column": 1,
       "line": 1,
@@ -1126,6 +1175,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
               "line": 1,
               "offset": 24,
             },
+            "source": "/",
             "start": {
               "column": 0,
               "line": 1,
@@ -1142,6 +1192,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
           "line": 1,
           "offset": 25,
         },
+        "source": "<template><div id=\\"abc\\"/",
         "start": {
           "column": 1,
           "line": 1,
@@ -1167,6 +1218,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
       "line": 1,
       "offset": 24,
     },
+    "source": "<template><div id=\\"abc\\"/",
     "start": {
       "column": 1,
       "line": 1,
@@ -1192,6 +1244,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
           "line": 1,
           "offset": 23,
         },
+        "source": "<template><div id='abc",
         "start": {
           "column": 1,
           "line": 1,
@@ -1217,6 +1270,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
       "line": 1,
       "offset": 22,
     },
+    "source": "<template><div id='abc",
     "start": {
       "column": 1,
       "line": 1,
@@ -1242,6 +1296,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
           "line": 1,
           "offset": 24,
         },
+        "source": "<template><div id='abc'",
         "start": {
           "column": 1,
           "line": 1,
@@ -1267,6 +1322,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
       "line": 1,
       "offset": 23,
     },
+    "source": "<template><div id='abc'",
     "start": {
       "column": 1,
       "line": 1,
@@ -1293,6 +1349,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
               "line": 1,
               "offset": 24,
             },
+            "source": "/",
             "start": {
               "column": 0,
               "line": 1,
@@ -1309,6 +1366,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
           "line": 1,
           "offset": 25,
         },
+        "source": "<template><div id='abc'/",
         "start": {
           "column": 1,
           "line": 1,
@@ -1334,6 +1392,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
       "line": 1,
       "offset": 24,
     },
+    "source": "<template><div id='abc'/",
     "start": {
       "column": 1,
       "line": 1,
@@ -1360,6 +1419,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
               "line": 1,
               "offset": 23,
             },
+            "source": "/",
             "start": {
               "column": 0,
               "line": 1,
@@ -1376,6 +1436,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
           "line": 1,
           "offset": 24,
         },
+        "source": "<template><div id=abc /",
         "start": {
           "column": 1,
           "line": 1,
@@ -1401,6 +1462,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
       "line": 1,
       "offset": 23,
     },
+    "source": "<template><div id=abc /",
     "start": {
       "column": 1,
       "line": 1,
@@ -1426,6 +1488,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
           "line": 1,
           "offset": 22,
         },
+        "source": "<template><div id=abc",
         "start": {
           "column": 1,
           "line": 1,
@@ -1451,6 +1514,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
       "line": 1,
       "offset": 21,
     },
+    "source": "<template><div id=abc",
     "start": {
       "column": 1,
       "line": 1,
@@ -1478,6 +1542,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
               "line": 1,
               "offset": 27,
             },
+            "source": "<div id= /></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -1493,6 +1558,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 20,
                 },
+                "source": "id= /",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1506,6 +1572,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 17,
                 },
+                "source": "id",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1521,6 +1588,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                     "line": 1,
                     "offset": 20,
                   },
+                  "source": "/",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -1543,6 +1611,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
           "line": 1,
           "offset": 38,
         },
+        "source": "<template><div id= /></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -1568,6 +1637,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "line": 1,
       "offset": 38,
     },
+    "source": "<template><div id= /></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -1595,6 +1665,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
               "line": 1,
               "offset": 26,
             },
+            "source": "<div id= ></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -1610,6 +1681,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 19,
                 },
+                "source": "id= ",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1623,6 +1695,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 17,
                 },
+                "source": "id",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1638,6 +1711,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                     "line": 1,
                     "offset": 19,
                   },
+                  "source": "",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -1660,6 +1734,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
           "line": 1,
           "offset": 37,
         },
+        "source": "<template><div id= ></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -1685,6 +1760,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "line": 1,
       "offset": 37,
     },
+    "source": "<template><div id= ></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -1712,6 +1788,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
               "line": 1,
               "offset": 25,
             },
+            "source": "<div id=></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -1727,6 +1804,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "id=",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1740,6 +1818,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                   "line": 1,
                   "offset": 17,
                 },
+                "source": "id",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1755,6 +1834,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
                     "line": 1,
                     "offset": 18,
                   },
+                  "source": "",
                   "start": {
                     "column": 19,
                     "line": 1,
@@ -1777,6 +1857,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
           "line": 1,
           "offset": 36,
         },
+        "source": "<template><div id=></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -1802,6 +1883,7 @@ exports[`compiler: parse > Errors > MISSING_ATTRIBUTE_VALUE > <template><div id=
       "line": 1,
       "offset": 36,
     },
+    "source": "<template><div id=></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -1827,6 +1909,7 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
           "line": 1,
           "offset": 24,
         },
+        "source": "<template></></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -1852,6 +1935,7 @@ exports[`compiler: parse > Errors > MISSING_END_TAG_NAME > <template></></templa
       "line": 1,
       "offset": 24,
     },
+    "source": "<template></></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -1879,6 +1963,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
               "line": 1,
               "offset": 29,
             },
+            "source": "<div a\\"bc=''></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -1894,6 +1979,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 22,
                 },
+                "source": "a\\"bc=''",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1907,6 +1993,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 19,
                 },
+                "source": "a\\"bc",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -1922,6 +2009,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                     "line": 1,
                     "offset": 22,
                   },
+                  "source": "''",
                   "start": {
                     "column": 21,
                     "line": 1,
@@ -1944,6 +2032,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
           "line": 1,
           "offset": 40,
         },
+        "source": "<template><div a\\"bc=''></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -1969,6 +2058,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "line": 1,
       "offset": 40,
     },
+    "source": "<template><div a\\"bc=''></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -1996,6 +2086,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
               "line": 1,
               "offset": 29,
             },
+            "source": "<div a'bc=''></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2011,6 +2102,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 22,
                 },
+                "source": "a'bc=''",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2024,6 +2116,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 19,
                 },
+                "source": "a'bc",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2039,6 +2132,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                     "line": 1,
                     "offset": 22,
                   },
+                  "source": "''",
                   "start": {
                     "column": 21,
                     "line": 1,
@@ -2061,6 +2155,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
           "line": 1,
           "offset": 40,
         },
+        "source": "<template><div a'bc=''></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2086,6 +2181,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "line": 1,
       "offset": 40,
     },
+    "source": "<template><div a'bc=''></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2113,6 +2209,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
               "line": 1,
               "offset": 29,
             },
+            "source": "<div a<bc=''></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2128,6 +2225,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 22,
                 },
+                "source": "a<bc=''",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2141,6 +2239,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 19,
                 },
+                "source": "a<bc",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2156,6 +2255,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                     "line": 1,
                     "offset": 22,
                   },
+                  "source": "''",
                   "start": {
                     "column": 21,
                     "line": 1,
@@ -2178,6 +2278,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
           "line": 1,
           "offset": 40,
         },
+        "source": "<template><div a<bc=''></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2203,6 +2304,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "line": 1,
       "offset": 40,
     },
+    "source": "<template><div a<bc=''></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2230,6 +2332,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 30,
             },
+            "source": "<div foo=bar\\"></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2245,6 +2348,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 23,
                 },
+                "source": "foo=bar\\"",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2258,6 +2362,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2273,6 +2378,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                     "line": 1,
                     "offset": 23,
                   },
+                  "source": "bar\\"",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2295,6 +2401,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 41,
         },
+        "source": "<template><div foo=bar\\"></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2320,6 +2427,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 41,
     },
+    "source": "<template><div foo=bar\\"></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2347,6 +2455,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 30,
             },
+            "source": "<div foo=bar'></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2362,6 +2471,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 23,
                 },
+                "source": "foo=bar'",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2375,6 +2485,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2390,6 +2501,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                     "line": 1,
                     "offset": 23,
                   },
+                  "source": "bar'",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2412,6 +2524,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 41,
         },
+        "source": "<template><div foo=bar'></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2437,6 +2550,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 41,
     },
+    "source": "<template><div foo=bar'></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2464,6 +2578,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 33,
             },
+            "source": "<div foo=bar<div></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2479,6 +2594,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 26,
                 },
+                "source": "foo=bar<div",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2492,6 +2608,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2507,6 +2624,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                     "line": 1,
                     "offset": 26,
                   },
+                  "source": "bar<div",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2529,6 +2647,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 44,
         },
+        "source": "<template><div foo=bar<div></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2554,6 +2673,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 44,
     },
+    "source": "<template><div foo=bar<div></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2581,6 +2701,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 33,
             },
+            "source": "<div foo=bar=baz></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2596,6 +2717,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 26,
                 },
+                "source": "foo=bar=baz",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2609,6 +2731,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2624,6 +2747,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                     "line": 1,
                     "offset": 26,
                   },
+                  "source": "bar=baz",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2646,6 +2770,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 44,
         },
+        "source": "<template><div foo=bar=baz></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2671,6 +2796,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 44,
     },
+    "source": "<template><div foo=bar=baz></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2698,6 +2824,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 30,
             },
+            "source": "<div foo=bar\`></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2713,6 +2840,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 23,
                 },
+                "source": "foo=bar\`",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2726,6 +2854,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2741,6 +2870,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                     "line": 1,
                     "offset": 23,
                   },
+                  "source": "bar\`",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2763,6 +2893,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 41,
         },
+        "source": "<template><div foo=bar\`></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2788,6 +2919,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 41,
     },
+    "source": "<template><div foo=bar\`></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2815,6 +2947,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
               "line": 1,
               "offset": 23,
             },
+            "source": "<div =></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2830,6 +2963,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 16,
                 },
+                "source": "=",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2843,6 +2977,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 16,
                 },
+                "source": "=",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2865,6 +3000,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
           "line": 1,
           "offset": 34,
         },
+        "source": "<template><div =></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2890,6 +3026,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "line": 1,
       "offset": 34,
     },
+    "source": "<template><div =></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -2917,6 +3054,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
               "line": 1,
               "offset": 30,
             },
+            "source": "<div =foo=bar></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2932,6 +3070,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 23,
                 },
+                "source": "=foo=bar",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2945,6 +3084,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                   "line": 1,
                   "offset": 19,
                 },
+                "source": "=foo",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2960,6 +3100,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
                     "line": 1,
                     "offset": 23,
                   },
+                  "source": "bar",
                   "start": {
                     "column": 21,
                     "line": 1,
@@ -2982,6 +3123,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
           "line": 1,
           "offset": 41,
         },
+        "source": "<template><div =foo=bar></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3007,6 +3149,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME
       "line": 1,
       "offset": 41,
     },
+    "source": "<template><div =foo=bar></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3032,6 +3175,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
           "line": 1,
           "offset": 28,
         },
+        "source": "<template><?xml?></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3057,6 +3201,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME
       "line": 1,
       "offset": 28,
     },
+    "source": "<template><?xml?></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3084,6 +3229,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
               "line": 1,
               "offset": 25,
             },
+            "source": "<div a/b></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -3099,6 +3245,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                   "line": 1,
                   "offset": 16,
                 },
+                "source": "a",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -3112,6 +3259,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                   "line": 1,
                   "offset": 16,
                 },
+                "source": "a",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -3128,6 +3276,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "b",
                 "start": {
                   "column": 18,
                   "line": 1,
@@ -3141,6 +3290,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
                   "line": 1,
                   "offset": 18,
                 },
+                "source": "b",
                 "start": {
                   "column": 18,
                   "line": 1,
@@ -3163,6 +3313,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
           "line": 1,
           "offset": 36,
         },
+        "source": "<template><div a/b></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3188,6 +3339,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_SOLIDUS_IN_TAG > <template><div a
       "line": 1,
       "offset": 36,
     },
+    "source": "<template><div a/b></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3214,6 +3366,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
               "line": 1,
               "offset": 20,
             },
+            "source": "</div>",
             "start": {
               "column": 15,
               "line": 1,
@@ -3230,6 +3383,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
           "line": 1,
           "offset": 29,
         },
+        "source": "<svg><![CDATA[</div>]]></svg>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3255,6 +3409,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><![CDATA[</div>]]><
       "line": 1,
       "offset": 29,
     },
+    "source": "<svg><![CDATA[</div>]]></svg>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3281,6 +3436,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
               "line": 1,
               "offset": 18,
             },
+            "source": "<!--</div>-->",
             "start": {
               "column": 6,
               "line": 1,
@@ -3297,6 +3453,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
           "line": 1,
           "offset": 24,
         },
+        "source": "<svg><!--</div>--></svg>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3322,6 +3479,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <svg><!--</div>--></svg>
       "line": 1,
       "offset": 24,
     },
+    "source": "<svg><!--</div>--></svg>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3347,6 +3505,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
           "line": 1,
           "offset": 33,
         },
+        "source": "<template></div></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3372,6 +3531,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></div></
       "line": 1,
       "offset": 33,
     },
+    "source": "<template></div></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3397,6 +3557,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
           "line": 1,
           "offset": 27,
         },
+        "source": "<template></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3422,6 +3583,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template></div></templa
       "line": 1,
       "offset": 27,
     },
+    "source": "<template></div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3451,6 +3613,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
                 "line": 1,
                 "offset": 20,
               },
+              "source": "'</div>'",
               "start": {
                 "column": 13,
                 "line": 1,
@@ -3465,6 +3628,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
               "line": 1,
               "offset": 22,
             },
+            "source": "{{'</div>'}}",
             "start": {
               "column": 11,
               "line": 1,
@@ -3481,6 +3645,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
           "line": 1,
           "offset": 33,
         },
+        "source": "<template>{{'</div>'}}</template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3506,6 +3671,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>{{'</div>'}}</
       "line": 1,
       "offset": 33,
     },
+    "source": "<template>{{'</div>'}}</template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3532,6 +3698,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</templa
               "line": 1,
               "offset": 12,
             },
+            "source": "a ",
             "start": {
               "column": 11,
               "line": 1,
@@ -3548,6 +3715,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</templa
           "line": 1,
           "offset": 27,
         },
+        "source": "<template>a </ b</template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3573,6 +3741,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <template>a </ b</templa
       "line": 1,
       "offset": 27,
     },
+    "source": "<template>a </ b</template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3599,6 +3768,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
               "line": 1,
               "offset": 16,
             },
+            "source": "</div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -3615,6 +3785,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
           "line": 1,
           "offset": 27,
         },
+        "source": "<textarea></div></textarea>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3640,6 +3811,7 @@ exports[`compiler: parse > Errors > X_INVALID_END_TAG > <textarea></div></textar
       "line": 1,
       "offset": 27,
     },
+    "source": "<textarea></div></textarea>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3665,6 +3837,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
           "line": 1,
           "offset": 24,
         },
+        "source": "<div v-foo:[sef fsef] />",
         "start": {
           "column": 1,
           "line": 1,
@@ -3684,6 +3857,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
                 "line": 1,
                 "offset": 16,
               },
+              "source": "[sef ",
               "start": {
                 "column": 12,
                 "line": 1,
@@ -3699,6 +3873,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
               "line": 1,
               "offset": 15,
             },
+            "source": "v-foo:[sef",
             "start": {
               "column": 6,
               "line": 1,
@@ -3718,6 +3893,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
               "line": 1,
               "offset": 21,
             },
+            "source": "fsef]",
             "start": {
               "column": 17,
               "line": 1,
@@ -3731,6 +3907,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
               "line": 1,
               "offset": 21,
             },
+            "source": "fsef]",
             "start": {
               "column": 17,
               "line": 1,
@@ -3758,6 +3935,7 @@ exports[`compiler: parse > Errors > X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END > <
       "line": 1,
       "offset": 24,
     },
+    "source": "<div v-foo:[sef fsef] />",
     "start": {
       "column": 1,
       "line": 1,
@@ -3785,6 +3963,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
               "line": 1,
               "offset": 15,
             },
+            "source": "<div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -3805,6 +3984,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
           "line": 1,
           "offset": 15,
         },
+        "source": "<template><div>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3830,6 +4010,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div> 1`] = `
       "line": 1,
       "offset": 15,
     },
+    "source": "<template><div>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3857,6 +4038,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
               "line": 1,
               "offset": 15,
             },
+            "source": "<div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -3877,6 +4059,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
           "line": 1,
           "offset": 26,
         },
+        "source": "<template><div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3902,6 +4085,7 @@ exports[`compiler: parse > Errors > X_MISSING_END_TAG > <template><div></templat
       "line": 1,
       "offset": 26,
     },
+    "source": "<template><div></template>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3928,6 +4112,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</d
               "line": 1,
               "offset": 17,
             },
+            "source": "{{ foo</div>",
             "start": {
               "column": 6,
               "line": 1,
@@ -3944,6 +4129,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</d
           "line": 1,
           "offset": 17,
         },
+        "source": "<div>{{ foo</div>",
         "start": {
           "column": 1,
           "line": 1,
@@ -3969,6 +4155,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > <div>{{ foo</d
       "line": 1,
       "offset": 17,
     },
+    "source": "<div>{{ foo</div>",
     "start": {
       "column": 1,
       "line": 1,
@@ -3993,6 +4180,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
           "line": 1,
           "offset": 2,
         },
+        "source": "{{",
         "start": {
           "column": 1,
           "line": 1,
@@ -4014,6 +4202,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ 1`] = `
       "line": 1,
       "offset": 2,
     },
+    "source": "{{",
     "start": {
       "column": 1,
       "line": 1,
@@ -4038,6 +4227,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
           "line": 1,
           "offset": 6,
         },
+        "source": "{{ foo",
         "start": {
           "column": 1,
           "line": 1,
@@ -4059,6 +4249,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{ foo 1`] = `
       "line": 1,
       "offset": 6,
     },
+    "source": "{{ foo",
     "start": {
       "column": 1,
       "line": 1,
@@ -4086,6 +4277,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
             "line": 1,
             "offset": 2,
           },
+          "source": "",
           "start": {
             "column": 3,
             "line": 1,
@@ -4100,6 +4292,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
           "line": 1,
           "offset": 4,
         },
+        "source": "{{}}",
         "start": {
           "column": 1,
           "line": 1,
@@ -4121,6 +4314,7 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
       "line": 1,
       "offset": 4,
     },
+    "source": "{{}}",
     "start": {
       "column": 1,
       "line": 1,
@@ -4148,6 +4342,8 @@ exports[`compiler: parse > invalid html 1`] = `
               "line": 3,
               "offset": 13,
             },
+            "source": "<span>
+",
             "start": {
               "column": 1,
               "line": 2,
@@ -4168,6 +4364,9 @@ exports[`compiler: parse > invalid html 1`] = `
           "line": 3,
           "offset": 19,
         },
+        "source": "<div>
+<span>
+</div>",
         "start": {
           "column": 1,
           "line": 1,
@@ -4193,6 +4392,10 @@ exports[`compiler: parse > invalid html 1`] = `
       "line": 4,
       "offset": 27,
     },
+    "source": "<div>
+<span>
+</div>
+</span>",
     "start": {
       "column": 1,
       "line": 1,
@@ -4221,6 +4424,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
           "line": 1,
           "offset": 36,
         },
+        "source": "<div :class=\\"{ some: condition }\\" />",
         "start": {
           "column": 1,
           "line": 1,
@@ -4240,6 +4444,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
                 "line": 1,
                 "offset": 11,
               },
+              "source": "class",
               "start": {
                 "column": 7,
                 "line": 1,
@@ -4258,6 +4463,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
                 "line": 1,
                 "offset": 32,
               },
+              "source": "{ some: condition }",
               "start": {
                 "column": 14,
                 "line": 1,
@@ -4272,6 +4478,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
               "line": 1,
               "offset": 33,
             },
+            "source": ":class=\\"{ some: condition }\\"",
             "start": {
               "column": 6,
               "line": 1,
@@ -4298,6 +4505,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
           "line": 2,
           "offset": 73,
         },
+        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
         "start": {
           "column": 1,
           "line": 2,
@@ -4317,6 +4525,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
                 "line": 2,
                 "offset": 52,
               },
+              "source": "style",
               "start": {
                 "column": 11,
                 "line": 2,
@@ -4335,6 +4544,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
                 "line": 2,
                 "offset": 70,
               },
+              "source": "{ color: 'red' }",
               "start": {
                 "column": 18,
                 "line": 2,
@@ -4349,6 +4559,7 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
               "line": 2,
               "offset": 71,
             },
+            "source": "v-bind:style=\\"{ color: 'red' }\\"",
             "start": {
               "column": 4,
               "line": 2,
@@ -4379,6 +4590,8 @@ exports[`compiler: parse > self closing multiple tag 1`] = `
       "line": 2,
       "offset": 73,
     },
+    "source": "<div :class=\\"{ some: condition }\\" />
+<p v-bind:style=\\"{ color: 'red' }\\"/>",
     "start": {
       "column": 1,
       "line": 1,
@@ -4407,6 +4620,7 @@ exports[`compiler: parse > valid html 1`] = `
               "line": 2,
               "offset": 73,
             },
+            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
             "start": {
               "column": 3,
               "line": 2,
@@ -4426,6 +4640,7 @@ exports[`compiler: parse > valid html 1`] = `
                     "line": 2,
                     "offset": 52,
                   },
+                  "source": "style",
                   "start": {
                     "column": 13,
                     "line": 2,
@@ -4444,6 +4659,7 @@ exports[`compiler: parse > valid html 1`] = `
                     "line": 2,
                     "offset": 70,
                   },
+                  "source": "{ color: 'red' }",
                   "start": {
                     "column": 20,
                     "line": 2,
@@ -4458,6 +4674,7 @@ exports[`compiler: parse > valid html 1`] = `
                   "line": 2,
                   "offset": 71,
                 },
+                "source": "v-bind:style=\\"{ color: 'red' }\\"",
                 "start": {
                   "column": 6,
                   "line": 2,
@@ -4483,6 +4700,7 @@ exports[`compiler: parse > valid html 1`] = `
               "line": 3,
               "offset": 116,
             },
+            "source": "<!-- a comment with <html> inside it -->",
             "start": {
               "column": 3,
               "line": 3,
@@ -4499,6 +4717,10 @@ exports[`compiler: parse > valid html 1`] = `
           "line": 4,
           "offset": 123,
         },
+        "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
         "start": {
           "column": 1,
           "line": 1,
@@ -4518,6 +4740,7 @@ exports[`compiler: parse > valid html 1`] = `
                 "line": 1,
                 "offset": 11,
               },
+              "source": "class",
               "start": {
                 "column": 7,
                 "line": 1,
@@ -4536,6 +4759,7 @@ exports[`compiler: parse > valid html 1`] = `
                 "line": 1,
                 "offset": 32,
               },
+              "source": "{ some: condition }",
               "start": {
                 "column": 14,
                 "line": 1,
@@ -4550,6 +4774,7 @@ exports[`compiler: parse > valid html 1`] = `
               "line": 1,
               "offset": 33,
             },
+            "source": ":class=\\"{ some: condition }\\"",
             "start": {
               "column": 6,
               "line": 1,
@@ -4580,6 +4805,10 @@ exports[`compiler: parse > valid html 1`] = `
       "line": 4,
       "offset": 123,
     },
+    "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
     "start": {
       "column": 1,
       "line": 1,

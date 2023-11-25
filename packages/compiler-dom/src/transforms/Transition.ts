@@ -27,7 +27,8 @@ export const transformTransition: NodeTransform = (node, context) => {
               DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN,
               {
                 start: node.children[0].loc.start,
-                end: node.children[node.children.length - 1].loc.end
+                end: node.children[node.children.length - 1].loc.end,
+                source: ''
               }
             )
           )

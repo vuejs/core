@@ -28,7 +28,8 @@ describe('compiler: parse', () => {
         content: 'some text',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: 'some text'
         }
       })
     })
@@ -55,7 +56,8 @@ describe('compiler: parse', () => {
         content: 'some text',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: 'some text'
         }
       })
     })
@@ -70,7 +72,8 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 }
+          end: { offset: 5, line: 1, column: 6 },
+          source: 'some '
         }
       })
       expect(text2).toStrictEqual({
@@ -78,7 +81,8 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 20, line: 1, column: 21 },
-          end: { offset: 25, line: 1, column: 26 }
+          end: { offset: 25, line: 1, column: 26 },
+          source: ' text'
         }
       })
     })
@@ -93,7 +97,8 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 }
+          end: { offset: 5, line: 1, column: 6 },
+          source: 'some '
         }
       })
       expect(text2).toStrictEqual({
@@ -101,7 +106,8 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 21, line: 1, column: 22 },
-          end: { offset: 26, line: 1, column: 27 }
+          end: { offset: 26, line: 1, column: 27 },
+          source: ' text'
         }
       })
     })
@@ -116,7 +122,8 @@ describe('compiler: parse', () => {
         content: 'some ',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 }
+          end: { offset: 5, line: 1, column: 6 },
+          source: 'some '
         }
       })
       expect(text2).toStrictEqual({
@@ -124,7 +131,8 @@ describe('compiler: parse', () => {
         content: ' text',
         loc: {
           start: { offset: 32, line: 1, column: 33 },
-          end: { offset: 37, line: 1, column: 38 }
+          end: { offset: 37, line: 1, column: 38 },
+          source: ' text'
         }
       })
     })
@@ -144,7 +152,8 @@ describe('compiler: parse', () => {
         content: 'a < b',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 }
+          end: { offset: 5, line: 1, column: 6 },
+          source: 'a < b'
         }
       })
     })
@@ -164,7 +173,8 @@ describe('compiler: parse', () => {
         content: 'a {{ b',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 }
+          end: { offset: 6, line: 1, column: 7 },
+          source: 'a {{ b'
         }
       })
     })
@@ -184,12 +194,14 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 2, line: 1, column: 3 },
-            end: { offset: 9, line: 1, column: 10 }
+            end: { offset: 9, line: 1, column: 10 },
+            source: 'message'
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 }
+          end: { offset: 11, line: 1, column: 12 },
+          source: '{{message}}'
         }
       })
     })
@@ -207,12 +219,14 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
-            end: { offset: 6, line: 1, column: 7 }
+            end: { offset: 6, line: 1, column: 7 },
+            source: 'a<b'
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: '{{ a<b }}'
         }
       })
     })
@@ -231,12 +245,14 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 3, line: 1, column: 4 },
-            end: { offset: 6, line: 1, column: 7 }
+            end: { offset: 6, line: 1, column: 7 },
+            source: 'a<b'
           }
         },
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: '{{ a<b }}'
         }
       })
 
@@ -249,12 +265,14 @@ describe('compiler: parse', () => {
           content: 'c>d',
           loc: {
             start: { offset: 12, line: 1, column: 13 },
-            end: { offset: 15, line: 1, column: 16 }
+            end: { offset: 15, line: 1, column: 16 },
+            source: 'c>d'
           }
         },
         loc: {
           start: { offset: 9, line: 1, column: 10 },
-          end: { offset: 18, line: 1, column: 19 }
+          end: { offset: 18, line: 1, column: 19 },
+          source: '{{ c>d }}'
         }
       })
     })
@@ -274,12 +292,14 @@ describe('compiler: parse', () => {
           content: '"</div>"',
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 16, line: 1, column: 17 }
+            end: { offset: 16, line: 1, column: 17 },
+            source: '"</div>"'
           }
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 19, line: 1, column: 20 }
+          end: { offset: 19, line: 1, column: 20 },
+          source: '{{ "</div>" }}'
         }
       })
     })
@@ -300,12 +320,14 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 4, line: 1, column: 5 },
-            end: { offset: 7, line: 1, column: 8 }
+            end: { offset: 7, line: 1, column: 8 },
+            source: 'msg'
           }
         },
         loc: {
           start: { offset: 3, line: 1, column: 4 },
-          end: { offset: 8, line: 1, column: 9 }
+          end: { offset: 8, line: 1, column: 9 },
+          source: '{msg}'
         }
       })
     })
@@ -321,7 +343,8 @@ describe('compiler: parse', () => {
         content: '',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 7, line: 1, column: 8 }
+          end: { offset: 7, line: 1, column: 8 },
+          source: '<!---->'
         }
       })
     })
@@ -335,7 +358,8 @@ describe('compiler: parse', () => {
         content: 'abc',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 10, line: 1, column: 11 }
+          end: { offset: 10, line: 1, column: 11 },
+          source: '<!--abc-->'
         }
       })
     })
@@ -350,7 +374,8 @@ describe('compiler: parse', () => {
         content: 'abc',
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 10, line: 1, column: 11 }
+          end: { offset: 10, line: 1, column: 11 },
+          source: '<!--abc-->'
         }
       })
       expect(comment2).toStrictEqual({
@@ -358,7 +383,8 @@ describe('compiler: parse', () => {
         content: 'def',
         loc: {
           start: { offset: 10, line: 1, column: 11 },
-          end: { offset: 20, line: 1, column: 21 }
+          end: { offset: 20, line: 1, column: 21 },
+          source: '<!--def-->'
         }
       })
     })
@@ -430,13 +456,15 @@ describe('compiler: parse', () => {
             content: 'hello',
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 }
+              end: { offset: 10, line: 1, column: 11 },
+              source: 'hello'
             }
           }
         ],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 16, line: 1, column: 17 }
+          end: { offset: 16, line: 1, column: 17 },
+          source: '<div>hello</div>'
         }
       })
     })
@@ -455,7 +483,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 11, line: 1, column: 12 }
+          end: { offset: 11, line: 1, column: 12 },
+          source: '<div></div>'
         }
       })
     })
@@ -474,7 +503,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 }
+          end: { offset: 6, line: 1, column: 7 },
+          source: '<div/>'
         }
       })
     })
@@ -495,7 +525,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 5, line: 1, column: 6 }
+          end: { offset: 5, line: 1, column: 6 },
+          source: '<img>'
         }
       })
     })
@@ -516,7 +547,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 6, line: 1, column: 7 }
+          end: { offset: 6, line: 1, column: 7 },
+          source: '<img/>'
         }
       })
     })
@@ -703,12 +735,14 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: undefined,
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             }
           }
         ],
@@ -716,7 +750,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 14, line: 1, column: 15 }
+          end: { offset: 14, line: 1, column: 15 },
+          source: '<div id></div>'
         }
       })
     })
@@ -737,19 +772,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 }
+                end: { offset: 10, line: 1, column: 11 },
+                source: '""'
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 }
+              end: { offset: 10, line: 1, column: 11 },
+              source: 'id=""'
             }
           }
         ],
@@ -757,7 +795,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 }
+          end: { offset: 17, line: 1, column: 18 },
+          source: '<div id=""></div>'
         }
       })
     })
@@ -778,19 +817,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 }
+                end: { offset: 10, line: 1, column: 11 },
+                source: "''"
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 }
+              end: { offset: 10, line: 1, column: 11 },
+              source: "id=''"
             }
           }
         ],
@@ -798,7 +840,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 }
+          end: { offset: 17, line: 1, column: 18 },
+          source: "<div id=''></div>"
         }
       })
     })
@@ -819,19 +862,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: ">'",
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 12, line: 1, column: 13 }
+                end: { offset: 12, line: 1, column: 13 },
+                source: '">\'"'
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 12, line: 1, column: 13 }
+              end: { offset: 12, line: 1, column: 13 },
+              source: 'id=">\'"'
             }
           }
         ],
@@ -839,7 +885,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 19, line: 1, column: 20 }
+          end: { offset: 19, line: 1, column: 20 },
+          source: '<div id=">\'"></div>'
         }
       })
     })
@@ -860,19 +907,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: '>"',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 12, line: 1, column: 13 }
+                end: { offset: 12, line: 1, column: 13 },
+                source: "'>\"'"
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 12, line: 1, column: 13 }
+              end: { offset: 12, line: 1, column: 13 },
+              source: "id='>\"'"
             }
           }
         ],
@@ -880,7 +930,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 19, line: 1, column: 20 }
+          end: { offset: 19, line: 1, column: 20 },
+          source: "<div id='>\"'></div>"
         }
       })
     })
@@ -901,19 +952,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: 'a/',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 10, line: 1, column: 11 }
+                end: { offset: 10, line: 1, column: 11 },
+                source: 'a/'
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 10, line: 1, column: 11 }
+              end: { offset: 10, line: 1, column: 11 },
+              source: 'id=a/'
             }
           }
         ],
@@ -921,7 +975,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 17, line: 1, column: 18 }
+          end: { offset: 17, line: 1, column: 18 },
+          source: '<div id=a/></div>'
         }
       })
     })
@@ -942,19 +997,22 @@ describe('compiler: parse', () => {
             name: 'id',
             nameLoc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 7, line: 1, column: 8 }
+              end: { offset: 7, line: 1, column: 8 },
+              source: 'id'
             },
             value: {
               type: NodeTypes.TEXT,
               content: 'a',
               loc: {
                 start: { offset: 8, line: 1, column: 9 },
-                end: { offset: 9, line: 1, column: 10 }
+                end: { offset: 9, line: 1, column: 10 },
+                source: 'a'
               }
             },
             loc: {
               start: { offset: 5, line: 1, column: 6 },
-              end: { offset: 9, line: 1, column: 10 }
+              end: { offset: 9, line: 1, column: 10 },
+              source: 'id=a'
             }
           },
           {
@@ -962,19 +1020,22 @@ describe('compiler: parse', () => {
             name: 'class',
             nameLoc: {
               start: { offset: 10, line: 1, column: 11 },
-              end: { offset: 15, line: 1, column: 16 }
+              end: { offset: 15, line: 1, column: 16 },
+              source: 'class'
             },
             value: {
               type: NodeTypes.TEXT,
               content: 'c',
               loc: {
                 start: { offset: 16, line: 1, column: 17 },
-                end: { offset: 19, line: 1, column: 20 }
+                end: { offset: 19, line: 1, column: 20 },
+                source: '"c"'
               }
             },
             loc: {
               start: { offset: 10, line: 1, column: 11 },
-              end: { offset: 19, line: 1, column: 20 }
+              end: { offset: 19, line: 1, column: 20 },
+              source: 'class="c"'
             }
           },
           {
@@ -982,12 +1043,14 @@ describe('compiler: parse', () => {
             name: 'inert',
             nameLoc: {
               start: { offset: 20, line: 1, column: 21 },
-              end: { offset: 25, line: 1, column: 26 }
+              end: { offset: 25, line: 1, column: 26 },
+              source: 'inert'
             },
             value: undefined,
             loc: {
               start: { offset: 20, line: 1, column: 21 },
-              end: { offset: 25, line: 1, column: 26 }
+              end: { offset: 25, line: 1, column: 26 },
+              source: 'inert'
             }
           },
           {
@@ -995,19 +1058,22 @@ describe('compiler: parse', () => {
             name: 'style',
             nameLoc: {
               start: { offset: 26, line: 1, column: 27 },
-              end: { offset: 31, line: 1, column: 32 }
+              end: { offset: 31, line: 1, column: 32 },
+              source: 'style'
             },
             value: {
               type: NodeTypes.TEXT,
               content: '',
               loc: {
                 start: { offset: 32, line: 1, column: 33 },
-                end: { offset: 34, line: 1, column: 35 }
+                end: { offset: 34, line: 1, column: 35 },
+                source: "''"
               }
             },
             loc: {
               start: { offset: 26, line: 1, column: 27 },
-              end: { offset: 34, line: 1, column: 35 }
+              end: { offset: 34, line: 1, column: 35 },
+              source: "style=''"
             }
           }
         ],
@@ -1015,7 +1081,8 @@ describe('compiler: parse', () => {
         children: [],
         loc: {
           start: { offset: 0, line: 1, column: 1 },
-          end: { offset: 41, line: 1, column: 42 }
+          end: { offset: 41, line: 1, column: 42 },
+          source: '<div id=a class="c" inert style=\'\'></div>'
         }
       })
     })
@@ -1030,7 +1097,8 @@ describe('compiler: parse', () => {
         codegenNode: undefined,
         loc: {
           start: { column: 1, line: 1, offset: 0 },
-          end: { column: 10, line: 3, offset: 29 }
+          end: { column: 10, line: 3, offset: 29 },
+          source: '<div class=" \n\t c \t\n "></div>'
         },
         ns: Namespaces.HTML,
         props: [
@@ -1038,20 +1106,23 @@ describe('compiler: parse', () => {
             name: 'class',
             nameLoc: {
               start: { column: 6, line: 1, offset: 5 },
-              end: { column: 11, line: 1, offset: 10 }
+              end: { column: 11, line: 1, offset: 10 },
+              source: 'class'
             },
             type: NodeTypes.ATTRIBUTE,
             value: {
               content: 'c',
               loc: {
                 start: { column: 12, line: 1, offset: 11 },
-                end: { column: 3, line: 3, offset: 22 }
+                end: { column: 3, line: 3, offset: 22 },
+                source: '" \n\t c \t\n "'
               },
               type: NodeTypes.TEXT
             },
             loc: {
               start: { column: 6, line: 1, offset: 5 },
-              end: { column: 3, line: 3, offset: 22 }
+              end: { column: 3, line: 3, offset: 22 },
+              source: 'class=" \n\t c \t\n "'
             }
           }
         ],
@@ -1075,7 +1146,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: 'v-if'
         }
       })
     })
@@ -1097,13 +1169,15 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 11, line: 1, column: 12 },
-            end: { offset: 12, line: 1, column: 13 }
+            end: { offset: 12, line: 1, column: 13 },
+            source: 'a'
           }
         },
         rawExp: 'a',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 13, line: 1, column: 14 }
+          end: { offset: 13, line: 1, column: 14 },
+          source: 'v-if="a"'
         }
       })
     })
@@ -1123,7 +1197,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 11, line: 1, offset: 10 },
-            end: { column: 16, line: 1, offset: 15 }
+            end: { column: 16, line: 1, offset: 15 },
+            source: 'click'
           }
         },
         modifiers: [],
@@ -1131,7 +1206,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 }
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'v-on:click'
         }
       })
     })
@@ -1178,7 +1254,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { column: 11, line: 1, offset: 10 },
-            end: { column: 18, line: 1, offset: 17 }
+            end: { column: 18, line: 1, offset: 17 },
+            source: '[event]'
           }
         },
         modifiers: [],
@@ -1186,7 +1263,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 17, line: 1, column: 18 }
+          end: { offset: 17, line: 1, column: 18 },
+          source: 'v-on:[event]'
         }
       })
     })
@@ -1205,7 +1283,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 }
+          end: { offset: 15, line: 1, column: 16 },
+          source: 'v-on.enter'
         }
       })
     })
@@ -1224,7 +1303,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 21, line: 1, column: 22 }
+          end: { offset: 21, line: 1, column: 22 },
+          source: 'v-on.enter.exact'
         }
       })
     })
@@ -1244,7 +1324,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 11, line: 1, offset: 10 },
-            end: { column: 16, line: 1, offset: 15 }
+            end: { column: 16, line: 1, offset: 15 },
+            source: 'click'
           }
         },
         modifiers: ['enter', 'exact'],
@@ -1252,7 +1333,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 27, line: 1, column: 28 }
+          end: { offset: 27, line: 1, column: 28 },
+          source: 'v-on:click.enter.exact'
         }
       })
     })
@@ -1272,7 +1354,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { column: 11, line: 1, offset: 10 },
-            end: { column: 16, line: 1, offset: 15 }
+            end: { column: 16, line: 1, offset: 15 },
+            source: '[a.b]'
           }
         },
         modifiers: ['camel'],
@@ -1280,7 +1363,8 @@ describe('compiler: parse', () => {
         rawExp: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 21, line: 1, column: 22 }
+          end: { offset: 21, line: 1, column: 22 },
+          source: 'v-on:[a.b].camel'
         }
       })
     })
@@ -1301,11 +1385,13 @@ describe('compiler: parse', () => {
         value: undefined,
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 7, line: 1, column: 8 }
+          end: { offset: 7, line: 1, column: 8 },
+          source: 'v-'
         },
         nameLoc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 7, line: 1, column: 8 }
+          end: { offset: 7, line: 1, column: 8 },
+          source: 'v-'
         }
       })
     })
@@ -1325,7 +1411,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 7, line: 1, offset: 6 },
-            end: { column: 8, line: 1, offset: 7 }
+            end: { column: 8, line: 1, offset: 7 },
+            source: 'a'
           }
         },
         modifiers: [],
@@ -1336,13 +1423,15 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 }
+            end: { offset: 9, line: 1, column: 10 },
+            source: 'b'
           }
         },
         rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: ':a=b'
         }
       })
     })
@@ -1362,7 +1451,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 7, line: 1, offset: 6 },
-            end: { column: 8, line: 1, offset: 7 }
+            end: { column: 8, line: 1, offset: 7 },
+            source: 'a'
           }
         },
         modifiers: ['prop'],
@@ -1373,13 +1463,15 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 }
+            end: { offset: 9, line: 1, column: 10 },
+            source: 'b'
           }
         },
         rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: '.a=b'
         }
       })
     })
@@ -1399,7 +1491,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 7, line: 1, offset: 6 },
-            end: { column: 8, line: 1, offset: 7 }
+            end: { column: 8, line: 1, offset: 7 },
+            source: 'a'
           }
         },
         modifiers: ['sync'],
@@ -1411,13 +1504,15 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 13, line: 1, column: 14 },
-            end: { offset: 14, line: 1, column: 15 }
+            end: { offset: 14, line: 1, column: 15 },
+            source: 'b'
           }
         },
         rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 14, line: 1, column: 15 }
+          end: { offset: 14, line: 1, column: 15 },
+          source: ':a.sync=b'
         }
       })
     })
@@ -1437,7 +1532,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 7, line: 1, offset: 6 },
-            end: { column: 8, line: 1, offset: 7 }
+            end: { column: 8, line: 1, offset: 7 },
+            source: 'a'
           }
         },
         modifiers: [],
@@ -1449,13 +1545,15 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 8, line: 1, column: 9 },
-            end: { offset: 9, line: 1, column: 10 }
+            end: { offset: 9, line: 1, column: 10 },
+            source: 'b'
           }
         },
         rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 9, line: 1, column: 10 }
+          end: { offset: 9, line: 1, column: 10 },
+          source: '@a=b'
         }
       })
     })
@@ -1475,7 +1573,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 7, line: 1, offset: 6 },
-            end: { column: 8, line: 1, offset: 7 }
+            end: { column: 8, line: 1, offset: 7 },
+            source: 'a'
           }
         },
         modifiers: ['enter'],
@@ -1487,13 +1586,15 @@ describe('compiler: parse', () => {
 
           loc: {
             start: { offset: 14, line: 1, column: 15 },
-            end: { offset: 15, line: 1, column: 16 }
+            end: { offset: 15, line: 1, column: 16 },
+            source: 'b'
           }
         },
         rawExp: 'b',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 15, line: 1, column: 16 }
+          end: { offset: 15, line: 1, column: 16 },
+          source: '@a.enter=b'
         }
       })
     })
@@ -1513,7 +1614,8 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.CAN_STRINGIFY,
           loc: {
             start: { column: 8, line: 1, offset: 7 },
-            end: { column: 9, line: 1, offset: 8 }
+            end: { column: 9, line: 1, offset: 8 },
+            source: 'a'
           }
         },
         modifiers: [],
@@ -1525,13 +1627,15 @@ describe('compiler: parse', () => {
           constType: ConstantTypes.NOT_CONSTANT,
           loc: {
             start: { offset: 10, line: 1, column: 11 },
-            end: { offset: 15, line: 1, column: 16 }
+            end: { offset: 15, line: 1, column: 16 },
+            source: '{ b }'
           }
         },
         rawExp: '{ b }',
         loc: {
           start: { offset: 6, line: 1, column: 7 },
-          end: { offset: 16, line: 1, column: 17 }
+          end: { offset: 16, line: 1, column: 17 },
+          source: '#a="{ b }"'
         }
       })
     })
@@ -1697,7 +1801,8 @@ describe('compiler: parse', () => {
         content: 'hello',
         loc: {
           start: { offset: 5, line: 1, column: 6 },
-          end: { offset: 10, line: 1, column: 11 }
+          end: { offset: 10, line: 1, column: 11 },
+          source: 'hello'
         }
       })
     })

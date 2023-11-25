@@ -76,6 +76,7 @@ export interface Node {
 export interface SourceLocation {
   start: Position
   end: Position
+  source: string
 }
 
 export interface Position {
@@ -198,11 +199,6 @@ export interface DirectiveNode extends Node {
    */
   rawName?: string
   exp: ExpressionNode | undefined
-  /**
-   * the raw expression as a string
-   * only required on directives parsed from templates
-   */
-  rawExp?: string
   arg: ExpressionNode | undefined
   modifiers: string[]
   /**
@@ -570,7 +566,8 @@ export interface ForIteratorExpression extends FunctionExpression {
 // Container types like CompoundExpression also don't need a real location.
 export const locStub: SourceLocation = {
   start: { line: 1, column: 1, offset: 0 },
-  end: { line: 1, column: 1, offset: 0 }
+  end: { line: 1, column: 1, offset: 0 },
+  source: ''
 }
 
 export function createRoot(

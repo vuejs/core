@@ -218,7 +218,6 @@ const tokenizer = new Tokenizer(stack, {
         name,
         rawName: raw,
         exp: undefined,
-        rawExp: undefined,
         arg: undefined,
         modifiers: raw === '.' ? ['prop'] : [],
         loc: getLoc(start)
@@ -241,7 +240,7 @@ const tokenizer = new Tokenizer(stack, {
     const arg = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += arg
-      ;(currentProp as AttributeNode).nameLoc.end = tokenizer.getPos(end)
+      setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
       const isStatic = arg[0] !== `[`
       ;(currentProp as DirectiveNode).arg = createSimpleExpression(
@@ -257,14 +256,14 @@ const tokenizer = new Tokenizer(stack, {
     const mod = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += '.' + mod
-      ;(currentProp as AttributeNode).nameLoc.end = tokenizer.getPos(end)
+      setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else if ((currentProp as DirectiveNode).name === 'slot') {
       // slot has no modifiers, special case for edge cases like
       // https://github.com/vuejs/language-tools/issues/2710
       const arg = (currentProp as DirectiveNode).arg
       if (arg) {
         ;(arg as SimpleExpressionNode).content += '.' + mod
-        arg.loc.end = tokenizer.getPos(end)
+        setLocEnd(arg.loc, end)
       }
     } else {
       ;(currentProp as DirectiveNode).modifiers.push(mod)
@@ -302,7 +301,7 @@ const tokenizer = new Tokenizer(stack, {
   onattribend(quote, end) {
     if (currentOpenTag && currentProp) {
       // finalize end pos
-      currentProp.loc.end = tokenizer.getPos(end)
+      setLocEnd(currentProp.loc, end)
 
       if (quote !== QuoteType.NoValue) {
         if (__BROWSER__ && currentAttrValue.includes('&')) {
@@ -345,7 +344,6 @@ const tokenizer = new Tokenizer(stack, {
           }
         } else {
           // directive
-          currentProp.rawExp = currentAttrValue
           currentProp.exp = createSimpleExpression(
             currentAttrValue,
             false,
@@ -562,7 +560,7 @@ function onText(content: string, start: number, end: number) {
   if (lastNode?.type === NodeTypes.TEXT) {
     // merge
     lastNode.content += content
-    lastNode.loc.end = tokenizer.getPos(end)
+    setLocEnd(lastNode.loc, end)
   } else {
     parent.children.push({
       type: NodeTypes.TEXT,
@@ -576,9 +574,9 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   // attach end position
   if (isImplied) {
     // implied close, end should be backtracked to close
-    el.loc.end = tokenizer.getPos(backTrack(end, CharCodes.Lt))
+    setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    el.loc.end = tokenizer.getPos(end + fastForward(end, CharCodes.Gt) + 1)
+    setLocEnd(el.loc, end + fastForward(end, CharCodes.Gt) + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -588,6 +586,10 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     } else {
       el.innerLoc!.end = extend({}, el.innerLoc!.start)
     }
+    el.innerLoc!.source = getSlice(
+      el.innerLoc!.start.offset,
+      el.innerLoc!.end.offset
+    )
   }
 
   // refine element type
@@ -885,8 +887,15 @@ function getLoc(start: number, end?: number): SourceLocation {
   return {
     start: tokenizer.getPos(start),
     // @ts-expect-error allow late attachment
-    end: end && tokenizer.getPos(end)
+    end: end == null ? end : tokenizer.getPos(end),
+    // @ts-expect-error allow late attachment
+    source: end == null ? end : getSlice(start, end)
   }
+}
+
+function setLocEnd(loc: SourceLocation, end: number) {
+  loc.end = tokenizer.getPos(end)
+  loc.source = getSlice(loc.start.offset, end)
 }
 
 function dirToAttr(dir: DirectiveNode): AttributeNode {

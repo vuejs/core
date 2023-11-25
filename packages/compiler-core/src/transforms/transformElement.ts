@@ -158,7 +158,8 @@ export const transformElement: NodeTransform = (node, context) => {
           context.onError(
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
               start: node.children[0].loc.start,
-              end: node.children[node.children.length - 1].loc.end
+              end: node.children[node.children.length - 1].loc.end,
+              source: ''
             })
           )
         }
