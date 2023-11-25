@@ -69,3 +69,10 @@ export type {
   CompilerError,
   BindingMetadata
 } from '@vue/compiler-core'
+
+/**
+ * @deprecated this is preserved to avoid breaking vite-plugin-vue < 5.0
+ * with reactivityTransform: true. The desired behavior should be silently
+ * ignoring the option instead of breaking.
+ */
+export const shouldTransformRef = () => false
