@@ -2,7 +2,9 @@ import type { SourceLocation } from '@vue/compiler-dom'
 
 export const enum IRNodeTypes {
   ROOT,
-  TEMPLATE_GENERATOR,
+  TEMPLATE_FACTORY,
+  FRAGMENT_FACTORY,
+
   SET_PROP,
   SET_TEXT,
   SET_EVENT,
@@ -19,7 +21,7 @@ export interface IRNode {
 
 export interface RootIRNode extends IRNode {
   type: IRNodeTypes.ROOT
-  template: Array<TemplateGeneratorIRNode>
+  template: Array<TemplateFactoryIRNode | FragmentFactoryIRNode>
   children: DynamicChild
   // TODO multi-expression effect
   effect: Record<string /* expr */, OperationNode[]>
@@ -28,9 +30,13 @@ export interface RootIRNode extends IRNode {
   vaporHelpers: Set<string>
 }
 
-export interface TemplateGeneratorIRNode extends IRNode {
-  type: IRNodeTypes.TEMPLATE_GENERATOR
+export interface TemplateFactoryIRNode extends IRNode {
+  type: IRNodeTypes.TEMPLATE_FACTORY
   template: string
+}
+
+export interface FragmentFactoryIRNode extends IRNode {
+  type: IRNodeTypes.FRAGMENT_FACTORY
 }
 
 export interface SetPropIRNode extends IRNode {

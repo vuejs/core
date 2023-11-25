@@ -18,3 +18,7 @@ export const template = (str: string): (() => Node) => {
     }
   }
 }
+
+export function fragment(): () => DocumentFragment {
+  return () => document.createDocumentFragment()
+}

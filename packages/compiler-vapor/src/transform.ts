@@ -73,11 +73,15 @@ function createRootContext(
     registerTemplate() {
       if (!ctx.template) return -1
 
-      const idx = ir.template.findIndex((t) => t.template === ctx.template)
+      const idx = ir.template.findIndex(
+        (t) =>
+          t.type === IRNodeTypes.TEMPLATE_FACTORY &&
+          t.template === ctx.template,
+      )
       if (idx !== -1) return idx
 
       ir.template.push({
-        type: IRNodeTypes.TEMPLATE_GENERATOR,
+        type: IRNodeTypes.TEMPLATE_FACTORY,
         template: ctx.template,
         loc: node.loc,
       })
@@ -152,6 +156,12 @@ export function transform(
     store: true,
     ghost: false,
     children: ctx.children,
+  }
+  if (ir.template.length === 0) {
+    ir.template.push({
+      type: IRNodeTypes.FRAGMENT_FACTORY,
+      loc: root.loc,
+    })
   }
 
   return ir

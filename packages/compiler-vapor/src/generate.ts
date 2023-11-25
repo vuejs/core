@@ -18,14 +18,19 @@ export function generate(
   let preamble = ''
 
   const { helpers, vaporHelpers } = ir
-  if (ir.template.length) {
-    preamble += ir.template
-      .map(
-        (template, i) => `const t${i} = template(\`${template.template}\`)\n`,
-      )
-      .join('')
-    vaporHelpers.add('template')
-  }
+
+  ir.template.forEach((template, i) => {
+    if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
+      preamble += `const t${i} = template(${JSON.stringify(
+        template.template,
+      )})\n`
+      vaporHelpers.add('template')
+    } else {
+      // fragment
+      code += `const t0 = fragment()\n`
+      vaporHelpers.add('fragment')
+    }
+  })
 
   {
     code += `const n${ir.children.id} = t0()\n`
@@ -50,6 +55,7 @@ export function generate(
       code += scope
     }
     // TODO multiple-template
+    // TODO return statement in IR
     code += `return n${ir.children.id}\n`
   }
 
