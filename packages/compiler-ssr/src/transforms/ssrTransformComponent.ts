@@ -322,7 +322,6 @@ function createVNodeSlotBranch(
     ns: Namespaces.HTML,
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
-    isSelfClosing: false,
     props: wrapperProps,
     children,
     loc: locStub,
