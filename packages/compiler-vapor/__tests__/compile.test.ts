@@ -34,7 +34,9 @@ describe('comile', () => {
   })
 
   test('static + dynamic root', async () => {
-    const code = await compile(`{{ 1 }}2{{ 3 }}`)
+    const code = await compile(
+      `{{ 1 }}{{ 2 }}3{{ 4 }}{{ 5 }}6{{ 7 }}{{ 8 }}9{{ 'A' }}{{ 'B' }}`,
+    )
     expect(code).matchSnapshot()
   })
 

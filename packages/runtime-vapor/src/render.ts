@@ -58,6 +58,14 @@ export function insert(
   // }
 }
 
+export function prepend(parent: ParentBlock, ...nodes: Node[]) {
+  if (parent instanceof Node) {
+    parent.prepend(...nodes)
+  } else if (isArray(parent)) {
+    parent.unshift(...nodes)
+  }
+}
+
 export function append(parent: ParentBlock, ...nodes: Node[]) {
   if (parent instanceof Node) {
     parent.append(...nodes)

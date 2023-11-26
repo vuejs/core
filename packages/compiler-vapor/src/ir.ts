@@ -11,6 +11,7 @@ export const enum IRNodeTypes {
   SET_HTML,
 
   INSERT_NODE,
+  PREPEND_NODE,
   APPEND_NODE,
   CREATE_TEXT_NODE,
 }
@@ -72,12 +73,17 @@ export interface CreateTextNodeIRNode extends IRNode {
   value: string
 }
 
-export type InsertAnchor = number | 'first' | 'last'
 export interface InsertNodeIRNode extends IRNode {
   type: IRNodeTypes.INSERT_NODE
-  element: number
+  element: number | number[]
   parent: number
-  anchor: InsertAnchor
+  anchor: number
+}
+
+export interface PrependNodeIRNode extends IRNode {
+  type: IRNodeTypes.PREPEND_NODE
+  elements: number[]
+  parent: number
 }
 
 export interface AppendNodeIRNode extends IRNode {
@@ -93,6 +99,7 @@ export type OperationNode =
   | SetHtmlIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode
+  | PrependNodeIRNode
   | AppendNodeIRNode
 
 export interface DynamicInfo {

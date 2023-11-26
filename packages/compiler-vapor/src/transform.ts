@@ -15,7 +15,6 @@ import {
   type RootIRNode,
   IRNodeTypes,
   DynamicInfo,
-  InsertAnchor,
 } from './ir'
 import { isVoidTag } from '@vue/shared'
 
@@ -170,41 +169,46 @@ function transformChildren(
   const childrenTemplate: string[] = []
   children.forEach((child, i) => walkNode(child, i))
 
-  const dynamicChildren = Object.values(ctx.dynamic.children)
-  const dynamicCount = dynamicChildren.reduce(
-    (prev, child) => prev + (child.ghost ? 1 : 0),
-    0,
-  )
-  if (dynamicCount === children.length) {
-    // all dynamic node
-    ctx.registerOpration({
-      type: IRNodeTypes.APPEND_NODE,
-      loc: ctx.node.loc,
-      elements: dynamicChildren.map((child) => child.id!),
-      parent: ctx.reference(),
-    })
-  } else if (dynamicCount > 0 && dynamicCount < children.length) {
-    // mixed
-    for (const [indexString, child] of Object.entries(ctx.dynamic.children)) {
-      if (!child.ghost) continue
+  let prevChildren: DynamicInfo[] = []
+  let hasStatic = false
 
-      const index = Number(indexString)
-      let anchor: InsertAnchor
-      if (index === 0) {
-        anchor = 'first'
-      } else if (index === children.length - 1) {
-        anchor = 'last'
-      } else {
-        childrenTemplate[index] = `<!>`
-        anchor = child.placeholder = ctx.incraseId()
-      }
+  for (let index = 0; index < children.length; index++) {
+    const child = ctx.dynamic.children[index]
 
+    if (!child || !child.ghost) {
+      if (prevChildren.length)
+        if (hasStatic) {
+          childrenTemplate[index - prevChildren.length] = `<!>`
+          const anchor = (prevChildren[0].placeholder = ctx.incraseId())
+
+          ctx.registerOpration({
+            type: IRNodeTypes.INSERT_NODE,
+            loc: ctx.node.loc,
+            element: prevChildren.map((child) => child.id!),
+            parent: ctx.reference(),
+            anchor,
+          })
+        } else {
+          ctx.registerOpration({
+            type: IRNodeTypes.PREPEND_NODE,
+            loc: ctx.node.loc,
+            elements: prevChildren.map((child) => child.id!),
+            parent: ctx.reference(),
+          })
+        }
+      hasStatic = true
+      prevChildren = []
+      continue
+    }
+
+    prevChildren.push(child)
+
+    if (index === children.length - 1) {
       ctx.registerOpration({
-        type: IRNodeTypes.INSERT_NODE,
+        type: IRNodeTypes.APPEND_NODE,
         loc: ctx.node.loc,
-        element: child.id!,
+        elements: prevChildren.map((child) => child.id!),
         parent: ctx.reference(),
-        anchor,
       })
     }
   }

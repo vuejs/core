@@ -119,14 +119,18 @@ export function generate(
       }
 
       case IRNodeTypes.INSERT_NODE: {
-        let anchor = ''
-        if (typeof oper.anchor === 'number') {
-          anchor = `, n${oper.anchor}`
-        } else if (oper.anchor === 'first') {
-          anchor = `, 0 /* InsertPosition.FIRST */`
-        }
-        code = `insert(n${oper.element}, n${oper.parent}${anchor})\n`
+        const elements = ([] as number[]).concat(oper.element)
+        let element = elements.map((el) => `n${el}`).join(', ')
+        if (elements.length > 1) element = `[${element}]`
+        code = `insert(${element}, n${oper.parent}${`, n${oper.anchor}`})\n`
         vaporHelpers.add('insert')
+        break
+      }
+      case IRNodeTypes.PREPEND_NODE: {
+        code = `prepend(n${oper.parent}, ${oper.elements
+          .map((el) => `n${el}`)
+          .join(', ')})\n`
+        vaporHelpers.add('prepend')
         break
       }
       case IRNodeTypes.APPEND_NODE: {
@@ -148,11 +152,12 @@ function genChildren(children: DynamicChildren) {
   let code = ''
   // TODO
   let offset = 0
-
   for (const [index, child] of Object.entries(children)) {
     const childrenLength = Object.keys(child.children).length
-    if (child.ghost && child.placeholder === null && childrenLength === 0)
+    if (child.ghost && child.placeholder === null && childrenLength === 0) {
+      offset--
       continue
+    }
 
     code += ` ${Number(index) + offset}: [`
 
