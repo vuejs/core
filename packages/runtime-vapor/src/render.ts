@@ -60,6 +60,7 @@ export function insert(
 
 export function prepend(parent: ParentBlock, ...nodes: Node[]) {
   if (parent instanceof Node) {
+    // TODO use insertBefore for better performance https://jsbench.me/rolpg250hh/1
     parent.prepend(...nodes)
   } else if (isArray(parent)) {
     parent.unshift(...nodes)
@@ -68,6 +69,7 @@ export function prepend(parent: ParentBlock, ...nodes: Node[]) {
 
 export function append(parent: ParentBlock, ...nodes: Node[]) {
   if (parent instanceof Node) {
+    // TODO use insertBefore for better performance
     parent.append(...nodes)
   } else if (isArray(parent)) {
     parent.push(...nodes)
