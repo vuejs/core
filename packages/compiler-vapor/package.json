@@ -2,17 +2,26 @@
   "name": "@vue/compiler-vapor",
   "version": "0.0.0",
   "description": "@vue/compiler-vapor",
-  "main": "dist/compiler-vapor.cjs.js",
+  "main": "index.js",
+  "module": "dist/compiler-vapor.esm-bundler.js",
+  "types": "dist/compiler-vapor.d.ts",
+  "unpkg": "dist/compiler-vapor.global.js",
+  "jsdelivr": "dist/compiler-vapor.global.js",
   "files": [
+    "index.js",
     "dist"
   ],
+  "sideEffects": false,
   "buildOptions": {
+    "name": "VueCompilerVapor",
+    "compat": true,
     "formats": [
-      "cjs"
-    ],
-    "prod": false
+      "esm-bundler",
+      "esm-browser",
+      "cjs",
+      "global"
+    ]
   },
-  "types": "dist/compiler-vapor.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vuejs/core-vapor.git",
@@ -26,13 +35,9 @@
   "bugs": {
     "url": "https://github.com/vuejs/core-vapor/issues"
   },
-  "homepage": "https://github.com/vuejs/core-vapor/tree/dev/packages/compiler-vapor#readme",
+  "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/compiler-vapor#readme",
   "dependencies": {
     "@vue/shared": "3.3.8",
-    "@vue/compiler-dom": "3.3.8",
-    "ast-kit": "^0.11.2"
-  },
-  "devDependencies": {
-    "@babel/types": "^7.23.0"
+    "@vue/compiler-dom": "3.3.8"
   }
 }

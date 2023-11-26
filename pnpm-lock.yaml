@@ -261,17 +261,10 @@ importers:
     dependencies:
       '@vue/compiler-dom':
         specifier: 3.3.8
-        version: link:../compiler-dom
+        version: 3.3.8
       '@vue/shared':
         specifier: 3.3.8
-        version: link:../shared
-      ast-kit:
-        specifier: ^0.11.2
-        version: 0.11.2(rollup@4.1.4)
-    devDependencies:
-      '@babel/types':
-        specifier: ^7.23.0
-        version: 7.23.3
+        version: 3.3.8
 
   packages/dts-built-test:
     dependencies:
@@ -1361,12 +1354,14 @@ packages:
       estree-walker: 2.0.2
       picomatch: 2.3.1
       rollup: 4.1.4
+    dev: true
 
   /@rollup/rollup-android-arm-eabi@4.1.4:
     resolution: {integrity: sha512-WlzkuFvpKl6CLFdc3V6ESPt7gq5Vrimd2Yv9IzKXdOpgbH4cdDSS1JLiACX8toygihtH5OlxyQzhXOph7Ovlpw==}
     cpu: [arm]
     os: [android]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-android-arm-eabi@4.4.1:
@@ -1382,6 +1377,7 @@ packages:
     cpu: [arm64]
     os: [android]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-android-arm64@4.4.1:
@@ -1397,6 +1393,7 @@ packages:
     cpu: [arm64]
     os: [darwin]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-darwin-arm64@4.4.1:
@@ -1412,6 +1409,7 @@ packages:
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-darwin-x64@4.4.1:
@@ -1427,6 +1425,7 @@ packages:
     cpu: [arm]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-linux-arm-gnueabihf@4.4.1:
@@ -1442,6 +1441,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-linux-arm64-gnu@4.4.1:
@@ -1457,6 +1457,7 @@ packages:
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-linux-arm64-musl@4.4.1:
@@ -1472,6 +1473,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-linux-x64-gnu@4.4.1:
@@ -1487,6 +1489,7 @@ packages:
     cpu: [x64]
     os: [linux]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-linux-x64-musl@4.4.1:
@@ -1502,6 +1505,7 @@ packages:
     cpu: [arm64]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-win32-arm64-msvc@4.4.1:
@@ -1517,6 +1521,7 @@ packages:
     cpu: [ia32]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-win32-ia32-msvc@4.4.1:
@@ -1532,6 +1537,7 @@ packages:
     cpu: [x64]
     os: [win32]
     requiresBuild: true
+    dev: true
     optional: true
 
   /@rollup/rollup-win32-x64-msvc@4.4.1:
@@ -1567,6 +1573,7 @@ packages:
 
   /@types/estree@1.0.3:
     resolution: {integrity: sha512-CS2rOaoQ/eAgAfcTfq6amKG7bsN+EMcgGY4FAFQdvSj2y1ixvOZTUA9mOtCai7E1SYu283XNw7urKK30nP3wkQ==}
+    dev: true
 
   /@types/hash-sum@1.0.2:
     resolution: {integrity: sha512-UP28RddqY8xcU0SCEp9YKutQICXpaAq9N8U2klqF5hegGha7KzTOL8EdhIIV3bOSGBzjEpN9bU/d+nNZBdJYVw==}
@@ -1808,6 +1815,22 @@ packages:
       pretty-format: 29.7.0
     dev: true
 
+  /@vue/compiler-core@3.3.8:
+    resolution: {integrity: sha512-hN/NNBUECw8SusQvDSqqcVv6gWq8L6iAktUR0UF3vGu2OhzRqcOiAno0FmBJWwxhYEXRlQJT5XnoKsVq1WZx4g==}
+    dependencies:
+      '@babel/parser': 7.23.3
+      '@vue/shared': 3.3.8
+      estree-walker: 2.0.2
+      source-map-js: 1.0.2
+    dev: false
+
+  /@vue/compiler-dom@3.3.8:
+    resolution: {integrity: sha512-+PPtv+p/nWDd0AvJu3w8HS0RIm/C6VGBIRe24b9hSyNWOAPEUosFZ5diwawwP8ip5sJ8n0Pe87TNNNHnvjs0FQ==}
+    dependencies:
+      '@vue/compiler-core': 3.3.8
+      '@vue/shared': 3.3.8
+    dev: false
+
   /@vue/consolidate@0.17.3:
     resolution: {integrity: sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==}
     engines: {node: '>= 0.12.0'}
@@ -1815,6 +1838,10 @@ packages:
 
   /@vue/repl@2.7.0:
     resolution: {integrity: sha512-zzyb+tVvzmOePv8Gp4sefP/7CKidx4WiJDfKPP698b9bN5jSFtmSOg4nvPoJEE1ICKeAEgdRKVneYJ8Mp7C/WA==}
+    dev: false
+
+  /@vue/shared@3.3.8:
+    resolution: {integrity: sha512-8PGwybFwM4x8pcfgqEQFy70NaQxASvOC5DJwLQfpArw1UDfUXrJkdxD3BhVTMS+0Lef/TU7YO0Jvr0jJY8T+mw==}
     dev: false
 
   /@zeit/schemas@2.29.0:
@@ -2018,17 +2045,6 @@ packages:
   /assertion-error@1.1.0:
     resolution: {integrity: sha512-jgsaNduz+ndvGyFt3uSuWqvy4lCnIJiovtouQN5JZHOKCS2QuhEdbcQHFhVksz2N2U9hXJo8odG7ETyWlEeuDw==}
     dev: true
-
-  /ast-kit@0.11.2(rollup@4.1.4):
-    resolution: {integrity: sha512-Q0DjXK4ApbVoIf9GLyCo252tUH44iTnD/hiJ2TQaJeydYWSpKk0sI34+WMel8S9Wt5pbLgG02oJ+gkgX5DV3sQ==}
-    engines: {node: '>=16.14.0'}
-    dependencies:
-      '@babel/parser': 7.23.3
-      '@rollup/pluginutils': 5.0.5(rollup@4.1.4)
-      pathe: 1.1.1
-    transitivePeerDependencies:
-      - rollup
-    dev: false
 
   /ast-types@0.13.4:
     resolution: {integrity: sha512-x1FCFnFifvYDDzTaLII71vG5uvDwgtmDTEVWAxrgeiR8VjMONcCXJx7E+USjDtHlwFmt9MysbqgF9b9Vjr6w+w==}
@@ -3313,6 +3329,7 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
     requiresBuild: true
+    dev: true
     optional: true
 
   /function-bind@1.1.2:
@@ -4805,6 +4822,7 @@ packages:
 
   /pathe@1.1.1:
     resolution: {integrity: sha512-d+RQGp0MAYTIaDBIMmOfMwz3E+LOZnxx1HZd5R18mmCZY0QBlK0LDZfPc8FW8Ed2DlvsuE6PRjroDY+wg4+j/Q==}
+    dev: true
 
   /pathval@1.1.1:
     resolution: {integrity: sha512-Dp6zGqpTdETdR63lehJYPeIOqpiNBNtc7BpWSLrOje7UaIsE5aY92r/AunQA7rsXvet3lrJ3JnZX29UPTKXyKQ==}
@@ -4820,6 +4838,7 @@ packages:
   /picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}
     engines: {node: '>=8.6'}
+    dev: true
 
   /pidtree@0.3.1:
     resolution: {integrity: sha512-qQbW94hLHEqCg7nhby4yRC7G2+jYHY4Rguc2bjw7Uug4GIJuu1tvf2uHaZv5Q8zdt+WKJ6qK1FOI6amaWUo5FA==}
@@ -5356,6 +5375,7 @@ packages:
       '@rollup/rollup-win32-ia32-msvc': 4.1.4
       '@rollup/rollup-win32-x64-msvc': 4.1.4
       fsevents: 2.3.3
+    dev: true
 
   /rollup@4.4.1:
     resolution: {integrity: sha512-idZzrUpWSblPJX66i+GzrpjKE3vbYrlWirUHteoAbjKReZwa0cohAErOYA5efoMmNCdvG9yrJS+w9Kl6csaH4w==}

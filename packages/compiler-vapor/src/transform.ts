@@ -50,7 +50,7 @@ function createRootContext(
     node,
     parent: null,
     index: 0,
-    root: undefined as any, // set later
+    root: null!, // set later
     options,
     dynamic: ir.dynamic,
     once: false,
