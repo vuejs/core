@@ -7,6 +7,7 @@ import {
 import { isArray } from '@vue/shared'
 
 export type Block = Node | Fragment | Block[]
+export type ParentBlock = ParentNode | Node[]
 export type Fragment = { nodes: Block; anchor: Node }
 export type BlockFn = (props?: any) => Block
 
@@ -57,8 +58,12 @@ export function insert(
   // }
 }
 
-export function append(parent: ParentNode, ...nodes: (Node | string)[]) {
-  parent.append(...nodes)
+export function append(parent: ParentBlock, ...nodes: Node[]) {
+  if (parent instanceof Node) {
+    parent.append(...nodes)
+  } else if (isArray(parent)) {
+    parent.push(...nodes)
+  }
 }
 
 export function remove(block: Block, parent: ParentNode) {

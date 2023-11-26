@@ -36,7 +36,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
 - [ ] Fragment
   - [x] multiple root nodes
   - [x] all dynamic children
-  - [ ] return `Node[]` for all dynamic children, instead of using `fragment` API
+  - [x] return `Node[]` for all dynamic children, instead of using `fragment` API
 - [ ] Built-in Components
   - [ ] Transition
   - [ ] TransitionGroup

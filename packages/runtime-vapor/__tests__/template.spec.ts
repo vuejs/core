@@ -18,12 +18,13 @@ describe('api: template', () => {
 
   test('create fragment', () => {
     const frag = fragment()
-    const root = frag()
-    expect(root).toBeInstanceOf(DocumentFragment)
-    expect(root.childNodes.length).toBe(0)
 
-    const div2 = frag()
-    expect(div2).toBeInstanceOf(DocumentFragment)
-    expect(div2).not.toBe(root)
+    const root = frag()
+    expect(root).toBeInstanceOf(Array)
+    expect(root.length).toBe(0)
+
+    const root2 = frag()
+    expect(root2).toBeInstanceOf(Array)
+    expect(root2).not.toBe(root)
   })
 })
