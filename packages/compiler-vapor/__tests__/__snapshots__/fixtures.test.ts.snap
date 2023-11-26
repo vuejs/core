@@ -20,19 +20,19 @@ const increment = () => count.value++
 
 return (() => {
 const n0 = t0()
-const { 1: [n1], 2: [n3], 3: [n5], 4: [n6], 6: [n7],} = children(n0)
-const n2 = createTextNode(count.value)
-insert(n2, n1)
-const n4 = createTextNode(double.value)
-insert(n4, n3)
-const n8 = createTextNode(count.value)
-insert(n8, n7)
-setText(n8, undefined, count.value)
+const { 1: [n2], 2: [n4], 3: [n5], 4: [n6], 6: [n8],} = children(n0)
+const n1 = createTextNode(count.value)
+insert(n1, n2)
+const n3 = createTextNode(double.value)
+insert(n3, n4)
+const n7 = createTextNode(count.value)
+setText(n7, undefined, count.value)
+insert(n7, n8)
 watchEffect(() => {
-setText(n2, undefined, count.value)
+setText(n1, undefined, count.value)
 })
 watchEffect(() => {
-setText(n4, undefined, double.value)
+setText(n3, undefined, double.value)
 })
 watchEffect(() => {
 on(n5, \\"click\\", increment)

@@ -33,11 +33,11 @@ export function generate(
   })
 
   {
-    code += `const n${ir.children.id} = t0()\n`
-    if (Object.keys(ir.children.children).length) {
-      code += `const {${genChildren(ir.children.children)}} = children(n${
-        ir.children.id
-      })\n`
+    code += `const n${ir.dynamic.id} = t0()\n`
+
+    const children = genChildren(ir.dynamic.children)
+    if (children) {
+      code += `const ${children} = children(n${ir.dynamic.id})\n`
       vaporHelpers.add('children')
     }
 
@@ -56,7 +56,7 @@ export function generate(
     }
     // TODO multiple-template
     // TODO return statement in IR
-    code += `return n${ir.children.id}\n`
+    code += `return n${ir.dynamic.id}\n`
   }
 
   if (vaporHelpers.size)
@@ -79,59 +79,65 @@ export function generate(
     preamble,
   }
 
-  function genOperation(operation: OperationNode) {
+  function genOperation(oper: OperationNode) {
     let code = ''
 
     // TODO: cache old value
-    switch (operation.type) {
+    switch (oper.type) {
       case IRNodeTypes.SET_PROP: {
-        code = `setAttr(n${operation.element}, ${JSON.stringify(
-          operation.name,
-        )}, undefined, ${operation.value})\n`
+        code = `setAttr(n${oper.element}, ${JSON.stringify(
+          oper.name,
+        )}, undefined, ${oper.value})\n`
         vaporHelpers.add('setAttr')
         break
       }
 
       case IRNodeTypes.SET_TEXT: {
-        code = `setText(n${operation.element}, undefined, ${operation.value})\n`
+        code = `setText(n${oper.element}, undefined, ${oper.value})\n`
         vaporHelpers.add('setText')
         break
       }
 
       case IRNodeTypes.SET_EVENT: {
-        code = `on(n${operation.element}, ${JSON.stringify(operation.name)}, ${
-          operation.value
+        code = `on(n${oper.element}, ${JSON.stringify(oper.name)}, ${
+          oper.value
         })\n`
         vaporHelpers.add('on')
         break
       }
 
       case IRNodeTypes.SET_HTML: {
-        code = `setHtml(n${operation.element}, undefined, ${operation.value})\n`
+        code = `setHtml(n${oper.element}, undefined, ${oper.value})\n`
         vaporHelpers.add('setHtml')
         break
       }
 
       case IRNodeTypes.CREATE_TEXT_NODE: {
-        code = `const n${operation.id} = createTextNode(${operation.value})\n`
+        code = `const n${oper.id} = createTextNode(${oper.value})\n`
         vaporHelpers.add('createTextNode')
         break
       }
 
       case IRNodeTypes.INSERT_NODE: {
         let anchor = ''
-        if (typeof operation.anchor === 'number') {
-          anchor = `, n${operation.anchor}`
-        } else if (operation.anchor === 'first') {
+        if (typeof oper.anchor === 'number') {
+          anchor = `, n${oper.anchor}`
+        } else if (oper.anchor === 'first') {
           anchor = `, 0 /* InsertPosition.FIRST */`
         }
-        code = `insert(n${operation.element}, n${operation.parent}${anchor})\n`
+        code = `insert(n${oper.element}, n${oper.parent}${anchor})\n`
         vaporHelpers.add('insert')
         break
       }
-
+      case IRNodeTypes.APPEND_NODE: {
+        code = `append(n${oper.parent}, ${oper.elements
+          .map((el) => `n${el}`)
+          .join(', ')})\n`
+        vaporHelpers.add('append')
+        break
+      }
       default:
-        checkNever(operation)
+        checkNever(oper)
     }
 
     return code
@@ -139,16 +145,26 @@ export function generate(
 }
 
 function genChildren(children: DynamicChildren) {
-  let str = ''
+  let code = ''
+  // TODO
+  let offset = 0
+
   for (const [index, child] of Object.entries(children)) {
-    str += ` ${index}: [`
-    if (child.store) {
-      str += `n${child.id}`
-    }
-    if (Object.keys(child.children).length) {
-      str += `, {${genChildren(child.children)}}`
-    }
-    str += '],'
+    const childrenLength = Object.keys(child.children).length
+    if (child.ghost && child.placeholder === null && childrenLength === 0)
+      continue
+
+    code += ` ${Number(index) + offset}: [`
+
+    const id = child.ghost ? child.placeholder : child.id
+    if (id !== null) code += `n${id}`
+
+    const childrenString = childrenLength && genChildren(child.children)
+    if (childrenString) code += `, ${childrenString}`
+
+    code += '],'
   }
-  return str
+
+  if (!code) return ''
+  return `{${code}}`
 }

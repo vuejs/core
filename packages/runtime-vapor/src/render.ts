@@ -57,6 +57,10 @@ export function insert(
   // }
 }
 
+export function append(parent: ParentNode, ...nodes: (Node | string)[]) {
+  parent.append(...nodes)
+}
+
 export function remove(block: Block, parent: ParentNode) {
   if (block instanceof Node) {
     parent.removeChild(block)
@@ -124,6 +128,6 @@ export function children(n: ChildNode): Children {
   return { ...Array.from(n.childNodes).map(n => [n, children(n)]) }
 }
 
-export function createTextNode(data: string): Text {
-  return document.createTextNode(data)
+export function createTextNode(val: unknown): Text {
+  return document.createTextNode(toDisplayString(val))
 }
