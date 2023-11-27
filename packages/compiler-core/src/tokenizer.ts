@@ -301,6 +301,10 @@ export default class Tokenizer {
     }
   }
 
+  private peek() {
+    return this.buffer.charCodeAt(this.index + 1)
+  }
+
   private stateText(c: number): void {
     if (c === CharCodes.Lt) {
       if (this.index > this.sectionStart) {
@@ -627,12 +631,16 @@ export default class Tokenizer {
       this.sectionStart = this.index + 1
     } else if (c === CharCodes.Slash) {
       this.state = State.InSelfClosingTag
-      if (
-        (__DEV__ || !__BROWSER__) &&
-        this.buffer.charCodeAt(this.index + 1) !== CharCodes.Gt
-      ) {
+      if ((__DEV__ || !__BROWSER__) && this.peek() !== CharCodes.Gt) {
         this.cbs.onerr(ErrorCodes.UNEXPECTED_SOLIDUS_IN_TAG, this.index)
       }
+    } else if (c === CharCodes.Lt && this.peek() === CharCodes.Slash) {
+      // special handling for </ appearing in open tag state
+      // this is different from standard HTML parsing but makes practical sense
+      // especially for parsing intermedaite input state in IDEs.
+      this.cbs.onopentagend(this.index)
+      this.state = State.BeforeTagName
+      this.sectionStart = this.index
     } else if (!isWhitespace(c)) {
       if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
         this.cbs.onerr(
@@ -644,10 +652,7 @@ export default class Tokenizer {
     }
   }
   private handleAttrStart(c: number) {
-    if (
-      c === CharCodes.LowerV &&
-      this.buffer.charCodeAt(this.index + 1) === CharCodes.Dash
-    ) {
+    if (c === CharCodes.LowerV && this.peek() === CharCodes.Dash) {
       this.state = State.InDirName
       this.sectionStart = this.index
     } else if (

@@ -1918,6 +1918,29 @@ describe('compiler: parse', () => {
     expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
   })
 
+  // With standard HTML parsing, the following input would ignore the slash
+  // and treat "<" and "template" as attributes on the open tag of "Hello",
+  // causing `<template>` to fail to close, and `<script>` being parsed as its
+  // child. This is would never be intended in actual templates, but is a common
+  // intermediate state from user input when parsing for IDE support. We want
+  // the `<script>` to be at root-level to keep the SFC structure stable for
+  // Volar to do incremental computations.
+  test('tag termination handling for IDE', () => {
+    const spy = vi.fn()
+    const ast = baseParse(
+      `<template><Hello\n</template><script>console.log(1)</script>`,
+      {
+        onError: spy
+      }
+    )
+    //
+    expect(ast.children.length).toBe(2)
+    expect(ast.children[1]).toMatchObject({
+      type: NodeTypes.ELEMENT,
+      tag: 'script'
+    })
+  })
+
   describe('decodeEntities option', () => {
     test('use decode by default', () => {
       const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')
