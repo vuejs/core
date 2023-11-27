@@ -2,8 +2,7 @@
 
 exports[`fixtures 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { watchEffect } from 'vue'
-import { template, children, createTextNode, append, setText, on, setHtml } from 'vue/vapor'
+import { template, children, createTextNode, append, setText, effect, on, setHtml } from 'vue/vapor'
 const t0 = template(\\"<h1 id=\\\\\\"title\\\\\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div></div><input type=\\\\\\"text\\\\\\"><p>once: </p><p>{{ count }}</p>\\")
 import { ref, computed } from 'vue'
 
@@ -28,16 +27,16 @@ append(n4, n3)
 const n7 = createTextNode(count.value)
 setText(n7, undefined, count.value)
 append(n8, n7)
-watchEffect(() => {
+effect(() => {
 setText(n1, undefined, count.value)
 })
-watchEffect(() => {
+effect(() => {
 setText(n3, undefined, double.value)
 })
-watchEffect(() => {
+effect(() => {
 on(n5, \\"click\\", increment)
 })
-watchEffect(() => {
+effect(() => {
 setHtml(n6, undefined, html)
 })
 return n0

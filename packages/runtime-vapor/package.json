@@ -34,6 +34,8 @@
     "url": "https://github.com/vuejs/core-vapor/issues"
   },
   "homepage": "https://github.com/vuejs/core-vapor/tree/dev/packages/runtime-vapor#readme",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@vue/shared": "workspace:*",
+    "@vue/reactivity": "workspace:*"
+  }
 }

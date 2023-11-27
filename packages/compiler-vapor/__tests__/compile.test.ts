@@ -129,7 +129,7 @@ describe('comile', () => {
       test.fails('as root node', async () => {
         const code = await compile(`<div :id="foo" v-once />`)
         expect(code).toMatchSnapshot()
-        expect(code).not.contains('watchEffect')
+        expect(code).not.contains('effect')
       })
     })
   })

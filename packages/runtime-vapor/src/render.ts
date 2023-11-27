@@ -1,10 +1,10 @@
 import {
-  effectScope,
   normalizeClass,
   normalizeStyle,
-  toDisplayString
-} from 'vue'
-import { isArray } from '@vue/shared'
+  toDisplayString,
+  isArray
+} from '@vue/shared'
+import { effectScope } from '@vue/reactivity'
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]

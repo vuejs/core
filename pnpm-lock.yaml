@@ -348,7 +348,14 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/runtime-vapor: {}
+  packages/runtime-vapor:
+    dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
+      '@vue/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/server-renderer:
     dependencies:
