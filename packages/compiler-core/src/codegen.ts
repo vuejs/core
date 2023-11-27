@@ -227,7 +227,6 @@ function createCodegenContext(
     // lazy require source-map implementation, only in non-browser builds
     context.map = new SourceMapGenerator()
     context.map.setSourceContent(filename, context.source)
-    // @ts-ignore
     context.map._sources.add(filename)
   }
 

@@ -48,6 +48,7 @@ declare module 'source-map-js' {
   export interface SourceMapGenerator {
     // SourceMapGenerator has this method but the types do not include it
     toJSON(): RawSourceMap
+    _sources: Set<string>
     _names: Set<string>
     _mappings: {
       add(mapping: MappingItem): void

@@ -339,22 +339,21 @@ function generateSourceMap(
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
   map.setSourceContent(filename, source)
+  map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
         if (!/\s/.test(line[i])) {
-          map.addMapping({
+          map._mappings.add({
+            originalLine,
+            originalColumn: i,
+            generatedLine,
+            generatedColumn: i,
             source: filename,
-            original: {
-              line: originalLine,
-              column: i
-            },
-            generated: {
-              line: generatedLine,
-              column: i
-            }
+            // @ts-ignore
+            name: null
           })
         }
       }
