@@ -169,54 +169,55 @@ function transformChildren(
   const childrenTemplate: string[] = []
   children.forEach((child, i) => walkNode(child, i))
 
-  let prevChildren: DynamicInfo[] = []
-  let hasStatic = false
-
-  for (let index = 0; index < children.length; index++) {
-    const child = ctx.dynamic.children[index]
-
-    if (!child || !child.ghost) {
-      if (prevChildren.length)
-        if (hasStatic) {
-          childrenTemplate[index - prevChildren.length] = `<!>`
-          const anchor = (prevChildren[0].placeholder = ctx.incraseId())
-
-          ctx.registerOpration({
-            type: IRNodeTypes.INSERT_NODE,
-            loc: ctx.node.loc,
-            element: prevChildren.map((child) => child.id!),
-            parent: ctx.reference(),
-            anchor,
-          })
-        } else {
-          ctx.registerOpration({
-            type: IRNodeTypes.PREPEND_NODE,
-            loc: ctx.node.loc,
-            elements: prevChildren.map((child) => child.id!),
-            parent: ctx.reference(),
-          })
-        }
-      hasStatic = true
-      prevChildren = []
-      continue
-    }
-
-    prevChildren.push(child)
-
-    if (index === children.length - 1) {
-      ctx.registerOpration({
-        type: IRNodeTypes.APPEND_NODE,
-        loc: ctx.node.loc,
-        elements: prevChildren.map((child) => child.id!),
-        parent: ctx.reference(),
-      })
-    }
-  }
-
+  processDynamicChildren()
   ctx.template += childrenTemplate.join('')
 
-  // finalize template
   if (root) ctx.registerTemplate()
+
+  function processDynamicChildren() {
+    let prevChildren: DynamicInfo[] = []
+    let hasStatic = false
+    for (let index = 0; index < children.length; index++) {
+      const child = ctx.dynamic.children[index]
+
+      if (!child || !child.ghost) {
+        if (prevChildren.length)
+          if (hasStatic) {
+            childrenTemplate[index - prevChildren.length] = `<!>`
+            const anchor = (prevChildren[0].placeholder = ctx.incraseId())
+
+            ctx.registerOpration({
+              type: IRNodeTypes.INSERT_NODE,
+              loc: ctx.node.loc,
+              element: prevChildren.map((child) => child.id!),
+              parent: ctx.reference(),
+              anchor,
+            })
+          } else {
+            ctx.registerOpration({
+              type: IRNodeTypes.PREPEND_NODE,
+              loc: ctx.node.loc,
+              elements: prevChildren.map((child) => child.id!),
+              parent: ctx.reference(),
+            })
+          }
+        hasStatic = true
+        prevChildren = []
+        continue
+      }
+
+      prevChildren.push(child)
+
+      if (index === children.length - 1) {
+        ctx.registerOpration({
+          type: IRNodeTypes.APPEND_NODE,
+          loc: ctx.node.loc,
+          elements: prevChildren.map((child) => child.id!),
+          parent: ctx.reference(),
+        })
+      }
+    }
+  }
 
   function walkNode(node: TemplateChildNode, index: number) {
     const child = createContext(node, ctx, index)
