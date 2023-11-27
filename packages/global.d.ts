@@ -50,14 +50,7 @@ declare module 'source-map-js' {
     toJSON(): RawSourceMap
     _names: Set<string>
     _mappings: {
-      add(mapping: {
-        originalLine: number
-        originalColumn: number
-        generatedLine: number
-        generatedColumn: number
-        source: string
-        name: string | null
-      }): void
+      add(mapping: MappingItem): void
     }
   }
 }

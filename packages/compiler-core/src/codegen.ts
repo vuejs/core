@@ -218,6 +218,7 @@ function createCodegenContext(
       generatedLine: context.line,
       generatedColumn: context.column - 1,
       source: filename,
+      // @ts-ignore it is possible to be null
       name
     })
   }
