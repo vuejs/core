@@ -214,10 +214,10 @@ function doCompileTemplate({
     inAST = undefined
   }
 
-  if (inAST?.codegenNode) {
-    // input AST has codegenNode - it has already been transformed and cannot
-    // be reused. We need to parse a fresh one. Can't just use `source` here
-    // since we need the AST location info to be relative to the entire SFC.
+  if (inAST?.transformed) {
+    // If input AST has already been transformed, then it cannot be reused.
+    // We need to parse a fresh one. Can't just use `source` here since we need
+    // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
       parseMode: 'sfc',
       onError: e => errors.push(e)

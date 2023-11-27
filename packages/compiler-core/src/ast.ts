@@ -113,6 +113,7 @@ export interface RootNode extends Node {
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
+  transformed?: boolean
 
   // v2 compat only
   filters?: string[]

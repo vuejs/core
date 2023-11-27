@@ -156,6 +156,52 @@ test('should work w/ AST from descriptor', () => {
   expect(
     consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
   ).toMatchObject(getPositionInCode(source, `foobar`))
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content
+    }).code
+  )
+})
+
+test('should work w/ AST from descriptor in SSR mode', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  expect(template.ast!.source).toBe(source)
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: '', // make sure it's actually using the AST instead of source
+    ast: template.ast,
+    ssr: true
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  // when reusing AST from SFC parse for template compile,
+  // the source corresponds to the entire SFC
+  expect(map!.sourcesContent).toEqual([source])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(source, `foobar`))
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content,
+      ssr: true
+    }).code
+  )
 })
 
 test('should not reuse AST if using custom compiler', () => {
@@ -183,6 +229,66 @@ test('should not reuse AST if using custom compiler', () => {
   // what we really want to assert is that the `input` received by the custom
   // compiler is the source string, not the AST.
   expect(code).toBe(template.content)
+})
+
+test('should force re-parse on already transformed AST', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  // force set to empty, if this is reused then it won't generate proper code
+  template.ast!.children = []
+  template.ast!.transformed = true
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: '',
+    ast: template.ast
+  })
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content
+    }).code
+  )
+})
+
+test('should force re-parse with correct compiler in SSR mode', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  // force set to empty, if this is reused then it won't generate proper code
+  template.ast!.children = []
+  template.ast!.transformed = true
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: '',
+    ast: template.ast,
+    ssr: true
+  })
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content,
+      ssr: true
+    }).code
+  )
 })
 
 test('template errors', () => {
