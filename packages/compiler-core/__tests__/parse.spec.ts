@@ -1941,6 +1941,17 @@ describe('compiler: parse', () => {
     })
   })
 
+  test('arg should be undefined on shorthand dirs with no arg', () => {
+    const ast = baseParse(`<template #></template>`)
+    const el = ast.children[0] as ElementNode
+    expect(el.props[0]).toMatchObject({
+      type: NodeTypes.DIRECTIVE,
+      name: 'slot',
+      exp: undefined,
+      arg: undefined
+    })
+  })
+
   describe('decodeEntities option', () => {
     test('use decode by default', () => {
       const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')

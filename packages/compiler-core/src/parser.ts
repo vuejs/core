@@ -238,6 +238,7 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   ondirarg(start, end) {
+    if (start === end) return
     const arg = getSlice(start, end)
     if (inVPre) {
       ;(currentProp as AttributeNode).name += arg
