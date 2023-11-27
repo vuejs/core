@@ -463,7 +463,11 @@ export default class Tokenizer {
    */
   private fastForwardTo(c: number): boolean {
     while (++this.index < this.buffer.length) {
-      if (this.buffer.charCodeAt(this.index) === c) {
+      const cc = this.buffer.charCodeAt(this.index)
+      if (cc === CharCodes.NewLine) {
+        this.newlines.push(this.index)
+      }
+      if (cc === c) {
         return true
       }
     }

@@ -7,15 +7,61 @@ describe('compiler:sfc', () => {
     test('style block', () => {
       // Padding determines how many blank lines will there be before the style block
       const padding = Math.round(Math.random() * 10)
-      const style = parse(
-        `${'\n'.repeat(padding)}<style>\n.color {\n color: red;\n }\n</style>\n`
-      ).descriptor.styles[0]
+      const src =
+        `${'\n'.repeat(padding)}` +
+        `<style>
+.css {
+color: red;
+}
+</style>
 
-      expect(style.map).not.toBeUndefined()
+<style module>
+.css-module {
+color: red;
+}
+</style>
 
-      const consumer = new SourceMapConsumer(style.map!)
+<style scoped>
+.css-scoped {
+color: red;
+}
+</style>
+
+<style scoped>
+.css-scoped-nested {
+color: red;
+.dummy {
+color: green;
+}
+font-weight: bold;
+}
+</style>`
+      const {
+        descriptor: { styles }
+      } = parse(src)
+
+      expect(styles[0].map).not.toBeUndefined()
+      const consumer = new SourceMapConsumer(styles[0].map!)
+      const lineOffset =
+        src.slice(0, src.indexOf(`<style>`)).split('\n').length - 1
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.generatedLine + lineOffset).toBe(mapping.originalLine)
+      })
+
+      expect(styles[1].map).not.toBeUndefined()
+      const consumer1 = new SourceMapConsumer(styles[1].map!)
+      const lineOffset1 =
+        src.slice(0, src.indexOf(`<style module>`)).split('\n').length - 1
+      consumer1.eachMapping(mapping => {
+        expect(mapping.generatedLine + lineOffset1).toBe(mapping.originalLine)
+      })
+
+      expect(styles[2].map).not.toBeUndefined()
+      const consumer2 = new SourceMapConsumer(styles[2].map!)
+      const lineOffset2 =
+        src.slice(0, src.indexOf(`<style scoped>`)).split('\n').length - 1
+      consumer2.eachMapping(mapping => {
+        expect(mapping.generatedLine + lineOffset2).toBe(mapping.originalLine)
       })
     })
 
