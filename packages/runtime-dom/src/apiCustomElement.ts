@@ -527,5 +527,3 @@ export class VueElement extends BaseClass {
     }
   }
 }
-
-// TODO: teleport 会导致dom 不会在 shadowRoot 中（是否需要）

@@ -2123,7 +2123,7 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.COMPONENT) {
       // remove style tags when the component is a child
       // component of a custom element
-      if (vnode.component!.ceContext) {
+      if (vnode.component!.ceContext && isHmrUpdating) {
         vnode.component!.ceContext.removeCEChildStyles(vnode.component!.uid)
       }
       unmountComponent(vnode.component!, parentSuspense, doRemove)
