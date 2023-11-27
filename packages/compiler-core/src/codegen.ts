@@ -207,10 +207,10 @@ function createCodegenContext(
   }
 
   function addMapping(loc: Position, name: string | null = null) {
-    // @ts-ignore we use the private property to directly add the mapping
+    // we use the private property to directly add the mapping
     // because the addMapping() implementation in source-map-js has a bunch of
     // unnecessary arg and validation checks that are pure overhead in our case.
-    const { _names, _mappings } = context.map
+    const { _names, _mappings } = context.map!
     if (name !== null && !_names.has(name)) _names.add(name)
     _mappings.add({
       originalLine: loc.line,
@@ -354,8 +354,7 @@ export function generate(
     ast,
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
-    // SourceMapGenerator does have toJSON() method but it's not in the types
-    map: context.map ? (context.map as any).toJSON() : undefined
+    map: context.map ? context.map.toJSON() : undefined
   }
 }
 

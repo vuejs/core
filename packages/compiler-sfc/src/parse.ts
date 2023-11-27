@@ -360,7 +360,7 @@ function generateSourceMap(
       }
     }
   })
-  return JSON.parse(map.toString())
+  return map.toJSON()
 }
 
 function padContent(
