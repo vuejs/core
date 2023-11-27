@@ -282,7 +282,7 @@ function transformElement(ctx: TransformContext<ElementNode>) {
   if (children.length) transformChildren(ctx)
 
   // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!node.isSelfClosing || !isVoidTag(tag)) {
+  if (!isVoidTag(tag)) {
     ctx.template += `</${tag}>`
   }
 }

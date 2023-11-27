@@ -2,7 +2,7 @@ import {
   type CodegenResult,
   type CompilerOptions,
   type RootNode,
-  baseParse,
+  parse,
 } from '@vue/compiler-dom'
 import { isString } from '@vue/shared'
 import { transform } from './transform'
@@ -13,7 +13,7 @@ export function compile(
   template: string | RootNode,
   options: CompilerOptions = {},
 ): CodegenResult {
-  const ast = isString(template) ? baseParse(template, options) : template
+  const ast = isString(template) ? parse(template, options) : template
   const ir = transform(ast, options)
   return generate(ir, options)
 }
