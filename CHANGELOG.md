@@ -1,3 +1,44 @@
+# [3.4.0-alpha.2](https://github.com/vuejs/core/compare/v3.3.9...v3.4.0-alpha.2) (2023-11-27)
+
+
+### Bug Fixes
+
+* avoid confusing breakage in @vitejs/plugin-vue ([ceec69c](https://github.com/vuejs/core/commit/ceec69c8ccb96c433a4a506ad2e85e276998bade))
+* **compiler-core:** fix line/column tracking when fast forwarding ([2e65ea4](https://github.com/vuejs/core/commit/2e65ea481f74db8649df8110a031cbdc98f98c84))
+* **compiler-sfc:** fix ast reuse for ssr ([fb619cf](https://github.com/vuejs/core/commit/fb619cf9a440239f0ba88e327d10001a6a3c8171))
+* **compiler-sfc:** support `:is` and `:where` selector in scoped css rewrite ([#8929](https://github.com/vuejs/core/issues/8929)) ([c6083dc](https://github.com/vuejs/core/commit/c6083dcad31f3e9292c687fada9e32f287e2317f))
+* **compiler-sfc:** use correct compiler when re-parsing in ssr mode ([678378a](https://github.com/vuejs/core/commit/678378afd559481badb486b243722b6287862e09))
+
+
+* feat!: remove reactivity transform (#9321) ([79b8a09](https://github.com/vuejs/core/commit/79b8a0905bf363bf82edd2096fef10c3db6d9c3c)), closes [#9321](https://github.com/vuejs/core/issues/9321)
+
+
+### Features
+
+* **compiler-core:** support specifying root namespace when parsing ([40f72d5](https://github.com/vuejs/core/commit/40f72d5e50b389cb11b7ca13461aa2a75ddacdb4))
+* **compiler-core:** support v-bind shorthand for key and value with the same name ([#9451](https://github.com/vuejs/core/issues/9451)) ([26399aa](https://github.com/vuejs/core/commit/26399aa6fac1596b294ffeba06bb498d86f5508c))
+* **compiler:** improve parsing tolerance for language-tools ([41ff68e](https://github.com/vuejs/core/commit/41ff68ea579d933333392146625560359acb728a))
+* **reactivity:** expose last result for computed getter ([#9497](https://github.com/vuejs/core/issues/9497)) ([48b47a1](https://github.com/vuejs/core/commit/48b47a1ab63577e2dbd91947eea544e3ef185b85))
+
+
+### Performance Improvements
+
+* avoid sfc source map unnecessary serialization and parsing ([f15d2f6](https://github.com/vuejs/core/commit/f15d2f6cf69c0c39f8dfb5c33122790c68bf92e2))
+* **codegen:** optimize line / column calculation during codegen ([3be53d9](https://github.com/vuejs/core/commit/3be53d9b974dae1a10eb795cade71ae765e17574))
+* **codegen:** optimize source map generation ([c11002f](https://github.com/vuejs/core/commit/c11002f16afd243a2b15b546816e73882eea9e4d))
+* **compiler-sfc:** remove magic-string trim on script ([e8e3ec6](https://github.com/vuejs/core/commit/e8e3ec6ca7392e43975c75b56eaaa711d5ea9410))
+* **compiler-sfc:** use faster source map addMapping ([50cde7c](https://github.com/vuejs/core/commit/50cde7cfbcc49022ba88f5f69fa9b930b483c282))
+* optimize away isBuiltInType ([66c0ed0](https://github.com/vuejs/core/commit/66c0ed0a3c1c6f37dafc6b1c52b75c6bf60e3136))
+* optimize makeMap ([ae6fba9](https://github.com/vuejs/core/commit/ae6fba94954bac6430902f77b0d1113a98a75b18))
+* optimize position cloning ([2073236](https://github.com/vuejs/core/commit/20732366b9b3530d33b842cf1fc985919afb9317))
+
+
+### BREAKING CHANGES
+
+* Reactivity Transform was marked deprecated in 3.3 and is now removed in 3.4. This change does not require a major due to the feature being experimental. Users who wish to continue using the feature can do so via the external plugin at https://vue-macros.dev/features/reactivity-transform.html
+
+
+
 ## [3.3.9](https://github.com/vuejs/core/compare/v3.3.8...v3.3.9) (2023-11-25)
 
 
