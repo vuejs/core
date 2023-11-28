@@ -481,5 +481,20 @@ describe('DOM parser', () => {
       expect(elementForieng.ns).toBe(Namespaces.SVG)
       expect(element.ns).toBe(Namespaces.HTML)
     })
+
+    test('correct XML handling with root ns', () => {
+      // when root ns is an XML namespace, there should be no special content
+      // treatment for <script>, <style>, <textarea> etc.
+      const ast = parse('<script><g/><g/></script>', {
+        ...parserOptions,
+        ns: Namespaces.SVG
+      })
+      const elementSvg = ast.children[0] as ElementNode
+      // should parse as nodes instead of text
+      expect(elementSvg.children).toMatchObject([
+        { type: NodeTypes.ELEMENT, tag: 'g' },
+        { type: NodeTypes.ELEMENT, tag: 'g' }
+      ])
+    })
   })
 })

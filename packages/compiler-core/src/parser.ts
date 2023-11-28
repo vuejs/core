@@ -978,6 +978,10 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
         ? ParseMode.SFC
         : ParseMode.BASE
 
+  tokenizer.inXML =
+    currentOptions.ns === Namespaces.SVG ||
+    currentOptions.ns === Namespaces.MATH_ML
+
   const delimiters = options?.delimiters
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
