@@ -7,7 +7,14 @@ import {
   triggerEffects
 } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
+import {
+  isArray,
+  hasChanged,
+  IfAny,
+  isFunction,
+  isObject,
+  IfEquals
+} from '@vue/shared'
 import {
   isProxy,
   toRaw,
@@ -311,8 +318,16 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
 
-export type ToRefs<T = any> = {
-  [K in keyof T]: ToRef<T[K]>
+// export type ToRefs<T = any> = {
+//   [K in keyof T]: ToRef<T[K]>
+// }
+export type ToRefs<T> = {
+  [P in keyof T]: IfEquals<
+    { [Q in P]: T[P] },
+    { -readonly [Q in P]: T[P] },
+    ToRef<T[P]>,
+    ToRef<T[P], true>
+  >
 }
 
 /**
@@ -366,7 +381,15 @@ class GetterRefImpl<T> {
   }
 }
 
-export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
+export type ToRef<T, RO extends boolean = false> = IfAny<
+  T,
+  Ref<T>,
+  [T] extends [Ref]
+    ? T
+    : RO extends true
+      ? Omit<Ref<T>, 'value'> & { readonly value: T }
+      : Ref<T>
+>
 
 /**
  * Used to normalize values / refs / getters into refs.

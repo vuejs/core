@@ -273,6 +273,49 @@ expectType<Ref<string>>(p2.obj.k)
   expectType<Ref<number>>(x)
 }
 
+// #5159 toRef readonly
+{
+  const withReadonly = toRefs(readonly(reactive({ foo: 'foo' })))
+  // @ts-expect-error readonly
+  withReadonly.foo.value = 'bar'
+
+  const obj = toRefs({
+    foo: 'test'
+  } as const)
+  // @ts-expect-error readonly
+  obj.foo.value = 'bar'
+
+  const multiple = toRefs(
+    {} as {
+      foo: string
+      readonly bar: string
+    }
+  )
+  // @ts-expect-error readonly
+  multiple.bar.value = 'bar'
+  multiple.foo.value = 'bar'
+
+  const deep = toRefs(
+    {} as {
+      foo: string
+      obj: {
+        readonly bar: string
+      }
+      readonly deep: { baz: string; readonly qux: string }
+    }
+  )
+
+  deep.foo.value = 'bar'
+  // @ts-expect-error readonly
+  deep.obj.value.bar = 'bar'
+
+  // @ts-expect-error readonly
+  deep.deep.value = { baz: 'test', qux: 'test' }
+  deep.deep.value.baz = 'test'
+  // @ts-expect-error readonly
+  deep.deep.value.qux = 'test'
+}
+
 // readonly() + ref()
 expectType<Readonly<Ref<number>>>(readonly(ref(1)))
 

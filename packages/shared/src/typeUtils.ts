@@ -13,6 +13,16 @@ export type LooseRequired<T> = { [P in keyof (T & Required<T>)]: T[P] }
 // https://stackoverflow.com/questions/49927523/disallow-call-with-any/49928360#49928360
 export type IfAny<T, Y, N> = 0 extends 1 & T ? Y : N
 
+/**
+ * IfEquals<X, Y, A, B> is a conditional type that checks if types X and Y are equal.
+ * If they are, it results in type A, otherwise in type B.
+ */
+export type IfEquals<X, Y, A = X, B = never> = (<T>() => T extends X
+  ? 1
+  : 2) extends <T>() => T extends Y ? 1 : 2
+  ? A
+  : B
+
 // To prevent users with TypeScript versions lower than 4.5 from encountering unsupported Awaited<T> type, a copy has been made here.
 export type Awaited<T> = T extends null | undefined
   ? T // special case for `null | undefined` when not in `--strictNullChecks` mode
