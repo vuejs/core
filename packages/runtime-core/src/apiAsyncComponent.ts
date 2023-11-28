@@ -9,12 +9,24 @@ import {
 import { isFunction, isObject } from '@vue/shared'
 import { ComponentPublicInstance } from './componentPublicInstance'
 import { createVNode, VNode } from './vnode'
-import { defineComponent } from './apiDefineComponent'
+import {
+  DefineComponentFromOptions,
+  DefineComponentOptions,
+  defineComponent
+} from './apiDefineComponent'
 import { warn } from './warning'
 import { ref } from '@vue/reactivity'
 import { handleError, ErrorCodes } from './errorHandling'
 import { isKeepAlive } from './components/KeepAlive'
 import { queueJob } from './scheduler'
+import {
+  ComponentInjectOptions,
+  ComponentOptionsMixin,
+  ComputedOptions,
+  EmitsOptions,
+  MethodOptions,
+  SlotsType
+} from '.'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -41,6 +53,77 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
   !!(i.type as ComponentOptions).__asyncLoader
 
 /*! #__NO_SIDE_EFFECTS__ */
+export function defineAsyncComponent<
+  T extends Component = { new (): ComponentPublicInstance }
+>(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T
+
+export function defineAsyncComponent<
+  Props = undefined,
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = {},
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  Options extends Record<PropertyKey, any> = {}
+>(
+  source:
+    | AsyncComponentLoader<
+        DefineComponentOptions<
+          Props,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          EE,
+          I,
+          II,
+          S,
+          Options
+        >
+      >
+    | AsyncComponentOptions<
+        DefineComponentOptions<
+          Props,
+          RawBindings,
+          D,
+          C,
+          M,
+          Mixin,
+          Extends,
+          E,
+          EE,
+          I,
+          II,
+          S,
+          Options
+        >
+      >
+): DefineComponentFromOptions<
+  Props,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  I,
+  II,
+  S,
+  Options
+>
+
+// Implementation
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance }
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {

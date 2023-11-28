@@ -1578,6 +1578,34 @@ describe('should work with props null', () => {
   })
 })
 
+describe('InstanceType should be supported', () => {
+  const Comp = defineComponent({
+    props: { a: String }
+  })
+  expectType<InstanceType<typeof Comp>>(new Comp())
+})
+
+describe('type should be inferred correctly', () => {
+  const a = defineComponent({
+    setup(props, { slots, attrs, emit }) {
+      return {
+        test: true
+      }
+    }
+  })
+
+  new a().test
+})
+
+// @ts-expect-error should not allow non object and functions
+defineComponent(1)
+// @ts-expect-error should not allow
+defineComponent('test-my-component')
+declare function test<T>(comp: DefineComponent<T, any, any>): T
+test(defineComponent({}))
+const a = defineComponent({})
+test(a)
+
 import {
   DefineComponent,
   ComponentOptionsMixin,

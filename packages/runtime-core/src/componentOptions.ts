@@ -118,7 +118,7 @@ export interface ComponentOptionsBase<
   setup?: (
     this: void,
     props: LooseRequired<
-      ([Props] extends [never] ? {} : Props) &
+      Props &
         Prettify<
           UnwrapMixinsType<
             IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
@@ -378,21 +378,22 @@ export type ComponentOptions<
   E extends EmitsOptions = {},
   I extends ComponentInjectOptions = {},
   S extends SlotsType = any
-> = ComponentOptionsBase<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  string,
-  {},
-  I,
-  string,
-  S
-> &
+> = Record<string, any> &
+  ComponentOptionsBase<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    {},
+    I,
+    string,
+    S
+  > &
   ThisType<
     CreateComponentPublicInstance<
       {},
@@ -440,8 +441,8 @@ export type ExtractComputedReturns<T extends any> = {
   [key in keyof T]: T[key] extends { get: (...args: any[]) => infer TReturn }
     ? TReturn
     : T[key] extends (...args: any[]) => infer TReturn
-      ? TReturn
-      : never
+    ? TReturn
+    : never
 }
 
 export type ObjectWatchOptionItem = {
@@ -471,10 +472,10 @@ export type InjectToObject<T extends ComponentInjectOptions> =
         [K in T[number]]?: unknown
       }
     : T extends ObjectInjectOptions
-      ? {
-          [K in keyof T]?: unknown
-        }
-      : never
+    ? {
+        [K in keyof T]?: unknown
+      }
+    : never
 
 interface LegacyOptions<
   Props,
@@ -774,8 +775,8 @@ export function applyOptions(instance: ComponentInternalInstance) {
       const get = isFunction(opt)
         ? opt.bind(publicThis, publicThis)
         : isFunction(opt.get)
-          ? opt.get.bind(publicThis, publicThis)
-          : NOOP
+        ? opt.get.bind(publicThis, publicThis)
+        : NOOP
       if (__DEV__ && get === NOOP) {
         warn(`Computed property "${key}" has no getter.`)
       }
@@ -783,12 +784,12 @@ export function applyOptions(instance: ComponentInternalInstance) {
         !isFunction(opt) && isFunction(opt.set)
           ? opt.set.bind(publicThis)
           : __DEV__
-            ? () => {
-                warn(
-                  `Write operation failed: computed property "${key}" is readonly.`
-                )
-              }
-            : NOOP
+          ? () => {
+              warn(
+                `Write operation failed: computed property "${key}" is readonly.`
+              )
+            }
+          : NOOP
       const c = computed({
         get,
         set

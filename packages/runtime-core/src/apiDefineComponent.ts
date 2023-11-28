@@ -34,16 +34,16 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-      ? ExtractPropTypes<Props>
-      : Props extends never[]
-        ? {}
-        : [Props] extends [string[]]
-          ? { [key: string]: any }
-          : [Props] extends [never]
-            ? {}
-            : [Props] extends [undefined]
-              ? {}
-              : Props) &
+    ? ExtractPropTypes<Props>
+    : Props extends never[]
+    ? {}
+    : [Props] extends [string[]]
+    ? { [key: string]: any }
+    : [Props] extends [never]
+    ? {}
+    : [Props] extends [undefined]
+    ? {}
+    : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -57,7 +57,7 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  E extends EmitsOptions = {},
   EE extends string = string,
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
@@ -65,7 +65,7 @@ export type DefineComponent<
   I extends ComponentInjectOptions = any,
   II extends string = string,
   S extends SlotsType = any,
-  Options = {}
+  Options extends Record<PropertyKey, any> = {}
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -139,10 +139,10 @@ type BuildComponentInstance<
 type NamedProps<PropNames> = [PropNames] extends [string]
   ? PropNames[]
   : PropNames extends string[]
-    ? PropNames
-    : PropNames extends never[]
-      ? PropNames
-      : never
+  ? PropNames
+  : PropNames extends never[]
+  ? PropNames
+  : never
 type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
   ? Props
   : never
@@ -160,20 +160,20 @@ export type DefineComponentOptions<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {},
+  Options extends {} = {},
   PrettyProps = Readonly<
     ExtractPropTypes<
       [Props] extends [string]
         ? { [K in Props]: any }
         : [Props] extends [string[]]
-          ? { [K in string]: any }
-          : [Props] extends [never]
-            ? {}
-            : [Props] extends [undefined]
-              ? {}
-              : [Props] extends [never[]]
-                ? {}
-                : Props
+        ? { [K in string]: any }
+        : [Props] extends [never]
+        ? {}
+        : [Props] extends [undefined]
+        ? {}
+        : [Props] extends [never[]]
+        ? {}
+        : Props
     > &
       EmitsToProps<E>
   >
@@ -215,70 +215,6 @@ export type DefineComponentOptions<
           Options
         >
       >)
-  // ([Props] extends [string]
-  //   ? {} /*ComponentOptionsWithArrayProps<
-  //       Props,
-  //       RawBindings,
-  //       D,
-  //       C,
-  //       M,
-  //       Mixin,
-  //       Extends,
-  //       E,
-  //       EE,
-  //       I,
-  //       II,
-  //       S
-  //     >*/
-  //   : [Props] extends [undefined]
-  //   ? {
-  //       // props?: undefined
-  //     }
-  //   : // {
-  //   //     props?: undefined
-  //   //   } & ComponentOptionsWithoutProps<
-  //   //     {},
-  //   //     RawBindings,
-  //   //     D,
-  //   //     C,
-  //   //     M,
-  //   //     Mixin,
-  //   //     Extends,
-  //   //     E,
-  //   //     EE,
-  //   //     I,
-  //   //     II,
-  //   //     S
-  //   //   >
-  //   Props extends ComponentObjectPropsOptions
-  //   ? {}
-  //   : // ComponentOptionsWithObjectProps<
-  //     //     Props,
-  //     //     RawBindings,
-  //     //     D,
-  //     //     C,
-  //     //     M,
-  //     //     Mixin,
-  //     //     Extends,
-  //     //     E,
-  //     //     EE,
-  //     //     I,
-  //     //     II,
-  //     //     S
-  //     //   >
-  //     // adding support for ComponentOProp
-  //     ComponentOptions<
-  //       Readonly<Record<string, any> & EmitsToProps<E>>,
-  //       RawBindings,
-  //       D,
-  //       C,
-  //       M,
-  //       Mixin,
-  //       Extends,
-  //       E,
-  //       I,
-  //       S
-  //     >)
   | (((
       props: Props,
       ctx: SetupContext<E, S>
@@ -298,15 +234,15 @@ export type DefineComponentFromOptions<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {}
+  Options extends Record<PropertyKey, any> = {}
 > = DefineComponent<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-      ? {}
-      : Props extends never[]
-        ? string[]
-        : Props,
+    ? {}
+    : Props extends never[]
+    ? string[]
+    : Props,
   RawBindings,
   D,
   C,
@@ -429,7 +365,7 @@ export function defineComponent<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options = {}
+  Options extends Record<PropertyKey, any> = {}
 >(
   options: DefineComponentOptions<
     Props,
@@ -447,7 +383,7 @@ export function defineComponent<
     Options
   >
 ): DefineComponentFromOptions<
-  Props,
+  undefined extends Props ? {} : Props,
   RawBindings,
   D,
   C,

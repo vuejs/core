@@ -790,9 +790,7 @@ describe('api: options', () => {
       data() {}
     }
     defineComponent({
-      // @ts-expect-error edge case after #7963, unlikely to happen in practice
-      // since the user will want to type the mixins themselves.
-      mixins: [defineComponent(MixinA), defineComponent(MixinB)],
+      mixins: [MixinA, MixinB],
       data() {}
     })
   })

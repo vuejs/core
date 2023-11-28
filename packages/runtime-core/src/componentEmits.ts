@@ -41,37 +41,37 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
       [K in string & `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
     }
   : T extends ObjectEmitsOptions
-    ? {
-        [K in string &
-          `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-          ? T[Uncapitalize<C>] extends null
-            ? (...args: any[]) => any
-            : (
-                ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                  ? P
-                  : never
-              ) => any
-          : never
-      }
-    : {}
+  ? {
+      [K in string &
+        `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+        ? T[Uncapitalize<C>] extends null
+          ? (...args: any[]) => any
+          : (
+              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                ? P
+                : never
+            ) => any
+        : never
+    }
+  : {}
 
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options
-> = Options extends Array<infer V>
+> = [Options] extends [Array<infer V>]
   ? (event: V, ...args: any[]) => void
   : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (
-        event: any,
-        ...args: any[]
-      ) => any | ((event: string, ...args: any[]) => void) // (event:any, ...args:[])=> void is there, to allow $emit('myEvent') to work
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends (...args: infer Args) => any
-            ? (event: key, ...args: Args) => void
-            : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+  ? (
+      event: any,
+      ...args: any[]
+    ) => any | ((event: string, ...args: any[]) => void) // (event:any, ...args:[])=> void is there, to allow $emit('myEvent') to work
+  : UnionToIntersection<
+      {
+        [key in Event]: Options[key] extends (...args: infer Args) => any
+          ? (event: key, ...args: Args) => void
+          : (event: key, ...args: any[]) => void
+      }[Event]
+    >
 
 export function emit(
   instance: ComponentInternalInstance,

@@ -327,6 +327,7 @@ describe('defineCustomElement', () => {
           })
       }
     })
+
     const E = defineCustomElement(CompDef)
     customElements.define('my-el-emits', E)
 
@@ -602,19 +603,16 @@ describe('defineCustomElement', () => {
     })
 
     test('set DOM property before resolve', async () => {
-      const E = defineCustomElement(
-        defineAsyncComponent(() => {
-          return Promise.resolve({
-            props: ['msg'],
-            setup(props) {
-              expect(typeof props.msg).toBe('string')
-            },
-            render(this: any) {
-              return h('div', this.msg)
-            }
-          })
-        })
-      )
+      const D = defineAsyncComponent(async () => ({
+        props: ['msg'],
+        setup(props) {
+          expect(typeof props.msg).toBe('string')
+        },
+        render(this: any) {
+          return h('div', this.msg)
+        }
+      }))
+      const E = defineCustomElement(D)
       customElements.define('my-el-async-2', E)
 
       const e1 = new E()
@@ -643,19 +641,18 @@ describe('defineCustomElement', () => {
     })
 
     test('Number prop casting before resolve', async () => {
-      const E = defineCustomElement(
-        defineAsyncComponent(() => {
-          return Promise.resolve({
-            props: { n: Number },
-            setup(props) {
-              expect(props.n).toBe(20)
-            },
-            render(this: any) {
-              return h('div', this.n + ',' + typeof this.n)
-            }
-          })
-        })
-      )
+      const D = defineAsyncComponent(async () => {
+        return {
+          props: { n: Number },
+          setup(props) {
+            expect(props.n).toBe(20)
+          },
+          render(this: any) {
+            return h('div', this.n + ',' + typeof this.n)
+          }
+        }
+      })
+      const E = defineCustomElement(D)
       customElements.define('my-el-async-3', E)
       container.innerHTML = `<my-el-async-3 n="2e1"></my-el-async-3>`
 
