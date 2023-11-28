@@ -606,7 +606,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     }
   }
 
-  // whitepsace management
+  // whitespace management
   if (!tokenizer.inRCDATA) {
     el.children = condenseWhitespace(el.children, el.tag)
   }

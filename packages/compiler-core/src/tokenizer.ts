@@ -77,7 +77,7 @@ export const enum CharCodes {
   Dot = 0x2e, // "."
   Colon = 0x3a, // ":"
   At = 0x40, // "@"
-  LeftSqaure = 91, // "["
+  LeftSquare = 91, // "["
   RightSquare = 93 // "]"
 }
 
@@ -243,7 +243,7 @@ export default class Tokenizer {
   public inRCDATA = false
   /** For disabling RCDATA tags handling */
   public inXML = false
-  /** Reocrd newline positions for fast line / column calculation */
+  /** Record newline positions for fast line / column calculation */
   private newlines: number[] = []
 
   private readonly entityDecoder?: EntityDecoder
@@ -637,7 +637,7 @@ export default class Tokenizer {
     } else if (c === CharCodes.Lt && this.peek() === CharCodes.Slash) {
       // special handling for </ appearing in open tag state
       // this is different from standard HTML parsing but makes practical sense
-      // especially for parsing intermedaite input state in IDEs.
+      // especially for parsing intermediate input state in IDEs.
       this.cbs.onopentagend(this.index)
       this.state = State.BeforeTagName
       this.sectionStart = this.index
@@ -714,7 +714,7 @@ export default class Tokenizer {
     if (c === CharCodes.Eq || isEndOfTagSection(c)) {
       this.cbs.ondirarg(this.sectionStart, this.index)
       this.handleAttrNameEnd(c)
-    } else if (c === CharCodes.LeftSqaure) {
+    } else if (c === CharCodes.LeftSquare) {
       this.state = State.InDirDynamicArg
     } else if (c === CharCodes.Dot) {
       this.cbs.ondirarg(this.sectionStart, this.index)
