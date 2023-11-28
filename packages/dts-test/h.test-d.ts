@@ -258,5 +258,5 @@ describe('h should work with multiple types', () => {
 // usage in test-utils
 describe('should allow to assign vnode', () => {
   h(h('div', 'test'))
-  h({} as unknown as VNode | string | { render: Function } | Component)
+  h({} as unknown as VNode | string | { render(): any } | Component)
 })

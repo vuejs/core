@@ -1606,6 +1606,54 @@ test(defineComponent({}))
 const a = defineComponent({})
 test(a)
 
+defineComponent({
+  render() {
+    return null
+  }
+})
+
+defineComponent({
+  props: {
+    n: Number
+  },
+  data: () => ({ msg: 'hello' }),
+  render() {
+    this.msg
+    return h('div', this.n)
+  }
+})
+
+defineComponent({
+  props: {
+    n: Number
+  },
+  data() {
+    return { msg: 'hello' }
+  },
+  mounted() {
+    this.msg
+  },
+  render() {
+    this.msg
+    this.$data
+    return h('div', this.n)
+  }
+})
+
+defineComponent({
+  mixins: [
+    defineComponent({
+      data() {
+        return { msg: 'hello' }
+      },
+      render() {
+        this.$data
+        return h('div', this.msg)
+      }
+    })
+  ]
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,
