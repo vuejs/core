@@ -47,22 +47,46 @@ describe('SFC scoped CSS', () => {
     )
   })
 
-  test('pseudo class', () => {
-    expect(compileScoped(`.foo:after { color: red; }`)).toMatch(
-      `.foo[data-v-test]:after { color: red;`,
-    )
+  test.each([
+    {
+      message: 'pseudo class with class',
+      source: `.foo:after { color: red; }`,
+      expected: `.foo:after[data-v-test] { color: red;`,
+    },
+    {
+      message: 'bare pseudo class at root',
+      source: `:after { color: red; }`,
+      expected: `:after[data-v-test] { color: red;`,
+    },
+    {
+      message: 'bare pseudo class as descendent',
+      source: `div :required { color: red; }`,
+      expected: `div :required[data-v-test] { color: red;`,
+    },
+    {
+      message: 'pseudo class with tag as descendent',
+      source: `div input:required { color: red; }`,
+      expected: `div input:required[data-v-test] { color: red;`,
+    },
+    {
+      message: ':not pseudo class',
+      source: `input:not(.error) { color: red; }`,
+      expected: `input:not(.error)[data-v-test] { color: red;`,
+    }
+  ])('$message', ({ source, expected }) => {
+    expect(compileScoped(source)).toMatch(expected)
   })
 
   test('pseudo element', () => {
     expect(compileScoped(`::selection { display: none; }`)).toMatch(
-      '[data-v-test]::selection {',
+      '::selection[data-v-test] {',
     )
   })
 
   test('spaces before pseudo element', () => {
     const code = compileScoped(`.abc, ::selection { color: red; }`)
     expect(code).toMatch('.abc[data-v-test],')
-    expect(code).toMatch('[data-v-test]::selection {')
+    expect(code).toMatch('::selection[data-v-test] {')
   })
 
   test('::v-deep', () => {
