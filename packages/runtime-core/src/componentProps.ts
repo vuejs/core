@@ -122,11 +122,17 @@ type InferPropType<T> = [T] extends [null]
             ? U extends DateConstructor
               ? Date | InferPropType<U>
               : InferPropType<U>
-            : [T] extends [Prop<infer V, infer D>]
-              ? unknown extends V
-                ? IfAny<V, V, D>
-                : V
-              : T
+            : [T] extends [PropOptions<infer V, infer D>]
+              ? unknown extends D
+                ? V
+                : unknown extends V
+                  ? IfAny<V, V, D>
+                  : V
+              : [T] extends [Prop<infer V, infer D>]
+                ? unknown extends V
+                  ? IfAny<V, V, D>
+                  : V
+                : T
 
 /**
  * Extract prop types from a runtime props options object.
