@@ -1,4 +1,12 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  ref,
+  readonly,
+  shallowReadonly,
+  Ref,
+  reactive,
+  markRaw,
+  computed
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
@@ -61,4 +69,27 @@ describe('should unwrap tuple correctly', () => {
   const tuple: [Ref<number>] = [ref(0)]
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
+})
+
+describe('should add readonly', () => {
+  test('readonly ref', () => {
+    const r = reactive({ foo: readonly(ref('foo')), bar: 3 })
+    // @ts-expect-error readonly
+    r.foo = 'bar'
+    r.bar = 42
+  })
+  test('computed ', () => {
+    // #5159
+    const r = reactive({ foo: computed(() => 'foo'), bar: 3 })
+    // @ts-expect-error readonly
+    r.foo = 'bar'
+    r.bar = 42
+  })
+
+  test('readonly property', () => {
+    const r = reactive({} as { foo: { readonly bar: number }; bar: number })
+    // @ts-expect-error readonly
+    r.foo.bar = 2
+    r.bar = 42
+  })
 })

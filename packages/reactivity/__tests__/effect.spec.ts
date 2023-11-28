@@ -141,6 +141,7 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(4)
     // this doesn't work, should it?
     // expect(parentDummy).toBe(4)
+    // @ts-expect-error readonly
     parent.prop = 2
     expect(dummy).toBe(2)
     expect(parentDummy).toBe(2)

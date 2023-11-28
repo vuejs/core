@@ -16,10 +16,6 @@ export type IsUnion<T, U extends T = T> = (
   ? false
   : true
 
-/**
- * IfEquals<X, Y, A, B> is a conditional type that checks if types X and Y are equal.
- * If they are, it results in type A, otherwise in type B.
- */
 export type IfEquals<X, Y, A = X, B = never> = (<T>() => T extends X
   ? 1
   : 2) extends <T>() => T extends Y ? 1 : 2

@@ -497,6 +497,7 @@ describe('reactivity/readonly', () => {
     const ror = readonly(r)
     const obj = reactive({ ror })
     expect(() => {
+      // @ts-expect-error readonly
       obj.ror = true
     }).toThrow()
     expect(obj.ror).toBe(false)
@@ -506,6 +507,8 @@ describe('reactivity/readonly', () => {
     const r = ref(false)
     const ror = readonly(r)
     const obj = reactive({ ror })
+    // @ts-expect-error this type is tecnically `readonly` if boolean is used, since
+    // we are overriding the ref... might be an edge case
     obj.ror = ref(true) as unknown as boolean
     expect(obj.ror).toBe(true)
     expect(toRaw(obj).ror).not.toBe(ror) // ref successfully replaced

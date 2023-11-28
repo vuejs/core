@@ -510,6 +510,22 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
     ? UnwrapRefSimple<V>
     : UnwrapRefSimple<T>
 
+// extracts writable keys and also sets Readonly<Ref> as readonly
+type WritableKeysOf<T> = NonNullable<
+  {
+    [P in keyof T]: IfEquals<
+      { [Q in P]: T[P] },
+      { -readonly [Q in P]: T[P] },
+      [T[P]] extends [ComputedRef]
+        ? never
+        : [T[P]] extends [Ref]
+          ? IfEquals<T[P], Readonly<T[P]>, never, P>
+          : P,
+      never
+    >
+  }[keyof T]
+>
+
 export type UnwrapRefSimple<T> = T extends
   | Function
   | CollectionTypes
@@ -521,7 +537,13 @@ export type UnwrapRefSimple<T> = T extends
   : T extends ReadonlyArray<any>
     ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
     : T extends object & { [ShallowReactiveMarker]?: never }
-      ? {
-          [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-        }
+      ? WritableKeysOf<T> extends infer WritableKeys extends keyof T
+        ? {
+            [P in keyof ({
+              [Q in WritableKeys]: T[Q]
+            } & {
+              readonly [Q in Exclude<keyof T, WritableKeys>]: T[Q]
+            })]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+          }
+        : never
       : T
