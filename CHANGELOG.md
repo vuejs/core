@@ -1,3 +1,18 @@
+# [3.4.0-alpha.3](https://github.com/vuejs/core/compare/v3.4.0-alpha.2...v3.4.0-alpha.3) (2023-11-28)
+
+
+### Bug Fixes
+
+* **deps:** update compiler to ^7.23.4 ([#9681](https://github.com/vuejs/core/issues/9681)) ([31f6ebc](https://github.com/vuejs/core/commit/31f6ebc4df84490ed29fb75e7bf4259200eb51f0))
+* **parser:** directive arg should be undefined on shorthands with no arg ([e49dffc](https://github.com/vuejs/core/commit/e49dffc9ece86bddf094b9ad4ad15eb4856d6277))
+
+
+### Features
+
+* **dx:** link errors to docs in prod build ([#9165](https://github.com/vuejs/core/issues/9165)) ([9f8ba98](https://github.com/vuejs/core/commit/9f8ba9821fe166f77e63fa940e9e7e13ec3344fa))
+
+
+
 # [3.4.0-alpha.2](https://github.com/vuejs/core/compare/v3.3.9...v3.4.0-alpha.2) (2023-11-27)
 
 
