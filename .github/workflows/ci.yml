@@ -22,10 +22,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
@@ -44,10 +44,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
@@ -73,14 +73,14 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
-      - run: node node_modules/puppeteer/install.js
+      - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
         run: pnpm run test-e2e
@@ -96,10 +96,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install

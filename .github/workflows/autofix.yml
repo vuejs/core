@@ -17,7 +17,7 @@ jobs:
         uses: pnpm/action-setup@v2
 
       - name: Set node version to 18
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: pnpm
@@ -30,4 +30,4 @@ jobs:
       - name: Run prettier
         run: pnpm run format
 
-      - uses: autofix-ci/action@8caa572fd27b0019a65e4c695447089c8d3138b9
+      - uses: autofix-ci/action@bee19d72e71787c12ca0f29de72f2833e437e4c9
