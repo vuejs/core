@@ -23,7 +23,14 @@ import {
   SlotsType,
   DefineComponent
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hyphenate,
+  isArray,
+  toBoolean,
+  toNumber
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -177,6 +184,7 @@ export class VueElement extends BaseClass {
   private _connected = false
   private _resolved = false
   private _numberProps: Record<string, true> | null = null
+  private _booleanProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
   constructor(
@@ -250,8 +258,9 @@ export class VueElement extends BaseClass {
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
 
-      // cast Number-type props set before resolve
+      // cast Number-type and Boolean-type props set before resolve
       let numberProps
+      let booleanProps
       if (props && !isArray(props)) {
         for (const key in props) {
           const opt = props[key]
@@ -262,10 +271,18 @@ export class VueElement extends BaseClass {
             ;(numberProps || (numberProps = Object.create(null)))[
               camelize(key)
             ] = true
+          } else if (opt === Boolean || (opt && opt.type === Boolean)) {
+            if (key in this._props) {
+              this._props[key] = toBoolean(this._props[key])
+            }
+            ;(booleanProps || (booleanProps = Object.create(null)))[
+              camelize(key)
+            ] = true
           }
         }
       }
       this._numberProps = numberProps
+      this._booleanProps = booleanProps
 
       if (isAsync) {
         // defining getter/setters on prototype
@@ -313,10 +330,12 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    let value = this.getAttribute(key)
+    let value = this.getAttribute(key) as any
     const camelKey = camelize(key)
     if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
+    } else if (this._booleanProps && this._booleanProps[camelKey]) {
+      value = toBoolean(value)
     }
     this._setProp(camelKey, value, false)
   }

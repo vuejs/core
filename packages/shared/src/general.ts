@@ -162,6 +162,20 @@ export const toNumber = (val: any): any => {
   return isNaN(n) ? val : n
 }
 
+/**
+ * Converts a value to a boolean. If the input value is the string 'false', the result will be `false`. Otherwise, the result will be the boolean representation of the input value using the double negation (`!!`) to coerce the value to a boolean.
+ *
+ * @example
+ * toBoolean('false') // false
+ *
+ * toBoolean(1) // true
+ *
+ * toBoolean(null) // false
+ */
+export const toBoolean = (val: any): boolean => {
+  return val === 'false' ? false : !!val
+}
+
 let _globalThis: any
 export const getGlobalThis = (): any => {
   return (

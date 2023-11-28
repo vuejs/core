@@ -172,17 +172,19 @@ describe('defineCustomElement', () => {
 
       e.setAttribute('bar', '')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`1 number true boolean 12345 string`)
+      expect(e.shadowRoot!.innerHTML).toBe(
+        `1 number false boolean 12345 string`
+      )
 
       e.setAttribute('foo-bar', '2e1')
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        `20 number true boolean 12345 string`
+        `20 number false boolean 12345 string`
       )
 
       e.setAttribute('baz', '2e1')
       await nextTick()
-      expect(e.shadowRoot!.innerHTML).toBe(`20 number true boolean 2e1 string`)
+      expect(e.shadowRoot!.innerHTML).toBe(`20 number false boolean 2e1 string`)
     })
 
     // #4772
