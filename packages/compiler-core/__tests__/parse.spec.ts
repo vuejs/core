@@ -1952,6 +1952,12 @@ describe('compiler: parse', () => {
     })
   })
 
+  // edge case found in vue-macros where the input is TS or JSX
+  test('should reset inRCDATA state', () => {
+    baseParse(`<Foo>`, { parseMode: 'sfc', onError() {} })
+    expect(() => baseParse(`{ foo }`)).not.toThrow()
+  })
+
   describe('decodeEntities option', () => {
     test('use decode by default', () => {
       const ast: any = baseParse('&gt;&lt;&amp;&apos;&quot;&foo;')

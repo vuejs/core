@@ -271,6 +271,7 @@ export default class Tokenizer {
     this.sectionStart = 0
     this.index = 0
     this.baseState = State.Text
+    this.inRCDATA = false
     this.currentSequence = undefined!
     this.newlines.length = 0
     this.delimiterOpen = defaultDelimitersOpen
