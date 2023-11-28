@@ -999,13 +999,13 @@ describe('SSR hydration', () => {
         super()
       }
     }
-    customElements.define('my-element', MyElement)
+    customElements.define('my-element-7203', MyElement)
 
     const msg = ref('bar')
     const container = document.createElement('div')
-    container.innerHTML = '<my-element :foo="msg"></my-element>'
+    container.innerHTML = '<my-element-7203 :foo="msg"></my-element>'
     const app = createSSRApp({
-      render: () => h('my-element', { foo: msg.value })
+      render: () => h('my-element-7203', { foo: msg.value })
     })
     // isCustomElement MUST be set at runtime
     app.config.compilerOptions.isCustomElement = tag => tag.startsWith('my-')
