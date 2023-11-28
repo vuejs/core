@@ -1,14 +1,14 @@
-import type {
+import {
   NodeTypes,
-  RootNode,
-  Node,
-  TemplateChildNode,
-  ElementNode,
-  AttributeNode,
-  InterpolationNode,
-  TransformOptions,
-  DirectiveNode,
-  ExpressionNode,
+  type RootNode,
+  type Node,
+  type TemplateChildNode,
+  type ElementNode,
+  type AttributeNode,
+  type InterpolationNode,
+  type TransformOptions,
+  type DirectiveNode,
+  type ExpressionNode,
 } from '@vue/compiler-dom'
 import {
   type OperationNode,
@@ -17,6 +17,12 @@ import {
   DynamicInfo,
 } from './ir'
 import { isVoidTag } from '@vue/shared'
+import {
+  ErrorCodes,
+  createCompilerError,
+  defaultOnError,
+  defaultOnWarn,
+} from './errors'
 
 export interface TransformContext<T extends Node = Node> {
   node: T
@@ -129,6 +135,9 @@ export function transform(
   root: RootNode,
   options: TransformOptions = {},
 ): RootIRNode {
+  options.onError ||= defaultOnError
+  options.onWarn ||= defaultOnWarn
+
   const ir: RootIRNode = {
     type: IRNodeTypes.ROOT,
     loc: root.loc,
@@ -145,6 +154,7 @@ export function transform(
     helpers: new Set([]),
     vaporHelpers: new Set([]),
   }
+
   const ctx = createRootContext(ir, root, options)
 
   // TODO: transform presets, see packages/compiler-core/src/transforms
@@ -344,9 +354,21 @@ function transformProp(
     return
   }
 
-  const expr = processExpression(ctx, node.exp)
+  const { exp, loc, modifiers } = node
+
+  const expr = processExpression(ctx, exp)
   switch (name) {
     case 'bind': {
+      if (
+        !exp ||
+        (exp.type === NodeTypes.SIMPLE_EXPRESSION! && !exp.content.trim())
+      ) {
+        ctx.options.onError!(
+          createCompilerError(ErrorCodes.VAPOR_BIND_NO_EXPRESSION, loc),
+        )
+        return
+      }
+
       if (expr === null) {
         // TODO: Vue 3.4 supported shorthand syntax
         // https://github.com/vuejs/core/pull/9451
@@ -371,6 +393,13 @@ function transformProp(
       break
     }
     case 'on': {
+      if (!exp && !modifiers.length) {
+        ctx.options.onError!(
+          createCompilerError(ErrorCodes.VAPOR_ON_NO_EXPRESSION, loc),
+        )
+        return
+      }
+
       if (!node.arg) {
         // TODO support v-on="{}"
         return

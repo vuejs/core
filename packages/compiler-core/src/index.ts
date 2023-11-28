@@ -25,6 +25,8 @@ export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
   ErrorCodes,
   createCompilerError,
+  defaultOnError,
+  defaultOnWarn,
   type CoreCompilerError,
   type CompilerError
 } from './errors'

@@ -2,6 +2,7 @@ import { BindingTypes, CompilerOptions, RootNode } from '@vue/compiler-dom'
 // TODO remove it
 import { format } from 'prettier'
 import { compile as _compile } from '../src'
+import { ErrorCodes } from '../src/errors'
 
 async function compile(
   template: string | RootNode,
@@ -71,6 +72,25 @@ describe('compile', () => {
         })
         expect(code).matchSnapshot()
       })
+
+      test('should error if no expression', async () => {
+        const onError = vi.fn()
+        await compile(`<div v-bind:arg />`, { onError })
+
+        expect(onError.mock.calls[0][0]).toMatchObject({
+          code: ErrorCodes.VAPOR_BIND_NO_EXPRESSION,
+          loc: {
+            start: {
+              line: 1,
+              column: 6,
+            },
+            end: {
+              line: 1,
+              column: 16,
+            },
+          },
+        })
+      })
     })
 
     describe('v-on', () => {
@@ -81,6 +101,24 @@ describe('compile', () => {
           },
         })
         expect(code).matchSnapshot()
+      })
+
+      test('should error if no expression AND no modifier', async () => {
+        const onError = vi.fn()
+        await compile(`<div v-on:click />`, { onError })
+        expect(onError.mock.calls[0][0]).toMatchObject({
+          code: ErrorCodes.VAPOR_ON_NO_EXPRESSION,
+          loc: {
+            start: {
+              line: 1,
+              column: 6,
+            },
+            end: {
+              line: 1,
+              column: 16,
+            },
+          },
+        })
       })
     })
 
