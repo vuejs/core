@@ -172,6 +172,11 @@ async function main() {
     }
   }
 
+  if (versionIncrements.includes(targetVersion)) {
+    // @ts-ignore
+    targetVersion = inc(targetVersion)
+  }
+
   if (!semver.valid(targetVersion)) {
     throw new Error(`invalid target version: ${targetVersion}`)
   }
