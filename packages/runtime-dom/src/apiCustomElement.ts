@@ -170,10 +170,10 @@ export function defineCustomElement<
   [Props] extends [string]
     ? { [key in Props]?: any }
     : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : ExtractPropTypes<Props>
+      ? {}
+      : Props extends never[]
+        ? string[]
+        : ExtractPropTypes<Props>
 >
 
 /*! #__NO_SIDE_EFFECTS__ */
