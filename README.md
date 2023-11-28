@@ -43,10 +43,7 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
   - [ ] KeepAlive
   - [ ] Teleport
   - [ ] Suspense
-- [ ] Component
-  - [ ] runtime
-  - [ ] compiler
-- ...
+- [ ] [Component](https://github.com/vuejs/core-vapor/issues/4)
 - [ ] SSR
 - [ ] Performance & Optimization
   - [ ] remove unnecessary close tag `</div>`
