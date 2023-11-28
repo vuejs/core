@@ -318,9 +318,6 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
 
-// export type ToRefs<T = any> = {
-//   [K in keyof T]: ToRef<T[K]>
-// }
 export type ToRefs<T> = {
   [P in keyof T]: IfEquals<
     { [Q in P]: T[P] },
