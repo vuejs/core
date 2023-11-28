@@ -16,7 +16,7 @@ async function compile(
   return code
 }
 
-describe('comile', () => {
+describe('compile', () => {
   test('static template', async () => {
     const code = await compile(
       `<div>
@@ -30,6 +30,13 @@ describe('comile', () => {
 
   test('dynamic root', async () => {
     const code = await compile(`{{ 1 }}{{ 2 }}`)
+    expect(code).matchSnapshot()
+  })
+
+  test('dynamic root nodes and interpolation', async () => {
+    const code = await compile(
+      `<button @click="handleClick" :id="count">{{count}}foo{{count}}foo{{count}} </button>`,
+    )
     expect(code).matchSnapshot()
   })
 

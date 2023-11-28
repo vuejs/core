@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`comile > bindings 1`] = `
+exports[`compile > bindings 1`] = `
 "import { template, children, createTextNode, insert, effect, setText } from 'vue/vapor';
 const t0 = template('<div>count is <!>.</div>');
 export function render() {
@@ -23,7 +23,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-bind > simple expression 1`] = `
+exports[`compile > directives > v-bind > simple expression 1`] = `
 "import { template, children, effect, setAttr } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -39,7 +39,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-html > no expression 1`] = `
+exports[`compile > directives > v-html > no expression 1`] = `
 "import { template, children, effect, setHtml } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -55,7 +55,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-html > simple expression 1`] = `
+exports[`compile > directives > v-html > simple expression 1`] = `
 "import { template, children, effect, setHtml } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -71,7 +71,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-on > simple expression 1`] = `
+exports[`compile > directives > v-on > simple expression 1`] = `
 "import { template, children, effect, on } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -87,7 +87,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-once > as root node 1`] = `
+exports[`compile > directives > v-once > as root node 1`] = `
 "import { template, children, effect, setAttr } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -103,7 +103,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-once > basic 1`] = `
+exports[`compile > directives > v-once > basic 1`] = `
 "import { template, children, createTextNode, setText, setAttr, prepend } from 'vue/vapor';
 const t0 = template('<div> <span></span></div>');
 export function render() {
@@ -125,7 +125,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-text > no expression 1`] = `
+exports[`compile > directives > v-text > no expression 1`] = `
 "import { template, children, effect, setText } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -141,7 +141,7 @@ export function render() {
 "
 `;
 
-exports[`comile > directives > v-text > simple expression 1`] = `
+exports[`compile > directives > v-text > simple expression 1`] = `
 "import { template, children, effect, setText } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render() {
@@ -157,7 +157,7 @@ export function render() {
 "
 `;
 
-exports[`comile > dynamic root 1`] = `
+exports[`compile > dynamic root 1`] = `
 "import { fragment, createTextNode, append, effect, setText } from 'vue/vapor';
 export function render() {
   const t0 = fragment();
@@ -176,7 +176,40 @@ export function render() {
 "
 `;
 
-exports[`comile > fragment 1`] = `
+exports[`compile > dynamic root nodes and interpolation 1`] = `
+"import { template, children, createTextNode, prepend, insert, append, effect, on, setAttr, setText } from 'vue/vapor';
+const t0 = template('<button>foo<!>foo</button>');
+export function render() {
+  const n0 = t0();
+  const {
+    0: [
+      n1,
+      {
+        1: [n5],
+      },
+    ],
+  } = children(n0);
+  const n2 = createTextNode(count);
+  const n3 = createTextNode(count);
+  const n4 = createTextNode(count);
+  prepend(n1, n2);
+  insert(n3, n1, n5);
+  append(n1, n4);
+  effect(() => {
+    on(n1, 'click', handleClick);
+  });
+  effect(() => {
+    setAttr(n1, 'id', undefined, count);
+    setText(n2, undefined, count);
+    setText(n3, undefined, count);
+    setText(n4, undefined, count);
+  });
+  return n0;
+}
+"
+`;
+
+exports[`compile > fragment 1`] = `
 "import { template } from 'vue/vapor';
 const t0 = template('<p></p><span></span><div></div>');
 export function render() {
@@ -186,7 +219,7 @@ export function render() {
 "
 `;
 
-exports[`comile > static + dynamic root 1`] = `
+exports[`compile > static + dynamic root 1`] = `
 "import { template, children, createTextNode, prepend, insert, append, effect, setText } from 'vue/vapor';
 const t0 = template('3<!>6<!>9');
 export function render() {
@@ -236,7 +269,7 @@ export function render() {
 "
 `;
 
-exports[`comile > static template 1`] = `
+exports[`compile > static template 1`] = `
 "import { template } from 'vue/vapor';
 const t0 = template('<div><p>hello</p><input><span></span></div>');
 export function render() {
