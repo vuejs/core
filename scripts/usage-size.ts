@@ -8,7 +8,9 @@ import { brotliCompressSync, gzipSync } from 'node:zlib'
 
 const sizeDir = path.resolve('temp/size')
 const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
-const vapor = path.resolve('./packages/vue/vapor/index.mjs')
+const vapor = path.resolve(
+  './packages/vue-vapor/dist/vue-vapor.runtime.esm-bundler.js'
+)
 
 interface Preset {
   name: string
@@ -24,6 +26,7 @@ const presets: Preset[] = [
     imports: ['defineCustomElement'],
     from: vue
   },
+  { name: 'vapor', imports: '*', from: vapor },
   {
     name: 'overall',
     imports: [
@@ -35,8 +38,7 @@ const presets: Preset[] = [
       'Suspense'
     ],
     from: vue
-  },
-  { name: 'vapor', imports: '*', from: vapor }
+  }
 ]
 
 main()

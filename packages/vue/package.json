@@ -63,16 +63,6 @@
         "default": "./vapor/index.js"
       }
     },
-    "./compiler-vapor": {
-      "import": {
-        "types": "./compiler-vapor/index.d.mts",
-        "default": "./compiler-vapor/index.mjs"
-      },
-      "require": {
-        "types": "./compiler-vapor/index.d.ts",
-        "default": "./compiler-vapor/index.js"
-      }
-    },
     "./jsx-runtime": {
       "types": "./jsx-runtime/index.d.ts",
       "import": "./jsx-runtime/index.mjs",
@@ -117,10 +107,9 @@
   "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/vue#readme",
   "dependencies": {
     "@vue/shared": "workspace:*",
+    "@vue/vapor": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/runtime-dom": "workspace:*",
-    "@vue/runtime-vapor": "workspace:*",
-    "@vue/compiler-vapor": "workspace:*",
     "@vue/compiler-sfc": "workspace:*",
     "@vue/server-renderer": "workspace:*"
   },
