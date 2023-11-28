@@ -47,7 +47,7 @@
     "@babel/types": "^7.23.4",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
-    "lru-cache": "^10.0.3",
+    "lru-cache": "^10.1.0",
     "merge-source-map": "^1.1.0",
     "minimatch": "^9.0.3",
     "postcss-modules": "^4.3.1",
