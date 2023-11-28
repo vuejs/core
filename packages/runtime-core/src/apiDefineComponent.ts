@@ -100,14 +100,15 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
+  CloneProps extends Props = Props
 >(
   setup: (
     props: Props,
     ctx: SetupContext<E, S>
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
-    props?: (keyof Props)[]
+    props?: (keyof CloneProps)[]
     emits?: E | EE[]
     slots?: S
   }
