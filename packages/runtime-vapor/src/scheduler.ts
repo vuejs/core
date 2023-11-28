@@ -4,7 +4,7 @@ const p = Promise.resolve()
 
 let queued: any[] | undefined
 
-const queue = (fn: any) => {
+function queue(fn: any) {
   if (!queued) {
     queued = [fn]
     p.then(flush)
@@ -22,7 +22,7 @@ function flush() {
 
 export const nextTick = (fn: any) => p.then(fn)
 
-export const effect = (fn: any) => {
+export function effect(fn: any) {
   let run: () => void
   const e = new ReactiveEffect(fn, () => queue(run))
   run = e.run.bind(e)

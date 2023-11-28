@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed } from 'vue/vapor'
 
 const count = ref(1)
 const double = computed(() => count.value * 2)

@@ -6,6 +6,7 @@ export {
   reactive,
   ref,
   readonly,
+  computed,
   // utilities
   unref,
   proxyRefs,
@@ -26,7 +27,6 @@ export {
   markRaw,
   toRaw,
   // effect
-  effect,
   stop,
   ReactiveEffect,
   // effect scope
@@ -35,7 +35,7 @@ export {
   getCurrentScope,
   onScopeDispose
 } from '@vue/reactivity'
+export { effect } from './scheduler'
 export * from './on'
 export * from './render'
 export * from './template'
-export * from './scheduler'

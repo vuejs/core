@@ -1,14 +1,14 @@
-import {
+import type {
   NodeTypes,
-  type RootNode,
-  type Node,
-  type TemplateChildNode,
-  type ElementNode,
-  type AttributeNode,
-  type InterpolationNode,
-  type TransformOptions,
-  type DirectiveNode,
-  type ExpressionNode,
+  RootNode,
+  Node,
+  TemplateChildNode,
+  ElementNode,
+  AttributeNode,
+  InterpolationNode,
+  TransformOptions,
+  DirectiveNode,
+  ExpressionNode,
 } from '@vue/compiler-dom'
 import {
   type OperationNode,
@@ -361,7 +361,8 @@ function transformProp(
     case 'bind': {
       if (
         !exp ||
-        (exp.type === NodeTypes.SIMPLE_EXPRESSION! && !exp.content.trim())
+        (exp.type === (4 satisfies NodeTypes.SIMPLE_EXPRESSION) &&
+          !exp.content.trim())
       ) {
         ctx.options.onError!(
           createCompilerError(ErrorCodes.VAPOR_BIND_NO_EXPRESSION, loc),

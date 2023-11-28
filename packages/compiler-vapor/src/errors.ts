@@ -1,10 +1,14 @@
-export {
-  createCompilerError,
-  defaultOnError,
-  defaultOnWarn,
-  type CoreCompilerError,
-  type CompilerError,
-} from '@vue/compiler-dom'
+import { CompilerError } from '@vue/compiler-dom'
+
+export { createCompilerError } from '@vue/compiler-dom'
+
+export function defaultOnError(error: CompilerError) {
+  throw error
+}
+
+export function defaultOnWarn(msg: CompilerError) {
+  __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
+}
 
 export const enum ErrorCodes {
   // transform errors

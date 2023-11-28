@@ -368,7 +368,8 @@ export function compileScript(
   const vueImportAliases: Record<string, string> = {}
   for (const key in ctx.userImports) {
     const { source, imported, local } = ctx.userImports[key]
-    if (source === 'vue') vueImportAliases[imported] = local
+    if (['vue', 'vue/vapor'].includes(source))
+      vueImportAliases[imported] = local
   }
 
   // 2.1 process normal <script> body
@@ -744,7 +745,7 @@ export function compileScript(
     ctx.bindingMetadata[key] =
       imported === '*' ||
       (imported === 'default' && source.endsWith('.vue')) ||
-      source === 'vue'
+      ['vue', 'vue/vapor'].includes(source)
         ? BindingTypes.SETUP_CONST
         : BindingTypes.SETUP_MAYBE_REF
   }
@@ -855,7 +856,7 @@ export function compileScript(
     for (const key in allBindings) {
       if (
         allBindings[key] === true &&
-        ctx.userImports[key].source !== 'vue' &&
+        ['vue', 'vue/vapor'].includes(ctx.userImports[key].source) &&
         !ctx.userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
