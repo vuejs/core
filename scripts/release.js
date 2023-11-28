@@ -418,7 +418,8 @@ async function publishPackage(pkgName, version) {
         '--access',
         'public',
         ...(isDryRun ? ['--dry-run'] : []),
-        ...(skipGit ? ['--no-git-checks'] : [])
+        ...(skipGit ? ['--no-git-checks'] : []),
+        ...(process.env.CI && !isCanary ? ['--provenance'] : [])
       ],
       {
         cwd: getPkgRoot(pkgName),
