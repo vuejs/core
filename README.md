@@ -4,7 +4,7 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 
 ## TODO
 
-PR are welcome! Please create a issue before you start to work on it.
+PR are welcome! However, please create an issue before you start to work on it, and DO NOT create a PR before issue discussion.
 
 See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `runtime-vapor` packages).
 
@@ -24,13 +24,13 @@ See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `ru
     - [ ] compound expression
     - [ ] modifiers
     - [ ] unit tests
-  - [ ] runtime
-  - [ ] `v-memo`
-  - [ ] `v-model`
-  - [ ] `v-if` / `v-else` / `v-else-if`
+  - [ ] runtime directives #19
+  - [ ] `v-memo` #18
+  - [ ] `v-model` #17, needs #19 first
+  - [ ] `v-if` / `v-else` / `v-else-if` (#9)
   - [ ] `v-for`
   - [ ] `v-show`
-    - [ ] runtime directive
+    - [ ] runtime directive, needs #19 first
     - [ ] compiler
 - [ ] Remove DOM API in codegen
 - [ ] Fragment
