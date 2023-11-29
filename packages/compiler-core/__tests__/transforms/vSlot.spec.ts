@@ -850,7 +850,6 @@ describe('compiler: transform component slots', () => {
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_EXTRANEOUS_DEFAULT_SLOT_CHILDREN,
         loc: {
-          source: `bar`,
           start: {
             offset: index,
             line: 1,
@@ -873,7 +872,6 @@ describe('compiler: transform component slots', () => {
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_DUPLICATE_SLOT_NAMES,
         loc: {
-          source: `#foo`,
           start: {
             offset: index,
             line: 1,
@@ -896,7 +894,6 @@ describe('compiler: transform component slots', () => {
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_MIXED_SLOT_USAGE,
         loc: {
-          source: `#foo`,
           start: {
             offset: index,
             line: 1,
@@ -919,7 +916,6 @@ describe('compiler: transform component slots', () => {
       expect(onError.mock.calls[0][0]).toMatchObject({
         code: ErrorCodes.X_V_SLOT_MISPLACED,
         loc: {
-          source: `v-slot`,
           start: {
             offset: index,
             line: 1,

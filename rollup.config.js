@@ -12,7 +12,7 @@ import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
-import { constEnum } from './scripts/const-enum.js'
+import { inlineEnums } from './scripts/inline-enums.js'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -33,7 +33,7 @@ const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
-const [enumPlugin, enumDefines] = constEnum()
+const [enumPlugin, enumDefines] = inlineEnums()
 
 /**
  * @typedef { Omit<T, K> & Required<Pick<T, K>> } MarkRequired
@@ -274,7 +274,12 @@ function createConfig(format, output, plugins = []) {
   }
 
   function resolveExternal() {
-    const treeShakenDeps = ['source-map-js', '@babel/parser', 'estree-walker']
+    const treeShakenDeps = [
+      'source-map-js',
+      '@babel/parser',
+      'estree-walker',
+      'entities/lib/decode.js'
+    ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
       if (!packageOptions.enableNonBrowserBranches) {

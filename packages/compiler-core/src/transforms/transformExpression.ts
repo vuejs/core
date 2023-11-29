@@ -336,9 +336,9 @@ export function processExpression(
         id.name,
         false,
         {
-          source,
           start: advancePositionWithClone(node.loc.start, source, start),
-          end: advancePositionWithClone(node.loc.start, source, end)
+          end: advancePositionWithClone(node.loc.start, source, end),
+          source
         },
         id.isConstant ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
       )

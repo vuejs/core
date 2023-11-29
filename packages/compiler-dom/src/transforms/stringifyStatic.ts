@@ -15,7 +15,8 @@ import {
   PlainElementNode,
   JSChildNode,
   TextCallNode,
-  ConstantTypes
+  ConstantTypes,
+  Namespaces
 } from '@vue/compiler-core'
 import {
   isVoidTag,
@@ -31,9 +32,8 @@ import {
   isKnownSvgAttr,
   isBooleanAttr
 } from '@vue/shared'
-import { DOMNamespaces } from '../parserOptions'
 
-export const enum StringifyThresholds {
+export enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
   NODE_COUNT = 20
 }
@@ -148,11 +148,11 @@ const getHoistedNode = (node: TemplateChildNode) =>
   node.codegenNode.hoisted
 
 const dataAriaRE = /^(data|aria)-/
-const isStringifiableAttr = (name: string, ns: DOMNamespaces) => {
+const isStringifiableAttr = (name: string, ns: Namespaces) => {
   return (
-    (ns === DOMNamespaces.HTML
+    (ns === Namespaces.HTML
       ? isKnownHtmlAttr(name)
-      : ns === DOMNamespaces.SVG
+      : ns === Namespaces.SVG
         ? isKnownSvgAttr(name)
         : false) || dataAriaRE.test(name)
   )

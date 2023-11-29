@@ -240,14 +240,22 @@ describe('SFC compile <script setup>', () => {
       const { content } = compile(
         `
       <script setup>
-      import { ref } from 'vue'
-      let foo = $ref(1)
+      import { useCssVars, ref } from 'vue'
+      const msg = ref()
       </script>
-      `,
-        { reactivityTransform: true }
+      
+      <style>
+      .foo {
+        color: v-bind(msg)
+      }
+      </style>
+      `
       )
       assertCode(content)
-      expect(content).toMatch(`import { ref } from 'vue'`)
+      expect(content).toMatch(
+        `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`
+      )
+      expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -891,9 +899,7 @@ describe('SFC compile <script setup>', () => {
 
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
-      const { content } = compile(`<script setup>${code}</script>`, {
-        reactivityTransform: true
-      })
+      const { content } = compile(`<script setup>${code}</script>`)
       if (shouldAsync) {
         expect(content).toMatch(`let __temp, __restore`)
       }
@@ -911,7 +917,7 @@ describe('SFC compile <script setup>', () => {
     })
 
     test('ref', () => {
-      assertAwaitDetection(`let a = $ref(1 + (await foo))`)
+      assertAwaitDetection(`let a = ref(1 + (await foo))`)
     })
 
     // #4448

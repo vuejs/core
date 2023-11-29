@@ -7,8 +7,7 @@ import {
   RootNode,
   TemplateChildNode,
   ParentNode,
-  findDir,
-  isBuiltInType
+  findDir
 } from '@vue/compiler-dom'
 
 const filterChild = (node: ParentNode) =>
@@ -28,8 +27,10 @@ export const ssrInjectFallthroughAttrs: NodeTransform = (node, context) => {
   if (
     node.type === NodeTypes.ELEMENT &&
     node.tagType === ElementTypes.COMPONENT &&
-    (isBuiltInType(node.tag, 'Transition') ||
-      isBuiltInType(node.tag, 'KeepAlive'))
+    (node.tag === 'transition' ||
+      node.tag === 'Transition' ||
+      node.tag === 'KeepAlive' ||
+      node.tag === 'keep-alive')
   ) {
     const rootChildren = filterChild(context.root)
     if (rootChildren.length === 1 && rootChildren[0] === node) {

@@ -8,7 +8,7 @@
     "useDefineForClassFields": false,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "allowJs": false,
+    "allowJs": true,
     "strict": true,
     "noUnusedLocals": true,
     "experimentalDecorators": true,
@@ -35,7 +35,8 @@
     "packages/*/__tests__",
     "packages/dts-test",
     "packages/vue/jsx-runtime",
-    "scripts/setupVitest.ts",
+    "rollup.*.js",
     "playground"
-  ]
+  ],
+  "exclude": ["rollup.config.js"]
 }

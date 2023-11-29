@@ -7,7 +7,6 @@ const packagesToCheck = [
   'compiler-dom',
   'compiler-ssr',
   'compiler-vapor',
-  'reactivity-transform',
   'shared'
 ]
 

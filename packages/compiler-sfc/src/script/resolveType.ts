@@ -43,6 +43,13 @@ import { extname, dirname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 import * as process from 'process'
 
+export type SimpleTypeResolveOptions = Partial<
+  Pick<
+    SFCScriptCompileOptions,
+    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd'
+  >
+>
+
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
  * but also allows a simpler version of it with minimal required properties
@@ -60,13 +67,28 @@ import * as process from 'process'
  */
 export type SimpleTypeResolveContext = Pick<
   ScriptCompileContext,
-  // required
-  'source' | 'filename' | 'error' | 'options'
+  // file
+  | 'source'
+  | 'filename'
+
+  // utils
+  | 'error'
+  | 'helper'
+  | 'getString'
+
+  // props
+  | 'propsTypeDecl'
+  | 'propsRuntimeDefaults'
+  | 'propsDestructuredBindings'
+
+  // emits
+  | 'emitsTypeDecl'
 > &
   Partial<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
   > & {
     ast: Statement[]
+    options: SimpleTypeResolveOptions
   }
 
 export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
