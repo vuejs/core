@@ -38,13 +38,13 @@ import {
   fromCodePoint
 } from 'entities/lib/decode.js'
 
-export const enum ParseMode {
+export enum ParseMode {
   BASE,
   HTML,
   SFC
 }
 
-export const enum CharCodes {
+export enum CharCodes {
   Tab = 0x9, // "\t"
   NewLine = 0xa, // "\n"
   FormFeed = 0xc, // "\f"
@@ -72,7 +72,6 @@ export const enum CharCodes {
   UpperZ = 0x5a, // "Z"
   LowerZ = 0x7a, // "z"
   LowerX = 0x78, // "x"
-  OpeningSquareBracket = 0x5b, // "["
   LowerV = 0x76, // "v"
   Dot = 0x2e, // "."
   Colon = 0x3a, // ":"
@@ -85,7 +84,7 @@ const defaultDelimitersOpen = new Uint8Array([123, 123]) // "{{"
 const defaultDelimitersClose = new Uint8Array([125, 125]) // "}}"
 
 /** All the states the tokenizer can be in. */
-export const enum State {
+export enum State {
   Text = 1,
 
   // interpolation
@@ -820,7 +819,7 @@ export default class Tokenizer {
     }
   }
   private stateBeforeDeclaration(c: number): void {
-    if (c === CharCodes.OpeningSquareBracket) {
+    if (c === CharCodes.LeftSqaure) {
       this.state = State.CDATASequence
       this.sequenceIndex = 0
     } else {

@@ -5,7 +5,8 @@ const NodeGlobals = ['module', 'require']
 
 const banConstEnum = {
   selector: 'TSEnumDeclaration[const=true]',
-  message: 'Please use enums, instead',
+  message:
+    'Please use non-const enums. This project automatically inlines enums.'
 }
 
 /**
@@ -64,10 +65,7 @@ module.exports = {
       files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
       rules: {
         'no-restricted-globals': ['error', ...DOMGlobals],
-        'no-restricted-syntax': [
-          'error',
-          banConstEnum,
-        ]
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     },
     // Private package, browser only + no syntax restrictions
@@ -75,10 +73,7 @@ module.exports = {
       files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
-        'no-restricted-syntax': [
-          'error',
-          banConstEnum,
-        ]
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     },
     // JavaScript files
@@ -94,10 +89,7 @@ module.exports = {
       files: ['scripts/**', '*.{js,ts}', 'packages/**/index.js'],
       rules: {
         'no-restricted-globals': 'off',
-        'no-restricted-syntax': [
-          'error',
-          banConstEnum,
-        ]
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     }
   ]
