@@ -71,6 +71,22 @@ export function render() {
 "
 `;
 
+exports[`compile > directives > v-on > event modifier 1`] = `
+"import { template, children, effect, withModifiers, on } from 'vue/vapor';
+const t0 = template('<div></div>');
+export function render() {
+  const n0 = t0();
+  const {
+    0: [n1],
+  } = children(n0);
+  effect(() => {
+    on(n1, 'click', withModifiers(handleClick, ['prevent', 'stop']));
+  });
+  return n0;
+}
+"
+`;
+
 exports[`compile > directives > v-on > simple expression 1`] = `
 "import { template, children, effect, on } from 'vue/vapor';
 const t0 = template('<div></div>');

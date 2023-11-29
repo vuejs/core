@@ -120,6 +120,18 @@ describe('compile', () => {
           },
         })
       })
+
+      test('event modifier', async () => {
+        const code = await compile(
+          `<div @click.prevent.stop="handleClick"></div>`,
+          {
+            bindingMetadata: {
+              handleClick: BindingTypes.SETUP_CONST,
+            },
+          },
+        )
+        expect(code).matchSnapshot()
+      })
     })
 
     describe('v-html', () => {

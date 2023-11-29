@@ -98,9 +98,14 @@ export function generate(
       }
 
       case IRNodeTypes.SET_EVENT: {
-        code = `on(n${oper.element}, ${JSON.stringify(oper.name)}, ${
-          oper.value
-        })\n`
+        let value = oper.value
+        if (oper.modifiers.length) {
+          value = `withModifiers(${value}, ${genArrayExpression(
+            oper.modifiers,
+          )})`
+          vaporHelpers.add('withModifiers')
+        }
+        code = `on(n${oper.element}, ${JSON.stringify(oper.name)}, ${value})\n`
         vaporHelpers.add('on')
         break
       }
@@ -171,4 +176,9 @@ function genChildren(children: DynamicChildren) {
 
   if (!code) return ''
   return `{${code}}`
+}
+
+// TODO: other types (not only string)
+function genArrayExpression(elements: string[]) {
+  return `[${elements.map((it) => `"${it}"`).join(', ')}]`
 }
