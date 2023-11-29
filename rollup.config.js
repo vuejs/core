@@ -12,7 +12,7 @@ import terser from '@rollup/plugin-terser'
 import esbuild from 'rollup-plugin-esbuild'
 import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
-import { constEnum } from './scripts/const-enum.js'
+import { inlineEnums } from './scripts/inline-enums.js'
 
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
@@ -32,7 +32,7 @@ const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
-const [enumPlugin, enumDefines] = constEnum()
+const [enumPlugin, enumDefines] = inlineEnums()
 
 const outputConfigs = {
   'esm-bundler': {

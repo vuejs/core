@@ -37,7 +37,7 @@ export function createCompilerError<T extends number>(
   return error
 }
 
-export const enum ErrorCodes {
+export enum ErrorCodes {
   // parse errors
   ABRUPT_CLOSING_OF_EMPTY_COMMENT,
   CDATA_IN_HTML_CONTENT,

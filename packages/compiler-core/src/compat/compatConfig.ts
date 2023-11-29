@@ -13,7 +13,7 @@ export interface CompilerCompatOptions {
   compatConfig?: CompilerCompatConfig
 }
 
-export const enum CompilerDeprecationTypes {
+export enum CompilerDeprecationTypes {
   COMPILER_IS_ON_ELEMENT = 'COMPILER_IS_ON_ELEMENT',
   COMPILER_V_BIND_SYNC = 'COMPILER_V_BIND_SYNC',
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',

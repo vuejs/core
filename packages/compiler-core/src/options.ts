@@ -94,7 +94,7 @@ export type HoistTransform = (
   parent: ParentNode
 ) => void
 
-export const enum BindingTypes {
+export enum BindingTypes {
   /**
    * returned from data()
    */

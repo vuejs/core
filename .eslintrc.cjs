@@ -3,6 +3,15 @@
 const DOMGlobals = ['window', 'document']
 const NodeGlobals = ['module', 'require']
 
+const banConstEnum = {
+  selector: 'TSEnumDeclaration[const=true]',
+  message:
+    'Please use non-const enums. This project automatically inlines enums.'
+}
+
+/**
+ * @type {import('eslint-define-config').ESLintConfig}
+ */
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -16,6 +25,7 @@ module.exports = {
 
     'no-restricted-syntax': [
       'error',
+      banConstEnum,
       // since we target ES2015 for baseline support, we need to forbid object
       // rest spread usage in destructure as it compiles into a verbose helper.
       'ObjectPattern > RestElement',
@@ -55,7 +65,7 @@ module.exports = {
       files: ['packages/{compiler-sfc,compiler-ssr,server-renderer}/**'],
       rules: {
         'no-restricted-globals': ['error', ...DOMGlobals],
-        'no-restricted-syntax': 'off'
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     },
     // Private package, browser only + no syntax restrictions
@@ -63,7 +73,7 @@ module.exports = {
       files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
-        'no-restricted-syntax': 'off'
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     },
     // JavaScript files
@@ -79,7 +89,7 @@ module.exports = {
       files: ['scripts/**', '*.{js,ts}', 'packages/**/index.js'],
       rules: {
         'no-restricted-globals': 'off',
-        'no-restricted-syntax': 'off'
+        'no-restricted-syntax': ['error', banConstEnum]
       }
     }
   ]

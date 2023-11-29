@@ -68,8 +68,4 @@ export {
   getCurrentScope,
   onScopeDispose
 } from './effectScope'
-export {
-  TrackOpTypes /* @remove */,
-  TriggerOpTypes /* @remove */,
-  ReactiveFlags /* @remove */
-} from './constants'
+export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

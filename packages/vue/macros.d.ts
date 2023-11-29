@@ -10,7 +10,7 @@ import {
 
 export declare const RefType: unique symbol
 
-export declare const enum RefTypes {
+export declare enum RefTypes {
   Ref = 1,
   ComputedRef = 2,
   WritableComputedRef = 3
