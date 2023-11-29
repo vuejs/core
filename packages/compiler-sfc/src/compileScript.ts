@@ -856,7 +856,7 @@ export function compileScript(
     for (const key in allBindings) {
       if (
         allBindings[key] === true &&
-        ['vue', 'vue/vapor'].includes(ctx.userImports[key].source) &&
+        !['vue', 'vue/vapor'].includes(ctx.userImports[key].source) &&
         !ctx.userImports[key].source.endsWith('.vue')
       ) {
         // generate getter for import bindings
