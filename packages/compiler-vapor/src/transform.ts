@@ -1,14 +1,14 @@
-import type {
+import {
+  type RootNode,
+  type Node,
+  type TemplateChildNode,
+  type ElementNode,
+  type AttributeNode,
+  type InterpolationNode,
+  type TransformOptions,
+  type DirectiveNode,
+  type ExpressionNode,
   NodeTypes,
-  RootNode,
-  Node,
-  TemplateChildNode,
-  ElementNode,
-  AttributeNode,
-  InterpolationNode,
-  TransformOptions,
-  DirectiveNode,
-  ExpressionNode,
 } from '@vue/compiler-dom'
 import {
   type OperationNode,
@@ -235,19 +235,19 @@ function transformChildren(
     const isLast = index === children.length - 1
 
     switch (node.type) {
-      case 1 satisfies NodeTypes.ELEMENT: {
+      case NodeTypes.ELEMENT: {
         transformElement(child as TransformContext<ElementNode>)
         break
       }
-      case 2 satisfies NodeTypes.TEXT: {
+      case NodeTypes.TEXT: {
         child.template += node.content
         break
       }
-      case 3 satisfies NodeTypes.COMMENT: {
+      case NodeTypes.COMMENT: {
         child.template += `<!--${node.content}-->`
         break
       }
-      case 5 satisfies NodeTypes.INTERPOLATION: {
+      case NodeTypes.INTERPOLATION: {
         transformInterpolation(
           child as TransformContext<InterpolationNode>,
           isFirst,
@@ -255,7 +255,7 @@ function transformChildren(
         )
         break
       }
-      case 12 satisfies NodeTypes.TEXT_CALL:
+      case NodeTypes.TEXT_CALL:
         // never?
         break
       default: {
@@ -305,7 +305,7 @@ function transformInterpolation(
 ) {
   const { node } = ctx
 
-  if (node.content.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
+  if (node.content.type === NodeTypes.COMPOUND_EXPRESSION) {
     // TODO: CompoundExpressionNode: {{ count + 1 }}
     return
   }
@@ -345,7 +345,7 @@ function transformProp(
 ): void {
   const { name } = node
 
-  if (node.type === (6 satisfies NodeTypes.ATTRIBUTE)) {
+  if (node.type === NodeTypes.ATTRIBUTE) {
     if (node.value) {
       ctx.template += ` ${name}="${node.value.content}"`
     } else {
@@ -361,8 +361,7 @@ function transformProp(
     case 'bind': {
       if (
         !exp ||
-        (exp.type === (4 satisfies NodeTypes.SIMPLE_EXPRESSION) &&
-          !exp.content.trim())
+        (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
       ) {
         ctx.options.onError!(
           createCompilerError(ErrorCodes.VAPOR_BIND_NO_EXPRESSION, loc),
@@ -377,9 +376,7 @@ function transformProp(
       } else if (!node.arg) {
         // TODO support v-bind="{}"
         return
-      } else if (
-        node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)
-      ) {
+      } else if (node.arg.type === NodeTypes.COMPOUND_EXPRESSION) {
         // TODO support :[foo]="bar"
         return
       }
@@ -404,9 +401,7 @@ function transformProp(
       if (!node.arg) {
         // TODO support v-on="{}"
         return
-      } else if (
-        node.arg.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)
-      ) {
+      } else if (node.arg.type === NodeTypes.COMPOUND_EXPRESSION) {
         // TODO support @[foo]="bar"
         return
       } else if (expr === null) {
@@ -461,7 +456,7 @@ function processExpression(
   expr: ExpressionNode | undefined,
 ): string | null {
   if (!expr) return null
-  if (expr.type === (8 satisfies NodeTypes.COMPOUND_EXPRESSION)) {
+  if (expr.type === NodeTypes.COMPOUND_EXPRESSION) {
     // TODO
     return ''
   }

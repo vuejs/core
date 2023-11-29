@@ -1,6 +1,6 @@
 import type { SourceLocation } from '@vue/compiler-dom'
 
-export const enum IRNodeTypes {
+export enum IRNodeTypes {
   ROOT,
   TEMPLATE_FACTORY,
   FRAGMENT_FACTORY,
