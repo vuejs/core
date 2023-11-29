@@ -36,8 +36,8 @@ export interface ParserOptions
    */
   parseMode?: 'base' | 'html' | 'sfc'
   /**
-   * Specify the root namepsace to use when parsing a tempalte.
-   * Defaults to `Namepsaces.HTML` (0).
+   * Specify the root namespace to use when parsing a template.
+   * Defaults to `Namespaces.HTML` (0).
    */
   ns?: Namespaces
   /**
