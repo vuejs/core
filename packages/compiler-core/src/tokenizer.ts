@@ -819,7 +819,7 @@ export default class Tokenizer {
     }
   }
   private stateBeforeDeclaration(c: number): void {
-    if (c === CharCodes.LeftSqaure) {
+    if (c === CharCodes.LeftSquare) {
       this.state = State.CDATASequence
       this.sequenceIndex = 0
     } else {
