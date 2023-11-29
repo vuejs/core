@@ -6,34 +6,46 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 
 PR are welcome! However, please create an issue before you start to work on it, and DO NOT create a PR before issue discussion.
 
-See the To-do list below or `// TODO` comments in code (`compiler-vapor` and `runtime-vapor` packages).
+- [Issues with `todo` tag](https://github.com/vuejs/core-vapor/labels/todo)
+- To-do list below (discussion before PR is required)
+- `// TODO` comments in code (`compiler-vapor` and `runtime-vapor` packages)
 
-- [x] counter
+---
+
+- [x] Counter App
   - [x] simple bindings
   - [x] simple events
-- [ ] TODO-MVC
+- [ ] TODO-MVC App
 - [ ] directives
   - [x] `v-once`
-    - [ ] unit tests
   - [x] `v-html`
   - [x] `v-text`
   - [x] `v-pre`
   - [x] `v-cloak`
-  - [ ] `v-on` / `v-bind`
+  - [ ] `v-on`
     - [x] simple expression
     - [ ] compound expression
     - [ ] modifiers
-    - [ ] unit tests
-  - [ ] runtime directives #19
-  - [ ] `v-memo` #18
-  - [ ] `v-model` #17, needs #19 first
-  - [ ] `v-if` / `v-else` / `v-else-if` (#9)
+  - [ ] `v-bind`
+    - [x] simple expression
+    - [ ] compound expression
+    - [x] modifiers
+  - [ ] runtime directives
+    - #19
+  - [ ] `v-memo`
+    - #18
+  - [ ] `v-model`
+    - #17
+    - needs #19 first
+  - [ ] `v-if` / `v-else` / `v-else-if`
+    - #9
   - [ ] `v-for`
+    - #21
   - [ ] `v-show`
-    - [ ] runtime directive, needs #19 first
-    - [ ] compiler
-- [ ] Remove DOM API in codegen
-- [ ] Fragment
+    - #16
+    - needs #19 first
+- [x] Remove DOM API in codegen
+- [x] Fragment
   - [x] multiple root nodes
   - [x] all dynamic children
   - [x] return `Node[]` for all dynamic children, instead of using `fragment` API
