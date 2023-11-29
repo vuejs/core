@@ -37,11 +37,5 @@
     "scripts/*",
     "rollup.*.js"
   ],
-  "exclude": [
-    "rollup.config.js",
-    "scripts/aliases.js",
-    "scripts/build.js",
-    "scripts/release.js",
-    "scripts/utils.js"
-  ]
+  "exclude": ["rollup.config.js", "scripts/*"]
 }
