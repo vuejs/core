@@ -189,5 +189,51 @@ describe('compile', () => {
         expect(code).not.contains('effect')
       })
     })
+
+    describe('v-pre', () => {
+      test('basic', async () => {
+        const code = await compile(
+          `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n`,
+          {
+            bindingMetadata: {
+              foo: BindingTypes.SETUP_REF,
+              bar: BindingTypes.SETUP_REF,
+            },
+          },
+        )
+
+        expect(code).toMatchSnapshot()
+        expect(code).contains('<div :id="foo"><Comp></Comp>{{ bar }}</div>')
+        expect(code).not.contains('effect')
+      })
+
+      // TODO: support multiple root nodes and components
+      test('should not affect siblings after it', async () => {
+        const code = await compile(
+          `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +
+            `<div :id="foo"><Comp/>{{ bar }}</div>`,
+          {
+            bindingMetadata: {
+              foo: BindingTypes.SETUP_REF,
+              bar: BindingTypes.SETUP_REF,
+            },
+          },
+        )
+
+        expect(code).toMatchSnapshot()
+        // Waiting for TODO, There should be more here.
+      })
+
+      // TODO: support multiple root nodes and components
+      test('self-closing v-pre', async () => {
+        const code = await compile(
+          `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`,
+        )
+
+        expect(code).toMatchSnapshot()
+        expect(code).contains('<div></div><div><Comp></Comp></div>')
+        // Waiting for TODO, There should be more here.
+      })
+    })
   })
 })

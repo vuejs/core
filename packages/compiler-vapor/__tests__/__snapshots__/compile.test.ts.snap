@@ -141,6 +141,58 @@ export function render() {
 "
 `;
 
+exports[`compile > directives > v-pre > basic 1`] = `
+"import { template } from 'vue/vapor';
+const t0 = template('<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>');
+export function render() {
+  const n0 = t0();
+  return n0;
+}
+"
+`;
+
+exports[`compile > directives > v-pre > self-closing v-pre 1`] = `
+"import { template, children, createTextNode, append, effect, setAttr, setText } from 'vue/vapor';
+const t0 = template('<div></div><div><Comp></Comp></div>');
+export function render() {
+  const n0 = t0();
+  const {
+    1: [n1],
+  } = children(n0);
+  const n2 = createTextNode(bar);
+  append(n1, n2);
+  effect(() => {
+    setAttr(n1, 'id', undefined, foo);
+  });
+  effect(() => {
+    setText(n2, undefined, bar);
+  });
+  return n0;
+}
+"
+`;
+
+exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
+"import { template, children, createTextNode, append, effect, setAttr, setText } from 'vue/vapor';
+const t0 = template('<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>');
+export function render() {
+  const n0 = t0();
+  const {
+    1: [n1],
+  } = children(n0);
+  const n2 = createTextNode(bar.value);
+  append(n1, n2);
+  effect(() => {
+    setAttr(n1, 'id', undefined, foo.value);
+  });
+  effect(() => {
+    setText(n2, undefined, bar.value);
+  });
+  return n0;
+}
+"
+`;
+
 exports[`compile > directives > v-text > no expression 1`] = `
 "import { template, children, effect, setText } from 'vue/vapor';
 const t0 = template('<div></div>');
