@@ -208,7 +208,7 @@ export function scanEnums() {
 /**
  * @returns {[import('rollup').Plugin, Record<string, string>]}
  */
-export function simplifyEnum() {
+export function inlineEnums() {
   if (!existsSync(ENUM_CACHE_PATH)) {
     throw new Error('enum cache needs to be initialized before creating plugin')
   }
@@ -224,7 +224,7 @@ export function simplifyEnum() {
    * @type {import('rollup').Plugin}
    */
   const plugin = {
-    name: 'simplify-enum',
+    name: 'inline-enum',
     transform(code, id) {
       /**
        * @type {MagicString | undefined}
