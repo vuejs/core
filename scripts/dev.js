@@ -41,6 +41,7 @@ const relativeOutfile = relative(process.cwd(), outfile)
 
 // resolve externals
 // TODO this logic is largely duplicated from rollup.config.js
+/** @type {string[]} */
 let external = []
 if (!inlineDeps) {
   // cjs & esm-bundler: external all deps
@@ -80,7 +81,7 @@ if (!inlineDeps) {
     ]
   }
 }
-
+/** @type {Array<import('esbuild').Plugin>} */
 const plugins = [
   {
     name: 'log-rebuild',

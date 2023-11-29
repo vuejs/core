@@ -27,7 +27,7 @@ export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 export const shallowReadonlyMap = new WeakMap<Target, any>()
 
-const enum TargetType {
+enum TargetType {
   INVALID = 0,
   COMMON = 1,
   COLLECTION = 2

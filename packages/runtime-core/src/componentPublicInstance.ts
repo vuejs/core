@@ -281,7 +281,7 @@ if (__COMPAT__) {
   installCompatInstanceProperties(publicPropertiesMap)
 }
 
-const enum AccessTypes {
+enum AccessTypes {
   OTHER,
   SETUP,
   DATA,

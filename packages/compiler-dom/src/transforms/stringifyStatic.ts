@@ -33,7 +33,7 @@ import {
   isBooleanAttr
 } from '@vue/shared'
 
-export const enum StringifyThresholds {
+export enum StringifyThresholds {
   ELEMENT_WITH_BINDING_COUNT = 5,
   NODE_COUNT = 20
 }

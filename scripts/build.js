@@ -26,7 +26,7 @@ import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './simplify-enum.js'
 import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
