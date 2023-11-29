@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx ./setup/vite.ts",
+    "dev": "node ./setup/vite.js",
     "build": "vite build"
   },
   "dependencies": {
@@ -11,7 +11,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
-    "tsx": "^4.6.0",
     "vite": "^5.0.2",
     "vite-node": "^0.34.6",
     "vite-plugin-inspect": "^0.7.42"

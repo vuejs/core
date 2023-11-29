@@ -1,10 +1,12 @@
+// @ts-check
 import path from 'node:path'
-import type { Plugin } from 'vite'
 
 const dirname = path.dirname(new URL(import.meta.url).pathname)
-const resolve = (p: string) => path.resolve(dirname, '../../packages', p)
+const resolve = (/** @type {string} */ p) =>
+  path.resolve(dirname, '../../packages', p)
 
-export function DevPlugin(): Plugin {
+/** @returns {import('vite').Plugin} */
+export function DevPlugin() {
   return {
     name: 'dev-plugin',
     config() {

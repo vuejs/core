@@ -1,16 +1,20 @@
+// @ts-check
 import { createServer, createLogger } from 'vite'
 import { ViteNodeServer } from 'vite-node/server'
 import { ViteNodeRunner } from 'vite-node/client'
 import { reload } from 'vite-node/hmr'
 import { installSourcemapsSupport } from 'vite-node/source-map'
-import { DevPlugin } from './dev'
+import { DevPlugin } from './dev.js'
 
-const logger = createLogger(undefined, {
+export const logger = createLogger(undefined, {
   prefix: '[vite-node]',
   allowClearScreen: false
 })
 
-export async function setupViteNode(onUpdate: () => void) {
+/**
+ * @param {() => void} onUpdate
+ */
+export async function setupViteNode(onUpdate) {
   const server = await createServer({
     configFile: false,
     optimizeDeps: { disabled: true },
