@@ -1,11 +1,23 @@
 import { defineConfig } from 'vite'
 import Inspect from 'vite-plugin-inspect'
 import { DevPlugin } from './setup/dev'
+import Vue from '@vitejs/plugin-vue'
+import * as CompilerVapor from '@vue/compiler-vapor'
+import * as CompilerSFC from '@vue/compiler-sfc'
 
 export default defineConfig({
   build: {
     target: 'esnext'
   },
   clearScreen: false,
-  plugins: [DevPlugin(), Inspect()]
+  plugins: [
+    Vue({
+      template: {
+        compiler: CompilerVapor
+      },
+      compiler: CompilerSFC
+    }),
+    DevPlugin(),
+    Inspect()
+  ]
 })

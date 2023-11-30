@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node ./setup/vite.js",
-    "build": "vite build"
+    "build": "node ./setup/vite.js build"
   },
   "dependencies": {
     "vue": "workspace:*"
@@ -12,6 +12,7 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.5.0",
     "vite": "^5.0.2",
+    "vite-hyper-config": "^0.1.1",
     "vite-node": "^0.34.6",
     "vite-plugin-inspect": "^0.7.42"
   }
