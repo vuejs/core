@@ -227,7 +227,12 @@ export interface SimpleExpressionNode extends Node {
   content: string
   isStatic: boolean
   constType: ConstantTypes
-  ast?: BabelNode | null
+  /**
+   * - `null` means the expression is a simple identifier that doesn't need
+   *    parsing
+   * - `false` means there was a parsing error
+   */
+  ast?: BabelNode | null | false
   /**
    * Indicates this is an identifier for a hoist vnode call and points to the
    * hoisted node.
@@ -248,7 +253,12 @@ export interface InterpolationNode extends Node {
 
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
-  ast?: BabelNode | null
+  /**
+   * - `null` means the expression is a simple identifier that doesn't need
+   *    parsing
+   * - `false` means there was a parsing error
+   */
+  ast?: BabelNode | null | false
   children: (
     | SimpleExpressionNode
     | CompoundExpressionNode

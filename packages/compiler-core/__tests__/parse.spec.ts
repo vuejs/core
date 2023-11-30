@@ -2174,6 +2174,7 @@ describe('compiler: parse', () => {
   describe('expression parsing', () => {
     test('interpolation', () => {
       const ast = baseParse(`{{ a + b }}`, { prefixIdentifiers: true })
+      // @ts-ignore
       expect((ast.children[0] as InterpolationNode).content.ast?.type).toBe(
         'BinaryExpression'
       )
@@ -2184,7 +2185,9 @@ describe('compiler: parse', () => {
         prefixIdentifiers: true
       })
       const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-ignore
       expect(dir.arg?.ast?.type).toBe('BinaryExpression')
+      // @ts-ignore
       expect(dir.exp?.ast?.type).toBe('CallExpression')
     })
 
@@ -2193,6 +2196,7 @@ describe('compiler: parse', () => {
         prefixIdentifiers: true
       })
       const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-ignore
       expect(dir.exp?.ast?.type).toBe('Program')
       expect((dir.exp?.ast as Program).body).toMatchObject([
         { type: 'ExpressionStatement' },
@@ -2205,6 +2209,7 @@ describe('compiler: parse', () => {
         prefixIdentifiers: true
       })
       const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
+      // @ts-ignore
       expect(dir.exp?.ast?.type).toBe('ArrowFunctionExpression')
     })
 
@@ -2214,10 +2219,12 @@ describe('compiler: parse', () => {
       })
       const dir = (ast.children[0] as ElementNode).props[0] as DirectiveNode
       const { source, value, key, index } = dir.forParseResult!
+      // @ts-ignore
       expect(source.ast?.type).toBe('MemberExpression')
+      // @ts-ignore
       expect(value?.ast?.type).toBe('ArrowFunctionExpression')
-      expect(key?.ast).toBeUndefined() // simple ident
-      expect(index?.ast).toBeUndefined() // simple ident
+      expect(key?.ast).toBeNull() // simple ident
+      expect(index?.ast).toBeNull() // simple ident
     })
   })
 

@@ -81,9 +81,9 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
 }
 
 function extractIdentifiers(ids: Set<string>, node: ExpressionNode) {
-  if (!node.ast) {
+  if (node.ast) {
+    walkIdentifiers(node.ast, n => ids.add(n.name))
+  } else if (node.ast === null) {
     ids.add((node as SimpleExpressionNode).content)
-    return
   }
-  walkIdentifiers(node.ast, n => ids.add(n.name))
 }

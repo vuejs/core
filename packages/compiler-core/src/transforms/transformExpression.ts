@@ -223,7 +223,14 @@ export function processExpression(
   // bail constant on parens (function invocation) and dot (member access)
   const bailConstant = constantBailRE.test(rawExp)
 
-  if (isSimpleIdentifier(rawExp)) {
+  let ast = node.ast
+
+  if (ast === false) {
+    // ast being false means it has caused an error already during parse phase
+    return node
+  }
+
+  if (ast === null || (!ast && isSimpleIdentifier(rawExp))) {
     const isScopeVarReference = context.identifiers[rawExp]
     const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
@@ -249,11 +256,6 @@ export function processExpression(
     return node
   }
 
-  let ast = node.ast
-  if (ast === null) {
-    // ast being null means it has caused an error already during parse phase
-    return node
-  }
   if (!ast) {
     // exp needs to be parsed differently:
     // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw

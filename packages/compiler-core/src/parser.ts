@@ -45,7 +45,11 @@ import {
   isStaticArgOf
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
-import { parse, parseExpression } from '@babel/parser'
+import {
+  parse,
+  parseExpression,
+  type ParserOptions as BabelOptions
+} from '@babel/parser'
 
 type OptionalOptions =
   | 'decodeEntities'
@@ -983,18 +987,16 @@ function createExp(
     !isStatic &&
     currentOptions.prefixIdentifiers &&
     parseMode !== ExpParseMode.Skip &&
-    content.trim() &&
-    !isSimpleIdentifier(content)
+    content.trim()
   ) {
+    if (isSimpleIdentifier(content)) {
+      exp.ast = null // fast path
+      return exp
+    }
     try {
-      const options = {
-        plugins: currentOptions.expressionPlugins
-      }
-      if (/ as\s+\w|<.*>|:/.test(content)) {
-        options.plugins = [
-          ...(currentOptions.expressionPlugins || []),
-          'typescript'
-        ]
+      const plugins = currentOptions.expressionPlugins
+      const options: BabelOptions = {
+        plugins: plugins ? [...plugins, 'typescript'] : ['typescript']
       }
       if (parseMode === ExpParseMode.Statements) {
         // v-on with multi-inline-statements, pad 1 char
@@ -1006,7 +1008,7 @@ function createExp(
         exp.ast = parseExpression(`(${content})`, options)
       }
     } catch (e: any) {
-      exp.ast = null
+      exp.ast = false // indicate an error
       emitError(ErrorCodes.X_INVALID_EXPRESSION, loc.start.offset, e.message)
     }
   }
