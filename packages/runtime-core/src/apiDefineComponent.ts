@@ -111,7 +111,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   }
-): (props: Props & EmitsToProps<E>) => any
+): (props: Props & EmitsToProps<E> & S) => any
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -127,7 +127,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   }
-): (props: Props & EmitsToProps<E>) => any
+): (props: Props & EmitsToProps<E> & S) => any
 
 // overload 2: object format with no props
 // (uses user defined props interface)

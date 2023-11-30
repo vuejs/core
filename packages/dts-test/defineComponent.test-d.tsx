@@ -1497,6 +1497,41 @@ describe('should work when props type is incompatible with setup returned type '
   expectType<SizeType>(CompA.$props.size)
 })
 
+// #9649
+describe('should keep slots on functional component', () => {
+  const Comp = defineComponent(
+    (
+      _1: {},
+      _2: SetupContext<
+        {},
+        SlotsType<{ default?(data: { foo: string; bar: number }): any }>
+      >
+    ) =>
+      () =>
+        null,
+    {
+      slots: Object as SlotsType<{ default: { foo: string; bar: number } }>
+    }
+  )
+
+  h(Comp, {
+    default: data => {
+      expectType<{ foo: string; bar: number }>(data)
+      // @ts-expect-error not any
+      expectType<string>(data)
+      return null
+    }
+  })
+  h(Comp, null, {
+    default: data => {
+      expectType<{ foo: string; bar: number }>(data)
+      // @ts-expect-error not any
+      expectType<string>(data)
+      return null
+    }
+  })
+})
+
 import {
   DefineComponent,
   ComponentOptionsMixin,

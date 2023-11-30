@@ -11,7 +11,7 @@ import {
 import { Teleport, TeleportProps } from './components/Teleport'
 import { Suspense, SuspenseProps } from './components/Suspense'
 import { isObject, isArray } from '@vue/shared'
-import { RawSlots } from './componentSlots'
+import { RawSlots, SlotsType, UnwrapSlotsType } from './componentSlots'
 import {
   FunctionalComponent,
   Component,
@@ -126,8 +126,22 @@ export function h<
   S extends Record<string, any> = {}
 >(
   type: FunctionalComponent<P, E, S>,
+  children?:
+    | RawChildren
+    | (P extends SlotsType<any> ? UnwrapSlotsType<P> : never)
+): VNode
+// functional component
+export function h<
+  P,
+  E extends EmitsOptions = {},
+  S extends Record<string, any> = {}
+>(
+  type: FunctionalComponent<P, E, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?:
+    | RawChildren
+    | RawSlots
+    | (P extends SlotsType<any> ? UnwrapSlotsType<P> : {})
 ): VNode
 
 // catch-all for generic component types
