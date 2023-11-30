@@ -1796,166 +1796,167 @@ describe('compiler: parse', () => {
     })
   })
 
-  test('self closing single tag', () => {
-    const ast = baseParse('<div :class="{ some: condition }" />')
+  describe('Edge Cases', () => {
+    test('self closing single tag', () => {
+      const ast = baseParse('<div :class="{ some: condition }" />')
 
-    expect(ast.children).toHaveLength(1)
-    expect(ast.children[0]).toMatchObject({ tag: 'div' })
-  })
-
-  test('self closing multiple tag', () => {
-    const ast = baseParse(
-      `<div :class="{ some: condition }" />\n` +
-        `<p v-bind:style="{ color: 'red' }"/>`
-    )
-
-    expect(ast).toMatchSnapshot()
-
-    expect(ast.children).toHaveLength(2)
-    expect(ast.children[0]).toMatchObject({ tag: 'div' })
-    expect(ast.children[1]).toMatchObject({ tag: 'p' })
-  })
-
-  test('valid html', () => {
-    const ast = baseParse(
-      `<div :class="{ some: condition }">\n` +
-        `  <p v-bind:style="{ color: 'red' }"/>\n` +
-        `  <!-- a comment with <html> inside it -->\n` +
-        `</div>`
-    )
-
-    expect(ast).toMatchSnapshot()
-
-    expect(ast.children).toHaveLength(1)
-    const el = ast.children[0] as any
-    expect(el).toMatchObject({
-      tag: 'div'
-    })
-    expect(el.children).toHaveLength(2)
-    expect(el.children[0]).toMatchObject({
-      tag: 'p'
-    })
-    expect(el.children[1]).toMatchObject({
-      type: NodeTypes.COMMENT
-    })
-  })
-
-  test('invalid html', () => {
-    expect(() => {
-      baseParse(`<div>\n<span>\n</div>\n</span>`)
-    }).toThrow('Element is missing end tag.')
-
-    const spy = vi.fn()
-    const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
-      onError: spy
+      expect(ast.children).toHaveLength(1)
+      expect(ast.children[0]).toMatchObject({ tag: 'div' })
     })
 
-    expect(spy.mock.calls).toMatchObject([
-      [
-        {
-          code: ErrorCodes.X_MISSING_END_TAG,
-          loc: {
-            start: {
-              offset: 6,
-              line: 2,
-              column: 1
-            }
-          }
-        }
-      ],
-      [
-        {
-          code: ErrorCodes.X_INVALID_END_TAG,
-          loc: {
-            start: {
-              offset: 20,
-              line: 4,
-              column: 1
-            }
-          }
-        }
-      ]
-    ])
+    test('self closing multiple tag', () => {
+      const ast = baseParse(
+        `<div :class="{ some: condition }" />\n` +
+          `<p v-bind:style="{ color: 'red' }"/>`
+      )
 
-    expect(ast).toMatchSnapshot()
-  })
+      expect(ast).toMatchSnapshot()
 
-  test('parse with correct location info', () => {
-    const fooSrc = `foo
- is `
-    const barSrc = `{{ bar }}`
-    const butSrc = ` but `
-    const bazSrc = `{{ baz }}`
-    const [foo, bar, but, baz] = baseParse(
-      fooSrc + barSrc + butSrc + bazSrc
-    ).children
+      expect(ast.children).toHaveLength(2)
+      expect(ast.children[0]).toMatchObject({ tag: 'div' })
+      expect(ast.children[1]).toMatchObject({ tag: 'p' })
+    })
 
-    let offset = 0
-    expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
-    offset += fooSrc.length
-    expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
+    test('valid html', () => {
+      const ast = baseParse(
+        `<div :class="{ some: condition }">\n` +
+          `  <p v-bind:style="{ color: 'red' }"/>\n` +
+          `  <!-- a comment with <html> inside it -->\n` +
+          `</div>`
+      )
 
-    expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
-    const barInner = (bar as InterpolationNode).content
-    offset += 3
-    expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
-    offset += 3
-    expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
-    offset += 3
-    expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
+      expect(ast).toMatchSnapshot()
 
-    expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
-    offset += butSrc.length
-    expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
+      expect(ast.children).toHaveLength(1)
+      const el = ast.children[0] as any
+      expect(el).toMatchObject({
+        tag: 'div'
+      })
+      expect(el.children).toHaveLength(2)
+      expect(el.children[0]).toMatchObject({
+        tag: 'p'
+      })
+      expect(el.children[1]).toMatchObject({
+        type: NodeTypes.COMMENT
+      })
+    })
 
-    expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
-    const bazInner = (baz as InterpolationNode).content
-    offset += 3
-    expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
-    offset += 3
-    expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
-    offset += 3
-    expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
-  })
+    test('invalid html', () => {
+      expect(() => {
+        baseParse(`<div>\n<span>\n</div>\n</span>`)
+      }).toThrow('Element is missing end tag.')
 
-  // With standard HTML parsing, the following input would ignore the slash
-  // and treat "<" and "template" as attributes on the open tag of "Hello",
-  // causing `<template>` to fail to close, and `<script>` being parsed as its
-  // child. This is would never be intended in actual templates, but is a common
-  // intermediate state from user input when parsing for IDE support. We want
-  // the `<script>` to be at root-level to keep the SFC structure stable for
-  // Volar to do incremental computations.
-  test('tag termination handling for IDE', () => {
-    const spy = vi.fn()
-    const ast = baseParse(
-      `<template><Hello\n</template><script>console.log(1)</script>`,
-      {
+      const spy = vi.fn()
+      const ast = baseParse(`<div>\n<span>\n</div>\n</span>`, {
         onError: spy
-      }
-    )
-    //
-    expect(ast.children.length).toBe(2)
-    expect(ast.children[1]).toMatchObject({
-      type: NodeTypes.ELEMENT,
-      tag: 'script'
-    })
-  })
+      })
 
-  test('arg should be undefined on shorthand dirs with no arg', () => {
-    const ast = baseParse(`<template #></template>`)
-    const el = ast.children[0] as ElementNode
-    expect(el.props[0]).toMatchObject({
-      type: NodeTypes.DIRECTIVE,
-      name: 'slot',
-      exp: undefined,
-      arg: undefined
-    })
-  })
+      expect(spy.mock.calls).toMatchObject([
+        [
+          {
+            code: ErrorCodes.X_MISSING_END_TAG,
+            loc: {
+              start: {
+                offset: 6,
+                line: 2,
+                column: 1
+              }
+            }
+          }
+        ],
+        [
+          {
+            code: ErrorCodes.X_INVALID_END_TAG,
+            loc: {
+              start: {
+                offset: 20,
+                line: 4,
+                column: 1
+              }
+            }
+          }
+        ]
+      ])
 
-  // edge case found in vue-macros where the input is TS or JSX
-  test('should reset inRCDATA state', () => {
-    baseParse(`<Foo>`, { parseMode: 'sfc', onError() {} })
-    expect(() => baseParse(`{ foo }`)).not.toThrow()
+      expect(ast).toMatchSnapshot()
+    })
+
+    test('parse with correct location info', () => {
+      const fooSrc = `foo\n is `
+      const barSrc = `{{ bar }}`
+      const butSrc = ` but `
+      const bazSrc = `{{ baz }}`
+      const [foo, bar, but, baz] = baseParse(
+        fooSrc + barSrc + butSrc + bazSrc
+      ).children
+
+      let offset = 0
+      expect(foo.loc.start).toEqual({ line: 1, column: 1, offset })
+      offset += fooSrc.length
+      expect(foo.loc.end).toEqual({ line: 2, column: 5, offset })
+
+      expect(bar.loc.start).toEqual({ line: 2, column: 5, offset })
+      const barInner = (bar as InterpolationNode).content
+      offset += 3
+      expect(barInner.loc.start).toEqual({ line: 2, column: 8, offset })
+      offset += 3
+      expect(barInner.loc.end).toEqual({ line: 2, column: 11, offset })
+      offset += 3
+      expect(bar.loc.end).toEqual({ line: 2, column: 14, offset })
+
+      expect(but.loc.start).toEqual({ line: 2, column: 14, offset })
+      offset += butSrc.length
+      expect(but.loc.end).toEqual({ line: 2, column: 19, offset })
+
+      expect(baz.loc.start).toEqual({ line: 2, column: 19, offset })
+      const bazInner = (baz as InterpolationNode).content
+      offset += 3
+      expect(bazInner.loc.start).toEqual({ line: 2, column: 22, offset })
+      offset += 3
+      expect(bazInner.loc.end).toEqual({ line: 2, column: 25, offset })
+      offset += 3
+      expect(baz.loc.end).toEqual({ line: 2, column: 28, offset })
+    })
+
+    // With standard HTML parsing, the following input would ignore the slash
+    // and treat "<" and "template" as attributes on the open tag of "Hello",
+    // causing `<template>` to fail to close, and `<script>` being parsed as its
+    // child. This is would never be intended in actual templates, but is a common
+    // intermediate state from user input when parsing for IDE support. We want
+    // the `<script>` to be at root-level to keep the SFC structure stable for
+    // Volar to do incremental computations.
+    test('tag termination handling for IDE', () => {
+      const spy = vi.fn()
+      const ast = baseParse(
+        `<template><Hello\n</template><script>console.log(1)</script>`,
+        {
+          onError: spy
+        }
+      )
+      //
+      expect(ast.children.length).toBe(2)
+      expect(ast.children[1]).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        tag: 'script'
+      })
+    })
+
+    test('arg should be undefined on shorthand dirs with no arg', () => {
+      const ast = baseParse(`<template #></template>`)
+      const el = ast.children[0] as ElementNode
+      expect(el.props[0]).toMatchObject({
+        type: NodeTypes.DIRECTIVE,
+        name: 'slot',
+        exp: undefined,
+        arg: undefined
+      })
+    })
+
+    // edge case found in vue-macros where the input is TS or JSX
+    test('should reset inRCDATA state', () => {
+      baseParse(`<Foo>`, { parseMode: 'sfc', onError() {} })
+      expect(() => baseParse(`{ foo }`)).not.toThrow()
+    })
   })
 
   describe('decodeEntities option', () => {
