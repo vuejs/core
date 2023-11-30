@@ -13,7 +13,7 @@ export default defineConfig({
   plugins: [
     Vue({
       template: {
-        compiler: CompilerVapor
+        compiler: CompilerVapor as any
       },
       compiler: CompilerSFC
     }),

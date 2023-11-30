@@ -224,6 +224,7 @@ export function assert(condition: boolean, msg?: string) {
   }
 }
 
+/** find directive */
 export function findDir(
   node: ElementNode,
   name: string | RegExp,

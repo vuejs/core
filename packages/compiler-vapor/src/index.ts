@@ -1,5 +1,6 @@
 export { parse } from '@vue/compiler-dom'
 export { transform } from './transform'
 export { generate } from './generate'
-export { compile } from './compile'
+export { compile, type CompilerOptions } from './compile'
 export * from './ir'
+export * from './errors'

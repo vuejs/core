@@ -104,16 +104,14 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-once > as root node 1`] = `
-"import { template, children, effect, setAttr } from 'vue/vapor';
+"import { template, children, setAttr } from 'vue/vapor';
 const t0 = template('<div></div>');
 export function render(_ctx) {
   const n0 = t0();
   const {
     0: [n1],
   } = children(n0);
-  effect(() => {
-    setAttr(n1, 'id', undefined, foo);
-  });
+  setAttr(n1, 'id', undefined, foo);
   return n0;
 }
 "

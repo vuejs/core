@@ -1,8 +1,12 @@
-import { BindingTypes, CompilerOptions, RootNode } from '@vue/compiler-dom'
+import { type RootNode, BindingTypes } from '@vue/compiler-dom'
+import {
+  type CompilerOptions,
+  VaporErrorCodes,
+  compile as _compile,
+} from '../src'
+
 // TODO remove it
 import { format } from 'prettier'
-import { compile as _compile } from '../src'
-import { ErrorCodes } from '../src/errors'
 
 async function compile(
   template: string | RootNode,
@@ -78,7 +82,7 @@ describe('compile', () => {
         await compile(`<div v-bind:arg />`, { onError })
 
         expect(onError.mock.calls[0][0]).toMatchObject({
-          code: ErrorCodes.VAPOR_BIND_NO_EXPRESSION,
+          code: VaporErrorCodes.X_VAPOR_BIND_NO_EXPRESSION,
           loc: {
             start: {
               line: 1,
@@ -107,7 +111,7 @@ describe('compile', () => {
         const onError = vi.fn()
         await compile(`<div v-on:click />`, { onError })
         expect(onError.mock.calls[0][0]).toMatchObject({
-          code: ErrorCodes.VAPOR_ON_NO_EXPRESSION,
+          code: VaporErrorCodes.X_VAPOR_ON_NO_EXPRESSION,
           loc: {
             start: {
               line: 1,
@@ -170,9 +174,9 @@ describe('compile', () => {
       test('basic', async () => {
         const code = await compile(
           `<div v-once>
-          {{ msg }}
-          <span :class="clz" />
-        </div>`,
+            {{ msg }}
+            <span :class="clz" />
+          </div>`,
           {
             bindingMetadata: {
               msg: BindingTypes.SETUP_REF,
@@ -183,7 +187,7 @@ describe('compile', () => {
         expect(code).matchSnapshot()
       })
 
-      test.fails('as root node', async () => {
+      test('as root node', async () => {
         const code = await compile(`<div :id="foo" v-once />`)
         expect(code).toMatchSnapshot()
         expect(code).not.contains('effect')

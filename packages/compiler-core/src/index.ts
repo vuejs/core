@@ -68,5 +68,6 @@ export { generateCodeFrame } from '@vue/shared'
 export {
   checkCompatEnabled,
   warnDeprecation,
-  CompilerDeprecationTypes
+  CompilerDeprecationTypes,
+  type CompilerCompatOptions
 } from './compat/compatConfig'
