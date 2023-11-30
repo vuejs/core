@@ -6,7 +6,12 @@ import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
 import { RendererOptions } from '@vue/runtime-core'
 
-const nativeOnRE = /^on[a-z]/
+const isNativeOn = (key: string) =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // lowercase letter
+  key.charCodeAt(2) > 96 &&
+  key.charCodeAt(2) < 123
 
 const embeddedTags = ['IMG', 'VIDEO', 'CANVAS', 'SOURCE']
 
@@ -75,7 +80,7 @@ function shouldSetAsProp(
       return true
     }
     // or native onclick with function values
-    if (key in el && nativeOnRE.test(key) && isFunction(value)) {
+    if (key in el && isNativeOn(key) && isFunction(value)) {
       return true
     }
     return false
@@ -116,7 +121,7 @@ function shouldSetAsProp(
   }
 
   // native onclick with string value, must be set as attribute
-  if (nativeOnRE.test(key) && isString(value)) {
+  if (isNativeOn(key) && isString(value)) {
     return false
   }
 
