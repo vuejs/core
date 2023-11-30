@@ -36,6 +36,5 @@
     "packages/vue/jsx-runtime",
     "scripts/*",
     "rollup.*.js"
-  ],
-  "exclude": ["rollup.config.js", "scripts/*"]
+  ]
 }
