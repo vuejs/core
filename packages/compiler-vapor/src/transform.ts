@@ -9,6 +9,7 @@ import {
   type DirectiveNode,
   type ExpressionNode,
   NodeTypes,
+  BindingTypes,
 } from '@vue/compiler-dom'
 import {
   type OperationNode,
@@ -461,9 +462,13 @@ function processExpression(
     // TODO
     return ''
   }
-  const { content } = expr
-  if (ctx.options.bindingMetadata?.[content] === 'setup-ref') {
-    return content + '.value'
+
+  let { content } = expr
+  if (ctx.options.bindingMetadata?.[content] === BindingTypes.SETUP_REF) {
+    content += '.value'
+  }
+  if (ctx.options.prefixIdentifiers && !ctx.options.inline) {
+    content = `_ctx.${content}`
   }
   return content
 }

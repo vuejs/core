@@ -2,9 +2,6 @@
 const handleClick = () => {
   console.log('Hello, Vapor!')
 }
-
-// @ts-expect-error
-globalThis.handleClick = handleClick
 </script>
 
 <template>
