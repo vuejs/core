@@ -249,29 +249,35 @@ export function processExpression(
     return node
   }
 
-  let ast: any
-  // exp needs to be parsed differently:
-  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
-  //    exp, but make sure to pad with spaces for consistent ranges
-  // 2. Expressions: wrap with parens (for e.g. object expressions)
-  // 3. Function arguments (v-for, v-slot): place in a function argument position
-  const source = asRawStatements
-    ? ` ${rawExp} `
-    : `(${rawExp})${asParams ? `=>{}` : ``}`
-  try {
-    ast = parse(source, {
-      plugins: context.expressionPlugins
-    }).program
-  } catch (e: any) {
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_INVALID_EXPRESSION,
-        node.loc,
-        undefined,
-        e.message
-      )
-    )
+  let ast = node.ast
+  if (ast === null) {
+    // ast being null means it has caused an error already during parse phase
     return node
+  }
+  if (!ast) {
+    // exp needs to be parsed differently:
+    // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+    //    exp, but make sure to pad with spaces for consistent ranges
+    // 2. Expressions: wrap with parens (for e.g. object expressions)
+    // 3. Function arguments (v-for, v-slot): place in a function argument position
+    const source = asRawStatements
+      ? ` ${rawExp} `
+      : `(${rawExp})${asParams ? `=>{}` : ``}`
+    try {
+      ast = parse(source, {
+        plugins: context.expressionPlugins
+      }).program
+    } catch (e: any) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_INVALID_EXPRESSION,
+          node.loc,
+          undefined,
+          e.message
+        )
+      )
+      return node
+    }
   }
 
   type QualifiedId = Identifier & PrefixMeta
@@ -351,6 +357,7 @@ export function processExpression(
   let ret
   if (children.length) {
     ret = createCompoundExpression(children, node.loc)
+    ret.ast = ast
   } else {
     ret = node
     ret.constType = bailConstant

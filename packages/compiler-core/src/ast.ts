@@ -14,6 +14,7 @@ import {
 } from './runtimeHelpers'
 import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
+import { Node as BabelNode } from '@babel/types'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces can be declared by platform specific compilers.
@@ -226,6 +227,7 @@ export interface SimpleExpressionNode extends Node {
   content: string
   isStatic: boolean
   constType: ConstantTypes
+  ast?: BabelNode | null
   /**
    * Indicates this is an identifier for a hoist vnode call and points to the
    * hoisted node.
@@ -246,6 +248,7 @@ export interface InterpolationNode extends Node {
 
 export interface CompoundExpressionNode extends Node {
   type: NodeTypes.COMPOUND_EXPRESSION
+  ast?: BabelNode | null
   children: (
     | SimpleExpressionNode
     | CompoundExpressionNode

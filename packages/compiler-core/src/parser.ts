@@ -38,14 +38,21 @@ import {
   defaultOnError,
   defaultOnWarn
 } from './errors'
-import { forAliasRE, isCoreComponent, isStaticArgOf } from './utils'
+import {
+  forAliasRE,
+  isCoreComponent,
+  isSimpleIdentifier,
+  isStaticArgOf
+} from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
+import { parse, parseExpression } from '@babel/parser'
 
 type OptionalOptions =
   | 'decodeEntities'
   | 'whitespace'
   | 'isNativeTag'
   | 'isBuiltInComponent'
+  | 'expressionPlugins'
   | keyof CompilerCompatOptions
 
 export type MergedParserOptions = Omit<
@@ -64,7 +71,8 @@ export const defaultParserOptions: MergedParserOptions = {
   isCustomElement: NO,
   onError: defaultOnError,
   onWarn: defaultOnWarn,
-  comments: __DEV__
+  comments: __DEV__,
+  prefixIdentifiers: false
 }
 
 let currentOptions: MergedParserOptions = defaultParserOptions
@@ -116,7 +124,7 @@ const tokenizer = new Tokenizer(stack, {
     }
     addNode({
       type: NodeTypes.INTERPOLATION,
-      content: createSimpleExpression(exp, false, getLoc(innerStart, innerEnd)),
+      content: createExp(exp, false, getLoc(innerStart, innerEnd)),
       loc: getLoc(start, end)
     })
   },
@@ -245,7 +253,7 @@ const tokenizer = new Tokenizer(stack, {
       setLocEnd((currentProp as AttributeNode).nameLoc, end)
     } else {
       const isStatic = arg[0] !== `[`
-      ;(currentProp as DirectiveNode).arg = createSimpleExpression(
+      ;(currentProp as DirectiveNode).arg = createExp(
         isStatic ? arg : arg.slice(1, -1),
         isStatic,
         getLoc(start, end),
@@ -346,10 +354,25 @@ const tokenizer = new Tokenizer(stack, {
           }
         } else {
           // directive
-          currentProp.exp = createSimpleExpression(
+          let expParseMode = ExpParseMode.Normal
+          if (!__BROWSER__) {
+            if (currentProp.name === 'for') {
+              expParseMode = ExpParseMode.Skip
+            } else if (currentProp.name === 'slot') {
+              expParseMode = ExpParseMode.Params
+            } else if (
+              currentProp.name === 'on' &&
+              currentAttrValue.includes(';')
+            ) {
+              expParseMode = ExpParseMode.Statements
+            }
+          }
+          currentProp.exp = createExp(
             currentAttrValue,
             false,
-            getLoc(currentAttrStartIndex, currentAttrEndIndex)
+            getLoc(currentAttrStartIndex, currentAttrEndIndex),
+            ConstantTypes.NOT_CONSTANT,
+            expParseMode
           )
           if (currentProp.name === 'for') {
             currentProp.forParseResult = parseForExpression(currentProp.exp)
@@ -477,10 +500,20 @@ function parseForExpression(
 
   const [, LHS, RHS] = inMatch
 
-  const createAliasExpression = (content: string, offset: number) => {
+  const createAliasExpression = (
+    content: string,
+    offset: number,
+    asParam = false
+  ) => {
     const start = loc.start.offset + offset
     const end = start + content.length
-    return createSimpleExpression(content, false, getLoc(start, end))
+    return createExp(
+      content,
+      false,
+      getLoc(start, end),
+      ConstantTypes.NOT_CONSTANT,
+      asParam ? ExpParseMode.Params : ExpParseMode.Normal
+    )
   }
 
   const result: ForParseResult = {
@@ -502,7 +535,7 @@ function parseForExpression(
     let keyOffset: number | undefined
     if (keyContent) {
       keyOffset = exp.indexOf(keyContent, trimmedOffset + valueContent.length)
-      result.key = createAliasExpression(keyContent, keyOffset)
+      result.key = createAliasExpression(keyContent, keyOffset, true)
     }
 
     if (iteratorMatch[2]) {
@@ -516,14 +549,15 @@ function parseForExpression(
             result.key
               ? keyOffset! + keyContent.length
               : trimmedOffset + valueContent.length
-          )
+          ),
+          true
         )
       }
     }
   }
 
   if (valueContent) {
-    result.value = createAliasExpression(valueContent, trimmedOffset)
+    result.value = createAliasExpression(valueContent, trimmedOffset, true)
   }
 
   return result
@@ -929,8 +963,54 @@ function dirToAttr(dir: DirectiveNode): AttributeNode {
   return attr
 }
 
-function emitError(code: ErrorCodes, index: number) {
-  currentOptions.onError(createCompilerError(code, getLoc(index, index)))
+enum ExpParseMode {
+  Normal,
+  Params,
+  Statements,
+  Skip
+}
+
+function createExp(
+  content: SimpleExpressionNode['content'],
+  isStatic: SimpleExpressionNode['isStatic'] = false,
+  loc: SourceLocation,
+  constType: ConstantTypes = ConstantTypes.NOT_CONSTANT,
+  parseMode = ExpParseMode.Normal
+) {
+  const exp = createSimpleExpression(content, isStatic, loc, constType)
+  if (
+    !__BROWSER__ &&
+    !isStatic &&
+    currentOptions.prefixIdentifiers &&
+    parseMode !== ExpParseMode.Skip &&
+    content.trim() &&
+    !isSimpleIdentifier(content)
+  ) {
+    try {
+      const options = {
+        plugins: currentOptions.expressionPlugins
+      }
+      if (parseMode === ExpParseMode.Statements) {
+        // v-on with multi-inline-statements, pad 1 char
+        exp.ast = parse(` ${content} `, options).program
+      } else if (parseMode === ExpParseMode.Params) {
+        exp.ast = parseExpression(`(${content})=>{}`, options)
+      } else {
+        // normal exp, wrap with parens
+        exp.ast = parseExpression(`(${content})`, options)
+      }
+    } catch (e: any) {
+      exp.ast = null
+      emitError(ErrorCodes.X_INVALID_EXPRESSION, loc.start.offset, e.message)
+    }
+  }
+  return exp
+}
+
+function emitError(code: ErrorCodes, index: number, message?: string) {
+  currentOptions.onError(
+    createCompilerError(code, getLoc(index, index), undefined, message)
+  )
 }
 
 function reset() {
