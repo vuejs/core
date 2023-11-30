@@ -140,6 +140,15 @@ export {
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
+import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
+/**
+ * Runtime error messages. Only exposed in dev or esm builds.
+ * @internal
+ */
+export const ErrorTypeStrings = (
+  __ESM_BUNDLER__ || __DEV__ ? _ErrorTypeStrings : null
+) as typeof _ErrorTypeStrings
+
 // For devtools
 export { devtools, setDevtoolsHook } from './devtools'
 
@@ -352,7 +361,7 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-export { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
 export type { CompatVue } from './compat/global'
 export type { LegacyConfig } from './compat/globalConfig'
 
@@ -384,3 +393,7 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
+
+export const DeprecationTypes = (
+  __COMPAT__ ? _DeprecationTypes : null
+) as typeof _DeprecationTypes

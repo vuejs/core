@@ -292,14 +292,15 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
         }
       } else {
         // special case: value on <textarea>
-        if (node.tag === 'textarea' && prop.name === 'value' && prop.value) {
+        const name = prop.name
+        if (node.tag === 'textarea' && name === 'value' && prop.value) {
           rawChildrenMap.set(node, escapeHtml(prop.value.content))
         } else if (!needMergeProps) {
-          if (prop.name === 'key' || prop.name === 'ref') {
+          if (name === 'key' || name === 'ref') {
             continue
           }
           // static prop
-          if (prop.name === 'class' && prop.value) {
+          if (name === 'class' && prop.value) {
             staticClassBinding = JSON.stringify(prop.value.content)
           }
           openTag.push(

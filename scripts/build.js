@@ -26,7 +26,7 @@ import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
@@ -38,6 +38,7 @@ const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
+/** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a
 const writeSize = args.size
 const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
@@ -102,7 +103,9 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
       executing.push(e)
       if (executing.length >= maxConcurrency) {
         await Promise.race(executing)

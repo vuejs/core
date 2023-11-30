@@ -3,8 +3,9 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  TextModes,
-  BindingMetadata
+  BindingMetadata,
+  RootNode,
+  createRoot
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -37,7 +38,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  ast: ElementNode
+  ast?: RootNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -128,31 +129,7 @@ export function parse(
 
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
-    // there are no components at SFC parsing level
-    isNativeTag: () => true,
-    // preserve all whitespaces
-    isPreTag: () => true,
-    getTextMode: ({ tag, props }, parent) => {
-      // all top level elements except <template> are parsed as raw text
-      // containers
-      if (
-        (!parent && tag !== 'template') ||
-        // <template lang="xxx"> should also be treated as raw text
-        (tag === 'template' &&
-          props.some(
-            p =>
-              p.type === NodeTypes.ATTRIBUTE &&
-              p.name === 'lang' &&
-              p.value &&
-              p.value.content &&
-              p.value.content !== 'html'
-          ))
-      ) {
-        return TextModes.RAWTEXT
-      } else {
-        return TextModes.DATA
-      }
-    },
+    parseMode: 'sfc',
     onError: e => {
       errors.push(e)
     }
@@ -161,7 +138,8 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    // we only want to keep the nodes that are not empty
+    // (when the tag is not a template)
     if (
       ignoreEmpty &&
       node.tag !== 'template' &&
@@ -178,7 +156,10 @@ export function parse(
             source,
             false
           ) as SFCTemplateBlock)
-          templateBlock.ast = node
+
+          if (!templateBlock.attrs.src) {
+            templateBlock.ast = createRoot(node.children, source)
+          }
 
           // warn against 2.x <template functional>
           if (templateBlock.attrs.functional) {
@@ -188,7 +169,9 @@ export function parse(
                 `difference from stateful ones. Just use a normal <template> ` +
                 `instead.`
             ) as CompilerError
-            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            err.loc = node.props.find(
+              p => p.type === NodeTypes.ATTRIBUTE && p.name === 'functional'
+            )!.loc
             errors.push(err)
           }
         } else {
@@ -307,32 +290,11 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  let { start, end } = node.loc
-  let content = ''
-  if (node.children.length) {
-    start = node.children[0].loc.start
-    end = node.children[node.children.length - 1].loc.end
-    content = source.slice(start.offset, end.offset)
-  } else {
-    const offset = node.loc.source.indexOf(`</`)
-    if (offset > -1) {
-      start = {
-        line: start.line,
-        column: start.column + offset,
-        offset: start.offset + offset
-      }
-    }
-    end = { ...start }
-  }
-  const loc = {
-    source: content,
-    start,
-    end
-  }
+  const loc = node.innerLoc!
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content,
+    content: source.slice(loc.start.offset, loc.end.offset),
     loc,
     attrs
   }
@@ -341,18 +303,19 @@ function createBlock(
   }
   node.props.forEach(p => {
     if (p.type === NodeTypes.ATTRIBUTE) {
-      attrs[p.name] = p.value ? p.value.content || true : true
-      if (p.name === 'lang') {
+      const name = p.name
+      attrs[name] = p.value ? p.value.content || true : true
+      if (name === 'lang') {
         block.lang = p.value && p.value.content
-      } else if (p.name === 'src') {
+      } else if (name === 'src') {
         block.src = p.value && p.value.content
       } else if (type === 'style') {
-        if (p.name === 'scoped') {
+        if (name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'module') {
-          ;(block as SFCStyleBlock).module = attrs[p.name]
+        } else if (name === 'module') {
+          ;(block as SFCStyleBlock).module = attrs[name]
         }
-      } else if (type === 'script' && p.name === 'setup') {
+      } else if (type === 'script' && name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }
@@ -376,28 +339,27 @@ function generateSourceMap(
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
   map.setSourceContent(filename, source)
+  map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
         if (!/\s/.test(line[i])) {
-          map.addMapping({
+          map._mappings.add({
+            originalLine,
+            originalColumn: i,
+            generatedLine,
+            generatedColumn: i,
             source: filename,
-            original: {
-              line: originalLine,
-              column: i
-            },
-            generated: {
-              line: generatedLine,
-              column: i
-            }
+            // @ts-ignore
+            name: null
           })
         }
       }
     }
   })
-  return JSON.parse(map.toString())
+  return map.toJSON()
 }
 
 function padContent(

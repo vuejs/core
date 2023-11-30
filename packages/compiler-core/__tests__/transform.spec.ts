@@ -1,4 +1,4 @@
-import { baseParse } from '../src/parse'
+import { baseParse } from '../src/parser'
 import { transform, NodeTransform } from '../src/transform'
 import {
   ElementNode,

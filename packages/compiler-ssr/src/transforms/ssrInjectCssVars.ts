@@ -6,8 +6,7 @@ import {
   createSimpleExpression,
   RootNode,
   TemplateChildNode,
-  findDir,
-  isBuiltInType
+  findDir
 } from '@vue/compiler-dom'
 
 export const ssrInjectCssVars: NodeTransform = (node, context) => {
@@ -43,7 +42,7 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
       node.tagType === ElementTypes.COMPONENT) &&
     !findDir(node, 'for')
   ) {
-    if (isBuiltInType(node.tag, 'Suspense')) {
+    if (node.tag === 'suspense' || node.tag === 'Suspense') {
       for (const child of node.children) {
         if (
           child.type === NodeTypes.ELEMENT &&

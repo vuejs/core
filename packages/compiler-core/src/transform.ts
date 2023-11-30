@@ -334,6 +334,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+  root.transformed = true
 
   if (__COMPAT__) {
     root.filters = [...context.filters!]

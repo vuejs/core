@@ -31,7 +31,6 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
-  ReactiveFlags /* @remove */,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
@@ -49,12 +48,11 @@ export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
-  trigger,
-  track,
   enableTracking,
   pauseTracking,
   resetTracking,
-  ITERATE_KEY,
+  pauseScheduling,
+  resetScheduling,
   ReactiveEffect,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
@@ -63,13 +61,11 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo
 } from './effect'
+export { trigger, track, ITERATE_KEY } from './reactiveEffect'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
   onScopeDispose
 } from './effectScope'
-export {
-  TrackOpTypes /* @remove */,
-  TriggerOpTypes /* @remove */
-} from './operations'
+export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

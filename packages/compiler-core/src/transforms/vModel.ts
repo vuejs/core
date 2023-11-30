@@ -29,6 +29,8 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
     return createTransformProps()
   }
 
+  // we assume v-model directives are always parsed
+  // (not artificially created by a transform)
   const rawExp = exp.loc.source
   const expString =
     exp.type === NodeTypes.SIMPLE_EXPRESSION ? exp.content : rawExp
