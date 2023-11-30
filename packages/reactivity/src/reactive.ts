@@ -64,6 +64,8 @@ function getTargetType(value: Target) {
 // only unwrap nested ref
 export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
 
+type NoInfer<T> = [T][T extends any ? 0 : never]
+
 /**
  * Returns a reactive proxy of the object.
  *
@@ -80,6 +82,9 @@ export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>
  * @see {@link https://vuejs.org/api/reactivity-core.html#reactive}
  */
 export function reactive<T extends object>(target: T): UnwrapNestedRefs<T>
+export function reactive<T extends object>(
+  target: T
+): NoInfer<UnwrapNestedRefs<T>>
 export function reactive(target: object) {
   // if trying to observe a readonly proxy, return the readonly version.
   if (isReadonly(target)) {
