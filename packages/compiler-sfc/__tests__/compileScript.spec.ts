@@ -243,7 +243,7 @@ describe('SFC compile <script setup>', () => {
       import { useCssVars, ref } from 'vue'
       const msg = ref()
       </script>
-      
+
       <style>
       .foo {
         color: v-bind(msg)
@@ -516,6 +516,46 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(
         'return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }'
       )
+      assertCode(content)
+    })
+
+    // https://github.com/nuxt/nuxt/issues/22416
+    test('property access', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo.Bar.Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('spread operator', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div v-bind="{ ...Foo.Bar.Baz }"></div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('property access (whitespace)', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo . Bar . Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
       assertCode(content)
     })
   })

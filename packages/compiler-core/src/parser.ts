@@ -990,6 +990,12 @@ function createExp(
       const options = {
         plugins: currentOptions.expressionPlugins
       }
+      if (/ as\s+\w|<.*>|:/.test(content)) {
+        options.plugins = [
+          ...(currentOptions.expressionPlugins || []),
+          'typescript'
+        ]
+      }
       if (parseMode === ExpParseMode.Statements) {
         // v-on with multi-inline-statements, pad 1 char
         exp.ast = parse(` ${content} `, options).program
