@@ -16,7 +16,7 @@ export interface ComponentInternalInstance {
 
 let uid = 0
 export const createComponentInstance = (
-  component: BlockFn
+  component: BlockFn,
 ): ComponentInternalInstance => {
   const instance: ComponentInternalInstance = {
     uid: uid++,
@@ -25,7 +25,7 @@ export const createComponentInstance = (
     scope: new EffectScope(true /* detached */)!,
 
     component,
-    isMounted: false
+    isMounted: false,
     // TODO: registory of provides, appContext, lifecycles, ...
   }
   return instance

@@ -33,7 +33,7 @@ export {
   effectScope,
   EffectScope,
   getCurrentScope,
-  onScopeDispose
+  onScopeDispose,
 } from '@vue/reactivity'
 export { effect } from './scheduler'
 export * from './on'

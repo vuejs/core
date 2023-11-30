@@ -2,7 +2,7 @@ import {
   isArray,
   normalizeClass,
   normalizeStyle,
-  toDisplayString
+  toDisplayString,
 } from '@vue/shared'
 
 import { ComponentInternalInstance, createComponentInstance } from './component'
@@ -14,7 +14,7 @@ export type BlockFn = (props?: any) => Block
 
 export function render(
   comp: BlockFn,
-  container: string | ParentNode
+  container: string | ParentNode,
 ): ComponentInternalInstance {
   const instance = createComponentInstance(comp)
   mountComponent(instance, (container = normalizeContainer(container)))
@@ -29,11 +29,11 @@ export function normalizeContainer(container: string | ParentNode): ParentNode {
 
 export const mountComponent = (
   instance: ComponentInternalInstance,
-  container: ParentNode
+  container: ParentNode,
 ) => {
   instance.container = container
   const block = instance.scope.run(
-    () => (instance.block = instance.component())
+    () => (instance.block = instance.component()),
   )!
   insert(block, instance.container)
   instance.isMounted = true
@@ -55,7 +55,7 @@ export const unmountComponent = (instance: ComponentInternalInstance) => {
 export function insert(
   block: Block,
   parent: ParentNode,
-  anchor: Node | null = null
+  anchor: Node | null = null,
 ) {
   // if (!isHydrating) {
   if (block instanceof Node) {
@@ -151,7 +151,7 @@ export function setDynamicProp(el: Element, key: string, val: any) {
 
 type Children = Record<number, [ChildNode, Children]>
 export function children(n: ChildNode): Children {
-  return { ...Array.from(n.childNodes).map(n => [n, children(n)]) }
+  return { ...Array.from(n.childNodes).map((n) => [n, children(n)]) }
 }
 
 export function createTextNode(val: unknown): Text {
