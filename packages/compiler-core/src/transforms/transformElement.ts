@@ -19,7 +19,8 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  JSChildNode
 } from '../ast'
 import {
   PatchFlags,
@@ -457,6 +458,12 @@ export function buildProps(
 
       if (isEventHandler && isReservedProp(name)) {
         hasVnodeHook = true
+      }
+
+      if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
+        // handler wrapped with internal helper e.g. withModifiers(fn)
+        // extract the actual expression
+        value = value.arguments[0] as JSChildNode
       }
 
       if (

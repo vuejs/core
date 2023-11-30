@@ -1160,6 +1160,20 @@ describe('compiler: element transform', () => {
         genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
       )
     })
+
+    test('should not have PROPS patchflag for constant v-on handlers', () => {
+      const { node } = parseWithElementTransform(`<div @keydown="foo" />`, {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_CONST
+        },
+        directiveTransforms: {
+          on: transformOn
+        }
+      })
+      // should only have hydration flag
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_HYDRATION))
+    })
   })
 
   describe('dynamic component', () => {
