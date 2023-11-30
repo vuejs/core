@@ -13,8 +13,6 @@ const isNativeOn = (key: string) =>
   key.charCodeAt(2) > 96 &&
   key.charCodeAt(2) < 123
 
-const embeddedTags = ['IMG', 'VIDEO', 'CANVAS', 'SOURCE']
-
 type DOMRendererOptions = RendererOptions<Node, Element>
 
 export const patchProp: DOMRendererOptions['patchProp'] = (
@@ -113,11 +111,11 @@ function shouldSetAsProp(
   }
 
   // #8780 the width or heigth of embedded tags must be set as attribute
-  if (
-    (key === 'width' || key === 'height') &&
-    embeddedTags.includes(el.tagName)
-  ) {
-    return false
+  if (key === 'width' || key === 'height') {
+    const tag = el.tagName
+    return (
+      tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS' || tag === 'SOURCE'
+    )
   }
 
   // native onclick with string value, must be set as attribute
