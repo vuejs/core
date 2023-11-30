@@ -43,6 +43,13 @@ import { extname, dirname, join } from 'path'
 import { minimatch as isMatch } from 'minimatch'
 import * as process from 'process'
 
+export type SimpleTypeResolveOptions = Partial<
+  Pick<
+    SFCScriptCompileOptions,
+    'globalTypeFiles' | 'fs' | 'babelParserPlugins' | 'isProd'
+  >
+>
+
 /**
  * TypeResolveContext is compatible with ScriptCompileContext
  * but also allows a simpler version of it with minimal required properties
@@ -60,13 +67,28 @@ import * as process from 'process'
  */
 export type SimpleTypeResolveContext = Pick<
   ScriptCompileContext,
-  // required
-  'source' | 'filename' | 'error' | 'options'
+  // file
+  | 'source'
+  | 'filename'
+
+  // utils
+  | 'error'
+  | 'helper'
+  | 'getString'
+
+  // props
+  | 'propsTypeDecl'
+  | 'propsRuntimeDefaults'
+  | 'propsDestructuredBindings'
+
+  // emits
+  | 'emitsTypeDecl'
 > &
   Partial<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
   > & {
     ast: Statement[]
+    options: SimpleTypeResolveOptions
   }
 
 export type TypeResolveContext = ScriptCompileContext | SimpleTypeResolveContext
@@ -635,8 +657,8 @@ function innerResolveTypeReference(
             ? scope.exportedDeclares
             : scope.declares
           : onlyExported
-          ? scope.exportedTypes
-          : scope.types
+            ? scope.exportedTypes
+            : scope.types
       if (lookupSource[name]) {
         return lookupSource[name]
       } else {
@@ -679,10 +701,10 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
     node.type === 'TSTypeReference'
       ? node.typeName
       : node.type === 'TSExpressionWithTypeArguments'
-      ? node.expression
-      : node.type === 'TSImportType'
-      ? node.qualifier
-      : node.exprName
+        ? node.expression
+        : node.type === 'TSImportType'
+          ? node.qualifier
+          : node.exprName
   if (ref?.type === 'Identifier') {
     return ref.name
   } else if (ref?.type === 'TSQualifiedName') {
@@ -1056,8 +1078,8 @@ function ctxToScope(ctx: TypeResolveContext): TypeScope {
     'ast' in ctx
       ? ctx.ast
       : ctx.scriptAst
-      ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
-      : ctx.scriptSetupAst!.body
+        ? [...ctx.scriptAst.body, ...ctx.scriptSetupAst!.body]
+        : ctx.scriptSetupAst!.body
 
   const scope = new TypeScope(
     ctx.filename,

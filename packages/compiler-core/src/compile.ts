@@ -1,5 +1,5 @@
 import { CompilerOptions } from './options'
-import { baseParse } from './parse'
+import { baseParse } from './parser'
 import { transform, NodeTransform, DirectiveTransform } from './transform'
 import { generate, CodegenResult } from './codegen'
 import { RootNode } from './ast'
@@ -41,8 +41,8 @@ export function getBaseTransformPreset(
             transformExpression
           ]
         : __BROWSER__ && __DEV__
-        ? [transformExpression]
-        : []),
+          ? [transformExpression]
+          : []),
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
@@ -59,7 +59,7 @@ export function getBaseTransformPreset(
 // we name it `baseCompile` so that higher order compilers like
 // @vue/compiler-dom can export `compile` while re-exporting everything else.
 export function baseCompile(
-  template: string | RootNode,
+  source: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
   const onError = options.onError || defaultOnError
@@ -82,7 +82,7 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
-  const ast = isString(template) ? baseParse(template, options) : template
+  const ast = isString(source) ? baseParse(source, options) : source
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
 

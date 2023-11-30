@@ -4,7 +4,10 @@ import {
   CompilerError,
   NodeTransform,
   ParserOptions,
-  RootNode
+  RootNode,
+  NodeTypes,
+  ElementNode,
+  createRoot
 } from '@vue/compiler-core'
 import {
   SourceMapConsumer,
@@ -30,7 +33,7 @@ import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
 
 export interface TemplateCompiler {
-  compile(template: string, options: CompilerOptions): CodegenResult
+  compile(source: string | RootNode, options: CompilerOptions): CodegenResult
   parse(template: string, options: ParserOptions): RootNode
 }
 
@@ -46,6 +49,7 @@ export interface SFCTemplateCompileResults {
 
 export interface SFCTemplateCompileOptions {
   source: string
+  ast?: RootNode
   filename: string
   id: string
   scoped?: boolean
@@ -124,14 +128,15 @@ export function compileTemplate(
     ? preprocessCustomRequire
       ? preprocessCustomRequire(preprocessLang)
       : __ESM_BROWSER__
-      ? undefined
-      : consolidate[preprocessLang as keyof typeof consolidate]
+        ? undefined
+        : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {
       return doCompileTemplate({
         ...options,
-        source: preprocess(options, preprocessor)
+        source: preprocess(options, preprocessor),
+        ast: undefined // invalidate AST if template goes through preprocessor
       })
     } catch (e: any) {
       return {
@@ -164,10 +169,11 @@ function doCompileTemplate({
   slotted,
   inMap,
   source,
+  ast: inAST,
   ssr = false,
   ssrCssVars,
   isProd = false,
-  compiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM,
+  compiler,
   compilerOptions = {},
   transformAssetUrls
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
@@ -199,7 +205,30 @@ function doCompileTemplate({
   const shortId = id.replace(/^data-v-/, '')
   const longId = `data-v-${shortId}`
 
-  let { code, ast, preamble, map } = compiler.compile(source, {
+  const defaultCompiler = ssr ? (CompilerSSR as TemplateCompiler) : CompilerDOM
+  compiler = compiler || defaultCompiler
+
+  if (compiler !== defaultCompiler) {
+    // user using custom compiler, this means we cannot reuse the AST from
+    // the descriptor as they might be different.
+    inAST = undefined
+  }
+
+  if (inAST?.transformed) {
+    // If input AST has already been transformed, then it cannot be reused.
+    // We need to parse a fresh one. Can't just use `source` here since we need
+    // the AST location info to be relative to the entire SFC.
+    const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
+      parseMode: 'sfc',
+      onError: e => errors.push(e)
+    })
+    const template = newAST.children.find(
+      node => node.type === NodeTypes.ELEMENT && node.tag === 'template'
+    ) as ElementNode
+    inAST = createRoot(template.children, inAST.source)
+  }
+
+  let { code, ast, preamble, map } = compiler.compile(inAST || source, {
     mode: 'module',
     prefixIdentifiers: true,
     hoistStatic: true,
@@ -222,7 +251,7 @@ function doCompileTemplate({
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
   // reflect the original line numbers.
-  if (inMap) {
+  if (inMap && !inAST) {
     if (map) {
       map = mapLines(inMap, map)
     }
@@ -235,7 +264,7 @@ function doCompileTemplate({
     let msg = w.message
     if (w.loc) {
       msg += `\n${generateCodeFrame(
-        source,
+        inAST?.source || source,
         w.loc.start.offset,
         w.loc.end.offset
       )}`

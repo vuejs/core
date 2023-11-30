@@ -1,6 +1,6 @@
 import { SourceLocation } from '../ast'
 import { CompilerError } from '../errors'
-import { ParserContext } from '../parse'
+import { MergedParserOptions } from '../parser'
 import { TransformContext } from '../transform'
 
 export type CompilerCompatConfig = Partial<
@@ -13,10 +13,9 @@ export interface CompilerCompatOptions {
   compatConfig?: CompilerCompatConfig
 }
 
-export const enum CompilerDeprecationTypes {
+export enum CompilerDeprecationTypes {
   COMPILER_IS_ON_ELEMENT = 'COMPILER_IS_ON_ELEMENT',
   COMPILER_V_BIND_SYNC = 'COMPILER_V_BIND_SYNC',
-  COMPILER_V_BIND_PROP = 'COMPILER_V_BIND_PROP',
   COMPILER_V_BIND_OBJECT_ORDER = 'COMPILER_V_BIND_OBJECT_ORDER',
   COMPILER_V_ON_NATIVE = 'COMPILER_V_ON_NATIVE',
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
@@ -45,12 +44,6 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `argument instead. \`v-bind:${key}.sync\` should be changed to ` +
       `\`v-model:${key}\`.`,
     link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`
-  },
-
-  [CompilerDeprecationTypes.COMPILER_V_BIND_PROP]: {
-    message:
-      `.prop modifier for v-bind has been removed and no longer necessary. ` +
-      `Vue 3 will automatically set a binding as DOM property when appropriate.`
   },
 
   [CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER]: {
@@ -100,12 +93,9 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
 
 function getCompatValue(
   key: CompilerDeprecationTypes | 'MODE',
-  context: ParserContext | TransformContext
+  { compatConfig }: MergedParserOptions | TransformContext
 ) {
-  const config = (context as ParserContext).options
-    ? (context as ParserContext).options.compatConfig
-    : (context as TransformContext).compatConfig
-  const value = config && config[key]
+  const value = compatConfig && compatConfig[key]
   if (key === 'MODE') {
     return value || 3 // compiler defaults to v3 behavior
   } else {
@@ -115,7 +105,7 @@ function getCompatValue(
 
 export function isCompatEnabled(
   key: CompilerDeprecationTypes,
-  context: ParserContext | TransformContext
+  context: MergedParserOptions | TransformContext
 ) {
   const mode = getCompatValue('MODE', context)
   const value = getCompatValue(key, context)
@@ -126,7 +116,7 @@ export function isCompatEnabled(
 
 export function checkCompatEnabled(
   key: CompilerDeprecationTypes,
-  context: ParserContext | TransformContext,
+  context: MergedParserOptions | TransformContext,
   loc: SourceLocation | null,
   ...args: any[]
 ): boolean {
@@ -139,7 +129,7 @@ export function checkCompatEnabled(
 
 export function warnDeprecation(
   key: CompilerDeprecationTypes,
-  context: ParserContext | TransformContext,
+  context: MergedParserOptions | TransformContext,
   loc: SourceLocation | null,
   ...args: any[]
 ) {

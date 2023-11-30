@@ -43,6 +43,7 @@ export const transformTransition: NodeTransform = (node, context) => {
               node.props.push({
                 type: NodeTypes.ATTRIBUTE,
                 name: 'persisted',
+                nameLoc: node.loc,
                 value: undefined,
                 loc: node.loc
               })

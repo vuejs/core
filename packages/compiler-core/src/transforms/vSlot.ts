@@ -14,7 +14,6 @@ import {
   SourceLocation,
   createConditionalExpression,
   ConditionalExpression,
-  SimpleExpressionNode,
   FunctionExpression,
   CallExpression,
   createCallExpression,
@@ -32,7 +31,7 @@ import {
   isStaticExp
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
-import { parseForExpression, createForLoopParams } from './vFor'
+import { createForLoopParams, finalizeForParseResult } from './vFor'
 import { SlotFlags, slotFlagsText } from '@vue/shared'
 
 const defaultFallback = createSimpleExpression(`undefined`, false)
@@ -78,11 +77,9 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
     node.props.some(isVSlot) &&
     (vFor = findDir(node, 'for'))
   ) {
-    const result = (vFor.parseResult = parseForExpression(
-      vFor.exp as SimpleExpressionNode,
-      context
-    ))
+    const result = vFor.forParseResult
     if (result) {
+      finalizeForParseResult(result, context)
       const { value, key, index } = result
       const { addIdentifiers, removeIdentifiers } = context
       value && addIdentifiers(value)
@@ -100,7 +97,7 @@ export const trackVForSlotScopes: NodeTransform = (node, context) => {
 
 export type SlotFnBuilder = (
   slotProps: ExpressionNode | undefined,
-  vForExp: ExpressionNode | undefined,
+  vFor: DirectiveNode | undefined,
   slotChildren: TemplateChildNode[],
   loc: SourceLocation
 ) => FunctionExpression
@@ -203,12 +200,7 @@ export function buildSlots(
     }
 
     const vFor = findDir(slotElement, 'for')
-    const slotFunction = buildSlotFn(
-      slotProps,
-      vFor?.exp,
-      slotChildren,
-      slotLoc
-    )
+    const slotFunction = buildSlotFn(slotProps, vFor, slotChildren, slotLoc)
 
     // check if this slot is conditional (v-if/v-for)
     let vIf: DirectiveNode | undefined
@@ -266,10 +258,9 @@ export function buildSlots(
       }
     } else if (vFor) {
       hasDynamicSlots = true
-      const parseResult =
-        vFor.parseResult ||
-        parseForExpression(vFor.exp as SimpleExpressionNode, context)
+      const parseResult = vFor.forParseResult
       if (parseResult) {
+        finalizeForParseResult(parseResult, context)
         // Render the dynamic slots as an array and add it to the createSlot()
         // args. The runtime knows how to handle it appropriately.
         dynamicSlots.push(
@@ -349,8 +340,8 @@ export function buildSlots(
   const slotFlag = hasDynamicSlots
     ? SlotFlags.DYNAMIC
     : hasForwardedSlots(node.children)
-    ? SlotFlags.FORWARDED
-    : SlotFlags.STABLE
+      ? SlotFlags.FORWARDED
+      : SlotFlags.STABLE
 
   let slots = createObjectExpression(
     slotsProperties.concat(

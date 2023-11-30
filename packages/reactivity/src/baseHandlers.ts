@@ -2,7 +2,6 @@ import {
   reactive,
   readonly,
   toRaw,
-  ReactiveFlags,
   Target,
   readonlyMap,
   reactiveMap,
@@ -11,14 +10,14 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
-  track,
-  trigger,
-  ITERATE_KEY,
   pauseTracking,
-  resetTracking
+  resetTracking,
+  pauseScheduling,
+  resetScheduling
 } from './effect'
+import { track, trigger, ITERATE_KEY } from './reactiveEffect'
 import {
   isObject,
   hasOwn,
@@ -71,7 +70,9 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
+      pauseScheduling()
       const res = (toRaw(this) as any)[key].apply(this, args)
+      resetScheduling()
       resetTracking()
       return res
     }
@@ -108,8 +109,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
             ? shallowReadonlyMap
             : readonlyMap
           : shallow
-          ? shallowReactiveMap
-          : reactiveMap
+            ? shallowReactiveMap
+            : reactiveMap
         ).get(target)
     ) {
       return target

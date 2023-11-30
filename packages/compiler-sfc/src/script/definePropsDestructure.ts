@@ -27,7 +27,7 @@ export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern
 ) {
-  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+  if (!ctx.options.propsDestructure) {
     return
   }
 
@@ -103,7 +103,7 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
-  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+  if (!ctx.options.propsDestructure) {
     return
   }
 

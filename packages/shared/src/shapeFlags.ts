@@ -1,4 +1,4 @@
-export const enum ShapeFlags {
+export enum ShapeFlags {
   ELEMENT = 1,
   FUNCTIONAL_COMPONENT = 1 << 1,
   STATEFUL_COMPONENT = 1 << 2,

@@ -1,4 +1,4 @@
-import { baseParse as parse } from '../../src/parse'
+import { baseParse as parse } from '../../src/parser'
 import { transform } from '../../src/transform'
 import { transformIf } from '../../src/transforms/vIf'
 import { transformElement } from '../../src/transforms/transformElement'

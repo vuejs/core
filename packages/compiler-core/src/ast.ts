@@ -1,5 +1,4 @@
 import { isString } from '@vue/shared'
-import { ForParseResult } from './transforms/vFor'
 import {
   RENDER_SLOT,
   CREATE_SLOTS,
@@ -17,15 +16,16 @@ import { PropsExpression } from './transforms/transformElement'
 import { ImportItem, TransformContext } from './transform'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
-// More namespaces like SVG and MathML are declared by platform specific
-// compilers.
+// More namespaces can be declared by platform specific compilers.
 export type Namespace = number
 
-export const enum Namespaces {
-  HTML
+export enum Namespaces {
+  HTML,
+  SVG,
+  MATH_ML
 }
 
-export const enum NodeTypes {
+export enum NodeTypes {
   ROOT,
   ELEMENT,
   TEXT,
@@ -59,7 +59,7 @@ export const enum NodeTypes {
   JS_RETURN_STATEMENT
 }
 
-export const enum ElementTypes {
+export enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
@@ -102,6 +102,7 @@ export type TemplateChildNode =
 
 export interface RootNode extends Node {
   type: NodeTypes.ROOT
+  source: string
   children: TemplateChildNode[]
   helpers: Set<symbol>
   components: string[]
@@ -112,6 +113,7 @@ export interface RootNode extends Node {
   temps: number
   ssrHelpers?: symbol[]
   codegenNode?: TemplateChildNode | JSChildNode | BlockStatement
+  transformed?: boolean
 
   // v2 compat only
   filters?: string[]
@@ -128,9 +130,10 @@ export interface BaseElementNode extends Node {
   ns: Namespace
   tag: string
   tagType: ElementTypes
-  isSelfClosing: boolean
   props: Array<AttributeNode | DirectiveNode>
   children: TemplateChildNode[]
+  isSelfClosing?: boolean
+  innerLoc?: SourceLocation // only for SFC root level elements
 }
 
 export interface PlainElementNode extends BaseElementNode {
@@ -182,19 +185,28 @@ export interface CommentNode extends Node {
 export interface AttributeNode extends Node {
   type: NodeTypes.ATTRIBUTE
   name: string
+  nameLoc: SourceLocation
   value: TextNode | undefined
 }
 
 export interface DirectiveNode extends Node {
   type: NodeTypes.DIRECTIVE
+  /**
+   * the normalized name without prefix or shorthands, e.g. "bind", "on"
+   */
   name: string
+  /**
+   * the raw attribute name, preserving shorthand, and including arg & modifiers
+   * this is only used during parse.
+   */
+  rawName?: string
   exp: ExpressionNode | undefined
   arg: ExpressionNode | undefined
   modifiers: string[]
   /**
    * optional property to cache the expression parse result for v-for
    */
-  parseResult?: ForParseResult
+  forParseResult?: ForParseResult
 }
 
 /**
@@ -202,7 +214,7 @@ export interface DirectiveNode extends Node {
  * Higher levels implies lower levels. e.g. a node that can be stringified
  * can always be hoisted and skipped for patch.
  */
-export const enum ConstantTypes {
+export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
   CAN_HOIST,
@@ -274,6 +286,14 @@ export interface ForNode extends Node {
   parseResult: ForParseResult
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
+}
+
+export interface ForParseResult {
+  source: ExpressionNode
+  value: ExpressionNode | undefined
+  key: ExpressionNode | undefined
+  index: ExpressionNode | undefined
+  finalized: boolean
 }
 
 export interface TextCallNode extends Node {
@@ -547,17 +567,18 @@ export interface ForIteratorExpression extends FunctionExpression {
 // associated with template nodes, so their source locations are just a stub.
 // Container types like CompoundExpression also don't need a real location.
 export const locStub: SourceLocation = {
-  source: '',
   start: { line: 1, column: 1, offset: 0 },
-  end: { line: 1, column: 1, offset: 0 }
+  end: { line: 1, column: 1, offset: 0 },
+  source: ''
 }
 
 export function createRoot(
   children: TemplateChildNode[],
-  loc = locStub
+  source = ''
 ): RootNode {
   return {
     type: NodeTypes.ROOT,
+    source,
     children,
     helpers: new Set(),
     components: [],
@@ -567,7 +588,7 @@ export function createRoot(
     cached: 0,
     temps: 0,
     codegenNode: undefined,
-    loc
+    loc: locStub
   }
 }
 

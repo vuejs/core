@@ -266,7 +266,7 @@ export type SetupRenderEffectFn = (
   optimized: boolean
 ) => void
 
-export const enum MoveType {
+export enum MoveType {
   ENTER,
   LEAVE,
   REORDER
@@ -1281,6 +1281,7 @@ function baseCreateRenderer(
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect.
+        instance.effect.dirty = true
         instance.update()
       }
     } else {
@@ -1545,11 +1546,16 @@ function baseCreateRenderer(
     // create render effect for rendering
     const effect = (instance.effect = new RenderEffect(
       componentUpdateFn,
+      NOOP,
       () => queueJob(update),
       instance.scope // track it in component's effect scope
     ))
 
-    const update: SchedulerJob = (instance.update = () => effect.update())
+    const update: SchedulerJob = (instance.update = () => {
+      if (effect.dirty) {
+        effect.update()
+      }
+    })
     update.id = instance.uid
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates

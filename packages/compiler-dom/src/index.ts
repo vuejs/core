@@ -38,11 +38,11 @@ export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
 }
 
 export function compile(
-  template: string,
+  src: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
   return baseCompile(
-    template,
+    src,
     extend({}, parserOptions, options, {
       nodeTransforms: [
         // ignore <script> and <tag>
@@ -68,5 +68,9 @@ export function parse(template: string, options: ParserOptions = {}): RootNode {
 
 export * from './runtimeHelpers'
 export { transformStyle } from './transforms/transformStyle'
-export { createDOMCompilerError, DOMErrorCodes } from './errors'
+export {
+  createDOMCompilerError,
+  DOMErrorCodes,
+  DOMErrorMessages
+} from './errors'
 export * from '@vue/compiler-core'
