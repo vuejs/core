@@ -24,8 +24,8 @@ const pkg = require(`../packages/${target}/package.json`)
 const outputFormat = format.startsWith('global')
   ? 'iife'
   : format === 'cjs'
-  ? 'cjs'
-  : 'esm'
+    ? 'cjs'
+    : 'esm'
 
 const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
@@ -41,6 +41,7 @@ const relativeOutfile = relative(process.cwd(), outfile)
 
 // resolve externals
 // TODO this logic is largely duplicated from rollup.config.js
+/** @type {string[]} */
 let external = []
 if (!inlineDeps) {
   // cjs & esm-bundler: external all deps
@@ -80,7 +81,7 @@ if (!inlineDeps) {
     ]
   }
 }
-
+/** @type {Array<import('esbuild').Plugin>} */
 const plugins = [
   {
     name: 'log-rebuild',
@@ -92,7 +93,7 @@ const plugins = [
   }
 ]
 
-if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
+if (format !== 'cjs' && pkg.buildOptions?.enableNonBrowserBranches) {
   plugins.push(polyfillNode())
 }
 

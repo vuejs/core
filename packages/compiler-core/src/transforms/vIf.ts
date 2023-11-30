@@ -30,13 +30,7 @@ import { createCompilerError, ErrorCodes } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { FRAGMENT, CREATE_COMMENT } from '../runtimeHelpers'
-import {
-  injectProp,
-  findDir,
-  findProp,
-  isBuiltInType,
-  getMemoedVNodeCall
-} from '../utils'
+import { injectProp, findDir, findProp, getMemoedVNodeCall } from '../utils'
 import { PatchFlags, PatchFlagNames } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -165,7 +159,8 @@ export function processIf(
           !(
             context.parent &&
             context.parent.type === NodeTypes.ELEMENT &&
-            isBuiltInType(context.parent.tag, 'transition')
+            (context.parent.tag === 'transition' ||
+              context.parent.tag === 'Transition')
           )
         ) {
           branch.children = [...comments, ...branch.children]

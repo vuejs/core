@@ -60,10 +60,10 @@ type MapSources<T, Immediate> = {
       ? V | undefined
       : V
     : T[K] extends object
-    ? Immediate extends true
-      ? T[K] | undefined
-      : T[K]
-    : never
+      ? Immediate extends true
+        ? T[K] | undefined
+        : T[K]
+      : never
 }
 
 type OnCleanup = (cleanupFn: () => void) => void
@@ -76,6 +76,7 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
   deep?: boolean
   depth?: number
+  once?: boolean
 }
 
 export type WatchStopHandle = () => void
@@ -178,10 +179,19 @@ function doWatch(
     deep,
     flush,
     depth,
+    once,
     onTrack,
     onTrigger
   }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  if (cb && once) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      unwatch()
+    }
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -192,6 +202,12 @@ function doWatch(
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback, options?) signature.`
+      )
+    }
+    if (once !== undefined) {
+      warn(
+        `watch() "once" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
       )
     }
@@ -316,7 +332,7 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!effect.active) {
+    if (!effect.active || !effect.dirty) {
       return
     }
     if (cb) {
@@ -342,8 +358,8 @@ function doWatch(
           oldValue === INITIAL_WATCHER_VALUE
             ? undefined
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-            ? []
-            : oldValue,
+              ? []
+              : oldValue,
           onCleanup
         ])
         oldValue = newValue
@@ -370,7 +386,14 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, scheduler)
+  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+
+  const unwatch = () => {
+    effect.stop()
+    if (instance && instance.scope) {
+      remove(instance.scope.effects!, effect)
+    }
+  }
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -391,13 +414,6 @@ function doWatch(
     )
   } else {
     effect.run()
-  }
-
-  const unwatch = () => {
-    effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
-    }
   }
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)

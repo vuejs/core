@@ -30,7 +30,7 @@ export type RootHydrateFunction = (
   container: (Element | ShadowRoot) & { _vnode?: VNode }
 ) => void
 
-const enum DOMNodeTypes {
+enum DOMNodeTypes {
   ELEMENT = 1,
   TEXT = 3,
   COMMENT = 8
@@ -582,8 +582,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-          ? `(start of fragment)`
-          : ``
+            ? `(start of fragment)`
+            : ``
       )
     vnode.el = null
 

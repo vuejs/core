@@ -246,6 +246,7 @@ const BaseTransitionImpl: ComponentOptions = {
             // #6835
             // it also needs to be updated when active is undefined
             if (instance.update.active !== false) {
+              instance.effect.dirty = true
               instance.update()
             }
           }
@@ -478,8 +479,8 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
       __DEV__ && vnode.component
       ? vnode.component.subTree
       : vnode.children
-      ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
-      : undefined
+        ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
+        : undefined
     : vnode
 }
 

@@ -37,7 +37,8 @@ import {
   JSChildNode,
   RESOLVE_DYNAMIC_COMPONENT,
   TRANSITION,
-  stringifyExpression
+  stringifyExpression,
+  DirectiveNode
 } from '@vue/compiler-dom'
 import { SSR_RENDER_COMPONENT, SSR_RENDER_VNODE } from '../runtimeHelpers'
 import {
@@ -54,7 +55,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup
 } from './ssrTransformTransitionGroup'
-import { isSymbol, isObject, isArray } from '@vue/shared'
+import { isSymbol, isObject, isArray, extend } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -278,8 +279,8 @@ const vnodeDirectiveTransforms = {
 }
 
 function createVNodeSlotBranch(
-  props: ExpressionNode | undefined,
-  vForExp: ExpressionNode | undefined,
+  slotProps: ExpressionNode | undefined,
+  vFor: DirectiveNode | undefined,
   children: TemplateChildNode[],
   parentContext: TransformContext
 ): ReturnStatement {
@@ -300,32 +301,28 @@ function createVNodeSlotBranch(
   }
 
   // wrap the children with a wrapper template for proper children treatment.
+  // important: provide v-slot="props" and v-for="exp" on the wrapper for
+  // proper scope analysis
+  const wrapperProps: TemplateNode['props'] = []
+  if (slotProps) {
+    wrapperProps.push({
+      type: NodeTypes.DIRECTIVE,
+      name: 'slot',
+      exp: slotProps,
+      arg: undefined,
+      modifiers: [],
+      loc: locStub
+    })
+  }
+  if (vFor) {
+    wrapperProps.push(extend({}, vFor))
+  }
   const wrapperNode: TemplateNode = {
     type: NodeTypes.ELEMENT,
     ns: Namespaces.HTML,
     tag: 'template',
     tagType: ElementTypes.TEMPLATE,
-    isSelfClosing: false,
-    // important: provide v-slot="props" and v-for="exp" on the wrapper for
-    // proper scope analysis
-    props: [
-      {
-        type: NodeTypes.DIRECTIVE,
-        name: 'slot',
-        exp: props,
-        arg: undefined,
-        modifiers: [],
-        loc: locStub
-      },
-      {
-        type: NodeTypes.DIRECTIVE,
-        name: 'for',
-        exp: vForExp,
-        arg: undefined,
-        modifiers: [],
-        loc: locStub
-      }
-    ],
+    props: wrapperProps,
     children,
     loc: locStub,
     codegenNode: undefined
