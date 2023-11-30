@@ -21,6 +21,9 @@ export interface IRNode {
   loc: SourceLocation
 }
 
+// TODO refactor
+export type VaporHelper = keyof typeof import('../../runtime-vapor/src')
+
 export interface RootIRNode extends IRNode {
   type: IRNodeTypes.ROOT
   template: Array<TemplateFactoryIRNode | FragmentFactoryIRNode>
@@ -29,7 +32,7 @@ export interface RootIRNode extends IRNode {
   effect: Record<string /* expr */, OperationNode[]>
   operation: OperationNode[]
   helpers: Set<string>
-  vaporHelpers: Set<string>
+  vaporHelpers: Set<VaporHelper>
 }
 
 export interface TemplateFactoryIRNode extends IRNode {

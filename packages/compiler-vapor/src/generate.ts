@@ -4,31 +4,56 @@ import {
   type RootIRNode,
   IRNodeTypes,
   OperationNode,
+  VaporHelper,
 } from './ir'
 
 // remove when stable
 function checkNever(x: never): void {}
+
+export interface CodegenContext {
+  options: CodegenOptions
+  helpers: Set<string>
+  vaporHelpers: Set<string>
+  helper(name: string): string
+  vaporHelper(name: string): string
+}
+
+function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {
+  const { helpers, vaporHelpers } = ir
+  return {
+    options,
+    helpers,
+    vaporHelpers,
+    helper(name: string) {
+      helpers.add(name)
+      return name
+    },
+    vaporHelper(name: VaporHelper) {
+      vaporHelpers.add(name)
+      return name
+    },
+  }
+}
 
 // IR -> JS codegen
 export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
 ): CodegenResult {
+  const ctx = createCodegenContext(ir, options)
+  const { vaporHelper, helpers, vaporHelpers } = ctx
+
   let code = ''
   let preamble = ''
 
-  const { helpers, vaporHelpers } = ir
-
   ir.template.forEach((template, i) => {
     if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
-      preamble += `const t${i} = template(${JSON.stringify(
+      preamble += `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
         template.template,
       )})\n`
-      vaporHelpers.add('template')
     } else {
       // fragment
-      code += `const t0 = fragment()\n`
-      vaporHelpers.add('fragment')
+      code += `const t0 = ${vaporHelper('fragment')}()\n`
     }
   })
 
@@ -37,18 +62,18 @@ export function generate(
 
     const children = genChildren(ir.dynamic.children)
     if (children) {
-      code += `const ${children} = children(n${ir.dynamic.id})\n`
-      vaporHelpers.add('children')
+      code += `const ${children} = ${vaporHelper('children')}(n${
+        ir.dynamic.id
+      })\n`
     }
 
     for (const operation of ir.operation) {
-      code += genOperation(operation)
+      code += genOperation(operation, ctx)
     }
     for (const [_expr, operations] of Object.entries(ir.effect)) {
-      let scope = `effect(() => {\n`
-      vaporHelpers.add('effect')
+      let scope = `${vaporHelper('effect')}(() => {\n`
       for (const operation of operations) {
-        scope += genOperation(operation)
+        scope += genOperation(operation, ctx)
       }
       scope += '})\n'
       code += scope
@@ -69,7 +94,7 @@ export function generate(
   if (isSetupInlined) {
     code = `(() => {\n${code}\n})();`
   } else {
-    code = `${preamble}export function ${functionName}() {\n${code}\n}`
+    code = `${preamble}export function ${functionName}(_ctx) {\n${code}\n}`
   }
 
   return {
@@ -77,78 +102,67 @@ export function generate(
     ast: ir as any,
     preamble,
   }
+}
 
-  function genOperation(oper: OperationNode) {
-    let code = ''
-
-    // TODO: cache old value
-    switch (oper.type) {
-      case IRNodeTypes.SET_PROP: {
-        code = `setAttr(n${oper.element}, ${JSON.stringify(
-          oper.name,
-        )}, undefined, ${oper.value})\n`
-        vaporHelpers.add('setAttr')
-        break
-      }
-
-      case IRNodeTypes.SET_TEXT: {
-        code = `setText(n${oper.element}, undefined, ${oper.value})\n`
-        vaporHelpers.add('setText')
-        break
-      }
-
-      case IRNodeTypes.SET_EVENT: {
-        let value = oper.value
-        if (oper.modifiers.length) {
-          value = `withModifiers(${value}, ${genArrayExpression(
-            oper.modifiers,
-          )})`
-          vaporHelpers.add('withModifiers')
-        }
-        code = `on(n${oper.element}, ${JSON.stringify(oper.name)}, ${value})\n`
-        vaporHelpers.add('on')
-        break
-      }
-
-      case IRNodeTypes.SET_HTML: {
-        code = `setHtml(n${oper.element}, undefined, ${oper.value})\n`
-        vaporHelpers.add('setHtml')
-        break
-      }
-
-      case IRNodeTypes.CREATE_TEXT_NODE: {
-        code = `const n${oper.id} = createTextNode(${oper.value})\n`
-        vaporHelpers.add('createTextNode')
-        break
-      }
-
-      case IRNodeTypes.INSERT_NODE: {
-        const elements = ([] as number[]).concat(oper.element)
-        let element = elements.map((el) => `n${el}`).join(', ')
-        if (elements.length > 1) element = `[${element}]`
-        code = `insert(${element}, n${oper.parent}${`, n${oper.anchor}`})\n`
-        vaporHelpers.add('insert')
-        break
-      }
-      case IRNodeTypes.PREPEND_NODE: {
-        code = `prepend(n${oper.parent}, ${oper.elements
-          .map((el) => `n${el}`)
-          .join(', ')})\n`
-        vaporHelpers.add('prepend')
-        break
-      }
-      case IRNodeTypes.APPEND_NODE: {
-        code = `append(n${oper.parent}, ${oper.elements
-          .map((el) => `n${el}`)
-          .join(', ')})\n`
-        vaporHelpers.add('append')
-        break
-      }
-      default:
-        checkNever(oper)
+function genOperation(oper: OperationNode, { vaporHelper }: CodegenContext) {
+  // TODO: cache old value
+  switch (oper.type) {
+    case IRNodeTypes.SET_PROP: {
+      return `${vaporHelper('setAttr')}(n${oper.element}, ${JSON.stringify(
+        oper.name,
+      )}, undefined, ${oper.value})\n`
     }
 
-    return code
+    case IRNodeTypes.SET_TEXT: {
+      return `${vaporHelper('setText')}(n${oper.element}, undefined, ${
+        oper.value
+      })\n`
+    }
+
+    case IRNodeTypes.SET_EVENT: {
+      let value = oper.value
+      if (oper.modifiers.length) {
+        value = `${vaporHelper('withModifiers')}(${value}, ${genArrayExpression(
+          oper.modifiers,
+        )})`
+      }
+      return `${vaporHelper('on')}(n${oper.element}, ${JSON.stringify(
+        oper.name,
+      )}, ${value})\n`
+    }
+
+    case IRNodeTypes.SET_HTML: {
+      return `${vaporHelper('setHtml')}(n${oper.element}, undefined, ${
+        oper.value
+      })\n`
+    }
+
+    case IRNodeTypes.CREATE_TEXT_NODE: {
+      return `const n${oper.id} = ${vaporHelper('createTextNode')}(${
+        oper.value
+      })\n`
+    }
+
+    case IRNodeTypes.INSERT_NODE: {
+      const elements = ([] as number[]).concat(oper.element)
+      let element = elements.map((el) => `n${el}`).join(', ')
+      if (elements.length > 1) element = `[${element}]`
+      return `${vaporHelper('insert')}(${element}, n${
+        oper.parent
+      }${`, n${oper.anchor}`})\n`
+    }
+    case IRNodeTypes.PREPEND_NODE: {
+      return `${vaporHelper('prepend')}(n${oper.parent}, ${oper.elements
+        .map((el) => `n${el}`)
+        .join(', ')})\n`
+    }
+    case IRNodeTypes.APPEND_NODE: {
+      return `${vaporHelper('append')}(n${oper.parent}, ${oper.elements
+        .map((el) => `n${el}`)
+        .join(', ')})\n`
+    }
+    default:
+      checkNever(oper)
   }
 }
 
