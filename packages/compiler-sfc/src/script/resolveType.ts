@@ -725,7 +725,7 @@ export function registerTS(_loadTS: () => typeof TS) {
       ) {
         throw new Error(
           'Failed to load TypeScript, which is required for resolving imported types. ' +
-            'Please check "typescript" dependency is installed.'
+            'Please make sure "typescript" is installed as a project dependency.'
         )
       } else {
         throw new Error(
