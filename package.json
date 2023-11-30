@@ -1,7 +1,7 @@
 {
   "private": true,
-  "version": "3.3.8",
-  "packageManager": "pnpm@8.10.5",
+  "version": "3.3.9",
+  "packageManager": "pnpm@8.11.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -57,8 +57,8 @@
     "node": ">=18.12.0"
   },
   "devDependencies": {
-    "@babel/parser": "^7.23.3",
-    "@babel/types": "^7.23.3",
+    "@babel/parser": "^7.23.4",
+    "@babel/types": "^7.23.4",
     "@rollup/plugin-alias": "^5.0.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-json": "^6.0.1",
@@ -66,8 +66,8 @@
     "@rollup/plugin-replace": "^5.0.4",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.9.2",
-    "@typescript-eslint/parser": "^6.11.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/parser": "^6.13.0",
     "@vitest/coverage-istanbul": "^0.34.6",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
@@ -90,7 +90,7 @@
     "prettier": "^3.1.0",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.2",
-    "puppeteer": "~21.5.1",
+    "puppeteer": "~21.5.2",
     "rimraf": "^5.0.5",
     "rollup": "^4.1.4",
     "rollup-plugin-dts": "^6.1.0",
@@ -102,7 +102,7 @@
     "terser": "^5.22.0",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
-    "tsx": "^4.1.4",
+    "tsx": "^4.5.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "vitest": "^0.34.6"
