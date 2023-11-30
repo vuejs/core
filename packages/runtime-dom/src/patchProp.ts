@@ -113,8 +113,11 @@ function shouldSetAsProp(
   // #8780 the width or heigth of embedded tags must be set as attribute
   if (key === 'width' || key === 'height') {
     const tag = el.tagName
-    return (
-      tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS' || tag === 'SOURCE'
+    return !(
+      tag === 'IMG' ||
+      tag === 'VIDEO' ||
+      tag === 'CANVAS' ||
+      tag === 'SOURCE'
     )
   }
 
