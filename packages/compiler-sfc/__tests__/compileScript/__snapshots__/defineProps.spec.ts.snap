@@ -52,6 +52,51 @@ return {  }
 })"
 `;
 
+exports[`defineProps > should escape names w/ special symbols 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    \\"spa ce\\": { type: null, required: true },
+    \\"exclamation!mark\\": { type: null, required: true },
+    \\"double\\\\\\"quote\\": { type: null, required: true },
+    \\"hash#tag\\": { type: null, required: true },
+    \\"dollar$sign\\": { type: null, required: true },
+    \\"percentage%sign\\": { type: null, required: true },
+    \\"amper&sand\\": { type: null, required: true },
+    \\"single'quote\\": { type: null, required: true },
+    \\"round(brack)ets\\": { type: null, required: true },
+    \\"aste*risk\\": { type: null, required: true },
+    \\"pl+us\\": { type: null, required: true },
+    \\"com,ma\\": { type: null, required: true },
+    \\"do.t\\": { type: null, required: true },
+    \\"sla/sh\\": { type: null, required: true },
+    \\"co:lon\\": { type: null, required: true },
+    \\"semi;colon\\": { type: null, required: true },
+    \\"angle<brack>ets\\": { type: null, required: true },
+    \\"equal=sign\\": { type: null, required: true },
+    \\"question?mark\\": { type: null, required: true },
+    \\"at@sign\\": { type: null, required: true },
+    \\"square[brack]ets\\": { type: null, required: true },
+    \\"back\\\\\\\\slash\\": { type: null, required: true },
+    \\"ca^ret\\": { type: null, required: true },
+    \\"back\`tick\\": { type: null, required: true },
+    \\"curly{bra}ces\\": { type: null, required: true },
+    \\"pi|pe\\": { type: null, required: true },
+    \\"til~de\\": { type: null, required: true },
+    \\"da-sh\\": { type: null, required: true }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+    
+    
+return {  }
+}
+
+})"
+`;
+
 exports[`defineProps > w/ TS assertion 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
@@ -232,6 +277,7 @@ export default /*#__PURE__*/_defineComponent({
     alias: { type: Array, required: true },
     method: { type: Function, required: true },
     symbol: { type: Symbol, required: true },
+    error: { type: Error, required: true },
     extract: { type: Number, required: true },
     exclude: { type: [Number, Boolean], required: true },
     uppercase: { type: String, required: true },

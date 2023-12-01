@@ -238,8 +238,8 @@ export function createTransformContext(
       const removalIndex = node
         ? list.indexOf(node)
         : context.currentNode
-        ? context.childIndex
-        : -1
+          ? context.childIndex
+          : -1
       /* istanbul ignore if */
       if (__DEV__ && removalIndex < 0) {
         throw new Error(`node being removed is not a child of current parent`)
@@ -334,6 +334,7 @@ export function transform(root: RootNode, options: TransformOptions) {
   root.hoists = context.hoists
   root.temps = context.temps
   root.cached = context.cached
+  root.transformed = true
 
   if (__COMPAT__) {
     root.filters = [...context.filters!]

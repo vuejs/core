@@ -8,7 +8,8 @@ import {
   defineSlots,
   VNode,
   Ref,
-  defineModel
+  defineModel,
+  toRefs
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -20,6 +21,7 @@ describe('defineProps w/ type declaration', () => {
     foo: string
     bool?: boolean
     boolAndUndefined: boolean | undefined
+    file?: File | File[]
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
@@ -108,6 +110,7 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
     defineProps<{
       n?: number
       bool?: boolean
+      s?: string
 
       generic1?: T[] | { x: T }
       generic2?: { x: T }
@@ -126,6 +129,10 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
   )
 
   res.n + 1
+  // @ts-expect-error should be readonly
+  res.n++
+  // @ts-expect-error should be readonly
+  res.s = ''
 
   expectType<T[] | { x: T }>(res.generic1)
   expectType<{ x: T }>(res.generic2)
@@ -327,4 +334,12 @@ describe('useAttrs', () => {
 describe('useSlots', () => {
   const slots = useSlots()
   expectType<Slots>(slots)
+})
+
+// #6420
+describe('toRefs w/ type declaration', () => {
+  const props = defineProps<{
+    file?: File | File[]
+  }>()
+  expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
 })

@@ -18,7 +18,7 @@ function parseWithExpressionTransform(
   template: string,
   options: CompilerOptions = {}
 ) {
-  const ast = parse(template)
+  const ast = parse(template, options)
   transform(ast, {
     prefixIdentifiers: true,
     nodeTransforms: [transformIf, transformExpression],
@@ -128,51 +128,24 @@ describe('compiler: expression transform', () => {
         {
           content: `_ctx.foo`,
           loc: {
-            source: `foo`,
-            start: {
-              offset: 3,
-              line: 1,
-              column: 4
-            },
-            end: {
-              offset: 6,
-              line: 1,
-              column: 7
-            }
+            start: { offset: 3, line: 1, column: 4 },
+            end: { offset: 6, line: 1, column: 7 }
           }
         },
         `(`,
         {
           content: `_ctx.baz`,
           loc: {
-            source: `baz`,
-            start: {
-              offset: 7,
-              line: 1,
-              column: 8
-            },
-            end: {
-              offset: 10,
-              line: 1,
-              column: 11
-            }
+            start: { offset: 7, line: 1, column: 8 },
+            end: { offset: 10, line: 1, column: 11 }
           }
         },
         ` + 1, { key: `,
         {
           content: `_ctx.kuz`,
           loc: {
-            source: `kuz`,
-            start: {
-              offset: 23,
-              line: 1,
-              column: 24
-            },
-            end: {
-              offset: 26,
-              line: 1,
-              column: 27
-            }
+            start: { offset: 23, line: 1, column: 24 },
+            end: { offset: 26, line: 1, column: 27 }
           }
         },
         ` })`
@@ -187,6 +160,14 @@ describe('compiler: expression transform', () => {
     expect(node.content).toMatchObject({
       type: NodeTypes.COMPOUND_EXPRESSION,
       children: [{ content: `Math` }, `.`, { content: `max` }, `(1, 2)`]
+    })
+
+    expect(
+      (parseWithExpressionTransform(`{{ new Error() }}`) as InterpolationNode)
+        .content
+    ).toMatchObject({
+      type: NodeTypes.COMPOUND_EXPRESSION,
+      children: ['new ', { content: 'Error' }, '()']
     })
   })
 
@@ -506,7 +487,8 @@ describe('compiler: expression transform', () => {
       data: BindingTypes.DATA,
       options: BindingTypes.OPTIONS,
       reactive: BindingTypes.SETUP_REACTIVE_CONST,
-      literal: BindingTypes.LITERAL_CONST
+      literal: BindingTypes.LITERAL_CONST,
+      isNaN: BindingTypes.SETUP_REF
     }
 
     function compileWithBindingMetadata(
@@ -522,19 +504,56 @@ describe('compiler: expression transform', () => {
 
     test('non-inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ data }} {{ options }}</div>`
+        `<div>{{ props }} {{ setup }} {{ data }} {{ options }} {{ isNaN }}</div>`
       )
       expect(code).toMatch(`$props.props`)
       expect(code).toMatch(`$setup.setup`)
+      expect(code).toMatch(`$setup.isNaN`)
       expect(code).toMatch(`$data.data`)
       expect(code).toMatch(`$options.options`)
       expect(code).toMatch(`_ctx, _cache, $props, $setup, $data, $options`)
       expect(code).toMatchSnapshot()
     })
 
+    test('should not prefix temp variable of for...in', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x in list) {
+            log(x)
+          }
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not prefix temp variable of for...of', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (const x of list) {
+            log(x)
+          }
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.x`)
+      expect(code).toMatchSnapshot()
+    })
+
+    test('should not prefix temp variable of for loop', () => {
+      const { code } = compileWithBindingMetadata(
+        `<div @click="() => {
+          for (let i = 0; i < list.length; i++) {
+            log(i)
+          }
+        }"/>`
+      )
+      expect(code).not.toMatch(`_ctx.i`)
+      expect(code).toMatchSnapshot()
+    })
+
     test('inline mode', () => {
       const { code } = compileWithBindingMetadata(
-        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }}</div>`,
+        `<div>{{ props }} {{ setup }} {{ setupConst }} {{ data }} {{ options }} {{ isNaN }}</div>`,
         { inline: true }
       )
       expect(code).toMatch(`__props.props`)
@@ -542,6 +561,7 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(`_toDisplayString(setupConst)`)
       expect(code).toMatch(`_ctx.data`)
       expect(code).toMatch(`_ctx.options`)
+      expect(code).toMatch(`isNaN.value`)
       expect(code).toMatchSnapshot()
     })
 

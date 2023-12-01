@@ -38,11 +38,11 @@ export const DOMDirectiveTransforms: Record<string, DirectiveTransform> = {
 }
 
 export function compile(
-  template: string,
+  src: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
   return baseCompile(
-    template,
+    src,
     extend({}, parserOptions, options, {
       nodeTransforms: [
         // ignore <script> and <tag>

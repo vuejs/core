@@ -80,32 +80,16 @@ describe('compiler: transform v-bind', () => {
         content: `id`,
         isStatic: true,
         loc: {
-          start: {
-            line: 1,
-            column: 13,
-            offset: 12
-          },
-          end: {
-            line: 1,
-            column: 15,
-            offset: 14
-          }
+          start: { line: 1, column: 13, offset: 12 },
+          end: { line: 1, column: 15, offset: 14 }
         }
       },
       value: {
         content: `id`,
         isStatic: false,
         loc: {
-          start: {
-            line: 1,
-            column: 1,
-            offset: 0
-          },
-          end: {
-            line: 1,
-            column: 1,
-            offset: 0
-          }
+          start: { line: 1, column: 13, offset: 12 },
+          end: { line: 1, column: 15, offset: 14 }
         }
       }
     })

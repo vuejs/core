@@ -9,6 +9,15 @@ import { execa } from 'execa'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 
+/**
+ * @typedef {{
+ *   name: string
+ *   version: string
+ *   dependencies?: { [dependenciesPackageName: string]: string }
+ *   peerDependencies?: { [peerDependenciesPackageName: string]: string }
+ * }} Package
+ */
+
 let versionUpdated = false
 
 const { prompt } = enquirer
@@ -25,6 +34,7 @@ const args = minimist(process.argv.slice(2), {
 
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
 const isDryRun = args.dry
+/** @type {boolean | undefined} */
 let skipTests = args.skipTests
 const skipBuild = args.skipBuild
 const isCanary = args.canary
@@ -33,9 +43,17 @@ const skipGit = args.skipGit || args.canary
 
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
-  .filter(p => !p.endsWith('.ts') && !p.startsWith('.'))
+  .filter(p => {
+    const pkgRoot = path.resolve(__dirname, '../packages', p)
+    if (fs.statSync(pkgRoot).isDirectory()) {
+      const pkg = JSON.parse(
+        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8')
+      )
+      return !pkg.private
+    }
+  })
 
-const isCorePackage = pkgName => {
+const isCorePackage = (/** @type {string} */ pkgName) => {
   if (!pkgName) return
 
   if (pkgName === 'vue' || pkgName === '@vue/compat') {
@@ -48,7 +66,7 @@ const isCorePackage = pkgName => {
   )
 }
 
-const renamePackageToCanary = pkgName => {
+const renamePackageToCanary = (/** @type {string} */ pkgName) => {
   if (pkgName === 'vue') {
     return '@vue/canary'
   }
@@ -60,25 +78,37 @@ const renamePackageToCanary = pkgName => {
   return pkgName
 }
 
-const keepThePackageName = pkgName => pkgName
+const keepThePackageName = (/** @type {string} */ pkgName) => pkgName
 
+/** @type {string[]} */
 const skippedPackages = []
 
+/** @type {ReadonlyArray<import('semver').ReleaseType>} */
 const versionIncrements = [
   'patch',
   'minor',
   'major',
-  ...(preId ? ['prepatch', 'preminor', 'premajor', 'prerelease'] : [])
+  ...(preId
+    ? /** @type {const} */ (['prepatch', 'preminor', 'premajor', 'prerelease'])
+    : [])
 ]
 
-const inc = i => semver.inc(currentVersion, i, preId)
-const run = (bin, args, opts = {}) =>
-  execa(bin, args, { stdio: 'inherit', ...opts })
-const dryRun = (bin, args, opts = {}) =>
-  console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
+const inc = (/** @type {import('semver').ReleaseType} */ i) =>
+  semver.inc(currentVersion, i, preId)
+const run = async (
+  /** @type {string} */ bin,
+  /** @type {ReadonlyArray<string>} */ args,
+  /** @type {import('execa').Options} */ opts = {}
+) => execa(bin, args, { stdio: 'inherit', ...opts })
+const dryRun = async (
+  /** @type {string} */ bin,
+  /** @type {ReadonlyArray<string>} */ args,
+  /** @type {import('execa').Options} */ opts = {}
+) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
-const getPkgRoot = pkg => path.resolve(__dirname, '../packages/' + pkg)
-const step = msg => console.log(pico.cyan(msg))
+const getPkgRoot = (/** @type {string} */ pkg) =>
+  path.resolve(__dirname, '../packages/' + pkg)
+const step = (/** @type {string} */ msg) => console.log(pico.cyan(msg))
 
 async function main() {
   if (!(await isInSyncWithRemote())) {
@@ -129,7 +159,7 @@ async function main() {
           semver.inc(latestSameDayPatch, 'prerelease', args.tag)
         )
       }
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       if (/E404/.test(e.message)) {
         // the first patch version on that day
       } else {
@@ -142,7 +172,7 @@ async function main() {
 
   if (!targetVersion) {
     // no explicit version, offer suggestions
-    // @ts-ignore
+    /** @type {{ release: string }} */
     const { release } = await prompt({
       type: 'select',
       name: 'release',
@@ -151,16 +181,16 @@ async function main() {
     })
 
     if (release === 'custom') {
+      /** @type {{ version: string }} */
       const result = await prompt({
         type: 'input',
         name: 'version',
         message: 'Input custom version',
         initial: currentVersion
       })
-      // @ts-ignore
       targetVersion = result.version
     } else {
-      targetVersion = release.match(/\((.*)\)/)[1]
+      targetVersion = release.match(/\((.*)\)/)?.[1] ?? ''
     }
   }
 
@@ -175,7 +205,7 @@ async function main() {
         : `Releasing v${targetVersion}...`
     )
   } else {
-    // @ts-ignore
+    /** @type {{ yes: boolean }} */
     const { yes: confirmRelease } = await prompt({
       type: 'confirm',
       name: 'yes',
@@ -193,7 +223,7 @@ async function main() {
     skipTests ||= isCIPassed
 
     if (isCIPassed && !skipPrompts) {
-      // @ts-ignore
+      /** @type {{ yes: boolean }} */
       const { yes: promptSkipTests } = await prompt({
         type: 'confirm',
         name: 'yes',
@@ -238,7 +268,7 @@ async function main() {
   await run(`pnpm`, ['run', 'changelog'])
 
   if (!skipPrompts) {
-    // @ts-ignore
+    /** @type {{ yes: boolean }} */
     const { yes: changelogOk } = await prompt({
       type: 'confirm',
       name: 'yes',
@@ -335,10 +365,22 @@ async function isInSyncWithRemote() {
       `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
     )
     const data = await res.json()
-    return data.sha === (await getSha())
+    if (data.sha === (await getSha())) {
+      return true
+    } else {
+      /** @type {{ yes: boolean }} */
+      const { yes } = await prompt({
+        type: 'confirm',
+        name: 'yes',
+        message: pico.red(
+          `Local HEAD is not up-to-date with remote. Are you sure you want to continue?`
+        )
+      })
+      return yes
+    }
   } catch (e) {
     console.error(
-      'Failed to check whether local HEAD is up-to-date with remote.'
+      pico.red('Failed to check whether local HEAD is up-to-date with remote.')
     )
     return false
   }
@@ -352,6 +394,10 @@ async function getBranch() {
   return (await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD'])).stdout
 }
 
+/**
+ * @param {string} version
+ * @param {(pkgName: string) => string} getNewPackageName
+ */
 function updateVersions(version, getNewPackageName = keepThePackageName) {
   // 1. update root package.json
   updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
@@ -361,23 +407,34 @@ function updateVersions(version, getNewPackageName = keepThePackageName) {
   )
 }
 
+/**
+ * @param {string} pkgRoot
+ * @param {string} version
+ * @param {(pkgName: string) => string} getNewPackageName
+ */
 function updatePackage(pkgRoot, version, getNewPackageName) {
   const pkgPath = path.resolve(pkgRoot, 'package.json')
+  /** @type {Package} */
   const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
   pkg.name = getNewPackageName(pkg.name)
   pkg.version = version
-  updateDeps(pkg, 'dependencies', version, getNewPackageName)
-  updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
+  if (isCanary) {
+    updateDeps(pkg, 'dependencies', version, getNewPackageName)
+    updateDeps(pkg, 'peerDependencies', version, getNewPackageName)
+  }
   fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
+/**
+ * @param {Package} pkg
+ * @param {'dependencies' | 'peerDependencies'} depType
+ * @param {string} version
+ * @param {(pkgName: string) => string} getNewPackageName
+ */
 function updateDeps(pkg, depType, version, getNewPackageName) {
   const deps = pkg[depType]
   if (!deps) return
   Object.keys(deps).forEach(dep => {
-    if (deps[dep] === 'workspace:*') {
-      return
-    }
     if (isCorePackage(dep)) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
@@ -389,14 +446,13 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
   })
 }
 
+/**
+ * @param {string} pkgName
+ * @param {string} version
+ * @param {ReadonlyArray<string>} additionalFlags
+ */
 async function publishPackage(pkgName, version, additionalFlags) {
   if (skippedPackages.includes(pkgName)) {
-    return
-  }
-  const pkgRoot = getPkgRoot(pkgName)
-  const pkgPath = path.resolve(pkgRoot, 'package.json')
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'))
-  if (pkg.private) {
     return
   }
 
@@ -413,6 +469,8 @@ async function publishPackage(pkgName, version, additionalFlags) {
 
   step(`Publishing ${pkgName}...`)
   try {
+    // Don't change the package manager here as we rely on pnpm to handle
+    // workspace:* deps
     await run(
       'pnpm',
       [
@@ -423,12 +481,12 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...additionalFlags
       ],
       {
-        cwd: pkgRoot,
+        cwd: getPkgRoot(pkgName),
         stdio: 'pipe'
       }
     )
     console.log(pico.green(`Successfully published ${pkgName}@${version}`))
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     if (e.stderr.match(/previously published/)) {
       console.log(pico.red(`Skipping already published: ${pkgName}`))
     } else {

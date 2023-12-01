@@ -1,5 +1,4 @@
 import {
-  SourceLocation,
   Position,
   ElementNode,
   NodeTypes,
@@ -37,7 +36,7 @@ import {
   GUARD_REACTIVE_PROPS,
   WITH_MEMO
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
+import { isString, isObject, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
@@ -45,18 +44,20 @@ import { Expression } from '@babel/types'
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
-export const isBuiltInType = (tag: string, expected: string): boolean =>
-  tag === expected || tag === hyphenate(expected)
-
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Teleport')) {
-    return TELEPORT
-  } else if (isBuiltInType(tag, 'Suspense')) {
-    return SUSPENSE
-  } else if (isBuiltInType(tag, 'KeepAlive')) {
-    return KEEP_ALIVE
-  } else if (isBuiltInType(tag, 'BaseTransition')) {
-    return BASE_TRANSITION
+  switch (tag) {
+    case 'Teleport':
+    case 'teleport':
+      return TELEPORT
+    case 'Suspense':
+    case 'suspense':
+      return SUSPENSE
+    case 'KeepAlive':
+    case 'keep-alive':
+      return KEEP_ALIVE
+    case 'BaseTransition':
+    case 'base-transition':
+      return BASE_TRANSITION
   }
 }
 
@@ -64,7 +65,7 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const enum MemberExpLexState {
+enum MemberExpLexState {
   inMemberExp,
   inBrackets,
   inParens,
@@ -174,38 +175,17 @@ export const isMemberExpression = __BROWSER__
   ? isMemberExpressionBrowser
   : isMemberExpressionNode
 
-export function getInnerRange(
-  loc: SourceLocation,
-  offset: number,
-  length: number
-): SourceLocation {
-  __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.slice(offset, offset + length)
-  const newLoc: SourceLocation = {
-    source,
-    start: advancePositionWithClone(loc.start, loc.source, offset),
-    end: loc.end
-  }
-
-  if (length != null) {
-    __TEST__ && assert(offset + length <= loc.source.length)
-    newLoc.end = advancePositionWithClone(
-      loc.start,
-      loc.source,
-      offset + length
-    )
-  }
-
-  return newLoc
-}
-
 export function advancePositionWithClone(
   pos: Position,
   source: string,
   numberOfCharacters: number = source.length
 ): Position {
   return advancePositionWithMutation(
-    extend({}, pos),
+    {
+      offset: pos.offset,
+      line: pos.line,
+      column: pos.column
+    },
     source,
     numberOfCharacters
   )
@@ -519,3 +499,5 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
     return node
   }
 }
+
+export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/

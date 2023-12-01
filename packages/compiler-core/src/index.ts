@@ -10,7 +10,7 @@ export {
   type BindingMetadata,
   BindingTypes
 } from './options'
-export { baseParse, TextModes } from './parse'
+export { baseParse } from './parser'
 export {
   transform,
   type TransformContext,

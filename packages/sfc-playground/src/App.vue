@@ -25,9 +25,13 @@ if (hash.startsWith('__SSR__')) {
 
 const store = new ReplStore({
   serializedState: hash,
+  productionMode: !useDevMode.value,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`,
+  defaultVueRuntimeProdURL: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
   defaultVueServerRendererURL: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`
@@ -38,7 +42,7 @@ const sfcOptions: SFCOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
-    reactivityTransform: true
+    propsDestructure: true
   },
   style: {
     isProd: !useDevMode.value
@@ -64,7 +68,7 @@ function toggleDevMode() {
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
       !dev
-  store.setFiles(store.getFiles())
+  store.toggleProduction()
 }
 
 function toggleSSR() {

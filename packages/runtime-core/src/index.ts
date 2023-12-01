@@ -361,7 +361,7 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-export { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
 export type { CompatVue } from './compat/global'
 export type { LegacyConfig } from './compat/globalConfig'
 
@@ -393,3 +393,7 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
+
+export const DeprecationTypes = (
+  __COMPAT__ ? _DeprecationTypes : null
+) as typeof _DeprecationTypes

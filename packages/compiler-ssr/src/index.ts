@@ -11,7 +11,8 @@ import {
   noopDirectiveTransform,
   transformBind,
   transformStyle,
-  transformOn
+  transformOn,
+  RootNode
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
@@ -28,12 +29,11 @@ import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttr
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
 export function compile(
-  template: string,
+  source: string | RootNode,
   options: CompilerOptions = {}
 ): CodegenResult {
   options = {
     ...options,
-    // apply DOM-specific parsing options
     ...parserOptions,
     ssr: true,
     inSSR: true,
@@ -45,7 +45,7 @@ export function compile(
     hoistStatic: false
   }
 
-  const ast = baseParse(template, options)
+  const ast = typeof source === 'string' ? baseParse(source, options) : source
 
   // Save raw options for AST. This is needed when performing sub-transforms
   // on slot vnode branches.
@@ -72,7 +72,7 @@ export function compile(
       // reusing core v-bind
       bind: transformBind,
       on: transformOn,
-      // model and show has dedicated SSR handling
+      // model and show have dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
       // the following are ignored during SSR
