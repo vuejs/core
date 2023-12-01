@@ -5,23 +5,26 @@ import {
   NewlineType,
   advancePositionWithMutation,
   locStub,
+  NodeTypes,
+  BindingTypes,
 } from '@vue/compiler-dom'
 import {
-  type DynamicChildren,
+  type IRDynamicChildren,
   type RootIRNode,
   IRNodeTypes,
   OperationNode,
   VaporHelper,
-  IRNode,
+  BaseIRNode,
+  IRExpression,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
+import { isString } from '@vue/shared'
 
 // remove when stable
 // @ts-expect-error
 function checkNever(x: never): never {}
 
-export interface CodegenContext
-  extends Omit<Required<CodegenOptions>, 'bindingMetadata' | 'inline'> {
+export interface CodegenContext extends Required<CodegenOptions> {
   source: string
   code: string
   line: number
@@ -30,8 +33,8 @@ export interface CodegenContext
   indentLevel: number
   map?: SourceMapGenerator
 
-  push(code: string, newlineIndex?: number, node?: IRNode): void
-  pushWithNewline(code: string, newlineIndex?: number, node?: IRNode): void
+  push(code: string, newlineIndex?: number, node?: BaseIRNode): void
+  pushWithNewline(code: string, newlineIndex?: number, node?: BaseIRNode): void
   indent(): void
   deindent(): void
   newline(): void
@@ -57,6 +60,8 @@ function createCodegenContext(
     ssr = false,
     isTS = false,
     inSSR = false,
+    inline = false,
+    bindingMetadata = {},
   }: CodegenOptions,
 ) {
   const { helpers, vaporHelpers } = ir
@@ -73,6 +78,8 @@ function createCodegenContext(
     ssr,
     isTS,
     inSSR,
+    bindingMetadata,
+    inline,
 
     source: ir.source,
     code: ``,
@@ -205,7 +212,7 @@ export function generate(
   if (isSetupInlined) {
     push(`(() => {`)
   } else {
-    push(`export function ${functionName}(_ctx) {`)
+    pushWithNewline(`export function ${functionName}(_ctx) {`)
   }
   indent()
 
@@ -239,7 +246,7 @@ export function generate(
     for (const operation of ir.operation) {
       genOperation(operation, ctx)
     }
-    for (const [_expr, operations] of Object.entries(ir.effect)) {
+    for (const { operations } of ir.effect) {
       pushWithNewline(`${vaporHelper('effect')}(() => {`)
       indent()
       for (const operation of operations) {
@@ -279,6 +286,8 @@ export function generate(
       NewlineType.End,
     )
 
+  console.log(ctx.code)
+
   return {
     code: ctx.code,
     ast: ir as any,
@@ -287,24 +296,25 @@ export function generate(
   }
 }
 
-function genOperation(
-  oper: OperationNode,
-  { vaporHelper, pushWithNewline }: CodegenContext,
-) {
+function genOperation(oper: OperationNode, context: CodegenContext) {
+  const { vaporHelper, pushWithNewline } = context
   // TODO: cache old value
   switch (oper.type) {
     case IRNodeTypes.SET_PROP: {
       pushWithNewline(
-        `${vaporHelper('setAttr')}(n${oper.element}, ${JSON.stringify(
+        `${vaporHelper('setAttr')}(n${oper.element}, ${processExpression(
           oper.name,
-        )}, undefined, ${oper.value})`,
+          context,
+        )}, undefined, ${processExpression(oper.value, context)})`,
       )
       return
     }
 
     case IRNodeTypes.SET_TEXT: {
       pushWithNewline(
-        `${vaporHelper('setText')}(n${oper.element}, undefined, ${oper.value})`,
+        `${vaporHelper('setText')}(n${
+          oper.element
+        }, undefined, ${processExpression(oper.value, context)})`,
       )
       return
     }
@@ -312,28 +322,34 @@ function genOperation(
     case IRNodeTypes.SET_EVENT: {
       let value = oper.value
       if (oper.modifiers.length) {
-        value = `${vaporHelper('withModifiers')}(${value}, ${genArrayExpression(
-          oper.modifiers,
-        )})`
+        value = `${vaporHelper('withModifiers')}(${processExpression(
+          value,
+          context,
+        )}, ${genArrayExpression(oper.modifiers)})`
       }
       pushWithNewline(
-        `${vaporHelper('on')}(n${oper.element}, ${JSON.stringify(
+        `${vaporHelper('on')}(n${oper.element}, ${processExpression(
           oper.name,
-        )}, ${value})`,
+          context,
+        )}, ${processExpression(value, context)})`,
       )
       return
     }
 
     case IRNodeTypes.SET_HTML: {
       pushWithNewline(
-        `${vaporHelper('setHtml')}(n${oper.element}, undefined, ${oper.value})`,
+        `${vaporHelper('setHtml')}(n${
+          oper.element
+        }, undefined, ${processExpression(oper.value, context)})`,
       )
       return
     }
 
     case IRNodeTypes.CREATE_TEXT_NODE: {
       pushWithNewline(
-        `const n${oper.id} = ${vaporHelper('createTextNode')}(${oper.value})`,
+        `const n${oper.id} = ${vaporHelper(
+          'createTextNode',
+        )}(${processExpression(oper.value, context)})`,
       )
       return
     }
@@ -370,7 +386,7 @@ function genOperation(
   }
 }
 
-function genChildren(children: DynamicChildren) {
+function genChildren(children: IRDynamicChildren) {
   let code = ''
   // TODO
   let offset = 0
@@ -399,4 +415,36 @@ function genChildren(children: DynamicChildren) {
 // TODO: other types (not only string)
 function genArrayExpression(elements: string[]) {
   return `[${elements.map((it) => `"${it}"`).join(', ')}]`
+}
+
+function processExpression(
+  exp: IRExpression,
+  { inline, prefixIdentifiers, bindingMetadata, vaporHelper }: CodegenContext,
+) {
+  if (isString(exp)) return exp
+
+  let content = ''
+  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
+    content = exp.content
+    if (exp.isStatic) {
+      return JSON.stringify(content)
+    }
+  } else {
+    // TODO NodeTypes.COMPOUND_EXPRESSION
+  }
+
+  switch (bindingMetadata[content]) {
+    case BindingTypes.SETUP_REF:
+      content += '.value'
+      break
+    case BindingTypes.SETUP_MAYBE_REF:
+      content = `${vaporHelper('unref')}(${content})`
+      break
+  }
+
+  if (prefixIdentifiers && !inline) {
+    content = `_ctx.${content}`
+  }
+
+  return content
 }
