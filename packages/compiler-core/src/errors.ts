@@ -90,6 +90,7 @@ export enum ErrorCodes {
   X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
+  X_VNODE_HOOKS,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
@@ -98,7 +99,6 @@ export enum ErrorCodes {
   X_SCOPE_ID_NOT_SUPPORTED,
 
   // deprecations
-  DEPRECATION_VNODE_HOOKS,
   DEPRECATION_V_IS,
 
   // Special value for higher-order compilers to pick up the last code
@@ -176,6 +176,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_MODEL_ON_PROPS]: `v-model cannot be used on a prop, because local prop bindings are not writable.\nUse a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
+  [ErrorCodes.X_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support will be removed in 3.4.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
@@ -184,7 +185,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
   // deprecations
-  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support will be removed in 3.4.`,
   [ErrorCodes.DEPRECATION_V_IS]: `v-is="component-name" has been deprecated. Use is="vue:component-name" instead. v-is support will be removed in 3.4.`,
 
   // just to fulfill types

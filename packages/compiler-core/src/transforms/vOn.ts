@@ -44,9 +44,7 @@ export const transformOn: DirectiveTransform = (
     if (arg.isStatic) {
       let rawName = arg.content
       if (__DEV__ && rawName.startsWith('vnode')) {
-        context.onWarn(
-          createCompilerError(ErrorCodes.DEPRECATION_VNODE_HOOKS, arg.loc)
-        )
+        context.onError(createCompilerError(ErrorCodes.X_VNODE_HOOKS, arg.loc))
       }
       if (rawName.startsWith('vue:')) {
         rawName = `vnode-${rawName.slice(4)}`
