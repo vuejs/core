@@ -24,6 +24,7 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -104,7 +105,8 @@ export function parse(
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
-    compiler = CompilerDOM
+    compiler = CompilerDOM,
+    parseExpressions = true
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -130,6 +132,7 @@ export function parse(
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
+    prefixIdentifiers: parseExpressions,
     onError: e => {
       errors.push(e)
     }

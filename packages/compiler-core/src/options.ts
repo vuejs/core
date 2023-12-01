@@ -86,6 +86,17 @@ export interface ParserOptions
    * This defaults to `true` in development and `false` in production builds.
    */
   comments?: boolean
+  /**
+   * Parse JavaScript expressions with Babel.
+   * @default false
+   */
+  prefixIdentifiers?: boolean
+  /**
+   * A list of parser plugins to enable for `@babel/parser`, which is used to
+   * parse expressions in bindings and interpolations.
+   * https://babeljs.io/docs/en/next/babel-parser#plugins
+   */
+  expressionPlugins?: ParserPlugin[]
 }
 
 export type HoistTransform = (
