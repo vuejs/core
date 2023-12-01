@@ -2,11 +2,13 @@ import {
   type CodegenOptions,
   type CodegenResult,
   type Position,
+  type SourceLocation,
   NewlineType,
   advancePositionWithMutation,
   locStub,
   NodeTypes,
   BindingTypes,
+  isSimpleIdentifier,
 } from '@vue/compiler-dom'
 import {
   type IRDynamicChildren,
@@ -14,7 +16,6 @@ import {
   IRNodeTypes,
   OperationNode,
   VaporHelper,
-  BaseIRNode,
   IRExpression,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
@@ -36,12 +37,14 @@ export interface CodegenContext extends Required<CodegenOptions> {
   push(
     code: string,
     newlineIndex?: number,
-    node?: Pick<BaseIRNode, 'loc'>,
+    loc?: SourceLocation,
+    name?: string,
   ): void
   pushWithNewline(
     code: string,
     newlineIndex?: number,
-    node?: Pick<BaseIRNode, 'loc'>,
+    loc?: SourceLocation,
+    name?: string,
   ): void
   indent(): void
   deindent(): void
@@ -106,20 +109,11 @@ function createCodegenContext(
       vaporHelpers.add(name)
       return `_${name}`
     },
-    push(code, newlineIndex = NewlineType.None, node) {
+    push(code, newlineIndex = NewlineType.None, loc, name) {
       context.code += code
       if (!__BROWSER__ && context.map) {
-        if (node) {
-          // TODO
-          let name
-          // if (node.type === NodeTypes.SIMPLE_EXPRESSION && !node.isStatic) {
-          //   const content = node.content.replace(/^_ctx\./, '')
-          //   if (content !== node.content && isSimpleIdentifier(content)) {
-          //     name = content
-          //   }
-          // }
-          addMapping(node.loc.start, name)
-        }
+        if (loc) addMapping(loc.start, name)
+
         if (newlineIndex === NewlineType.Unknown) {
           // multiple newlines, full iteration
           advancePositionWithMutation(context, code)
@@ -155,8 +149,8 @@ function createCodegenContext(
             context.column = code.length - newlineIndex
           }
         }
-        if (node && node.loc !== locStub) {
-          addMapping(node.loc.end)
+        if (loc && loc !== locStub) {
+          addMapping(loc.end)
         }
       }
     },
@@ -427,7 +421,8 @@ function genExpression(
   // TODO NodeTypes.COMPOUND_EXPRESSION
   if (exp.type === NodeTypes.COMPOUND_EXPRESSION) return
 
-  let content = exp.content
+  let { content } = exp
+  let name: string | undefined
 
   if (exp.isStatic) {
     content = JSON.stringify(content)
@@ -441,9 +436,10 @@ function genExpression(
         break
     }
     if (prefixIdentifiers && !inline) {
+      if (isSimpleIdentifier(content)) name = content
       content = `_ctx.${content}`
     }
   }
 
-  push(content, NewlineType.None, exp)
+  push(content, NewlineType.None, exp.loc, name)
 }
