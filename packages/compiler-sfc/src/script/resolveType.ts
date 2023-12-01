@@ -140,9 +140,9 @@ function innerResolveTypeElements(
 ): ResolvedElements {
   switch (node.type) {
     case 'TSTypeLiteral':
-      return typeElementsToMap(ctx, node.members, scope)
+      return typeElementsToMap(ctx, node.members, scope, typeParameters)
     case 'TSInterfaceDeclaration':
-      return resolveInterfaceMembers(ctx, node, scope)
+      return resolveInterfaceMembers(ctx, node, scope, typeParameters)
     case 'TSTypeAliasDeclaration':
     case 'TSParenthesizedType':
       return resolveTypeElements(
@@ -156,20 +156,8 @@ function innerResolveTypeElements(
     }
     case 'TSUnionType':
     case 'TSIntersectionType':
-      const types = typeParameters
-        ? node.types.map(t => {
-            if (
-              t.type === 'TSTypeReference' &&
-              t.typeName.type === 'Identifier' &&
-              typeParameters[t.typeName.name]
-            ) {
-              return typeParameters[t.typeName.name]
-            }
-            return t
-          })
-        : node.types
       return mergeElements(
-        types.map(t => resolveTypeElements(ctx, t, scope)),
+        node.types.map(t => resolveTypeElements(ctx, t, scope, typeParameters)),
         node.type
       )
     case 'TSMappedType':
@@ -191,7 +179,12 @@ function innerResolveTypeElements(
         scope.imports[typeName]?.source === 'vue'
       ) {
         return resolveExtractPropTypes(
-          resolveTypeElements(ctx, node.typeParameters.params[0], scope),
+          resolveTypeElements(
+            ctx,
+            node.typeParameters.params[0],
+            scope,
+            typeParameters
+          ),
           scope
         )
       }
@@ -199,7 +192,8 @@ function innerResolveTypeElements(
       if (resolved) {
         const typeParams: Record<string, Node> = Object.create(null)
         if (
-          resolved.type === 'TSTypeAliasDeclaration' &&
+          (resolved.type === 'TSTypeAliasDeclaration' ||
+            resolved.type === 'TSInterfaceDeclaration') &&
           resolved.typeParameters &&
           node.typeParameters
         ) {
@@ -294,11 +288,17 @@ function innerResolveTypeElements(
 function typeElementsToMap(
   ctx: TypeResolveContext,
   elements: TSTypeElement[],
-  scope = ctxToScope(ctx)
+  scope = ctxToScope(ctx),
+  typeParameters?: Record<string, Node>
 ): ResolvedElements {
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
+      // capture generic parameters on node's scope
+      if (typeParameters) {
+        scope = createChildScope(scope)
+        Object.assign(scope.types, typeParameters)
+      }
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
       if (name && !e.computed) {
@@ -374,9 +374,15 @@ function createProperty(
 function resolveInterfaceMembers(
   ctx: TypeResolveContext,
   node: TSInterfaceDeclaration & MaybeWithScope,
-  scope: TypeScope
+  scope: TypeScope,
+  typeParameters?: Record<string, Node>
 ): ResolvedElements {
-  const base = typeElementsToMap(ctx, node.body.body, node._ownerScope)
+  const base = typeElementsToMap(
+    ctx,
+    node.body.body,
+    node._ownerScope,
+    typeParameters
+  )
   if (node.extends) {
     for (const ext of node.extends) {
       if (
@@ -1160,14 +1166,7 @@ function moduleDeclToScope(
     return node._resolvedChildScope
   }
 
-  const scope = new TypeScope(
-    parentScope.filename,
-    parentScope.source,
-    parentScope.offset,
-    Object.create(parentScope.imports),
-    Object.create(parentScope.types),
-    Object.create(parentScope.declares)
-  )
+  const scope = createChildScope(parentScope)
 
   if (node.body.type === 'TSModuleDeclaration') {
     const decl = node.body as TSModuleDeclaration & WithScope
@@ -1179,6 +1178,17 @@ function moduleDeclToScope(
   }
 
   return (node._resolvedChildScope = scope)
+}
+
+function createChildScope(parentScope: TypeScope) {
+  return new TypeScope(
+    parentScope.filename,
+    parentScope.source,
+    parentScope.offset,
+    Object.create(parentScope.imports),
+    Object.create(parentScope.types),
+    Object.create(parentScope.declares)
+  )
 }
 
 const importExportRE = /^Import|^Export/
