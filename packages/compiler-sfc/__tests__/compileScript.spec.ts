@@ -376,18 +376,19 @@ describe('SFC compile <script setup>', () => {
     test('dynamic arguments', () => {
       const { content } = compile(`
         <script setup lang="ts">
-        import { FooBar, foo, bar, unused } from './x'
+        import { FooBar, foo, bar, unused, baz } from './x'
         </script>
         <template>
           <FooBar #[foo.slotName] />
           <FooBar #unused />
           <div :[bar.attrName]="15"></div>
           <div unused="unused"></div>
+          <div #[\`item:\${baz.key}\`]="{ value }"></div>
         </template>
         `)
       expect(content).toMatch(
         `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
-          `get bar() { return bar } }`
+          `get bar() { return bar }, get baz() { return baz } }`
       )
       assertCode(content)
     })
@@ -777,6 +778,7 @@ describe('SFC compile <script setup>', () => {
         <script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const style = { color: 'red' }
         </script>
         <template>
           <div>{{ count }}</div>
@@ -784,6 +786,7 @@ describe('SFC compile <script setup>', () => {
         </template>
         <style>
         div { color: v-bind(count) }
+        span { color: v-bind(style.color) }
         </style>
         `,
         {
@@ -798,6 +801,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
       assertCode(content)
     })
 
