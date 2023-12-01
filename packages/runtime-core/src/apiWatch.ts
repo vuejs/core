@@ -80,11 +80,17 @@ export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
 
 export type WatchStopHandle = () => void
 
+export interface WatchHandle extends WatchStopHandle {
+  pause: () => void
+  resume: () => void
+  stop: () => void
+}
+
 // Simple effect.
 export function watchEffect(
   effect: WatchEffect,
   options?: WatchOptionsBase
-): WatchStopHandle {
+): WatchHandle {
   return doWatch(effect, null, options)
 }
 
@@ -123,7 +129,7 @@ export function watch<
   sources: [...T],
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
-): WatchStopHandle
+): WatchHandle
 
 // overload: multiple sources w/ `as const`
 // watch([foo, bar] as const, () => {})
@@ -135,14 +141,14 @@ export function watch<
   source: T,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
   options?: WatchOptions<Immediate>
-): WatchStopHandle
+): WatchHandle
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
   source: WatchSource<T>,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
-): WatchStopHandle
+): WatchHandle
 
 // overload: watching reactive object w/ cb
 export function watch<
@@ -152,14 +158,14 @@ export function watch<
   source: T,
   cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>
-): WatchStopHandle
+): WatchHandle
 
 // implementation
 export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   source: T | WatchSource<T>,
   cb: any,
   options?: WatchOptions<Immediate>
-): WatchStopHandle {
+): WatchHandle {
   if (__DEV__ && !isFunction(cb)) {
     warn(
       `\`watch(fn, options?)\` signature has been moved to a separate API. ` +
@@ -174,7 +180,7 @@ function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
   { immediate, deep, flush, once, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
-): WatchStopHandle {
+): WatchHandle {
   if (cb && once) {
     const _cb = cb
     cb = (...args) => {
@@ -315,7 +321,7 @@ function doWatch(
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
-      return NOOP
+      return NOOP as WatchHandle
     }
   }
 
@@ -386,6 +392,11 @@ function doWatch(
     }
   }
 
+  const watchHandle: WatchHandle = () => unwatch()
+  watchHandle.pause = () => effect.pause()
+  watchHandle.resume = () => effect.resume()
+  watchHandle.stop = unwatch
+
   if (__DEV__) {
     effect.onTrack = onTrack
     effect.onTrigger = onTrigger
@@ -396,7 +407,7 @@ function doWatch(
     if (immediate) {
       job()
     } else {
-      oldValue = effect.run()
+      if (!effect._isPaused) oldValue = effect.run()
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
@@ -408,7 +419,7 @@ function doWatch(
   }
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)
-  return unwatch
+  return watchHandle
 }
 
 // this.$watch

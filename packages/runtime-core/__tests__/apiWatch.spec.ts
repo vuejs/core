@@ -1278,4 +1278,25 @@ describe('api: watch', () => {
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
   })
+
+  test('pause / resume', async () => {
+    const count = ref(0)
+    const cb = vi.fn()
+    const { pause, resume } = watch(count, cb)
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toBeCalledWith(1, 0, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    resume()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(2)
+  })
 })
