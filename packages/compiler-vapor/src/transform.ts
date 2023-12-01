@@ -178,9 +178,6 @@ export function transform(
   root: RootNode,
   options: TransformOptions = {},
 ): RootIRNode {
-  options.onError ||= defaultOnError
-  options.onWarn ||= defaultOnWarn
-
   const ir: RootIRNode = {
     type: IRNodeTypes.ROOT,
     node: root,
@@ -449,7 +446,7 @@ function transformProp(
         !exp ||
         (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
       ) {
-        ctx.options.onError!(
+        ctx.options.onError(
           createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
         )
         return
@@ -480,7 +477,7 @@ function transformProp(
     }
     case 'on': {
       if (!exp && !modifiers.length) {
-        ctx.options.onError!(
+        ctx.options.onError(
           createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
         )
         return
