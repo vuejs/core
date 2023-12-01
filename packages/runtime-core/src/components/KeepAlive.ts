@@ -129,12 +129,6 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
       const instance = vnode.component!
-
-      if (props.lazy) {
-        // on activation, resume the effect of the component instance and immediately execute the call during the pause process
-        instance.scope.resume(true)
-      }
-
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -167,12 +161,6 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
-
-      if (props.lazy) {
-        // on deactivation, pause the effect of the component instance
-        instance.scope.pause()
-      }
-
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
