@@ -100,13 +100,13 @@ describe('should unwrap Set correctly', () => {
 })
 
 describe('should add readonly', () => {
-  test('readonly ref', () => {
+  describe('readonly ref', () => {
     const r = reactive({ foo: readonly(ref('foo')), bar: 3 })
     // @ts-expect-error readonly
     r.foo = 'bar'
     r.bar = 42
   })
-  test('computed ', () => {
+  describe('computed ', () => {
     // #5159
     const r = reactive({ foo: computed(() => 'foo'), bar: 3 })
     // @ts-expect-error readonly
@@ -114,7 +114,7 @@ describe('should add readonly', () => {
     r.bar = 42
   })
 
-  test('readonly property', () => {
+  describe('readonly property', () => {
     const r = reactive({} as { foo: { readonly bar: number }; bar: number })
     // @ts-expect-error readonly
     r.foo.bar = 2
