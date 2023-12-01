@@ -26,6 +26,8 @@ export {
   ErrorCodes,
   errorMessages,
   createCompilerError,
+  defaultOnError,
+  defaultOnWarn,
   type CoreCompilerError,
   type CompilerError
 } from './errors'

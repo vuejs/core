@@ -1,9 +1,5 @@
-import { type RootNode, BindingTypes } from '@vue/compiler-dom'
-import {
-  type CompilerOptions,
-  VaporErrorCodes,
-  compile as _compile,
-} from '../src'
+import { type RootNode, BindingTypes, ErrorCodes } from '@vue/compiler-dom'
+import { type CompilerOptions, compile as _compile } from '../src'
 
 // TODO remove it
 import { format } from 'prettier'
@@ -82,7 +78,7 @@ describe('compile', () => {
         await compile(`<div v-bind:arg />`, { onError })
 
         expect(onError.mock.calls[0][0]).toMatchObject({
-          code: VaporErrorCodes.X_VAPOR_BIND_NO_EXPRESSION,
+          code: ErrorCodes.X_V_BIND_NO_EXPRESSION,
           loc: {
             start: {
               line: 1,
@@ -111,7 +107,7 @@ describe('compile', () => {
         const onError = vi.fn()
         await compile(`<div v-on:click />`, { onError })
         expect(onError.mock.calls[0][0]).toMatchObject({
-          code: VaporErrorCodes.X_VAPOR_ON_NO_EXPRESSION,
+          code: ErrorCodes.X_V_ON_NO_EXPRESSION,
           loc: {
             start: {
               line: 1,

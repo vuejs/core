@@ -1,29 +1,32 @@
-import type { CompilerError } from '@vue/compiler-dom'
+import {
+  CompilerError,
+  SourceLocation,
+  createCompilerError,
+} from '@vue/compiler-dom'
 
-export { createCompilerError } from '@vue/compiler-dom'
-export function defaultOnError(error: CompilerError) {
-  throw error
+export interface VaporCompilerError extends CompilerError {
+  code: VaporErrorCodes
 }
 
-export function defaultOnWarn(msg: CompilerError) {
-  __DEV__ && console.warn(`[Vue warn] ${msg.message}`)
+export function createVaporCompilerError(
+  code: VaporErrorCodes,
+  loc?: SourceLocation,
+) {
+  return createCompilerError(
+    code,
+    loc,
+    __DEV__ || !__BROWSER__ ? VaporErrorMessages : undefined,
+  ) as VaporCompilerError
 }
 
 export enum VaporErrorCodes {
-  // transform errors
-  X_VAPOR_BIND_NO_EXPRESSION,
-  X_VAPOR_ON_NO_EXPRESSION,
-
-  // generic errors
-  X_PREFIX_ID_NOT_SUPPORTED,
-  X_MODULE_MODE_NOT_SUPPORTED,
+  X_V_PLACEHOLDER = 100,
+  __EXTEND_POINT__,
 }
 
-export const errorMessages: Record<VaporErrorCodes, string> = {
-  // transform errors
-  [VaporErrorCodes.X_VAPOR_BIND_NO_EXPRESSION]: `v-bind is missing expression.`,
-  [VaporErrorCodes.X_VAPOR_ON_NO_EXPRESSION]: `v-on is missing expression.`,
+export const VaporErrorMessages: Record<VaporErrorCodes, string> = {
+  [VaporErrorCodes.X_V_PLACEHOLDER]: `[placeholder]`,
 
-  [VaporErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
-  [VaporErrorCodes.X_MODULE_MODE_NOT_SUPPORTED]: `ES module mode is not supported in this build of compiler.`,
+  // just to fulfill types
+  [VaporErrorCodes.__EXTEND_POINT__]: ``,
 }

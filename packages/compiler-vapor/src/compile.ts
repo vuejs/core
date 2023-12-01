@@ -4,11 +4,13 @@ import {
   type RootNode,
   type DirectiveTransform,
   parse,
+  defaultOnError,
+  createCompilerError,
+  ErrorCodes,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
 import { NodeTransform, transform } from './transform'
 import { generate } from './generate'
-import { defaultOnError, createCompilerError, VaporErrorCodes } from './errors'
 import { transformOnce } from './transforms/vOnce'
 import { HackOptions } from './hack'
 
@@ -25,9 +27,9 @@ export function compile(
   /* istanbul ignore if */
   if (__BROWSER__) {
     if (options.prefixIdentifiers === true) {
-      onError(createCompilerError(VaporErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
+      onError(createCompilerError(ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED))
     } else if (isModuleMode) {
-      onError(createCompilerError(VaporErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
+      onError(createCompilerError(ErrorCodes.X_MODULE_MODE_NOT_SUPPORTED))
     }
   }
 

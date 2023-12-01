@@ -9,24 +9,22 @@ import {
   type ExpressionNode,
   type ParentNode,
   type AllNode,
+  type CompilerCompatOptions,
   NodeTypes,
   BindingTypes,
-  CompilerCompatOptions,
+  defaultOnError,
+  defaultOnWarn,
+  ErrorCodes,
+  createCompilerError,
 } from '@vue/compiler-dom'
+import { EMPTY_OBJ, NOOP, isArray, isVoidTag } from '@vue/shared'
 import {
   type OperationNode,
   type RootIRNode,
   IRNodeTypes,
   DynamicInfo,
 } from './ir'
-import { EMPTY_OBJ, NOOP, isArray, isVoidTag } from '@vue/shared'
-import {
-  VaporErrorCodes,
-  createCompilerError,
-  defaultOnError,
-  defaultOnWarn,
-} from './errors'
-import { HackOptions } from './hack'
+import type { HackOptions } from './hack'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -438,7 +436,7 @@ function transformProp(
         (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
       ) {
         ctx.options.onError!(
-          createCompilerError(VaporErrorCodes.X_VAPOR_BIND_NO_EXPRESSION, loc),
+          createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
         )
         return
       }
@@ -467,7 +465,7 @@ function transformProp(
     case 'on': {
       if (!exp && !modifiers.length) {
         ctx.options.onError!(
-          createCompilerError(VaporErrorCodes.X_VAPOR_ON_NO_EXPRESSION, loc),
+          createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
         )
         return
       }

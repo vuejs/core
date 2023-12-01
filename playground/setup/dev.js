@@ -5,8 +5,12 @@ const dirname = path.dirname(new URL(import.meta.url).pathname)
 const resolve = (/** @type {string} */ p) =>
   path.resolve(dirname, '../../packages', p)
 
-/** @returns {import('vite').Plugin} */
-export function DevPlugin() {
+/**
+ * @param {Object} [env]
+ * @param {boolean} [env.browser]
+ * @returns {import('vite').Plugin}
+ */
+export function DevPlugin({ browser = false } = {}) {
   return {
     name: 'dev-plugin',
     config() {
@@ -39,7 +43,7 @@ export function DevPlugin() {
           // this is only used during Vue's internal tests
           __TEST__: `false`,
           // If the build is expected to run directly in the browser (global / esm builds)
-          __BROWSER__: String(true),
+          __BROWSER__: String(browser),
           __GLOBAL__: String(false),
           __ESM_BUNDLER__: String(true),
           __ESM_BROWSER__: String(false),
