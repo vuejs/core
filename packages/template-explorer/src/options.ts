@@ -1,5 +1,5 @@
 import { h, reactive, createApp, ref } from 'vue'
-import { CompilerOptions } from '@vue/compiler-dom'
+import { CompilerOptions } from '@vue/compiler-vapor'
 import { BindingTypes } from '@vue/compiler-core'
 
 export const ssrMode = ref(false)

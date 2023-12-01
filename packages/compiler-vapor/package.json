@@ -37,7 +37,8 @@
   },
   "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/compiler-vapor#readme",
   "dependencies": {
+    "@vue/compiler-dom": "3.3.8",
     "@vue/shared": "3.3.8",
-    "@vue/compiler-dom": "3.3.8"
+    "source-map-js": "^1.0.2"
   }
 }

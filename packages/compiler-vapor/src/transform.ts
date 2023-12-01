@@ -175,6 +175,7 @@ export function transform(
 
   const ir: RootIRNode = {
     type: IRNodeTypes.ROOT,
+    source: root.source,
     loc: root.loc,
     template: [],
     dynamic: {

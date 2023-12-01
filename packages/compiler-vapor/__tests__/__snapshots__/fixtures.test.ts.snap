@@ -2,8 +2,6 @@
 
 exports[`fixtures 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, setText as _setText, effect as _effect, on as _on, setHtml as _setHtml } from 'vue/vapor'
-const t0 = _template(\\"<h1 id=\\\\\\"title\\\\\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div></div><input type=\\\\\\"text\\\\\\"><p>once: </p><p>{{ count }}</p>\\")
 import { ref, computed } from 'vue'
 
 const html = '<b>HTML</b>'
@@ -18,6 +16,7 @@ const increment = () => count.value++
 
 
 return (() => {
+const t0 = _template(\\"<h1 id=\\\\\\"title\\\\\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div></div><input type=\\\\\\"text\\\\\\"><p>once: </p><p>{{ count }}</p>\\")
 const n0 = t0()
 const { 1: [n2], 2: [n4], 3: [n5], 4: [n6], 6: [n8],} = _children(n0)
 const n1 = _createTextNode(count.value)
@@ -40,8 +39,9 @@ _effect(() => {
 _setHtml(n6, undefined, html)
 })
 return n0
+})()
+import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, setText as _setText, effect as _effect, on as _on, setHtml as _setHtml } from 'vue/vapor'
 
-})();
 }
 
 })"

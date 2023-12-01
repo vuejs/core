@@ -26,6 +26,7 @@ export type VaporHelper = keyof typeof import('../../runtime-vapor/src')
 
 export interface RootIRNode extends IRNode {
   type: IRNodeTypes.ROOT
+  source: string
   template: Array<TemplateFactoryIRNode | FragmentFactoryIRNode>
   dynamic: DynamicInfo
   // TODO multi-expression effect

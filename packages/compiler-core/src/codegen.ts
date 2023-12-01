@@ -69,7 +69,7 @@ export interface CodegenResult {
   map?: RawSourceMap
 }
 
-enum NewlineType {
+export enum NewlineType {
   Start = 0,
   End = -1,
   None = -2,

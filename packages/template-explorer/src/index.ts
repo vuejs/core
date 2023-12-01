@@ -1,7 +1,7 @@
 import * as m from 'monaco-editor'
-import { CompilerError, CompilerOptions } from '@vue/compiler-dom'
-import { compile } from '@vue/compiler-vapor'
-import { compile as ssrCompile } from '@vue/compiler-ssr'
+import { CompilerError } from '@vue/compiler-dom'
+import { compile, CompilerOptions } from '@vue/compiler-vapor'
+// import { compile as ssrCompile } from '@vue/compiler-ssr'
 import {
   defaultOptions,
   compilerOptions,
@@ -74,7 +74,7 @@ window.init = () => {
     console.clear()
     try {
       const errors: CompilerError[] = []
-      const compileFn = ssrMode.value ? ssrCompile : compile
+      const compileFn = /* ssrMode.value ? ssrCompile : */ compile
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
         ...compilerOptions,
@@ -93,8 +93,8 @@ window.init = () => {
       console.log(`AST: `, ast)
       console.log(`Options: `, toRaw(compilerOptions))
       lastSuccessfulCode = code + `\n\n// Check the console for the AST`
-      // lastSuccessfulMap = new SourceMapConsumer(map!)
-      // lastSuccessfulMap!.computeColumnSpans()
+      lastSuccessfulMap = new SourceMapConsumer(map!)
+      lastSuccessfulMap!.computeColumnSpans()
     } catch (e: any) {
       lastSuccessfulCode = `/* ERROR: ${e.message} (see console for more info) */`
       console.error(e)

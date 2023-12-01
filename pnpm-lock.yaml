@@ -274,6 +274,9 @@ importers:
       '@vue/shared':
         specifier: 3.3.8
         version: 3.3.8
+      source-map-js:
+        specifier: ^1.0.2
+        version: 1.0.2
 
   packages/dts-built-test:
     dependencies:
