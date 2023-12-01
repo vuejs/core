@@ -33,8 +33,16 @@ export interface CodegenContext extends Required<CodegenOptions> {
   indentLevel: number
   map?: SourceMapGenerator
 
-  push(code: string, newlineIndex?: number, node?: BaseIRNode): void
-  pushWithNewline(code: string, newlineIndex?: number, node?: BaseIRNode): void
+  push(
+    code: string,
+    newlineIndex?: number,
+    node?: Pick<BaseIRNode, 'loc'>,
+  ): void
+  pushWithNewline(
+    code: string,
+    newlineIndex?: number,
+    node?: Pick<BaseIRNode, 'loc'>,
+  ): void
   indent(): void
   deindent(): void
   newline(): void
@@ -286,8 +294,6 @@ export function generate(
       NewlineType.End,
     )
 
-  console.log(ctx.code)
-
   return {
     code: ctx.code,
     ast: ir as any,
@@ -297,60 +303,50 @@ export function generate(
 }
 
 function genOperation(oper: OperationNode, context: CodegenContext) {
-  const { vaporHelper, pushWithNewline } = context
+  const { vaporHelper, push, pushWithNewline } = context
   // TODO: cache old value
   switch (oper.type) {
     case IRNodeTypes.SET_PROP: {
-      pushWithNewline(
-        `${vaporHelper('setAttr')}(n${oper.element}, ${processExpression(
-          oper.name,
-          context,
-        )}, undefined, ${processExpression(oper.value, context)})`,
-      )
+      pushWithNewline(`${vaporHelper('setAttr')}(n${oper.element}, `)
+      genExpression(oper.name, context)
+      push(`, undefined, `)
+      genExpression(oper.value, context)
+      push(')')
       return
     }
 
     case IRNodeTypes.SET_TEXT: {
-      pushWithNewline(
-        `${vaporHelper('setText')}(n${
-          oper.element
-        }, undefined, ${processExpression(oper.value, context)})`,
-      )
+      pushWithNewline(`${vaporHelper('setText')}(n${oper.element}, undefined, `)
+      genExpression(oper.value, context)
+      push(')')
       return
     }
 
     case IRNodeTypes.SET_EVENT: {
-      let value = oper.value
-      if (oper.modifiers.length) {
-        value = `${vaporHelper('withModifiers')}(${processExpression(
-          value,
-          context,
-        )}, ${genArrayExpression(oper.modifiers)})`
-      }
-      pushWithNewline(
-        `${vaporHelper('on')}(n${oper.element}, ${processExpression(
-          oper.name,
-          context,
-        )}, ${processExpression(value, context)})`,
-      )
+      pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
+      genExpression(oper.name, context)
+      push(', ')
+
+      const hasModifiers = oper.modifiers.length
+      hasModifiers && push(`${vaporHelper('withModifiers')}(`)
+      genExpression(oper.value, context)
+      hasModifiers && push(`, ${genArrayExpression(oper.modifiers)})`)
+
+      push(')')
       return
     }
 
     case IRNodeTypes.SET_HTML: {
-      pushWithNewline(
-        `${vaporHelper('setHtml')}(n${
-          oper.element
-        }, undefined, ${processExpression(oper.value, context)})`,
-      )
+      pushWithNewline(`${vaporHelper('setHtml')}(n${oper.element}, undefined, `)
+      genExpression(oper.value, context)
+      push(')')
       return
     }
 
     case IRNodeTypes.CREATE_TEXT_NODE: {
-      pushWithNewline(
-        `const n${oper.id} = ${vaporHelper(
-          'createTextNode',
-        )}(${processExpression(oper.value, context)})`,
-      )
+      pushWithNewline(`const n${oper.id} = ${vaporHelper('createTextNode')}(`)
+      genExpression(oper.value, context)
+      push(')')
       return
     }
 
@@ -414,37 +410,41 @@ function genChildren(children: IRDynamicChildren) {
 
 // TODO: other types (not only string)
 function genArrayExpression(elements: string[]) {
-  return `[${elements.map((it) => `"${it}"`).join(', ')}]`
+  return `[${elements.map((it) => JSON.stringify(it)).join(', ')}]`
 }
 
-function processExpression(
+function genExpression(
   exp: IRExpression,
-  { inline, prefixIdentifiers, bindingMetadata, vaporHelper }: CodegenContext,
+  {
+    inline,
+    prefixIdentifiers,
+    bindingMetadata,
+    vaporHelper,
+    push,
+  }: CodegenContext,
 ) {
-  if (isString(exp)) return exp
+  if (isString(exp)) return push(exp)
 
-  let content = ''
-  if (exp.type === NodeTypes.SIMPLE_EXPRESSION) {
-    content = exp.content
-    if (exp.isStatic) {
-      return JSON.stringify(content)
-    }
+  // TODO NodeTypes.COMPOUND_EXPRESSION
+  if (exp.type === NodeTypes.COMPOUND_EXPRESSION) return
+
+  let content = exp.content
+
+  if (exp.isStatic) {
+    content = JSON.stringify(content)
   } else {
-    // TODO NodeTypes.COMPOUND_EXPRESSION
+    switch (bindingMetadata[content]) {
+      case BindingTypes.SETUP_REF:
+        content += '.value'
+        break
+      case BindingTypes.SETUP_MAYBE_REF:
+        content = `${vaporHelper('unref')}(${content})`
+        break
+    }
+    if (prefixIdentifiers && !inline) {
+      content = `_ctx.${content}`
+    }
   }
 
-  switch (bindingMetadata[content]) {
-    case BindingTypes.SETUP_REF:
-      content += '.value'
-      break
-    case BindingTypes.SETUP_MAYBE_REF:
-      content = `${vaporHelper('unref')}(${content})`
-      break
-  }
-
-  if (prefixIdentifiers && !inline) {
-    content = `_ctx.${content}`
-  }
-
-  return content
+  push(content, NewlineType.None, exp)
 }

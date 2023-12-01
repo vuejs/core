@@ -76,7 +76,7 @@ export function render(_ctx) {
   return n0
 }
 
-import { template as _template, children as _children, effect as _effect, withModifiers as _withModifiers, on as _on } from 'vue/vapor'
+import { template as _template, children as _children, effect as _effect, on as _on, withModifiers as _withModifiers } from 'vue/vapor'
 "
 `;
 
