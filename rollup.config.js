@@ -1,4 +1,5 @@
 // @ts-check
+import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
@@ -14,6 +15,14 @@ import alias from '@rollup/plugin-alias'
 import { entries } from './scripts/aliases.js'
 import { inlineEnums } from './scripts/inline-enums.js'
 
+/**
+ * @template T
+ * @template {keyof T} K
+ * @typedef { Omit<T, K> & Required<Pick<T, K>> } MarkRequired
+ */
+/** @typedef {'cjs' | 'esm-bundler' | 'global' | 'global-runtime' | 'esm-browser' | 'esm-bundler-runtime' | 'esm-browser-runtime'} PackageFormat */
+/** @typedef {MarkRequired<import('rollup').OutputOptions, 'file' | 'format'>} OutputOptions */
+
 if (!process.env.TARGET) {
   throw new Error('TARGET package must be specified via --environment flag.')
 }
@@ -27,45 +36,35 @@ const consolidatePkg = require('@vue/consolidate/package.json')
 const packagesDir = path.resolve(__dirname, 'packages')
 const packageDir = path.resolve(packagesDir, process.env.TARGET)
 
-/** @param {string} p */
-const resolve = p => path.resolve(packageDir, p)
+const resolve = (/** @type {string} */ p) => path.resolve(packageDir, p)
 const pkg = require(resolve(`package.json`))
 const packageOptions = pkg.buildOptions || {}
 const name = packageOptions.filename || path.basename(packageDir)
 
 const [enumPlugin, enumDefines] = inlineEnums()
 
-/**
- * @typedef { Omit<T, K> & Required<Pick<T, K>> } MarkRequired
- * @template T
- * @template {keyof T} K
- */
-
-/** @typedef {import('rollup').ModuleFormat} Format */
-/** @typedef {MarkRequired<import('rollup').OutputOptions, 'file'>} Output */
-
-/** @type {Record<string, Output>} */
+/** @type {Record<PackageFormat, OutputOptions>} */
 const outputConfigs = {
   'esm-bundler': {
     file: resolve(`dist/${name}.esm-bundler.js`),
-    format: `es`
+    format: 'es'
   },
   'esm-browser': {
     file: resolve(`dist/${name}.esm-browser.js`),
-    format: `es`
+    format: 'es'
   },
   cjs: {
     file: resolve(`dist/${name}.cjs.js`),
-    format: `cjs`
+    format: 'cjs'
   },
   global: {
     file: resolve(`dist/${name}.global.js`),
-    format: `iife`
+    format: 'iife'
   },
   // runtime-only builds, for main "vue" package only
   'esm-bundler-runtime': {
     file: resolve(`dist/${name}.runtime.esm-bundler.js`),
-    format: `es`
+    format: 'es'
   },
   'esm-browser-runtime': {
     file: resolve(`dist/${name}.runtime.esm-browser.js`),
@@ -77,40 +76,39 @@ const outputConfigs = {
   }
 }
 
+/** @type {ReadonlyArray<PackageFormat>} */
 const defaultFormats = ['esm-bundler', 'cjs']
-const inlineFormats = process.env.FORMATS && process.env.FORMATS.split(',')
+/** @type {ReadonlyArray<PackageFormat>} */
+const inlineFormats = /** @type {any} */ (
+  process.env.FORMATS && process.env.FORMATS.split(',')
+)
+/** @type {ReadonlyArray<PackageFormat>} */
 const packageFormats = inlineFormats || packageOptions.formats || defaultFormats
 const packageConfigs = process.env.PROD_ONLY
   ? []
-  : packageFormats.map(
-      /** @param {Format} format */
-      format => createConfig(format, outputConfigs[format])
-    )
+  : packageFormats.map(format => createConfig(format, outputConfigs[format]))
 
 if (process.env.NODE_ENV === 'production') {
-  packageFormats.forEach(
-    /** @param {Format} format */
-    format => {
-      if (packageOptions.prod === false) {
-        return
-      }
-      if (format === 'cjs') {
-        packageConfigs.push(createProductionConfig(format))
-      }
-      if (/^(global|esm-browser)(-runtime)?/.test(format)) {
-        packageConfigs.push(createMinifiedConfig(format))
-      }
+  packageFormats.forEach(format => {
+    if (packageOptions.prod === false) {
+      return
     }
-  )
+    if (format === 'cjs') {
+      packageConfigs.push(createProductionConfig(format))
+    }
+    if (/^(global|esm-browser)(-runtime)?/.test(format)) {
+      packageConfigs.push(createMinifiedConfig(format))
+    }
+  })
 }
 
 export default packageConfigs
 
 /**
  *
- * @param {Format} format
- * @param {Output} output
- * @param {import('rollup').Plugin[]} plugins
+ * @param {PackageFormat} format
+ * @param {OutputOptions} output
+ * @param {ReadonlyArray<import('rollup').Plugin>} plugins
  * @returns {import('rollup').RollupOptions}
  */
 function createConfig(format, output, plugins = []) {
@@ -180,7 +178,7 @@ function createConfig(format, output, plugins = []) {
     ],
     output,
     onwarn(msg, warn) {
-      if (!/Circular/.test(msg.message)) {
+      if (msg.code !== 'CIRCULAR_DEPENDENCY') {
         warn(msg)
       }
     },
@@ -221,7 +219,6 @@ function createConfig(format, output, plugins = []) {
 
     if (!isBundlerESMBuild) {
       // hard coded dev/prod builds
-      // @ts-ignore
       replacements.__DEV__ = String(!isProductionBuild)
     }
 
@@ -229,7 +226,9 @@ function createConfig(format, output, plugins = []) {
     //__RUNTIME_COMPILE__=true pnpm build runtime-core
     Object.keys(replacements).forEach(key => {
       if (key in process.env) {
-        replacements[key] = /** @type {string} */ (process.env[key])
+        const value = process.env[key]
+        assert(typeof value === 'string')
+        replacements[key] = value
       }
     })
     return replacements
@@ -266,7 +265,6 @@ function createConfig(format, output, plugins = []) {
     }
 
     if (Object.keys(replacements).length) {
-      // @ts-ignore
       return [replace({ values: replacements, preventAssignment: true })]
     } else {
       return []
@@ -304,7 +302,7 @@ function createConfig(format, output, plugins = []) {
   function resolveNodePlugins() {
     // we are bundling forked consolidate.js in compiler-sfc which dynamically
     // requires a ton of template engines which should be ignored.
-    /** @type { string[] } */
+    /** @type {ReadonlyArray<string>} */
     let cjsIgnores = []
     if (
       pkg.name === '@vue/compiler-sfc' ||
@@ -339,20 +337,14 @@ function createConfig(format, output, plugins = []) {
   }
 }
 
-/**
- * @param {Format} format
- */
-function createProductionConfig(format) {
+function createProductionConfig(/** @type {PackageFormat} */ format) {
   return createConfig(format, {
     ...outputConfigs[format],
     file: resolve(`dist/${name}.${format}.prod.js`)
   })
 }
 
-/**
- * @param {Format} format
- */
-function createMinifiedConfig(format) {
+function createMinifiedConfig(/** @type {PackageFormat} */ format) {
   return createConfig(
     format,
     {

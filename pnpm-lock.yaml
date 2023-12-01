@@ -245,8 +245,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       postcss-modules:
-        specifier: ^4.3.1
-        version: 4.3.1(postcss@8.4.31)
+        specifier: ^6.0.0
+        version: 6.0.0(postcss@8.4.31)
       postcss-selector-parser:
         specifier: ^6.0.13
         version: 6.0.13
@@ -3689,10 +3689,6 @@ packages:
       safer-buffer: 2.1.2
     dev: true
 
-  /icss-replace-symbols@1.1.0:
-    resolution: {integrity: sha512-chIaY3Vh2mh2Q3RGXttaDIzeiPvaVXJ+C4DAh/w3c37SKZ/U6PGMmuicR2EQQp9bKG8zLMCl7I+PtIoOOPp8Gg==}
-    dev: true
-
   /icss-utils@5.1.0(postcss@8.4.31):
     resolution: {integrity: sha512-soFhflCVWLfRNOPU3iv5Z9VUdT44xFRbzjLsEzSr5AQmgqPMTHdU3PMT1Cf1ssx8fLNJDA1juftYl+PUcv3MqA==}
     engines: {node: ^10 || ^12 || >= 14}
@@ -4917,13 +4913,13 @@ packages:
       postcss: 8.4.31
     dev: true
 
-  /postcss-modules@4.3.1(postcss@8.4.31):
-    resolution: {integrity: sha512-ItUhSUxBBdNamkT3KzIZwYNNRFKmkJrofvC2nWab3CPKhYBQ1f27XXh1PAPE27Psx58jeelPsxWB/+og+KEH0Q==}
+  /postcss-modules@6.0.0(postcss@8.4.31):
+    resolution: {integrity: sha512-7DGfnlyi/ju82BRzTIjWS5C4Tafmzl3R79YP/PASiocj+aa6yYphHhhKUOEoXQToId5rgyFgJ88+ccOUydjBXQ==}
     peerDependencies:
       postcss: ^8.0.0
     dependencies:
       generic-names: 4.0.0
-      icss-replace-symbols: 1.1.0
+      icss-utils: 5.1.0(postcss@8.4.31)
       lodash.camelcase: 4.3.0
       postcss: 8.4.31
       postcss-modules-extract-imports: 3.0.0(postcss@8.4.31)

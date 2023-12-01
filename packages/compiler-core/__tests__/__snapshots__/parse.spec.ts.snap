@@ -1,5 +1,501 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: parse > Edge Cases > invalid html 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "loc": {
+            "end": {
+              "column": 1,
+              "line": 3,
+              "offset": 13,
+            },
+            "source": "<span>
+",
+            "start": {
+              "column": 1,
+              "line": 2,
+              "offset": 6,
+            },
+          },
+          "ns": 0,
+          "props": [],
+          "tag": "span",
+          "tagType": 0,
+          "type": 1,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 7,
+          "line": 3,
+          "offset": 19,
+        },
+        "source": "<div>
+<span>
+</div>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 8,
+      "line": 4,
+      "offset": 27,
+    },
+    "source": "<div>
+<span>
+</div>
+</span>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div>
+<span>
+</div>
+</span>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 37,
+          "line": 1,
+          "offset": 36,
+        },
+        "source": "<div :class=\\"{ some: condition }\\" />",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "class",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "class",
+              "start": {
+                "column": 7,
+                "line": 1,
+                "offset": 6,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 33,
+                "line": 1,
+                "offset": 32,
+              },
+              "source": "{ some: condition }",
+              "start": {
+                "column": 14,
+                "line": 1,
+                "offset": 13,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": ":class=\\"{ some: condition }\\"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":class",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+    {
+      "children": [],
+      "codegenNode": undefined,
+      "isSelfClosing": true,
+      "loc": {
+        "end": {
+          "column": 37,
+          "line": 2,
+          "offset": 73,
+        },
+        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+        "start": {
+          "column": 1,
+          "line": 2,
+          "offset": 37,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "style",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 16,
+                "line": 2,
+                "offset": 52,
+              },
+              "source": "style",
+              "start": {
+                "column": 11,
+                "line": 2,
+                "offset": 47,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ color: 'red' }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 34,
+                "line": 2,
+                "offset": 70,
+              },
+              "source": "{ color: 'red' }",
+              "start": {
+                "column": 18,
+                "line": 2,
+                "offset": 54,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 35,
+              "line": 2,
+              "offset": 71,
+            },
+            "source": "v-bind:style=\\"{ color: 'red' }\\"",
+            "start": {
+              "column": 4,
+              "line": 2,
+              "offset": 40,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": "v-bind:style",
+          "type": 7,
+        },
+      ],
+      "tag": "p",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 37,
+      "line": 2,
+      "offset": 73,
+    },
+    "source": "<div :class=\\"{ some: condition }\\" />
+<p v-bind:style=\\"{ color: 'red' }\\"/>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div :class=\\"{ some: condition }\\" />
+<p v-bind:style=\\"{ color: 'red' }\\"/>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
+exports[`compiler: parse > Edge Cases > valid html 1`] = `
+{
+  "cached": 0,
+  "children": [
+    {
+      "children": [
+        {
+          "children": [],
+          "codegenNode": undefined,
+          "isSelfClosing": true,
+          "loc": {
+            "end": {
+              "column": 39,
+              "line": 2,
+              "offset": 73,
+            },
+            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+            "start": {
+              "column": 3,
+              "line": 2,
+              "offset": 37,
+            },
+          },
+          "ns": 0,
+          "props": [
+            {
+              "arg": {
+                "constType": 3,
+                "content": "style",
+                "isStatic": true,
+                "loc": {
+                  "end": {
+                    "column": 18,
+                    "line": 2,
+                    "offset": 52,
+                  },
+                  "source": "style",
+                  "start": {
+                    "column": 13,
+                    "line": 2,
+                    "offset": 47,
+                  },
+                },
+                "type": 4,
+              },
+              "exp": {
+                "constType": 0,
+                "content": "{ color: 'red' }",
+                "isStatic": false,
+                "loc": {
+                  "end": {
+                    "column": 36,
+                    "line": 2,
+                    "offset": 70,
+                  },
+                  "source": "{ color: 'red' }",
+                  "start": {
+                    "column": 20,
+                    "line": 2,
+                    "offset": 54,
+                  },
+                },
+                "type": 4,
+              },
+              "loc": {
+                "end": {
+                  "column": 37,
+                  "line": 2,
+                  "offset": 71,
+                },
+                "source": "v-bind:style=\\"{ color: 'red' }\\"",
+                "start": {
+                  "column": 6,
+                  "line": 2,
+                  "offset": 40,
+                },
+              },
+              "modifiers": [],
+              "name": "bind",
+              "rawName": "v-bind:style",
+              "type": 7,
+            },
+          ],
+          "tag": "p",
+          "tagType": 0,
+          "type": 1,
+        },
+        {
+          "content": " a comment with <html> inside it ",
+          "loc": {
+            "end": {
+              "column": 43,
+              "line": 3,
+              "offset": 116,
+            },
+            "source": "<!-- a comment with <html> inside it -->",
+            "start": {
+              "column": 3,
+              "line": 3,
+              "offset": 76,
+            },
+          },
+          "type": 3,
+        },
+      ],
+      "codegenNode": undefined,
+      "loc": {
+        "end": {
+          "column": 7,
+          "line": 4,
+          "offset": 123,
+        },
+        "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+        "start": {
+          "column": 1,
+          "line": 1,
+          "offset": 0,
+        },
+      },
+      "ns": 0,
+      "props": [
+        {
+          "arg": {
+            "constType": 3,
+            "content": "class",
+            "isStatic": true,
+            "loc": {
+              "end": {
+                "column": 12,
+                "line": 1,
+                "offset": 11,
+              },
+              "source": "class",
+              "start": {
+                "column": 7,
+                "line": 1,
+                "offset": 6,
+              },
+            },
+            "type": 4,
+          },
+          "exp": {
+            "constType": 0,
+            "content": "{ some: condition }",
+            "isStatic": false,
+            "loc": {
+              "end": {
+                "column": 33,
+                "line": 1,
+                "offset": 32,
+              },
+              "source": "{ some: condition }",
+              "start": {
+                "column": 14,
+                "line": 1,
+                "offset": 13,
+              },
+            },
+            "type": 4,
+          },
+          "loc": {
+            "end": {
+              "column": 34,
+              "line": 1,
+              "offset": 33,
+            },
+            "source": ":class=\\"{ some: condition }\\"",
+            "start": {
+              "column": 6,
+              "line": 1,
+              "offset": 5,
+            },
+          },
+          "modifiers": [],
+          "name": "bind",
+          "rawName": ":class",
+          "type": 7,
+        },
+      ],
+      "tag": "div",
+      "tagType": 0,
+      "type": 1,
+    },
+  ],
+  "codegenNode": undefined,
+  "components": [],
+  "directives": [],
+  "helpers": Set {},
+  "hoists": [],
+  "imports": [],
+  "loc": {
+    "end": {
+      "column": 7,
+      "line": 4,
+      "offset": 123,
+    },
+    "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+    "start": {
+      "column": 1,
+      "line": 1,
+      "offset": 0,
+    },
+  },
+  "source": "<div :class=\\"{ some: condition }\\">
+  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  <!-- a comment with <html> inside it -->
+</div>",
+  "temps": 0,
+  "type": 0,
+}
+`;
+
 exports[`compiler: parse > Errors > CDATA_IN_HTML_CONTENT > <template><![CDATA[cdata]]></template> 1`] = `
 {
   "cached": 0,
@@ -4322,502 +4818,6 @@ exports[`compiler: parse > Errors > X_MISSING_INTERPOLATION_END > {{}} 1`] = `
     },
   },
   "source": "{{}}",
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > invalid html 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "loc": {
-            "end": {
-              "column": 1,
-              "line": 3,
-              "offset": 13,
-            },
-            "source": "<span>
-",
-            "start": {
-              "column": 1,
-              "line": 2,
-              "offset": 6,
-            },
-          },
-          "ns": 0,
-          "props": [],
-          "tag": "span",
-          "tagType": 0,
-          "type": 1,
-        },
-      ],
-      "codegenNode": undefined,
-      "loc": {
-        "end": {
-          "column": 7,
-          "line": 3,
-          "offset": 19,
-        },
-        "source": "<div>
-<span>
-</div>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 8,
-      "line": 4,
-      "offset": 27,
-    },
-    "source": "<div>
-<span>
-</div>
-</span>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "source": "<div>
-<span>
-</div>
-</span>",
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > self closing multiple tag 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [],
-      "codegenNode": undefined,
-      "isSelfClosing": true,
-      "loc": {
-        "end": {
-          "column": 37,
-          "line": 1,
-          "offset": 36,
-        },
-        "source": "<div :class=\\"{ some: condition }\\" />",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "class",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 12,
-                "line": 1,
-                "offset": 11,
-              },
-              "source": "class",
-              "start": {
-                "column": 7,
-                "line": 1,
-                "offset": 6,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ some: condition }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 33,
-                "line": 1,
-                "offset": 32,
-              },
-              "source": "{ some: condition }",
-              "start": {
-                "column": 14,
-                "line": 1,
-                "offset": 13,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": ":class=\\"{ some: condition }\\"",
-            "start": {
-              "column": 6,
-              "line": 1,
-              "offset": 5,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "rawName": ":class",
-          "type": 7,
-        },
-      ],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-    {
-      "children": [],
-      "codegenNode": undefined,
-      "isSelfClosing": true,
-      "loc": {
-        "end": {
-          "column": 37,
-          "line": 2,
-          "offset": 73,
-        },
-        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
-        "start": {
-          "column": 1,
-          "line": 2,
-          "offset": 37,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "style",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 16,
-                "line": 2,
-                "offset": 52,
-              },
-              "source": "style",
-              "start": {
-                "column": 11,
-                "line": 2,
-                "offset": 47,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ color: 'red' }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 34,
-                "line": 2,
-                "offset": 70,
-              },
-              "source": "{ color: 'red' }",
-              "start": {
-                "column": 18,
-                "line": 2,
-                "offset": 54,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 35,
-              "line": 2,
-              "offset": 71,
-            },
-            "source": "v-bind:style=\\"{ color: 'red' }\\"",
-            "start": {
-              "column": 4,
-              "line": 2,
-              "offset": 40,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "rawName": "v-bind:style",
-          "type": 7,
-        },
-      ],
-      "tag": "p",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 37,
-      "line": 2,
-      "offset": 73,
-    },
-    "source": "<div :class=\\"{ some: condition }\\" />
-<p v-bind:style=\\"{ color: 'red' }\\"/>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "source": "<div :class=\\"{ some: condition }\\" />
-<p v-bind:style=\\"{ color: 'red' }\\"/>",
-  "temps": 0,
-  "type": 0,
-}
-`;
-
-exports[`compiler: parse > valid html 1`] = `
-{
-  "cached": 0,
-  "children": [
-    {
-      "children": [
-        {
-          "children": [],
-          "codegenNode": undefined,
-          "isSelfClosing": true,
-          "loc": {
-            "end": {
-              "column": 39,
-              "line": 2,
-              "offset": 73,
-            },
-            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
-            "start": {
-              "column": 3,
-              "line": 2,
-              "offset": 37,
-            },
-          },
-          "ns": 0,
-          "props": [
-            {
-              "arg": {
-                "constType": 3,
-                "content": "style",
-                "isStatic": true,
-                "loc": {
-                  "end": {
-                    "column": 18,
-                    "line": 2,
-                    "offset": 52,
-                  },
-                  "source": "style",
-                  "start": {
-                    "column": 13,
-                    "line": 2,
-                    "offset": 47,
-                  },
-                },
-                "type": 4,
-              },
-              "exp": {
-                "constType": 0,
-                "content": "{ color: 'red' }",
-                "isStatic": false,
-                "loc": {
-                  "end": {
-                    "column": 36,
-                    "line": 2,
-                    "offset": 70,
-                  },
-                  "source": "{ color: 'red' }",
-                  "start": {
-                    "column": 20,
-                    "line": 2,
-                    "offset": 54,
-                  },
-                },
-                "type": 4,
-              },
-              "loc": {
-                "end": {
-                  "column": 37,
-                  "line": 2,
-                  "offset": 71,
-                },
-                "source": "v-bind:style=\\"{ color: 'red' }\\"",
-                "start": {
-                  "column": 6,
-                  "line": 2,
-                  "offset": 40,
-                },
-              },
-              "modifiers": [],
-              "name": "bind",
-              "rawName": "v-bind:style",
-              "type": 7,
-            },
-          ],
-          "tag": "p",
-          "tagType": 0,
-          "type": 1,
-        },
-        {
-          "content": " a comment with <html> inside it ",
-          "loc": {
-            "end": {
-              "column": 43,
-              "line": 3,
-              "offset": 116,
-            },
-            "source": "<!-- a comment with <html> inside it -->",
-            "start": {
-              "column": 3,
-              "line": 3,
-              "offset": 76,
-            },
-          },
-          "type": 3,
-        },
-      ],
-      "codegenNode": undefined,
-      "loc": {
-        "end": {
-          "column": 7,
-          "line": 4,
-          "offset": 123,
-        },
-        "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
-        "start": {
-          "column": 1,
-          "line": 1,
-          "offset": 0,
-        },
-      },
-      "ns": 0,
-      "props": [
-        {
-          "arg": {
-            "constType": 3,
-            "content": "class",
-            "isStatic": true,
-            "loc": {
-              "end": {
-                "column": 12,
-                "line": 1,
-                "offset": 11,
-              },
-              "source": "class",
-              "start": {
-                "column": 7,
-                "line": 1,
-                "offset": 6,
-              },
-            },
-            "type": 4,
-          },
-          "exp": {
-            "constType": 0,
-            "content": "{ some: condition }",
-            "isStatic": false,
-            "loc": {
-              "end": {
-                "column": 33,
-                "line": 1,
-                "offset": 32,
-              },
-              "source": "{ some: condition }",
-              "start": {
-                "column": 14,
-                "line": 1,
-                "offset": 13,
-              },
-            },
-            "type": 4,
-          },
-          "loc": {
-            "end": {
-              "column": 34,
-              "line": 1,
-              "offset": 33,
-            },
-            "source": ":class=\\"{ some: condition }\\"",
-            "start": {
-              "column": 6,
-              "line": 1,
-              "offset": 5,
-            },
-          },
-          "modifiers": [],
-          "name": "bind",
-          "rawName": ":class",
-          "type": 7,
-        },
-      ],
-      "tag": "div",
-      "tagType": 0,
-      "type": 1,
-    },
-  ],
-  "codegenNode": undefined,
-  "components": [],
-  "directives": [],
-  "helpers": Set {},
-  "hoists": [],
-  "imports": [],
-  "loc": {
-    "end": {
-      "column": 7,
-      "line": 4,
-      "offset": 123,
-    },
-    "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
-    "start": {
-      "column": 1,
-      "line": 1,
-      "offset": 0,
-    },
-  },
-  "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
-  <!-- a comment with <html> inside it -->
-</div>",
   "temps": 0,
   "type": 0,
 }

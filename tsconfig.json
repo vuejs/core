@@ -35,8 +35,8 @@
     "packages/*/__tests__",
     "packages/dts-test",
     "packages/vue/jsx-runtime",
+    "scripts/*",
     "rollup.*.js",
     "playground"
-  ],
-  "exclude": ["rollup.config.js"]
+  ]
 }

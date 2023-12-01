@@ -11,8 +11,6 @@
     "packages/template-explorer",
     "packages/sfc-playground",
     "packages/dts-test",
-    "rollup.config.js",
-    "scripts/*",
     "playground"
   ]
 }
