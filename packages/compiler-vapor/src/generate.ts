@@ -26,11 +26,11 @@ function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {
     vaporHelpers,
     helper(name: string) {
       helpers.add(name)
-      return name
+      return `_${name}`
     },
     vaporHelper(name: VaporHelper) {
       vaporHelpers.add(name)
-      return name
+      return `_${name}`
     },
   }
 }
@@ -84,12 +84,18 @@ export function generate(
   }
 
   if (vaporHelpers.size)
+    // TODO: extract
     preamble =
-      `import { ${[...vaporHelpers].join(', ')} } from 'vue/vapor'\n` + preamble
+      `import { ${[...vaporHelpers]
+        .map((h) => `${h} as _${h}`)
+        .join(', ')} } from 'vue/vapor'\n` + preamble
   if (helpers.size)
-    preamble = `import { ${[...helpers].join(', ')} } from 'vue'\n` + preamble
+    preamble =
+      `import { ${[...helpers]
+        .map((h) => `${h} as _${h}`)
+        .join(', ')} } from 'vue'\n` + preamble
 
-  const functionName = options.ssr ? `ssrRender` : `render`
+  const functionName = 'render'
   const isSetupInlined = !!options.inline
   if (isSetupInlined) {
     code = `(() => {\n${code}\n})();`
