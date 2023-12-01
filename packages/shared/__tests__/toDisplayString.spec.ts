@@ -174,11 +174,15 @@ describe('toDisplayString', () => {
 
   //#9727
   test('Map with Symbol keys', () => {
-    const m = new Map<any, any>([[Symbol(), 'foo']])
+    const m = new Map<any, any>([
+      [Symbol(), 'foo'],
+      [Symbol(), 'bar']
+    ])
     expect(toDisplayString(m)).toMatchInlineSnapshot(`
       "{
-        \\"Map(1)\\": {
-          \\"Symbol() =>\\": \\"foo\\"
+        \\"Map(2)\\": {
+          \\"Symbol(0) =>\\": \\"foo\\",
+          \\"Symbol(1) =>\\": \\"bar\\"
         }
       }"
     `)
