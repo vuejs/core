@@ -25,6 +25,12 @@ export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
 
+  _isPaused = false
+
+  _isCalled = false
+
+  scheduler?: EffectScheduler
+
   /**
    * Can be attached after creation
    * @internal
@@ -34,10 +40,6 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   allowRecurse?: boolean
-
-  private _isPaused = false
-
-  private _isCalled = false
 
   onStop?: () => void
   // dev only
@@ -66,12 +68,28 @@ export class ReactiveEffect<T = any> {
    */
   _depsLength = 0
 
+  /**
+   * Indicates the level of dirtiness for pausing activity.
+   * @internal
+   */
+  _pauseDirtyLevel = DirtyLevels.NotDirty
+
   constructor(
     public fn: () => T,
     public trigger: () => void,
-    public scheduler?: EffectScheduler,
+    scheduler?: EffectScheduler,
     scope?: EffectScope
   ) {
+    if (scheduler) {
+      this.scheduler = (...args: Parameters<EffectScheduler>) => {
+        if (this._isPaused) {
+          this.setPausedDirtyLevel()
+          this._isCalled = true
+          return
+        }
+        return scheduler(...args)
+      }
+    }
     recordEffectScope(this, scope)
   }
 
@@ -98,6 +116,10 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NotDirty
   }
 
+  private setPausedDirtyLevel() {
+    this._pauseDirtyLevel = Math.max(this._dirtyLevel, this._pauseDirtyLevel)
+    this._dirtyLevel = DirtyLevels.NotDirty
+  }
   pause() {
     this._isPaused = true
   }
@@ -110,7 +132,12 @@ export class ReactiveEffect<T = any> {
     if (this._isPaused) {
       this._isPaused = false
       if (this._isCalled && immediate) {
-        this.run()
+        if (this.scheduler) {
+          this._dirtyLevel = Math.max(this._dirtyLevel, this._pauseDirtyLevel)
+          this.scheduler()
+        } else {
+          this.run()
+        }
       }
       this._isCalled = false
     }
