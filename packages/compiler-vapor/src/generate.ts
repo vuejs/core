@@ -30,9 +30,10 @@ export interface CodegenContext
   indentLevel: number
   map?: SourceMapGenerator
 
-  push(code: string, newlineIndex?: NewlineType, node?: IRNode): void
+  push(code: string, newlineIndex?: number, node?: IRNode): void
+  pushWithNewline(code: string, newlineIndex?: number, node?: IRNode): void
   indent(): void
-  deindent(withoutNewLine?: boolean): void
+  deindent(): void
   newline(): void
 
   helpers: Set<string>
@@ -90,7 +91,7 @@ function createCodegenContext(
       vaporHelpers.add(name)
       return `_${name}`
     },
-    push(code, newlineIndex: NewlineType = NewlineType.None, node) {
+    push(code, newlineIndex = NewlineType.None, node) {
       context.code += code
       if (!__BROWSER__ && context.map) {
         if (node) {
@@ -144,15 +145,15 @@ function createCodegenContext(
         }
       }
     },
-    indent() {
-      newline(++context.indentLevel)
+    pushWithNewline(code, newlineIndex, node) {
+      context.newline()
+      context.push(code, newlineIndex, node)
     },
-    deindent(withoutNewLine = false) {
-      if (withoutNewLine) {
-        --context.indentLevel
-      } else {
-        newline(--context.indentLevel)
-      }
+    indent() {
+      ++context.indentLevel
+    },
+    deindent() {
+      --context.indentLevel
     },
     newline() {
       newline(context.indentLevel)
@@ -196,74 +197,82 @@ export function generate(
   options: CodegenOptions = {},
 ): CodegenResult {
   const ctx = createCodegenContext(ir, options)
+  const { push, pushWithNewline, indent, deindent, newline } = ctx
   const { vaporHelper, helpers, vaporHelpers } = ctx
 
   const functionName = 'render'
   const isSetupInlined = !!options.inline
   if (isSetupInlined) {
-    ctx.push(`(() => {\n`, NewlineType.End)
+    push(`(() => {`)
   } else {
-    ctx.push(`export function ${functionName}(_ctx) {\n`, NewlineType.End)
+    push(`export function ${functionName}(_ctx) {`)
   }
+  indent()
 
   ir.template.forEach((template, i) => {
     if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
       // TODO source map?
-      ctx.push(
+      pushWithNewline(
         `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
           template.template,
-        )})\n`,
-        NewlineType.End,
+        )})`,
       )
     } else {
       // fragment
-      ctx.push(`const t0 = ${vaporHelper('fragment')}()\n`, NewlineType.End)
+      pushWithNewline(
+        `const t0 = ${vaporHelper('fragment')}()\n`,
+        NewlineType.End,
+      )
     }
   })
 
   {
-    ctx.push(`const n${ir.dynamic.id} = t0()\n`, NewlineType.End, ir)
+    pushWithNewline(`const n${ir.dynamic.id} = t0()`)
+
     const children = genChildren(ir.dynamic.children)
     if (children) {
-      ctx.push(
-        `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})\n`,
-        NewlineType.End,
+      pushWithNewline(
+        `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
       )
     }
 
     for (const operation of ir.operation) {
-      genOperation(operation, ctx).forEach((args) => ctx.push(...args))
+      genOperation(operation, ctx)
     }
     for (const [_expr, operations] of Object.entries(ir.effect)) {
-      ctx.push(`${vaporHelper('effect')}(() => {\n`, NewlineType.End)
+      pushWithNewline(`${vaporHelper('effect')}(() => {`)
+      indent()
       for (const operation of operations) {
-        genOperation(operation, ctx).forEach((args) => ctx.push(...args))
+        genOperation(operation, ctx)
       }
-      ctx.push('})\n', NewlineType.End)
+      deindent()
+      pushWithNewline('})')
     }
     // TODO multiple-template
     // TODO return statement in IR
-    ctx.push(`return n${ir.dynamic.id}\n`, NewlineType.End)
+    pushWithNewline(`return n${ir.dynamic.id}`)
   }
 
+  deindent()
+  newline()
   if (isSetupInlined) {
-    ctx.push('})()')
+    push('})()')
   } else {
-    ctx.push('}')
+    push('}')
   }
 
   ctx.newline()
 
   if (vaporHelpers.size)
     // TODO: extract
-    ctx.push(
+    pushWithNewline(
       `import { ${[...vaporHelpers]
         .map((h) => `${h} as _${h}`)
         .join(', ')} } from 'vue/vapor'\n`,
       NewlineType.End,
     )
   if (helpers.size)
-    ctx.push(
+    pushWithNewline(
       `import { ${[...helpers]
         .map((h) => `${h} as _${h}`)
         .join(', ')} } from 'vue'\n`,
@@ -280,30 +289,24 @@ export function generate(
 
 function genOperation(
   oper: OperationNode,
-  { vaporHelper }: CodegenContext,
-): Parameters<CodegenContext['push']>[] {
+  { vaporHelper, pushWithNewline }: CodegenContext,
+) {
   // TODO: cache old value
   switch (oper.type) {
     case IRNodeTypes.SET_PROP: {
-      return [
-        [
-          `${vaporHelper('setAttr')}(n${oper.element}, ${JSON.stringify(
-            oper.name,
-          )}, undefined, ${oper.value})\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('setAttr')}(n${oper.element}, ${JSON.stringify(
+          oper.name,
+        )}, undefined, ${oper.value})`,
+      )
+      return
     }
 
     case IRNodeTypes.SET_TEXT: {
-      return [
-        [
-          `${vaporHelper('setText')}(n${oper.element}, undefined, ${
-            oper.value
-          })\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('setText')}(n${oper.element}, undefined, ${oper.value})`,
+      )
+      return
     }
 
     case IRNodeTypes.SET_EVENT: {
@@ -313,70 +316,54 @@ function genOperation(
           oper.modifiers,
         )})`
       }
-      return [
-        [
-          `${vaporHelper('on')}(n${oper.element}, ${JSON.stringify(
-            oper.name,
-          )}, ${value})\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('on')}(n${oper.element}, ${JSON.stringify(
+          oper.name,
+        )}, ${value})`,
+      )
+      return
     }
 
     case IRNodeTypes.SET_HTML: {
-      return [
-        [
-          `${vaporHelper('setHtml')}(n${oper.element}, undefined, ${
-            oper.value
-          })\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('setHtml')}(n${oper.element}, undefined, ${oper.value})`,
+      )
+      return
     }
 
     case IRNodeTypes.CREATE_TEXT_NODE: {
-      return [
-        [
-          `const n${oper.id} = ${vaporHelper('createTextNode')}(${
-            oper.value
-          })\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `const n${oper.id} = ${vaporHelper('createTextNode')}(${oper.value})`,
+      )
+      return
     }
 
     case IRNodeTypes.INSERT_NODE: {
       const elements = ([] as number[]).concat(oper.element)
       let element = elements.map((el) => `n${el}`).join(', ')
       if (elements.length > 1) element = `[${element}]`
-      return [
-        [
-          `${vaporHelper('insert')}(${element}, n${
-            oper.parent
-          }${`, n${oper.anchor}`})\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('insert')}(${element}, n${
+          oper.parent
+        }${`, n${oper.anchor}`})`,
+      )
+      return
     }
     case IRNodeTypes.PREPEND_NODE: {
-      return [
-        [
-          `${vaporHelper('prepend')}(n${oper.parent}, ${oper.elements
-            .map((el) => `n${el}`)
-            .join(', ')})\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('prepend')}(n${oper.parent}, ${oper.elements
+          .map((el) => `n${el}`)
+          .join(', ')})`,
+      )
+      return
     }
     case IRNodeTypes.APPEND_NODE: {
-      return [
-        [
-          `${vaporHelper('append')}(n${oper.parent}, ${oper.elements
-            .map((el) => `n${el}`)
-            .join(', ')})\n`,
-          NewlineType.End,
-        ],
-      ]
+      pushWithNewline(
+        `${vaporHelper('append')}(n${oper.parent}, ${oper.elements
+          .map((el) => `n${el}`)
+          .join(', ')})`,
+      )
+      return
     }
     default:
       return checkNever(oper)
