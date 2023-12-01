@@ -77,9 +77,9 @@ onMounted(() => {
       <li v-for="version of versions">
         <a @click="setVersion(version)">v{{ version }}</a>
       </li>
-      <li @click="expanded = false">
+      <div @click="expanded = false">
         <slot />
-      </li>
+      </div>
     </ul>
   </div>
 </template>
