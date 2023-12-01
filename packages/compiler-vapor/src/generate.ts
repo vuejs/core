@@ -220,6 +220,8 @@ export function generate(
   if (isSetupInlined) {
     push(`(() => {`)
   } else {
+    // placeholder for preamble
+    newline()
     pushWithNewline(`export function ${functionName}(_ctx) {`)
   }
   indent()
@@ -276,28 +278,25 @@ export function generate(
     push('}')
   }
 
-  ctx.newline()
-
+  let preamble = ''
   if (vaporHelpers.size)
-    // TODO: extract
-    pushWithNewline(
-      `import { ${[...vaporHelpers]
-        .map((h) => `${h} as _${h}`)
-        .join(', ')} } from 'vue/vapor'\n`,
-      NewlineType.End,
-    )
+    // TODO: extract import codegen
+    preamble = `import { ${[...vaporHelpers]
+      .map((h) => `${h} as _${h}`)
+      .join(', ')} } from 'vue/vapor';`
   if (helpers.size)
-    pushWithNewline(
-      `import { ${[...helpers]
-        .map((h) => `${h} as _${h}`)
-        .join(', ')} } from 'vue'\n`,
-      NewlineType.End,
-    )
+    preamble = `import { ${[...helpers]
+      .map((h) => `${h} as _${h}`)
+      .join(', ')} } from 'vue';`
+
+  if (!isSetupInlined) {
+    ctx.code = preamble + ctx.code
+  }
 
   return {
     code: ctx.code,
     ast: ir as any,
-    preamble: '',
+    preamble,
     map: ctx.map ? ctx.map.toJSON() : undefined,
   }
 }

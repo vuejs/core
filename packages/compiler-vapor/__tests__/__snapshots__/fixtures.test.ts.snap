@@ -2,7 +2,7 @@
 
 exports[`fixtures 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { ref, computed } from 'vue'
+import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, setText as _setText, effect as _effect, on as _on, setHtml as _setHtml } from 'vue/vapor';import { ref, computed } from 'vue'
 
 const html = '<b>HTML</b>'
 
@@ -40,9 +40,6 @@ return (() => {
   })
   return n0
 })()
-
-import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, setText as _setText, effect as _effect, on as _on, setHtml as _setHtml } from 'vue/vapor'
-
 }
 
 })"
