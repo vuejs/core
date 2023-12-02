@@ -176,15 +176,21 @@ describe('toDisplayString', () => {
   test('Map with Symbol keys', () => {
     const m = new Map<any, any>([
       [Symbol(), 'foo'],
-      [Symbol(), 'bar']
+      [Symbol(), 'bar'],
+      [Symbol('baz'), 'baz']
     ])
     expect(toDisplayString(m)).toMatchInlineSnapshot(`
       "{
-        \\"Map(2)\\": {
+        \\"Map(3)\\": {
           \\"Symbol(0) =>\\": \\"foo\\",
-          \\"Symbol(1) =>\\": \\"bar\\"
+          \\"Symbol(1) =>\\": \\"bar\\",
+          \\"Symbol(baz) =>\\": \\"baz\\"
         }
       }"
     `)
+    // confirming the symbol renders Symbol(foo)
+    expect(toDisplayString(new Map([[Symbol('foo'), 'foo']]))).toContain(
+      String(Symbol('foo'))
+    )
   })
 })

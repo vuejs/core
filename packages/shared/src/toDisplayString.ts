@@ -34,7 +34,9 @@ const replacer = (_key: string, val: any): any => {
     return {
       [`Map(${val.size})`]: [...val.entries()].reduce(
         (entries, [key, val], i) => {
-          entries[`${isSymbol(key) ? `Symbol(${i})` : key} =>`] = val
+          entries[
+            `${isSymbol(key) ? `Symbol(${key.description ?? i})` : key} =>`
+          ] = val
           return entries
         },
         {} as Record<string, any>
