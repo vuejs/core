@@ -7,7 +7,6 @@ import {
   NodeTypes,
   createCompoundExpression,
   ExpressionNode,
-  SimpleExpressionNode,
   isStaticExp,
   CompilerDeprecationTypes,
   TransformContext,
@@ -15,7 +14,7 @@ import {
   checkCompatEnabled
 } from '@vue/compiler-core'
 import { V_ON_WITH_MODIFIERS, V_ON_WITH_KEYS } from '../runtimeHelpers'
-import { makeMap, capitalize } from '@vue/shared'
+import { makeMap, capitalize, isString } from '@vue/shared'
 
 const isEventOptionModifier = /*#__PURE__*/ makeMap(`passive,once,capture`)
 const isNonKeyModifier = /*#__PURE__*/ makeMap(
@@ -33,10 +32,10 @@ const isKeyboardEvent = /*#__PURE__*/ makeMap(
   true
 )
 
-const resolveModifiers = (
-  key: ExpressionNode,
+export const resolveModifiers = (
+  key: ExpressionNode | string,
   modifiers: string[],
-  context: TransformContext,
+  context: TransformContext | null,
   loc: SourceLocation
 ) => {
   const keyModifiers = []
@@ -49,6 +48,7 @@ const resolveModifiers = (
     if (
       __COMPAT__ &&
       modifier === 'native' &&
+      context &&
       checkCompatEnabled(
         CompilerDeprecationTypes.COMPILER_V_ON_NATIVE,
         context,
@@ -61,10 +61,16 @@ const resolveModifiers = (
       // e.g. .passive & .capture
       eventOptionModifiers.push(modifier)
     } else {
+      const keyString = isString(key)
+        ? key
+        : isStaticExp(key)
+          ? key.content
+          : null
+
       // runtimeModifiers: modifiers that needs runtime guards
       if (maybeKeyModifier(modifier)) {
-        if (isStaticExp(key)) {
-          if (isKeyboardEvent((key as SimpleExpressionNode).content)) {
+        if (keyString) {
+          if (isKeyboardEvent(keyString)) {
             keyModifiers.push(modifier)
           } else {
             nonKeyModifiers.push(modifier)
@@ -76,7 +82,7 @@ const resolveModifiers = (
       } else {
         if (isNonKeyModifier(modifier)) {
           nonKeyModifiers.push(modifier)
-        } else {
+        } else if (!keyString || isKeyboardEvent(keyString)) {
           keyModifiers.push(modifier)
         }
       }

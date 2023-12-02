@@ -17,6 +17,7 @@ import {
   OperationNode,
   VaporHelper,
   IRExpression,
+  SetEventIRNode,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { isString } from '@vue/shared'
@@ -316,17 +317,7 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
     }
 
     case IRNodeTypes.SET_EVENT: {
-      pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
-      genExpression(oper.name, context)
-      push(', ')
-
-      const hasModifiers = oper.modifiers.length
-      hasModifiers && push(`${vaporHelper('withModifiers')}(`)
-      genExpression(oper.value, context)
-      hasModifiers && push(`, ${genArrayExpression(oper.modifiers)})`)
-
-      push(')')
-      return
+      return genSetEvent(oper, context)
     }
 
     case IRNodeTypes.SET_HTML: {
@@ -442,4 +433,33 @@ function genExpression(
   }
 
   push(content, NewlineType.None, exp.loc, name)
+}
+
+function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
+  const { vaporHelper, push, pushWithNewline } = context
+
+  pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
+  // second arg: event name
+  genExpression(oper.name, context)
+  push(', ')
+
+  const { keys, nonKeys, options } = oper.modifiers
+  if (keys.length) {
+    push(`${vaporHelper('withKeys')}(`)
+  }
+  if (nonKeys.length) {
+    push(`${vaporHelper('withModifiers')}(`)
+  }
+  genExpression(oper.value, context)
+  if (nonKeys.length) {
+    push(`, ${genArrayExpression(nonKeys)})`)
+  }
+  if (keys.length) {
+    push(`, ${genArrayExpression(keys)})`)
+  }
+  if (options.length) {
+    push(`, { ${options.map((v) => `${v}: true`).join(', ')} }`)
+  }
+
+  push(')')
 }

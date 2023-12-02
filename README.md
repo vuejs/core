@@ -28,7 +28,7 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [ ] `v-on`
     - [x] simple expression
     - [ ] compound expression
-    - [ ] modifiers
+    - [x] modifiers
   - [ ] `v-bind`
     - [x] simple expression
     - [ ] compound expression

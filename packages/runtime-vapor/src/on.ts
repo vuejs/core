@@ -1,8 +1,8 @@
 export function on(
-  el: any,
+  el: HTMLElement,
   event: string,
   handler: () => any,
-  options?: EventListenerOptions,
+  options?: AddEventListenerOptions,
 ) {
   el.addEventListener(event, handler, options)
 }

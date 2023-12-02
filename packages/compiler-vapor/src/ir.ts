@@ -67,7 +67,14 @@ export interface SetEventIRNode extends BaseIRNode {
   element: number
   name: IRExpression
   value: IRExpression
-  modifiers: string[]
+  modifiers: {
+    // modifiers for addEventListener() options, e.g. .passive & .capture
+    options: string[]
+    // modifiers that needs runtime guards, withKeys
+    keys: string[]
+    // modifiers that needs runtime guards, withModifiers
+    nonKeys: string[]
+  }
 }
 
 export interface SetHtmlIRNode extends BaseIRNode {

@@ -30,7 +30,7 @@ export type NodeTransform = (
 export type DirectiveTransform = (
   dir: DirectiveNode,
   node: ElementNode,
-  context: TransformContext,
+  context: TransformContext<ElementNode>,
   // a platform specific compiler can import the base transform and augment
   // it by passing in this optional argument.
   // augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult,

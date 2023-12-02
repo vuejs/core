@@ -10,6 +10,7 @@ import {
 import { isVoidTag } from '@vue/shared'
 import { NodeTransform, TransformContext } from '../transform'
 import { IRNodeTypes } from '../ir'
+import { transformVOn } from './vOn'
 
 export const transformElement: NodeTransform = (node, ctx) => {
   return function postTransformElement() {
@@ -70,7 +71,7 @@ function transformProp(
     return
   }
 
-  const { arg, exp, loc, modifiers } = prop
+  const { arg, exp, loc } = prop
   const directiveTransform = context.options.directiveTransforms[name]
   if (directiveTransform) {
     directiveTransform(prop, node, context)
@@ -112,31 +113,7 @@ function transformProp(
       break
     }
     case 'on': {
-      if (!exp && !modifiers.length) {
-        context.options.onError(
-          createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
-        )
-        return
-      }
-
-      if (!arg) {
-        // TODO support v-on="{}"
-        return
-      } else if (exp === undefined) {
-        // TODO: support @foo
-        // https://github.com/vuejs/core/pull/9451
-        return
-      }
-
-      // TODO reactive
-      context.registerOperation({
-        type: IRNodeTypes.SET_EVENT,
-        loc: node.loc,
-        element: context.reference(),
-        name: arg,
-        value: exp,
-        modifiers,
-      })
+      transformVOn(prop, node, context)
       break
     }
   }
