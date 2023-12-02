@@ -11,8 +11,9 @@ import {
 import { extend, isString } from '@vue/shared'
 import { NodeTransform, transform } from './transform'
 import { generate } from './generate'
-import { transformOnce } from './transforms/vOnce'
 import { HackOptions } from './hack'
+import { transformOnce } from './transforms/vOnce'
+import { transformElement } from './transforms/transformElement'
 
 export type CompilerOptions = HackOptions<BaseCompilerOptions>
 
@@ -84,5 +85,5 @@ export type TransformPreset = [
 export function getBaseTransformPreset(
   prefixIdentifiers?: boolean,
 ): TransformPreset {
-  return [[transformOnce], {}]
+  return [[transformOnce, transformElement], {}]
 }

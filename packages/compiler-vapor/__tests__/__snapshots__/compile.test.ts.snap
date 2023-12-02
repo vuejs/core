@@ -136,38 +136,38 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > self-closing v-pre 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, effect as _effect, setAttr as _setAttr, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, effect as _effect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template(\\"<div></div><div><Comp></Comp></div>\\")
   const n0 = t0()
-  const { 1: [n1],} = _children(n0)
-  const n2 = _createTextNode(bar)
-  _append(n1, n2)
+  const { 1: [n2],} = _children(n0)
+  const n1 = _createTextNode(bar)
+  _append(n2, n1)
   _effect(() => {
-    _setAttr(n1, \\"id\\", undefined, foo)
+    _setText(n1, undefined, bar)
   })
   _effect(() => {
-    _setText(n2, undefined, bar)
+    _setAttr(n2, \\"id\\", undefined, foo)
   })
   return n0
 }"
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, effect as _effect, setAttr as _setAttr, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, effect as _effect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template(\\"<div :id=\\\\\\"foo\\\\\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>\\")
   const n0 = t0()
-  const { 1: [n1],} = _children(n0)
-  const n2 = _createTextNode(bar.value)
-  _append(n1, n2)
+  const { 1: [n2],} = _children(n0)
+  const n1 = _createTextNode(bar.value)
+  _append(n2, n1)
   _effect(() => {
-    _setAttr(n1, \\"id\\", undefined, foo.value)
+    _setText(n1, undefined, bar.value)
   })
   _effect(() => {
-    _setText(n2, undefined, bar.value)
+    _setAttr(n2, \\"id\\", undefined, foo.value)
   })
   return n0
 }"
@@ -220,23 +220,20 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, effect as _effect, on as _on, setAttr as _setAttr, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, effect as _effect, setText as _setText, on as _on, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template(\\"<button>foo<!>foo</button>\\")
   const n0 = t0()
-  const { 0: [n1, { 1: [n5],}],} = _children(n0)
+  const { 0: [n4, { 1: [n5],}],} = _children(n0)
+  const n1 = _createTextNode(count)
   const n2 = _createTextNode(count)
   const n3 = _createTextNode(count)
-  const n4 = _createTextNode(count)
-  _prepend(n1, n2)
-  _insert(n3, n1, n5)
-  _append(n1, n4)
+  _prepend(n4, n1)
+  _insert(n2, n4, n5)
+  _append(n4, n3)
   _effect(() => {
-    _on(n1, \\"click\\", handleClick)
-  })
-  _effect(() => {
-    _setAttr(n1, \\"id\\", undefined, count)
+    _setText(n1, undefined, count)
   })
   _effect(() => {
     _setText(n2, undefined, count)
@@ -245,7 +242,10 @@ export function render(_ctx) {
     _setText(n3, undefined, count)
   })
   _effect(() => {
-    _setText(n4, undefined, count)
+    _on(n4, \\"click\\", handleClick)
+  })
+  _effect(() => {
+    _setAttr(n4, \\"id\\", undefined, count)
   })
   return n0
 }"

@@ -2,22 +2,16 @@ import {
   type RootNode,
   type TemplateChildNode,
   type ElementNode,
-  type AttributeNode,
   type InterpolationNode,
   type TransformOptions as BaseTransformOptions,
-  type DirectiveNode,
   type ParentNode,
   type AllNode,
   type CompilerCompatOptions,
   NodeTypes,
   defaultOnError,
   defaultOnWarn,
-  ErrorCodes,
-  createCompilerError,
-  DOMErrorCodes,
-  createDOMCompilerError,
 } from '@vue/compiler-dom'
-import { EMPTY_OBJ, NOOP, isArray, isVoidTag } from '@vue/shared'
+import { EMPTY_OBJ, NOOP, isArray } from '@vue/shared'
 import {
   type OperationNode,
   type RootIRNode,
@@ -29,7 +23,7 @@ import type { HackOptions } from './hack'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
-  context: TransformContext,
+  context: TransformContext<RootNode | TemplateChildNode>,
 ) => void | (() => void) | (() => void)[]
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
@@ -44,6 +38,7 @@ export interface TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string
+  childrenTemplate: string[]
   dynamic: IRDynamicInfo
 
   inVOnce: boolean
@@ -121,6 +116,7 @@ function createRootContext(
     },
 
     template: '',
+    childrenTemplate: [],
     registerTemplate() {
       if (!ctx.template) return -1
 
@@ -164,6 +160,7 @@ function createContext<T extends TemplateChildNode>(
     index,
 
     template: '',
+    childrenTemplate: [],
     dynamic: {
       id: null,
       referenced: false,
@@ -200,9 +197,11 @@ export function transform(
   }
 
   const ctx = createRootContext(ir, root, options)
-
-  // TODO: transform presets, see packages/compiler-core/src/transforms
   transformNode(ctx)
+
+  if (ctx.node.type === NodeTypes.ROOT) {
+    ctx.registerTemplate()
+  }
   if (ir.template.length === 0) {
     ir.template.push({
       type: IRNodeTypes.FRAGMENT_FACTORY,
@@ -222,8 +221,7 @@ function transformNode(
   const { nodeTransforms } = context.options
   const exitFns = []
   for (const nodeTransform of nodeTransforms) {
-    // TODO nodeTransform type
-    const onExit = nodeTransform(node, context as any)
+    const onExit = nodeTransform(node, context)
     if (onExit) {
       if (isArray(onExit)) {
         exitFns.push(...onExit)
@@ -240,18 +238,14 @@ function transformNode(
     }
   }
 
-  if (node.type === NodeTypes.ROOT) {
-    transformChildren(context as TransformContext<RootNode>)
-    return
-  }
-
-  const parentChildren = context.parent!.node.children
+  const parentChildren = context.parent ? context.parent.node.children : []
   const isFirst = index === 0
   const isLast = index === parentChildren.length - 1
 
   switch (node.type) {
+    case NodeTypes.ROOT:
     case NodeTypes.ELEMENT: {
-      transformElement(context as TransformContext<ElementNode>)
+      transformChildren(context as TransformContext<RootNode | ElementNode>)
       break
     }
     case NodeTypes.TEXT: {
@@ -289,93 +283,81 @@ function transformNode(
   while (i--) {
     exitFns[i]()
   }
+
+  if (context.node.type === NodeTypes.ROOT)
+    context.template += context.childrenTemplate.join('')
 }
 
 function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
-  const {
-    node: { children },
-  } = ctx
-  const childrenTemplate: string[] = []
-  children.forEach((child, index) => {
-    const childContext = createContext(child, ctx, index)
+  const { children } = ctx.node
+  let i = 0
+  // const nodeRemoved = () => {
+  //   i--
+  // }
+  for (; i < children.length; i++) {
+    const child = children[i]
+    const childContext = createContext(child, ctx, i)
     transformNode(childContext)
-
-    childrenTemplate.push(childContext.template)
+    ctx.childrenTemplate.push(childContext.template)
     if (
       childContext.dynamic.ghost ||
       childContext.dynamic.referenced ||
       childContext.dynamic.placeholder ||
       Object.keys(childContext.dynamic.children).length
     ) {
-      ctx.dynamic.children[index] = childContext.dynamic
-    }
-  })
-
-  processDynamicChildren()
-  ctx.template += childrenTemplate.join('')
-
-  if (ctx.node.type === NodeTypes.ROOT) ctx.registerTemplate()
-
-  function processDynamicChildren() {
-    let prevChildren: IRDynamicInfo[] = []
-    let hasStatic = false
-    for (let index = 0; index < children.length; index++) {
-      const child = ctx.dynamic.children[index]
-
-      if (!child || !child.ghost) {
-        if (prevChildren.length)
-          if (hasStatic) {
-            childrenTemplate[index - prevChildren.length] = `<!>`
-            const anchor = (prevChildren[0].placeholder = ctx.increaseId())
-
-            ctx.registerOperation({
-              type: IRNodeTypes.INSERT_NODE,
-              loc: ctx.node.loc,
-              element: prevChildren.map((child) => child.id!),
-              parent: ctx.reference(),
-              anchor,
-            })
-          } else {
-            ctx.registerOperation({
-              type: IRNodeTypes.PREPEND_NODE,
-              loc: ctx.node.loc,
-              elements: prevChildren.map((child) => child.id!),
-              parent: ctx.reference(),
-            })
-          }
-        hasStatic = true
-        prevChildren = []
-        continue
-      }
-
-      prevChildren.push(child)
-
-      if (index === children.length - 1) {
-        ctx.registerOperation({
-          type: IRNodeTypes.APPEND_NODE,
-          loc: ctx.node.loc,
-          elements: prevChildren.map((child) => child.id!),
-          parent: ctx.reference(),
-        })
-      }
+      ctx.dynamic.children[i] = childContext.dynamic
     }
   }
+
+  processDynamicChildren(ctx)
 }
 
-function transformElement(ctx: TransformContext<ElementNode>) {
+function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
   const { node } = ctx
-  const { tag, props, children } = node
 
-  ctx.template += `<${tag}`
+  let prevChildren: IRDynamicInfo[] = []
+  let hasStatic = false
 
-  props.forEach((prop) => transformProp(prop, ctx))
-  ctx.template += `>`
+  for (let index = 0; index < node.children.length; index++) {
+    const child = ctx.dynamic.children[index]
 
-  if (children.length) transformChildren(ctx)
+    if (!child || !child.ghost) {
+      if (prevChildren.length) {
+        if (hasStatic) {
+          ctx.childrenTemplate[index - prevChildren.length] = `<!>`
+          const anchor = (prevChildren[0].placeholder = ctx.increaseId())
 
-  // TODO remove unnecessary close tag, e.g. if it's the last element of the template
-  if (!isVoidTag(tag)) {
-    ctx.template += `</${tag}>`
+          ctx.registerOperation({
+            type: IRNodeTypes.INSERT_NODE,
+            loc: node.loc,
+            element: prevChildren.map((child) => child.id!),
+            parent: ctx.reference(),
+            anchor,
+          })
+        } else {
+          ctx.registerOperation({
+            type: IRNodeTypes.PREPEND_NODE,
+            loc: node.loc,
+            elements: prevChildren.map((child) => child.id!),
+            parent: ctx.reference(),
+          })
+        }
+      }
+      hasStatic = true
+      prevChildren = []
+      continue
+    }
+
+    prevChildren.push(child)
+
+    if (index === node.children.length - 1) {
+      ctx.registerOperation({
+        type: IRNodeTypes.APPEND_NODE,
+        loc: node.loc,
+        elements: prevChildren.map((child) => child.id!),
+        parent: ctx.reference(),
+      })
+    }
   }
 }
 
@@ -422,136 +404,5 @@ function transformInterpolation(
         },
       ],
     )
-  }
-}
-
-function transformProp(
-  node: DirectiveNode | AttributeNode,
-  ctx: TransformContext<ElementNode>,
-): void {
-  const { name } = node
-
-  if (node.type === NodeTypes.ATTRIBUTE) {
-    if (node.value) {
-      ctx.template += ` ${name}="${node.value.content}"`
-    } else {
-      ctx.template += ` ${name}`
-    }
-    return
-  }
-
-  const { arg, exp, loc, modifiers } = node
-
-  switch (name) {
-    case 'bind': {
-      if (
-        !exp ||
-        (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
-      ) {
-        ctx.options.onError(
-          createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
-        )
-        return
-      }
-
-      if (exp === null) {
-        // TODO: Vue 3.4 supported shorthand syntax
-        // https://github.com/vuejs/core/pull/9451
-        return
-      } else if (!arg) {
-        // TODO support v-bind="{}"
-        return
-      }
-
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_PROP,
-            loc: node.loc,
-            element: ctx.reference(),
-            name: arg,
-            value: exp,
-          },
-        ],
-      )
-      break
-    }
-    case 'on': {
-      if (!exp && !modifiers.length) {
-        ctx.options.onError(
-          createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
-        )
-        return
-      }
-
-      if (!arg) {
-        // TODO support v-on="{}"
-        return
-      } else if (exp === undefined) {
-        // TODO: support @foo
-        // https://github.com/vuejs/core/pull/9451
-        return
-      }
-
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_EVENT,
-            loc: node.loc,
-            element: ctx.reference(),
-            name: arg,
-            value: exp,
-            modifiers,
-          },
-        ],
-      )
-      break
-    }
-    case 'html': {
-      if (!exp) {
-        ctx.options.onError(
-          createDOMCompilerError(DOMErrorCodes.X_V_HTML_NO_EXPRESSION, loc),
-        )
-      }
-      if (ctx.node.children.length) {
-        ctx.options.onError(
-          createDOMCompilerError(DOMErrorCodes.X_V_HTML_WITH_CHILDREN, loc),
-        )
-        ctx.node.children.length = 0
-      }
-
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_HTML,
-            loc: node.loc,
-            element: ctx.reference(),
-            value: exp || '""',
-          },
-        ],
-      )
-      break
-    }
-    case 'text': {
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_TEXT,
-            loc: node.loc,
-            element: ctx.reference(),
-            value: exp || '""',
-          },
-        ],
-      )
-      break
-    }
-    case 'cloak': {
-      // do nothing
-      break
-    }
   }
 }
