@@ -15,6 +15,7 @@ import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
 import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
+import { transformVOn } from './transforms/vOn'
 
 export type CompilerOptions = HackOptions<BaseCompilerOptions>
 
@@ -89,6 +90,7 @@ export function getBaseTransformPreset(
   return [
     [transformOnce, transformElement],
     {
+      on: transformVOn,
       html: transformVHtml,
       text: transformVText,
     },
