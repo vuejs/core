@@ -1,4 +1,9 @@
-import { type RootNode, BindingTypes, ErrorCodes } from '@vue/compiler-dom'
+import {
+  type RootNode,
+  BindingTypes,
+  ErrorCodes,
+  DOMErrorCodes,
+} from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
@@ -133,9 +138,26 @@ describe('compile', () => {
         expect(code).matchSnapshot()
       })
 
-      test('no expression', async () => {
-        const code = await compile(`<div v-html></div>`)
+      test('should raise error and ignore children when v-html is present', async () => {
+        const onError = vi.fn()
+        const code = await compile(`<div v-html="test">hello</div>`, {
+          onError,
+        })
         expect(code).matchSnapshot()
+        expect(onError.mock.calls).toMatchObject([
+          [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }],
+        ])
+      })
+
+      test('should raise error if has no expression', async () => {
+        const onError = vi.fn()
+        const code = await compile(`<div v-html></div>`, {
+          onError,
+        })
+        expect(code).matchSnapshot()
+        expect(onError.mock.calls).toMatchObject([
+          [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
+        ])
       })
     })
 
