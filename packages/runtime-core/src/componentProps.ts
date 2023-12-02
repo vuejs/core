@@ -594,19 +594,26 @@ function validatePropName(key: string) {
   return false
 }
 
+const typeMap = new WeakMap<PropConstructor, string>()
+
 // use function string name to check type constructors
 // so that it works across vms / iframes.
-function getType(ctor: Prop<any>): string {
+function getType(ctor: PropConstructor): string {
+  if (typeMap.has(ctor)) {
+    return typeMap.get(ctor)!
+  }
   const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
-  return match ? match[2] : ctor === null ? 'null' : ''
+  const type = match ? match[2] : ctor === null ? 'null' : ''
+  if (match) typeMap.set(ctor, type)
+  return type
 }
 
-function isSameType(a: Prop<any>, b: Prop<any>): boolean {
+function isSameType(a: PropConstructor, b: PropConstructor): boolean {
   return getType(a) === getType(b)
 }
 
 function getTypeIndex(
-  type: Prop<any>,
+  type: PropConstructor,
   expectedTypes: PropType<any> | void | null | true
 ): number {
   if (isArray(expectedTypes)) {
