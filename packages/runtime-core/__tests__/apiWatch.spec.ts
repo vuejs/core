@@ -1300,5 +1300,21 @@ describe('api: watch', () => {
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(2)
     expect(cb).toHaveBeenLastCalledWith(3, 1, expect.any(Function))
+
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    pause()
+    count.value++
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(3)
+    expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
+
+    resume(true)
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(4)
+    expect(cb).toHaveBeenLastCalledWith(5, 4, expect.any(Function))
   })
 })
