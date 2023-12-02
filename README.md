@@ -32,7 +32,6 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [ ] `v-bind`
     - [x] simple expression
     - [ ] compound expression
-    - [x] modifiers
   - [ ] runtime directives
     - #19
   - [ ] `v-memo`
@@ -47,11 +46,13 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [ ] `v-show`
     - #16
     - needs #19 first
-- [x] Remove DOM API in codegen
 - [x] Fragment
-  - [x] multiple root nodes
-  - [x] all dynamic children
-  - [x] return `Node[]` for all dynamic children, instead of using `fragment` API
+- [ ] Codegen
+  - [x] CodegenContext
+  - [x] indent
+  - [x] Source map
+  - [ ] Function mode
+  - [ ] SSR
 - [ ] Built-in Components
   - [ ] Transition
   - [ ] TransitionGroup
@@ -59,7 +60,6 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [ ] Teleport
   - [ ] Suspense
 - [ ] [Component](https://github.com/vuejs/core-vapor/issues/4)
-- [ ] SSR
 - [ ] Performance & Optimization
   - [ ] remove unnecessary close tag `</div>`
 
