@@ -72,7 +72,7 @@ export class ReactiveEffect<T = any> {
    * Indicates the level of dirtiness for pausing activity.
    * @internal
    */
-  _pauseDirtyLevel = DirtyLevels.NotDirty
+  _pausedDirtyLevel = DirtyLevels.NotDirty
 
   constructor(
     public fn: () => T,
@@ -117,7 +117,7 @@ export class ReactiveEffect<T = any> {
   }
 
   private setPausedDirtyLevel() {
-    this._pauseDirtyLevel = Math.max(this._dirtyLevel, this._pauseDirtyLevel)
+    this._pausedDirtyLevel = Math.max(this._dirtyLevel, this._pausedDirtyLevel)
     this._dirtyLevel = DirtyLevels.NotDirty
   }
   pause() {
@@ -133,7 +133,7 @@ export class ReactiveEffect<T = any> {
       this._isPaused = false
       if (this._isCalled && immediate) {
         if (this.scheduler) {
-          this._dirtyLevel = Math.max(this._dirtyLevel, this._pauseDirtyLevel)
+          this._dirtyLevel = Math.max(this._dirtyLevel, this._pausedDirtyLevel)
           this.scheduler()
         } else {
           this.run()
