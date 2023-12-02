@@ -128,19 +128,15 @@ function transformProp(
         return
       }
 
-      context.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_EVENT,
-            loc: prop.loc,
-            element: context.reference(),
-            name: arg,
-            value: exp,
-            modifiers,
-          },
-        ],
-      )
+      // TODO reactive
+      context.registerOperation({
+        type: IRNodeTypes.SET_EVENT,
+        loc: node.loc,
+        element: context.reference(),
+        name: arg,
+        value: exp,
+        modifiers,
+      })
       break
     }
   }
