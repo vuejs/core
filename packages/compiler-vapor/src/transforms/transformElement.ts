@@ -5,8 +5,6 @@ import {
   NodeTypes,
   ErrorCodes,
   createCompilerError,
-  DOMErrorCodes,
-  createDOMCompilerError,
   ElementTypes,
 } from '@vue/compiler-dom'
 import { isVoidTag } from '@vue/shared'
@@ -28,13 +26,18 @@ export const transformElement: NodeTransform = (node, ctx) => {
     }
 
     const { tag, props } = node
+    const isComponent = node.tagType === ElementTypes.COMPONENT
 
     ctx.template += `<${tag}`
-    props.forEach((prop) =>
-      transformProp(prop, ctx as TransformContext<ElementNode>),
-    )
-    ctx.template += `>`
-    ctx.template += ctx.childrenTemplate.join('')
+    if (props.length) {
+      buildProps(
+        node,
+        ctx as TransformContext<ElementNode>,
+        undefined,
+        isComponent,
+      )
+    }
+    ctx.template += `>` + ctx.childrenTemplate.join('')
 
     // TODO remove unnecessary close tag, e.g. if it's the last element of the template
     if (!isVoidTag(tag)) {
@@ -43,22 +46,35 @@ export const transformElement: NodeTransform = (node, ctx) => {
   }
 }
 
-function transformProp(
-  node: DirectiveNode | AttributeNode,
-  ctx: TransformContext<ElementNode>,
-): void {
-  const { name } = node
+function buildProps(
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+  props: ElementNode['props'] = node.props,
+  isComponent: boolean,
+) {
+  for (const prop of props) {
+    transformProp(prop, node, context)
+  }
+}
 
-  if (node.type === NodeTypes.ATTRIBUTE) {
-    if (node.value) {
-      ctx.template += ` ${name}="${node.value.content}"`
-    } else {
-      ctx.template += ` ${name}`
-    }
+function transformProp(
+  prop: DirectiveNode | AttributeNode,
+  node: ElementNode,
+  context: TransformContext<ElementNode>,
+): void {
+  const { name } = prop
+
+  if (prop.type === NodeTypes.ATTRIBUTE) {
+    context.template += ` ${name}`
+    if (prop.value) context.template += `="${prop.value.content}"`
     return
   }
 
-  const { arg, exp, loc, modifiers } = node
+  const { arg, exp, loc, modifiers } = prop
+  const directiveTransform = context.options.directiveTransforms[name]
+  if (directiveTransform) {
+    directiveTransform(prop, node, context)
+  }
 
   switch (name) {
     case 'bind': {
@@ -66,7 +82,7 @@ function transformProp(
         !exp ||
         (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
       ) {
-        ctx.options.onError(
+        context.options.onError(
           createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
         )
         return
@@ -81,13 +97,13 @@ function transformProp(
         return
       }
 
-      ctx.registerEffect(
+      context.registerEffect(
         [exp],
         [
           {
             type: IRNodeTypes.SET_PROP,
-            loc: node.loc,
-            element: ctx.reference(),
+            loc: prop.loc,
+            element: context.reference(),
             name: arg,
             value: exp,
           },
@@ -97,7 +113,7 @@ function transformProp(
     }
     case 'on': {
       if (!exp && !modifiers.length) {
-        ctx.options.onError(
+        context.options.onError(
           createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
         )
         return
@@ -112,63 +128,19 @@ function transformProp(
         return
       }
 
-      ctx.registerEffect(
+      context.registerEffect(
         [exp],
         [
           {
             type: IRNodeTypes.SET_EVENT,
-            loc: node.loc,
-            element: ctx.reference(),
+            loc: prop.loc,
+            element: context.reference(),
             name: arg,
             value: exp,
             modifiers,
           },
         ],
       )
-      break
-    }
-    case 'html': {
-      if (!exp) {
-        ctx.options.onError(
-          createDOMCompilerError(DOMErrorCodes.X_V_HTML_NO_EXPRESSION, loc),
-        )
-      }
-      if (ctx.node.children.length) {
-        ctx.options.onError(
-          createDOMCompilerError(DOMErrorCodes.X_V_HTML_WITH_CHILDREN, loc),
-        )
-        ctx.childrenTemplate.length = 0
-      }
-
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_HTML,
-            loc: node.loc,
-            element: ctx.reference(),
-            value: exp || '""',
-          },
-        ],
-      )
-      break
-    }
-    case 'text': {
-      ctx.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_TEXT,
-            loc: node.loc,
-            element: ctx.reference(),
-            value: exp || '""',
-          },
-        ],
-      )
-      break
-    }
-    case 'cloak': {
-      // do nothing
       break
     }
   }

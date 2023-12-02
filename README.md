@@ -16,9 +16,9 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [x] simple bindings
   - [x] simple events
 - [ ] TODO-MVC App
-- [ ] transform
+- [x] transform
   - [x] NodeTransform
-  - [ ] DirectiveTransform
+  - [x] DirectiveTransform
 - [ ] directives
   - [x] `v-once`
   - [x] `v-html`

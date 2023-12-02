@@ -10,6 +10,7 @@ import {
   NodeTypes,
   defaultOnError,
   defaultOnWarn,
+  DirectiveNode,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, isArray } from '@vue/shared'
 import {
@@ -25,6 +26,15 @@ export type NodeTransform = (
   node: RootNode | TemplateChildNode,
   context: TransformContext<RootNode | TemplateChildNode>,
 ) => void | (() => void) | (() => void)[]
+
+export type DirectiveTransform = (
+  dir: DirectiveNode,
+  node: ElementNode,
+  context: TransformContext,
+  // a platform specific compiler can import the base transform and augment
+  // it by passing in this optional argument.
+  // augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult,
+) => void
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
 

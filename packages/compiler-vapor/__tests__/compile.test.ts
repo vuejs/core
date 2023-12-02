@@ -172,8 +172,12 @@ describe('compile', () => {
       })
 
       test('no expression', async () => {
-        const code = await compile(`<div v-text></div>`)
+        const onError = vi.fn()
+        const code = await compile(`<div v-text></div>`, { onError })
         expect(code).matchSnapshot()
+        expect(onError.mock.calls).toMatchObject([
+          [{ code: DOMErrorCodes.X_V_TEXT_NO_EXPRESSION }],
+        ])
       })
     })
 

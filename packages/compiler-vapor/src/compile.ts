@@ -2,18 +2,19 @@ import {
   type CodegenResult,
   type CompilerOptions as BaseCompilerOptions,
   type RootNode,
-  type DirectiveTransform,
   parse,
   defaultOnError,
   createCompilerError,
   ErrorCodes,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
-import { NodeTransform, transform } from './transform'
+import { DirectiveTransform, NodeTransform, transform } from './transform'
 import { generate } from './generate'
 import { HackOptions } from './hack'
 import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
+import { transformVHtml } from './transforms/vHtml'
+import { transformVText } from './transforms/vText'
 
 export type CompilerOptions = HackOptions<BaseCompilerOptions>
 
@@ -85,5 +86,11 @@ export type TransformPreset = [
 export function getBaseTransformPreset(
   prefixIdentifiers?: boolean,
 ): TransformPreset {
-  return [[transformOnce, transformElement], {}]
+  return [
+    [transformOnce, transformElement],
+    {
+      html: transformVHtml,
+      text: transformVText,
+    },
+  ]
 }
