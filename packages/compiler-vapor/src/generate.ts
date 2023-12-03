@@ -9,6 +9,7 @@ import {
   NodeTypes,
   BindingTypes,
   isSimpleIdentifier,
+  createSimpleExpression,
 } from '@vue/compiler-dom'
 import {
   type IRDynamicChildren,
@@ -20,7 +21,7 @@ import {
   SetEventIRNode,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { isString } from '@vue/shared'
+import { camelize, capitalize, isString } from '@vue/shared'
 
 // remove when stable
 // @ts-expect-error
@@ -361,6 +362,23 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
       )
       return
     }
+    case IRNodeTypes.WITH_DIRECTIVE: {
+      // TODO merge directive for the same node
+      pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
+
+      // TODO resolve directive
+      const directiveReference = camelize(`v-${oper.name}`)
+      if (context.bindingMetadata[directiveReference]) {
+        genExpression(createSimpleExpression(directiveReference), context)
+      }
+
+      if (oper.binding) {
+        push(', ')
+        genExpression(oper.binding, context)
+      }
+      push(']])')
+      return
+    }
     default:
       return checkNever(oper)
   }
@@ -406,6 +424,7 @@ function genExpression(
     vaporHelper,
     push,
   }: CodegenContext,
+  { unref = true }: { unref?: boolean } = {},
 ) {
   if (isString(exp)) return push(exp)
 
@@ -418,14 +437,15 @@ function genExpression(
   if (exp.isStatic) {
     content = JSON.stringify(content)
   } else {
-    switch (bindingMetadata[content]) {
-      case BindingTypes.SETUP_REF:
-        content += '.value'
-        break
-      case BindingTypes.SETUP_MAYBE_REF:
-        content = `${vaporHelper('unref')}(${content})`
-        break
-    }
+    if (unref)
+      switch (bindingMetadata[content]) {
+        case BindingTypes.SETUP_REF:
+          content += '.value'
+          break
+        case BindingTypes.SETUP_MAYBE_REF:
+          content = `${vaporHelper('unref')}(${content})`
+          break
+      }
     if (prefixIdentifiers && !inline) {
       if (isSimpleIdentifier(content)) name = content
       content = `_ctx.${content}`

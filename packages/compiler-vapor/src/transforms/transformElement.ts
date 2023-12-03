@@ -7,7 +7,7 @@ import {
   createCompilerError,
   ElementTypes,
 } from '@vue/compiler-dom'
-import { isVoidTag } from '@vue/shared'
+import { isBuiltInDirective, isVoidTag } from '@vue/shared'
 import { NodeTransform, TransformContext } from '../transform'
 import { IRNodeTypes } from '../ir'
 
@@ -74,6 +74,14 @@ function transformProp(
   const directiveTransform = context.options.directiveTransforms[name]
   if (directiveTransform) {
     directiveTransform(prop, node, context)
+  } else if (!isBuiltInDirective(name)) {
+    context.registerOperation({
+      type: IRNodeTypes.WITH_DIRECTIVE,
+      element: context.reference(),
+      name,
+      binding: prop.exp,
+      loc: prop.loc,
+    })
   }
 
   switch (name) {

@@ -5,7 +5,11 @@ import {
   toDisplayString,
 } from '@vue/shared'
 
-import { ComponentInternalInstance, createComponentInstance } from './component'
+import {
+  ComponentInternalInstance,
+  createComponentInstance,
+  setCurrentInstance,
+} from './component'
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
@@ -17,6 +21,7 @@ export function render(
   container: string | ParentNode,
 ): ComponentInternalInstance {
   const instance = createComponentInstance(comp)
+  setCurrentInstance(instance)
   mountComponent(instance, (container = normalizeContainer(container)))
   return instance
 }

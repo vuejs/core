@@ -269,11 +269,11 @@ importers:
   packages/compiler-vapor:
     dependencies:
       '@vue/compiler-dom':
-        specifier: 3.3.8
-        version: 3.3.8
+        specifier: workspace:*
+        version: link:../compiler-dom
       '@vue/shared':
-        specifier: 3.3.8
-        version: 3.3.8
+        specifier: workspace:*
+        version: link:../shared
       source-map-js:
         specifier: ^1.0.2
         version: 1.0.2
@@ -1825,22 +1825,6 @@ packages:
       pretty-format: 29.7.0
     dev: true
 
-  /@vue/compiler-core@3.3.8:
-    resolution: {integrity: sha512-hN/NNBUECw8SusQvDSqqcVv6gWq8L6iAktUR0UF3vGu2OhzRqcOiAno0FmBJWwxhYEXRlQJT5XnoKsVq1WZx4g==}
-    dependencies:
-      '@babel/parser': 7.23.5
-      '@vue/shared': 3.3.8
-      estree-walker: 2.0.2
-      source-map-js: 1.0.2
-    dev: false
-
-  /@vue/compiler-dom@3.3.8:
-    resolution: {integrity: sha512-+PPtv+p/nWDd0AvJu3w8HS0RIm/C6VGBIRe24b9hSyNWOAPEUosFZ5diwawwP8ip5sJ8n0Pe87TNNNHnvjs0FQ==}
-    dependencies:
-      '@vue/compiler-core': 3.3.8
-      '@vue/shared': 3.3.8
-    dev: false
-
   /@vue/consolidate@0.17.3:
     resolution: {integrity: sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==}
     engines: {node: '>= 0.12.0'}
@@ -1848,10 +1832,6 @@ packages:
 
   /@vue/repl@2.7.0:
     resolution: {integrity: sha512-zzyb+tVvzmOePv8Gp4sefP/7CKidx4WiJDfKPP698b9bN5jSFtmSOg4nvPoJEE1ICKeAEgdRKVneYJ8Mp7C/WA==}
-    dev: false
-
-  /@vue/shared@3.3.8:
-    resolution: {integrity: sha512-8PGwybFwM4x8pcfgqEQFy70NaQxASvOC5DJwLQfpArw1UDfUXrJkdxD3BhVTMS+0Lef/TU7YO0Jvr0jJY8T+mw==}
     dev: false
 
   /@zeit/schemas@2.29.0:

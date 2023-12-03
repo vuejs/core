@@ -20,6 +20,8 @@ export enum IRNodeTypes {
   PREPEND_NODE,
   APPEND_NODE,
   CREATE_TEXT_NODE,
+
+  WITH_DIRECTIVE,
 }
 
 export interface BaseIRNode {
@@ -110,6 +112,13 @@ export interface AppendNodeIRNode extends BaseIRNode {
   parent: number
 }
 
+export interface WithDirectiveIRNode extends BaseIRNode {
+  type: IRNodeTypes.WITH_DIRECTIVE
+  element: number
+  name: string
+  binding: IRExpression | undefined
+}
+
 export type IRNode =
   | OperationNode
   | RootIRNode
@@ -124,6 +133,7 @@ export type OperationNode =
   | InsertNodeIRNode
   | PrependNodeIRNode
   | AppendNodeIRNode
+  | WithDirectiveIRNode
 
 export interface IRDynamicInfo {
   id: number | null
