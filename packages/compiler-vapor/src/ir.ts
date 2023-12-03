@@ -3,6 +3,8 @@ import type {
   RootNode,
   SourceLocation,
 } from '@vue/compiler-dom'
+import type { Prettify } from '@vue/shared'
+import type { DirectiveTransform, NodeTransform } from './transform'
 
 export enum IRNodeTypes {
   ROOT,
@@ -139,3 +141,16 @@ export interface IREffect {
   expressions: IRExpression[]
   operations: OperationNode[]
 }
+
+type Overwrite<T, U> = Pick<T, Exclude<keyof T, keyof U>> &
+  Pick<U, Extract<keyof U, keyof T>>
+
+export type HackOptions<T> = Prettify<
+  Overwrite<
+    T,
+    {
+      nodeTransforms?: NodeTransform[]
+      directiveTransforms?: Record<string, DirectiveTransform | undefined>
+    }
+  >
+>

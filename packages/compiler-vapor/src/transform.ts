@@ -2,7 +2,6 @@ import {
   type RootNode,
   type TemplateChildNode,
   type ElementNode,
-  type InterpolationNode,
   type TransformOptions as BaseTransformOptions,
   type ParentNode,
   type AllNode,
@@ -20,7 +19,7 @@ import {
   type IRExpression,
   IRNodeTypes,
 } from './ir'
-import type { HackOptions } from './hack'
+import type { HackOptions } from './ir'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -225,7 +224,7 @@ export function transform(
 function transformNode(
   context: TransformContext<RootNode | TemplateChildNode>,
 ) {
-  let { node, index } = context
+  let { node } = context
 
   // apply transform plugins
   const { nodeTransforms } = context.options
@@ -248,10 +247,6 @@ function transformNode(
     }
   }
 
-  const parentChildren = context.parent ? context.parent.node.children : []
-  const isFirst = index === 0
-  const isLast = index === parentChildren.length - 1
-
   switch (node.type) {
     case NodeTypes.ROOT:
     case NodeTypes.ELEMENT: {
@@ -265,25 +260,6 @@ function transformNode(
     case NodeTypes.COMMENT: {
       context.template += `<!--${node.content}-->`
       break
-    }
-    case NodeTypes.INTERPOLATION: {
-      transformInterpolation(
-        context as TransformContext<InterpolationNode>,
-        isFirst,
-        isLast,
-      )
-      break
-    }
-    case NodeTypes.TEXT_CALL:
-      // never
-      break
-    default: {
-      // TODO handle other types
-      // CompoundExpressionNode
-      // IfNode
-      // IfBranchNode
-      // ForNode
-      context.template += `[type: ${node.type}]`
     }
   }
 
@@ -368,51 +344,5 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
         parent: ctx.reference(),
       })
     }
-  }
-}
-
-function transformInterpolation(
-  ctx: TransformContext<InterpolationNode>,
-  isFirst: boolean,
-  isLast: boolean,
-) {
-  const { node } = ctx
-
-  const expr = node.content
-
-  if (isFirst && isLast) {
-    const parent = ctx.parent!
-    const parentId = parent.reference()
-    ctx.registerEffect(
-      [expr],
-      [
-        {
-          type: IRNodeTypes.SET_TEXT,
-          loc: node.loc,
-          element: parentId,
-          value: expr,
-        },
-      ],
-    )
-  } else {
-    const id = ctx.reference()
-    ctx.dynamic.ghost = true
-    ctx.registerOperation({
-      type: IRNodeTypes.CREATE_TEXT_NODE,
-      loc: node.loc,
-      id,
-      value: expr,
-    })
-    ctx.registerEffect(
-      [expr],
-      [
-        {
-          type: IRNodeTypes.SET_TEXT,
-          loc: node.loc,
-          element: id,
-          value: expr,
-        },
-      ],
-    )
   }
 }

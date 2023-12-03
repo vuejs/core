@@ -8,14 +8,19 @@ import {
   ErrorCodes,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
-import { DirectiveTransform, NodeTransform, transform } from './transform'
+import {
+  type DirectiveTransform,
+  type NodeTransform,
+  transform,
+} from './transform'
 import { generate } from './generate'
-import { HackOptions } from './hack'
 import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
 import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
 import { transformVOn } from './transforms/vOn'
+import { transformInterpolation } from './transforms/transformInterpolation'
+import type { HackOptions } from './ir'
 
 export type CompilerOptions = HackOptions<BaseCompilerOptions>
 
@@ -88,7 +93,7 @@ export function getBaseTransformPreset(
   prefixIdentifiers?: boolean,
 ): TransformPreset {
   return [
-    [transformOnce, transformElement],
+    [transformOnce, transformInterpolation, transformElement],
     {
       on: transformVOn,
       html: transformVHtml,
