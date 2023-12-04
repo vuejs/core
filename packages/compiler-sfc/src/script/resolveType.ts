@@ -757,9 +757,9 @@ function getReferenceName(node: ReferenceTypes): string | string[] {
     node.type === 'TSTypeReference'
       ? node.typeName
       : node.type === 'TSExpressionWithTypeArguments'
-      ? node.expression
+        ? node.expression
         : node.type === 'TSImportType'
-        ? node.qualifier
+          ? node.qualifier
           : node.type === 'TSTypeQuery'
             ? node.exprName
             : node
