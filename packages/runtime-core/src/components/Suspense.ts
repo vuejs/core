@@ -507,7 +507,7 @@ function createSuspenseBoundary(
               move(
                 pendingBranch!,
                 container,
-                next(activeBranch),
+                next(activeBranch!),
                 MoveType.ENTER
               )
               queuePostFlushCb(effects)
