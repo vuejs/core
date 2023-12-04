@@ -25,12 +25,6 @@ export class ReactiveEffect<T = any> {
   active = true
   deps: Dep[] = []
 
-  _isPaused = false
-
-  _isCalled = false
-
-  scheduler?: EffectScheduler
-
   /**
    * Can be attached after creation
    * @internal
@@ -67,29 +61,16 @@ export class ReactiveEffect<T = any> {
    * @internal
    */
   _depsLength = 0
-
   /**
-   * Indicates the level of dirtiness for pausing activity.
    * @internal
    */
-  _pausedDirtyLevel = DirtyLevels.NotDirty
-
+  _isStopped = false
   constructor(
     public fn: () => T,
     public trigger: () => void,
-    scheduler?: EffectScheduler,
+    public scheduler?: EffectScheduler,
     scope?: EffectScope
   ) {
-    if (scheduler) {
-      this.scheduler = (...args: Parameters<EffectScheduler>) => {
-        if (this._isPaused) {
-          this.setPausedDirtyLevel()
-          this._isCalled = true
-          return
-        }
-        return scheduler(...args)
-      }
-    }
     recordEffectScope(this, scope)
   }
 
@@ -116,12 +97,8 @@ export class ReactiveEffect<T = any> {
     this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NotDirty
   }
 
-  private setPausedDirtyLevel() {
-    this._pausedDirtyLevel = Math.max(this._dirtyLevel, this._pausedDirtyLevel)
-    this._dirtyLevel = DirtyLevels.NotDirty
-  }
   pause() {
-    this._isPaused = true
+    this.active = false
   }
 
   /**
@@ -129,26 +106,19 @@ export class ReactiveEffect<T = any> {
    * @param {boolean} immediate - If true, executes the saved run method immediately upon resuming.
    */
   resume(immediate: boolean = false) {
-    if (this._isPaused) {
-      this._isPaused = false
-      if (this._isCalled && immediate) {
-        if (this.scheduler) {
-          this._dirtyLevel = Math.max(this._dirtyLevel, this._pausedDirtyLevel)
-          this.scheduler()
-        } else {
-          this.run()
-        }
+    this.active = true
+    if (pausedQueueEffects.has(this)) {
+      pausedQueueEffects.delete(this)
+      queueEffectSchedulers.push(this.scheduler!)
+      if (immediate) {
+        pauseScheduling()
+        resetScheduling()
       }
-      this._isCalled = false
     }
   }
   run() {
     this._dirtyLevel = DirtyLevels.NotDirty
-    if (this._isPaused) {
-      this._isCalled = true
-      return
-    }
-    if (!this.active) {
+    if (!this.active || this._isStopped) {
       return this.fn()
     }
     let lastShouldTrack = shouldTrack
@@ -168,11 +138,12 @@ export class ReactiveEffect<T = any> {
   }
 
   stop() {
-    if (this.active) {
+    if (!this._isStopped) {
       preCleanupEffect(this)
       postCleanupEffect(this)
       this.onStop?.()
       this.active = false
+      this._isStopped = true
     }
   }
 }
@@ -330,6 +301,7 @@ export function trackEffect(
 }
 
 const queueEffectSchedulers: (() => void)[] = []
+const pausedQueueEffects = new WeakSet<ReactiveEffect>()
 
 export function triggerEffects(
   dep: Dep,
@@ -356,7 +328,11 @@ export function triggerEffects(
         }
         effect.trigger()
         if (effect.scheduler) {
-          queueEffectSchedulers.push(effect.scheduler)
+          if (!effect.active) {
+            pausedQueueEffects.add(effect)
+          } else {
+            queueEffectSchedulers.push(effect.scheduler)
+          }
         }
       }
     }

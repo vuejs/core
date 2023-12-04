@@ -407,7 +407,7 @@ function doWatch(
     if (immediate) {
       job()
     } else {
-      if (!effect._isPaused) oldValue = effect.run()
+      oldValue = effect.run()
     }
   } else if (flush === 'post') {
     queuePostRenderEffect(
