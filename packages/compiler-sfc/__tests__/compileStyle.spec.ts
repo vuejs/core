@@ -144,7 +144,7 @@ describe('SFC scoped CSS', () => {
     `)
   })
 
-  test(':is() and :where()', () => {
+  test(':is() and :where() with multiple selectors', () => {
     expect(compileScoped(`:is(.foo) { color: red; }`)).toMatchInlineSnapshot(`
       ":is(.foo[data-v-test]) { color: red;
       }"
