@@ -33,7 +33,7 @@ import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
-// skip the compare bwtween receiver and proxy of the target
+// skip the comparsion bwtween receiver and proxy of the target
 // which leads to infinite loops in some cases (#9742)
 let forceToRaw = false
 
