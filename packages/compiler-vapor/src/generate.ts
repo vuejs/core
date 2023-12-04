@@ -19,9 +19,10 @@ import {
   VaporHelper,
   IRExpression,
   SetEventIRNode,
+  WithDirectiveIRNode,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { camelize, capitalize, isString } from '@vue/shared'
+import { camelize, isString } from '@vue/shared'
 
 // remove when stable
 // @ts-expect-error
@@ -249,9 +250,17 @@ export function generate(
       )
     }
 
+    for (const oper of ir.operation.filter(
+      (oper): oper is WithDirectiveIRNode =>
+        oper.type === IRNodeTypes.WITH_DIRECTIVE,
+    )) {
+      genWithDirective(oper, ctx)
+    }
+
     for (const operation of ir.operation) {
       genOperation(operation, ctx)
     }
+
     for (const { operations } of ir.effect) {
       pushWithNewline(`${vaporHelper('effect')}(() => {`)
       indent()
@@ -261,6 +270,7 @@ export function generate(
       deindent()
       pushWithNewline('})')
     }
+
     // TODO multiple-template
     // TODO return statement in IR
     pushWithNewline(`return n${ir.dynamic.id}`)
@@ -363,20 +373,7 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
       return
     }
     case IRNodeTypes.WITH_DIRECTIVE: {
-      // TODO merge directive for the same node
-      pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
-
-      // TODO resolve directive
-      const directiveReference = camelize(`v-${oper.name}`)
-      if (context.bindingMetadata[directiveReference]) {
-        genExpression(createSimpleExpression(directiveReference), context)
-      }
-
-      if (oper.binding) {
-        push(', ')
-        genExpression(oper.binding, context)
-      }
-      push(']])')
+      // generated, skip
       return
     }
     default:
@@ -482,4 +479,24 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
   }
 
   push(')')
+}
+
+function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
+  const { push, pushWithNewline, vaporHelper, bindingMetadata } = context
+
+  // TODO merge directive for the same node
+  pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
+
+  // TODO resolve directive
+  const directiveReference = camelize(`v-${oper.name}`)
+  if (bindingMetadata[directiveReference]) {
+    genExpression(createSimpleExpression(directiveReference), context)
+  }
+
+  if (oper.binding) {
+    push(', ')
+    genExpression(oper.binding, context)
+  }
+  push(']])')
+  return
 }

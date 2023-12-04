@@ -1,8 +1,8 @@
-import { isFunction } from '@vue/shared'
-import { currentInstance, type ComponentPublicInstance } from './component'
+import { type Prettify, isFunction } from '@vue/shared'
+import { currentInstance, ComponentInternalInstance } from './component'
 
 export interface DirectiveBinding<V = any> {
-  instance: ComponentPublicInstance | null
+  instance: ComponentInternalInstance | null
   value: V
   oldValue: V | null
   arg?: string
@@ -21,15 +21,16 @@ export type DirectiveHook<T = any | null, V = any> = (
 // `beforeUnmount`-> node unmount -> `unmounted`
 export interface ObjectDirective<T = any, V = any> {
   created?: DirectiveHook<T, V>
-  // beforeMount?: DirectiveHook<T, V>
-  // mounted?: DirectiveHook<T, V>
+  beforeMount?: DirectiveHook<T, V>
+  mounted?: DirectiveHook<T, V>
   // beforeUpdate?: DirectiveHook<T, V>
   // updated?: DirectiveHook<T, V>
-  // beforeUnmount?: DirectiveHook<T, V>
-  // unmounted?: DirectiveHook<T, V>
+  beforeUnmount?: DirectiveHook<T, V>
+  unmounted?: DirectiveHook<T, V>
   // getSSRProps?: SSRDirectiveHook
-  deep?: boolean
+  // deep?: boolean
 }
+export type DirectiveHookName = Exclude<keyof ObjectDirective, 'deep'>
 
 export type FunctionDirective<T = any, V = any> = DirectiveHook<T, V>
 export type Directive<T = any, V = any> =
@@ -54,8 +55,6 @@ export function withDirectives<T extends Node>(
   if (!currentInstance.dirs.has(node)) currentInstance.dirs.set(node, [])
   const bindings = currentInstance.dirs.get(node)!
 
-  // TODO public instance
-  const instance = currentInstance as any
   for (const directive of directives) {
     let [dir, value, arg] = directive
     if (!dir) continue
@@ -68,7 +67,7 @@ export function withDirectives<T extends Node>(
 
     const binding: DirectiveBinding = {
       dir,
-      instance,
+      instance: currentInstance,
       value,
       oldValue: void 0,
       arg,
@@ -78,4 +77,22 @@ export function withDirectives<T extends Node>(
   }
 
   return node
+}
+
+export function invokeDirectiveHook(
+  instance: ComponentInternalInstance | null,
+  name: DirectiveHookName,
+  nodes?: IterableIterator<Node>,
+) {
+  if (!instance) return
+  if (!nodes) {
+    nodes = instance.dirs.keys()
+  }
+  for (const node of nodes) {
+    const directives = instance.dirs.get(node) || []
+    for (const binding of directives) {
+      const hook = binding.dir[name]
+      hook && hook(node, binding)
+    }
+  }
 }

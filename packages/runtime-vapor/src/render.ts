@@ -4,12 +4,13 @@ import {
   normalizeStyle,
   toDisplayString,
 } from '@vue/shared'
-
 import {
   ComponentInternalInstance,
   createComponentInstance,
   setCurrentInstance,
+  unsetCurrentInstance,
 } from './component'
+import { invokeDirectiveHook } from './directives'
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
@@ -37,11 +38,17 @@ export const mountComponent = (
   container: ParentNode,
 ) => {
   instance.container = container
+
+  setCurrentInstance(instance)
   const block = instance.scope.run(
     () => (instance.block = instance.component()),
   )!
+
+  invokeDirectiveHook(instance, 'beforeMount')
   insert(block, instance.container)
   instance.isMounted = true
+  invokeDirectiveHook(instance, 'mounted')
+
   // TODO: lifecycle hooks (mounted, ...)
   // const { m } = instance
   // m && invoke(m)
@@ -49,9 +56,14 @@ export const mountComponent = (
 
 export const unmountComponent = (instance: ComponentInternalInstance) => {
   const { container, block, scope } = instance
+
+  invokeDirectiveHook(instance, 'beforeUnmount')
   scope.stop()
   block && remove(block, container)
   instance.isMounted = false
+  invokeDirectiveHook(instance, 'unmounted')
+  unsetCurrentInstance()
+
   // TODO: lifecycle hooks (unmounted, ...)
   // const { um } = instance
   // um && invoke(um)

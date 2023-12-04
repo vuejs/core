@@ -1,12 +1,25 @@
 <script setup lang="ts">
-import { FunctionDirective } from '@vue/vapor'
+import { ObjectDirective } from '@vue/vapor'
 
-const vDirective: FunctionDirective<HTMLDivElement, undefined> = node => {
-  node.textContent = 'hello world'
-  node.style.color = 'red'
+const text = 'created (overwrite by v-text), '
+const vDirective: ObjectDirective<HTMLDivElement, undefined> = {
+  created(node) {
+    if (!node.parentElement) {
+      node.textContent += 'created, '
+      node.style.color = 'red'
+    } else {
+      alert('!')
+    }
+  },
+  beforeMount(node) {
+    if (!node.parentElement) node.textContent += 'beforeMount, '
+  },
+  mounted(node) {
+    if (node.parentElement) node.textContent += 'mounted, '
+  }
 }
 </script>
 
 <template>
-  <div v-directive />
+  <div v-directive v-text="text" />
 </template>

@@ -24,15 +24,11 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
   currentInstance = instance
-  instance.scope.on()
 }
 
 export const unsetCurrentInstance = () => {
-  currentInstance && currentInstance.scope.off()
   currentInstance = null
 }
-
-export interface ComponentPublicInstance {}
 
 let uid = 0
 export const createComponentInstance = (
