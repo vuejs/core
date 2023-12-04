@@ -66,7 +66,7 @@
     "@rollup/plugin-replace": "^5.0.4",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.10.0",
+    "@types/node": "^20.10.3",
     "@typescript-eslint/parser": "^6.13.0",
     "@vitest/coverage-istanbul": "^0.34.6",
     "@vue/consolidate": "0.17.3",
@@ -102,7 +102,7 @@
     "terser": "^5.22.0",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
-    "tsx": "^4.5.0",
+    "tsx": "^4.6.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "vitest": "^0.34.6"
