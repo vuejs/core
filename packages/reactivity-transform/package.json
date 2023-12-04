@@ -28,7 +28,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/dev/packages/reactivity-transform#readme",
   "dependencies": {
-    "@babel/parser": "^7.23.3",
+    "@babel/parser": "^7.23.4",
     "@vue/compiler-core": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "^2.0.2",
@@ -36,6 +36,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.23.3",
-    "@babel/types": "^7.23.3"
+    "@babel/types": "^7.23.4"
   }
 }
