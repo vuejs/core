@@ -217,7 +217,6 @@ describe('reactivity/reactive/Array', () => {
       expect(proxyArray.includes(1)).toBe(true)
     })
 
-    
     test('toRaw on array using reactive as prototype', () => {
       const original = reactive([])
       const obj = Object.create(original)
