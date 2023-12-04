@@ -1733,6 +1733,35 @@ describe('compiler: parse', () => {
       })
     })
 
+    // https://github.com/vuejs/docs/issues/2586
+    test('v-pre with half-open interpolation', () => {
+      const ast = baseParse(
+        `<div v-pre>
+          <span>{{ number </span>
+          <span>}}</span>
+        </div>
+        `
+      )
+      expect((ast.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `{{ number ` }]
+        },
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `}}` }]
+        }
+      ])
+
+      const ast2 = baseParse(`<div v-pre><span>{{ number </span></div>`)
+      expect((ast2.children[0] as ElementNode).children).toMatchObject([
+        {
+          type: NodeTypes.ELEMENT,
+          children: [{ type: NodeTypes.TEXT, content: `{{ number ` }]
+        }
+      ])
+    })
+
     test('self-closing v-pre', () => {
       const ast = baseParse(
         `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`
