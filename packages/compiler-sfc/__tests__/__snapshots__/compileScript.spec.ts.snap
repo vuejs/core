@@ -1065,10 +1065,12 @@ export default {
   setup(__props) {
 
         const count = ref(0)
+        const style = { color: 'red' }
         
 return (_ctx, _push, _parent, _attrs) => {
   const _cssVars = { style: {
-  \\"--xxxxxxxx-count\\": (count.value)
+  \\"--xxxxxxxx-count\\": (count.value),
+  \\"--xxxxxxxx-style\\\\\\\\.color\\": (style.color)
 }}
   _push(\`<!--[--><div\${
     _ssrRenderAttrs(_cssVars)

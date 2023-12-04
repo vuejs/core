@@ -16,7 +16,6 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 import { ComputedRefImpl } from './computed'
 import { getDepFromReactive } from './reactiveEffect'
@@ -505,16 +504,23 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends ReadonlyArray<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object & { [ShallowReactiveMarker]?: never }
-      ? {
-          [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-        }
-      : T
+  : T extends Map<infer K, infer V>
+    ? Map<K, UnwrapRefSimple<V>>
+    : T extends WeakMap<infer K, infer V>
+      ? WeakMap<K, UnwrapRefSimple<V>>
+      : T extends Set<infer V>
+        ? Set<UnwrapRefSimple<V>>
+        : T extends WeakSet<infer V>
+          ? WeakSet<UnwrapRefSimple<V>>
+          : T extends ReadonlyArray<any>
+            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+            : T extends object & { [ShallowReactiveMarker]?: never }
+              ? {
+                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                }
+              : T

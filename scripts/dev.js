@@ -2,7 +2,7 @@
 
 // Using esbuild for faster dev builds.
 // We are still using Rollup for production builds because it generates
-// smaller files w/ better tree-shaking.
+// smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
 import { resolve, relative, dirname } from 'node:path'
