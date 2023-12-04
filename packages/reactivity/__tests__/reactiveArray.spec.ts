@@ -209,7 +209,7 @@ describe('reactivity/reactive/Array', () => {
       expect(index).toBe(2)
       expect(observed.lastSearched).toBe(6)
     })
-    
+
     test('add a proxy to a reactive array', () => {
       const reactiveArray: number[] = reactive([])
       const proxyArray = new Proxy(reactiveArray, {})
