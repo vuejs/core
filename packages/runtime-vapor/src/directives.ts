@@ -1,5 +1,5 @@
-import { type Prettify, isFunction } from '@vue/shared'
-import { currentInstance, ComponentInternalInstance } from './component'
+import { isFunction } from '@vue/shared'
+import { currentInstance, type ComponentInternalInstance } from './component'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentInternalInstance | null
