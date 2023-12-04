@@ -116,6 +116,10 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     }
 
     const targetIsArray = isArray(target)
+    // #9742 if the target is array prevent and we retriving the RAW, retrieve the correct target
+    if (key === ReactiveFlags.RAW && targetIsArray) {
+      return target
+    }
 
     if (!isReadonly) {
       if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
