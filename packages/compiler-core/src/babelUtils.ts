@@ -28,9 +28,9 @@ export function walkIdentifiers(
   }
 
   const rootExp =
-    root.type === 'Program' &&
-    root.body[0].type === 'ExpressionStatement' &&
-    root.body[0].expression
+    root.type === 'Program'
+      ? root.body[0].type === 'ExpressionStatement' && root.body[0].expression
+      : root
 
   walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {

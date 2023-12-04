@@ -13,7 +13,10 @@ export function compileSFCScript(
   options?: Partial<SFCScriptCompileOptions>,
   parseOptions?: SFCParseOptions
 ) {
-  const { descriptor } = parse(src, parseOptions)
+  const { descriptor, errors } = parse(src, parseOptions)
+  if (errors.length) {
+    console.warn(errors[0])
+  }
   return compileScript(descriptor, {
     ...options,
     id: mockId
