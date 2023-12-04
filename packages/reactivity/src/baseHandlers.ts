@@ -33,6 +33,18 @@ import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
+// skip the compare bwtween receiver and proxy of the target
+// which leads to infinite loops in some cases (#9742)
+let forceToRaw = false
+
+function enableForceToRaw() {
+  forceToRaw = true
+}
+
+function stopForceToRaw() {
+  forceToRaw = false
+}
+
 const builtInSymbols = new Set(
   /*#__PURE__*/
   Object.getOwnPropertyNames(Symbol)
@@ -52,7 +64,9 @@ function createArrayInstrumentations() {
   // values
   ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      enableForceToRaw()
       const arr = toRaw(this) as any
+      stopForceToRaw()
       for (let i = 0, l = this.length; i < l; i++) {
         track(arr, TrackOpTypes.GET, i + '')
       }
@@ -71,7 +85,9 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
+      enableForceToRaw()
       const res = (toRaw(this) as any)[key].apply(this, args)
+      stopForceToRaw()
       resetTracking()
       return res
     }
@@ -102,15 +118,16 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return shallow
     } else if (
       key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? shallow
-            ? shallowReadonlyMap
-            : readonlyMap
-          : shallow
-            ? shallowReactiveMap
-            : reactiveMap
-        ).get(target)
+      (forceToRaw ||
+        receiver ===
+          (isReadonly
+            ? shallow
+              ? shallowReadonlyMap
+              : readonlyMap
+            : shallow
+              ? shallowReactiveMap
+              : reactiveMap
+          ).get(target))
     ) {
       return target
     }
