@@ -448,8 +448,8 @@ export function transformAST(
         const keyStr = isString(key)
           ? `'${key}'`
           : key
-          ? snip(key)
-          : `'${nameId.name}'`
+            ? snip(key)
+            : `'${nameId.name}'`
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
           call.end! + offset,

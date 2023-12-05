@@ -7,7 +7,8 @@ import {
   NodeTypes,
   ObjectExpression,
   transform,
-  VNodeCall
+  VNodeCall,
+  BindingTypes
 } from '@vue/compiler-core'
 import { transformOn } from '../../src/transforms/vOn'
 import { V_ON_WITH_KEYS, V_ON_WITH_MODIFIERS } from '../../src/runtimeHelpers'
@@ -25,12 +26,11 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
     },
     ...options
   })
+  const node = (ast.children[0] as ElementNode).codegenNode as VNodeCall
   return {
     root: ast,
-    props: (
-      ((ast.children[0] as ElementNode).codegenNode as VNodeCall)
-        .props as ObjectExpression
-    ).properties
+    node,
+    props: (node.props as ObjectExpression).properties
   }
 }
 
@@ -287,5 +287,19 @@ describe('compiler-dom: transform v-on', () => {
         }
       }
     })
+  })
+
+  test('should not have PROPS patchFlag for constant v-on handlers with modifiers', () => {
+    const { node } = parseWithVOn(`<div @keydown.up="foo" />`, {
+      prefixIdentifiers: true,
+      bindingMetadata: {
+        foo: BindingTypes.SETUP_CONST
+      },
+      directiveTransforms: {
+        on: transformOn
+      }
+    })
+    // should only have hydration flag
+    expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_HYDRATION))
   })
 })

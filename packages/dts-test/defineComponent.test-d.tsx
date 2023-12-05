@@ -11,7 +11,9 @@ import {
   h,
   SlotsType,
   Slots,
-  VNode
+  VNode,
+  withKeys,
+  withModifiers
 } from 'vue'
 import { describe, expectType, IsUnion } from './utils'
 
@@ -1495,6 +1497,12 @@ describe('should work when props type is incompatible with setup returned type '
   expectType<ComponentPublicInstance>(CompA)
   expectType<number>(CompA.size)
   expectType<SizeType>(CompA.$props.size)
+})
+
+describe('withKeys and withModifiers as pro', () => {
+  const onKeydown = withKeys(e => {}, [''])
+  const onClick = withModifiers(e => {}, [''])
+  ;<input onKeydown={onKeydown} onClick={onClick} />
 })
 
 import {

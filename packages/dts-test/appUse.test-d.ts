@@ -1,4 +1,4 @@
-import { createApp, App, Plugin } from 'vue'
+import { createApp, App, Plugin, defineComponent } from 'vue'
 
 const app = createApp({})
 
@@ -93,3 +93,15 @@ const PluginTyped: Plugin<PluginOptions> = (app, options) => {}
 // @ts-expect-error: needs options
 app.use(PluginTyped)
 app.use(PluginTyped, { option2: 2, option3: true })
+
+// vuetify usage
+const key: string = ''
+const aliases: Record<string, any> = {}
+app.component(
+  key,
+  defineComponent({
+    ...aliases[key],
+    name: key,
+    aliasName: aliases[key].name
+  })
+)

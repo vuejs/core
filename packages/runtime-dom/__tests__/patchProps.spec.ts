@@ -291,6 +291,15 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('baz')
   })
 
+  // #8780
+  test('embedded tag with width and height', () => {
+    // Width and height of some embedded element such as img、video、source、canvas
+    // must be set as attribute
+    const el = document.createElement('img')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
   test('translate attribute', () => {
     const el = document.createElement('div')
     patchProp(el, 'translate', null, 'no')

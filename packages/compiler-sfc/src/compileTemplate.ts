@@ -124,8 +124,8 @@ export function compileTemplate(
     ? preprocessCustomRequire
       ? preprocessCustomRequire(preprocessLang)
       : __ESM_BROWSER__
-      ? undefined
-      : consolidate[preprocessLang as keyof typeof consolidate]
+        ? undefined
+        : consolidate[preprocessLang as keyof typeof consolidate]
     : false
   if (preprocessor) {
     try {

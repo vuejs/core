@@ -778,6 +778,7 @@ describe('SFC compile <script setup>', () => {
         <script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const style = { color: 'red' }
         </script>
         <template>
           <div>{{ count }}</div>
@@ -785,6 +786,7 @@ describe('SFC compile <script setup>', () => {
         </template>
         <style>
         div { color: v-bind(count) }
+        span { color: v-bind(style.color) }
         </style>
         `,
         {
@@ -799,6 +801,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
       assertCode(content)
     })
 

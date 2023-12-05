@@ -153,8 +153,8 @@ const isStringifiableAttr = (name: string, ns: DOMNamespaces) => {
     (ns === DOMNamespaces.HTML
       ? isKnownHtmlAttr(name)
       : ns === DOMNamespaces.SVG
-      ? isKnownSvgAttr(name)
-      : false) || dataAriaRE.test(name)
+        ? isKnownSvgAttr(name)
+        : false) || dataAriaRE.test(name)
   )
 }
 

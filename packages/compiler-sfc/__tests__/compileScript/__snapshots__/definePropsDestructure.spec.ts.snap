@@ -62,7 +62,7 @@ exports[`sfc reactive props destructure > default values w/ array runtime declar
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: _mergeDefaults(['foo', 'bar', 'baz'], {
+  props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -81,7 +81,7 @@ exports[`sfc reactive props destructure > default values w/ object runtime decla
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+  props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -101,7 +101,7 @@ exports[`sfc reactive props destructure > default values w/ runtime declaration 
 "import { mergeDefaults as _mergeDefaults } from 'vue'
 
 export default {
-  props: _mergeDefaults(['foo', 'foo:bar'], {
+  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   \\"foo:bar\\": 'foo-bar'
 }),

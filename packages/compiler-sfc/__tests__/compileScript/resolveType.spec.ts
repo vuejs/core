@@ -455,6 +455,88 @@ describe('resolveType', () => {
     })
   })
 
+  describe('generics', () => {
+    test('generic with type literal', () => {
+      expect(
+        resolve(`
+        type Props<T> = T
+        defineProps<Props<{ foo: string }>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic used in intersection', () => {
+      expect(
+        resolve(`
+        type Foo = { foo: string; }
+        type Bar = { bar: number; }
+        type Props<T,U> = T & U & { baz: boolean }
+        defineProps<Props<Foo, Bar>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number'],
+        baz: ['Boolean']
+      })
+    })
+
+    test('generic type /w generic type alias', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = Readonly<Partial<T>>
+        type Props<T> = Aliased<T>
+        type Foo = { foo: string; }
+        defineProps<Props<Foo>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic type /w aliased type literal', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = { foo: T }
+        defineProps<Aliased<string>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic type /w interface', () => {
+      expect(
+        resolve(`
+        interface Props<T> {
+          foo: T
+        }
+        type Foo = string
+        defineProps<Props<Foo>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic from external-file', () => {
+      const files = {
+        '/foo.ts': 'export type P<T> = { foo: T }'
+      }
+      const { props } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P<string>>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String']
+      })
+    })
+  })
+
   describe('external type imports', () => {
     test('relative ts', () => {
       const files = {

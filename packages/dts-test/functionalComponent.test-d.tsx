@@ -45,7 +45,7 @@ Bar.emits = {
 Bar.emits = { baz: () => void 0 }
 
 // TSX
-expectType<JSX.Element>(<Bar foo={1} />)
+expectType<JSX.Element>(<Bar foo={1} onUpdate={() => {}} />)
 //  @ts-expect-error
 ;<Foo />
 //  @ts-expect-error

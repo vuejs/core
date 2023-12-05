@@ -17,7 +17,10 @@ import {
   renderSlot,
   onErrorCaptured,
   onServerPrefetch,
-  getCurrentInstance
+  getCurrentInstance,
+  reactive,
+  computed,
+  createSSRApp
 } from 'vue'
 import { escapeHtml } from '@vue/shared'
 import { renderToString } from '../src/renderToString'
@@ -1139,6 +1142,48 @@ function testRender(type: string, render: typeof renderToString) {
       }
       expect(renderError).toBe(null)
       expect((capturedError as unknown as Error).message).toBe('An error')
+    })
+
+    test('computed reactivity during SSR with onServerPrefetch', async () => {
+      const store = {
+        // initial state could be hydrated
+        state: reactive({ items: null as null | string[] }),
+
+        // pretend to fetch some data from an api
+        async fetchData() {
+          this.state.items = ['hello', 'world']
+        }
+      }
+
+      const getterSpy = vi.fn()
+
+      const App = defineComponent(() => {
+        const msg = computed(() => {
+          getterSpy()
+          return store.state.items?.join(' ')
+        })
+
+        // If msg value is falsy then we are either in ssr context or on the client
+        // and the initial state was not modified/hydrated.
+        // In both cases we need to fetch data.
+        onServerPrefetch(() => store.fetchData())
+
+        // simulate the read from a composable (e.g. filtering a list of results)
+        msg.value
+
+        return () => h('div', null, msg.value)
+      })
+
+      const app = createSSRApp(App)
+
+      // in real world serve this html and append store state for hydration on client
+      const html = await renderToString(app)
+
+      expect(html).toMatch('hello world')
+
+      // should only be called twice since access should be cached
+      // during the render phase
+      expect(getterSpy).toHaveBeenCalledTimes(2)
     })
   })
 }

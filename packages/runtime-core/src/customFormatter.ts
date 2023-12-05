@@ -11,9 +11,9 @@ export function initCustomFormatter() {
   }
 
   const vueStyle = { style: 'color:#3ba776' }
-  const numberStyle = { style: 'color:#0b1bc9' }
-  const stringStyle = { style: 'color:#b62e24' }
-  const keywordStyle = { style: 'color:#9d288c' }
+  const numberStyle = { style: 'color:#1677ff' }
+  const stringStyle = { style: 'color:#f5222d' }
+  const keywordStyle = { style: 'color:#eb2f96' }
 
   // custom formatter for Chrome
   // https://www.mattzeunert.com/2016/02/19/custom-chrome-devtools-object-formatters.html

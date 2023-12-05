@@ -332,7 +332,7 @@ exports[`defineProps > withDefaults (dynamic) 1`] = `
 import { defaults } from './foo'
     
 export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+  props: /*#__PURE__*/_mergeDefaults({
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
@@ -353,7 +353,7 @@ exports[`defineProps > withDefaults (dynamic) w/ production mode 1`] = `
 import { defaults } from './foo'
     
 export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+  props: /*#__PURE__*/_mergeDefaults({
     foo: { type: Function },
     bar: { type: Boolean },
     baz: { type: [Boolean, Function] },
@@ -375,7 +375,7 @@ exports[`defineProps > withDefaults (reference) 1`] = `
 import { defaults } from './foo'
     
 export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+  props: /*#__PURE__*/_mergeDefaults({
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
@@ -462,7 +462,7 @@ exports[`defineProps > withDefaults w/ dynamic object method 1`] = `
 "import { mergeDefaults as _mergeDefaults, defineComponent as _defineComponent } from 'vue'
 
 export default /*#__PURE__*/_defineComponent({
-  props: _mergeDefaults({
+  props: /*#__PURE__*/_mergeDefaults({
     foo: { type: Function, required: false }
   }, {
       ['fo' + 'o']() { return 'foo' }

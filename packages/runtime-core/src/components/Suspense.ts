@@ -504,7 +504,12 @@ function createSuspenseBoundary(
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              move(pendingBranch!, container, anchor, MoveType.ENTER)
+              move(
+                pendingBranch!,
+                container,
+                next(activeBranch!),
+                MoveType.ENTER
+              )
               queuePostFlushCb(effects)
             }
           }
@@ -577,7 +582,6 @@ function createSuspenseBoundary(
       // invoke @fallback event
       triggerEvent(vnode, 'onFallback')
 
-      const anchor = next(activeBranch!)
       const mountFallback = () => {
         if (!suspense.isInFallback) {
           return
@@ -587,7 +591,7 @@ function createSuspenseBoundary(
           null,
           fallbackVNode,
           container,
-          anchor,
+          next(activeBranch!),
           parentComponent,
           null, // fallback tree will not have suspense context
           isSVG,
