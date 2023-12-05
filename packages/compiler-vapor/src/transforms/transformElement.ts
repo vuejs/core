@@ -1,7 +1,6 @@
 import {
   type ElementNode,
   type AttributeNode,
-  type DirectiveNode,
   NodeTypes,
   ErrorCodes,
   createCompilerError,
@@ -9,7 +8,7 @@ import {
 } from '@vue/compiler-dom'
 import { isBuiltInDirective, isVoidTag } from '@vue/shared'
 import { NodeTransform, TransformContext } from '../transform'
-import { IRNodeTypes } from '../ir'
+import { HackDirectiveNode, IRNodeTypes } from '../ir'
 
 export const transformElement: NodeTransform = (node, ctx) => {
   return function postTransformElement() {
@@ -53,17 +52,16 @@ function buildProps(
   isComponent: boolean,
 ) {
   for (const prop of props) {
-    transformProp(prop, node, context)
+    transformProp(prop as HackDirectiveNode | AttributeNode, node, context)
   }
 }
 
 function transformProp(
-  prop: DirectiveNode | AttributeNode,
+  prop: HackDirectiveNode | AttributeNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): void {
   const { name } = prop
-
   if (prop.type === NodeTypes.ATTRIBUTE) {
     context.template += ` ${name}`
     if (prop.value) context.template += `="${prop.value.content}"`
@@ -79,17 +77,14 @@ function transformProp(
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       name,
-      binding: prop.exp,
+      binding: exp,
       loc: prop.loc,
     })
   }
 
   switch (name) {
     case 'bind': {
-      if (
-        !exp ||
-        (exp.type === NodeTypes.SIMPLE_EXPRESSION && !exp.content.trim())
-      ) {
+      if (!exp || !exp.content.trim()) {
         context.options.onError(
           createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
         )

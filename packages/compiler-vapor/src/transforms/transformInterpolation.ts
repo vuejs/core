@@ -1,11 +1,11 @@
-import { NodeTypes } from '@vue/compiler-dom'
+import { NodeTypes, SimpleExpressionNode } from '@vue/compiler-dom'
 import { NodeTransform } from '../transform'
 import { IRNodeTypes } from '../ir'
 
 export const transformInterpolation: NodeTransform = (node, ctx) => {
   if (node.type !== NodeTypes.INTERPOLATION) return
 
-  const expr = node.content
+  const expr = node.content as SimpleExpressionNode
   const parentChildren = ctx.parent ? ctx.parent.node.children : []
   const isFirst = ctx.index === 0
   const isLast = ctx.index === parentChildren.length - 1

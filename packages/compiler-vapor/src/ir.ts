@@ -1,6 +1,7 @@
 import type {
-  ExpressionNode,
+  DirectiveNode,
   RootNode,
+  SimpleExpressionNode,
   SourceLocation,
 } from '@vue/compiler-dom'
 import type { Prettify } from '@vue/shared'
@@ -145,7 +146,7 @@ export interface IRDynamicInfo {
 }
 export type IRDynamicChildren = Record<number, IRDynamicInfo>
 
-export type IRExpression = ExpressionNode | string
+export type IRExpression = SimpleExpressionNode | string
 export interface IREffect {
   // TODO multi-expression effect
   expressions: IRExpression[]
@@ -163,4 +164,12 @@ export type HackOptions<T> = Prettify<
       directiveTransforms?: Record<string, DirectiveTransform | undefined>
     }
   >
+>
+
+export type HackDirectiveNode = Overwrite<
+  DirectiveNode,
+  {
+    exp: SimpleExpressionNode | undefined
+    arg: SimpleExpressionNode | undefined
+  }
 >

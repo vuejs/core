@@ -25,9 +25,6 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   } else if (exp === undefined) {
     // TODO X_V_ON_NO_EXPRESSION error
     return
-  } else if (arg.type === NodeTypes.COMPOUND_EXPRESSION) {
-    // TODO
-    return
   }
 
   const handlerKey = `on${arg.content}`
