@@ -75,14 +75,14 @@ interface Constructor<P = any> {
   new (...args: any[]): { $props: P }
 }
 
-// The following is a series of overloads for providing props validation of
-// manually written render functions.
-
 type HTMLElementEventHandler = {
   [K in keyof HTMLElementEventMap as `on${Capitalize<K>}`]?: (
     ev: HTMLElementEventMap[K]
   ) => any
 }
+
+// The following is a series of overloads for providing props validation of
+// manually written render functions.
 
 // element
 export function h<K extends keyof HTMLElementTagNameMap>(
