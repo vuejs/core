@@ -36,15 +36,13 @@ export class EffectScope {
    */
   private index: number | undefined
 
-  constructor(detached: false, parent?: EffectScope | undefined)
-  constructor(detached?: boolean)
-  constructor(
-    public detached = false,
-    parent = activeEffectScope
-  ) {
-    this.parent = parent
-    if (!detached && parent) {
-      this.index = (parent.scopes || (parent.scopes = [])).push(this) - 1
+  constructor(public detached = false) {
+    this.parent = activeEffectScope
+    if (!detached && activeEffectScope) {
+      this.index =
+        (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
+          this
+        ) - 1
     }
   }
 
@@ -153,13 +151,10 @@ export class EffectScope {
  * corresponding {@link https://github.com/vuejs/rfcs/blob/master/active-rfcs/0041-reactivity-effect-scope.md | RFC}.
  *
  * @param detached - Can be used to create a "detached" effect scope.
- * @param parent - Can be passed to explicitly set the parent scope.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#effectscope}
  */
-export function effectScope(detached: false, parent?: EffectScope): EffectScope
-export function effectScope(detached?: boolean): EffectScope
-export function effectScope(detached?: boolean, parent?: EffectScope) {
-  return new EffectScope(detached as any, parent)
+export function effectScope(detached?: boolean) {
+  return new EffectScope(detached)
 }
 
 export function recordEffectScope(
