@@ -53,7 +53,7 @@ declare const propsWithDefaults: Prettify<
   ExtractDefaultPropTypes<typeof propsOptions>
 >
 expectType<{
-  foo: number
+  foo: 1
   baz: boolean
-  boolAndUndefined: boolean | undefined
+  boolAndUndefined: boolean
 }>(propsWithDefaults)
