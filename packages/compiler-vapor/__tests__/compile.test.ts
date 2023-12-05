@@ -273,5 +273,13 @@ describe('compile', () => {
         // Waiting for TODO, There should be more here.
       })
     })
+
+    describe('v-cloak', () => {
+      test('basic', async () => {
+        const code = await compile(`<div v-cloak>test</div>`)
+        expect(code).toMatchSnapshot()
+        expect(code).not.contains('v-cloak')
+      })
+    })
   })
 })

@@ -30,6 +30,16 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compile > directives > v-cloak > basic 1`] = `
+"import { template as _template } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template(\\"<div>test</div>\\")
+  const n0 = t0()
+  return n0
+}"
+`;
+
 exports[`compile > directives > v-html > should raise error and ignore children when v-html is present 1`] = `
 "import { template as _template, children as _children, effect as _effect, setHtml as _setHtml } from 'vue/vapor';
 
