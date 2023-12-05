@@ -52,7 +52,6 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
-  lazy?: boolean
 }
 
 type CacheKey = string | number | symbol | ConcreteComponent
@@ -85,8 +84,7 @@ const KeepAliveImpl: ComponentOptions = {
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
-    max: [String, Number],
-    lazy: Boolean
+    max: [String, Number]
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
