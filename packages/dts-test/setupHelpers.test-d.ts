@@ -9,9 +9,12 @@ import {
   VNode,
   Ref,
   defineModel,
-  toRefs
+  toRefs,
+  ExtractPropTypes,
+  ExtractPublicPropTypes,
+  ExtractDefaultPropTypes
 } from 'vue'
-import { describe, expectType } from './utils'
+import { Prettify, describe, expectType } from './utils'
 import { defineComponent } from 'vue'
 import { useModel } from 'vue'
 
@@ -164,7 +167,7 @@ describe('withDefaults w/ boolean type', () => {
 
 describe('defineProps w/ runtime declaration', () => {
   // runtime declaration
-  const props = defineProps({
+  const propOptions = {
     foo: String,
     bar: {
       type: Number,
@@ -174,12 +177,24 @@ describe('defineProps w/ runtime declaration', () => {
       type: Array,
       required: true
     }
-  })
+  } as const
+  const props = defineProps(propOptions)
   expectType<{
-    foo?: string
+    foo: string | undefined
     bar: number
     baz: unknown[]
   }>(props)
+  expectType<{
+    foo: string | undefined
+    bar: number
+    baz: unknown[]
+  }>({} as Prettify<ExtractPropTypes<typeof propOptions>>)
+  expectType<{
+    foo?: string | undefined
+    bar?: number | undefined
+    baz: unknown[]
+  }>({} as Prettify<ExtractPublicPropTypes<typeof propOptions>>)
+  expectType<{ bar: number }>({} as ExtractDefaultPropTypes<typeof propOptions>)
 
   props.foo && props.foo + 'bar'
   props.bar + 1
@@ -191,6 +206,8 @@ describe('defineProps w/ runtime declaration', () => {
   props2.foo + props2.bar
   // @ts-expect-error
   props2.baz
+
+  expectType<Ref<string | undefined>>(toRefs(props).foo)
 })
 
 describe('defineEmits w/ type declaration', () => {
