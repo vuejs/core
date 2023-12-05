@@ -284,7 +284,7 @@ describe('component props', () => {
 
   describe('validator', () => {
     test('validator should be called with two arguments', async () => {
-      const mockFn = jest.fn((...args: any[]) => true)
+      const mockFn = vi.fn((...args: any[]) => true)
       const Comp = defineComponent({
         props: {
           foo: {
@@ -306,7 +306,7 @@ describe('component props', () => {
     })
 
     test('validator should not be able to mutate other props', async () => {
-      const mockFn = jest.fn((...args: any[]) => true)
+      const mockFn = vi.fn((...args: any[]) => true)
       const Comp = defineComponent({
         props: {
           foo: {
