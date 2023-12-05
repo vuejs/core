@@ -32,9 +32,10 @@
     "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev vue -ipf esm-browser-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
     "serve": "serve",
     "open": "open http://localhost:3000/packages/template-explorer/local.html",
-    "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-ssr-esm build-sfc-playground-self",
+    "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-browser-esm build-ssr-esm build-sfc-playground-self",
     "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity shared -af cjs",
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
+    "build-browser-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler && node scripts/build.js vue -f esm-browser",
     "build-ssr-esm": "node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages/sfc-playground && npm run build",
     "preinstall": "npx only-allow pnpm",
@@ -108,6 +109,6 @@
     "tsx": "^4.6.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
-    "vitest": "^0.34.6"
+    "vitest": "^1.0.0"
   }
 }

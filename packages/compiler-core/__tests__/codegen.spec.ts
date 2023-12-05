@@ -632,7 +632,7 @@ describe('compiler: codegen', () => {
 
     test('tag only', () => {
       expect(genCode(createVNodeCall(null, `"div"`))).toMatchInlineSnapshot(`
-        "return _createElementVNode(\\"div\\")
+        "return _createElementVNode("div")
          "
       `)
       expect(genCode(createVNodeCall(null, FRAGMENT))).toMatchInlineSnapshot(`
@@ -644,7 +644,7 @@ describe('compiler: codegen', () => {
     test('with props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps)))
         .toMatchInlineSnapshot(`
-          "return _createElementVNode(\\"div\\", { foo: \\"bar\\" })
+          "return _createElementVNode("div", { foo: "bar" })
            "
         `)
     })
@@ -652,7 +652,7 @@ describe('compiler: codegen', () => {
     test('with children, no props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, mockChildren)))
         .toMatchInlineSnapshot(`
-          "return _createElementVNode(\\"div\\", null, children)
+          "return _createElementVNode("div", null, children)
            "
         `)
     })
@@ -660,7 +660,7 @@ describe('compiler: codegen', () => {
     test('with children + props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, mockProps, mockChildren)))
         .toMatchInlineSnapshot(`
-          "return _createElementVNode(\\"div\\", { foo: \\"bar\\" }, children)
+          "return _createElementVNode("div", { foo: "bar" }, children)
            "
         `)
     })
@@ -668,7 +668,7 @@ describe('compiler: codegen', () => {
     test('with patchFlag and no children/props', () => {
       expect(genCode(createVNodeCall(null, `"div"`, undefined, undefined, '1')))
         .toMatchInlineSnapshot(`
-          "return _createElementVNode(\\"div\\", null, null, 1)
+          "return _createElementVNode("div", null, null, 1)
            "
         `)
     })
@@ -688,7 +688,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(), _createElementBlock("div", { foo: "bar" }, children))
          "
       `)
     })
@@ -709,7 +709,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return (_openBlock(true), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children))
+        "return (_openBlock(true), _createElementBlock("div", { foo: "bar" }, children))
          "
       `)
     })
@@ -728,7 +728,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives(_createElementVNode(\\"div\\", { foo: \\"bar\\" }, children), [
+        "return _withDirectives(_createElementVNode("div", { foo: "bar" }, children), [
               [foo, bar]
             ])
          "
@@ -750,7 +750,7 @@ describe('compiler: codegen', () => {
           )
         )
       ).toMatchInlineSnapshot(`
-        "return _withDirectives((_openBlock(), _createElementBlock(\\"div\\", { foo: \\"bar\\" }, children)), [
+        "return _withDirectives((_openBlock(), _createElementBlock("div", { foo: "bar" }, children)), [
               [foo, bar]
             ])
          "

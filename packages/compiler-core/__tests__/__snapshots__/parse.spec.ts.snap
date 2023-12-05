@@ -98,7 +98,7 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
           "line": 1,
           "offset": 36,
         },
-        "source": "<div :class=\\"{ some: condition }\\" />",
+        "source": "<div :class="{ some: condition }" />",
         "start": {
           "column": 1,
           "line": 1,
@@ -152,7 +152,7 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
               "line": 1,
               "offset": 33,
             },
-            "source": ":class=\\"{ some: condition }\\"",
+            "source": ":class="{ some: condition }"",
             "start": {
               "column": 6,
               "line": 1,
@@ -179,7 +179,7 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
           "line": 2,
           "offset": 73,
         },
-        "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+        "source": "<p v-bind:style="{ color: 'red' }"/>",
         "start": {
           "column": 1,
           "line": 2,
@@ -233,7 +233,7 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
               "line": 2,
               "offset": 71,
             },
-            "source": "v-bind:style=\\"{ color: 'red' }\\"",
+            "source": "v-bind:style="{ color: 'red' }"",
             "start": {
               "column": 4,
               "line": 2,
@@ -263,16 +263,16 @@ exports[`compiler: parse > Edge Cases > self closing multiple tag 1`] = `
       "line": 2,
       "offset": 73,
     },
-    "source": "<div :class=\\"{ some: condition }\\" />
-<p v-bind:style=\\"{ color: 'red' }\\"/>",
+    "source": "<div :class="{ some: condition }" />
+<p v-bind:style="{ color: 'red' }"/>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<div :class=\\"{ some: condition }\\" />
-<p v-bind:style=\\"{ color: 'red' }\\"/>",
+  "source": "<div :class="{ some: condition }" />
+<p v-bind:style="{ color: 'red' }"/>",
   "temps": 0,
   "type": 0,
 }
@@ -294,7 +294,7 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
               "line": 2,
               "offset": 73,
             },
-            "source": "<p v-bind:style=\\"{ color: 'red' }\\"/>",
+            "source": "<p v-bind:style="{ color: 'red' }"/>",
             "start": {
               "column": 3,
               "line": 2,
@@ -348,7 +348,7 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
                   "line": 2,
                   "offset": 71,
                 },
-                "source": "v-bind:style=\\"{ color: 'red' }\\"",
+                "source": "v-bind:style="{ color: 'red' }"",
                 "start": {
                   "column": 6,
                   "line": 2,
@@ -390,8 +390,8 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
           "line": 4,
           "offset": 123,
         },
-        "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
+        "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
   <!-- a comment with <html> inside it -->
 </div>",
         "start": {
@@ -447,7 +447,7 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
               "line": 1,
               "offset": 33,
             },
-            "source": ":class=\\"{ some: condition }\\"",
+            "source": ":class="{ some: condition }"",
             "start": {
               "column": 6,
               "line": 1,
@@ -477,8 +477,8 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
       "line": 4,
       "offset": 123,
     },
-    "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
+    "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
   <!-- a comment with <html> inside it -->
 </div>",
     "start": {
@@ -487,8 +487,8 @@ exports[`compiler: parse > Edge Cases > valid html 1`] = `
       "offset": 0,
     },
   },
-  "source": "<div :class=\\"{ some: condition }\\">
-  <p v-bind:style=\\"{ color: 'red' }\\"/>
+  "source": "<div :class="{ some: condition }">
+  <p v-bind:style="{ color: 'red' }"/>
   <!-- a comment with <html> inside it -->
 </div>",
   "temps": 0,
@@ -656,7 +656,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
               "line": 1,
               "offset": 33,
             },
-            "source": "<div id=\\"\\" id=\\"\\"></div>",
+            "source": "<div id="" id=""></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -672,7 +672,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 20,
                 },
-                "source": "id=\\"\\"",
+                "source": "id=""",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -702,7 +702,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 20,
                   },
-                  "source": "\\"\\"",
+                  "source": """",
                   "start": {
                     "column": 19,
                     "line": 1,
@@ -719,7 +719,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                   "line": 1,
                   "offset": 26,
                 },
-                "source": "id=\\"\\"",
+                "source": "id=""",
                 "start": {
                   "column": 22,
                   "line": 1,
@@ -749,7 +749,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
                     "line": 1,
                     "offset": 26,
                   },
-                  "source": "\\"\\"",
+                  "source": """",
                   "start": {
                     "column": 25,
                     "line": 1,
@@ -772,7 +772,7 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
           "line": 1,
           "offset": 44,
         },
-        "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
+        "source": "<template><div id="" id=""></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -798,14 +798,14 @@ exports[`compiler: parse > Errors > DUPLICATE_ATTRIBUTE > <template><div id="" i
       "line": 1,
       "offset": 44,
     },
-    "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
+    "source": "<template><div id="" id=""></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div id=\\"\\" id=\\"\\"></div></template>",
+  "source": "<template><div id="" id=""></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -1566,7 +1566,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
           "line": 1,
           "offset": 23,
         },
-        "source": "<template><div id=\\"abc",
+        "source": "<template><div id="abc",
         "start": {
           "column": 1,
           "line": 1,
@@ -1592,14 +1592,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
       "line": 1,
       "offset": 22,
     },
-    "source": "<template><div id=\\"abc",
+    "source": "<template><div id="abc",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div id=\\"abc",
+  "source": "<template><div id="abc",
   "temps": 0,
   "type": 0,
 }
@@ -1618,7 +1618,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
           "line": 1,
           "offset": 24,
         },
-        "source": "<template><div id=\\"abc\\"",
+        "source": "<template><div id="abc"",
         "start": {
           "column": 1,
           "line": 1,
@@ -1644,14 +1644,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
       "line": 1,
       "offset": 23,
     },
-    "source": "<template><div id=\\"abc\\"",
+    "source": "<template><div id="abc"",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div id=\\"abc\\"",
+  "source": "<template><div id="abc"",
   "temps": 0,
   "type": 0,
 }
@@ -1688,7 +1688,7 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
           "line": 1,
           "offset": 25,
         },
-        "source": "<template><div id=\\"abc\\"/",
+        "source": "<template><div id="abc"/",
         "start": {
           "column": 1,
           "line": 1,
@@ -1714,14 +1714,14 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
       "line": 1,
       "offset": 24,
     },
-    "source": "<template><div id=\\"abc\\"/",
+    "source": "<template><div id="abc"/",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div id=\\"abc\\"/",
+  "source": "<template><div id="abc"/",
   "temps": 0,
   "type": 0,
 }
@@ -2459,7 +2459,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
               "line": 1,
               "offset": 29,
             },
-            "source": "<div a\\"bc=''></div>",
+            "source": "<div a"bc=''></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2475,21 +2475,21 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
                   "line": 1,
                   "offset": 22,
                 },
-                "source": "a\\"bc=''",
+                "source": "a"bc=''",
                 "start": {
                   "column": 16,
                   "line": 1,
                   "offset": 15,
                 },
               },
-              "name": "a\\"bc",
+              "name": "a"bc",
               "nameLoc": {
                 "end": {
                   "column": 20,
                   "line": 1,
                   "offset": 19,
                 },
-                "source": "a\\"bc",
+                "source": "a"bc",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2528,7 +2528,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
           "line": 1,
           "offset": 40,
         },
-        "source": "<template><div a\\"bc=''></div></template>",
+        "source": "<template><div a"bc=''></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2554,14 +2554,14 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME > <te
       "line": 1,
       "offset": 40,
     },
-    "source": "<template><div a\\"bc=''></div></template>",
+    "source": "<template><div a"bc=''></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div a\\"bc=''></div></template>",
+  "source": "<template><div a"bc=''></div></template>",
   "temps": 0,
   "type": 0,
 }
@@ -2828,7 +2828,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               "line": 1,
               "offset": 30,
             },
-            "source": "<div foo=bar\\"></div>",
+            "source": "<div foo=bar"></div>",
             "start": {
               "column": 11,
               "line": 1,
@@ -2844,7 +2844,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
                   "line": 1,
                   "offset": 23,
                 },
-                "source": "foo=bar\\"",
+                "source": "foo=bar"",
                 "start": {
                   "column": 16,
                   "line": 1,
@@ -2867,14 +2867,14 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
               },
               "type": 6,
               "value": {
-                "content": "bar\\"",
+                "content": "bar"",
                 "loc": {
                   "end": {
                     "column": 24,
                     "line": 1,
                     "offset": 23,
                   },
-                  "source": "bar\\"",
+                  "source": "bar"",
                   "start": {
                     "column": 20,
                     "line": 1,
@@ -2897,7 +2897,7 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
           "line": 1,
           "offset": 41,
         },
-        "source": "<template><div foo=bar\\"></div></template>",
+        "source": "<template><div foo=bar"></div></template>",
         "start": {
           "column": 1,
           "line": 1,
@@ -2923,14 +2923,14 @@ exports[`compiler: parse > Errors > UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_V
       "line": 1,
       "offset": 41,
     },
-    "source": "<template><div foo=bar\\"></div></template>",
+    "source": "<template><div foo=bar"></div></template>",
     "start": {
       "column": 1,
       "line": 1,
       "offset": 0,
     },
   },
-  "source": "<template><div foo=bar\\"></div></template>",
+  "source": "<template><div foo=bar"></div></template>",
   "temps": 0,
   "type": 0,
 }
