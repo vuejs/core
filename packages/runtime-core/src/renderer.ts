@@ -45,7 +45,7 @@ import {
   flushPreFlushCbs,
   SchedulerJob
 } from './scheduler'
-import { pauseTracking, ReactiveEffect, resetTracking } from '@vue/reactivity'
+import { pauseTracking, resetTracking, ReactiveEffect } from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { pushWarningContext, popWarningContext, warn } from './warning'
@@ -1542,7 +1542,7 @@ function baseCreateRenderer(
       }
     }
 
-    // create render effect for rendering
+    // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
       NOOP,
