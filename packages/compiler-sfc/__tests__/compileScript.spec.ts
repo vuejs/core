@@ -243,7 +243,7 @@ describe('SFC compile <script setup>', () => {
       import { useCssVars, ref } from 'vue'
       const msg = ref()
       </script>
-      
+
       <style>
       .foo {
         color: v-bind(msg)
@@ -518,6 +518,46 @@ describe('SFC compile <script setup>', () => {
       )
       assertCode(content)
     })
+
+    // https://github.com/nuxt/nuxt/issues/22416
+    test('property access', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo.Bar.Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('spread operator', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div v-bind="{ ...Foo.Bar.Baz }"></div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('property access (whitespace)', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo . Bar . Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
   })
 
   describe('inlineTemplate mode', () => {
@@ -786,6 +826,7 @@ describe('SFC compile <script setup>', () => {
         <script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const style = { color: 'red' }
         </script>
         <template>
           <div>{{ count }}</div>
@@ -793,6 +834,7 @@ describe('SFC compile <script setup>', () => {
         </template>
         <style>
         div { color: v-bind(count) }
+        span { color: v-bind(style.color) }
         </style>
         `,
         {
@@ -807,6 +849,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
       assertCode(content)
     })
 
