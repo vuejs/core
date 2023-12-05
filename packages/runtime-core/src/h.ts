@@ -78,7 +78,24 @@ interface Constructor<P = any> {
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
 
+type HTMLElementEventHandler = {
+  [K in keyof HTMLElementEventMap as `on${Capitalize<K>}`]?: (
+    ev: HTMLElementEventMap[K]
+  ) => any
+}
+
 // element
+export function h<K extends keyof HTMLElementTagNameMap>(
+  type: K,
+  children?: RawChildren
+): VNode
+export function h<K extends keyof HTMLElementTagNameMap>(
+  type: K,
+  props?: (RawProps & HTMLElementEventHandler) | null,
+  children?: RawChildren | RawSlots
+): VNode
+
+// custom element
 export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
