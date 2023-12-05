@@ -78,6 +78,10 @@ window.init = () => {
       const start = performance.now()
       const { code, ast, map } = compileFn(source, {
         ...compilerOptions,
+        prefixIdentifiers:
+          compilerOptions.prefixIdentifiers ||
+          compilerOptions.mode === 'module' ||
+          compilerOptions.ssr,
         filename: 'ExampleTemplate.vue',
         sourceMap: true,
         onError: err => {

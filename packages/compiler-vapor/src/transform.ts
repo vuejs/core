@@ -18,7 +18,7 @@ import {
   type IRExpression,
   IRNodeTypes,
 } from './ir'
-import type { HackDirectiveNode, HackOptions } from './ir'
+import type { VaporDirectiveNode, HackOptions } from './ir'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -26,12 +26,9 @@ export type NodeTransform = (
 ) => void | (() => void) | (() => void)[]
 
 export type DirectiveTransform = (
-  dir: HackDirectiveNode,
+  dir: VaporDirectiveNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
-  // a platform specific compiler can import the base transform and augment
-  // it by passing in this optional argument.
-  // augmentor?: (ret: DirectiveTransformResult) => DirectiveTransformResult,
 ) => void
 
 export type TransformOptions = HackOptions<BaseTransformOptions>

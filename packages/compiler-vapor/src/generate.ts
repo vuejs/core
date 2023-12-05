@@ -7,8 +7,9 @@ import {
   advancePositionWithMutation,
   locStub,
   BindingTypes,
-  isSimpleIdentifier,
   createSimpleExpression,
+  walkIdentifiers,
+  advancePositionWithClone,
 } from '@vue/compiler-dom'
 import {
   type IRDynamicChildren,
@@ -20,15 +21,16 @@ import {
   type SetEventIRNode,
   type WithDirectiveIRNode,
   type SetTextIRNode,
+  type SetHtmlIRNode,
+  type CreateTextNodeIRNode,
+  type InsertNodeIRNode,
+  type PrependNodeIRNode,
+  type AppendNodeIRNode,
   IRNodeTypes,
-  SetHtmlIRNode,
-  CreateTextNodeIRNode,
-  InsertNodeIRNode,
-  PrependNodeIRNode,
-  AppendNodeIRNode,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { camelize, isString } from '@vue/shared'
+import type { Identifier } from '@babel/types'
 
 // remove when stable
 // @ts-expect-error
@@ -467,7 +469,9 @@ function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
   // TODO resolve directive
   const directiveReference = camelize(`v-${oper.name}`)
   if (bindingMetadata[directiveReference]) {
-    genExpression(createSimpleExpression(directiveReference), context)
+    const directiveExpression = createSimpleExpression(directiveReference)
+    directiveExpression.ast = null
+    genExpression(directiveExpression, context)
   }
 
   if (oper.binding) {
@@ -483,37 +487,82 @@ function genArrayExpression(elements: string[]) {
   return `[${elements.map((it) => JSON.stringify(it)).join(', ')}]`
 }
 
-function genExpression(
-  exp: IRExpression,
-  {
-    inline,
-    prefixIdentifiers,
-    bindingMetadata,
-    vaporHelper,
-    push,
-  }: CodegenContext,
-) {
-  if (isString(exp)) return push(exp)
+function genExpression(node: IRExpression, context: CodegenContext): void {
+  const { push } = context
+  if (isString(node)) return push(node)
 
-  let { content } = exp
-  let name: string | undefined
-
-  if (exp.isStatic) {
-    content = JSON.stringify(content)
-  } else {
-    switch (bindingMetadata[content]) {
-      case BindingTypes.SETUP_REF:
-        content += '.value'
-        break
-      case BindingTypes.SETUP_MAYBE_REF:
-        content = `${vaporHelper('unref')}(${content})`
-        break
-    }
-    if (prefixIdentifiers && !inline) {
-      if (isSimpleIdentifier(content)) name = content
-      content = `_ctx.${content}`
-    }
+  const { content: rawExpr, ast, isStatic, loc } = node
+  if (__BROWSER__) {
+    return push(rawExpr)
   }
 
-  push(content, NewlineType.None, exp.loc, name)
+  if (
+    !context.prefixIdentifiers ||
+    !node.content.trim() ||
+    // there was a parsing error
+    ast === false
+  ) {
+    return push(rawExpr, NewlineType.None, node.loc)
+  }
+  if (isStatic) {
+    // TODO
+    return push(JSON.stringify(rawExpr))
+  }
+
+  if (ast === null) {
+    // the expression is a simple identifier
+    return genIdentifier(rawExpr, context, loc)
+  }
+
+  const ids: Identifier[] = []
+  walkIdentifiers(
+    ast!,
+    (id) => {
+      ids.push(id)
+    },
+    true,
+  )
+  ids.sort((a, b) => a.start! - b.start!)
+  ids.forEach((id, i) => {
+    // range is offset by -1 due to the wrapping parens when parsed
+    const start = id.start! - 1
+    const end = id.end! - 1
+    const last = ids[i - 1]
+
+    const leadingText = rawExpr.slice(last ? last.end! - 1 : 0, start)
+    if (leadingText.length) push(leadingText, NewlineType.Unknown)
+
+    const source = rawExpr.slice(start, end)
+    genIdentifier(source, context, {
+      start: advancePositionWithClone(node.loc.start, source, start),
+      end: advancePositionWithClone(node.loc.start, source, end),
+      source,
+    })
+
+    if (i === ids.length - 1 && end < rawExpr.length) {
+      push(rawExpr.slice(end), NewlineType.Unknown)
+    }
+  })
+}
+
+function genIdentifier(
+  id: string,
+  { inline, bindingMetadata, vaporHelper, push }: CodegenContext,
+  loc?: SourceLocation,
+): void {
+  let name: string | undefined = id
+  if (inline) {
+    switch (bindingMetadata[id]) {
+      case BindingTypes.SETUP_REF:
+        name = id += '.value'
+        break
+      case BindingTypes.SETUP_MAYBE_REF:
+        id = `${vaporHelper('unref')}(${id})`
+        name = undefined
+        break
+    }
+  } else {
+    id = `_ctx.${id}`
+  }
+  push(id, NewlineType.None, loc, name)
 }

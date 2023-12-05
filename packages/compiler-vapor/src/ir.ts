@@ -1,4 +1,5 @@
 import type {
+  CompoundExpressionNode,
   DirectiveNode,
   RootNode,
   SimpleExpressionNode,
@@ -166,10 +167,10 @@ export type HackOptions<T> = Prettify<
   >
 >
 
-export type HackDirectiveNode = Overwrite<
+export type VaporDirectiveNode = Overwrite<
   DirectiveNode,
   {
-    exp: SimpleExpressionNode | undefined
-    arg: SimpleExpressionNode | undefined
+    exp: Exclude<DirectiveNode['exp'], CompoundExpressionNode>
+    arg: Exclude<DirectiveNode['arg'], CompoundExpressionNode>
   }
 >

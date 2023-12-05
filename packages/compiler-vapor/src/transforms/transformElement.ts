@@ -8,7 +8,7 @@ import {
 } from '@vue/compiler-dom'
 import { isBuiltInDirective, isVoidTag } from '@vue/shared'
 import { NodeTransform, TransformContext } from '../transform'
-import { HackDirectiveNode, IRNodeTypes } from '../ir'
+import { VaporDirectiveNode, IRNodeTypes } from '../ir'
 
 export const transformElement: NodeTransform = (node, ctx) => {
   return function postTransformElement() {
@@ -52,12 +52,12 @@ function buildProps(
   isComponent: boolean,
 ) {
   for (const prop of props) {
-    transformProp(prop as HackDirectiveNode | AttributeNode, node, context)
+    transformProp(prop as VaporDirectiveNode | AttributeNode, node, context)
   }
 }
 
 function transformProp(
-  prop: HackDirectiveNode | AttributeNode,
+  prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): void {

@@ -25,13 +25,13 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [x] `v-text`
   - [x] `v-pre`
   - [x] `v-cloak`
+  - [x] `v-bind`
+    - [x] simple expression
+    - [x] compound expression
   - [ ] `v-on`
     - [x] simple expression
     - [ ] compound expression
     - [x] modifiers
-  - [ ] `v-bind`
-    - [x] simple expression
-    - [ ] compound expression
   - [ ] runtime directives
     - #19
   - [ ] `v-memo`

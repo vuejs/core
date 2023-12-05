@@ -70,9 +70,13 @@ export interface CodegenResult {
 }
 
 export enum NewlineType {
+  /** Start with `\n` */
   Start = 0,
+  /** Ends with `\n` */
   End = -1,
+  /** No `\n` included */
   None = -2,
+  /** Don't know, calc it */
   Unknown = -3
 }
 
