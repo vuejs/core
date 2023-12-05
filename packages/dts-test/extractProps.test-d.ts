@@ -3,7 +3,7 @@ import {
   ExtractPropTypes,
   ExtractPublicPropTypes
 } from 'vue'
-import { expectType, Prettify } from './utils'
+import { expectType, OptionalKeys, Prettify } from './utils'
 
 const propsOptions = {
   foo: {
@@ -14,6 +14,10 @@ const propsOptions = {
     required: true
   },
   baz: Boolean,
+  boolAndUndefined: {
+    type: Boolean,
+    default: undefined
+  },
   qux: Array
 } as const
 
@@ -24,8 +28,11 @@ expectType<{
   foo: number
   bar: string
   baz: boolean
+  boolAndUndefined: boolean | undefined
   qux: unknown[] | undefined
 }>(props)
+// no optional keys
+expectType<never>('' as OptionalKeys<typeof props>)
 
 // external facing props
 declare const publicProps: Prettify<ExtractPublicPropTypes<typeof propsOptions>>
@@ -34,8 +41,12 @@ expectType<{
   foo?: number | undefined
   bar: string
   baz?: boolean | undefined
+  boolAndUndefined?: boolean | undefined
   qux?: unknown[] | undefined
 }>(publicProps)
+expectType<'foo' | 'baz' | 'boolAndUndefined' | 'qux'>(
+  '' as OptionalKeys<typeof props>
+)
 
 // props with defaults
 declare const propsWithDefaults: Prettify<
@@ -44,4 +55,5 @@ declare const propsWithDefaults: Prettify<
 expectType<{
   foo: number
   baz: boolean
+  boolAndUndefined: boolean | undefined
 }>(propsWithDefaults)
