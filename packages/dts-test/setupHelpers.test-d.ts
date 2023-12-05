@@ -9,12 +9,9 @@ import {
   VNode,
   Ref,
   defineModel,
-  toRefs,
-  ExtractPropTypes,
-  ExtractPublicPropTypes,
-  ExtractDefaultPropTypes
+  toRefs
 } from 'vue'
-import { Prettify, describe, expectType } from './utils'
+import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
 import { useModel } from 'vue'
 
@@ -184,17 +181,6 @@ describe('defineProps w/ runtime declaration', () => {
     bar: number
     baz: unknown[]
   }>(props)
-  expectType<{
-    foo: string | undefined
-    bar: number
-    baz: unknown[]
-  }>({} as Prettify<ExtractPropTypes<typeof propOptions>>)
-  expectType<{
-    foo?: string | undefined
-    bar?: number | undefined
-    baz: unknown[]
-  }>({} as Prettify<ExtractPublicPropTypes<typeof propOptions>>)
-  expectType<{ bar: number }>({} as ExtractDefaultPropTypes<typeof propOptions>)
 
   props.foo && props.foo + 'bar'
   props.bar + 1

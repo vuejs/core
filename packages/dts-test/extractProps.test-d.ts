@@ -1,4 +1,8 @@
-import { ExtractPropTypes, ExtractPublicPropTypes } from 'vue'
+import {
+  ExtractDefaultPropTypes,
+  ExtractPropTypes,
+  ExtractPublicPropTypes
+} from 'vue'
 import { expectType, Prettify } from './utils'
 
 const propsOptions = {
@@ -16,15 +20,28 @@ const propsOptions = {
 // internal facing props
 declare const props: Prettify<ExtractPropTypes<typeof propsOptions>>
 
-expectType<number>(props.foo)
-expectType<string>(props.bar)
-expectType<boolean>(props.baz)
-expectType<unknown[] | undefined>(props.qux)
+expectType<{
+  foo: number
+  bar: string
+  baz: boolean
+  qux: unknown[] | undefined
+}>(props)
 
 // external facing props
 declare const publicProps: Prettify<ExtractPublicPropTypes<typeof propsOptions>>
 
-expectType<number | undefined>(publicProps.foo)
-expectType<string>(publicProps.bar)
-expectType<boolean | undefined>(publicProps.baz)
-expectType<unknown[] | undefined>(publicProps.qux)
+expectType<{
+  foo?: number | undefined
+  bar: string
+  baz?: boolean | undefined
+  qux?: unknown[] | undefined
+}>(publicProps)
+
+// props with defaults
+declare const propsWithDefaults: Prettify<
+  ExtractDefaultPropTypes<typeof propsOptions>
+>
+expectType<{
+  foo: number
+  baz: boolean
+}>(propsWithDefaults)
