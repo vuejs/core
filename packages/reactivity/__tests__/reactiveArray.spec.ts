@@ -151,6 +151,14 @@ describe('reactivity/reactive/Array', () => {
     expect(proxy).toHaveLength(1)
   })
 
+  test('toRaw on array using reactive as prototype', () => {
+    const original = reactive([])
+    const obj = Object.create(original)
+    const raw = toRaw(obj)
+    expect(raw).toBe(obj)
+    expect(raw).not.toBe(toRaw(original))
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {
