@@ -21,15 +21,37 @@ const { store } = props
 const currentCommit = __COMMIT__
 const vueVersion = ref(`@${currentCommit}`)
 
+let fetchingVueVersion = ''
+
+if (location.search) {
+  const search = new URLSearchParams(location.search)
+  const version = search.get('v')
+
+  if (version) {
+    setVueVersion(version)
+  }
+}
+
 async function setVueVersion(v: string) {
+  if (fetchingVueVersion) {
+    vueVersion.value = `loading...`
+    return
+  } else if (vueVersion.value === `v${v}`) {
+    return
+  }
+
   vueVersion.value = `loading...`
+  fetchingVueVersion = v
   await store.setVueVersion(v)
   vueVersion.value = `v${v}`
+  history.replaceState({}, '', `?v=${v}${location.hash}`)
+  fetchingVueVersion = ''
 }
 
 function resetVueVersion() {
   store.resetVueVersion()
   vueVersion.value = `@${currentCommit}`
+  history.replaceState({}, '', `?${location.hash}`)
 }
 
 async function copyLink(e: MouseEvent) {
