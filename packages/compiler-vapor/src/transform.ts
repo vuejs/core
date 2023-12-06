@@ -113,11 +113,28 @@ function createRootContext(
       ) {
         return this.registerOperation(...operations)
       }
-      // TODO combine effects
-      effect.push({
-        expressions: expressions as IRExpression[],
-        operations,
-      })
+      const existing = effect.find((e) =>
+        isSameExpression(e.expressions, expressions as IRExpression[]),
+      )
+      if (existing) {
+        existing.operations.push(...operations)
+      } else {
+        effect.push({
+          expressions: expressions as IRExpression[],
+          operations,
+        })
+      }
+
+      function isSameExpression(a: IRExpression[], b: IRExpression[]) {
+        if (a.length !== b.length) return false
+        return a.every(
+          (exp, i) => identifyExpression(exp) === identifyExpression(b[i]),
+        )
+      }
+
+      function identifyExpression(exp: IRExpression) {
+        return typeof exp === 'string' ? exp : exp.content
+      }
     },
 
     template: '',

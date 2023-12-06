@@ -328,14 +328,8 @@ export function render(_ctx) {
   _on(n4, "click", (...args) => (_ctx.handleClick && _ctx.handleClick(...args)))
   _effect(() => {
     _setText(n1, undefined, _ctx.count)
-  })
-  _effect(() => {
     _setText(n2, undefined, _ctx.count)
-  })
-  _effect(() => {
     _setText(n3, undefined, _ctx.count)
-  })
-  _effect(() => {
     _setAttr(n4, "id", undefined, _ctx.count)
   })
   return n0
