@@ -103,18 +103,15 @@ export class ReactiveEffect<T = any> {
 
   /**
    * Resumes the execution of the reactive effect.
-   * @param {boolean} immediate - If true, executes the saved run method immediately upon resuming.
    */
-  resume(immediate: boolean = false) {
+  resume() {
     if (!this._isStopped) {
       this.active = true
       if (pausedQueueEffects.has(this)) {
         pausedQueueEffects.delete(this)
         queueEffectSchedulers.push(this.scheduler!)
-        if (immediate) {
-          pauseScheduling()
-          resetScheduling()
-        }
+        pauseScheduling()
+        resetScheduling()
       }
     }
   }

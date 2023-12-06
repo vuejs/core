@@ -66,20 +66,18 @@ export class EffectScope {
 
   /**
    * Resumes the effect scope, including all child scopes and effects.
-   *
-   * @param {boolean} immediate - If true, executes all saved run methods in effects immediately upon resuming.
    */
-  resume(immediate: boolean = false) {
+  resume() {
     if (this._active) {
       if (this._isPaused) {
         this._isPaused = false
         if (this.scopes) {
           for (let i = 0, l = this.scopes.length; i < l; i++) {
-            this.scopes[i].resume(immediate)
+            this.scopes[i].resume()
           }
         }
         for (let i = 0, l = this.effects.length; i < l; i++) {
-          this.effects[i].resume(immediate)
+          this.effects[i].resume()
         }
       }
     }

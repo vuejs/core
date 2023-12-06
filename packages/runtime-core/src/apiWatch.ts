@@ -82,7 +82,7 @@ export type WatchStopHandle = () => void
 
 export interface WatchHandle extends WatchStopHandle {
   pause: () => void
-  resume: (immediate?: boolean) => void
+  resume: () => void
   stop: () => void
 }
 
@@ -393,8 +393,8 @@ function doWatch(
   }
 
   const watchHandle: WatchHandle = () => unwatch()
-  watchHandle.pause = () => effect.pause()
-  watchHandle.resume = immediate => effect.resume(immediate)
+  watchHandle.pause = effect.pause.bind(effect)
+  watchHandle.resume = effect.resume.bind(effect)
   watchHandle.stop = unwatch
 
   if (__DEV__) {

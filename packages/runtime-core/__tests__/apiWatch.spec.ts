@@ -1312,7 +1312,7 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(3)
     expect(cb).toHaveBeenLastCalledWith(4, 3, expect.any(Function))
 
-    resume(true)
+    resume()
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(4)
     expect(cb).toHaveBeenLastCalledWith(5, 4, expect.any(Function))

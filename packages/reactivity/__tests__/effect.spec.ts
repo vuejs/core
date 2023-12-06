@@ -1089,11 +1089,11 @@ describe('reactivity/effect', () => {
     expect(obj.foo).toBe(2)
 
     runner.effect.resume()
-    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(fnSpy).toHaveBeenCalledTimes(2)
     expect(obj.foo).toBe(2)
 
     obj.foo++
-    expect(fnSpy).toHaveBeenCalledTimes(2)
+    expect(fnSpy).toHaveBeenCalledTimes(3)
     expect(obj.foo).toBe(3)
   })
 
@@ -1110,12 +1110,12 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
     expect(obj.foo).toBe(2)
 
-    runner.effect.resume(true)
-    expect(fnSpy).toHaveBeenCalledTimes(2)
-    expect(obj.foo).toBe(2)
-
     obj.foo++
-    expect(fnSpy).toHaveBeenCalledTimes(3)
+    expect(fnSpy).toHaveBeenCalledTimes(1)
+    expect(obj.foo).toBe(3)
+
+    runner.effect.resume()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
     expect(obj.foo).toBe(3)
   })
 })

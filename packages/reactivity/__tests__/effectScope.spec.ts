@@ -316,39 +316,11 @@ describe('reactivity/effect/scope', () => {
     await nextTick()
     expect(fnSpy).toHaveBeenCalledTimes(2)
 
+    counter.num++
+    await nextTick()
+    expect(fnSpy).toHaveBeenCalledTimes(2)
+
     scope.resume()
-    await nextTick()
-    expect(fnSpy).toHaveBeenCalledTimes(2)
-
-    counter.num++
-    await nextTick()
     expect(fnSpy).toHaveBeenCalledTimes(3)
-  })
-
-  it('should execute all saved run methods in effects immediately upon resuming', async () => {
-    const counter = reactive({ num: 0 })
-    const fnSpy = vi.fn(() => counter.num)
-    const scope = new EffectScope()
-    scope.run(() => {
-      effect(fnSpy)
-    })
-
-    expect(fnSpy).toHaveBeenCalledTimes(1)
-
-    counter.num++
-    await nextTick()
-    expect(fnSpy).toHaveBeenCalledTimes(2)
-
-    scope.pause()
-    counter.num++
-    await nextTick()
-    expect(fnSpy).toHaveBeenCalledTimes(2)
-
-    scope.resume(true)
-    expect(fnSpy).toHaveBeenCalledTimes(3)
-
-    counter.num++
-    await nextTick()
-    expect(fnSpy).toHaveBeenCalledTimes(4)
   })
 })
