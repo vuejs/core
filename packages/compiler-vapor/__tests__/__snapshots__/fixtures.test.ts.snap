@@ -23,7 +23,7 @@ return (() => {
   _append(n2, n1)
   const n3 = _createTextNode(double.value)
   _append(n4, n3)
-  _on(n5, \\"click\\", increment)
+  _on(n5, \\"click\\", (...args) => (increment && increment(...args)))
   const n7 = _createTextNode(count.value)
   _setText(n7, undefined, count.value)
   _append(n8, n7)

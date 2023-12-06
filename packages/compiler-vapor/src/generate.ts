@@ -446,7 +446,14 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
   if (nonKeys.length) {
     push(`${vaporHelper('withModifiers')}(`)
   }
+
+  // gen event handler
+  push('(...args) => (')
   genExpression(oper.value, context)
+  push(' && ')
+  genExpression(oper.value, context)
+  push('(...args))')
+
   if (nonKeys.length) {
     push(`, ${genArrayExpression(nonKeys)})`)
   }
