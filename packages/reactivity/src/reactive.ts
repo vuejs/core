@@ -21,13 +21,13 @@ export const enum ReactiveFlags {
   RAW = '__v_raw'
 }
 
-declare const ReadonlyRawType: unique symbol
+declare const ReadonlyRawSymbol: unique symbol
 
 interface ReadonlyRaw<T> {
   /**
    * Original type used to hold readonly function parameters
    */
-  [ReadonlyRawType]: T
+  [ReadonlyRawSymbol]: T
 }
 
 export interface Target {
@@ -375,7 +375,7 @@ export function isProxy(value: unknown): boolean {
  */
 export function toRaw<T extends ReadonlyRaw<any>>(
   observed: T
-): T[typeof ReadonlyRawType]
+): T[typeof ReadonlyRawSymbol]
 export function toRaw<T>(observed: T): T
 export function toRaw<T>(observed: T): T {
   const raw = observed && (observed as Target)[ReactiveFlags.RAW]
