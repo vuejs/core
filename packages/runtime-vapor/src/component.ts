@@ -1,6 +1,15 @@
 import { EffectScope } from '@vue/reactivity'
-import { Block, BlockFn } from './render'
+import { Block } from './render'
 import { DirectiveBinding } from './directives'
+
+export type SetupFn = (props: any, ctx: any) => Block | Data
+export type FunctionalComponent = SetupFn & {
+  render(ctx: any): Block
+}
+export interface ObjectComponent {
+  setup: SetupFn
+  render(ctx: any): Block
+}
 
 export interface ComponentInternalInstance {
   uid: number
@@ -8,7 +17,7 @@ export interface ComponentInternalInstance {
   block: Block | null
   scope: EffectScope
 
-  component: BlockFn
+  component: FunctionalComponent | ObjectComponent
   isMounted: boolean
 
   /** directives */
@@ -32,7 +41,7 @@ export const unsetCurrentInstance = () => {
 
 let uid = 0
 export const createComponentInstance = (
-  component: BlockFn,
+  component: ObjectComponent | FunctionalComponent,
 ): ComponentInternalInstance => {
   const instance: ComponentInternalInstance = {
     uid: uid++,
