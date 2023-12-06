@@ -7,10 +7,10 @@ export function render(_ctx) {
   const t0 = _template(\\"<div>count is <!>.</div>\\")
   const n0 = t0()
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
-  const n1 = _createTextNode(count.value)
+  const n1 = _createTextNode(_ctx.count)
   _insert(n1, n3, n2)
   _effect(() => {
-    _setText(n1, undefined, count.value)
+    _setText(n1, undefined, _ctx.count)
   })
   return n0
 }"
@@ -24,7 +24,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _effect(() => {
-    _setAttr(n1, \\"id\\", undefined, id.value)
+    _setAttr(n1, \\"id\\", undefined, _ctx.id)
   })
   return n0
 }"
@@ -48,7 +48,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _effect(() => {
-    _setHtml(n1, undefined, test)
+    _setHtml(n1, undefined, _ctx.test)
   })
   return n0
 }"
@@ -74,7 +74,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _effect(() => {
-    _setHtml(n1, undefined, code.value)
+    _setHtml(n1, undefined, _ctx.code)
   })
   return n0
 }"
@@ -87,28 +87,28 @@ export function render(_ctx) {
   const t0 = _template(\\"<a></a><form></form><a></a><div></div><div></div><a></a><div></div><input><input><input><input><input><input><input><input><input><input><input><input><input><input><input>\\")
   const n0 = t0()
   const { 0: [n1], 1: [n2], 2: [n3], 3: [n4], 4: [n5], 5: [n6], 6: [n7], 7: [n8], 8: [n9], 9: [n10], 10: [n11], 11: [n12], 12: [n13], 13: [n14], 14: [n15], 15: [n16], 16: [n17], 17: [n18], 18: [n19], 19: [n20], 20: [n21], 21: [n22],} = _children(n0)
-  _on(n1, \\"click\\", _withModifiers(handleEvent, [\\"stop\\"]))
-  _on(n2, \\"submit\\", _withModifiers(handleEvent, [\\"prevent\\"]))
-  _on(n3, \\"click\\", _withModifiers(handleEvent, [\\"stop\\", \\"prevent\\"]))
-  _on(n4, \\"click\\", _withModifiers(handleEvent, [\\"self\\"]))
-  _on(n5, \\"click\\", handleEvent, { capture: true })
-  _on(n6, \\"click\\", handleEvent, { once: true })
-  _on(n7, \\"scroll\\", handleEvent, { passive: true })
-  _on(n8, \\"contextmenu\\", _withModifiers(handleEvent, [\\"right\\"]))
-  _on(n9, \\"click\\", _withModifiers(handleEvent, [\\"left\\"]))
-  _on(n10, \\"mouseup\\", _withModifiers(handleEvent, [\\"middle\\"]))
-  _on(n11, \\"contextmenu\\", _withModifiers(handleEvent, [\\"right\\"]))
-  _on(n12, \\"keyup\\", _withKeys(handleEvent, [\\"enter\\"]))
-  _on(n13, \\"keyup\\", _withKeys(handleEvent, [\\"tab\\"]))
-  _on(n14, \\"keyup\\", _withKeys(handleEvent, [\\"delete\\"]))
-  _on(n15, \\"keyup\\", _withKeys(handleEvent, [\\"esc\\"]))
-  _on(n16, \\"keyup\\", _withKeys(handleEvent, [\\"space\\"]))
-  _on(n17, \\"keyup\\", _withKeys(handleEvent, [\\"up\\"]))
-  _on(n18, \\"keyup\\", _withKeys(handleEvent, [\\"down\\"]))
-  _on(n19, \\"keyup\\", _withKeys(handleEvent, [\\"left\\"]))
-  _on(n20, \\"keyup\\", _withModifiers(submit, [\\"middle\\"]))
-  _on(n21, \\"keyup\\", _withModifiers(submit, [\\"middle\\", \\"self\\"]))
-  _on(n22, \\"keyup\\", _withKeys(_withModifiers(handleEvent, [\\"self\\"]), [\\"enter\\"]))
+  _on(n1, \\"click\\", _withModifiers(_ctx.handleEvent, [\\"stop\\"]))
+  _on(n2, \\"submit\\", _withModifiers(_ctx.handleEvent, [\\"prevent\\"]))
+  _on(n3, \\"click\\", _withModifiers(_ctx.handleEvent, [\\"stop\\", \\"prevent\\"]))
+  _on(n4, \\"click\\", _withModifiers(_ctx.handleEvent, [\\"self\\"]))
+  _on(n5, \\"click\\", _ctx.handleEvent, { capture: true })
+  _on(n6, \\"click\\", _ctx.handleEvent, { once: true })
+  _on(n7, \\"scroll\\", _ctx.handleEvent, { passive: true })
+  _on(n8, \\"contextmenu\\", _withModifiers(_ctx.handleEvent, [\\"right\\"]))
+  _on(n9, \\"click\\", _withModifiers(_ctx.handleEvent, [\\"left\\"]))
+  _on(n10, \\"mouseup\\", _withModifiers(_ctx.handleEvent, [\\"middle\\"]))
+  _on(n11, \\"contextmenu\\", _withModifiers(_ctx.handleEvent, [\\"right\\"]))
+  _on(n12, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"enter\\"]))
+  _on(n13, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"tab\\"]))
+  _on(n14, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"delete\\"]))
+  _on(n15, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"esc\\"]))
+  _on(n16, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"space\\"]))
+  _on(n17, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"up\\"]))
+  _on(n18, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"down\\"]))
+  _on(n19, \\"keyup\\", _withKeys(_ctx.handleEvent, [\\"left\\"]))
+  _on(n20, \\"keyup\\", _withModifiers(_ctx.submit, [\\"middle\\"]))
+  _on(n21, \\"keyup\\", _withModifiers(_ctx.submit, [\\"middle\\", \\"self\\"]))
+  _on(n22, \\"keyup\\", _withKeys(_withModifiers(_ctx.handleEvent, [\\"self\\"]), [\\"enter\\"]))
   return n0
 }"
 `;
@@ -120,7 +120,7 @@ export function render(_ctx) {
   const t0 = _template(\\"<div></div>\\")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, \\"click\\", handleClick)
+  _on(n1, \\"click\\", _ctx.handleClick)
   return n0
 }"
 `;
@@ -132,7 +132,7 @@ export function render(_ctx) {
   const t0 = _template(\\"<div></div>\\")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _setAttr(n1, \\"id\\", undefined, foo)
+  _setAttr(n1, \\"id\\", undefined, _ctx.foo)
   return n0
 }"
 `;
@@ -144,9 +144,9 @@ export function render(_ctx) {
   const t0 = _template(\\"<div> <span></span></div>\\")
   const n0 = t0()
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
-  const n1 = _createTextNode(msg.value)
-  _setText(n1, undefined, msg.value)
-  _setAttr(n2, \\"class\\", undefined, clz.value)
+  const n1 = _createTextNode(_ctx.msg)
+  _setText(n1, undefined, _ctx.msg)
+  _setAttr(n2, \\"class\\", undefined, _ctx.clz)
   _prepend(n3, n1)
   return n0
 }"
@@ -169,13 +169,13 @@ export function render(_ctx) {
   const t0 = _template(\\"<div></div><div><Comp></Comp></div>\\")
   const n0 = t0()
   const { 1: [n2],} = _children(n0)
-  const n1 = _createTextNode(bar)
+  const n1 = _createTextNode(_ctx.bar)
   _append(n2, n1)
   _effect(() => {
-    _setText(n1, undefined, bar)
+    _setText(n1, undefined, _ctx.bar)
   })
   _effect(() => {
-    _setAttr(n2, \\"id\\", undefined, foo)
+    _setAttr(n2, \\"id\\", undefined, _ctx.foo)
   })
   return n0
 }"
@@ -188,13 +188,13 @@ export function render(_ctx) {
   const t0 = _template(\\"<div :id=\\\\\\"foo\\\\\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>\\")
   const n0 = t0()
   const { 1: [n2],} = _children(n0)
-  const n1 = _createTextNode(bar.value)
+  const n1 = _createTextNode(_ctx.bar)
   _append(n2, n1)
   _effect(() => {
-    _setText(n1, undefined, bar.value)
+    _setText(n1, undefined, _ctx.bar)
   })
   _effect(() => {
-    _setAttr(n2, \\"id\\", undefined, foo.value)
+    _setAttr(n2, \\"id\\", undefined, _ctx.foo)
   })
   return n0
 }"
@@ -220,7 +220,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _effect(() => {
-    _setText(n1, undefined, str.value)
+    _setText(n1, undefined, _ctx.str)
   })
   return n0
 }"
@@ -253,24 +253,24 @@ export function render(_ctx) {
   const t0 = _template(\\"<button>foo<!>foo</button>\\")
   const n0 = t0()
   const { 0: [n4, { 1: [n5],}],} = _children(n0)
-  const n1 = _createTextNode(count)
-  const n2 = _createTextNode(count)
-  const n3 = _createTextNode(count)
+  const n1 = _createTextNode(_ctx.count)
+  const n2 = _createTextNode(_ctx.count)
+  const n3 = _createTextNode(_ctx.count)
   _prepend(n4, n1)
   _insert(n2, n4, n5)
   _append(n4, n3)
-  _on(n4, \\"click\\", handleClick)
+  _on(n4, \\"click\\", _ctx.handleClick)
   _effect(() => {
-    _setText(n1, undefined, count)
+    _setText(n1, undefined, _ctx.count)
   })
   _effect(() => {
-    _setText(n2, undefined, count)
+    _setText(n2, undefined, _ctx.count)
   })
   _effect(() => {
-    _setText(n3, undefined, count)
+    _setText(n3, undefined, _ctx.count)
   })
   _effect(() => {
-    _setAttr(n4, \\"id\\", undefined, count)
+    _setAttr(n4, \\"id\\", undefined, _ctx.count)
   })
   return n0
 }"

@@ -502,11 +502,10 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
     // there was a parsing error
     ast === false
   ) {
-    return push(rawExpr, NewlineType.None, node.loc)
+    return push(rawExpr, NewlineType.None, loc)
   }
   if (isStatic) {
-    // TODO
-    return push(JSON.stringify(rawExpr))
+    return push(JSON.stringify(rawExpr), NewlineType.None, loc)
   }
 
   if (ast === null) {
@@ -522,27 +521,31 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
     },
     true,
   )
-  ids.sort((a, b) => a.start! - b.start!)
-  ids.forEach((id, i) => {
-    // range is offset by -1 due to the wrapping parens when parsed
-    const start = id.start! - 1
-    const end = id.end! - 1
-    const last = ids[i - 1]
+  if (ids.length) {
+    ids.sort((a, b) => a.start! - b.start!)
+    ids.forEach((id, i) => {
+      // range is offset by -1 due to the wrapping parens when parsed
+      const start = id.start! - 1
+      const end = id.end! - 1
+      const last = ids[i - 1]
 
-    const leadingText = rawExpr.slice(last ? last.end! - 1 : 0, start)
-    if (leadingText.length) push(leadingText, NewlineType.Unknown)
+      const leadingText = rawExpr.slice(last ? last.end! - 1 : 0, start)
+      if (leadingText.length) push(leadingText, NewlineType.Unknown)
 
-    const source = rawExpr.slice(start, end)
-    genIdentifier(source, context, {
-      start: advancePositionWithClone(node.loc.start, source, start),
-      end: advancePositionWithClone(node.loc.start, source, end),
-      source,
+      const source = rawExpr.slice(start, end)
+      genIdentifier(source, context, {
+        start: advancePositionWithClone(node.loc.start, source, start),
+        end: advancePositionWithClone(node.loc.start, source, end),
+        source,
+      })
+
+      if (i === ids.length - 1 && end < rawExpr.length) {
+        push(rawExpr.slice(end), NewlineType.Unknown)
+      }
     })
-
-    if (i === ids.length - 1 && end < rawExpr.length) {
-      push(rawExpr.slice(end), NewlineType.Unknown)
-    }
-  })
+  } else {
+    push(rawExpr, NewlineType.Unknown)
+  }
 }
 
 function genIdentifier(

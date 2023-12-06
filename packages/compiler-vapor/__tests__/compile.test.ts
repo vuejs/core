@@ -7,7 +7,11 @@ import {
 import { type CompilerOptions, compile as _compile } from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {
-  let { code } = _compile(template, options)
+  let { code } = _compile(template, {
+    ...options,
+    mode: 'module',
+    prefixIdentifiers: true,
+  })
   return code
 }
 
