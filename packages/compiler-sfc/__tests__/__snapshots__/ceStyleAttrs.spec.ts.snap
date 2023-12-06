@@ -17,10 +17,10 @@ const __injectCSSVars__ = () => {
 
 _useCEStyleAttrs(_ctx => ([
   {
-   \\"id\\": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   \\"src\\": _ctx.msg,
+   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
+   "src": _ctx.msg,
    [_ctx.msg]: _ctx.msg,
-   \\"xlink:special\\": _ctx.msg,
+   "xlink:special": _ctx.msg,
  },
 ]))}
 const __setup__ = __default__.setup
@@ -53,7 +53,7 @@ export default {
 
 _useCEStyleAttrs(_ctx => ([
   {
-   \\"id\\": { id: _ctx.msg3, 'other-attr': msg },
+   "id": { id: _ctx.msg3, 'other-attr': msg },
  },
 ]))
 
@@ -72,10 +72,10 @@ const __injectCSSVars__ = () => {
 
 _useCEStyleAttrs(_ctx => ([
   {
-   \\"id\\": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   \\"src\\": _ctx.msg,
+   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
+   "src": _ctx.msg,
    [_ctx.msg]: _ctx.msg,
-   \\"xlink:special\\": _ctx.msg,
+   "xlink:special": _ctx.msg,
  },
 ]))}
 const __setup__ = __default__.setup
@@ -100,10 +100,10 @@ export default {
 
 _useCEStyleAttrs(_ctx => ([
   {
-   \\"id\\": { id: __props.msg3, 'other-attr': msg },
-   \\"src\\": msg2.value,
+   "id": { id: __props.msg3, 'other-attr': msg },
+   "src": msg2.value,
    [msg]: msg,
-   \\"xlink:special\\": __props.msg3,
+   "xlink:special": __props.msg3,
  },
 ]))
 
@@ -131,10 +131,10 @@ const __injectCSSVars__ = () => {
 
 _useCEStyleAttrs(_ctx => ([
   {
-   \\"id\\": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   \\"src\\": _ctx.msg,
+   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
+   "src": _ctx.msg,
    [_ctx.msg]: _ctx.msg,
-   \\"xlink:special\\": _ctx.msg,
+   "xlink:special": _ctx.msg,
  },
 ]))}
 const __setup__ = __default__.setup
