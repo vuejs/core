@@ -82,7 +82,10 @@ export function baseCompile(
     onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
   }
 
-  const ast = isString(source) ? baseParse(source, options) : source
+  const resolvedOptions = extend({}, options, {
+    prefixIdentifiers
+  })
+  const ast = isString(source) ? baseParse(source, resolvedOptions) : source
   const [nodeTransforms, directiveTransforms] =
     getBaseTransformPreset(prefixIdentifiers)
 
@@ -95,8 +98,7 @@ export function baseCompile(
 
   transform(
     ast,
-    extend({}, options, {
-      prefixIdentifiers,
+    extend({}, resolvedOptions, {
       nodeTransforms: [
         ...nodeTransforms,
         ...(options.nodeTransforms || []) // user transforms
@@ -109,10 +111,5 @@ export function baseCompile(
     })
   )
 
-  return generate(
-    ast,
-    extend({}, options, {
-      prefixIdentifiers
-    })
-  )
+  return generate(ast, resolvedOptions)
 }
