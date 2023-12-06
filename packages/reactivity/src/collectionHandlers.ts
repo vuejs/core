@@ -8,7 +8,7 @@ import {
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
-export type CollectionTypes = IterableCollections | WeakCollections
+type CollectionTypes = IterableCollections | WeakCollections
 
 type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>

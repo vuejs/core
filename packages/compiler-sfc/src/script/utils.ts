@@ -121,6 +121,8 @@ export function getEscapedPropName(key: string) {
 
 export const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 
-export function getEscapedCssVarName(key: string) {
-  return key.replace(cssVarNameEscapeSymbolsRE, s => `\\${s}`)
+export function getEscapedCssVarName(key: string, doubleEscape: boolean) {
+  return key.replace(cssVarNameEscapeSymbolsRE, s =>
+    doubleEscape ? `\\\\${s}` : `\\${s}`
+  )
 }
