@@ -611,4 +611,134 @@ const props = defineProps({ foo: String })
       }).toThrow(`cannot accept both type and non-type arguments`)
     })
   })
+
+  test('should escape names w/ special symbols', () => {
+    const { content, bindings } = compile(`
+    <script setup lang="ts">
+    defineProps<{
+      'spa ce': unknown
+      'exclamation!mark': unknown
+      'double"quote': unknown
+      'hash#tag': unknown
+      'dollar$sign': unknown
+      'percentage%sign': unknown
+      'amper&sand': unknown
+      "single'quote": unknown
+      'round(brack)ets': unknown
+      'aste*risk': unknown
+      'pl+us': unknown
+      'com,ma': unknown
+      'do.t': unknown
+      'sla/sh': unknown
+      'co:lon': unknown
+      'semi;colon': unknown
+      'angle<brack>ets': unknown
+      'equal=sign': unknown
+      'question?mark': unknown
+      'at@sign': unknown
+      'square[brack]ets': unknown
+      'back\\\\slash': unknown
+      'ca^ret': unknown
+      'back\`tick': unknown
+      'curly{bra}ces': unknown
+      'pi|pe': unknown
+      'til~de': unknown
+      'da-sh': unknown
+    }>()
+    </script>`)
+    assertCode(content)
+    expect(content).toMatch(`"spa ce": { type: null, required: true }`)
+    expect(content).toMatch(
+      `"exclamation!mark": { type: null, required: true }`
+    )
+    expect(content).toMatch(`"double\\"quote": { type: null, required: true }`)
+    expect(content).toMatch(`"hash#tag": { type: null, required: true }`)
+    expect(content).toMatch(`"dollar$sign": { type: null, required: true }`)
+    expect(content).toMatch(`"percentage%sign": { type: null, required: true }`)
+    expect(content).toMatch(`"amper&sand": { type: null, required: true }`)
+    expect(content).toMatch(`"single'quote": { type: null, required: true }`)
+    expect(content).toMatch(`"round(brack)ets": { type: null, required: true }`)
+    expect(content).toMatch(`"aste*risk": { type: null, required: true }`)
+    expect(content).toMatch(`"pl+us": { type: null, required: true }`)
+    expect(content).toMatch(`"com,ma": { type: null, required: true }`)
+    expect(content).toMatch(`"do.t": { type: null, required: true }`)
+    expect(content).toMatch(`"sla/sh": { type: null, required: true }`)
+    expect(content).toMatch(`"co:lon": { type: null, required: true }`)
+    expect(content).toMatch(`"semi;colon": { type: null, required: true }`)
+    expect(content).toMatch(`"angle<brack>ets": { type: null, required: true }`)
+    expect(content).toMatch(`"equal=sign": { type: null, required: true }`)
+    expect(content).toMatch(`"question?mark": { type: null, required: true }`)
+    expect(content).toMatch(`"at@sign": { type: null, required: true }`)
+    expect(content).toMatch(
+      `"square[brack]ets": { type: null, required: true }`
+    )
+    expect(content).toMatch(`"back\\\\slash": { type: null, required: true }`)
+    expect(content).toMatch(`"ca^ret": { type: null, required: true }`)
+    expect(content).toMatch(`"back\`tick": { type: null, required: true }`)
+    expect(content).toMatch(`"curly{bra}ces": { type: null, required: true }`)
+    expect(content).toMatch(`"pi|pe": { type: null, required: true }`)
+    expect(content).toMatch(`"til~de": { type: null, required: true }`)
+    expect(content).toMatch(`"da-sh": { type: null, required: true }`)
+    expect(bindings).toStrictEqual({
+      'spa ce': BindingTypes.PROPS,
+      'exclamation!mark': BindingTypes.PROPS,
+      'double"quote': BindingTypes.PROPS,
+      'hash#tag': BindingTypes.PROPS,
+      dollar$sign: BindingTypes.PROPS,
+      'percentage%sign': BindingTypes.PROPS,
+      'amper&sand': BindingTypes.PROPS,
+      "single'quote": BindingTypes.PROPS,
+      'round(brack)ets': BindingTypes.PROPS,
+      'aste*risk': BindingTypes.PROPS,
+      'pl+us': BindingTypes.PROPS,
+      'com,ma': BindingTypes.PROPS,
+      'do.t': BindingTypes.PROPS,
+      'sla/sh': BindingTypes.PROPS,
+      'co:lon': BindingTypes.PROPS,
+      'semi;colon': BindingTypes.PROPS,
+      'angle<brack>ets': BindingTypes.PROPS,
+      'equal=sign': BindingTypes.PROPS,
+      'question?mark': BindingTypes.PROPS,
+      'at@sign': BindingTypes.PROPS,
+      'square[brack]ets': BindingTypes.PROPS,
+      'back\\slash': BindingTypes.PROPS,
+      'ca^ret': BindingTypes.PROPS,
+      'back`tick': BindingTypes.PROPS,
+      'curly{bra}ces': BindingTypes.PROPS,
+      'pi|pe': BindingTypes.PROPS,
+      'til~de': BindingTypes.PROPS,
+      'da-sh': BindingTypes.PROPS
+    })
+  })
+
+  // #8989
+  test('custom element retains the props type & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const props = defineProps<{ foo: number}>()
+      </script>`,
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
+      { filename: 'app.ce.vue' }
+    )
+
+    expect(content).toMatch(`foo: {type: Number}`)
+    assertCode(content)
+  })
+
+  test('custom element retains the props type & default value & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      interface Props { 
+          foo?: number;
+      }
+      const props = withDefaults(defineProps<Props>(), {
+          foo: 5.5,
+      });
+      </script>`,
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
+      { filename: 'app.ce.vue' }
+    )
+    expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
+    assertCode(content)
+  })
 })

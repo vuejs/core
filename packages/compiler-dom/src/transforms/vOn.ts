@@ -96,14 +96,14 @@ const transformClick = (key: ExpressionNode, event: string) => {
   return isStaticClick
     ? createSimpleExpression(event, true)
     : key.type !== NodeTypes.SIMPLE_EXPRESSION
-    ? createCompoundExpression([
-        `(`,
-        key,
-        `) === "onClick" ? "${event}" : (`,
-        key,
-        `)`
-      ])
-    : key
+      ? createCompoundExpression([
+          `(`,
+          key,
+          `) === "onClick" ? "${event}" : (`,
+          key,
+          `)`
+        ])
+      : key
 }
 
 export const transformOn: DirectiveTransform = (dir, node, context) => {
