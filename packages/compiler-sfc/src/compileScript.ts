@@ -130,6 +130,10 @@ export interface SFCScriptCompileOptions {
    * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
    */
   reactivityTransform?: boolean
+  /**
+   * Transform Vue SFCs into custom elements.
+   */
+  customElement?: boolean | ((filename: string) => boolean)
 }
 
 export interface ImportBinding {
