@@ -4,10 +4,10 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 
 ## TODO
 
-PR are welcome! However, please create an issue before you start to work on it, and DO NOT create a PR before issue discussion.
+PR are welcome!
 
 - [Issues with `todo` tag](https://github.com/vuejs/core-vapor/labels/todo)
-- To-do list below (discussion before PR is required)
+- To-do list below (**create an issue** for discussion before a big feat/bug PR is required)
 - `// TODO` comments in code (`compiler-vapor` and `runtime-vapor` packages)
 
 ---
@@ -28,6 +28,10 @@ PR are welcome! However, please create an issue before you start to work on it, 
   - [x] `v-bind`
     - [x] simple expression
     - [x] compound expression
+    - [ ] modifiers
+      - [ ] .camel
+      - [ ] .prop
+      - [ ] .attr
   - [ ] `v-on`
     - [x] simple expression
     - [ ] compound expression
