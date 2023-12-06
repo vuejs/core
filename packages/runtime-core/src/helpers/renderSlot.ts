@@ -1,4 +1,3 @@
-import { Data } from '../component'
 import { Slots, RawSlots } from '../componentSlots'
 import {
   ContextualRenderFn,
@@ -13,7 +12,7 @@ import {
   Fragment,
   VNode
 } from '../vnode'
-import { PatchFlags, SlotFlags } from '@vue/shared'
+import { PatchFlags, SlotFlags, Data } from '@vue/shared'
 import { warn } from '../warning'
 import { createVNode } from '@vue/runtime-core'
 import { isAsyncWrapper } from '../apiAsyncComponent'

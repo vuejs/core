@@ -1,6 +1,5 @@
 import {
   ComponentInternalInstance,
-  Data,
   getExposeProxy,
   isStatefulComponent
 } from './component'
@@ -16,7 +15,8 @@ import {
   isFunction,
   UnionToIntersection,
   Prettify,
-  IfAny
+  IfAny,
+  Data
 } from '@vue/shared'
 import {
   toRaw,

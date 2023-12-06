@@ -23,11 +23,11 @@ import {
   def,
   extend,
   isOn,
-  IfAny
+  IfAny,
+  Data
 } from '@vue/shared'
 import { warn } from './warning'
 import {
-  Data,
   ComponentInternalInstance,
   ComponentOptions,
   ConcreteComponent,

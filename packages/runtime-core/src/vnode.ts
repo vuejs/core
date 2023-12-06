@@ -10,11 +10,11 @@ import {
   PatchFlags,
   ShapeFlags,
   SlotFlags,
-  isOn
+  isOn,
+  Data
 } from '@vue/shared'
 import {
   ComponentInternalInstance,
-  Data,
   ConcreteComponent,
   ClassComponent,
   Component,

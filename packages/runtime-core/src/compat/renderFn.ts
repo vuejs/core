@@ -8,13 +8,13 @@ import {
   normalizeClass,
   normalizeStyle,
   ShapeFlags,
-  toHandlerKey
+  toHandlerKey,
+  Data
 } from '@vue/shared'
 import {
   Component,
   ComponentInternalInstance,
   ComponentOptions,
-  Data,
   InternalRenderFunction
 } from '../component'
 import { currentRenderingInstance } from '../componentRenderContext'

@@ -17,7 +17,6 @@ import {
   ComponentInternalInstance,
   ComponentOptions,
   createComponentInstance,
-  Data,
   setupComponent
 } from './component'
 import {
@@ -35,7 +34,8 @@ import {
   NOOP,
   invokeArrayFns,
   isArray,
-  getGlobalThis
+  getGlobalThis,
+  Data
 } from '@vue/shared'
 import {
   queueJob,

@@ -12,9 +12,9 @@ return withDirectives(h(comp), [
 */
 
 import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
+import { isFunction, EMPTY_OBJ, isBuiltInDirective, Data } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance, Data, getExposeProxy } from './component'
+import { ComponentInternalInstance, getExposeProxy } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
 import { ComponentPublicInstance } from './componentPublicInstance'

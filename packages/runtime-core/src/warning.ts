@@ -1,11 +1,10 @@
 import { VNode } from './vnode'
 import {
-  Data,
   ComponentInternalInstance,
   ConcreteComponent,
   formatComponentName
 } from './component'
-import { isString, isFunction } from '@vue/shared'
+import { isString, isFunction, Data } from '@vue/shared'
 import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
 import { callWithErrorHandling, ErrorCodes } from './errorHandling'
 

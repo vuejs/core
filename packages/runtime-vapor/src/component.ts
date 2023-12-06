@@ -1,6 +1,7 @@
 import { EffectScope } from '@vue/reactivity'
 import { Block } from './render'
 import { DirectiveBinding } from './directives'
+import type { Data } from '@vue/shared'
 
 export type SetupFn = (props: any, ctx: any) => Block | Data
 export type FunctionalComponent = SetupFn & {
@@ -57,6 +58,3 @@ export const createComponentInstance = (
   }
   return instance
 }
-
-// FIXME: duplicated with runtime-core
-export type Data = Record<string, unknown>

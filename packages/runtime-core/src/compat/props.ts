@@ -1,6 +1,6 @@
-import { isArray } from '@vue/shared'
+import { isArray, Data } from '@vue/shared'
 import { inject } from '../apiInject'
-import { ComponentInternalInstance, Data } from '../component'
+import { ComponentInternalInstance } from '../component'
 import { ComponentOptions, resolveMergedOptions } from '../componentOptions'
 import { DeprecationTypes, warnDeprecation } from './compatConfig'
 

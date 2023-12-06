@@ -65,7 +65,8 @@ import {
   ShapeFlags,
   extend,
   getGlobalThis,
-  IfAny
+  IfAny,
+  Data
 } from '@vue/shared'
 import { SuspenseBoundary } from './components/Suspense'
 import { CompilerOptions } from '@vue/compiler-core'
@@ -80,8 +81,6 @@ import {
 } from './compat/compatConfig'
 import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
-
-export type Data = Record<string, unknown>
 
 /**
  * For extending allowed non-declared props on components in TSX

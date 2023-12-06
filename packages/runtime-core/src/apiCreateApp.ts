@@ -1,6 +1,5 @@
 import {
   ConcreteComponent,
-  Data,
   validateComponentName,
   Component,
   ComponentInternalInstance,
@@ -22,7 +21,7 @@ import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
 import { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { isFunction, NO, isObject, extend } from '@vue/shared'
+import { isFunction, NO, isObject, extend, Data } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'

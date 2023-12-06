@@ -1,6 +1,7 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance, type ComponentInternalInstance } from './component'
 import type { DirectiveModifiers } from '@vue/runtime-dom'
+
 export interface DirectiveBinding<V = any> {
   instance: ComponentInternalInstance | null
   value: V

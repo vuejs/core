@@ -1,6 +1,5 @@
 import {
   ComponentInternalInstance,
-  Data,
   SetupContext,
   ComponentInternalOptions,
   Component,
@@ -16,7 +15,8 @@ import {
   NOOP,
   isPromise,
   LooseRequired,
-  Prettify
+  Prettify,
+  Data
 } from '@vue/shared'
 import { isRef, Ref } from '@vue/reactivity'
 import { computed } from './apiComputed'

@@ -11,8 +11,7 @@ import {
   transformVNodeArgs,
   isBlockTreeEnabled
 } from '../src/vnode'
-import { Data } from '../src/component'
-import { ShapeFlags, PatchFlags } from '@vue/shared'
+import { ShapeFlags, PatchFlags, Data } from '@vue/shared'
 import { h, reactive, isReactive, setBlockTracking, ref, withCtx } from '../src'
 import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'

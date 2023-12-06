@@ -1,7 +1,6 @@
 import {
   ComponentInternalInstance,
   FunctionalComponent,
-  Data,
   getComponentName
 } from './component'
 import {
@@ -15,7 +14,13 @@ import {
   blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isOn,
+  isModelListener,
+  Data
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
