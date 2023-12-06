@@ -321,7 +321,11 @@ function doWatch(
       const ctx = useSSRContext()!
       ssrCleanup = ctx.__watcherHandles || (ctx.__watcherHandles = [])
     } else {
-      return NOOP as WatchHandle
+      const watchHandle: WatchHandle = () => {}
+      watchHandle.stop = NOOP
+      watchHandle.resume = NOOP
+      watchHandle.pause = NOOP
+      return watchHandle
     }
   }
 
