@@ -71,8 +71,7 @@ describe('compile', () => {
         expect(code).matchSnapshot()
       })
 
-      // TODO: fix this test
-      test.fails('should error if no expression', async () => {
+      test('should error if no expression', async () => {
         const onError = vi.fn()
         const code = await compile(`<div v-bind:arg="" />`, { onError })
 
@@ -92,11 +91,10 @@ describe('compile', () => {
 
         expect(code).matchSnapshot()
         // the arg is static
-        expect(code).contains(JSON.stringify('<div arg="" ></div>'))
+        expect(code).contains(JSON.stringify('<div arg=""></div>'))
       })
 
-      // TODO: support shorthand syntax for v-bind #9451
-      test.fails('no expression', async () => {
+      test('no expression', async () => {
         const code = await compile('<div v-bind:id />', {
           bindingMetadata: {
             id: BindingTypes.SETUP_REF,
@@ -107,16 +105,17 @@ describe('compile', () => {
         expect(code).contains('_setAttr(n1, "id", undefined, _ctx.id)')
       })
 
-      // TODO: support shorthand syntax for v-bind #9451
-      test.fails('no expression (shorthand)', async () => {
-        const code = await compile('<div :id />', {
+      test('no expression (shorthand)', async () => {
+        const code = await compile('<div :camel-case />', {
           bindingMetadata: {
-            id: BindingTypes.SETUP_REF,
+            camelCase: BindingTypes.SETUP_REF,
           },
         })
 
         expect(code).matchSnapshot()
-        expect(code).contains('_setAttr(n1, "id", undefined, _ctx.id)')
+        expect(code).contains(
+          '_setAttr(n1, "camel-case", undefined, _ctx.camelCase)',
+        )
       })
 
       test('dynamic arg', async () => {

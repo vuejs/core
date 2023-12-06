@@ -5,8 +5,9 @@ import {
   ErrorCodes,
   createCompilerError,
   ElementTypes,
+  createSimpleExpression,
 } from '@vue/compiler-dom'
-import { isBuiltInDirective, isVoidTag } from '@vue/shared'
+import { camelize, isBuiltInDirective, isVoidTag } from '@vue/shared'
 import { NodeTransform, TransformContext } from '../transform'
 import { VaporDirectiveNode, IRNodeTypes } from '../ir'
 
@@ -68,7 +69,7 @@ function transformProp(
     return
   }
 
-  const { arg, exp, loc } = prop
+  let { arg, exp, loc } = prop
   const directiveTransform = context.options.directiveTransforms[name]
   if (directiveTransform) {
     directiveTransform(prop, node, context)
@@ -84,19 +85,22 @@ function transformProp(
 
   switch (name) {
     case 'bind': {
-      if (!exp || !exp.content.trim()) {
+      if (!arg) {
+        // TODO support v-bind="{}"
+        return
+      }
+      if (!exp) {
+        // shorthand syntax https://github.com/vuejs/core/pull/9451
+        const propName = camelize(arg.content)
+        exp = createSimpleExpression(propName, false, arg.loc)
+        exp.ast = null
+      }
+
+      if (!exp.content.trim()) {
         context.options.onError(
           createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
         )
-        return
-      }
-
-      if (exp === null) {
-        // TODO: Vue 3.4 supported shorthand syntax
-        // https://github.com/vuejs/core/pull/9451
-        return
-      } else if (!arg) {
-        // TODO support v-bind="{}"
+        context.template += ` ${arg.content}=""`
         return
       }
 
