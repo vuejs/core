@@ -144,7 +144,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
           )
       }
       if (defaults.length) {
-        propsDecls = `${ctx.helper(
+        propsDecls = `/*#__PURE__*/${ctx.helper(
           `mergeDefaults`
         )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
       }
@@ -156,7 +156,9 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   const modelsDecls = genModelProps(ctx)
 
   if (propsDecls && modelsDecls) {
-    return `${ctx.helper('mergeModels')}(${propsDecls}, ${modelsDecls})`
+    return `/*#__PURE__*/${ctx.helper(
+      'mergeModels'
+    )}(${propsDecls}, ${modelsDecls})`
   } else {
     return modelsDecls || propsDecls
   }
@@ -184,9 +186,9 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
     ${propStrings.join(',\n    ')}\n  }`
 
   if (ctx.propsRuntimeDefaults && !hasStaticDefaults) {
-    propsDecls = `${ctx.helper('mergeDefaults')}(${propsDecls}, ${ctx.getString(
-      ctx.propsRuntimeDefaults
-    )})`
+    propsDecls = `/*#__PURE__*/${ctx.helper(
+      'mergeDefaults'
+    )}(${propsDecls}, ${ctx.getString(ctx.propsRuntimeDefaults)})`
   }
 
   return propsDecls

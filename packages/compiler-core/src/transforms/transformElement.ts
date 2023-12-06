@@ -20,6 +20,7 @@ import {
   DirectiveArguments,
   createVNodeCall,
   ConstantTypes,
+  JSChildNode,
   SimpleExpressionNode
 } from '../ast'
 import {
@@ -386,6 +387,13 @@ function resolveSetupReference(name: string, context: TransformContext) {
         `${context.helperString(UNREF)}(${fromMaybeRef})`
       : `$setup[${JSON.stringify(fromMaybeRef)}]`
   }
+
+  const fromProps = checkType(BindingTypes.PROPS)
+  if (fromProps) {
+    return `${context.helperString(UNREF)}(${
+      context.inline ? '__props' : '$props'
+    }[${JSON.stringify(fromProps)}])`
+  }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -451,6 +459,12 @@ export function buildProps(
 
       if (isEventHandler && isReservedProp(name)) {
         hasVnodeHook = true
+      }
+
+      if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
+        // handler wrapped with internal helper e.g. withModifiers(fn)
+        // extract the actual expression
+        value = value.arguments[0] as JSChildNode
       }
 
       if (
