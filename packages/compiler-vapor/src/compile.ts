@@ -18,6 +18,7 @@ import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
 import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
+import { transformVBind } from './transforms/vBind'
 import { transformVOn } from './transforms/vOn'
 import { transformInterpolation } from './transforms/transformInterpolation'
 import type { HackOptions } from './ir'
@@ -92,6 +93,7 @@ export function getBaseTransformPreset(
   return [
     [transformOnce, transformInterpolation, transformElement],
     {
+      bind: transformVBind,
       on: transformVOn,
       html: transformVHtml,
       text: transformVText,
