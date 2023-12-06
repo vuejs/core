@@ -16,14 +16,14 @@ const increment = () => count.value++
 
 
 return (() => {
-  const t0 = _template(\\"<h1 id=\\\\\\"title\\\\\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div></div><input type=\\\\\\"text\\\\\\"><p>once: </p><p>{{ count }}</p>\\")
+  const t0 = _template("<h1 id=\\"title\\">Counter</h1><p>Count: </p><p>Double: </p><button>Increment</button><div></div><input type=\\"text\\"><p>once: </p><p>{{ count }}</p>")
   const n0 = t0()
   const { 1: [n2], 2: [n4], 3: [n5], 4: [n6], 6: [n8],} = _children(n0)
   const n1 = _createTextNode(count.value)
   _append(n2, n1)
   const n3 = _createTextNode(double.value)
   _append(n4, n3)
-  _on(n5, \\"click\\", (...args) => (increment && increment(...args)))
+  _on(n5, "click", (...args) => (increment && increment(...args)))
   const n7 = _createTextNode(count.value)
   _setText(n7, undefined, count.value)
   _append(n8, n7)
