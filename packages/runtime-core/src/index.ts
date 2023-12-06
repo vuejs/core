@@ -279,7 +279,8 @@ export type {
   DirectiveHook,
   ObjectDirective,
   FunctionDirective,
-  DirectiveArguments
+  DirectiveArguments,
+  DirectiveModifiers
 } from './directives'
 export type { SuspenseBoundary } from './components/Suspense'
 export type {

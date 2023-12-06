@@ -59,7 +59,7 @@ function transformProp(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): void {
-  const { name } = prop
+  const { name, loc } = prop
   if (prop.type === NodeTypes.ATTRIBUTE) {
     context.template += ` ${name}`
     if (prop.value) context.template += `="${prop.value.content}"`
@@ -70,13 +70,11 @@ function transformProp(
   if (directiveTransform) {
     directiveTransform(prop, node, context)
   } else if (!isBuiltInDirective(name)) {
-    // custom directive
     context.registerOperation({
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
-      name,
-      binding: prop.exp,
-      loc: prop.loc,
+      dir: prop,
+      loc: loc,
     })
   }
 }

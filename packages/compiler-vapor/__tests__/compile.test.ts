@@ -332,6 +332,76 @@ describe('compile', () => {
         expect(code).not.contains('v-cloak')
       })
     })
+
+    describe('custom directive', () => {
+      test('basic', async () => {
+        const code = await compile(`<div v-example></div>`, {
+          bindingMetadata: {
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('binding value', async () => {
+        const code = await compile(`<div v-example="msg"></div>`, {
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('static parameters', async () => {
+        const code = await compile(`<div v-example:foo="msg"></div>`, {
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('modifiers', async () => {
+        const code = await compile(`<div v-example.bar="msg"></div>`, {
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('modifiers w/o binding', async () => {
+        const code = await compile(`<div v-example.foo-bar></div>`, {
+          bindingMetadata: {
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('static parameters and modifiers', async () => {
+        const code = await compile(`<div v-example:foo.bar="msg"></div>`, {
+          bindingMetadata: {
+            msg: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+
+      test('dynamic parameters', async () => {
+        const code = await compile(`<div v-example:[foo]="msg"></div>`, {
+          bindingMetadata: {
+            foo: BindingTypes.SETUP_REF,
+            vExample: BindingTypes.SETUP_CONST,
+          },
+        })
+        expect(code).matchSnapshot()
+      })
+    })
   })
 
   describe('expression parsing', () => {

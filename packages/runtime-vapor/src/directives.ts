@@ -1,13 +1,12 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance, type ComponentInternalInstance } from './component'
-
+import type { DirectiveModifiers } from '@vue/runtime-dom'
 export interface DirectiveBinding<V = any> {
   instance: ComponentInternalInstance | null
   value: V
   oldValue: V | null
   arg?: string
-  // TODO: should we support modifiers for custom directives?
-  // modifiers: DirectiveModifiers
+  modifiers?: DirectiveModifiers
   dir: ObjectDirective<any, V>
 }
 
@@ -41,6 +40,12 @@ export type DirectiveArguments = Array<
   | [Directive | undefined]
   | [Directive | undefined, value: any]
   | [Directive | undefined, value: any, argument: string]
+  | [
+      Directive | undefined,
+      value: any,
+      argument: string,
+      modifiers: DirectiveModifiers,
+    ]
 >
 
 export function withDirectives<T extends Node>(
@@ -56,7 +61,7 @@ export function withDirectives<T extends Node>(
   const bindings = currentInstance.dirs.get(node)!
 
   for (const directive of directives) {
-    let [dir, value, arg] = directive
+    let [dir, value, arg, modifiers] = directive
     if (!dir) continue
     if (isFunction(dir)) {
       // TODO function directive
@@ -71,6 +76,7 @@ export function withDirectives<T extends Node>(
       value,
       oldValue: void 0,
       arg,
+      modifiers,
     }
     if (dir.created) dir.created(node, binding)
     bindings.push(binding)

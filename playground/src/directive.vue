@@ -21,5 +21,5 @@ const vDirective: ObjectDirective<HTMLDivElement, undefined> = {
 </script>
 
 <template>
-  <div v-directive v-text="text" />
+  <div v-directive:foo.bar="text" v-text="text" />
 </template>

@@ -10,6 +10,7 @@ import {
   createSimpleExpression,
   walkIdentifiers,
   advancePositionWithClone,
+  isSimpleIdentifier,
 } from '@vue/compiler-dom'
 import {
   type IRDynamicChildren,
@@ -469,21 +470,38 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 
 function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
   const { push, pushWithNewline, vaporHelper, bindingMetadata } = context
+  const { dir } = oper
 
   // TODO merge directive for the same node
   pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
 
   // TODO resolve directive
-  const directiveReference = camelize(`v-${oper.name}`)
+  const directiveReference = camelize(`v-${dir.name}`)
   if (bindingMetadata[directiveReference]) {
     const directiveExpression = createSimpleExpression(directiveReference)
     directiveExpression.ast = null
     genExpression(directiveExpression, context)
   }
 
-  if (oper.binding) {
+  if (dir.exp) {
     push(', ')
-    genExpression(oper.binding, context)
+    genExpression(dir.exp, context)
+  } else if (dir.arg || dir.modifiers.length) {
+    push(', void 0')
+  }
+
+  if (dir.arg) {
+    push(', ')
+    genExpression(dir.arg, context)
+  } else if (dir.modifiers.length) {
+    push(', void 0')
+  }
+
+  if (dir.modifiers.length) {
+    push(', ')
+    push('{ ')
+    push(genDirectiveModifiers(dir.modifiers))
+    push(' }')
   }
   push(']])')
   return
@@ -575,4 +593,13 @@ function genIdentifier(
     id = `_ctx.${id}`
   }
   push(id, NewlineType.None, loc, name)
+}
+
+function genDirectiveModifiers(modifiers: string[]) {
+  return modifiers
+    .map(
+      (value) =>
+        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
+    )
+    .join(', ')
 }
