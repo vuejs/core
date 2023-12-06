@@ -260,22 +260,34 @@ export function parse(
     }
   }
 
+  // dedent pug/jade templates
+  let templateColumnOffset = 0
+  if (
+    descriptor.template &&
+    (descriptor.template.lang === 'pug' || descriptor.template.lang === 'jade')
+  ) {
+    ;[descriptor.template.content, templateColumnOffset] = dedent(
+      descriptor.template.content
+    )
+  }
+
   if (sourceMap) {
-    const genMap = (block: SFCBlock | null) => {
+    const genMap = (block: SFCBlock | null, columnOffset = 0) => {
       if (block && !block.src) {
         block.map = generateSourceMap(
           filename,
           source,
           block.content,
           sourceRoot,
-          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0,
+          columnOffset
         )
       }
     }
-    genMap(descriptor.template)
+    genMap(descriptor.template, templateColumnOffset)
     genMap(descriptor.script)
-    descriptor.styles.forEach(genMap)
-    descriptor.customBlocks.forEach(genMap)
+    descriptor.styles.forEach(s => genMap(s))
+    descriptor.customBlocks.forEach(s => genMap(s))
   }
 
   // parse CSS vars
@@ -376,7 +388,8 @@ function generateSourceMap(
   source: string,
   generated: string,
   sourceRoot: string,
-  lineOffset: number
+  lineOffset: number,
+  columnOffset: number
 ): RawSourceMap {
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
@@ -393,7 +406,7 @@ function generateSourceMap(
             source: filename,
             original: {
               line: originalLine,
-              column: i
+              column: i + columnOffset
             },
             generated: {
               line: generatedLine,
@@ -494,4 +507,32 @@ function setPropsNodeForStyleAttrs(
   if (propsArr.length > 0) {
     descriptor.ceStyleAttrs.push(propsArr)
   }
+}
+
+/**
+ * Dedent a string.
+ *
+ * This removes any whitespace that is common to all lines in the string from
+ * each line in the string.
+ */
+function dedent(s: string): [string, number] {
+  const lines = s.split('\n')
+  const minIndent = lines.reduce(function (minIndent, line) {
+    if (line.trim() === '') {
+      return minIndent
+    }
+    const indent = line.match(/^\s*/)?.[0]?.length || 0
+    return Math.min(indent, minIndent)
+  }, Infinity)
+  if (minIndent === 0) {
+    return [s, minIndent]
+  }
+  return [
+    lines
+      .map(function (line) {
+        return line.slice(minIndent)
+      })
+      .join('\n'),
+    minIndent
+  ]
 }

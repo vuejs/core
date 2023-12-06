@@ -22,17 +22,25 @@ export function genCssVarsFromList(
 ): string {
   return `{\n  ${vars
     .map(
-      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`
+      key =>
+        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`
     )
     .join(',\n  ')}\n}`
 }
 
-function genVarName(id: string, raw: string, isProd: boolean): string {
+function genVarName(
+  id: string,
+  raw: string,
+  isProd: boolean,
+  isSSR = false
+): string {
   if (isProd) {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${getEscapedCssVarName(raw)}`
+    // #7823 need to double-escape in SSR because the attributes are rendered
+    // into an HTML string
+    return `${id}-${getEscapedCssVarName(raw, isSSR)}`
   }
 }
 
