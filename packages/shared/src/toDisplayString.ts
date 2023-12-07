@@ -34,9 +34,7 @@ const replacer = (_key: string, val: any): any => {
     return {
       [`Map(${val.size})`]: [...val.entries()].reduce(
         (entries, [key, val], i) => {
-          entries[
-            `${isSymbol(key) ? `Symbol(${key.description ?? i})` : key} =>`
-          ] = val
+          entries[stringiySymbol(key, i) + ' =>'] = val
           return entries
         },
         {} as Record<string, any>
@@ -44,10 +42,16 @@ const replacer = (_key: string, val: any): any => {
     }
   } else if (isSet(val)) {
     return {
-      [`Set(${val.size})`]: [...val.values()]
+      [`Set(${val.size})`]: [...val.values()].map(v => stringiySymbol(v))
     }
+  } else if (isSymbol(val)) {
+    return stringiySymbol(val)
   } else if (isObject(val) && !isArray(val) && !isPlainObject(val)) {
+    // native elements
     return String(val)
   }
   return val
 }
+
+const stringiySymbol = (v: unknown, i: number | string = ''): any =>
+  isSymbol(v) ? `Symbol(${v.description ?? i})` : v
