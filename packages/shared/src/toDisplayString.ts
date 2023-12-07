@@ -6,7 +6,8 @@ import {
   isPlainObject,
   isSet,
   objectToString,
-  isString
+  isString,
+  isSymbol
 } from './general'
 
 /**
@@ -31,10 +32,15 @@ const replacer = (_key: string, val: any): any => {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
     return {
-      [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val]) => {
-        ;(entries as any)[`${key} =>`] = val
-        return entries
-      }, {})
+      [`Map(${val.size})`]: [...val.entries()].reduce(
+        (entries, [key, val], i) => {
+          entries[
+            `${isSymbol(key) ? `Symbol(${key.description ?? i})` : key} =>`
+          ] = val
+          return entries
+        },
+        {} as Record<string, any>
+      )
     }
   } else if (isSet(val)) {
     return {
