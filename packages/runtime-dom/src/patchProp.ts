@@ -110,15 +110,9 @@ function shouldSetAsProp(
     return false
   }
 
-  // #8780 the width or height of embedded tags must be set as attribute
+  // #9762 width and height of all elements should be set as attribute
   if (key === 'width' || key === 'height') {
-    const tag = el.tagName
-    return !(
-      tag === 'IMG' ||
-      tag === 'VIDEO' ||
-      tag === 'CANVAS' ||
-      tag === 'SOURCE'
-    )
+    return false
   }
 
   // native onclick with string value, must be set as attribute
