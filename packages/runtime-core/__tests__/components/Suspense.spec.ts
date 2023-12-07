@@ -1185,7 +1185,7 @@ describe('Suspense', () => {
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
   })
 
-  test('properly mount fallback content', async () => {
+  test('ensure the fallback content is in the correct position', async () => {
     const makeComp = (name: string, delay = 0) =>
       defineAsyncComponent(
         {
