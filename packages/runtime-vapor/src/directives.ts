@@ -1,41 +1,62 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance, type ComponentInternalInstance } from './component'
-import type { DirectiveModifiers } from '@vue/runtime-dom'
 
-export interface DirectiveBinding<V = any> {
+export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
+
+export interface DirectiveBinding<
+  V = any,
+  A = string,
+  M extends string = string,
+> {
   instance: ComponentInternalInstance | null
   value: V
   oldValue: V | null
-  arg?: string
-  modifiers?: DirectiveModifiers
+  arg?: A
+  modifiers?: DirectiveModifiers<M>
   dir: ObjectDirective<any, V>
 }
 
-export type DirectiveHook<T = any | null, V = any> = (
-  node: T,
-  binding: DirectiveBinding<V>,
-) => void
+export type DirectiveHook<
+  T = any | null,
+  V = any,
+  A = string,
+  M extends string = string,
+> = (node: T, binding: DirectiveBinding<V, A, M>) => void
 
 // create node -> `created` -> node operation -> `beforeMount` -> node mounted -> `mounted`
 // effect update -> `beforeUpdate` -> node updated -> `updated`
 // `beforeUnmount`-> node unmount -> `unmounted`
-export interface ObjectDirective<T = any, V = any> {
-  created?: DirectiveHook<T, V>
-  beforeMount?: DirectiveHook<T, V>
-  mounted?: DirectiveHook<T, V>
-  // beforeUpdate?: DirectiveHook<T, V>
-  // updated?: DirectiveHook<T, V>
-  beforeUnmount?: DirectiveHook<T, V>
-  unmounted?: DirectiveHook<T, V>
+export interface ObjectDirective<
+  T = any,
+  V = any,
+  A = string,
+  M extends string = string,
+> {
+  created?: DirectiveHook<T, V, A, M>
+  beforeMount?: DirectiveHook<T, V, A, M>
+  mounted?: DirectiveHook<T, V, A, M>
+  // beforeUpdate?: DirectiveHook<T, V,A,M>
+  // updated?: DirectiveHook<T, V,A,M>
+  beforeUnmount?: DirectiveHook<T, V, A, M>
+  unmounted?: DirectiveHook<T, V, A, M>
   // getSSRProps?: SSRDirectiveHook
   // deep?: boolean
 }
 export type DirectiveHookName = Exclude<keyof ObjectDirective, 'deep'>
 
-export type FunctionDirective<T = any, V = any> = DirectiveHook<T, V>
-export type Directive<T = any, V = any> =
-  | ObjectDirective<T, V>
-  | FunctionDirective<T, V>
+export type FunctionDirective<
+  T = any,
+  V = any,
+  A = string,
+  M extends string = string,
+> = DirectiveHook<T, V, A, M>
+
+export type Directive<
+  T = any,
+  V = any,
+  A = string,
+  M extends string = string,
+> = ObjectDirective<T, V, A, M> | FunctionDirective<T, V, A, M>
 
 export type DirectiveArguments = Array<
   | [Directive | undefined]
