@@ -15,9 +15,10 @@ import {
   MaybeRef,
   MaybeRefOrGetter,
   ComputedRef,
-  computed
+  computed,
+  ShallowRef
 } from 'vue'
-import { expectType, describe } from './utils'
+import { expectType, describe, IsUnion, IsAny } from './utils'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -78,6 +79,10 @@ function plainType(arg: number | Ref<number>) {
   // should still unwrap in objects nested in arrays
   const arr2 = ref([{ a: ref(1) }]).value
   expectType<number>(arr2[0].a)
+
+  // any value should return Ref<any>, not any
+  const a = ref(1 as any)
+  expectType<IsAny<typeof a>>(false)
 }
 
 plainType(1)
@@ -173,6 +178,33 @@ if (refStatus.value === 'initial') {
   expectType<Status>(shallowStatus.value)
   refStatus.value = 'invalidating'
 }
+
+{
+  const shallow = shallowRef(1)
+  expectType<Ref<number>>(shallow)
+  expectType<ShallowRef<number>>(shallow)
+}
+
+{
+  //#7852
+  type Steps = { step: '1' } | { step: '2' }
+  const shallowUnionGenParam = shallowRef<Steps>({ step: '1' })
+  const shallowUnionAsCast = shallowRef({ step: '1' } as Steps)
+
+  expectType<IsUnion<typeof shallowUnionGenParam>>(false)
+  expectType<IsUnion<typeof shallowUnionAsCast>>(false)
+}
+
+{
+  // any value should return Ref<any>, not any
+  const a = shallowRef(1 as any)
+  expectType<IsAny<typeof a>>(false)
+}
+
+describe('shallowRef with generic', <T>() => {
+  const r = ref({}) as MaybeRef<T>
+  expectType<ShallowRef<T> | Ref<T>>(shallowRef(r))
+})
 
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
