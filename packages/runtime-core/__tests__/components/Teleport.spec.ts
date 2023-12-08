@@ -553,4 +553,18 @@ describe('renderer: teleport', () => {
       `"<div>teleported</div>"`
     )
   })
+  // 8146
+  test(`ensure correct rendering when target is empty`, async () => {
+    const root = nodeOps.createElement('div')
+    const App = {
+      setup() {
+        return () => h(Teleport, { to: null }, h('div', 'teleported'))
+      }
+    }
+    render(h(App), root)
+    await nextTick()
+    expect(serializeInner(root)).toMatchInlineSnapshot(
+      `"<!--teleport start--><div>teleported</div><!--teleport end-->"`
+    )
+  })
 })
