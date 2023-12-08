@@ -1,5 +1,6 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance, type ComponentInternalInstance } from './component'
+import { effect } from './scheduler'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
@@ -9,6 +10,7 @@ export interface DirectiveBinding<
   M extends string = string,
 > {
   instance: ComponentInternalInstance | null
+  source?: () => V
   value: V
   oldValue: V | null
   arg?: A
@@ -26,23 +28,24 @@ export type DirectiveHook<
 // create node -> `created` -> node operation -> `beforeMount` -> node mounted -> `mounted`
 // effect update -> `beforeUpdate` -> node updated -> `updated`
 // `beforeUnmount`-> node unmount -> `unmounted`
-export interface ObjectDirective<
+export type DirectiveHookName =
+  | 'created'
+  | 'beforeMount'
+  | 'mounted'
+  // | 'beforeUpdate'
+  | 'updated'
+  | 'beforeUnmount'
+  | 'unmounted'
+export type ObjectDirective<
   T = any,
   V = any,
   A = string,
   M extends string = string,
-> {
-  created?: DirectiveHook<T, V, A, M>
-  beforeMount?: DirectiveHook<T, V, A, M>
-  mounted?: DirectiveHook<T, V, A, M>
-  // beforeUpdate?: DirectiveHook<T, V,A,M>
-  // updated?: DirectiveHook<T, V,A,M>
-  beforeUnmount?: DirectiveHook<T, V, A, M>
-  unmounted?: DirectiveHook<T, V, A, M>
-  // getSSRProps?: SSRDirectiveHook
-  // deep?: boolean
+> = {
+  [K in DirectiveHookName]?: DirectiveHook<T, V, A, M> | undefined
+} & {
+  deep?: boolean
 }
-export type DirectiveHookName = Exclude<keyof ObjectDirective, 'deep'>
 
 export type FunctionDirective<
   T = any,
@@ -60,11 +63,11 @@ export type Directive<
 
 export type DirectiveArguments = Array<
   | [Directive | undefined]
-  | [Directive | undefined, value: any]
-  | [Directive | undefined, value: any, argument: string]
+  | [Directive | undefined, () => any]
+  | [Directive | undefined, () => any, argument: string]
   | [
       Directive | undefined,
-      value: any,
+      value: () => any,
       argument: string,
       modifiers: DirectiveModifiers,
     ]
@@ -83,7 +86,7 @@ export function withDirectives<T extends Node>(
   const bindings = currentInstance.dirs.get(node)!
 
   for (const directive of directives) {
-    let [dir, value, arg, modifiers] = directive
+    let [dir, source, arg, modifiers] = directive
     if (!dir) continue
     if (isFunction(dir)) {
       // TODO function directive
@@ -95,13 +98,19 @@ export function withDirectives<T extends Node>(
     const binding: DirectiveBinding = {
       dir,
       instance: currentInstance,
-      value,
-      oldValue: void 0,
+      source,
+      value: null, // set later
+      oldValue: null,
       arg,
       modifiers,
     }
-    if (dir.created) dir.created(node, binding)
     bindings.push(binding)
+
+    callDirectiveHook(node, binding, 'created')
+    effect(() => {
+      if (!currentInstance!.isMountedRef.value) return
+      callDirectiveHook(node, binding, 'updated')
+    })
   }
 
   return node
@@ -113,14 +122,28 @@ export function invokeDirectiveHook(
   nodes?: IterableIterator<Node>,
 ) {
   if (!instance) return
-  if (!nodes) {
-    nodes = instance.dirs.keys()
-  }
+  nodes = nodes || instance.dirs.keys()
   for (const node of nodes) {
     const directives = instance.dirs.get(node) || []
     for (const binding of directives) {
-      const hook = binding.dir[name]
-      hook && hook(node, binding)
+      callDirectiveHook(node, binding, name)
     }
   }
+}
+
+function callDirectiveHook(
+  node: Node,
+  binding: DirectiveBinding,
+  name: DirectiveHookName,
+) {
+  const { dir } = binding
+  const hook = dir[name]
+  if (!hook) return
+
+  const newValue = binding.source ? binding.source() : undefined
+  if (name === 'updated' && binding.value === newValue) return
+
+  binding.oldValue = binding.value
+  binding.value = newValue
+  hook(node, binding)
 }

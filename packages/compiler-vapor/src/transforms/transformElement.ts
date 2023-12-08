@@ -74,7 +74,7 @@ function transformProp(
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir: prop,
-      loc: loc,
+      loc,
     })
   }
 }

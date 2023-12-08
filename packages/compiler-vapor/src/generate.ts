@@ -30,7 +30,7 @@ import {
   IRNodeTypes,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { camelize, isString } from '@vue/shared'
+import { camelize, isString, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
 
 // remove when stable
@@ -475,16 +475,20 @@ function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
   // TODO merge directive for the same node
   pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
 
-  // TODO resolve directive
-  const directiveReference = camelize(`v-${dir.name}`)
-  if (bindingMetadata[directiveReference]) {
-    const directiveExpression = createSimpleExpression(directiveReference)
-    directiveExpression.ast = null
-    genExpression(directiveExpression, context)
+  if (dir.name === 'show') {
+    push(vaporHelper('vShow'))
+  } else {
+    const directiveReference = camelize(`v-${dir.name}`)
+    // TODO resolve directive
+    if (bindingMetadata[directiveReference]) {
+      const directiveExpression = createSimpleExpression(directiveReference)
+      directiveExpression.ast = null
+      genExpression(directiveExpression, context)
+    }
   }
 
   if (dir.exp) {
-    push(', ')
+    push(', () => ')
     genExpression(dir.exp, context)
   } else if (dir.arg || dir.modifiers.length) {
     push(', void 0')
@@ -512,6 +516,8 @@ function genArrayExpression(elements: string[]) {
   return `[${elements.map((it) => JSON.stringify(it)).join(', ')}]`
 }
 
+const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+
 function genExpression(node: IRExpression, context: CodegenContext): void {
   const { push } = context
   if (isString(node)) return push(node)
@@ -525,7 +531,8 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
     !context.prefixIdentifiers ||
     !node.content.trim() ||
     // there was a parsing error
-    ast === false
+    ast === false ||
+    isLiteralWhitelisted(rawExpr)
   ) {
     return push(rawExpr, NewlineType.None, loc)
   }

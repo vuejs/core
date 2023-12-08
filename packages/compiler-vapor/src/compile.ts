@@ -20,6 +20,7 @@ import { transformVHtml } from './transforms/vHtml'
 import { transformVText } from './transforms/vText'
 import { transformVBind } from './transforms/vBind'
 import { transformVOn } from './transforms/vOn'
+import { transformVShow } from './transforms/vShow'
 import { transformInterpolation } from './transforms/transformInterpolation'
 import type { HackOptions } from './ir'
 
@@ -97,6 +98,7 @@ export function getBaseTransformPreset(
       on: transformVOn,
       html: transformVHtml,
       text: transformVText,
+      show: transformVShow,
     },
   ]
 }

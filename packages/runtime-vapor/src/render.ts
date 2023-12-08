@@ -7,7 +7,7 @@ import {
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-import { invokeDirectiveHook } from './directives'
+import { invokeDirectiveHook } from './directive'
 import { insert, remove } from './dom'
 
 export type Block = Node | Fragment | Block[]
@@ -56,7 +56,7 @@ export function mountComponent(
 
   invokeDirectiveHook(instance, 'beforeMount')
   insert(block, instance.container)
-  instance.isMounted = true
+  instance.isMountedRef.value = true
   invokeDirectiveHook(instance, 'mounted')
 
   // TODO: lifecycle hooks (mounted, ...)
@@ -70,7 +70,7 @@ export function unmountComponent(instance: ComponentInternalInstance) {
   invokeDirectiveHook(instance, 'beforeUnmount')
   scope.stop()
   block && remove(block, container)
-  instance.isMounted = false
+  instance.isMountedRef.value = false
   invokeDirectiveHook(instance, 'unmounted')
   unsetCurrentInstance()
 

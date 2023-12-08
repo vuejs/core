@@ -35,7 +35,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _withDirectives(n1, [[_ctx.vExample, _ctx.msg]])
+  _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg]])
   return n0
 }"
 `;
@@ -47,7 +47,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _withDirectives(n1, [[_ctx.vExample, _ctx.msg, _ctx.foo]])
+  _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
   return n0
 }"
 `;
@@ -59,7 +59,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _withDirectives(n1, [[_ctx.vExample, _ctx.msg, void 0, { bar: true }]])
+  _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
   return n0
 }"
 `;
@@ -83,7 +83,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _withDirectives(n1, [[_ctx.vExample, _ctx.msg, "foo"]])
+  _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo"]])
   return n0
 }"
 `;
@@ -95,7 +95,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _withDirectives(n1, [[_ctx.vExample, _ctx.msg, "foo", { bar: true }]])
+  _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
   return n0
 }"
 `;
