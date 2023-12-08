@@ -81,7 +81,7 @@ export function createHydrationFunctions(
 
   const hydrate: RootHydrateFunction = (vnode, container) => {
     if (!container.hasChildNodes()) {
-      __DEV__ &&
+      ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
         warn(
           `Attempting to hydrate existing markup but container is empty. ` +
             `Performing full mount instead.`
@@ -159,7 +159,7 @@ export function createHydrationFunctions(
         } else {
           if ((node as Text).data !== vnode.children) {
             hasMismatch = true
-            __DEV__ &&
+            ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               warn(
                 `Hydration text mismatch in`,
                 node.parentNode,
@@ -326,7 +326,7 @@ export function createHydrationFunctions(
             rendererInternals,
             hydrateNode
           )
-        } else if (__DEV__) {
+        } else if (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) {
           warn('Invalid HostVNode type:', type, `(${typeof type})`)
         }
     }
@@ -398,7 +398,10 @@ export function createHydrationFunctions(
         let hasWarned = false
         while (next) {
           hasMismatch = true
-          if (__DEV__ && !hasWarned) {
+          if (
+            (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+            !hasWarned
+          ) {
             warn(
               `Hydration children mismatch on`,
               el,
@@ -414,7 +417,7 @@ export function createHydrationFunctions(
       } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         if (el.textContent !== vnode.children) {
           hasMismatch = true
-          __DEV__ &&
+          ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
             warn(
               `Hydration text content mismatch on`,
               el,
@@ -525,7 +528,10 @@ export function createHydrationFunctions(
         continue
       } else {
         hasMismatch = true
-        if (__DEV__ && !hasWarned) {
+        if (
+          (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
+          !hasWarned
+        ) {
           warn(
             `Hydration children mismatch on`,
             container,
@@ -595,7 +601,7 @@ export function createHydrationFunctions(
     isFragment: boolean
   ): Node | null => {
     hasMismatch = true
-    __DEV__ &&
+    ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
         `Hydration node mismatch:\n- Client vnode:`,
         vnode.type,
