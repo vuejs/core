@@ -230,7 +230,8 @@ export type {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  AllowedComponentProps
+  AllowedComponentProps,
+  ComponentInstance
 } from './component'
 export type { DefineComponent, PublicProps } from './apiDefineComponent'
 export type {

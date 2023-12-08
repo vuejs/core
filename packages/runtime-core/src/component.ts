@@ -84,6 +84,39 @@ import { LifecycleHooks } from './enums'
 export type Data = Record<string, unknown>
 
 /**
+ * Public utility type for extracting the instance type of a component.
+ * Works with all valid component definition types. This is intended to replace
+ * the usage of `InstanceType<typeof Comp>` which only works for
+ * constructor-based component definition types.
+ *
+ * Exmaple:
+ * ```ts
+ * const MyComp = { ... }
+ * declare const instance: ComponentInstance<typeof MyComp>
+ * ```
+ */
+export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+  ? InstanceType<T>
+  : T extends FunctionalComponent<infer Props, infer Emits>
+  ? ComponentPublicInstance<Props, {}, {}, {}, {}, Emits>
+  : T extends Component<
+      infer Props,
+      infer RawBindings,
+      infer D,
+      infer C,
+      infer M
+    >
+  ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+    ComponentPublicInstance<
+      unknown extends Props ? {} : Props,
+      unknown extends RawBindings ? {} : RawBindings,
+      unknown extends D ? {} : D,
+      C,
+      M
+    >
+  : never // not a vue Component
+
+/**
  * For extending allowed non-declared props on components in TSX
  */
 export interface ComponentCustomProps {}
