@@ -16,6 +16,7 @@ PR are welcome!
   - [x] simple bindings
   - [x] simple events
 - [ ] TODO-MVC App
+- [ ] Repl
 - [x] transform
   - [x] NodeTransform
   - [x] DirectiveTransform
