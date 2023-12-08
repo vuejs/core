@@ -84,7 +84,7 @@ export interface ImportItem {
 
 export interface TransformContext
   extends Required<
-      Omit<TransformOptions, 'filename' | keyof CompilerCompatOptions>
+      Omit<TransformOptions, keyof CompilerCompatOptions>
     >,
     CompilerCompatOptions {
   selfName: string | null
@@ -153,6 +153,7 @@ export function createTransformContext(
   const nameMatch = filename.replace(/\?.*$/, '').match(/([^/\\]+)\.\w+$/)
   const context: TransformContext = {
     // options
+    filename,
     selfName: nameMatch && capitalize(camelize(nameMatch[1])),
     prefixIdentifiers,
     hoistStatic,
