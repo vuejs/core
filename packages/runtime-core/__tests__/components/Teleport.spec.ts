@@ -18,7 +18,7 @@ import {
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
 import { compile, render as domRender } from 'vue'
-import {transform} from "@vue/reactivity-transform";
+import { transform } from '@vue/reactivity-transform'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
