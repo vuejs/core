@@ -18,6 +18,7 @@ import {
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
 import { compile, render as domRender } from 'vue'
+import {transform} from "@vue/reactivity-transform";
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -566,5 +567,7 @@ describe('renderer: teleport', () => {
     expect(serializeInner(root)).toMatchInlineSnapshot(
       `"<!--teleport start--><div>teleported</div><!--teleport end-->"`
     )
+    expect(`Invalid Teleport target: null`).toHaveBeenWarnedTimes(1)
+    expect(`Invalid Teleport target on mount`).toHaveBeenWarnedTimes(1)
   })
 })
