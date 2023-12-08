@@ -1,6 +1,6 @@
 {
   "name": "@vue/reactivity-transform",
-  "version": "3.3.10",
+  "version": "3.3.11",
   "description": "@vue/reactivity-transform",
   "main": "dist/reactivity-transform.cjs.js",
   "files": [
