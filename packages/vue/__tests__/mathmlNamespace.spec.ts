@@ -28,13 +28,11 @@ describe('MathML support', () => {
             <mo>+</mo>
             <mi>y</mi>
           </mrow>
-      
-      
-          <!-- Annotate with a PNG image of the formula. -->
-          <annotation encoding="text/html" id="e3">
+
+          <annotation-xml encoding="text/html" id="e3">
             <div id="e4" />
             <svg id="e5" />
-          </annotation>
+          </annotation-xml>
         </semantics>
       </math>
       `

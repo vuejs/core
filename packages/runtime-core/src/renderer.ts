@@ -587,13 +587,10 @@ function baseCreateRenderer(
     slotScopeIds: string[] | null,
     optimized: boolean
   ) => {
-    switch (n2.type) {
-      case 'svg':
-        namespace = 'svg'
-        break
-      case 'math':
-        namespace = 'mathml'
-        break
+    if (n2.type === 'svg') {
+      namespace = 'svg'
+    } else if (n2.type === 'math') {
+      namespace = 'mathml'
     }
 
     if (n1 == null) {
@@ -632,7 +629,7 @@ function baseCreateRenderer(
   ) => {
     let el: RendererElement
     let vnodeHook: VNodeHook | undefined | null
-    const { type, props, shapeFlag, transition, dirs } = vnode
+    const { props, shapeFlag, transition, dirs } = vnode
 
     el = vnode.el = hostCreateElement(
       vnode.type as string,
@@ -646,22 +643,13 @@ function baseCreateRenderer(
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       hostSetElementText(el, vnode.children as string)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-      // foreignObject (svg), annotation and annotation-xml (MathML) can embed content
-      // that is different from their namespace
-      if (
-        type === 'foreignObject' ||
-        type === 'annotation' ||
-        type === 'annotation-xml'
-      ) {
-        namespace = undefined
-      }
       mountChildren(
         vnode.children as VNodeArrayChildren,
         el,
         null,
         parentComponent,
         parentSuspense,
-        namespace,
+        resolveChildrenNamespace(vnode, namespace),
         slotScopeIds,
         optimized
       )
@@ -841,15 +829,6 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
-    // foreignObject (svg), annotation and annotation-xml (MathML) can embed content
-    // that is different from their namespace
-    if (
-      n2.type === 'foreignObject' ||
-      n2.type === 'annotation' ||
-      n2.type === 'annotation-xml'
-    ) {
-      namespace = undefined
-    }
     if (dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
@@ -857,7 +836,7 @@ function baseCreateRenderer(
         el,
         parentComponent,
         parentSuspense,
-        namespace,
+        resolveChildrenNamespace(n2, namespace),
         slotScopeIds
       )
       if (__DEV__) {
@@ -873,7 +852,7 @@ function baseCreateRenderer(
         null,
         parentComponent,
         parentSuspense,
-        namespace,
+        resolveChildrenNamespace(n2, namespace),
         slotScopeIds,
         false
       )
@@ -2395,6 +2374,20 @@ function baseCreateRenderer(
     hydrate,
     createApp: createAppAPI(render, hydrate)
   }
+}
+
+function resolveChildrenNamespace(
+  { type, props }: VNode,
+  currentNamespace: ElementNamespace
+): ElementNamespace {
+  return (currentNamespace === 'svg' && type === 'foreignObject') ||
+    (currentNamespace === 'mathml' &&
+      type === 'annotation-xml' &&
+      props &&
+      props.encoding &&
+      props.encoding.includes('html'))
+    ? undefined
+    : currentNamespace
 }
 
 function toggleRecurse(
