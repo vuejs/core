@@ -16,7 +16,7 @@ import {
   ComponentPublicInstance
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
+import { ElementNamespace, RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
@@ -47,7 +47,7 @@ export interface App<HostElement = any> {
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    isSVG?: boolean
+    namespace?: boolean | ElementNamespace
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -297,7 +297,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG?: boolean
+        namespace?: boolean | ElementNamespace
       ): any {
         if (!isMounted) {
           // #5571
@@ -313,17 +313,29 @@ export function createAppAPI<HostElement>(
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
 
+          if (namespace === true) {
+            namespace = 'svg'
+          } else if (namespace === false) {
+            namespace = undefined
+          }
+
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
-              render(cloneVNode(vnode), rootContainer, isSVG)
+              // casting to ElementNamespace because TS doesn't guarantee type narrowing
+              // over function boundaries
+              render(
+                cloneVNode(vnode),
+                rootContainer,
+                namespace as ElementNamespace
+              )
             }
           }
 
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            render(vnode, rootContainer, isSVG)
+            render(vnode, rootContainer, namespace)
           }
           isMounted = true
           app._container = rootContainer
