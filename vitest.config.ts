@@ -1,5 +1,6 @@
-import { configDefaults, defineConfig, UserConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
+import codspeedPlugin from '@codspeed/vitest-plugin'
 
 export default defineConfig({
   define: {
@@ -20,10 +21,10 @@ export default defineConfig({
   resolve: {
     alias: entries
   },
+  plugins: [codspeedPlugin()],
   test: {
     globals: true,
     // disable threads on GH actions to speed it up
-    threads: !process.env.GITHUB_ACTIONS,
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
@@ -43,4 +44,4 @@ export default defineConfig({
       ]
     }
   }
-}) as UserConfig
+})
