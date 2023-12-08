@@ -582,6 +582,7 @@ function createSuspenseBoundary(
       // invoke @fallback event
       triggerEvent(vnode, 'onFallback')
 
+      const anchor = next(activeBranch!)
       const mountFallback = () => {
         if (!suspense.isInFallback) {
           return
@@ -591,7 +592,7 @@ function createSuspenseBoundary(
           null,
           fallbackVNode,
           container,
-          next(activeBranch!),
+          anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
           isSVG,

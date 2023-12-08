@@ -1185,6 +1185,72 @@ describe('Suspense', () => {
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
   })
 
+  test('mount the fallback content is in the correct position', async () => {
+    const makeComp = (name: string, delay = 0) =>
+      defineAsyncComponent(
+        {
+          setup() {
+            return () => h('div', [name])
+          }
+        },
+        delay
+      )
+
+    const One = makeComp('one')
+    const Two = makeComp('two', 20)
+
+    const view = shallowRef(One)
+
+    const Comp = {
+      setup() {
+        return () =>
+          h('div', [
+            h(
+              Suspense,
+              {
+                timeout: 10
+              },
+              {
+                default: h(view.value),
+                fallback: h('div', 'fallback')
+              }
+            ),
+            h('div', 'three')
+          ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div>fallback</div><div>three</div></div>`
+    )
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>one</div><div>three</div></div>`
+    )
+
+    view.value = Two
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>one</div><div>three</div></div>`
+    )
+
+    await new Promise(r => setTimeout(r, 10))
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>fallback</div><div>three</div></div>`
+    )
+
+    await deps[1]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>two</div><div>three</div></div>`
+    )
+  })
+
   // #2214
   // Since suspense renders its own root like a component, it should not patch
   // its content in optimized mode.
