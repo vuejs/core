@@ -17,7 +17,6 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
@@ -88,7 +87,6 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -492,16 +490,23 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends ReadonlyArray<any>
-    ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-    : T extends object & { [ShallowReactiveMarker]?: never }
-      ? {
-          [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-        }
-      : T
+  : T extends Map<infer K, infer V>
+    ? Map<K, UnwrapRefSimple<V>>
+    : T extends WeakMap<infer K, infer V>
+      ? WeakMap<K, UnwrapRefSimple<V>>
+      : T extends Set<infer V>
+        ? Set<UnwrapRefSimple<V>>
+        : T extends WeakSet<infer V>
+          ? WeakSet<UnwrapRefSimple<V>>
+          : T extends ReadonlyArray<any>
+            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+            : T extends object & { [ShallowReactiveMarker]?: never }
+              ? {
+                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                }
+              : T
