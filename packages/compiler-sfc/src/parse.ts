@@ -279,8 +279,8 @@ export function parse(
     }
     genMap(descriptor.template, templateColumnOffset)
     genMap(descriptor.script)
-    descriptor.styles.forEach(genMap)
-    descriptor.customBlocks.forEach(genMap)
+    descriptor.styles.forEach(s => genMap(s))
+    descriptor.customBlocks.forEach(s => genMap(s))
   }
 
   // parse CSS vars
