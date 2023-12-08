@@ -62,3 +62,31 @@ describe('should unwrap tuple correctly', () => {
   const reactiveTuple = reactive(tuple)
   expectType<Ref<number>>(reactiveTuple[0])
 })
+
+describe('should unwrap Map correctly', () => {
+  const map = reactive(new Map<string, Ref<number>>())
+  expectType<Ref<number>>(map.get('a')!)
+
+  const map2 = reactive(new Map<string, { wrap: Ref<number> }>())
+  expectType<number>(map2.get('a')!.wrap)
+
+  const wm = reactive(new WeakMap<object, Ref<number>>())
+  expectType<Ref<number>>(wm.get({})!)
+
+  const wm2 = reactive(new WeakMap<object, { wrap: Ref<number> }>())
+  expectType<number>(wm2.get({})!.wrap)
+})
+
+describe('should unwrap Set correctly', () => {
+  const set = reactive(new Set<Ref<number>>())
+  expectType<Set<Ref<number>>>(set)
+
+  const set2 = reactive(new Set<{ wrap: Ref<number> }>())
+  expectType<Set<{ wrap: number }>>(set2)
+
+  const ws = reactive(new WeakSet<Ref<number>>())
+  expectType<WeakSet<Ref<number>>>(ws)
+
+  const ws2 = reactive(new WeakSet<{ wrap: Ref<number> }>())
+  expectType<WeakSet<{ wrap: number }>>(ws2)
+})

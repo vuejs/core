@@ -51,6 +51,7 @@ import {
   EmitFn,
   emit,
   normalizeEmitsOptions,
+  EmitsToProps,
   ShortEmitsToObject
 } from './componentEmits'
 import {
@@ -132,7 +133,7 @@ export interface FunctionalComponent<
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
-    props: P,
+    props: P & & EmitsToProps<E>,
     ctx: Omit<
       SetupContext<ShortEmitsToObject<E>, IfAny<S, {}, SlotsType<S>>>,
       'expose'

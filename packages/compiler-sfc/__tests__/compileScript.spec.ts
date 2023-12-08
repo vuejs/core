@@ -240,14 +240,22 @@ describe('SFC compile <script setup>', () => {
       const { content } = compile(
         `
       <script setup>
-      import { ref } from 'vue'
-      let foo = $ref(1)
+      import { useCssVars, ref } from 'vue'
+      const msg = ref()
       </script>
-      `,
-        { reactivityTransform: true }
+
+      <style>
+      .foo {
+        color: v-bind(msg)
+      }
+      </style>
+      `
       )
       assertCode(content)
-      expect(content).toMatch(`import { ref } from 'vue'`)
+      expect(content).toMatch(
+        `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`
+      )
+      expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
     })
 
     test('import dedupe between <script> and <script setup>', () => {
@@ -508,6 +516,46 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(
         'return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }'
       )
+      assertCode(content)
+    })
+
+    // https://github.com/nuxt/nuxt/issues/22416
+    test('property access', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo.Bar.Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('spread operator', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div v-bind="{ ...Foo.Bar.Baz }"></div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
+      assertCode(content)
+    })
+
+    test('property access (whitespace)', () => {
+      const { content } = compile(`
+        <script setup lang="ts">
+          import { Foo, Bar, Baz } from './foo'
+        </script>
+        <template>
+          <div>{{ Foo . Bar . Baz }}</div>
+        </template>
+        `)
+      expect(content).toMatch('return { get Foo() { return Foo } }')
       assertCode(content)
     })
   })
@@ -778,6 +826,7 @@ describe('SFC compile <script setup>', () => {
         <script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const style = { color: 'red' }
         </script>
         <template>
           <div>{{ count }}</div>
@@ -785,6 +834,7 @@ describe('SFC compile <script setup>', () => {
         </template>
         <style>
         div { color: v-bind(count) }
+        span { color: v-bind(style.color) }
         </style>
         `,
         {
@@ -799,6 +849,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
       assertCode(content)
     })
 
@@ -891,9 +942,7 @@ describe('SFC compile <script setup>', () => {
 
   describe('async/await detection', () => {
     function assertAwaitDetection(code: string, shouldAsync = true) {
-      const { content } = compile(`<script setup>${code}</script>`, {
-        reactivityTransform: true
-      })
+      const { content } = compile(`<script setup>${code}</script>`)
       if (shouldAsync) {
         expect(content).toMatch(`let __temp, __restore`)
       }
@@ -911,7 +960,7 @@ describe('SFC compile <script setup>', () => {
     })
 
     test('ref', () => {
-      assertAwaitDetection(`let a = $ref(1 + (await foo))`)
+      assertAwaitDetection(`let a = ref(1 + (await foo))`)
     })
 
     // #4448
@@ -1549,6 +1598,40 @@ describe('SFC genDefaultAs', () => {
       toRef: BindingTypes.SETUP_CONST,
       props: BindingTypes.SETUP_REACTIVE_CONST,
       foo: BindingTypes.SETUP_REF
+    })
+  })
+
+  describe('parser plugins', () => {
+    test('import attributes', () => {
+      const { content } = compile(`
+        <script setup>
+        import { foo } from './foo.js' with { type: 'foobar' }
+        </script>
+      `)
+      assertCode(content)
+
+      expect(() =>
+        compile(`
+      <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>`)
+      ).toThrow()
+    })
+
+    test('import attributes (user override for deprecated syntax)', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>
+      `,
+        {
+          babelParserPlugins: [
+            ['importAttributes', { deprecatedAssertSyntax: true }]
+          ]
+        }
+      )
+      assertCode(content)
     })
   })
 })

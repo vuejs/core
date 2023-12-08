@@ -1,7 +1,7 @@
 {
   "private": true,
-  "version": "3.4.0-alpha.1",
-  "packageManager": "pnpm@8.10.5",
+  "version": "3.4.0-alpha.4",
+  "packageManager": "pnpm@8.11.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -32,9 +32,10 @@
     "dev-sfc-run": "run-p \"dev compiler-sfc -f esm-browser\" \"dev vue -if esm-bundler-runtime\" \"dev vue -ipf esm-browser-runtime\" \"dev server-renderer -if esm-bundler\" dev-sfc-serve",
     "serve": "serve",
     "open": "open http://localhost:3000/packages/template-explorer/local.html",
-    "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-ssr-esm build-sfc-playground-self",
-    "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity reactivity-transform shared -af cjs",
+    "build-sfc-playground": "run-s build-all-cjs build-runtime-esm build-browser-esm build-ssr-esm build-sfc-playground-self",
+    "build-all-cjs": "node scripts/build.js vue runtime compiler reactivity shared -af cjs",
     "build-runtime-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler-runtime && node scripts/build.js vue -f esm-browser-runtime",
+    "build-browser-esm": "node scripts/build.js runtime reactivity shared -af esm-bundler && node scripts/build.js vue -f esm-bundler && node scripts/build.js vue -f esm-browser",
     "build-ssr-esm": "node scripts/build.js compiler-sfc server-renderer -f esm-browser",
     "build-sfc-playground-self": "cd packages/sfc-playground && npm run build",
     "preinstall": "npx only-allow pnpm",
@@ -57,8 +58,8 @@
     "node": ">=18.12.0"
   },
   "devDependencies": {
-    "@babel/parser": "^7.23.3",
-    "@babel/types": "^7.23.3",
+    "@babel/parser": "^7.23.5",
+    "@babel/types": "^7.23.5",
     "@rollup/plugin-alias": "^5.0.1",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-json": "^6.0.1",
@@ -66,8 +67,10 @@
     "@rollup/plugin-replace": "^5.0.4",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.9.2",
-    "@typescript-eslint/parser": "^6.11.0",
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^20.10.3",
+    "@types/semver": "^7.5.5",
+    "@typescript-eslint/parser": "^6.13.0",
     "@vitest/coverage-istanbul": "^0.34.6",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
@@ -75,6 +78,7 @@
     "esbuild": "^0.19.5",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^8.54.0",
+    "eslint-define-config": "^1.24.1",
     "eslint-plugin-jest": "^27.6.0",
     "estree-walker": "^2.0.2",
     "execa": "^8.0.1",
@@ -90,7 +94,7 @@
     "prettier": "^3.1.0",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.2",
-    "puppeteer": "~21.5.1",
+    "puppeteer": "~21.5.2",
     "rimraf": "^5.0.5",
     "rollup": "^4.1.4",
     "rollup-plugin-dts": "^6.1.0",
@@ -102,9 +106,9 @@
     "terser": "^5.22.0",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
-    "tsx": "^4.1.4",
+    "tsx": "^4.6.2",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
-    "vitest": "^0.34.6"
+    "vitest": "^1.0.0"
   }
 }

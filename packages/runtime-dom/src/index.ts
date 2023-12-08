@@ -10,7 +10,8 @@ import {
   RootHydrateFunction,
   isRuntimeOnly,
   DeprecationTypes,
-  compatUtils
+  compatUtils,
+  ElementNamespace
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
@@ -21,7 +22,8 @@ import {
   isHTMLTag,
   isSVGTag,
   extend,
-  NOOP
+  NOOP,
+  isMathMLTag
 } from '@vue/shared'
 
 declare module '@vue/reactivity' {
@@ -99,7 +101,7 @@ export const createApp = ((...args) => {
 
     // clear content before mounting
     container.innerHTML = ''
-    const proxy = mount(container, false, container instanceof SVGElement)
+    const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -122,18 +124,30 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true, container instanceof SVGElement)
+      return mount(container, true, resolveRootNamespace(container))
     }
   }
 
   return app
 }) as CreateAppFunction<Element>
 
+function resolveRootNamespace(container: Element): ElementNamespace {
+  if (container instanceof SVGElement) {
+    return 'svg'
+  }
+  if (
+    typeof MathMLElement === 'function' &&
+    container instanceof MathMLElement
+  ) {
+    return 'mathml'
+  }
+}
+
 function injectNativeTagCheck(app: App) {
   // Inject `isNativeTag`
   // this is used for component name validation (dev only)
   Object.defineProperty(app.config, 'isNativeTag', {
-    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
+    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
     writable: false
   })
 }

@@ -1,5 +1,5 @@
 import { parse } from '../src'
-import { baseParse, baseCompile } from '@vue/compiler-core'
+import { baseCompile, createRoot } from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler:sfc', () => {
@@ -7,15 +7,61 @@ describe('compiler:sfc', () => {
     test('style block', () => {
       // Padding determines how many blank lines will there be before the style block
       const padding = Math.round(Math.random() * 10)
-      const style = parse(
-        `${'\n'.repeat(padding)}<style>\n.color {\n color: red;\n }\n</style>\n`
-      ).descriptor.styles[0]
+      const src =
+        `${'\n'.repeat(padding)}` +
+        `<style>
+.css {
+color: red;
+}
+</style>
 
-      expect(style.map).not.toBeUndefined()
+<style module>
+.css-module {
+color: red;
+}
+</style>
 
-      const consumer = new SourceMapConsumer(style.map!)
+<style scoped>
+.css-scoped {
+color: red;
+}
+</style>
+
+<style scoped>
+.css-scoped-nested {
+color: red;
+.dummy {
+color: green;
+}
+font-weight: bold;
+}
+</style>`
+      const {
+        descriptor: { styles }
+      } = parse(src)
+
+      expect(styles[0].map).not.toBeUndefined()
+      const consumer = new SourceMapConsumer(styles[0].map!)
+      const lineOffset =
+        src.slice(0, src.indexOf(`<style>`)).split('\n').length - 1
       consumer.eachMapping(mapping => {
-        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.generatedLine + lineOffset).toBe(mapping.originalLine)
+      })
+
+      expect(styles[1].map).not.toBeUndefined()
+      const consumer1 = new SourceMapConsumer(styles[1].map!)
+      const lineOffset1 =
+        src.slice(0, src.indexOf(`<style module>`)).split('\n').length - 1
+      consumer1.eachMapping(mapping => {
+        expect(mapping.generatedLine + lineOffset1).toBe(mapping.originalLine)
+      })
+
+      expect(styles[2].map).not.toBeUndefined()
+      const consumer2 = new SourceMapConsumer(styles[2].map!)
+      const lineOffset2 =
+        src.slice(0, src.indexOf(`<style scoped>`)).split('\n').length - 1
+      consumer2.eachMapping(mapping => {
+        expect(mapping.generatedLine + lineOffset2).toBe(mapping.originalLine)
       })
     })
 
@@ -31,6 +77,26 @@ describe('compiler:sfc', () => {
       const consumer = new SourceMapConsumer(script!.map!)
       consumer.eachMapping(mapping => {
         expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+      })
+    })
+
+    test('template block with lang + indent', () => {
+      // Padding determines how many blank lines will there be before the style block
+      const padding = Math.round(Math.random() * 10)
+      const template = parse(
+        `${'\n'.repeat(padding)}<template lang="pug">
+  h1 foo
+    div bar
+    span baz
+</template>\n`
+      ).descriptor.template!
+
+      expect(template.map).not.toBeUndefined()
+
+      const consumer = new SourceMapConsumer(template.map!)
+      consumer.eachMapping(mapping => {
+        expect(mapping.originalLine - mapping.generatedLine).toBe(padding)
+        expect(mapping.originalColumn - mapping.generatedColumn).toBe(2)
       })
     })
 
@@ -122,8 +188,7 @@ h1 { color: red }
         line: 3,
         column: 1,
         offset: 10 + content.length
-      },
-      source: content
+      }
     })
   })
 
@@ -132,9 +197,8 @@ h1 { color: red }
     expect(descriptor.template).toBeTruthy()
     expect(descriptor.template!.content).toBeFalsy()
     expect(descriptor.template!.loc).toMatchObject({
-      start: { line: 1, column: 1, offset: 0 },
-      end: { line: 1, column: 1, offset: 0 },
-      source: ''
+      start: { line: 1, column: 12, offset: 11 },
+      end: { line: 1, column: 12, offset: 11 }
     })
   })
 
@@ -144,8 +208,7 @@ h1 { color: red }
     expect(descriptor.template!.content).toBeFalsy()
     expect(descriptor.template!.loc).toMatchObject({
       start: { line: 1, column: 11, offset: 10 },
-      end: { line: 1, column: 11, offset: 10 },
-      source: ''
+      end: { line: 1, column: 11, offset: 10 }
     })
   })
 
@@ -167,6 +230,11 @@ h1 { color: red }
     expect(descriptor.script!.attrs['src']).toBe('com')
   })
 
+  test('should not expose ast on template node if has src import', () => {
+    const { descriptor } = parse(`<template src="./foo.html"/>`)
+    expect(descriptor.template!.ast).toBeUndefined()
+  })
+
   test('ignoreEmpty: false', () => {
     const { descriptor } = parse(
       `<script></script>\n<script setup>\n</script>`,
@@ -176,14 +244,12 @@ h1 { color: red }
     )
     expect(descriptor.script).toBeTruthy()
     expect(descriptor.script!.loc).toMatchObject({
-      source: '',
       start: { line: 1, column: 9, offset: 8 },
       end: { line: 1, column: 9, offset: 8 }
     })
 
     expect(descriptor.scriptSetup).toBeTruthy()
     expect(descriptor.scriptSetup!.loc).toMatchObject({
-      source: '\n',
       start: { line: 2, column: 15, offset: 32 },
       end: { line: 3, column: 1, offset: 33 }
     })
@@ -208,13 +274,15 @@ h1 { color: red }
   })
 
   // #1120
-  test('alternative template lang should be treated as plain text', () => {
-    const content = `p(v-if="1 < 2") test`
+  test('template with preprocessor lang should be treated as plain text', () => {
+    const content = `p(v-if="1 < 2") test <div/>`
     const { descriptor, errors } = parse(
       `<template lang="pug">` + content + `</template>`
     )
     expect(errors.length).toBe(0)
     expect(descriptor.template!.content).toBe(content)
+    // should not attempt to parse the content
+    expect(descriptor.template!.ast!.children.length).toBe(1)
   })
 
   //#2566
@@ -260,11 +328,18 @@ h1 { color: red }
   test('custom compiler', () => {
     const { errors } = parse(`<template><input></template>`, {
       compiler: {
-        parse: baseParse,
+        parse: (_, options) => {
+          options.onError!(new Error('foo') as any)
+          return createRoot([])
+        },
         compile: baseCompile
       }
     })
-    expect(errors.length).toBe(1)
+    expect(errors.length).toBe(2)
+    // error thrown by the custom parse
+    expect(errors[0].message).toBe('foo')
+    // error thrown based on the returned root
+    expect(errors[1].message).toMatch('At least one')
   })
 
   test('treat custom blocks as raw text', () => {

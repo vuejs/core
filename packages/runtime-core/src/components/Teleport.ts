@@ -6,7 +6,8 @@ import {
   RendererElement,
   RendererNode,
   RendererOptions,
-  traverseStaticChildren
+  traverseStaticChildren,
+  ElementNamespace
 } from '../renderer'
 import { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
 import { isString, ShapeFlags } from '@vue/shared'
@@ -27,6 +28,9 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
+
+const isTargetMathML = (target: RendererElement): boolean =>
+  typeof MathMLElement === 'function' && target instanceof MathMLElement
 
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
@@ -72,7 +76,7 @@ export const TeleportImpl = {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    isSVG: boolean,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean,
     internals: RendererInternals
@@ -109,7 +113,11 @@ export const TeleportImpl = {
       if (target) {
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        isSVG = isSVG || isTargetSVG(target)
+        if (namespace === 'svg' || isTargetSVG(target)) {
+          namespace = 'svg'
+        } else if (namespace === 'mathml' || isTargetMathML(target)) {
+          namespace = 'mathml'
+        }
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -124,7 +132,7 @@ export const TeleportImpl = {
             anchor,
             parentComponent,
             parentSuspense,
-            isSVG,
+            namespace,
             slotScopeIds,
             optimized
           )
@@ -145,7 +153,12 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
-      isSVG = isSVG || isTargetSVG(target)
+
+      if (namespace === 'svg' || isTargetSVG(target)) {
+        namespace = 'svg'
+      } else if (namespace === 'mathml' || isTargetMathML(target)) {
+        namespace = 'mathml'
+      }
 
       if (dynamicChildren) {
         // fast path when the teleport happens to be a block root
@@ -155,7 +168,7 @@ export const TeleportImpl = {
           currentContainer,
           parentComponent,
           parentSuspense,
-          isSVG,
+          namespace,
           slotScopeIds
         )
         // even in block tree mode we need to make sure all root-level nodes
@@ -170,7 +183,7 @@ export const TeleportImpl = {
           currentAnchor,
           parentComponent,
           parentSuspense,
-          isSVG,
+          namespace,
           slotScopeIds,
           false
         )
@@ -269,7 +282,7 @@ export const TeleportImpl = {
   hydrate: hydrateTeleport
 }
 
-export const enum TeleportMoveTypes {
+export enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
   REORDER // moved in the main view

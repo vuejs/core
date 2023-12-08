@@ -170,15 +170,23 @@ function rewriteSelector(
       }
     }
 
-    if (n.type !== 'pseudo' && n.type !== 'combinator') {
+    if (
+      (n.type !== 'pseudo' && n.type !== 'combinator') ||
+      (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
+    ) {
       node = n
     }
+  })
 
-    if (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where')) {
-      rewriteSelector(id, n.nodes[0], selectorRoot, slotted)
+  if (node) {
+    const { type, value } = node as selectorParser.Node
+    if (type === 'pseudo' && (value === ':is' || value === ':where')) {
+      ;(node as selectorParser.Pseudo).nodes.forEach(value =>
+        rewriteSelector(id, value, selectorRoot, slotted)
+      )
       shouldInject = false
     }
-  })
+  }
 
   if (node) {
     ;(node as selectorParser.Node).spaces.after = ''

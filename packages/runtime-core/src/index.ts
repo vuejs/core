@@ -260,7 +260,8 @@ export type {
   RendererElement,
   HydrationRenderer,
   RendererOptions,
-  RootRenderFunction
+  RootRenderFunction,
+  ElementNamespace
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
 export type { Slot, Slots, SlotsType } from './componentSlots'
@@ -361,7 +362,7 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-export { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
 export type { CompatVue } from './compat/global'
 export type { LegacyConfig } from './compat/globalConfig'
 
@@ -393,3 +394,7 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
+
+export const DeprecationTypes = (
+  __COMPAT__ ? _DeprecationTypes : null
+) as typeof _DeprecationTypes
