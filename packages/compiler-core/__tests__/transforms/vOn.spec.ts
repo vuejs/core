@@ -437,22 +437,22 @@ describe('compiler: transform v-on', () => {
     })
   })
 
-  // TODO remove in 3.4
-  test('case conversion for vnode hooks', () => {
-    const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
-    expect((node.codegenNode as VNodeCall).props).toMatchObject({
-      properties: [
-        {
-          key: {
-            content: `onVnodeMounted`
-          },
-          value: {
-            content: `onMount`
-          }
+  test('error for vnode hooks', () => {
+    const onError = vi.fn()
+    parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`, { onError })
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_VNODE_HOOKS,
+      loc: {
+        start: {
+          line: 1,
+          column: 11
+        },
+        end: {
+          line: 1,
+          column: 24
         }
-      ]
+      }
     })
-    expect('@vnode-* hooks in templates are deprecated').toHaveBeenWarned()
   })
 
   test('vue: prefixed events', () => {

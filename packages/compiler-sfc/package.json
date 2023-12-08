@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.4.0-alpha.1",
+  "version": "3.4.0-alpha.4",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -32,27 +32,26 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.23.0",
-    "@vue/compiler-core": "3.4.0-alpha.1",
-    "@vue/compiler-dom": "3.4.0-alpha.1",
-    "@vue/compiler-ssr": "3.4.0-alpha.1",
-    "@vue/reactivity-transform": "3.4.0-alpha.1",
-    "@vue/shared": "3.4.0-alpha.1",
+    "@babel/parser": "^7.23.5",
+    "@vue/compiler-core": "workspace:*",
+    "@vue/compiler-dom": "workspace:*",
+    "@vue/compiler-ssr": "workspace:*",
+    "@vue/shared": "workspace:*",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.30.5",
-    "postcss": "^8.4.31",
+    "postcss": "^8.4.32",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.23.0",
+    "@babel/types": "^7.23.5",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
-    "lru-cache": "^10.0.1",
+    "lru-cache": "^10.1.0",
     "merge-source-map": "^1.1.0",
     "minimatch": "^9.0.3",
-    "postcss-modules": "^4.3.1",
+    "postcss-modules": "^6.0.0",
     "postcss-selector-parser": "^6.0.13",
     "pug": "^3.0.2",
-    "sass": "^1.69.4"
+    "sass": "^1.69.5"
   }
 }

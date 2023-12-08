@@ -28,9 +28,9 @@ export function walkIdentifiers(
   }
 
   const rootExp =
-    root.type === 'Program' &&
-    root.body[0].type === 'ExpressionStatement' &&
-    root.body[0].expression
+    root.type === 'Program'
+      ? root.body[0].type === 'ExpressionStatement' && root.body[0].expression
+      : root
 
   walk(root, {
     enter(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
@@ -165,6 +165,19 @@ export function walkBlockDeclarations(
     ) {
       if (stmt.declare || !stmt.id) continue
       onIdent(stmt.id)
+    } else if (
+      stmt.type === 'ForOfStatement' ||
+      stmt.type === 'ForInStatement' ||
+      stmt.type === 'ForStatement'
+    ) {
+      const variable = stmt.type === 'ForStatement' ? stmt.init : stmt.left
+      if (variable && variable.type === 'VariableDeclaration') {
+        for (const decl of variable.declarations) {
+          for (const id of extractIdentifiers(decl.id)) {
+            onIdent(id)
+          }
+        }
+      }
     }
   }
 }

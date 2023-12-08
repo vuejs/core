@@ -1,4 +1,4 @@
-export const enum SlotFlags {
+export enum SlotFlags {
   /**
    * Stable slots that only reference slot props or context state. The slot
    * can fully capture its own dependencies so when passed down the parent won't

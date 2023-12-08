@@ -2,7 +2,8 @@ import {
   toRaw,
   shallowReactive,
   trigger,
-  TriggerOpTypes
+  TriggerOpTypes,
+  shallowReadonly
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
@@ -57,7 +58,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown): boolean
+  validator?(value: unknown, props: Data): boolean
   /**
    * @internal
    */
@@ -111,22 +112,22 @@ type DefaultKeys<T> = {
 type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
   : [T] extends [{ type: null | true }]
-  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
-  ? Record<string, any>
-  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
-  ? boolean
-  : [T] extends [DateConstructor | { type: DateConstructor }]
-  ? Date
-  : [T] extends [(infer U)[] | { type: (infer U)[] }]
-  ? U extends DateConstructor
-    ? Date | InferPropType<U>
-    : InferPropType<U>
-  : [T] extends [Prop<infer V, infer D>]
-  ? unknown extends V
-    ? IfAny<V, V, D>
-    : V
-  : T
+    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+      ? Record<string, any>
+      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+        ? boolean
+        : [T] extends [DateConstructor | { type: DateConstructor }]
+          ? Date
+          : [T] extends [(infer U)[] | { type: (infer U)[] }]
+            ? U extends DateConstructor
+              ? Date | InferPropType<U>
+              : InferPropType<U>
+            : [T] extends [Prop<infer V, infer D>]
+              ? unknown extends V
+                ? IfAny<V, V, D>
+                : V
+              : T
 
 /**
  * Extract prop types from a runtime props options object.
@@ -164,7 +165,7 @@ export type ExtractPublicPropTypes<O> = {
   [K in keyof Pick<O, PublicOptionalKeys<O>>]?: InferPropType<O[K]>
 }
 
-const enum BooleanFlags {
+enum BooleanFlags {
   shouldCast,
   shouldCastTrue
 }
@@ -634,6 +635,7 @@ function validateProps(
       key,
       resolvedValues[key],
       opt,
+      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
       !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
     )
   }
@@ -646,6 +648,7 @@ function validateProp(
   name: string,
   value: unknown,
   prop: PropOptions,
+  props: Data,
   isAbsent: boolean
 ) {
   const { type, required, validator, skipCheck } = prop
@@ -675,7 +678,7 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value)) {
+  if (validator && !validator(value, props)) {
     warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }
@@ -725,6 +728,12 @@ function getInvalidTypeMessage(
   value: unknown,
   expectedTypes: string[]
 ): string {
+  if (expectedTypes.length === 0) {
+    return (
+      `Prop type [] for prop "${name}" won't match anything.` +
+      ` Did you mean to use type Array instead?`
+    )
+  }
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
     ` Expected ${expectedTypes.map(capitalize).join(' | ')}`

@@ -1,12 +1,12 @@
 import { markRaw } from '@vue/reactivity'
 
-export const enum TestNodeTypes {
+export enum TestNodeTypes {
   TEXT = 'text',
   ELEMENT = 'element',
   COMMENT = 'comment'
 }
 
-export const enum NodeOpTypes {
+export enum NodeOpTypes {
   CREATE = 'create',
   INSERT = 'insert',
   REMOVE = 'remove',

@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.4.0-alpha.1",
+  "version": "3.4.0-alpha.4",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
@@ -32,10 +32,10 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/server-renderer#readme",
   "peerDependencies": {
-    "vue": "3.4.0-alpha.1"
+    "vue": "workspace:*"
   },
   "dependencies": {
-    "@vue/shared": "3.4.0-alpha.1",
-    "@vue/compiler-ssr": "3.4.0-alpha.1"
+    "@vue/shared": "workspace:*",
+    "@vue/compiler-ssr": "workspace:*"
   }
 }

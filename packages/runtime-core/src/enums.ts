@@ -1,4 +1,4 @@
-export const enum LifecycleHooks {
+export enum LifecycleHooks {
   BEFORE_CREATE = 'bc',
   CREATED = 'c',
   BEFORE_MOUNT = 'bm',

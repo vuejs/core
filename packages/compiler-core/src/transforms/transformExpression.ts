@@ -223,14 +223,26 @@ export function processExpression(
   // bail constant on parens (function invocation) and dot (member access)
   const bailConstant = constantBailRE.test(rawExp)
 
-  if (isSimpleIdentifier(rawExp)) {
+  let ast = node.ast
+
+  if (ast === false) {
+    // ast being false means it has caused an error already during parse phase
+    return node
+  }
+
+  if (ast === null || (!ast && isSimpleIdentifier(rawExp))) {
     const isScopeVarReference = context.identifiers[rawExp]
     const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
-    if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+    if (
+      !asParams &&
+      !isScopeVarReference &&
+      !isLiteral &&
+      (!isAllowedGlobal || bindingMetadata[rawExp])
+    ) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
-      if (isConst(bindingMetadata[node.content])) {
+      if (isConst(bindingMetadata[rawExp])) {
         node.constType = ConstantTypes.CAN_SKIP_PATCH
       }
       node.content = rewriteIdentifier(rawExp)
@@ -244,29 +256,30 @@ export function processExpression(
     return node
   }
 
-  let ast: any
-  // exp needs to be parsed differently:
-  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
-  //    exp, but make sure to pad with spaces for consistent ranges
-  // 2. Expressions: wrap with parens (for e.g. object expressions)
-  // 3. Function arguments (v-for, v-slot): place in a function argument position
-  const source = asRawStatements
-    ? ` ${rawExp} `
-    : `(${rawExp})${asParams ? `=>{}` : ``}`
-  try {
-    ast = parse(source, {
-      plugins: context.expressionPlugins
-    }).program
-  } catch (e: any) {
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_INVALID_EXPRESSION,
-        node.loc,
-        undefined,
-        e.message
+  if (!ast) {
+    // exp needs to be parsed differently:
+    // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+    //    exp, but make sure to pad with spaces for consistent ranges
+    // 2. Expressions: wrap with parens (for e.g. object expressions)
+    // 3. Function arguments (v-for, v-slot): place in a function argument position
+    const source = asRawStatements
+      ? ` ${rawExp} `
+      : `(${rawExp})${asParams ? `=>{}` : ``}`
+    try {
+      ast = parse(source, {
+        plugins: context.expressionPlugins
+      }).program
+    } catch (e: any) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_INVALID_EXPRESSION,
+          node.loc,
+          undefined,
+          e.message
+        )
       )
-    )
-    return node
+      return node
+    }
   }
 
   type QualifiedId = Identifier & PrefixMeta
@@ -331,9 +344,9 @@ export function processExpression(
         id.name,
         false,
         {
-          source,
           start: advancePositionWithClone(node.loc.start, source, start),
-          end: advancePositionWithClone(node.loc.start, source, end)
+          end: advancePositionWithClone(node.loc.start, source, end),
+          source
         },
         id.isConstant ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
       )
@@ -346,6 +359,7 @@ export function processExpression(
   let ret
   if (children.length) {
     ret = createCompoundExpression(children, node.loc)
+    ret.ast = ast
   } else {
     ret = node
     ret.constType = bailConstant

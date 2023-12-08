@@ -1,8 +1,22 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore, SFCOptions } from '@vue/repl'
-import Monaco from '@vue/repl/monaco-editor'
+import type Monaco from '@vue/repl/monaco-editor'
+import type CodeMirror from '@vue/repl/codemirror-editor'
 import { ref, watchEffect, onMounted } from 'vue'
+import { shallowRef } from 'vue'
+
+const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
+
+if (import.meta.env.DEV) {
+  import('@vue/repl/codemirror-editor').then(
+    mod => (EditorComponent.value = mod.default)
+  )
+} else {
+  import('@vue/repl/monaco-editor').then(
+    mod => (EditorComponent.value = mod.default)
+  )
+}
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -25,9 +39,13 @@ if (hash.startsWith('__SSR__')) {
 
 const store = new ReplStore({
   serializedState: hash,
+  productionMode: !useDevMode.value,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`,
+  defaultVueRuntimeProdURL: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
   defaultVueServerRendererURL: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
     : `${location.origin}/src/vue-server-renderer-dev-proxy`
@@ -38,7 +56,7 @@ const sfcOptions: SFCOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
-    reactivityTransform: true,
+    propsDestructure: true,
     defineModel: true
   },
   style: {
@@ -65,7 +83,7 @@ function toggleDevMode() {
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
       !dev
-  store.setFiles(store.getFiles())
+  store.toggleProduction()
 }
 
 function toggleSSR() {
@@ -93,8 +111,9 @@ onMounted(() => {
     @toggle-ssr="toggleSSR"
   />
   <Repl
+    v-if="EditorComponent"
     :theme="theme"
-    :editor="Monaco"
+    :editor="EditorComponent"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"

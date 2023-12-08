@@ -67,8 +67,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
             ? shallowReadonlyMap
             : readonlyMap
           : shallow
-          ? shallowReactiveMap
-          : reactiveMap
+            ? shallowReactiveMap
+            : reactiveMap
         ).get(target)
     ) {
       return target
