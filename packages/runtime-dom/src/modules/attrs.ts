@@ -7,8 +7,7 @@ import {
 import {
   compatUtils,
   ComponentInternalInstance,
-  DeprecationTypes,
-  ElementNamespace
+  DeprecationTypes
 } from '@vue/runtime-core'
 
 export const xlinkNS = 'http://www.w3.org/1999/xlink'
@@ -17,10 +16,10 @@ export function patchAttr(
   el: Element,
   key: string,
   value: any,
-  namespace?: ElementNamespace,
+  isSVG: boolean,
   instance?: ComponentInternalInstance | null
 ) {
-  if (namespace === 'svg' && key.startsWith('xlink:')) {
+  if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
       el.removeAttributeNS(xlinkNS, key.slice(6, key.length))
     } else {

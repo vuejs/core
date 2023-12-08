@@ -20,18 +20,12 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
   },
 
   createElement: (tag, namespace, is, props): Element => {
-    let el
-    switch (namespace) {
-      case 'svg':
-        el = doc.createElementNS(svgNS, tag)
-        break
-      case 'mathml':
-        el = doc.createElementNS(mathmlNS, tag)
-        break
-      default:
-        el = doc.createElement(tag, is ? { is } : undefined)
-        break
-    }
+    const el =
+      namespace === 'svg'
+        ? doc.createElementNS(svgNS, tag)
+        : namespace === 'mathml'
+          ? doc.createElementNS(mathmlNS, tag)
+          : doc.createElement(tag, is ? { is } : undefined)
 
     if (tag === 'select' && props && props.multiple != null) {
       ;(el as HTMLSelectElement).setAttribute('multiple', props.multiple)
@@ -80,17 +74,12 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       }
     } else {
       // fresh insert
-      switch (namespace) {
-        case 'svg':
-          templateContainer.innerHTML = `<svg>${content}</svg>`
-          break
-        case 'mathml':
-          templateContainer.innerHTML = `<math>${content}</math>`
-          break
-        default:
-          templateContainer.innerHTML = content
-          break
-      }
+      templateContainer.innerHTML =
+        namespace === 'svg'
+          ? `<svg>${content}</svg>`
+          : namespace === 'mathml'
+            ? `<math>${content}</math>`
+            : content
 
       const template = templateContainer.content
       if (namespace === 'svg' || namespace === 'mathml') {
