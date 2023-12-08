@@ -101,14 +101,7 @@ export const createApp = ((...args) => {
 
     // clear content before mounting
     container.innerHTML = ''
-    let namespace: ElementNamespace
-    if (container instanceof SVGElement) namespace = 'svg'
-    else if (
-      typeof MathMLElement === 'function' &&
-      container instanceof MathMLElement
-    )
-      namespace = 'mathml'
-    const proxy = mount(container, false, namespace)
+    const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -131,19 +124,24 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      let namespace: ElementNamespace
-      if (container instanceof SVGElement) namespace = 'svg'
-      else if (
-        typeof MathMLElement === 'function' &&
-        container instanceof MathMLElement
-      )
-        namespace = 'mathml'
-      return mount(container, true, namespace)
+      return mount(container, true, resolveRootNamespace(container))
     }
   }
 
   return app
 }) as CreateAppFunction<Element>
+
+function resolveRootNamespace(container: Element): ElementNamespace {
+  if (container instanceof SVGElement) {
+    return 'svg'
+  }
+  if (
+    typeof MathMLElement === 'function' &&
+    container instanceof MathMLElement
+  ) {
+    return 'mathml'
+  }
+}
 
 function injectNativeTagCheck(app: App) {
   // Inject `isNativeTag`
