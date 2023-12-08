@@ -39,10 +39,11 @@ enum DOMNodeTypes {
 let hasMismatch = false
 
 const isSVGContainer = (container: Element) =>
-  /svg/.test(container.namespaceURI!) && container.tagName !== 'foreignObject'
+  container.namespaceURI!.includes('svg') &&
+  container.tagName !== 'foreignObject'
 
 const isMathMLContainer = (container: Element) =>
-  /MathML/.test(container.namespaceURI!)
+  container.namespaceURI!.includes('MathML')
 
 const getContainerType = (container: Element): 'svg' | 'mathml' | undefined => {
   if (isSVGContainer(container)) return 'svg'
