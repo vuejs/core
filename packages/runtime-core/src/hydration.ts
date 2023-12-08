@@ -491,7 +491,7 @@ export function createHydrationFunctions(
         }, parentSuspense)
       }
     }
-  
+
     return el.nextSibling
   }
 
