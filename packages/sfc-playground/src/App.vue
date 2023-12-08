@@ -1,8 +1,22 @@
 <script setup lang="ts">
 import Header from './Header.vue'
 import { Repl, ReplStore, SFCOptions } from '@vue/repl'
-import Monaco from '@vue/repl/monaco-editor'
+import type Monaco from '@vue/repl/monaco-editor'
+import type CodeMirror from '@vue/repl/codemirror-editor'
 import { ref, watchEffect, onMounted } from 'vue'
+import { shallowRef } from 'vue'
+
+const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
+
+if (import.meta.env.DEV) {
+  import('@vue/repl/codemirror-editor').then(
+    mod => (EditorComponent.value = mod.default)
+  )
+} else {
+  import('@vue/repl/monaco-editor').then(
+    mod => (EditorComponent.value = mod.default)
+  )
+}
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -97,8 +111,9 @@ onMounted(() => {
     @toggle-ssr="toggleSSR"
   />
   <Repl
+    v-if="EditorComponent"
     :theme="theme"
-    :editor="Monaco"
+    :editor="EditorComponent"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
