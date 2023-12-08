@@ -133,7 +133,7 @@ export interface FunctionalComponent<
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
-    props: P & & EmitsToProps<E>,
+    props: P & EmitsToProps<ShortEmitsToObject<E>>,
     ctx: Omit<
       SetupContext<ShortEmitsToObject<E>, IfAny<S, {}, SlotsType<S>>>,
       'expose'
