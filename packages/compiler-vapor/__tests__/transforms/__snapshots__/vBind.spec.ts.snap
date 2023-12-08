@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`v-bind > .camel modifier 1`] = `
+exports[`compiler: codegen v-bind > .camel modifier 1`] = `
 "import { template as _template, children as _children, effect as _effect, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -14,7 +14,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-bind > dynamic arg 1`] = `
+exports[`compiler: codegen v-bind > dynamic arg 1`] = `
 "import { template as _template, children as _children, effect as _effect, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -28,7 +28,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-bind > no expression (shorthand) 1`] = `
+exports[`compiler: codegen v-bind > no expression (shorthand) 1`] = `
 "import { template as _template, children as _children, effect as _effect, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -42,7 +42,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-bind > no expression 1`] = `
+exports[`compiler: codegen v-bind > no expression 1`] = `
 "import { template as _template, children as _children, effect as _effect, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -56,7 +56,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-bind > should error if no expression 1`] = `
+exports[`compiler: codegen v-bind > should error if no expression 1`] = `
 "import { template as _template } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -66,7 +66,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-bind > simple expression 1`] = `
+exports[`compiler: codegen v-bind > simple expression 1`] = `
 "import { template as _template, children as _children, effect as _effect, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {

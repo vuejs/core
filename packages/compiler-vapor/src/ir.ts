@@ -58,7 +58,7 @@ export interface FragmentFactoryIRNode extends BaseIRNode {
 export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
   element: number
-  name: IRExpression
+  key: IRExpression
   value: IRExpression
 }
 
@@ -71,7 +71,7 @@ export interface SetTextIRNode extends BaseIRNode {
 export interface SetEventIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_EVENT
   element: number
-  name: IRExpression
+  key: IRExpression
   value: IRExpression
   modifiers: {
     // modifiers for addEventListener() options, e.g. .passive & .capture

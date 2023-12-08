@@ -45,7 +45,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     type: IRNodeTypes.SET_EVENT,
     loc,
     element: context.reference(),
-    name: createSimpleExpression(name, true, arg.loc),
+    key: createSimpleExpression(name, true, arg.loc),
     value: exp,
     modifiers: {
       keys: keyModifiers,

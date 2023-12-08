@@ -36,7 +36,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
         type: IRNodeTypes.SET_PROP,
         loc: dir.loc,
         element: context.reference(),
-        name: arg,
+        key: arg,
         value: exp,
       },
     ],

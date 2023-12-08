@@ -372,7 +372,7 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
 function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
   const { push, pushWithNewline, vaporHelper } = context
   pushWithNewline(`${vaporHelper('setAttr')}(n${oper.element}, `)
-  genExpression(oper.name, context)
+  genExpression(oper.key, context)
   push(`, undefined, `)
   genExpression(oper.value, context)
   push(')')
@@ -437,7 +437,7 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 
   pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
   // second arg: event name
-  genExpression(oper.name, context)
+  genExpression(oper.key, context)
   push(', ')
 
   const { keys, nonKeys, options } = oper.modifiers
