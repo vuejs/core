@@ -32,19 +32,21 @@ const modifierGuards: Record<
 /**
  * @private
  */
-export const withModifiers = (
-  fn: Function & { _withMods?: Function },
+export const withModifiers = <
+  T extends (event: Event, ...args: unknown[]) => any
+>(
+  fn: T & { _withMods?: T },
   modifiers: string[]
 ) => {
   return (
     fn._withMods ||
-    (fn._withMods = (event: Event, ...args: unknown[]) => {
+    (fn._withMods = ((event, ...args) => {
       for (let i = 0; i < modifiers.length; i++) {
         const guard = modifierGuards[modifiers[i]]
         if (guard && guard(event, modifiers)) return
       }
       return fn(event, ...args)
-    })
+    }) as T)
   )
 }
 
@@ -63,8 +65,8 @@ const keyNames: Record<string, string | string[]> = {
 /**
  * @private
  */
-export const withKeys = (
-  fn: Function & { _withKeys?: Function },
+export const withKeys = <T extends (event: KeyboardEvent) => any>(
+  fn: T & { _withKeys?: T },
   modifiers: string[]
 ) => {
   let globalKeyCodes: LegacyConfig['keyCodes']
@@ -88,7 +90,7 @@ export const withKeys = (
 
   return (
     fn._withKeys ||
-    (fn._withKeys = (event: KeyboardEvent) => {
+    (fn._withKeys = (event => {
       if (!('key' in event)) {
         return
       }
@@ -123,6 +125,6 @@ export const withKeys = (
           }
         }
       }
-    })
+    }) as T)
   )
 }
