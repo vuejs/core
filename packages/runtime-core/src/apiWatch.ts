@@ -60,10 +60,10 @@ type MapSources<T, Immediate> = {
       ? V | undefined
       : V
     : T[K] extends object
-    ? Immediate extends true
-      ? T[K] | undefined
-      : T[K]
-    : never
+      ? Immediate extends true
+        ? T[K] | undefined
+        : T[K]
+      : never
 }
 
 type OnCleanup = (cleanupFn: () => void) => void
@@ -75,6 +75,7 @@ export interface WatchOptionsBase extends DebuggerOptions {
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
   deep?: boolean
+  once?: boolean
 }
 
 export type WatchStopHandle = () => void
@@ -172,8 +173,16 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
-  { immediate, deep, flush, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
+  { immediate, deep, flush, once, onTrack, onTrigger }: WatchOptions = EMPTY_OBJ
 ): WatchStopHandle {
+  if (cb && once) {
+    const _cb = cb
+    cb = (...args) => {
+      _cb(...args)
+      unwatch()
+    }
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -184,6 +193,12 @@ function doWatch(
     if (deep !== undefined) {
       warn(
         `watch() "deep" option is only respected when using the ` +
+          `watch(source, callback, options?) signature.`
+      )
+    }
+    if (once !== undefined) {
+      warn(
+        `watch() "once" option is only respected when using the ` +
           `watch(source, callback, options?) signature.`
       )
     }
@@ -273,10 +288,11 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: () => void
+  let cleanup: (() => void) | undefined
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
+      cleanup = effect.onStop = undefined
     }
   }
 
@@ -307,7 +323,7 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!effect.active) {
+    if (!effect.active || !effect.dirty) {
       return
     }
     if (cb) {
@@ -333,8 +349,8 @@ function doWatch(
           oldValue === INITIAL_WATCHER_VALUE
             ? undefined
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-            ? []
-            : oldValue,
+              ? []
+              : oldValue,
           onCleanup
         ])
         oldValue = newValue
@@ -361,7 +377,14 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, scheduler)
+  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+
+  const unwatch = () => {
+    effect.stop()
+    if (instance && instance.scope) {
+      remove(instance.scope.effects!, effect)
+    }
+  }
 
   if (__DEV__) {
     effect.onTrack = onTrack
@@ -382,13 +405,6 @@ function doWatch(
     )
   } else {
     effect.run()
-  }
-
-  const unwatch = () => {
-    effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
-    }
   }
 
   if (__SSR__ && ssrCleanup) ssrCleanup.push(unwatch)

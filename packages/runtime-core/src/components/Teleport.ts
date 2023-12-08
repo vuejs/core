@@ -63,6 +63,7 @@ const resolveTarget = <T = RendererElement>(
 }
 
 export const TeleportImpl = {
+  name: 'Teleport',
   __isTeleport: true,
   process(
     n1: TeleportVNode | null,
@@ -268,7 +269,7 @@ export const TeleportImpl = {
   hydrate: hydrateTeleport
 }
 
-export const enum TeleportMoveTypes {
+export enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
   REORDER // moved in the main view

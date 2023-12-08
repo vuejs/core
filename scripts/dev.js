@@ -2,7 +2,7 @@
 
 // Using esbuild for faster dev builds.
 // We are still using Rollup for production builds because it generates
-// smaller files w/ better tree-shaking.
+// smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
 import { resolve, relative, dirname } from 'node:path'
@@ -16,6 +16,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const args = minimist(process.argv.slice(2))
 const target = args._[0] || 'vue'
 const format = args.f || 'global'
+const prod = args.p || false
 const inlineDeps = args.i || args.inline
 const pkg = require(`../packages/${target}/package.json`)
 
@@ -23,8 +24,8 @@ const pkg = require(`../packages/${target}/package.json`)
 const outputFormat = format.startsWith('global')
   ? 'iife'
   : format === 'cjs'
-  ? 'cjs'
-  : 'esm'
+    ? 'cjs'
+    : 'esm'
 
 const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
@@ -34,12 +35,13 @@ const outfile = resolve(
   __dirname,
   `../packages/${target}/dist/${
     target === 'vue-compat' ? `vue` : target
-  }.${postfix}.js`
+  }.${postfix}.${prod ? `prod.` : ``}js`
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
 // resolve externals
 // TODO this logic is largely duplicated from rollup.config.js
+/** @type {string[]} */
 let external = []
 if (!inlineDeps) {
   // cjs & esm-bundler: external all deps
@@ -79,7 +81,7 @@ if (!inlineDeps) {
     ]
   }
 }
-
+/** @type {Array<import('esbuild').Plugin>} */
 const plugins = [
   {
     name: 'log-rebuild',
@@ -91,7 +93,7 @@ const plugins = [
   }
 ]
 
-if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
+if (format !== 'cjs' && pkg.buildOptions?.enableNonBrowserBranches) {
   plugins.push(polyfillNode())
 }
 
@@ -109,7 +111,7 @@ esbuild
     define: {
       __COMMIT__: `"dev"`,
       __VERSION__: `"${pkg.version}"`,
-      __DEV__: `true`,
+      __DEV__: prod ? `false` : `true`,
       __TEST__: `false`,
       __BROWSER__: String(
         format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches

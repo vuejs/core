@@ -282,6 +282,56 @@ describe('component props', () => {
     expect(root.innerHTML).toBe('<div id="b">2</div>')
   })
 
+  describe('validator', () => {
+    test('validator should be called with two arguments', async () => {
+      const mockFn = vi.fn((...args: any[]) => true)
+      const Comp = defineComponent({
+        props: {
+          foo: {
+            type: Number,
+            validator: (value, props) => mockFn(value, props)
+          },
+          bar: {
+            type: Number
+          }
+        },
+        template: `<div />`
+      })
+
+      // Note this one is using the main Vue render so it can compile template
+      // on the fly
+      const root = document.createElement('div')
+      domRender(h(Comp, { foo: 1, bar: 2 }), root)
+      expect(mockFn).toHaveBeenCalledWith(1, { foo: 1, bar: 2 })
+    })
+
+    test('validator should not be able to mutate other props', async () => {
+      const mockFn = vi.fn((...args: any[]) => true)
+      const Comp = defineComponent({
+        props: {
+          foo: {
+            type: Number,
+            validator: (value, props) => !!(props.bar = 1)
+          },
+          bar: {
+            type: Number,
+            validator: value => mockFn(value)
+          }
+        },
+        template: `<div />`
+      })
+
+      // Note this one is using the main Vue render so it can compile template
+      // on the fly
+      const root = document.createElement('div')
+      domRender(h(Comp, { foo: 1, bar: 2 }), root)
+      expect(
+        `Set operation on key "bar" failed: target is readonly.`
+      ).toHaveBeenWarnedLast()
+      expect(mockFn).toHaveBeenCalledWith(2)
+    })
+  })
+
   test('warn props mutation', () => {
     let instance: ComponentInternalInstance
     let setupProps: any
@@ -336,7 +386,8 @@ describe('component props', () => {
         obj: { type: Object },
         cls: { type: MyClass },
         fn: { type: Function },
-        skipCheck: { type: [Boolean, Function], skipCheck: true }
+        skipCheck: { type: [Boolean, Function], skipCheck: true },
+        empty: { type: [] }
       },
       setup() {
         return () => null
@@ -351,7 +402,8 @@ describe('component props', () => {
         obj: 'false',
         cls: {},
         fn: true,
-        skipCheck: 'foo'
+        skipCheck: 'foo',
+        empty: [1, 2, 3]
       }),
       nodeOps.createElement('div')
     )
@@ -379,6 +431,9 @@ describe('component props', () => {
     expect(
       `Invalid prop: type check failed for prop "skipCheck". Expected Boolean | Function, got String with value "foo".`
     ).not.toHaveBeenWarned()
+    expect(
+      `Prop type [] for prop "empty" won't match anything. Did you mean to use type Array instead?`
+    ).toHaveBeenWarned()
   })
 
   // #3495

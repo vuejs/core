@@ -3,8 +3,9 @@ import {
   ElementNode,
   SourceLocation,
   CompilerError,
-  TextModes,
-  BindingMetadata
+  BindingMetadata,
+  RootNode,
+  createRoot
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -23,6 +24,7 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+  parseExpressions?: boolean
 }
 
 export interface SFCBlock {
@@ -37,7 +39,7 @@ export interface SFCBlock {
 
 export interface SFCTemplateBlock extends SFCBlock {
   type: 'template'
-  ast: ElementNode
+  ast?: RootNode
 }
 
 export interface SFCScriptBlock extends SFCBlock {
@@ -103,7 +105,8 @@ export function parse(
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
-    compiler = CompilerDOM
+    compiler = CompilerDOM,
+    parseExpressions = true
   }: SFCParseOptions = {}
 ): SFCParseResult {
   const sourceKey =
@@ -128,31 +131,8 @@ export function parse(
 
   const errors: (CompilerError | SyntaxError)[] = []
   const ast = compiler.parse(source, {
-    // there are no components at SFC parsing level
-    isNativeTag: () => true,
-    // preserve all whitespaces
-    isPreTag: () => true,
-    getTextMode: ({ tag, props }, parent) => {
-      // all top level elements except <template> are parsed as raw text
-      // containers
-      if (
-        (!parent && tag !== 'template') ||
-        // <template lang="xxx"> should also be treated as raw text
-        (tag === 'template' &&
-          props.some(
-            p =>
-              p.type === NodeTypes.ATTRIBUTE &&
-              p.name === 'lang' &&
-              p.value &&
-              p.value.content &&
-              p.value.content !== 'html'
-          ))
-      ) {
-        return TextModes.RAWTEXT
-      } else {
-        return TextModes.DATA
-      }
-    },
+    parseMode: 'sfc',
+    prefixIdentifiers: parseExpressions,
     onError: e => {
       errors.push(e)
     }
@@ -161,7 +141,8 @@ export function parse(
     if (node.type !== NodeTypes.ELEMENT) {
       return
     }
-    // we only want to keep the nodes that are not empty (when the tag is not a template)
+    // we only want to keep the nodes that are not empty
+    // (when the tag is not a template)
     if (
       ignoreEmpty &&
       node.tag !== 'template' &&
@@ -178,7 +159,10 @@ export function parse(
             source,
             false
           ) as SFCTemplateBlock)
-          templateBlock.ast = node
+
+          if (!templateBlock.attrs.src) {
+            templateBlock.ast = createRoot(node.children, source)
+          }
 
           // warn against 2.x <template functional>
           if (templateBlock.attrs.functional) {
@@ -188,7 +172,9 @@ export function parse(
                 `difference from stateful ones. Just use a normal <template> ` +
                 `instead.`
             ) as CompilerError
-            err.loc = node.props.find(p => p.name === 'functional')!.loc
+            err.loc = node.props.find(
+              p => p.type === NodeTypes.ATTRIBUTE && p.name === 'functional'
+            )!.loc
             errors.push(err)
           }
         } else {
@@ -253,22 +239,34 @@ export function parse(
     }
   }
 
+  // dedent pug/jade templates
+  let templateColumnOffset = 0
+  if (
+    descriptor.template &&
+    (descriptor.template.lang === 'pug' || descriptor.template.lang === 'jade')
+  ) {
+    ;[descriptor.template.content, templateColumnOffset] = dedent(
+      descriptor.template.content
+    )
+  }
+
   if (sourceMap) {
-    const genMap = (block: SFCBlock | null) => {
+    const genMap = (block: SFCBlock | null, columnOffset = 0) => {
       if (block && !block.src) {
         block.map = generateSourceMap(
           filename,
           source,
           block.content,
           sourceRoot,
-          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0
+          !pad || block.type === 'template' ? block.loc.start.line - 1 : 0,
+          columnOffset
         )
       }
     }
-    genMap(descriptor.template)
+    genMap(descriptor.template, templateColumnOffset)
     genMap(descriptor.script)
-    descriptor.styles.forEach(genMap)
-    descriptor.customBlocks.forEach(genMap)
+    descriptor.styles.forEach(s => genMap(s))
+    descriptor.customBlocks.forEach(s => genMap(s))
   }
 
   // parse CSS vars
@@ -307,32 +305,11 @@ function createBlock(
   pad: SFCParseOptions['pad']
 ): SFCBlock {
   const type = node.tag
-  let { start, end } = node.loc
-  let content = ''
-  if (node.children.length) {
-    start = node.children[0].loc.start
-    end = node.children[node.children.length - 1].loc.end
-    content = source.slice(start.offset, end.offset)
-  } else {
-    const offset = node.loc.source.indexOf(`</`)
-    if (offset > -1) {
-      start = {
-        line: start.line,
-        column: start.column + offset,
-        offset: start.offset + offset
-      }
-    }
-    end = { ...start }
-  }
-  const loc = {
-    source: content,
-    start,
-    end
-  }
+  const loc = node.innerLoc!
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
-    content,
+    content: source.slice(loc.start.offset, loc.end.offset),
     loc,
     attrs
   }
@@ -341,18 +318,19 @@ function createBlock(
   }
   node.props.forEach(p => {
     if (p.type === NodeTypes.ATTRIBUTE) {
-      attrs[p.name] = p.value ? p.value.content || true : true
-      if (p.name === 'lang') {
+      const name = p.name
+      attrs[name] = p.value ? p.value.content || true : true
+      if (name === 'lang') {
         block.lang = p.value && p.value.content
-      } else if (p.name === 'src') {
+      } else if (name === 'src') {
         block.src = p.value && p.value.content
       } else if (type === 'style') {
-        if (p.name === 'scoped') {
+        if (name === 'scoped') {
           ;(block as SFCStyleBlock).scoped = true
-        } else if (p.name === 'module') {
-          ;(block as SFCStyleBlock).module = attrs[p.name]
+        } else if (name === 'module') {
+          ;(block as SFCStyleBlock).module = attrs[name]
         }
-      } else if (type === 'script' && p.name === 'setup') {
+      } else if (type === 'script' && name === 'setup') {
         ;(block as SFCScriptBlock).setup = attrs.setup
       }
     }
@@ -369,35 +347,35 @@ function generateSourceMap(
   source: string,
   generated: string,
   sourceRoot: string,
-  lineOffset: number
+  lineOffset: number,
+  columnOffset: number
 ): RawSourceMap {
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/')
   })
   map.setSourceContent(filename, source)
+  map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
     if (!emptyRE.test(line)) {
       const originalLine = index + 1 + lineOffset
       const generatedLine = index + 1
       for (let i = 0; i < line.length; i++) {
         if (!/\s/.test(line[i])) {
-          map.addMapping({
+          map._mappings.add({
+            originalLine,
+            originalColumn: i + columnOffset,
+            generatedLine,
+            generatedColumn: i,
             source: filename,
-            original: {
-              line: originalLine,
-              column: i
-            },
-            generated: {
-              line: generatedLine,
-              column: i
-            }
+            // @ts-ignore
+            name: null
           })
         }
       }
     }
   })
-  return JSON.parse(map.toString())
+  return map.toJSON()
 }
 
 function padContent(
@@ -465,4 +443,32 @@ export function hmrShouldReload(
   }
 
   return false
+}
+
+/**
+ * Dedent a string.
+ *
+ * This removes any whitespace that is common to all lines in the string from
+ * each line in the string.
+ */
+function dedent(s: string): [string, number] {
+  const lines = s.split('\n')
+  const minIndent = lines.reduce(function (minIndent, line) {
+    if (line.trim() === '') {
+      return minIndent
+    }
+    const indent = line.match(/^\s*/)?.[0]?.length || 0
+    return Math.min(indent, minIndent)
+  }, Infinity)
+  if (minIndent === 0) {
+    return [s, minIndent]
+  }
+  return [
+    lines
+      .map(function (line) {
+        return line.slice(minIndent)
+      })
+      .join('\n'),
+    minIndent
+  ]
 }

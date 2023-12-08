@@ -91,7 +91,7 @@ describe('api: watch', () => {
     array.push(1)
     await nextTick()
     expect(spy).toBeCalledTimes(1)
-    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+    expect(spy).toBeCalledWith([1], [1], expect.anything())
   })
 
   it('should not fire if watched getter result did not change', async () => {
@@ -1204,5 +1204,78 @@ describe('api: watch', () => {
     // both watchers run again event though component has been unmounted
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
+  })
+
+  const options = [
+    { name: 'only trigger once watch' },
+    {
+      deep: true,
+      name: 'only trigger once watch with deep'
+    },
+    {
+      flush: 'sync',
+      name: 'only trigger once watch with flush: sync'
+    },
+    {
+      flush: 'pre',
+      name: 'only trigger once watch with flush: pre'
+    },
+    {
+      immediate: true,
+      name: 'only trigger once watch with immediate'
+    }
+  ] as const
+  test.each(options)('$name', async option => {
+    const count = ref(0)
+    const cb = vi.fn()
+
+    watch(count, cb, { once: true, ...option })
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    count.value++
+    await nextTick()
+
+    expect(count.value).toBe(2)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  // #5151
+  test('OnCleanup also needs to be cleaned，', async () => {
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+    const num = ref(0)
+
+    watch(num, (value, oldValue, onCleanup) => {
+      if (value > 1) {
+        return
+      }
+      spy1()
+      onCleanup(() => {
+        // OnCleanup also needs to be cleaned
+        spy2()
+      })
+    })
+
+    num.value++
+    await nextTick()
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(0)
+
+    num.value++
+    await nextTick()
+
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+
+    num.value++
+    await nextTick()
+    // would not be calld when value>1
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
   })
 })

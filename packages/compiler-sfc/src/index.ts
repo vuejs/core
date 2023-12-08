@@ -1,19 +1,16 @@
 export const version = __VERSION__
 
 // API
-export { parse, parseCache } from './parse'
+export { parse } from './parse'
 export { compileTemplate } from './compileTemplate'
 export { compileStyle, compileStyleAsync } from './compileStyle'
 export { compileScript } from './compileScript'
 export { rewriteDefault, rewriteDefaultAST } from './rewriteDefault'
 export { resolveTypeElements, inferRuntimeType } from './script/resolveType'
 
-// TODO remove in 3.4
-export {
-  shouldTransform as shouldTransformRef,
-  transform as transformRef,
-  transformAST as transformRefAST
-} from '@vue/reactivity-transform'
+import { SFCParseResult, parseCache as _parseCache } from './parse'
+// #9521 export parseCache as a simple map to avoid exposing LRU types
+export const parseCache = _parseCache as Map<string, SFCParseResult>
 
 // Utilities
 export { parse as babelParse } from '@babel/parser'
@@ -33,6 +30,8 @@ export {
 
 // Internals for type resolution
 export { invalidateTypeCache, registerTS } from './script/resolveType'
+export { extractRuntimeProps } from './script/defineProps'
+export { extractRuntimeEmits } from './script/defineEmits'
 
 // Types
 export type {
@@ -58,6 +57,7 @@ export type { SFCScriptCompileOptions } from './compileScript'
 export type { ScriptCompileContext } from './script/context'
 export type {
   TypeResolveContext,
+  SimpleTypeResolveOptions,
   SimpleTypeResolveContext
 } from './script/resolveType'
 export type {
@@ -69,3 +69,10 @@ export type {
   CompilerError,
   BindingMetadata
 } from '@vue/compiler-core'
+
+/**
+ * @deprecated this is preserved to avoid breaking vite-plugin-vue < 5.0
+ * with reactivityTransform: true. The desired behavior should be silently
+ * ignoring the option instead of breaking.
+ */
+export const shouldTransformRef = () => false

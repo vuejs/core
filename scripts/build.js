@@ -26,7 +26,7 @@ import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
@@ -38,6 +38,7 @@ const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
+/** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a
 const writeSize = args.size
 const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
@@ -75,19 +76,36 @@ async function run() {
   }
 }
 
+/**
+ * Builds all the targets in parallel.
+ * @param {Array<string>} targets - An array of targets to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function buildAll(targets) {
   await runParallel(cpus().length, targets, build)
 }
 
+/**
+ * Runs iterator function in parallel.
+ * @template T - The type of items in the data source
+ * @param {number} maxConcurrency - The maximum concurrency.
+ * @param {Array<T>} source - The data source
+ * @param {(item: T) => Promise<void>} iteratorFn - The iteratorFn
+ * @returns {Promise<void[]>} - A Promise array containing all iteration results.
+ */
 async function runParallel(maxConcurrency, source, iteratorFn) {
+  /**@type {Promise<void>[]} */
   const ret = []
+  /**@type {Promise<void>[]} */
   const executing = []
   for (const item of source) {
-    const p = Promise.resolve().then(() => iteratorFn(item, source))
+    const p = Promise.resolve().then(() => iteratorFn(item))
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
       executing.push(e)
       if (executing.length >= maxConcurrency) {
         await Promise.race(executing)
@@ -96,7 +114,11 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
   }
   return Promise.all(ret)
 }
-
+/**
+ * Builds the target.
+ * @param {string} target - The target to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   const pkg = require(`${pkgDir}/package.json`)
@@ -134,6 +156,11 @@ async function build(target) {
   )
 }
 
+/**
+ * Checks the sizes of all targets.
+ * @param {string[]} targets - The targets to check sizes for.
+ * @returns {Promise<void>}
+ */
 async function checkAllSizes(targets) {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
@@ -145,6 +172,11 @@ async function checkAllSizes(targets) {
   console.log()
 }
 
+/**
+ * Checks the size of a target.
+ * @param {string} target - The target to check the size for.
+ * @returns {Promise<void>}
+ */
 async function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
@@ -153,6 +185,11 @@ async function checkSize(target) {
   }
 }
 
+/**
+ * Checks the file size.
+ * @param {string} filePath - The path of the file to check the size for.
+ * @returns {Promise<void>}
+ */
 async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return

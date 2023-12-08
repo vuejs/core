@@ -4,7 +4,7 @@ import { readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const resolveEntryForPkg = p =>
+const resolveEntryForPkg = (/** @type {string} */ p) =>
   path.resolve(
     fileURLToPath(import.meta.url),
     `../../packages/${p}/src/index.ts`
@@ -12,6 +12,7 @@ const resolveEntryForPkg = p =>
 
 const dirs = readdirSync(new URL('../packages', import.meta.url))
 
+/** @type {Record<string, string>} */
 const entries = {
   vue: resolveEntryForPkg('vue'),
   'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),

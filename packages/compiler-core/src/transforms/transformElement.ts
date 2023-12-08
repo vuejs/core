@@ -19,7 +19,8 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  JSChildNode
 } from '../ast'
 import {
   PatchFlags,
@@ -49,12 +50,10 @@ import {
   GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
-  getInnerRange,
   toValidAssetId,
   findProp,
   isCoreComponent,
   isStaticArgOf,
-  findDir,
   isStaticExp
 } from '../utils'
 import { buildSlots } from './vSlot'
@@ -285,19 +284,6 @@ export function resolveComponentType(
     }
   }
 
-  // 1.5 v-is (TODO: remove in 3.4)
-  const isDir = !isExplicitDynamic && findDir(node, 'is')
-  if (isDir && isDir.exp) {
-    if (__DEV__) {
-      context.onWarn(
-        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
-      )
-    }
-    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-      isDir.exp
-    ])
-  }
-
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
   const builtIn = isCoreComponent(tag) || context.isBuiltInComponent(tag)
   if (builtIn) {
@@ -385,6 +371,13 @@ function resolveSetupReference(name: string, context: TransformContext) {
         `${context.helperString(UNREF)}(${fromMaybeRef})`
       : `$setup[${JSON.stringify(fromMaybeRef)}]`
   }
+
+  const fromProps = checkType(BindingTypes.PROPS)
+  if (fromProps) {
+    return `${context.helperString(UNREF)}(${
+      context.inline ? '__props' : '$props'
+    }[${JSON.stringify(fromProps)}])`
+  }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -452,6 +445,12 @@ export function buildProps(
         hasVnodeHook = true
       }
 
+      if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
+        // handler wrapped with internal helper e.g. withModifiers(fn)
+        // extract the actual expression
+        value = value.arguments[0] as JSChildNode
+      }
+
       if (
         value.type === NodeTypes.JS_CACHE_EXPRESSION ||
         ((value.type === NodeTypes.SIMPLE_EXPRESSION ||
@@ -489,7 +488,7 @@ export function buildProps(
     // static attribute
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
-      const { loc, name, value } = prop
+      const { loc, name, nameLoc, value } = prop
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
@@ -536,11 +535,7 @@ export function buildProps(
       }
       properties.push(
         createObjectProperty(
-          createSimpleExpression(
-            name,
-            true,
-            getInnerRange(loc, 0, name.length)
-          ),
+          createSimpleExpression(name, true, nameLoc),
           createSimpleExpression(
             value ? value.content : '',
             isStatic,
@@ -550,7 +545,7 @@ export function buildProps(
       )
     } else {
       // directives
-      const { name, arg, exp, loc } = prop
+      const { name, arg, exp, loc, modifiers } = prop
       const isVBind = name === 'bind'
       const isVOn = name === 'on'
 
@@ -678,6 +673,11 @@ export function buildProps(
         continue
       }
 
+      // force hydration for v-bind with .prop modifier
+      if (isVBind && modifiers.includes('prop')) {
+        patchFlag |= PatchFlags.NEED_HYDRATION
+      }
+
       const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
         // has built-in directive transform.
@@ -743,12 +743,12 @@ export function buildProps(
       patchFlag |= PatchFlags.PROPS
     }
     if (hasHydrationEventBinding) {
-      patchFlag |= PatchFlags.HYDRATE_EVENTS
+      patchFlag |= PatchFlags.NEED_HYDRATION
     }
   }
   if (
     !shouldUseBlock &&
-    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
+    (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
