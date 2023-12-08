@@ -232,7 +232,7 @@ export type {
   ComponentCustomProps,
   AllowedComponentProps
 } from './component'
-export type { DefineComponent } from './apiDefineComponent'
+export type { DefineComponent, PublicProps } from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
