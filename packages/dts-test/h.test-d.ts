@@ -9,7 +9,7 @@ import {
   Component,
   resolveComponent
 } from 'vue'
-import { describe, expectAssignable } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('h inference w/ element', () => {
   // key
