@@ -71,7 +71,7 @@
     "@types/hash-sum": "^1.0.2",
     "@types/node": "^20.10.3",
     "@typescript-eslint/parser": "^6.13.0",
-    "@vitest/coverage-istanbul": "^1.0.0-beta.4",
+    "@vitest/coverage-istanbul": "^1.0.2",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",

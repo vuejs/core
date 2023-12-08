@@ -45,7 +45,7 @@ importers:
         specifier: ^6.13.0
         version: 6.13.0(eslint@8.54.0)(typescript@5.2.2)
       '@vitest/coverage-istanbul':
-        specifier: ^1.0.0-beta.4
+        specifier: ^1.0.2
         version: 1.0.2(vitest@1.0.1)
       '@vue/consolidate':
         specifier: 0.17.3
