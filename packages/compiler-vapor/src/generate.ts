@@ -494,31 +494,31 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
     },
     // 3rd arg: event handler
     () => {
-      if (oper.value && oper.value.content.trim()) {
-        const pushWithKeys = (fn: () => void) => {
-          push(`${vaporHelper('withKeys')}(`)
-          fn()
-          push(`, ${genArrayExpression(keys)})`)
-        }
-        const pushWithModifiers = (fn: () => void) => {
-          push(`${vaporHelper('withModifiers')}(`)
-          fn()
-          push(`, ${genArrayExpression(nonKeys)})`)
-        }
-        const pushNoop = (fn: () => void) => fn()
-
-        ;(keys.length ? pushWithKeys : pushNoop)(() =>
-          (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
-            push('(...args) => (')
-            genExpression(oper.value!, context)
-            push(' && ')
-            genExpression(oper.value!, context)
-            push('(...args))')
-          }),
-        )
-      } else {
-        push('() => {}')
+      const pushWithKeys = (fn: () => void) => {
+        push(`${vaporHelper('withKeys')}(`)
+        fn()
+        push(`, ${genArrayExpression(keys)})`)
       }
+      const pushWithModifiers = (fn: () => void) => {
+        push(`${vaporHelper('withModifiers')}(`)
+        fn()
+        push(`, ${genArrayExpression(nonKeys)})`)
+      }
+      const pushNoop = (fn: () => void) => fn()
+
+      ;(keys.length ? pushWithKeys : pushNoop)(() =>
+        (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
+          if (oper.value && oper.value.content.trim()) {
+            push('(...args) => (')
+            genExpression(oper.value, context)
+            push(' && ')
+            genExpression(oper.value, context)
+            push('(...args))')
+          } else {
+            push('() => {}')
+          }
+        }),
+      )
     },
     // 4th arg, gen options
     !!options.length &&
