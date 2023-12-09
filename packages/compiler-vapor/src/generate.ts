@@ -525,11 +525,11 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
   if (isString(node)) return push(node)
 
   const { content: rawExpr, ast, isStatic, loc } = node
-  if (__BROWSER__) {
-    return push(rawExpr)
+  if (isStatic) {
+    return push(JSON.stringify(rawExpr), NewlineType.None, loc)
   }
-
   if (
+    __BROWSER__ ||
     !context.prefixIdentifiers ||
     !node.content.trim() ||
     // there was a parsing error
@@ -538,9 +538,6 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
     isLiteralWhitelisted(rawExpr)
   ) {
     return push(rawExpr, NewlineType.None, loc)
-  }
-  if (isStatic) {
-    return push(JSON.stringify(rawExpr), NewlineType.None, loc)
   }
 
   if (ast === null) {
