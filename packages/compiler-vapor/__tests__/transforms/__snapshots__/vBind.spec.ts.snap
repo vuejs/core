@@ -8,7 +8,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _effect(() => {
-    _setAttr(n1, "foo-bar", undefined, _ctx.id)
+    _setAttr(n1, "fooBar", undefined, _ctx.id)
   })
   return n0
 }"

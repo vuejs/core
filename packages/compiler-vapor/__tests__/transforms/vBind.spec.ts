@@ -165,7 +165,7 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test.fails('.camel modifier', () => {
+  test('.camel modifier', () => {
     const node = parseWithVBind(`<div v-bind:foo-bar.camel="id"/>`)
     expect(node.effect[0].operations[0]).toMatchObject({
       key: {
@@ -179,7 +179,7 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test.fails('.camel modifier w/ no expression', () => {
+  test('.camel modifier w/ no expression', () => {
     const node = parseWithVBind(`<div v-bind:foo-bar.camel />`)
     expect(node.effect[0].operations[0]).toMatchObject({
       key: {
@@ -193,13 +193,13 @@ describe('compiler: transform v-bind', () => {
     })
   })
 
-  test.fails('.camel modifier w/ dynamic arg', () => {
+  test('.camel modifier w/ dynamic arg', () => {
     const node = parseWithVBind(`<div v-bind:[foo].camel="id"/>`)
     expect(node.effect[0].operations[0]).toMatchObject({
+      runtimeCamelize: true,
       key: {
         content: `foo`,
         isStatic: false,
-        somethingShouldBeTrue: true,
       },
       value: {
         content: `id`,
@@ -289,8 +289,7 @@ describe('compiler: codegen v-bind', () => {
     expect(code).contains('_setAttr(n1, _ctx.id, undefined, _ctx.id)')
   })
 
-  // TODO: camel modifier for v-bind
-  test.fails('.camel modifier', () => {
+  test('.camel modifier', () => {
     const code = compile(`<div v-bind:foo-bar.camel="id"/>`)
 
     expect(code).matchSnapshot()

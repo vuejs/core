@@ -8,7 +8,7 @@ import { IRNodeTypes } from '../ir'
 import type { DirectiveTransform } from '../transform'
 
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
-  let { arg, exp, loc } = dir
+  let { arg, exp, loc, modifiers } = dir
 
   if (!arg) {
     // TODO support v-bind="{}"
@@ -19,6 +19,15 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     const propName = camelize(arg.content)
     exp = createSimpleExpression(propName, false, arg.loc)
     exp.ast = null
+  }
+
+  let camel = false
+  if (modifiers.includes('camel')) {
+    if (arg.isStatic) {
+      arg.content = camelize(arg.content)
+    } else {
+      camel = true
+    }
   }
 
   if (!exp.content.trim()) {
@@ -38,6 +47,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
         element: context.reference(),
         key: arg,
         value: exp,
+        runtimeCamelize: camel,
       },
     ],
   )
