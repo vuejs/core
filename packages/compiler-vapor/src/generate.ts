@@ -58,6 +58,10 @@ export interface CodegenContext extends Required<CodegenOptions> {
     loc?: SourceLocation,
     name?: string,
   ): void
+  pushMulti(
+    codes: [left: string, right: string, segment?: string],
+    ...fn: Array<false | (() => void)>
+  ): void
   indent(): void
   deindent(): void
   newline(): void
@@ -169,6 +173,15 @@ function createCodegenContext(
     pushWithNewline(code, newlineIndex, node) {
       context.newline()
       context.push(code, newlineIndex, node)
+    },
+    pushMulti([left, right, seg], ...fns) {
+      fns = fns.filter(Boolean)
+      context.push(left)
+      for (let i = 0; i < fns.length; i++) {
+        ;(fns[i] as () => void)()
+        if (seg && i < fns.length - 1) context.push(seg)
+      }
+      context.push(right)
     },
     indent() {
       ++context.indentLevel
@@ -435,56 +448,58 @@ function genAppendNode(oper: AppendNodeIRNode, context: CodegenContext) {
 }
 
 function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
-  const { vaporHelper, push, pushWithNewline } = context
-
-  pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
-
-  // 2nd arg: event name
-  if (oper.keyOverride) {
-    const find = JSON.stringify(oper.keyOverride[0])
-    const replacement = JSON.stringify(oper.keyOverride[1])
-    push('(')
-    genExpression(oper.key, context)
-    push(`) === ${find} ? ${replacement} : (`)
-    genExpression(oper.key, context)
-    push(')')
-  } else {
-    genExpression(oper.key, context)
-  }
-  push(', ')
-
+  const { vaporHelper, push, pushWithNewline, pushMulti: pushMulti } = context
   const { keys, nonKeys, options } = oper.modifiers
 
-  // 3rd arg: event handler
-  if (oper.value && oper.value.content.trim()) {
-    if (keys.length) {
-      push(`${vaporHelper('withKeys')}(`)
-    }
-    if (nonKeys.length) {
-      push(`${vaporHelper('withModifiers')}(`)
-    }
-    push('(...args) => (')
-    genExpression(oper.value, context)
-    push(' && ')
-    genExpression(oper.value, context)
-    push('(...args))')
+  pushWithNewline(vaporHelper('on'))
+  pushMulti(
+    ['(', ')', ', '],
+    // 1st arg: event name
+    () => push(`n${oper.element}`),
+    // 2nd arg: event name
+    () => {
+      if (oper.keyOverride) {
+        const find = JSON.stringify(oper.keyOverride[0])
+        const replacement = JSON.stringify(oper.keyOverride[1])
+        pushMulti(['(', ')'], () => genExpression(oper.key, context))
+        push(` === ${find} ? ${replacement} : `)
+        pushMulti(['(', ')'], () => genExpression(oper.key, context))
+      } else {
+        genExpression(oper.key, context)
+      }
+    },
+    // 3rd arg: event handler
+    () => {
+      if (oper.value && oper.value.content.trim()) {
+        const pushWithKeys = (fn: () => void) => {
+          push(`${vaporHelper('withKeys')}(`)
+          fn()
+          push(`, ${genArrayExpression(keys)})`)
+        }
+        const pushWithModifiers = (fn: () => void) => {
+          push(`${vaporHelper('withModifiers')}(`)
+          fn()
+          push(`, ${genArrayExpression(nonKeys)})`)
+        }
+        const pushNoop = (fn: () => void) => fn()
 
-    if (nonKeys.length) {
-      push(`, ${genArrayExpression(nonKeys)})`)
-    }
-    if (keys.length) {
-      push(`, ${genArrayExpression(keys)})`)
-    }
-  } else {
-    push('() => {}')
-  }
-
-  // 4th arg, gen options
-  if (options.length) {
-    push(`, { ${options.map((v) => `${v}: true`).join(', ')} }`)
-  }
-
-  push(')')
+        ;(keys.length ? pushWithKeys : pushNoop)(() =>
+          (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
+            push('(...args) => (')
+            genExpression(oper.value!, context)
+            push(' && ')
+            genExpression(oper.value!, context)
+            push('(...args))')
+          }),
+        )
+      } else {
+        push('() => {}')
+      }
+    },
+    // 4th arg, gen options
+    !!options.length &&
+      (() => push(`{ ${options.map((v) => `${v}: true`).join(', ')} }`)),
+  )
 }
 
 function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
