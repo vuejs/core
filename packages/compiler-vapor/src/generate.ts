@@ -52,7 +52,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
     loc?: SourceLocation,
     name?: string,
   ): void
-  pushWithNewline(
+  pushNewline(
     code: string,
     newlineIndex?: number,
     loc?: SourceLocation,
@@ -60,8 +60,9 @@ export interface CodegenContext extends Required<CodegenOptions> {
   ): void
   pushMulti(
     codes: [left: string, right: string, segment?: string],
-    ...fn: Array<false | (() => void)>
+    ...fn: Array<false | string | (() => void)>
   ): void
+  pushFnCall(name: string, ...args: Array<false | string | (() => void)>): void
   withIndent(fn: () => void): void
   newline(): void
 
@@ -169,7 +170,7 @@ function createCodegenContext(
         }
       }
     },
-    pushWithNewline(code, newlineIndex, node) {
+    pushNewline(code, newlineIndex, node) {
       context.newline()
       context.push(code, newlineIndex, node)
     },
@@ -177,10 +178,17 @@ function createCodegenContext(
       fns = fns.filter(Boolean)
       context.push(left)
       for (let i = 0; i < fns.length; i++) {
-        ;(fns[i] as () => void)()
+        const fn = fns[i] as string | (() => void)
+
+        if (isString(fn)) context.push(fn)
+        else fn()
         if (seg && i < fns.length - 1) context.push(seg)
       }
       context.push(right)
+    },
+    pushFnCall(name, ...args) {
+      context.push(name)
+      context.pushMulti(['(', ')', ', '], ...args)
     },
     withIndent(fn) {
       ++context.indentLevel
@@ -188,12 +196,8 @@ function createCodegenContext(
       --context.indentLevel
     },
     newline() {
-      newline(context.indentLevel)
+      context.push(`\n${`  `.repeat(context.indentLevel)}`, NewlineType.Start)
     },
-  }
-
-  function newline(n: number) {
-    context.push(`\n${`  `.repeat(n)}`, NewlineType.Start)
   }
 
   function addMapping(loc: Position, name: string | null = null) {
@@ -231,7 +235,7 @@ export function generate(
   const ctx = createCodegenContext(ir, options)
   const {
     push,
-    pushWithNewline,
+    pushNewline,
     withIndent,
     newline,
     helpers,
@@ -246,21 +250,21 @@ export function generate(
   } else {
     // placeholder for preamble
     newline()
-    pushWithNewline(`export function ${functionName}(_ctx) {`)
+    pushNewline(`export function ${functionName}(_ctx) {`)
   }
 
   withIndent(() => {
     ir.template.forEach((template, i) => {
       if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
         // TODO source map?
-        pushWithNewline(
+        pushNewline(
           `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
             template.template,
           )})`,
         )
       } else {
         // fragment
-        pushWithNewline(
+        pushNewline(
           `const t0 = ${vaporHelper('fragment')}()\n`,
           NewlineType.End,
         )
@@ -268,11 +272,11 @@ export function generate(
     })
 
     {
-      pushWithNewline(`const n${ir.dynamic.id} = t0()`)
+      pushNewline(`const n${ir.dynamic.id} = t0()`)
 
       const children = genChildren(ir.dynamic.children)
       if (children) {
-        pushWithNewline(
+        pushNewline(
           `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
         )
       }
@@ -289,18 +293,18 @@ export function generate(
       }
 
       for (const { operations } of ir.effect) {
-        pushWithNewline(`${vaporHelper('effect')}(() => {`)
+        pushNewline(`${vaporHelper('effect')}(() => {`)
         withIndent(() => {
           for (const operation of operations) {
             genOperation(operation, ctx)
           }
         })
-        pushWithNewline('})')
+        pushNewline('})')
       }
 
       // TODO multiple-template
       // TODO return statement in IR
-      pushWithNewline(`return n${ir.dynamic.id}`)
+      pushNewline(`return n${ir.dynamic.id}`)
     }
   })
 
@@ -336,7 +340,6 @@ export function generate(
 
 function genChildren(children: IRDynamicChildren) {
   let code = ''
-  // TODO
   let offset = 0
   for (const [index, child] of Object.entries(children)) {
     const childrenLength = Object.keys(child.children).length
@@ -388,77 +391,93 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
 }
 
 function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
-  const { push, pushWithNewline, vaporHelper, helper } = context
-  pushWithNewline(`${vaporHelper('setAttr')}(n${oper.element}, `)
-  if (oper.runtimeCamelize) push(`${helper('camelize')}(`)
-  genExpression(oper.key, context)
-  if (oper.runtimeCamelize) push(`)`)
-  push(`, undefined, `)
-  genExpression(oper.value, context)
-  push(')')
+  const { pushFnCall, newline, vaporHelper, helper } = context
+
+  newline()
+  pushFnCall(
+    vaporHelper('setAttr'),
+    `n${oper.element}`,
+    // 2. key name
+    () => {
+      if (oper.runtimeCamelize) {
+        pushFnCall(helper('camelize'), () => genExpression(oper.key, context))
+      } else {
+        genExpression(oper.key, context)
+      }
+    },
+    'undefined',
+    () => genExpression(oper.value, context),
+  )
 }
 
 function genSetText(oper: SetTextIRNode, context: CodegenContext) {
-  const { push, pushWithNewline, vaporHelper } = context
-  pushWithNewline(`${vaporHelper('setText')}(n${oper.element}, undefined, `)
-  genExpression(oper.value, context)
-  push(')')
+  const { pushFnCall, newline, vaporHelper } = context
+  newline()
+  pushFnCall(vaporHelper('setText'), `n${oper.element}`, 'undefined', () =>
+    genExpression(oper.value, context),
+  )
 }
 
 function genSetHtml(oper: SetHtmlIRNode, context: CodegenContext) {
-  const { push, pushWithNewline, vaporHelper } = context
-  pushWithNewline(`${vaporHelper('setHtml')}(n${oper.element}, undefined, `)
-  genExpression(oper.value, context)
-  push(')')
+  const { newline, pushFnCall, vaporHelper } = context
+  newline()
+  pushFnCall(vaporHelper('setHtml'), `n${oper.element}`, 'undefined', () =>
+    genExpression(oper.value, context),
+  )
 }
 
 function genCreateTextNode(
   oper: CreateTextNodeIRNode,
   context: CodegenContext,
 ) {
-  const { push, pushWithNewline, vaporHelper } = context
-  pushWithNewline(`const n${oper.id} = ${vaporHelper('createTextNode')}(`)
-  genExpression(oper.value, context)
-  push(')')
+  const { pushNewline, pushFnCall, vaporHelper } = context
+  pushNewline(`const n${oper.id} = `)
+  pushFnCall(vaporHelper('createTextNode'), () =>
+    genExpression(oper.value, context),
+  )
 }
 
 function genInsertNode(oper: InsertNodeIRNode, context: CodegenContext) {
-  const { pushWithNewline, vaporHelper } = context
+  const { newline, pushFnCall, vaporHelper } = context
   const elements = ([] as number[]).concat(oper.element)
   let element = elements.map((el) => `n${el}`).join(', ')
   if (elements.length > 1) element = `[${element}]`
-  pushWithNewline(
-    `${vaporHelper('insert')}(${element}, n${
-      oper.parent
-    }${`, n${oper.anchor}`})`,
+  newline()
+  pushFnCall(
+    vaporHelper('insert'),
+    element,
+    `n${oper.parent}`,
+    `n${oper.anchor}`,
   )
 }
 
 function genPrependNode(oper: PrependNodeIRNode, context: CodegenContext) {
-  const { pushWithNewline, vaporHelper } = context
-  pushWithNewline(
-    `${vaporHelper('prepend')}(n${oper.parent}, ${oper.elements
-      .map((el) => `n${el}`)
-      .join(', ')})`,
+  const { newline, pushFnCall, vaporHelper } = context
+  newline()
+  pushFnCall(
+    vaporHelper('prepend'),
+    `n${oper.parent}`,
+    oper.elements.map((el) => `n${el}`).join(', '),
   )
 }
 
 function genAppendNode(oper: AppendNodeIRNode, context: CodegenContext) {
-  const { pushWithNewline, vaporHelper } = context
-  pushWithNewline(
-    `${vaporHelper('append')}(n${oper.parent}, ${oper.elements
-      .map((el) => `n${el}`)
-      .join(', ')})`,
+  const { newline, pushFnCall, vaporHelper } = context
+  newline()
+  pushFnCall(
+    vaporHelper('append'),
+    `n${oper.parent}`,
+    oper.elements.map((el) => `n${el}`).join(', '),
   )
 }
 
 function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
-  const { vaporHelper, push, pushWithNewline, pushMulti: pushMulti } = context
+  const { vaporHelper, push, newline, pushMulti, pushFnCall } = context
   const { keys, nonKeys, options } = oper.modifiers
 
-  pushWithNewline(vaporHelper('on'))
-  pushMulti(
-    ['(', ')', ', '],
+  newline()
+  pushFnCall(
+    vaporHelper('on'),
     // 1st arg: event name
     () => push(`n${oper.element}`),
     // 2nd arg: event name
@@ -508,46 +527,58 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 }
 
 function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
-  const { push, pushWithNewline, vaporHelper, bindingMetadata } = context
+  const { push, newline, pushFnCall, pushMulti, vaporHelper, bindingMetadata } =
+    context
   const { dir } = oper
 
   // TODO merge directive for the same node
-  pushWithNewline(`${vaporHelper('withDirectives')}(n${oper.element}, [[`)
+  newline()
+  pushFnCall(
+    vaporHelper('withDirectives'),
+    // 1st arg: node
+    `n${oper.element}`,
+    // 2nd arg: directives
+    () => {
+      push('[')
+      // directive
+      pushMulti(['[', ']', ', '], () => {
+        if (dir.name === 'show') {
+          push(vaporHelper('vShow'))
+        } else {
+          const directiveReference = camelize(`v-${dir.name}`)
+          // TODO resolve directive
+          if (bindingMetadata[directiveReference]) {
+            const directiveExpression =
+              createSimpleExpression(directiveReference)
+            directiveExpression.ast = null
+            genExpression(directiveExpression, context)
+          }
+        }
 
-  if (dir.name === 'show') {
-    push(vaporHelper('vShow'))
-  } else {
-    const directiveReference = camelize(`v-${dir.name}`)
-    // TODO resolve directive
-    if (bindingMetadata[directiveReference]) {
-      const directiveExpression = createSimpleExpression(directiveReference)
-      directiveExpression.ast = null
-      genExpression(directiveExpression, context)
-    }
-  }
+        if (dir.exp) {
+          push(', () => ')
+          genExpression(dir.exp, context)
+        } else if (dir.arg || dir.modifiers.length) {
+          push(', void 0')
+        }
 
-  if (dir.exp) {
-    push(', () => ')
-    genExpression(dir.exp, context)
-  } else if (dir.arg || dir.modifiers.length) {
-    push(', void 0')
-  }
+        if (dir.arg) {
+          push(', ')
+          genExpression(dir.arg, context)
+        } else if (dir.modifiers.length) {
+          push(', void 0')
+        }
 
-  if (dir.arg) {
-    push(', ')
-    genExpression(dir.arg, context)
-  } else if (dir.modifiers.length) {
-    push(', void 0')
-  }
-
-  if (dir.modifiers.length) {
-    push(', ')
-    push('{ ')
-    push(genDirectiveModifiers(dir.modifiers))
-    push(' }')
-  }
-  push(']])')
-  return
+        if (dir.modifiers.length) {
+          push(', ')
+          push('{ ')
+          push(genDirectiveModifiers(dir.modifiers))
+          push(' }')
+        }
+      })
+      push(']')
+    },
+  )
 }
 
 // TODO: other types (not only string)
