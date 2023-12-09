@@ -30,7 +30,7 @@ import {
   IRNodeTypes,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { camelize, isString, makeMap } from '@vue/shared'
+import { camelize, isGloballyAllowed, isString, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
 
 // remove when stable
@@ -534,6 +534,7 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
     !node.content.trim() ||
     // there was a parsing error
     ast === false ||
+    isGloballyAllowed(rawExpr) ||
     isLiteralWhitelisted(rawExpr)
   ) {
     return push(rawExpr, NewlineType.None, loc)
