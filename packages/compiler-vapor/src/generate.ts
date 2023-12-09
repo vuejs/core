@@ -62,8 +62,7 @@ export interface CodegenContext extends Required<CodegenOptions> {
     codes: [left: string, right: string, segment?: string],
     ...fn: Array<false | (() => void)>
   ): void
-  indent(): void
-  deindent(): void
+  withIndent(fn: () => void): void
   newline(): void
 
   helpers: Set<string>
@@ -183,10 +182,9 @@ function createCodegenContext(
       }
       context.push(right)
     },
-    indent() {
+    withIndent(fn) {
       ++context.indentLevel
-    },
-    deindent() {
+      fn()
       --context.indentLevel
     },
     newline() {
@@ -231,8 +229,15 @@ export function generate(
   options: CodegenOptions = {},
 ): CodegenResult {
   const ctx = createCodegenContext(ir, options)
-  const { push, pushWithNewline, indent, deindent, newline } = ctx
-  const { vaporHelper, helpers, vaporHelpers } = ctx
+  const {
+    push,
+    pushWithNewline,
+    withIndent,
+    newline,
+    helpers,
+    vaporHelper,
+    vaporHelpers,
+  } = ctx
 
   const functionName = 'render'
   const isSetupInlined = !!options.inline
@@ -243,62 +248,62 @@ export function generate(
     newline()
     pushWithNewline(`export function ${functionName}(_ctx) {`)
   }
-  indent()
 
-  ir.template.forEach((template, i) => {
-    if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
-      // TODO source map?
-      pushWithNewline(
-        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
-          template.template,
-        )})`,
-      )
-    } else {
-      // fragment
-      pushWithNewline(
-        `const t0 = ${vaporHelper('fragment')}()\n`,
-        NewlineType.End,
-      )
+  withIndent(() => {
+    ir.template.forEach((template, i) => {
+      if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
+        // TODO source map?
+        pushWithNewline(
+          `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
+            template.template,
+          )})`,
+        )
+      } else {
+        // fragment
+        pushWithNewline(
+          `const t0 = ${vaporHelper('fragment')}()\n`,
+          NewlineType.End,
+        )
+      }
+    })
+
+    {
+      pushWithNewline(`const n${ir.dynamic.id} = t0()`)
+
+      const children = genChildren(ir.dynamic.children)
+      if (children) {
+        pushWithNewline(
+          `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
+        )
+      }
+
+      for (const oper of ir.operation.filter(
+        (oper): oper is WithDirectiveIRNode =>
+          oper.type === IRNodeTypes.WITH_DIRECTIVE,
+      )) {
+        genWithDirective(oper, ctx)
+      }
+
+      for (const operation of ir.operation) {
+        genOperation(operation, ctx)
+      }
+
+      for (const { operations } of ir.effect) {
+        pushWithNewline(`${vaporHelper('effect')}(() => {`)
+        withIndent(() => {
+          for (const operation of operations) {
+            genOperation(operation, ctx)
+          }
+        })
+        pushWithNewline('})')
+      }
+
+      // TODO multiple-template
+      // TODO return statement in IR
+      pushWithNewline(`return n${ir.dynamic.id}`)
     }
   })
 
-  {
-    pushWithNewline(`const n${ir.dynamic.id} = t0()`)
-
-    const children = genChildren(ir.dynamic.children)
-    if (children) {
-      pushWithNewline(
-        `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
-      )
-    }
-
-    for (const oper of ir.operation.filter(
-      (oper): oper is WithDirectiveIRNode =>
-        oper.type === IRNodeTypes.WITH_DIRECTIVE,
-    )) {
-      genWithDirective(oper, ctx)
-    }
-
-    for (const operation of ir.operation) {
-      genOperation(operation, ctx)
-    }
-
-    for (const { operations } of ir.effect) {
-      pushWithNewline(`${vaporHelper('effect')}(() => {`)
-      indent()
-      for (const operation of operations) {
-        genOperation(operation, ctx)
-      }
-      deindent()
-      pushWithNewline('})')
-    }
-
-    // TODO multiple-template
-    // TODO return statement in IR
-    pushWithNewline(`return n${ir.dynamic.id}`)
-  }
-
-  deindent()
   newline()
   if (isSetupInlined) {
     push('})()')
