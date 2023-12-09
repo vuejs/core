@@ -24,7 +24,6 @@ export default defineConfig({
   plugins: [codspeedPlugin()],
   test: {
     globals: true,
-    // disable threads on GH actions to speed it up
     setupFiles: 'scripts/setupVitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
