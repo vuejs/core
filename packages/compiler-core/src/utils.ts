@@ -152,11 +152,17 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
 }
 
 export const isMemberExpressionNode = __BROWSER__
-  ? (NOOP as any as (path: string, context: TransformContext) => boolean)
-  : (path: string, context: TransformContext): boolean => {
+  ? (NOOP as any as (
+      path: string,
+      options: Pick<TransformContext, 'expressionPlugins'>
+    ) => boolean)
+  : (
+      path: string,
+      options: Pick<TransformContext, 'expressionPlugins'>
+    ): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
-          plugins: context.expressionPlugins
+          plugins: options.expressionPlugins
         })
         if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
           ret = ret.expression

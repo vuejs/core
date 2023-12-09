@@ -69,11 +69,12 @@ export interface SetTextIRNode extends BaseIRNode {
   value: IRExpression
 }
 
+export type KeyOverride = [find: string, replacement: string]
 export interface SetEventIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_EVENT
   element: number
   key: IRExpression
-  value: IRExpression
+  value?: SimpleExpressionNode
   modifiers: {
     // modifiers for addEventListener() options, e.g. .passive & .capture
     options: string[]
@@ -82,6 +83,7 @@ export interface SetEventIRNode extends BaseIRNode {
     // modifiers that needs runtime guards, withModifiers
     nonKeys: string[]
   }
+  keyOverride?: KeyOverride
 }
 
 export interface SetHtmlIRNode extends BaseIRNode {

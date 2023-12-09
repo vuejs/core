@@ -438,31 +438,48 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
   const { vaporHelper, push, pushWithNewline } = context
 
   pushWithNewline(`${vaporHelper('on')}(n${oper.element}, `)
-  // second arg: event name
-  genExpression(oper.key, context)
+
+  // 2nd arg: event name
+  if (oper.keyOverride) {
+    const find = JSON.stringify(oper.keyOverride[0])
+    const replacement = JSON.stringify(oper.keyOverride[1])
+    push('(')
+    genExpression(oper.key, context)
+    push(`) === ${find} ? ${replacement} : (`)
+    genExpression(oper.key, context)
+    push(')')
+  } else {
+    genExpression(oper.key, context)
+  }
   push(', ')
 
   const { keys, nonKeys, options } = oper.modifiers
-  if (keys.length) {
-    push(`${vaporHelper('withKeys')}(`)
-  }
-  if (nonKeys.length) {
-    push(`${vaporHelper('withModifiers')}(`)
+
+  // 3rd arg: event handler
+  if (oper.value && oper.value.content.trim()) {
+    if (keys.length) {
+      push(`${vaporHelper('withKeys')}(`)
+    }
+    if (nonKeys.length) {
+      push(`${vaporHelper('withModifiers')}(`)
+    }
+    push('(...args) => (')
+    genExpression(oper.value, context)
+    push(' && ')
+    genExpression(oper.value, context)
+    push('(...args))')
+
+    if (nonKeys.length) {
+      push(`, ${genArrayExpression(nonKeys)})`)
+    }
+    if (keys.length) {
+      push(`, ${genArrayExpression(keys)})`)
+    }
+  } else {
+    push('() => {}')
   }
 
-  // gen event handler
-  push('(...args) => (')
-  genExpression(oper.value, context)
-  push(' && ')
-  genExpression(oper.value, context)
-  push('(...args))')
-
-  if (nonKeys.length) {
-    push(`, ${genArrayExpression(nonKeys)})`)
-  }
-  if (keys.length) {
-    push(`, ${genArrayExpression(keys)})`)
-  }
+  // 4th arg, gen options
   if (options.length) {
     push(`, { ${options.map((v) => `${v}: true`).join(', ')} }`)
   }
