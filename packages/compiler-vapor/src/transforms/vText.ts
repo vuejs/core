@@ -13,7 +13,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     context.options.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_TEXT_WITH_CHILDREN, loc),
     )
-    node.children.length = 0
+    context.childrenTemplate.length = 0
   }
 
   context.registerEffect(

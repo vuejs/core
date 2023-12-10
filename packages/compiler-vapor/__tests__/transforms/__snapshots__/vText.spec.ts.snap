@@ -1,18 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`v-text > no expression 1`] = `
-"import { template as _template, children as _children, setText as _setText } from 'vue/vapor';
-
-export function render(_ctx) {
-  const t0 = _template("<div></div>")
-  const n0 = t0()
-  const { 0: [n1],} = _children(n0)
-  _setText(n1, undefined, "")
-  return n0
-}"
-`;
-
-exports[`v-text > simple expression 1`] = `
+exports[`v-text > should convert v-text to textContent 1`] = `
 "import { template as _template, children as _children, effect as _effect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -22,6 +10,32 @@ export function render(_ctx) {
   _effect(() => {
     _setText(n1, undefined, _ctx.str)
   })
+  return n0
+}"
+`;
+
+exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
+"import { template as _template, children as _children, effect as _effect, setText as _setText } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _effect(() => {
+    _setText(n1, undefined, _ctx.test)
+  })
+  return n0
+}"
+`;
+
+exports[`v-text > should raise error if has no expression 1`] = `
+"import { template as _template, children as _children, setText as _setText } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _setText(n1, undefined, "")
   return n0
 }"
 `;

@@ -1,39 +1,119 @@
-import { type RootNode, BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
-import { type CompilerOptions, compile as _compile } from '../../src'
+import {
+  BindingTypes,
+  DOMErrorCodes,
+  NodeTypes,
+  parse,
+} from '@vue/compiler-dom'
+import {
+  type CompilerOptions,
+  compile as _compile,
+  RootIRNode,
+  transform,
+  generate,
+  IRNodeTypes,
+} from '../../src'
+import { getBaseTransformPreset } from '../../src/compile'
 
-function compile(template: string | RootNode, options: CompilerOptions = {}) {
-  let { code } = _compile(template, {
-    ...options,
-    mode: 'module',
+function compileWithVHtml(
+  template: string,
+  options: CompilerOptions = {},
+): {
+  ir: RootIRNode
+  code: string
+} {
+  const ast = parse(template, { prefixIdentifiers: true, ...options })
+  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
+  const ir = transform(ast, {
+    nodeTransforms,
+    directiveTransforms,
     prefixIdentifiers: true,
+    ...options,
   })
-  return code
+  const { code } = generate(ir, { prefixIdentifiers: true, ...options })
+  return { ir, code }
 }
 
 describe('v-html', () => {
-  test('simple expression', () => {
-    const code = compile(`<div v-html="code"></div>`, {
+  test('should convert v-html to innerHTML', () => {
+    const { code, ir } = compileWithVHtml(`<div v-html="code"></div>`, {
       bindingMetadata: {
         code: BindingTypes.SETUP_REF,
       },
     })
+
+    expect(ir.vaporHelpers).contains('setHtml')
+    expect(ir.helpers.size).toBe(0)
+
+    expect(ir.operation).toEqual([])
+    expect(ir.effect).toMatchObject([
+      {
+        expressions: [
+          {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'code',
+            isStatic: false,
+          },
+        ],
+        operations: [
+          {
+            type: IRNodeTypes.SET_HTML,
+            element: 1,
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'code',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    ])
+
     expect(code).matchSnapshot()
   })
 
   test('should raise error and ignore children when v-html is present', () => {
     const onError = vi.fn()
-    const code = compile(`<div v-html="test">hello</div>`, {
+    const { code, ir } = compileWithVHtml(`<div v-html="test">hello</div>`, {
       onError,
     })
-    expect(code).matchSnapshot()
+
+    expect(ir.vaporHelpers).contains('setHtml')
+    expect(ir.helpers.size).toBe(0)
+
+    expect(ir.operation).toEqual([])
+    expect(ir.effect).toMatchObject([
+      {
+        expressions: [
+          {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'test',
+            isStatic: false,
+          },
+        ],
+        operations: [
+          {
+            type: IRNodeTypes.SET_HTML,
+            element: 1,
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'test',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    ])
+
     expect(onError.mock.calls).toMatchObject([
       [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }],
     ])
+
+    expect(code).matchSnapshot()
   })
 
   test('should raise error if has no expression', () => {
     const onError = vi.fn()
-    const code = compile(`<div v-html></div>`, {
+    const { code } = compileWithVHtml(`<div v-html></div>`, {
       onError,
     })
     expect(code).matchSnapshot()
