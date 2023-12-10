@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`v-once > as root node 1`] = `
+exports[`compiler: v-once > as root node 1`] = `
 "import { template as _template, children as _children, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -12,7 +12,7 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`v-once > basic 1`] = `
+exports[`compiler: v-once > basic 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setAttr as _setAttr, prepend as _prepend } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -23,6 +23,28 @@ export function render(_ctx) {
   _setText(n1, undefined, _ctx.msg)
   _setAttr(n2, "class", undefined, _ctx.clz)
   _prepend(n3, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-once > inside v-once 1`] = `
+"import { template as _template } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div><div></div></div>")
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: v-once > on nested plain element 1`] = `
+"import { template as _template, children as _children, setAttr as _setAttr } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div><div></div></div>")
+  const n0 = t0()
+  const { 0: [, { 0: [n1],}],} = _children(n0)
+  _setAttr(n1, "id", undefined, _ctx.foo)
   return n0
 }"
 `;
