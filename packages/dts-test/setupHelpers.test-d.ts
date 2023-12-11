@@ -8,7 +8,8 @@ import {
   defineSlots,
   VNode,
   Ref,
-  defineModel
+  defineModel,
+  toRefs
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -20,6 +21,7 @@ describe('defineProps w/ type declaration', () => {
     foo: string
     bool?: boolean
     boolAndUndefined: boolean | undefined
+    file?: File | File[]
   }>()
   // explicitly declared type should be refined
   expectType<string>(props.foo)
@@ -100,13 +102,15 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
   )
 })
 
-describe('defineProps w/ generic type declaration + withDefaults', <T extends number, TA extends {
+describe('defineProps w/ generic type declaration + withDefaults', <T extends
+  number, TA extends {
   a: string
 }, TString extends string>() => {
   const res = withDefaults(
     defineProps<{
       n?: number
       bool?: boolean
+      s?: string
 
       generic1?: T[] | { x: T }
       generic2?: { x: T }
@@ -117,14 +121,18 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends nu
       n: 123,
 
       generic1: () => [123, 33] as T[],
-      generic2: () => ({ x: 123 } as { x: T }),
+      generic2: () => ({ x: 123 }) as { x: T },
 
       generic3: () => 'test' as TString,
-      generic4: () => ({ a: 'test' } as TA)
+      generic4: () => ({ a: 'test' }) as TA
     }
   )
 
   res.n + 1
+  // @ts-expect-error should be readonly
+  res.n++
+  // @ts-expect-error should be readonly
+  res.s = ''
 
   expectType<T[] | { x: T }>(res.generic1)
   expectType<{ x: T }>(res.generic2)
@@ -252,6 +260,30 @@ describe('defineSlots', () => {
   expectType<Slots>(slotsUntype)
 })
 
+describe('defineSlots generic', <T extends Record<string, any>>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  for (const key of Object.keys(props.item) as (keyof T & string)[]) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+  }
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: true })
@@ -326,4 +358,84 @@ describe('useAttrs', () => {
 describe('useSlots', () => {
   const slots = useSlots()
   expectType<Slots>(slots)
+})
+
+describe('defineSlots generic', <T extends Record<string, any>>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  // @ts-expect-error slots should be readonly
+  slots.label = () => {}
+
+  // @ts-expect-error non existing slot
+  slots['foo-asdas']?.({
+    item: props.item
+  })
+  for (const key in props.item) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+    slots[`slot-${String(key as keyof T)}`]?.({
+      item: props.item
+    })
+  }
+
+  for (const key of Object.keys(props.item) as (keyof T)[]) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+  }
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
+describe('defineSlots generic strict', <T extends {
+  foo: 'foo'
+  bar: 'bar'
+}>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  // slot-bar/foo should be automatically inferred
+  slots['slot-bar']?.({ item: props.item })
+  slots['slot-foo']?.({ item: props.item })
+
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error not part of the extends
+  slots['slot-RANDOM']?.({ item: props.item })
+
+  // @ts-expect-error slots should be readonly
+  slots.label = () => {}
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
+// #6420
+describe('toRefs w/ type declaration', () => {
+  const props = defineProps<{
+    file?: File | File[]
+  }>()
+  expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
 })

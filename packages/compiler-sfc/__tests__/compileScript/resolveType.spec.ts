@@ -1,3 +1,4 @@
+import { normalize } from 'node:path'
 import { Identifier } from '@babel/types'
 import { SFCScriptCompileOptions, parse } from '../../src'
 import { ScriptCompileContext } from '../../src/script/context'
@@ -454,6 +455,88 @@ describe('resolveType', () => {
     })
   })
 
+  describe('generics', () => {
+    test('generic with type literal', () => {
+      expect(
+        resolve(`
+        type Props<T> = T
+        defineProps<Props<{ foo: string }>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic used in intersection', () => {
+      expect(
+        resolve(`
+        type Foo = { foo: string; }
+        type Bar = { bar: number; }
+        type Props<T,U> = T & U & { baz: boolean }
+        defineProps<Props<Foo, Bar>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String'],
+        bar: ['Number'],
+        baz: ['Boolean']
+      })
+    })
+
+    test('generic type /w generic type alias', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = Readonly<Partial<T>>
+        type Props<T> = Aliased<T>
+        type Foo = { foo: string; }
+        defineProps<Props<Foo>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic type /w aliased type literal', () => {
+      expect(
+        resolve(`
+        type Aliased<T> = { foo: T }
+        defineProps<Aliased<string>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic type /w interface', () => {
+      expect(
+        resolve(`
+        interface Props<T> {
+          foo: T
+        }
+        type Foo = string
+        defineProps<Props<Foo>>()
+      `).props
+      ).toStrictEqual({
+        foo: ['String']
+      })
+    })
+
+    test('generic from external-file', () => {
+      const files = {
+        '/foo.ts': 'export type P<T> = { foo: T }'
+      }
+      const { props } = resolve(
+        `
+        import { P } from './foo'
+        defineProps<P<string>>()
+      `,
+        files
+      )
+      expect(props).toStrictEqual({
+        foo: ['String']
+      })
+    })
+  })
+
   describe('external type imports', () => {
     test('relative ts', () => {
       const files = {
@@ -476,6 +559,36 @@ describe('resolveType', () => {
         bar: ['String']
       })
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
+      const files = {
+        'C:\\Test\\FolderA\\foo.ts': 'export type P = { foo: number }',
+        'C:\\Test\\FolderA\\bar.d.ts':
+          'type X = { bar: string }; export { X as Y };' +
+          // verify that we can parse syntax that is only valid in d.ts
+          'export const baz: boolean',
+        'C:\\Test\\FolderB\\buz.ts': 'export type Z = { buz: string }'
+      }
+      const { props, deps } = resolve(
+        `
+      import { P } from './foo'
+      import { Y as PP } from './bar'
+      import { Z as PPP } from '../FolderB/buz'
+      defineProps<P & PP & PPP>()
+    `,
+        files,
+        {},
+        'C:\\Test\\FolderA\\Test.vue'
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+        buz: ['String']
+      })
+      expect(deps && [...deps].map(normalize)).toStrictEqual(
+        Object.keys(files).map(normalize)
+      )
     })
 
     // #8244
@@ -898,19 +1011,20 @@ describe('resolveType', () => {
 function resolve(
   code: string,
   files: Record<string, string> = {},
-  options?: Partial<SFCScriptCompileOptions>
+  options?: Partial<SFCScriptCompileOptions>,
+  sourceFileName: string = '/Test.vue'
 ) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
-    filename: '/Test.vue'
+    filename: sourceFileName
   })
   const ctx = new ScriptCompileContext(descriptor, {
     id: 'test',
     fs: {
       fileExists(file) {
-        return !!files[file]
+        return !!(files[file] ?? files[normalize(file)])
       },
       readFile(file) {
-        return files[file]
+        return files[file] ?? files[normalize(file)]
       }
     },
     ...options

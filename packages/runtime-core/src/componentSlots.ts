@@ -44,7 +44,7 @@ export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
 export type StrictUnwrapSlotsType<
   S extends SlotsType,
   T = NonNullable<S[typeof SlotSymbol]>
-> = [keyof S] extends [never] ? Slots : Readonly<T>
+> = [keyof S] extends [never] ? Slots : Readonly<T> & T
 
 export type UnwrapSlotsType<
   S extends SlotsType,
@@ -234,7 +234,7 @@ export const updateSlots = (
   // delete stale slots
   if (needDeletionCheck) {
     for (const key in slots) {
-      if (!isInternalKey(key) && !(key in deletionComparisonTarget)) {
+      if (!isInternalKey(key) && deletionComparisonTarget[key] == null) {
         delete slots[key]
       }
     }
