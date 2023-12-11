@@ -90,8 +90,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       marked:
-        specifier: ^9.1.6
-        version: 9.1.6
+        specifier: ^11.0.1
+        version: 11.0.1
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
@@ -4171,9 +4171,9 @@ packages:
     resolution: {integrity: sha512-Z1NL3Tb1M9wH4XESsCDEksWoKTdlUafKc4pt0GRwjUyXaCFZ+dc3g2erqB6zm3szA2IUSi7VnPI+o/9jnxh9hw==}
     dev: true
 
-  /marked@9.1.6:
-    resolution: {integrity: sha512-jcByLnIFkd5gSXZmjNvS1TlmRhCXZjIzHYlaGkPlLIekG55JDR2Z4va9tZwCiP+/RDERiNhMOFu01xd6O5ct1Q==}
-    engines: {node: '>= 16'}
+  /marked@11.0.1:
+    resolution: {integrity: sha512-P4kDhFEMlvLePBPRwOcMOv6+lYUbhfbSxJFs3Jb4Qx7v6K7l+k8Dxh9CEGfRvK71tL+qIFz5y7Pe4uzt4+/A3A==}
+    engines: {node: '>= 18'}
     hasBin: true
     dev: true
 
