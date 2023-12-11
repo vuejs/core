@@ -78,6 +78,7 @@ describe('component: emit', () => {
       render() {},
       created() {
         this.$emit('test-event')
+        this.$emit('testEvent')
       }
     })
 
@@ -88,7 +89,7 @@ describe('component: emit', () => {
       })
     render(h(Comp), nodeOps.createElement('div'))
 
-    expect(fooSpy).toHaveBeenCalledTimes(1)
+    expect(fooSpy).toHaveBeenCalledTimes(2)
   })
 
   // #3527
@@ -443,6 +444,7 @@ describe('component: emit', () => {
     expect(isEmitListener(options, 'onclickOnce')).toBe(false)
     // kebab-case option with on- listener #9812
     expect(isEmitListener(options, 'on-test-event')).toBe(true)
+    expect(isEmitListener(options, 'on-foo-bar')).toBe(true)
     // kebab-case option
     expect(isEmitListener(options, 'onTestEvent')).toBe(true)
     // camelCase option
