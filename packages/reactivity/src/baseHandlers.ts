@@ -100,19 +100,25 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return isReadonly
     } else if (key === ReactiveFlags.IS_SHALLOW) {
       return shallow
-    } else if (
-      key === ReactiveFlags.RAW &&
-      receiver ===
-        (isReadonly
-          ? shallow
-            ? shallowReadonlyMap
-            : readonlyMap
-          : shallow
-            ? shallowReactiveMap
-            : reactiveMap
-        ).get(target)
-    ) {
-      return target
+    } else if (key === ReactiveFlags.RAW) {
+      if (
+        receiver ===
+          (isReadonly
+            ? shallow
+              ? shallowReadonlyMap
+              : readonlyMap
+            : shallow
+              ? shallowReactiveMap
+              : reactiveMap
+          ).get(target) ||
+        // receiver is not the reactive proxy, but has the same prototype
+        // this means the reciever is a user proxy of the reactive proxy
+        Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
+      ) {
+        return target
+      }
+      // early return undefined
+      return
     }
 
     const targetIsArray = isArray(target)
@@ -168,17 +174,19 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
-    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
-      return false
-    }
     if (!this._shallow) {
+      const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
-        oldValue.value = value
-        return true
+        if (isOldValueReadonly) {
+          return false
+        } else {
+          oldValue.value = value
+          return true
+        }
       }
     } else {
       // in shallow mode, objects are set as-is regardless of reactive or not

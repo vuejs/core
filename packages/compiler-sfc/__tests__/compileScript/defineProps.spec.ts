@@ -710,4 +710,35 @@ const props = defineProps({ foo: String })
       'da-sh': BindingTypes.PROPS
     })
   })
+
+  // #8989
+  test('custom element retains the props type & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      const props = defineProps<{ foo: number}>()
+      </script>`,
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
+      { filename: 'app.ce.vue' }
+    )
+
+    expect(content).toMatch(`foo: {type: Number}`)
+    assertCode(content)
+  })
+
+  test('custom element retains the props type & default value & production mode', () => {
+    const { content } = compile(
+      `<script setup lang="ts">
+      interface Props { 
+          foo?: number;
+      }
+      const props = withDefaults(defineProps<Props>(), {
+          foo: 5.5,
+      });
+      </script>`,
+      { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
+      { filename: 'app.ce.vue' }
+    )
+    expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
+    assertCode(content)
+  })
 })
