@@ -477,5 +477,21 @@ describe('DOM parser', () => {
       expect(elementHtml.ns).toBe(DOMNamespaces.HTML)
       expect(element.ns).toBe(DOMNamespaces.MATH_ML)
     })
+
+    test('should convert \t to single whitespace', () => {
+      const ast = parse('<div>1&#0009;234</div>', parserOptions)
+      const element = ast.children[0] as ElementNode
+      const text = element.children[0] as TextNode
+
+      expect(text).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '1\t234',
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 16, line: 1, column: 17 },
+          source: '1&#0009;234'
+        }
+      })
+    })
   })
 })

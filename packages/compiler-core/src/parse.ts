@@ -259,7 +259,7 @@ function parseChildren(
       const node = nodes[i]
       if (node.type === NodeTypes.TEXT) {
         if (!context.inPre) {
-          if (!/[^\t\r\n\f ]/.test(node.content)) {
+          if (!/[^\r\n\f ]/.test(node.content)) {
             const prev = nodes[i - 1]
             const next = nodes[i + 1]
             // Remove if:
@@ -290,7 +290,7 @@ function parseChildren(
           } else if (shouldCondense) {
             // in condense mode, consecutive whitespaces in text are condensed
             // down to a single space.
-            node.content = node.content.replace(/[\t\r\n\f ]+/g, ' ')
+            node.content = node.content.replace(/[\r\n\f ]+/g, ' ')
           }
         } else {
           // #6410 normalize windows newlines in <pre>:
