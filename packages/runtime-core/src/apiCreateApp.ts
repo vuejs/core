@@ -149,17 +149,19 @@ export interface AppContext {
   filters?: Record<string, Function>
 }
 
-type PluginInstallFunction<Options> = Options extends unknown[]
+type PluginInstallFunction<Options = any[]> = Options extends unknown[]
   ? (app: App, ...options: Options) => any
   : (app: App, options: Options) => any
 
+export type ObjectPlugin<Options = any[]> = {
+  install: PluginInstallFunction<Options>
+}
+export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
+  Partial<ObjectPlugin<Options>>
+
 export type Plugin<Options = any[]> =
-  | (PluginInstallFunction<Options> & {
-      install?: PluginInstallFunction<Options>
-    })
-  | {
-      install: PluginInstallFunction<Options>
-    }
+  | FunctionPlugin<Options>
+  | ObjectPlugin<Options>
 
 export function createAppContext(): AppContext {
   return {
