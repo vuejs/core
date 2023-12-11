@@ -465,7 +465,7 @@ function createSuspenseBoundary(
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,
-    isInFallback: true,
+    isInFallback: !isHydrating,
     isHydrating,
     isUnmounted: false,
     effects: [],
@@ -583,6 +583,7 @@ function createSuspenseBoundary(
       // invoke @fallback event
       triggerEvent(vnode, 'onFallback')
 
+      const anchor = next(activeBranch!)
       const mountFallback = () => {
         if (!suspense.isInFallback) {
           return
@@ -592,7 +593,7 @@ function createSuspenseBoundary(
           null,
           fallbackVNode,
           container,
-          next(activeBranch!),
+          anchor,
           parentComponent,
           null, // fallback tree will not have suspense context
           namespace,

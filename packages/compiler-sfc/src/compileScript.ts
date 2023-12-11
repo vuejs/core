@@ -117,6 +117,10 @@ export interface SFCScriptCompileOptions {
     fileExists(file: string): boolean
     readFile(file: string): string | undefined
   }
+  /**
+   * Transform Vue SFCs into custom elements.
+   */
+  customElement?: boolean | ((filename: string) => boolean)
 }
 
 export interface ImportBinding {

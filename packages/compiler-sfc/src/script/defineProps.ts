@@ -281,6 +281,17 @@ function genRuntimePropFromType(
       defaultString
     ])} }`
   } else {
+    // #8989 for custom element, should keep the type
+    if (ctx.isCE) {
+      if (defaultString) {
+        return `${finalKey}: ${`{ ${defaultString}, type: ${toRuntimeTypeString(
+          type
+        )} }`}`
+      } else {
+        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
+      }
+    }
+
     // production: checks are useless
     return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }

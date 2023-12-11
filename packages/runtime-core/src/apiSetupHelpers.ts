@@ -66,9 +66,9 @@ const warnRuntimeUsage = (method: string) =>
  *   foo?: string
  *   bar: number
  * }>()
+ * ```
  *
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineprops-defineemits}
- * ```
  *
  * This is only usable inside `<script setup>`, is compiled away in the
  * output and should **not** be actually called at runtime.
@@ -116,8 +116,9 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  * Example type-based declaration:
  * ```ts
  * const emit = defineEmits<{
- *   (event: 'change'): void
- *   (event: 'update', id: number): void
+ *   // <eventName>: <expected arguments>
+ *   change: []
+ *   update: [value: string] // named tuple syntax
  * }>()
  *
  * emit('change')

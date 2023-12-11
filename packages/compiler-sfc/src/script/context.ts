@@ -12,6 +12,7 @@ import { TypeScope } from './resolveType'
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
+  isCE = false
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
@@ -95,6 +96,14 @@ export class ScriptCompileContext {
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
 
+    const customElement = options.customElement
+    const filename = this.descriptor.filename
+    if (customElement) {
+      this.isCE =
+        typeof customElement === 'boolean'
+          ? customElement
+          : customElement(filename)
+    }
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
       (scriptLang || scriptSetupLang)!,
