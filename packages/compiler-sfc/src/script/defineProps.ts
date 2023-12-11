@@ -6,7 +6,7 @@ import {
   ObjectExpression,
   Expression
 } from '@babel/types'
-import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
+import { BindingTypes, isFunctionType, unwrapTSNode } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
 import {
   TypeResolveContext,
@@ -19,7 +19,6 @@ import {
   concatStrings,
   isLiteralNode,
   isCallOf,
-  unwrapTSNode,
   toRuntimeTypeString,
   getEscapedPropName
 } from './utils'
