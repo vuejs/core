@@ -24,4 +24,4 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           body: |
-            Please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/minor/CHANGELOG.md) for details.
+            Please refer to [CHANGELOG.md](https://github.com/vuejs/core/blob/${{ github.ref === 'refs/heads/main' ? 'main' : 'minor' }}/CHANGELOG.md) for details.
