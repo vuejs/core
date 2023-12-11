@@ -144,6 +144,23 @@ describe('SFC scoped CSS', () => {
     `)
   })
 
+  test(':is() and :where() with multiple selectors', () => {
+    expect(compileScoped(`:is(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo, .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test], .bar[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(.foo, .bar) div { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo, .bar) div[data-v-test] { color: red;
+      }"
+    `)
+  })
+
   test('media query', () => {
     expect(compileScoped(`@media print { .foo { color: red }}`))
       .toMatchInlineSnapshot(`
