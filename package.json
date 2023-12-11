@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.3.11",
-  "packageManager": "pnpm@8.11.0",
+  "packageManager": "pnpm@8.12.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -69,7 +69,7 @@
     "@rollup/plugin-replace": "^5.0.4",
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
-    "@types/node": "^20.10.3",
+    "@types/node": "^20.10.4",
     "@typescript-eslint/parser": "^6.13.0",
     "@vitest/coverage-istanbul": "^1.0.2",
     "@vue/consolidate": "0.17.3",
