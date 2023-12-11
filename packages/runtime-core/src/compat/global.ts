@@ -82,8 +82,11 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   component(name: string): Component | undefined
   component(name: string, component: Component): CompatVue
-  directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): CompatVue
+  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
+  directive<T = any, V = any>(
+    name: string,
+    directive: Directive<T, V>
+  ): CompatVue
 
   compile(template: string): RenderFunction
 

@@ -42,8 +42,8 @@ export interface App<HostElement = any> {
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component | DefineComponent): this
-  directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): this
+  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
+  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
