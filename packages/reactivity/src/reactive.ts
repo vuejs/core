@@ -140,15 +140,8 @@ export function shallowReactive<T extends object>(
   )
 }
 
-export type Primitive =
-  | string
-  | number
-  | boolean
-  | bigint
-  | symbol
-  | undefined
-  | null
-export type Builtin = Function | Date | Error | RegExp
+type Primitive = string | number | boolean | bigint | symbol | undefined | null
+export type Builtin = Primitive | Function | Date | Error | RegExp
 export type DeepReadonly<T> = T extends Builtin
   ? T
   : T extends Map<infer K, infer V>
