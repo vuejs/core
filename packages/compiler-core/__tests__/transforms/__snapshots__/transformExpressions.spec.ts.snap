@@ -22,7 +22,7 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
     onClick: () => {
           for (let i = 0; i < _ctx.list.length; i++) {
             _ctx.log(i)
-          }         
+          }
         }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
@@ -36,7 +36,7 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
     onClick: () => {
           for (const x in _ctx.list) {
             _ctx.log(x)
-          }         
+          }
         }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"
@@ -50,7 +50,7 @@ return function render(_ctx, _cache, $props, $setup, $data, $options) {
     onClick: () => {
           for (const x of _ctx.list) {
             _ctx.log(x)
-          }         
+          }
         }
   }, null, 8 /* PROPS */, ["onClick"]))
 }"

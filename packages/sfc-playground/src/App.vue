@@ -56,7 +56,7 @@ const sfcOptions: SFCOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
-    reactivityTransform: true,
+    propsDestructure: true,
     defineModel: true
   },
   style: {

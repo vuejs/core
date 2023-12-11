@@ -16,7 +16,7 @@ import {
   ComponentPublicInstance
 } from './componentPublicInstance'
 import { Directive, validateDirectiveName } from './directives'
-import { RootRenderFunction } from './renderer'
+import { ElementNamespace, RootRenderFunction } from './renderer'
 import { InjectionKey } from './apiInject'
 import { warn } from './warning'
 import { createVNode, cloneVNode, VNode } from './vnode'
@@ -42,12 +42,12 @@ export interface App<HostElement = any> {
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
   component(name: string, component: Component | DefineComponent): this
-  directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): this
+  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
+  directive<T = any, V = any>(name: string, directive: Directive<T, V>): this
   mount(
     rootContainer: HostElement | string,
     isHydrate?: boolean,
-    isSVG?: boolean
+    namespace?: boolean | ElementNamespace
   ): ComponentPublicInstance
   unmount(): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
@@ -110,13 +110,6 @@ export interface AppConfig {
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
-
-  // TODO remove in 3.4
-  /**
-   * Temporary config for opt-in to unwrap injected refs.
-   * @deprecated this no longer has effect. 3.3 always unwraps injected refs.
-   */
-  unwrapInjectedRef?: boolean
 }
 
 export interface AppContext {
@@ -156,17 +149,19 @@ export interface AppContext {
   filters?: Record<string, Function>
 }
 
-type PluginInstallFunction<Options> = Options extends unknown[]
+type PluginInstallFunction<Options = any[]> = Options extends unknown[]
   ? (app: App, ...options: Options) => any
   : (app: App, options: Options) => any
 
+export type ObjectPlugin<Options = any[]> = {
+  install: PluginInstallFunction<Options>
+}
+export type FunctionPlugin<Options = any[]> = PluginInstallFunction<Options> &
+  Partial<ObjectPlugin<Options>>
+
 export type Plugin<Options = any[]> =
-  | (PluginInstallFunction<Options> & {
-      install?: PluginInstallFunction<Options>
-    })
-  | {
-      install: PluginInstallFunction<Options>
-    }
+  | FunctionPlugin<Options>
+  | ObjectPlugin<Options>
 
 export function createAppContext(): AppContext {
   return {
@@ -212,22 +207,6 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
-
-    // TODO remove in 3.4
-    if (__DEV__) {
-      Object.defineProperty(context.config, 'unwrapInjectedRef', {
-        get() {
-          return true
-        },
-        set() {
-          warn(
-            `app.config.unwrapInjectedRef has been deprecated. ` +
-              `3.3 now always unwraps injected refs in Options API.`
-          )
-        }
-      })
-    }
-
     const installedPlugins = new WeakSet()
 
     let isMounted = false
@@ -320,7 +299,7 @@ export function createAppAPI<HostElement>(
       mount(
         rootContainer: HostElement,
         isHydrate?: boolean,
-        isSVG?: boolean
+        namespace?: boolean | ElementNamespace
       ): any {
         if (!isMounted) {
           // #5571
@@ -336,17 +315,29 @@ export function createAppAPI<HostElement>(
           // this will be set on the root instance on initial mount.
           vnode.appContext = context
 
+          if (namespace === true) {
+            namespace = 'svg'
+          } else if (namespace === false) {
+            namespace = undefined
+          }
+
           // HMR root reload
           if (__DEV__) {
             context.reload = () => {
-              render(cloneVNode(vnode), rootContainer, isSVG)
+              // casting to ElementNamespace because TS doesn't guarantee type narrowing
+              // over function boundaries
+              render(
+                cloneVNode(vnode),
+                rootContainer,
+                namespace as ElementNamespace
+              )
             }
           }
 
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
-            render(vnode, rootContainer, isSVG)
+            render(vnode, rootContainer, namespace)
           }
           isMounted = true
           app._container = rootContainer

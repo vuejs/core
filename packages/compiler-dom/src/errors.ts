@@ -20,7 +20,7 @@ export function createDOMCompilerError(
   ) as DOMCompilerError
 }
 
-export const enum DOMErrorCodes {
+export enum DOMErrorCodes {
   X_V_HTML_NO_EXPRESSION = 53 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
@@ -36,7 +36,7 @@ export const enum DOMErrorCodes {
 }
 
 if (__TEST__) {
-  // esbuild cannot infer const enum increments if first value is from another
+  // esbuild cannot infer enum increments if first value is from another
   // file, so we have to manually keep them in sync. this check ensures it
   // errors out if there are collisions.
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {

@@ -1,3 +1,4 @@
+import { RawSourceMap, SourceMapConsumer } from 'source-map-js'
 import {
   compileTemplate,
   SFCTemplateCompileOptions
@@ -134,24 +135,193 @@ test('source map', () => {
   const template = parse(
     `
 <template>
-  <div><p>{{ render }}</p></div>
+  <div><p>{{ foobar }}</p></div>
 </template>
 `,
     { filename: 'example.vue', sourceMap: true }
-  ).descriptor.template as SFCTemplateBlock
+  ).descriptor.template!
 
-  const result = compile({
+  const { code, map } = compile({
     filename: 'example.vue',
     source: template.content
   })
 
-  expect(result.map).toMatchSnapshot()
+  expect(map!.sources).toEqual([`example.vue`])
+  expect(map!.sourcesContent).toEqual([template.content])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(template.content, `foobar`))
+})
+
+test('should work w/ AST from descriptor', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  expect(template.ast!.source).toBe(source)
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  // when reusing AST from SFC parse for template compile,
+  // the source corresponds to the entire SFC
+  expect(map!.sourcesContent).toEqual([source])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(source, `foobar`))
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content
+    }).code
+  )
+})
+
+test('should work w/ AST from descriptor in SSR mode', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  expect(template.ast!.source).toBe(source)
+
+  const { code, map } = compile({
+    filename: 'example.vue',
+    source: '', // make sure it's actually using the AST instead of source
+    ast: template.ast,
+    ssr: true
+  })
+
+  expect(map!.sources).toEqual([`example.vue`])
+  // when reusing AST from SFC parse for template compile,
+  // the source corresponds to the entire SFC
+  expect(map!.sourcesContent).toEqual([source])
+
+  const consumer = new SourceMapConsumer(map as RawSourceMap)
+  expect(
+    consumer.originalPositionFor(getPositionInCode(code, 'foobar'))
+  ).toMatchObject(getPositionInCode(source, `foobar`))
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content,
+      ssr: true
+    }).code
+  )
+})
+
+test('should not reuse AST if using custom compiler', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: template.content,
+    ast: template.ast,
+    compiler: {
+      parse: () => null as any,
+      // @ts-ignore
+      compile: input => ({ code: input })
+    }
+  })
+
+  // what we really want to assert is that the `input` received by the custom
+  // compiler is the source string, not the AST.
+  expect(code).toBe(template.content)
+})
+
+test('should force re-parse on already transformed AST', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  // force set to empty, if this is reused then it won't generate proper code
+  template.ast!.children = []
+  template.ast!.transformed = true
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: '',
+    ast: template.ast
+  })
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content
+    }).code
+  )
+})
+
+test('should force re-parse with correct compiler in SSR mode', () => {
+  const source = `
+  <template>
+    <div><p>{{ foobar }}</p></div>
+  </template>
+  `
+  const template = parse(source, {
+    filename: 'example.vue',
+    sourceMap: true
+  }).descriptor.template!
+
+  // force set to empty, if this is reused then it won't generate proper code
+  template.ast!.children = []
+  template.ast!.transformed = true
+
+  const { code } = compile({
+    filename: 'example.vue',
+    source: '',
+    ast: template.ast,
+    ssr: true
+  })
+
+  expect(code).toBe(
+    compile({
+      filename: 'example.vue',
+      source: template.content,
+      ssr: true
+    }).code
+  )
 })
 
 test('template errors', () => {
   const result = compile({
     filename: 'example.vue',
-    source: `<div :foo
+    source: `<div
       :bar="a[" v-model="baz"/>`
   })
   expect(result.errors).toMatchSnapshot()
@@ -226,3 +396,36 @@ test('dynamic v-on + static v-on should merged', () => {
 
   expect(result.code).toMatchSnapshot()
 })
+
+interface Pos {
+  line: number
+  column: number
+  name?: string
+}
+
+function getPositionInCode(
+  code: string,
+  token: string,
+  expectName: string | boolean = false
+): Pos {
+  const generatedOffset = code.indexOf(token)
+  let line = 1
+  let lastNewLinePos = -1
+  for (let i = 0; i < generatedOffset; i++) {
+    if (code.charCodeAt(i) === 10 /* newline char code */) {
+      line++
+      lastNewLinePos = i
+    }
+  }
+  const res: Pos = {
+    line,
+    column:
+      lastNewLinePos === -1
+        ? generatedOffset
+        : generatedOffset - lastNewLinePos - 1
+  }
+  if (expectName) {
+    res.name = typeof expectName === 'string' ? expectName : token
+  }
+  return res
+}

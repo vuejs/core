@@ -78,7 +78,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   return vars
 }
 
-const enum LexerState {
+enum LexerState {
   inParens,
   inSingleQuoteString,
   inDoubleQuoteString

@@ -17,7 +17,7 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { cloneVNode, createVNode } from '../vnode'
-import { RootRenderFunction } from '../renderer'
+import { ElementNamespace, RootRenderFunction } from '../renderer'
 import {
   App,
   AppConfig,
@@ -82,8 +82,11 @@ export type CompatVue = Pick<App, 'version' | 'component' | 'directive'> & {
 
   component(name: string): Component | undefined
   component(name: string, component: Component): CompatVue
-  directive(name: string): Directive | undefined
-  directive(name: string, directive: Directive): CompatVue
+  directive<T = any, V = any>(name: string): Directive<T, V> | undefined
+  directive<T = any, V = any>(
+    name: string,
+    directive: Directive<T, V>
+  ): CompatVue
 
   compile(template: string): RenderFunction
 
@@ -503,7 +506,13 @@ function installCompatMount(
         container = selectorOrEl || document.createElement('div')
       }
 
-      const isSVG = container instanceof SVGElement
+      let namespace: ElementNamespace
+      if (container instanceof SVGElement) namespace = 'svg'
+      else if (
+        typeof MathMLElement === 'function' &&
+        container instanceof MathMLElement
+      )
+        namespace = 'mathml'
 
       // HMR root reload
       if (__DEV__) {
@@ -511,7 +520,7 @@ function installCompatMount(
           const cloned = cloneVNode(vnode)
           // compat mode will use instance if not reset to null
           cloned.component = null
-          render(cloned, container, isSVG)
+          render(cloned, container, namespace)
         }
       }
 
@@ -538,7 +547,7 @@ function installCompatMount(
       container.innerHTML = ''
 
       // TODO hydration
-      render(vnode, container, isSVG)
+      render(vnode, container, namespace)
 
       if (container instanceof Element) {
         container.removeAttribute('v-cloak')

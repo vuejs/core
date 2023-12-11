@@ -2,7 +2,6 @@ import {
   reactive,
   readonly,
   toRaw,
-  ReactiveFlags,
   Target,
   readonlyMap,
   reactiveMap,
@@ -11,14 +10,14 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import { TrackOpTypes, TriggerOpTypes } from './operations'
+import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
-  track,
-  trigger,
-  ITERATE_KEY,
   pauseTracking,
-  resetTracking
+  resetTracking,
+  pauseScheduling,
+  resetScheduling
 } from './effect'
+import { track, trigger, ITERATE_KEY } from './reactiveEffect'
 import {
   isObject,
   hasOwn,
@@ -71,7 +70,9 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
+      pauseScheduling()
       const res = (toRaw(this) as any)[key].apply(this, args)
+      resetScheduling()
       resetTracking()
       return res
     }
@@ -174,17 +175,19 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     receiver: object
   ): boolean {
     let oldValue = (target as any)[key]
-    if (isReadonly(oldValue) && isRef(oldValue) && !isRef(value)) {
-      return false
-    }
     if (!this._shallow) {
+      const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
-        oldValue.value = value
-        return true
+        if (isOldValueReadonly) {
+          return false
+        } else {
+          oldValue.value = value
+          return true
+        }
       }
     } else {
       // in shallow mode, objects are set as-is regardless of reactive or not

@@ -10,7 +10,7 @@ interface AppRecord {
   types: Record<string, string | Symbol>
 }
 
-const enum DevtoolsHooks {
+enum DevtoolsHooks {
   APP_INIT = 'app:init',
   APP_UNMOUNT = 'app:unmount',
   COMPONENT_UPDATED = 'component:updated',

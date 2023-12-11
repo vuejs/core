@@ -51,7 +51,8 @@ import {
   EmitFn,
   emit,
   normalizeEmitsOptions,
-  EmitsToProps
+  EmitsToProps,
+  ShortEmitsToObject
 } from './componentEmits'
 import {
   EMPTY_OBJ,
@@ -82,6 +83,39 @@ import { SchedulerJob } from './scheduler'
 import { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
+
+/**
+ * Public utility type for extracting the instance type of a component.
+ * Works with all valid component definition types. This is intended to replace
+ * the usage of `InstanceType<typeof Comp>` which only works for
+ * constructor-based component definition types.
+ *
+ * Exmaple:
+ * ```ts
+ * const MyComp = { ... }
+ * declare const instance: ComponentInstance<typeof MyComp>
+ * ```
+ */
+export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
+  ? InstanceType<T>
+  : T extends FunctionalComponent<infer Props, infer Emits>
+    ? ComponentPublicInstance<Props, {}, {}, {}, {}, ShortEmitsToObject<Emits>>
+    : T extends Component<
+          infer Props,
+          infer RawBindings,
+          infer D,
+          infer C,
+          infer M
+        >
+      ? // NOTE we override Props/RawBindings/D to make sure is not `unknown`
+        ComponentPublicInstance<
+          unknown extends Props ? {} : Props,
+          unknown extends RawBindings ? {} : RawBindings,
+          unknown extends D ? {} : D,
+          C,
+          M
+        >
+      : never // not a vue Component
 
 /**
  * For extending allowed non-declared props on components in TSX
@@ -127,16 +161,17 @@ export interface ComponentInternalOptions {
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions = {},
-  S extends Record<string, any> = any
+  E extends EmitsOptions | Record<string, any[]> = {},
+  S extends Record<string, any> = any,
+  EE extends EmitsOptions = ShortEmitsToObject<E>
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
-    props: P & EmitsToProps<E>,
-    ctx: Omit<SetupContext<E, IfAny<S, {}, SlotsType<S>>>, 'expose'>
+    props: P & EmitsToProps<EE>,
+    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>
   ): any
   props?: ComponentPropsOptions<P>
-  emits?: E | (keyof E)[]
+  emits?: EE | (keyof EE)[]
   slots?: IfAny<S, Slots, SlotsType<S>>
   inheritAttrs?: boolean
   displayName?: string
@@ -159,10 +194,12 @@ export type ConcreteComponent<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  E extends EmitsOptions | Record<string, any[]> = {},
+  S extends Record<string, any> = any
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
-  | FunctionalComponent<Props, any>
+  | FunctionalComponent<Props, E, S>
 
 /**
  * A type used in public APIs where a component type is expected.
@@ -173,9 +210,11 @@ export type Component<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
+  E extends EmitsOptions | Record<string, any[]> = {},
+  S extends Record<string, any> = any
 > =
-  | ConcreteComponent<Props, RawBindings, D, C, M>
+  | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
   | ComponentPublicInstanceConstructor<Props>
 
 export type { ComponentOptions }

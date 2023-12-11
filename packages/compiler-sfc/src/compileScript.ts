@@ -2,7 +2,8 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers
+  walkIdentifiers,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
@@ -26,7 +27,6 @@ import {
 import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
 import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
 import { warnOnce } from './warn'
-import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { transformDestructuredProps } from './script/definePropsDestructure'
 import { ScriptCompileContext } from './script/context'
 import {
@@ -44,12 +44,7 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import {
-  isLiteralNode,
-  unwrapTSNode,
-  isCallOf,
-  getImportedName
-} from './script/utils'
+import { isLiteralNode, isCallOf, getImportedName } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -123,14 +118,6 @@ export interface SFCScriptCompileOptions {
     readFile(file: string): string | undefined
   }
   /**
-   * (Experimental) Enable syntax transform for using refs without `.value` and
-   * using destructured props with reactivity
-   * @deprecated the Reactivity Transform proposal has been dropped. This
-   * feature will be removed from Vue core in 3.4. If you intend to continue
-   * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
-   */
-  reactivityTransform?: boolean
-  /**
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
@@ -169,8 +156,6 @@ export function compileScript(
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
 
-  // TODO remove in 3.4
-  const enableReactivityTransform = !!options.reactivityTransform
   let refBindings: string[] | undefined
 
   if (!scriptSetup) {
@@ -481,20 +466,6 @@ export function compileScript(
       }
     }
 
-    // apply reactivity transform
-    // TODO remove in 3.4
-    if (enableReactivityTransform && shouldTransform(script.content)) {
-      const { rootRefs, importedHelpers } = transformAST(
-        scriptAst,
-        ctx.s,
-        scriptStartOffset!
-      )
-      refBindings = rootRefs
-      for (const h of importedHelpers) {
-        ctx.helperImports.add(h)
-      }
-    }
-
     // <script> after <script setup>
     // we need to move the block up so that `const __default__` is
     // declared before being used in the actual component definition
@@ -690,26 +661,7 @@ export function compileScript(
     transformDestructuredProps(ctx, vueImportAliases)
   }
 
-  // 4. Apply reactivity transform
-  // TODO remove in 3.4
-  if (
-    enableReactivityTransform &&
-    // normal <script> had ref bindings that maybe used in <script setup>
-    (refBindings || shouldTransform(scriptSetup.content))
-  ) {
-    const { rootRefs, importedHelpers } = transformAST(
-      scriptSetupAst,
-      ctx.s,
-      startOffset,
-      refBindings
-    )
-    refBindings = refBindings ? [...refBindings, ...rootRefs] : rootRefs
-    for (const h of importedHelpers) {
-      ctx.helperImports.add(h)
-    }
-  }
-
-  // 5. check macro args to make sure it doesn't reference setup scope
+  // 4. check macro args to make sure it doesn't reference setup scope
   // variables
   checkInvalidScopeReference(ctx.propsRuntimeDecl, DEFINE_PROPS)
   checkInvalidScopeReference(ctx.propsRuntimeDefaults, DEFINE_PROPS)
@@ -717,7 +669,7 @@ export function compileScript(
   checkInvalidScopeReference(ctx.emitsRuntimeDecl, DEFINE_EMITS)
   checkInvalidScopeReference(ctx.optionsRuntimeDecl, DEFINE_OPTIONS)
 
-  // 6. remove non-script content
+  // 5. remove non-script content
   if (script) {
     if (startOffset < scriptStartOffset!) {
       // <script setup> before <script>
@@ -736,7 +688,7 @@ export function compileScript(
     ctx.s.remove(endOffset, source.length)
   }
 
-  // 7. analyze binding metadata
+  // 6. analyze binding metadata
   // `defineProps` & `defineModel` also register props bindings
   if (scriptAst) {
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
@@ -765,7 +717,7 @@ export function compileScript(
     }
   }
 
-  // 8. inject `useCssVars` calls
+  // 7. inject `useCssVars` calls
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
@@ -784,7 +736,7 @@ export function compileScript(
     )
   }
 
-  // 9. finalize setup() argument signature
+  // 8. finalize setup() argument signature
   let args = `__props`
   if (ctx.propsTypeDecl) {
     // mark as any and only cast on assignment
@@ -835,7 +787,7 @@ export function compileScript(
     args += `, { ${destructureElements.join(', ')} }`
   }
 
-  // 10. generate return statement
+  // 9. generate return statement
   let returned
   if (
     !options.inlineTemplate ||
@@ -951,7 +903,7 @@ export function compileScript(
     ctx.s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
   }
 
-  // 11. finalize default export
+  // 10. finalize default export
   const genDefaultAs = options.genDefaultAs
     ? `const ${options.genDefaultAs} =`
     : `export default`
@@ -1025,7 +977,7 @@ export function compileScript(
     }
   }
 
-  // 12. finalize Vue helper imports
+  // 11. finalize Vue helper imports
   if (ctx.helperImports.size > 0) {
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
@@ -1033,8 +985,6 @@ export function compileScript(
         .join(', ')} } from 'vue'\n`
     )
   }
-
-  ctx.s.trim()
 
   return {
     ...scriptSetup,

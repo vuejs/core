@@ -37,7 +37,8 @@ import {
   queuePostRenderEffect,
   MoveType,
   RendererElement,
-  RendererNode
+  RendererNode,
+  ElementNamespace
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
 import { ComponentRenderContext } from '../componentPublicInstance'
@@ -64,7 +65,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
     vnode: VNode,
     container: RendererElement,
     anchor: RendererNode | null,
-    isSVG: boolean,
+    namespace: ElementNamespace,
     optimized: boolean
   ) => void
   deactivate: (vnode: VNode) => void
@@ -125,7 +126,13 @@ const KeepAliveImpl: ComponentOptions = {
     } = sharedContext
     const storageContainer = createElement('div')
 
-    sharedContext.activate = (vnode, container, anchor, isSVG, optimized) => {
+    sharedContext.activate = (
+      vnode,
+      container,
+      anchor,
+      namespace,
+      optimized
+    ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
@@ -136,7 +143,7 @@ const KeepAliveImpl: ComponentOptions = {
         anchor,
         instance,
         parentSuspense,
-        isSVG,
+        namespace,
         vnode.slotScopeIds,
         optimized
       )

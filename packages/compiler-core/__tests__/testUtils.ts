@@ -56,7 +56,6 @@ export function createElementWithCodegen(
     ns: Namespaces.HTML,
     tag: 'div',
     tagType: ElementTypes.ELEMENT,
-    isSelfClosing: false,
     props: [],
     children: [],
     codegenNode: {

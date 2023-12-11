@@ -2,7 +2,8 @@ import {
   toRaw,
   shallowReactive,
   trigger,
-  TriggerOpTypes
+  TriggerOpTypes,
+  shallowReadonly
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
@@ -57,7 +58,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown): boolean
+  validator?(value: unknown, props: Data): boolean
   /**
    * @internal
    */
@@ -164,7 +165,7 @@ export type ExtractPublicPropTypes<O> = {
   [K in keyof Pick<O, PublicOptionalKeys<O>>]?: InferPropType<O[K]>
 }
 
-const enum BooleanFlags {
+enum BooleanFlags {
   shouldCast,
   shouldCastTrue
 }
@@ -634,6 +635,7 @@ function validateProps(
       key,
       resolvedValues[key],
       opt,
+      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
       !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
     )
   }
@@ -646,6 +648,7 @@ function validateProp(
   name: string,
   value: unknown,
   prop: PropOptions,
+  props: Data,
   isAbsent: boolean
 ) {
   const { type, required, validator, skipCheck } = prop
@@ -675,7 +678,7 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value)) {
+  if (validator && !validator(value, props)) {
     warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }

@@ -15,10 +15,11 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  walkFunctionParams,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
-import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
+import { isCallOf, resolveObjectKey } from './utils'
 import { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
 import { warnOnce } from '../warn'
@@ -27,7 +28,7 @@ export function processPropsDestructure(
   ctx: ScriptCompileContext,
   declId: ObjectPattern
 ) {
-  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+  if (!ctx.options.propsDestructure) {
     return
   }
 
@@ -103,7 +104,7 @@ export function transformDestructuredProps(
   ctx: ScriptCompileContext,
   vueImportAliases: Record<string, string>
 ) {
-  if (!ctx.options.propsDestructure && !ctx.options.reactivityTransform) {
+  if (!ctx.options.propsDestructure) {
     return
   }
 

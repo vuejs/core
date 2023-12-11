@@ -60,7 +60,7 @@ export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useAttrs, useSlots, type DefineProps } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -140,6 +140,15 @@ export {
 } from './components/BaseTransition'
 export { initCustomFormatter } from './customFormatter'
 
+import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
+/**
+ * Runtime error messages. Only exposed in dev or esm builds.
+ * @internal
+ */
+export const ErrorTypeStrings = (
+  __ESM_BUNDLER__ || __DEV__ ? _ErrorTypeStrings : null
+) as typeof _ErrorTypeStrings
+
 // For devtools
 export { devtools, setDevtoolsHook } from './devtools'
 
@@ -203,6 +212,8 @@ export type {
   AppConfig,
   AppContext,
   Plugin,
+  ObjectPlugin,
+  FunctionPlugin,
   CreateAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
@@ -221,9 +232,10 @@ export type {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  AllowedComponentProps
+  AllowedComponentProps,
+  ComponentInstance
 } from './component'
-export type { DefineComponent } from './apiDefineComponent'
+export type { DefineComponent, PublicProps } from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
@@ -251,7 +263,8 @@ export type {
   RendererElement,
   HydrationRenderer,
   RendererOptions,
-  RootRenderFunction
+  RootRenderFunction,
+  ElementNamespace
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
 export type { Slot, Slots, SlotsType } from './componentSlots'
@@ -352,7 +365,7 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-export { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
 export type { CompatVue } from './compat/global'
 export type { LegacyConfig } from './compat/globalConfig'
 
@@ -384,3 +397,7 @@ const _compatUtils = {
 export const compatUtils = (
   __COMPAT__ ? _compatUtils : null
 ) as typeof _compatUtils
+
+export const DeprecationTypes = (
+  __COMPAT__ ? _DeprecationTypes : null
+) as typeof _DeprecationTypes
