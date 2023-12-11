@@ -195,9 +195,9 @@ export type {
   App,
   AppConfig,
   AppContext,
+  Plugin,
   ObjectPlugin,
   FunctionPlugin,
-  Plugin,
   CreateAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
