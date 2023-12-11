@@ -18,7 +18,6 @@ import {
 } from '@vue/runtime-test'
 import { createVNode, Fragment } from '../../src/vnode'
 import { compile, render as domRender } from 'vue'
-import { transform } from '@vue/reactivity-transform'
 
 describe('renderer: teleport', () => {
   test('should work', () => {
@@ -554,6 +553,7 @@ describe('renderer: teleport', () => {
       `"<div>teleported</div>"`
     )
   })
+
   // 8146
   test(`ensure correct rendering when target is empty`, async () => {
     const root = nodeOps.createElement('div')
