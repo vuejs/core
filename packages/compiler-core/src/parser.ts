@@ -236,7 +236,7 @@ const tokenizer = new Tokenizer(stack, {
         loc: getLoc(start)
       }
       if (name === 'pre') {
-        inVPre = true
+        inVPre = tokenizer.inVPre = true
         currentVPreBoundary = currentOpenTag
         // convert dirs before this one to attributes
         const props = currentOpenTag!.props
@@ -652,7 +652,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     inPre--
   }
   if (currentVPreBoundary === el) {
-    inVPre = false
+    inVPre = tokenizer.inVPre = false
     currentVPreBoundary = null
   }
   if (

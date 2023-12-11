@@ -175,6 +175,15 @@ describe('reactivity/reactive/Array', () => {
     expect(length).toBe('01')
   })
 
+  // #9742
+  test('mutation on user proxy of reactive Array', () => {
+    const array = reactive<number[]>([])
+    const proxy = new Proxy(array, {})
+    proxy.push(1)
+    expect(array).toHaveLength(1)
+    expect(proxy).toHaveLength(1)
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {

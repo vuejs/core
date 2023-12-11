@@ -9,7 +9,6 @@ import {
   StringLiteral
 } from '@babel/types'
 import path from 'path'
-import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
 
@@ -30,14 +29,6 @@ export function concatStrings(strs: Array<string | null | undefined | false>) {
 
 export function isLiteralNode(node: Node) {
   return node.type.endsWith('Literal')
-}
-
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
 }
 
 export function isCallOf(
@@ -121,6 +112,8 @@ export function getEscapedPropName(key: string) {
 
 export const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 
-export function getEscapedCssVarName(key: string) {
-  return key.replace(cssVarNameEscapeSymbolsRE, s => `\\${s}`)
+export function getEscapedCssVarName(key: string, doubleEscape: boolean) {
+  return key.replace(cssVarNameEscapeSymbolsRE, s =>
+    doubleEscape ? `\\\\${s}` : `\\${s}`
+  )
 }

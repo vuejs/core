@@ -44,7 +44,7 @@ export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
 export type StrictUnwrapSlotsType<
   S extends SlotsType,
   T = NonNullable<S[typeof SlotSymbol]>
-> = [keyof S] extends [never] ? Slots : Readonly<T>
+> = [keyof S] extends [never] ? Slots : Readonly<T> & T
 
 export type UnwrapSlotsType<
   S extends SlotsType,

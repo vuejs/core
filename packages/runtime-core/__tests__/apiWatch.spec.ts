@@ -549,6 +549,98 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  // #7030
+  it('should not fire on child component unmount w/ flush: pre', async () => {
+    const visible = ref(true)
+    const cb = vi.fn()
+    const Parent = defineComponent({
+      props: ['visible'],
+      render() {
+        return visible.value ? h(Comp) : null
+      }
+    })
+    const Comp = {
+      setup() {
+        watch(visible, cb, { flush: 'pre' })
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return h(Parent, {
+          visible: visible.value
+        })
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    visible.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  // #7030
+  it('flush: pre watcher in child component should not fire before parent update', async () => {
+    const b = ref(0)
+    const calls: string[] = []
+
+    const Comp = {
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher child')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          b.value
+          calls.push('render child')
+        }
+      }
+    }
+
+    const Parent = {
+      props: ['a'],
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher parent')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          b.value
+          calls.push('render parent')
+          return h(Comp)
+        }
+      }
+    }
+
+    const App = {
+      render() {
+        return h(Parent, {
+          a: b.value
+        })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render parent', 'render child'])
+
+    b.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'render parent',
+      'render child',
+      'watcher parent',
+      'render parent',
+      'watcher child',
+      'render child'
+    ])
+  })
+
   // #1763
   it('flush: pre watcher watching props should fire before child update', async () => {
     const a = ref(0)

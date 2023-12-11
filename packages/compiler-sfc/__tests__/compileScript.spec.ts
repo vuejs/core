@@ -826,6 +826,7 @@ describe('SFC compile <script setup>', () => {
         <script setup>
         import { ref } from 'vue'
         const count = ref(0)
+        const style = { color: 'red' }
         </script>
         <template>
           <div>{{ count }}</div>
@@ -833,6 +834,7 @@ describe('SFC compile <script setup>', () => {
         </template>
         <style>
         div { color: v-bind(count) }
+        span { color: v-bind(style.color) }
         </style>
         `,
         {
@@ -847,6 +849,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`ssrInterpolate`)
       expect(content).not.toMatch(`useCssVars`)
       expect(content).toMatch(`"--${mockId}-count": (count.value)`)
+      expect(content).toMatch(`"--${mockId}-style\\\\.color": (style.color)`)
       assertCode(content)
     })
 
@@ -1595,6 +1598,40 @@ describe('SFC genDefaultAs', () => {
       toRef: BindingTypes.SETUP_CONST,
       props: BindingTypes.SETUP_REACTIVE_CONST,
       foo: BindingTypes.SETUP_REF
+    })
+  })
+
+  describe('parser plugins', () => {
+    test('import attributes', () => {
+      const { content } = compile(`
+        <script setup>
+        import { foo } from './foo.js' with { type: 'foobar' }
+        </script>
+      `)
+      assertCode(content)
+
+      expect(() =>
+        compile(`
+      <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>`)
+      ).toThrow()
+    })
+
+    test('import attributes (user override for deprecated syntax)', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>
+      `,
+        {
+          babelParserPlugins: [
+            ['importAttributes', { deprecatedAssertSyntax: true }]
+          ]
+        }
+      )
+      assertCode(content)
     })
   })
 })

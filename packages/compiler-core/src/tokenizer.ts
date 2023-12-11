@@ -242,6 +242,8 @@ export default class Tokenizer {
   public inRCDATA = false
   /** For disabling RCDATA tags handling */
   public inXML = false
+  /** For disabling interpolation parsing in v-pre */
+  public inVPre = false
   /** Record newline positions for fast line / column calculation */
   private newlines: number[] = []
 
@@ -314,7 +316,7 @@ export default class Tokenizer {
       this.sectionStart = this.index
     } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
-    } else if (c === this.delimiterOpen[0]) {
+    } else if (!this.inVPre && c === this.delimiterOpen[0]) {
       this.state = State.InterpolationOpen
       this.delimiterIndex = 0
       this.stateInterpolationOpen(c)

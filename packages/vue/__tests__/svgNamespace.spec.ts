@@ -9,7 +9,11 @@ import { vtcKey } from '../../runtime-dom/src/components/Transition'
 import { render, h, ref, nextTick } from '../src'
 
 describe('SVG support', () => {
-  test('should mount elements with correct namespaces', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  test('should mount elements with correct html namespace', () => {
     const root = document.createElement('div')
     document.body.appendChild(root)
     const App = {
@@ -18,6 +22,8 @@ describe('SVG support', () => {
           <svg id="e1">
             <foreignObject id="e2">
               <div id="e3"/>
+              <svg id="e4"/>
+              <math id="e5"/>
             </foreignObject>
           </svg>
         </div>
@@ -29,6 +35,8 @@ describe('SVG support', () => {
     expect(e0.querySelector('#e1')!.namespaceURI).toMatch('svg')
     expect(e0.querySelector('#e2')!.namespaceURI).toMatch('svg')
     expect(e0.querySelector('#e3')!.namespaceURI).toMatch('xhtml')
+    expect(e0.querySelector('#e4')!.namespaceURI).toMatch('svg')
+    expect(e0.querySelector('#e5')!.namespaceURI).toMatch('Math')
   })
 
   test('should patch elements with correct namespaces', async () => {
