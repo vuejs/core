@@ -5,10 +5,9 @@ import {
   UNKNOWN_TYPE,
   concatStrings,
   isCallOf,
-  toRuntimeTypeString,
-  unwrapTSNode
+  toRuntimeTypeString
 } from './utils'
-import { BindingTypes } from '@vue/compiler-dom'
+import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
 

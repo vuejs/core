@@ -8,14 +8,22 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   toRefs,
-  SetupContext
+  SetupContext,
+  EmitsOptions
 } from 'vue'
 import { describe, expectAssignable, expectType, IsAny } from './utils'
 
-declare function extractComponentOptions<Props, RawBindings>(
-  obj: Component<Props, RawBindings>
+declare function extractComponentOptions<
+  Props,
+  RawBindings,
+  Emits extends EmitsOptions | Record<string, any[]>,
+  Slots extends Record<string, any>
+>(
+  obj: Component<Props, RawBindings, any, any, any, Emits, Slots>
 ): {
   props: Props
+  emits: Emits
+  slots: Slots
   rawBindings: RawBindings
   setup: ShallowUnwrapRef<RawBindings>
 }
@@ -455,11 +463,27 @@ describe('functional', () => {
   })
 
   describe('typed', () => {
-    const MyComponent: FunctionalComponent<{ foo: number }> = (_, _2) => {}
+    type Props = { foo: number }
+    type Emits = { change: [value: string]; inc: [value: number] }
+    type Slots = { default: (scope: { foo: string }) => any }
 
-    const { props } = extractComponentOptions(MyComponent)
+    const MyComponent: FunctionalComponent<Props, Emits, Slots> = (
+      props,
+      { emit, slots }
+    ) => {
+      expectType<Props>(props)
+      expectType<{
+        (event: 'change', value: string): void
+        (event: 'inc', value: number): void
+      }>(emit)
+      expectType<Slots>(slots)
+    }
 
-    expectType<number>(props.foo)
+    const { props, emits, slots } = extractComponentOptions(MyComponent)
+
+    expectType<Props>(props)
+    expectType<Emits>(emits)
+    expectType<Slots>(slots)
   })
 })
 
@@ -480,5 +504,19 @@ describe('SetupContext', () => {
     const wider: SetupContext<{ a: () => true; b: () => true }> = {} as any
 
     expectAssignable<SetupContext<{ b: () => true }>>(wider)
+  })
+
+  describe('short emits', () => {
+    const {
+      emit
+    }: SetupContext<{
+      a: [val: string]
+      b: [val: number]
+    }> = {} as any
+
+    expectType<{
+      (event: 'a', val: string): void
+      (event: 'b', val: number): void
+    }>(emit)
   })
 })

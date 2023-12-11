@@ -40,6 +40,7 @@ import { isString, isObject, NOOP } from '@vue/shared'
 import { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import { Expression } from '@babel/types'
+import { unwrapTSNode } from './babelUtils'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -158,9 +159,7 @@ export const isMemberExpressionNode = __BROWSER__
         let ret: Expression = parseExpression(path, {
           plugins: context.expressionPlugins
         })
-        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
-          ret = ret.expression
-        }
+        ret = unwrapTSNode(ret) as Expression
         return (
           ret.type === 'MemberExpression' ||
           ret.type === 'OptionalMemberExpression' ||

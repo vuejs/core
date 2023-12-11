@@ -15,10 +15,11 @@ import {
   isInDestructureAssignment,
   isReferencedIdentifier,
   isStaticProperty,
-  walkFunctionParams
+  walkFunctionParams,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { genPropsAccessExp } from '@vue/shared'
-import { isCallOf, resolveObjectKey, unwrapTSNode } from './utils'
+import { isCallOf, resolveObjectKey } from './utils'
 import { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
 import { warnOnce } from '../warn'

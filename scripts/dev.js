@@ -2,7 +2,7 @@
 
 // Using esbuild for faster dev builds.
 // We are still using Rollup for production builds because it generates
-// smaller files w/ better tree-shaking.
+// smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
 import { resolve, relative, dirname } from 'node:path'
@@ -124,7 +124,8 @@ esbuild
       __COMPAT__: String(target === 'vue-compat'),
       __FEATURE_SUSPENSE__: `true`,
       __FEATURE_OPTIONS_API__: `true`,
-      __FEATURE_PROD_DEVTOOLS__: `false`
+      __FEATURE_PROD_DEVTOOLS__: `false`,
+      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`
     }
   })
   .then(ctx => ctx.watch())

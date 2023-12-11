@@ -37,6 +37,7 @@ Starting with 3.0.0-rc.3, `esm-bundler` builds now exposes global feature flags 
 
 - `__VUE_OPTIONS_API__` (enable/disable Options API support, default: `true`)
 - `__VUE_PROD_DEVTOOLS__` (enable/disable devtools support in production, default: `false`)
+- `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__` (enable/disable detailed warnings for hydration mismatches in production, default: `false`)
 
 The build will work without configuring these flags, however it is **strongly recommended** to properly configure them in order to get proper tree-shaking in the final bundle. To configure these flags:
 

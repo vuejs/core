@@ -180,6 +180,9 @@ function createConfig(format, output, plugins = []) {
         : `true`,
       __FEATURE_PROD_DEVTOOLS__: isBundlerESMBuild
         ? `__VUE_PROD_DEVTOOLS__`
+        : `false`,
+      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: isBundlerESMBuild
+        ? `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`
         : `false`
     }
 

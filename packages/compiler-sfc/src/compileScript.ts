@@ -2,7 +2,8 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers
+  walkIdentifiers,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
@@ -43,12 +44,7 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import {
-  isLiteralNode,
-  unwrapTSNode,
-  isCallOf,
-  getImportedName
-} from './script/utils'
+import { isLiteralNode, isCallOf, getImportedName } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
