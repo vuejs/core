@@ -16,7 +16,7 @@ import {
   isReadonly,
   isShallow
 } from './reactive'
-import type { Builtin, ShallowReactiveMarker } from './reactive'
+import type { Builtin, Primitive, ShallowReactiveMarker } from './reactive'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
@@ -484,6 +484,7 @@ export type UnwrapRef<T> = T extends ShallowRef<infer V>
     : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
+  | Primitive
   | Builtin
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
