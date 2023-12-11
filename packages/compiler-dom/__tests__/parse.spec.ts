@@ -478,4 +478,22 @@ describe('DOM parser', () => {
       expect(element.ns).toBe(DOMNamespaces.MATH_ML)
     })
   })
+
+  describe('RawText tag', () => {
+    test('xmp tag', () => {
+      const ast = parse('<xmp><li>this is li</li></xmp>', parserOptions)
+      const elementXMP = ast.children[0] as ElementNode
+      const elementText = elementXMP.children[0]
+
+      expect(elementText).toStrictEqual({
+        type: NodeTypes.TEXT,
+        content: '<li>this is li</li>',
+        loc: {
+          start: { offset: 5, line: 1, column: 6 },
+          end: { offset: 24, line: 1, column: 25 },
+          source: '<li>this is li</li>'
+        }
+      })
+    })
+  })
 })

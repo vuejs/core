@@ -10,8 +10,9 @@ import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtml } from './decodeHtml'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
+// https://html.spec.whatwg.org/multipage/parsing.html#parsing-html-fragments
 const isRawTextContainer = /*#__PURE__*/ makeMap(
-  'style,iframe,script,noscript',
+  'style,iframe,script,noscript,xmp,noembed,noframes',
   true
 )
 

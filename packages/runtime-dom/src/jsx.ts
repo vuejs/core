@@ -1201,6 +1201,9 @@ export interface IntrinsicElementAttributes {
   video: VideoHTMLAttributes
   wbr: HTMLAttributes
   webview: WebViewHTMLAttributes
+  xmp: HTMLAttributes
+  noembed: HTMLAttributes
+  noframes: HTMLAttributes
 
   // SVG
   svg: SVGAttributes
