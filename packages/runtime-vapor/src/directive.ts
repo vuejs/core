@@ -4,16 +4,12 @@ import { effect } from './scheduler'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
-export interface DirectiveBinding<
-  V = any,
-  A = string,
-  M extends string = string,
-> {
+export interface DirectiveBinding<V = any, M extends string = string> {
   instance: ComponentInternalInstance | null
   source?: () => V
   value: V
   oldValue: V | null
-  arg?: A
+  arg?: string
   modifiers?: DirectiveModifiers<M>
   dir: ObjectDirective<any, V>
 }
@@ -21,9 +17,8 @@ export interface DirectiveBinding<
 export type DirectiveHook<
   T = any | null,
   V = any,
-  A = string,
   M extends string = string,
-> = (node: T, binding: DirectiveBinding<V, A, M>) => void
+> = (node: T, binding: DirectiveBinding<V, M>) => void
 
 // create node -> `created` -> node operation -> `beforeMount` -> node mounted -> `mounted`
 // effect update -> `beforeUpdate` -> node updated -> `updated`
@@ -36,13 +31,8 @@ export type DirectiveHookName =
   | 'updated'
   | 'beforeUnmount'
   | 'unmounted'
-export type ObjectDirective<
-  T = any,
-  V = any,
-  A = string,
-  M extends string = string,
-> = {
-  [K in DirectiveHookName]?: DirectiveHook<T, V, A, M> | undefined
+export type ObjectDirective<T = any, V = any, M extends string = string> = {
+  [K in DirectiveHookName]?: DirectiveHook<T, V, M> | undefined
 } & {
   deep?: boolean
 }
@@ -50,16 +40,12 @@ export type ObjectDirective<
 export type FunctionDirective<
   T = any,
   V = any,
-  A = string,
   M extends string = string,
-> = DirectiveHook<T, V, A, M>
+> = DirectiveHook<T, V, M>
 
-export type Directive<
-  T = any,
-  V = any,
-  A = string,
-  M extends string = string,
-> = ObjectDirective<T, V, A, M> | FunctionDirective<T, V, A, M>
+export type Directive<T = any, V = any, M extends string = string> =
+  | ObjectDirective<T, V, M>
+  | FunctionDirective<T, V, M>
 
 export type DirectiveArguments = Array<
   | [Directive | undefined]
