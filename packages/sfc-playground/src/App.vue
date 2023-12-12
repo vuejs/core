@@ -56,8 +56,7 @@ const sfcOptions: SFCOptions = {
   script: {
     inlineTemplate: !useDevMode.value,
     isProd: !useDevMode.value,
-    propsDestructure: true,
-    defineModel: true
+    propsDestructure: true
   },
   style: {
     isProd: !useDevMode.value
