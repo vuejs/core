@@ -1,7 +1,8 @@
 // @ts-check
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const dirname = path.dirname(new URL(import.meta.url).pathname)
+const dirname = path.dirname(fileURLToPath(new URL(import.meta.url)))
 const resolve = (/** @type {string} */ p) =>
   path.resolve(dirname, '../../packages', p)
 
