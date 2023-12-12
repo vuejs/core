@@ -26,7 +26,7 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const useDevMode = ref(false)
+const useDevMode = ref(true)
 const useSSRMode = ref(false)
 
 let hash = location.hash.slice(1)
