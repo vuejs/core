@@ -1241,6 +1241,10 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
+        // This noramlly gets setup by the following `setupRenderEffect`.
+        // But the call is skipped in initial mounting of async element.
+        // Thus, manually patching is required here or it will result in a crash during parent component update.
+        initialVNode.el = placeholder.el
       }
       return
     }
@@ -1447,10 +1451,34 @@ function baseCreateRenderer(
         // #2458: deference mount-only object parameters to prevent memleaks
         initialVNode = container = anchor = null as any
       } else {
+        let { next, bu, u, parent, vnode } = instance
+
+        if (__FEATURE_SUSPENSE__) {
+          const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance)
+          // we are trying to update some async comp before hydration
+          // this will cause crash because we don't know the root node yet
+          if (nonHydratedAsyncRoot) {
+            // only sync the properties and abort the rest of operations
+            toggleRecurse(instance, false)
+            if (next) {
+              next.el = vnode.el
+              updateComponentPreRender(instance, next, optimized)
+            }
+            toggleRecurse(instance, true)
+            // and continue the rest of operations once the deps are resolved
+            nonHydratedAsyncRoot.asyncDep!.then(() => {
+              // the instance may be destroyed during the time period
+              if (!instance.isUnmounted) {
+                componentUpdateFn()
+              }
+            })
+            return
+          }
+        }
+
         // updateComponent
         // This is triggered by mutation of component's own state (next: null)
         // OR parent calling processComponent (next: VNode)
-        let { next, bu, u, parent, vnode } = instance
         let originNext = next
         let vnodeHook: VNodeHook | null | undefined
         if (__DEV__) {
@@ -2488,4 +2516,17 @@ function getSequence(arr: number[]): number[] {
     v = p[v]
   }
   return result
+}
+
+function locateNonHydratedAsyncRoot(
+  instance: ComponentInternalInstance
+): ComponentInternalInstance | undefined {
+  const subComponent = instance.subTree.component
+  if (subComponent) {
+    if (subComponent.asyncDep && !subComponent.asyncResolved) {
+      return subComponent
+    } else {
+      return locateNonHydratedAsyncRoot(subComponent)
+    }
+  }
 }

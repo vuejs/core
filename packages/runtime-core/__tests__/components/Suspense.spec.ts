@@ -537,6 +537,51 @@ describe('Suspense', () => {
     expect(unmounted).not.toHaveBeenCalled()
   })
 
+  // vuetifyjs/vuetify#15207
+  test('update prop of async element before suspense resolve', async () => {
+    let resolve: () => void
+    const mounted = new Promise<void>(r => {
+      resolve = r
+    })
+    const Async = {
+      async setup() {
+        onMounted(() => {
+          resolve()
+        })
+        const p = new Promise(r => setTimeout(r, 1))
+        await p
+        return () => h('div', 'async')
+      }
+    }
+
+    const Comp: ComponentOptions<{ data: string }> = {
+      props: ['data'],
+      setup(props) {
+        return () => h(Async, { 'data-test': props.data })
+      }
+    }
+
+    const Root = {
+      setup() {
+        const data = ref('1')
+        onMounted(() => {
+          data.value = '2'
+        })
+        return () =>
+          h(Suspense, null, {
+            default: h(Comp, { data: data.value }),
+            fallback: h('div', 'fallback')
+          })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Root), root)
+    expect(serializeInner(root)).toBe(`<div>fallback</div>`)
+    await mounted
+    expect(serializeInner(root)).toBe(`<div data-test="2">async</div>`)
+  })
+
   test('nested suspense (parent resolves first)', async () => {
     const calls: string[] = []
 
