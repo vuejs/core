@@ -80,6 +80,9 @@ describe('v-html', () => {
     expect(ir.vaporHelpers).contains('setHtml')
     expect(ir.helpers.size).toBe(0)
 
+    // children should have been removed
+    expect(ir.template).toMatchObject([{ template: '<div></div>' }])
+
     expect(ir.operation).toEqual([])
     expect(ir.effect).toMatchObject([
       {
@@ -109,6 +112,8 @@ describe('v-html', () => {
     ])
 
     expect(code).matchSnapshot()
+    // children should have been removed
+    expect(code).contains('template("<div></div>")')
   })
 
   test('should raise error if has no expression', () => {

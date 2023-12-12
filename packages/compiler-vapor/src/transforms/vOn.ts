@@ -1,7 +1,12 @@
-import { createCompilerError, ErrorCodes } from '@vue/compiler-core'
+import {
+  createCompilerError,
+  ElementTypes,
+  ErrorCodes,
+} from '@vue/compiler-core'
 import type { DirectiveTransform } from '../transform'
-import { IRNodeTypes, KeyOverride } from '../ir'
+import { IRNodeTypes, KeyOverride, SetEventIRNode } from '../ir'
 import { resolveModifiers } from '@vue/compiler-dom'
+import { camelize } from '@vue/shared'
 
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
@@ -14,6 +19,23 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   if (!arg) {
     // TODO support v-on="{}"
     return
+  }
+
+  if (arg.isStatic) {
+    let rawName = arg.content
+    if (__DEV__ && rawName.startsWith('vnode')) {
+      context.options.onError(
+        createCompilerError(ErrorCodes.X_VNODE_HOOKS, arg.loc),
+      )
+    }
+
+    if (
+      node.tagType !== ElementTypes.ELEMENT ||
+      rawName.startsWith('vnode') ||
+      !/[A-Z]/.test(rawName)
+    ) {
+      arg.content = camelize(arg.content)
+    }
   }
 
   const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
@@ -48,7 +70,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     }
   }
 
-  context.registerOperation({
+  const operation: SetEventIRNode = {
     type: IRNodeTypes.SET_EVENT,
     loc,
     element: context.reference(),
@@ -60,5 +82,11 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       options: eventOptionModifiers,
     },
     keyOverride,
-  })
+  }
+
+  if (arg.isStatic) {
+    context.registerOperation(operation)
+  } else {
+    context.registerEffect([arg], [operation])
+  }
 }
