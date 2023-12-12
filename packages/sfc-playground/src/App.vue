@@ -18,6 +18,8 @@ if (import.meta.env.DEV) {
   )
 }
 
+const replRef = ref<InstanceType<typeof Repl>>()
+
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
 }
@@ -90,6 +92,10 @@ function toggleSSR() {
   store.setFiles(store.getFiles())
 }
 
+function reloadPage() {
+  replRef.value?.reload()
+}
+
 const theme = ref<'dark' | 'light'>('dark')
 function toggleTheme(isDark: boolean) {
   theme.value = isDark ? 'dark' : 'light'
@@ -108,9 +114,11 @@ onMounted(() => {
     @toggle-theme="toggleTheme"
     @toggle-dev="toggleDevMode"
     @toggle-ssr="toggleSSR"
+    @reload-page="reloadPage"
   />
   <Repl
     v-if="EditorComponent"
+    ref="replRef"
     :theme="theme"
     :editor="EditorComponent"
     @keydown.ctrl.s.prevent
