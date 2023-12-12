@@ -158,6 +158,21 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
+  // #1246
+  test('mutation on objects using reactive as prototype should not trigger', () => {
+    const observed = reactive({ foo: 1 })
+    const original = Object.create(observed)
+    let dummy
+    effect(() => (dummy = original.foo))
+    expect(dummy).toBe(1)
+    observed.foo = 2
+    expect(dummy).toBe(2)
+    original.foo = 3
+    expect(dummy).toBe(2)
+    original.foo = 4
+    expect(dummy).toBe(2)
+  })
+
   test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -166,11 +181,18 @@ describe('reactivity/reactive', () => {
   })
 
   test('toRaw on object using reactive as prototype', () => {
-    const original = reactive({})
-    const obj = Object.create(original)
+    const original = { foo: 1 }
+    const observed = reactive(original)
+    const inherted = Object.create(observed)
+    expect(toRaw(inherted)).toBe(inherted)
+  })
+
+  test('toRaw on user Proxy wrapping reactive', () => {
+    const original = {}
+    const re = reactive(original)
+    const obj = new Proxy(re, {})
     const raw = toRaw(obj)
-    expect(raw).toBe(obj)
-    expect(raw).not.toBe(toRaw(original))
+    expect(raw).toBe(original)
   })
 
   test('should not unwrap Ref<T>', () => {

@@ -593,8 +593,8 @@ export function createHydrationFunctions(
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
-          ? `(start of fragment)`
-          : ``
+            ? `(start of fragment)`
+            : ``
       )
     handleMismatchHook(vnode, parentComponent, node)
     vnode.el = null

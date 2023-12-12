@@ -60,6 +60,33 @@ body
   expect(result.errors.length).toBe(0)
 })
 
+test('preprocess pug with indents and blank lines', () => {
+  const template = parse(
+    `
+<template lang="pug">
+  body
+    h1 The next line contains four spaces.
+
+    div.container
+      p The next line is empty.
+    p This is the last line.
+</template>
+`,
+    { filename: 'example.vue', sourceMap: true }
+  ).descriptor.template as SFCTemplateBlock
+
+  const result = compile({
+    filename: 'example.vue',
+    source: template.content,
+    preprocessLang: template.lang
+  })
+
+  expect(result.errors.length).toBe(0)
+  expect(result.source).toBe(
+    '<body><h1>The next line contains four spaces.</h1><div class="container"><p>The next line is empty.</p></div><p>This is the last line.</p></body>'
+  )
+})
+
 test('warn missing preprocessor', () => {
   const template = parse(`<template lang="unknownLang">hi</template>\n`, {
     filename: 'example.vue',

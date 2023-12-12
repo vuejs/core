@@ -17,7 +17,6 @@ import {
   isShallow
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import { CollectionTypes } from './collectionHandlers'
 import { createDep, Dep } from './dep'
 
 declare const RefSymbol: unique symbol
@@ -88,7 +87,6 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -416,8 +414,8 @@ export function toRef<T>(
 ): T extends () => infer R
   ? Readonly<Ref<R>>
   : T extends Ref
-  ? T
-  : Ref<UnwrapRef<T>>
+    ? T
+    : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
@@ -478,30 +476,37 @@ export type ShallowUnwrapRef<T> = {
   [K in keyof T]: T[K] extends Ref<infer V>
     ? V // if `V` is `unknown` that means it does not extend `Ref` and is undefined
     : T[K] extends Ref<infer V> | undefined
-    ? unknown extends V
-      ? undefined
-      : V | undefined
-    : T[K]
+      ? unknown extends V
+        ? undefined
+        : V | undefined
+      : T[K]
 }
 
 export type UnwrapRef<T> = T extends ShallowRef<infer V>
   ? V
   : T extends Ref<infer V>
-  ? UnwrapRefSimple<V>
-  : UnwrapRefSimple<T>
+    ? UnwrapRefSimple<V>
+    : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
-  | CollectionTypes
   | BaseTypes
   | Ref
   | RefUnwrapBailTypes[keyof RefUnwrapBailTypes]
   | { [RawSymbol]?: true }
   ? T
-  : T extends ReadonlyArray<any>
-  ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
-  : T extends object & { [ShallowReactiveMarker]?: never }
-  ? {
-      [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
-    }
-  : T
+  : T extends Map<infer K, infer V>
+    ? Map<K, UnwrapRefSimple<V>>
+    : T extends WeakMap<infer K, infer V>
+      ? WeakMap<K, UnwrapRefSimple<V>>
+      : T extends Set<infer V>
+        ? Set<UnwrapRefSimple<V>>
+        : T extends WeakSet<infer V>
+          ? WeakSet<UnwrapRefSimple<V>>
+          : T extends ReadonlyArray<any>
+            ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
+            : T extends object & { [ShallowReactiveMarker]?: never }
+              ? {
+                  [P in keyof T]: P extends symbol ? T[P] : UnwrapRef<T[P]>
+                }
+              : T
