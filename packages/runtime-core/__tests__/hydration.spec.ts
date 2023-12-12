@@ -812,17 +812,17 @@ describe('SSR hydration', () => {
         })
     )
 
-    const bol = ref(true)
+    const toggle = ref(true)
     const App = {
       setup() {
         onMounted(() => {
           // change state, this makes updateComponent(AsyncComp) execute before
           // the async component is resolved
-          bol.value = false
+          toggle.value = false
         })
 
         return () => {
-          return [bol.value ? 'hello' : 'world', h(AsyncComp)]
+          return [toggle.value ? 'hello' : 'world', h(AsyncComp)]
         }
       }
     }
@@ -860,14 +860,12 @@ describe('SSR hydration', () => {
   })
 
   test('hydrate safely when property used by async setup changed before render', async () => {
-    // let serverResolve: any
+    const toggle = ref(true)
 
     const AsyncComp = {
       async setup() {
         await new Promise<void>(r => r())
-        return () => {
-          return h('h1', 'Async component')
-        }
+        return () => h('h1', 'Async component')
       }
     }
 
@@ -879,53 +877,45 @@ describe('SSR hydration', () => {
 
     const SiblingComp = {
       setup() {
-        return () => {
-          bol.value = false
-          return h('span')
-        }
+        toggle.value = false
+        return () => h('span')
       }
     }
 
-    const bol = ref(true)
-
     const App = {
       setup() {
-        return () => {
-          return [
-            h(
-              Suspense,
-              {},
-              {
-                default: () => {
-                  return [
-                    h('main', {}, [
-                      h(AsyncWrapper, { prop: bol.value ? 'hello' : 'world' }),
-                      h(SiblingComp)
-                    ])
-                  ]
-                }
-              }
-            )
-          ]
-        }
+        return () =>
+          h(
+            Suspense,
+            {},
+            {
+              default: () => [
+                h('main', {}, [
+                  h(AsyncWrapper, {
+                    prop: toggle.value ? 'hello' : 'world'
+                  }),
+                  h(SiblingComp)
+                ])
+              ]
+            }
+          )
       }
     }
 
     // server render
-
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop="hello">Async component</h1><span></span></main><!--]-->"`
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
     )
 
-    expect(bol.value).toBe(false)
+    expect(toggle.value).toBe(false)
 
     // hydration
 
     // reset the value
-    bol.value = true
-    expect(bol.value).toBe(true)
+    toggle.value = true
+    expect(toggle.value).toBe(true)
 
     const container = document.createElement('div')
     container.innerHTML = html
@@ -935,89 +925,68 @@ describe('SSR hydration', () => {
       setTimeout(resolve, 0)
     })
 
-    expect(bol.value).toBe(false)
+    expect(toggle.value).toBe(false)
 
     // should be hydrated now
-    // expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop="world">Async component</h1><span></span></main><!--]-->"`
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
     )
   })
 
   test('hydrate safely when property used by deep nested async setup changed before render', async () => {
-    // let serverResolve: any
+    const toggle = ref(true)
 
     const AsyncComp = {
       async setup() {
         await new Promise<void>(r => r())
-        return () => {
-          return h('h1', 'Async component')
-        }
+        return () => h('h1', 'Async component')
       }
     }
 
-    const AsyncWrapper = {
-      render() {
-        return h(AsyncComp)
-      }
-    }
-    const AsyncWrapperWrapper = {
-      render() {
-        return h(AsyncWrapper)
-      }
-    }
+    const AsyncWrapper = { render: () => h(AsyncComp) }
+    const AsyncWrapperWrapper = { render: () => h(AsyncWrapper) }
 
     const SiblingComp = {
       setup() {
-        return () => {
-          bol.value = false
-          return h('span')
-        }
+        toggle.value = false
+        return () => h('span')
       }
     }
 
-    const bol = ref(true)
-
     const App = {
       setup() {
-        return () => {
-          return [
-            h(
-              Suspense,
-              {},
-              {
-                default: () => {
-                  return [
-                    h('main', {}, [
-                      h(AsyncWrapperWrapper, {
-                        prop: bol.value ? 'hello' : 'world'
-                      }),
-                      h(SiblingComp)
-                    ])
-                  ]
-                }
-              }
-            )
-          ]
-        }
+        return () =>
+          h(
+            Suspense,
+            {},
+            {
+              default: () => [
+                h('main', {}, [
+                  h(AsyncWrapperWrapper, {
+                    prop: toggle.value ? 'hello' : 'world'
+                  }),
+                  h(SiblingComp)
+                ])
+              ]
+            }
+          )
       }
     }
 
     // server render
-
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop="hello">Async component</h1><span></span></main><!--]-->"`
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
     )
 
-    expect(bol.value).toBe(false)
+    expect(toggle.value).toBe(false)
 
     // hydration
 
     // reset the value
-    bol.value = true
-    expect(bol.value).toBe(true)
+    toggle.value = true
+    expect(toggle.value).toBe(true)
 
     const container = document.createElement('div')
     container.innerHTML = html
@@ -1027,14 +996,14 @@ describe('SSR hydration', () => {
       setTimeout(resolve, 0)
     })
 
-    expect(bol.value).toBe(false)
+    expect(toggle.value).toBe(false)
 
     // should be hydrated now
-    // expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop="world">Async component</h1><span></span></main><!--]-->"`
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
     )
   })
+
   // #3787
   test('unmount async wrapper before load', async () => {
     let resolve: any
