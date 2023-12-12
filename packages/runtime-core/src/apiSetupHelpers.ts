@@ -31,7 +31,7 @@ import {
 import { warn } from './warning'
 import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import { Ref, ref } from '@vue/reactivity'
-import { watch } from './apiWatch'
+import { watch, watchSyncEffect } from './apiWatch'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -378,17 +378,19 @@ export function useModel(
 
   if (options && options.local) {
     const proxy = ref<any>(props[name])
+    watchSyncEffect(() => {
+      proxy.value = props[name]
+    })
 
     watch(
-      () => props[name],
-      v => (proxy.value = v)
+      proxy,
+      value => {
+        if (value !== props[name]) {
+          i.emit(`update:${name}`, value)
+        }
+      },
+      { flush: 'sync' }
     )
-
-    watch(proxy, value => {
-      if (value !== props[name]) {
-        i.emit(`update:${name}`, value)
-      }
-    })
 
     return proxy
   } else {
