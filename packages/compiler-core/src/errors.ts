@@ -90,13 +90,13 @@ export enum ErrorCodes {
   X_V_MODEL_ON_PROPS,
   X_INVALID_EXPRESSION,
   X_KEEP_ALIVE_INVALID_CHILDREN,
-  X_VNODE_HOOKS,
 
   // generic errors
   X_PREFIX_ID_NOT_SUPPORTED,
   X_MODULE_MODE_NOT_SUPPORTED,
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
+  X_VNODE_HOOKS,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
