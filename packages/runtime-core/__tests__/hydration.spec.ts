@@ -916,7 +916,7 @@ describe('SSR hydration', () => {
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop=\\"hello\\">Async component</h1><span></span></main><!--]-->"`
+      `"<!--[--><main><h1 prop="hello">Async component</h1><span></span></main><!--]-->"`
     )
 
     expect(bol.value).toBe(false)
@@ -940,7 +940,7 @@ describe('SSR hydration', () => {
     // should be hydrated now
     // expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop=\\"world\\">Async component</h1><span></span></main><!--]-->"`
+      `"<!--[--><main><h1 prop="world">Async component</h1><span></span></main><!--]-->"`
     )
   })
 
@@ -1008,7 +1008,7 @@ describe('SSR hydration', () => {
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop=\\"hello\\">Async component</h1><span></span></main><!--]-->"`
+      `"<!--[--><main><h1 prop="hello">Async component</h1><span></span></main><!--]-->"`
     )
 
     expect(bol.value).toBe(false)
@@ -1032,7 +1032,7 @@ describe('SSR hydration', () => {
     // should be hydrated now
     // expect(`Hydration node mismatch`).toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><main><h1 prop=\\"world\\">Async component</h1><span></span></main><!--]-->"`
+      `"<!--[--><main><h1 prop="world">Async component</h1><span></span></main><!--]-->"`
     )
   })
   // #3787
