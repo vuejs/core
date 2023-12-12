@@ -318,10 +318,6 @@ describe('defineModel', () => {
   defineModel<string>({ default: 123 })
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
-
-  // accept defineModel-only options
-  defineModel({ local: true })
-  defineModel('foo', { local: true })
 })
 
 describe('useModel', () => {

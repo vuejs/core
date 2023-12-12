@@ -14,7 +14,9 @@ import {
   ComputedRef,
   shallowReactive,
   nextTick,
-  ref
+  ref,
+  Ref,
+  watch
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -184,13 +186,17 @@ describe('SFC <script setup> helpers', () => {
         foo.value = 'bar'
       }
 
+      const compRender = vi.fn()
       const Comp = defineComponent({
         props: ['modelValue'],
         emits: ['update:modelValue'],
         setup(props) {
           foo = useModel(props, 'modelValue')
-        },
-        render() {}
+          return () => {
+            compRender()
+            return foo.value
+          }
+        }
       })
 
       const msg = ref('')
@@ -206,6 +212,8 @@ describe('SFC <script setup> helpers', () => {
       expect(foo.value).toBe('')
       expect(msg.value).toBe('')
       expect(setValue).not.toBeCalled()
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('')
 
       // update from child
       update()
@@ -214,42 +222,55 @@ describe('SFC <script setup> helpers', () => {
       expect(msg.value).toBe('bar')
       expect(foo.value).toBe('bar')
       expect(setValue).toBeCalledTimes(1)
+      expect(compRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('bar')
 
       // update from parent
       msg.value = 'qux'
+      expect(msg.value).toBe('qux')
 
       await nextTick()
       expect(msg.value).toBe('qux')
       expect(foo.value).toBe('qux')
       expect(setValue).toBeCalledTimes(1)
+      expect(compRender).toBeCalledTimes(3)
+      expect(serializeInner(root)).toBe('qux')
     })
 
-    test('local', async () => {
+    test('without parent value (local mutation)', async () => {
       let foo: any
       const update = () => {
         foo.value = 'bar'
       }
 
+      const compRender = vi.fn()
       const Comp = defineComponent({
         props: ['foo'],
         emits: ['update:foo'],
         setup(props) {
-          foo = useModel(props, 'foo', { local: true })
-        },
-        render() {}
+          foo = useModel(props, 'foo')
+          return () => {
+            compRender()
+            return foo.value
+          }
+        }
       })
 
       const root = nodeOps.createElement('div')
       const updateFoo = vi.fn()
       render(h(Comp, { 'onUpdate:foo': updateFoo }), root)
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('<!---->')
 
       expect(foo.value).toBeUndefined()
       update()
-
+      // when parent didn't provide value, local mutation is enabled
       expect(foo.value).toBe('bar')
 
       await nextTick()
       expect(updateFoo).toBeCalledTimes(1)
+      expect(compRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('bar')
     })
 
     test('default value', async () => {
@@ -257,25 +278,156 @@ describe('SFC <script setup> helpers', () => {
       const inc = () => {
         count.value++
       }
+
+      const compRender = vi.fn()
       const Comp = defineComponent({
         props: { count: { default: 0 } },
         emits: ['update:count'],
         setup(props) {
-          count = useModel(props, 'count', { local: true })
-        },
-        render() {}
+          count = useModel(props, 'count')
+          return () => {
+            compRender()
+            return count.value
+          }
+        }
       })
 
       const root = nodeOps.createElement('div')
       const updateCount = vi.fn()
       render(h(Comp, { 'onUpdate:count': updateCount }), root)
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('0')
 
       expect(count.value).toBe(0)
 
       inc()
+      // when parent didn't provide value, local mutation is enabled
       expect(count.value).toBe(1)
+
       await nextTick()
+
       expect(updateCount).toBeCalledTimes(1)
+      expect(compRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('1')
+    })
+
+    test('parent limiting child value', async () => {
+      let childCount: Ref<number>
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['count'],
+        emits: ['update:count'],
+        setup(props) {
+          childCount = useModel(props, 'count')
+          return () => {
+            compRender()
+            return childCount.value
+          }
+        }
+      })
+
+      const Parent = defineComponent({
+        setup() {
+          const count = ref(0)
+          watch(count, () => {
+            if (count.value < 0) {
+              count.value = 0
+            }
+          })
+          return () =>
+            h(Comp, {
+              count: count.value,
+              'onUpdate:count': val => {
+                count.value = val
+              }
+            })
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Parent), root)
+      expect(serializeInner(root)).toBe('0')
+
+      // child update
+      childCount!.value = 1
+      // not yet updated
+      expect(childCount!.value).toBe(0)
+
+      await nextTick()
+      expect(childCount!.value).toBe(1)
+      expect(serializeInner(root)).toBe('1')
+
+      // child update to invalid value
+      childCount!.value = -1
+      // not yet updated
+      expect(childCount!.value).toBe(1)
+
+      await nextTick()
+      // limited to 0 by parent
+      expect(childCount!.value).toBe(0)
+      expect(serializeInner(root)).toBe('0')
+    })
+
+    test('has parent value -> no parent value', async () => {
+      let childCount: Ref<number>
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['count'],
+        emits: ['update:count'],
+        setup(props) {
+          childCount = useModel(props, 'count')
+          return () => {
+            compRender()
+            return childCount.value
+          }
+        }
+      })
+
+      const toggle = ref(true)
+      const Parent = defineComponent({
+        setup() {
+          const count = ref(0)
+          return () =>
+            toggle.value
+              ? h(Comp, {
+                  count: count.value,
+                  'onUpdate:count': val => {
+                    count.value = val
+                  }
+                })
+              : h(Comp)
+        }
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Parent), root)
+      expect(serializeInner(root)).toBe('0')
+
+      // child update
+      childCount!.value = 1
+      // not yet updated
+      expect(childCount!.value).toBe(0)
+
+      await nextTick()
+      expect(childCount!.value).toBe(1)
+      expect(serializeInner(root)).toBe('1')
+
+      // parent change
+      toggle.value = false
+
+      await nextTick()
+      // localValue should be reset
+      expect(childCount!.value).toBeUndefined()
+      expect(serializeInner(root)).toBe('<!---->')
+
+      // child local mutation should continue to work
+      childCount!.value = 2
+      expect(childCount!.value).toBe(2)
+
+      await nextTick()
+      expect(serializeInner(root)).toBe('2')
     })
   })
 
