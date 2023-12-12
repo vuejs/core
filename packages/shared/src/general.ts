@@ -12,8 +12,11 @@ export const NOOP = () => {}
  */
 export const NO = () => false
 
-const onRE = /^on[^a-z]/
-export const isOn = (key: string) => onRE.test(key)
+export const isOn = (key: string) =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // uppercase letter
+  (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
@@ -170,12 +173,12 @@ export const getGlobalThis = (): any => {
       typeof globalThis !== 'undefined'
         ? globalThis
         : typeof self !== 'undefined'
-        ? self
-        : typeof window !== 'undefined'
-        ? window
-        : typeof global !== 'undefined'
-        ? global
-        : {})
+          ? self
+          : typeof window !== 'undefined'
+            ? window
+            : typeof global !== 'undefined'
+              ? global
+              : {})
   )
 }
 
