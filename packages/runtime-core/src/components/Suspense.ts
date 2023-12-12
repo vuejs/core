@@ -47,6 +47,9 @@ export interface SuspenseProps {
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
 
+// incrementing unique id for every pending branch
+let suspenseId = 0
+
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -249,7 +252,8 @@ function patchSuspense(
       }
     } else {
       // toggled before pending tree is resolved
-      suspense.pendingId++
+      // increment pending ID. this is used to invalidate async callbacks
+      suspense.pendingId = suspenseId++
       if (isHydrating) {
         // if toggled before hydration is finished, the current DOM tree is
         // no longer valid. set it as the active branch so it will be unmounted
@@ -259,7 +263,6 @@ function patchSuspense(
       } else {
         unmount(pendingBranch, parentComponent, suspense)
       }
-      // increment pending ID. this is used to invalidate async callbacks
       // reset suspense state
       suspense.deps = 0
       // discard effects from pending branch
@@ -350,7 +353,11 @@ function patchSuspense(
       triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
-      suspense.pendingId++
+      if (newBranch.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+        suspense.pendingId = newBranch.component!.suspenseId!
+      } else {
+        suspense.pendingId = suspenseId++
+      }
       patch(
         null,
         newBranch,
