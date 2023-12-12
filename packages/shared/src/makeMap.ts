@@ -1,3 +1,4 @@
+import type { Split } from "."
 /**
  * Make a map and return a function for checking if a key
  * is in that map.
@@ -5,10 +6,14 @@
  * \/\*#\_\_PURE\_\_\*\/
  * So that rollup can tree-shake them if necessary.
  */
-export function makeMap(
-  str: string,
-  expectsLowerCase?: boolean
-): (key: string) => boolean {
+
+
+
+
+export function makeMap<T extends string, LC extends boolean>(
+  str: T,
+  expectsLowerCase?: LC
+): (key: Split<LC extends true ? Lowercase<T> : T, ','> | (string & {})) => boolean {
   const map: Record<string, boolean> = Object.create(null)
   const list: Array<string> = str.split(',')
   for (let i = 0; i < list.length; i++) {
