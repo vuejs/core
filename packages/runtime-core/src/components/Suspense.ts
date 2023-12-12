@@ -226,10 +226,12 @@ function patchSuspense(
       if (suspense.deps <= 0) {
         suspense.resolve()
       } else if (isInFallback) {
-        // It's possible that the app is in hydrating state when patching the suspense instance
-        //   if someone update the dependency during component setup in children of suspense boundary
-        // And that would be problemtic because we aren't actually showing a fallback content when patchSuspense is called.
-        // In such case, patch of fallback content should be no op
+        // It's possible that the app is in hydrating state when patching the
+        // suspense instance. If someone updates the dependency during component
+        // setup in children of suspense boundary, that would be problemtic
+        // because we aren't actually showing a fallback content when
+        // patchSuspense is called. In such case, patch of fallback content
+        // should be no op
         if (!isHydrating) {
           patch(
             activeBranch,
