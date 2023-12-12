@@ -228,8 +228,11 @@ export function defineSlots<
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * If the parent did not provide the corresponding v-model props, the returned
- * ref can still be used and will behave like a normal local ref.
+ * The the returned ref behaves differently depending on whether the parent
+ * provided the corresponding v-model props or not:
+ * - If yes, the returned ref's value will always be in sync with the parent
+ *   prop.
+ * - If not, the returned ref will behave like a normal local ref.
  *
  * @example
  * ```ts
