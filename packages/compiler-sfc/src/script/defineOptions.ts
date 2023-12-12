@@ -1,6 +1,7 @@
 import { Node } from '@babel/types'
+import { unwrapTSNode } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
-import { isCallOf, unwrapTSNode } from './utils'
+import { isCallOf } from './utils'
 import { DEFINE_PROPS } from './defineProps'
 import { DEFINE_EMITS } from './defineEmits'
 import { DEFINE_EXPOSE } from './defineExpose'

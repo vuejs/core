@@ -2,6 +2,7 @@ import { parse } from '@babel/parser'
 import MagicString from 'magic-string'
 import type { ParserPlugin } from '@babel/parser'
 import type { Identifier, Statement } from '@babel/types'
+import { resolveParserPlugins } from './script/context'
 
 export function rewriteDefault(
   input: string,
@@ -10,7 +11,7 @@ export function rewriteDefault(
 ): string {
   const ast = parse(input, {
     sourceType: 'module',
-    plugins: parserPlugins
+    plugins: resolveParserPlugins('js', parserPlugins)
   }).program.body
   const s = new MagicString(input)
 

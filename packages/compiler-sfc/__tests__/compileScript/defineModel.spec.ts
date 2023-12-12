@@ -10,8 +10,7 @@ describe('defineModel()', () => {
       const c = defineModel('count')
       const toString = defineModel('toString', { type: Function })
       </script>
-      `,
-      { defineModel: true }
+      `
     )
     assertCode(content)
     expect(content).toMatch('props: {')
@@ -44,8 +43,7 @@ describe('defineModel()', () => {
       defineEmits(['change'])
       const count = defineModel({ default: 0 })
       </script>
-    `,
-      { defineModel: true }
+    `
     )
     assertCode(content)
     expect(content).toMatch(`props: /*#__PURE__*/_mergeModels({ foo: String }`)
@@ -66,8 +64,7 @@ describe('defineModel()', () => {
       defineProps(['foo', 'bar'])
       const count = defineModel('count')
       </script>
-    `,
-      { defineModel: true }
+    `
     )
     assertCode(content)
     expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
@@ -94,8 +91,7 @@ describe('defineModel()', () => {
 
       const local = true
       const hoist = defineModel('hoist', { local })
-      </script>`,
-      { defineModel: true }
+      </script>`
     )
     assertCode(content)
     expect(content).toMatch(`_useModel(__props, "modelValue", { local: true })`)
@@ -115,8 +111,7 @@ describe('defineModel()', () => {
       const disabled = defineModel<number>('disabled', { required: false })
       const any = defineModel<any | boolean>('any')
       </script>
-      `,
-      { defineModel: true }
+      `
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
@@ -155,7 +150,7 @@ describe('defineModel()', () => {
       const optional = defineModel<string>('optional', { required: false })
       </script>
       `,
-      { defineModel: true, isProd: true }
+      { isProd: true }
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: Boolean }')

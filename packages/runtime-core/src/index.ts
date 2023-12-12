@@ -60,7 +60,7 @@ export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useAttrs, useSlots, type DefineProps } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -212,6 +212,8 @@ export type {
   AppConfig,
   AppContext,
   Plugin,
+  ObjectPlugin,
+  FunctionPlugin,
   CreateAppFunction,
   OptionMergeFunction
 } from './apiCreateApp'
@@ -230,9 +232,10 @@ export type {
   ComponentInternalInstance,
   SetupContext,
   ComponentCustomProps,
-  AllowedComponentProps
+  AllowedComponentProps,
+  ComponentInstance
 } from './component'
-export type { DefineComponent } from './apiDefineComponent'
+export type { DefineComponent, PublicProps } from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
@@ -260,7 +263,8 @@ export type {
   RendererElement,
   HydrationRenderer,
   RendererOptions,
-  RootRenderFunction
+  RootRenderFunction,
+  ElementNamespace
 } from './renderer'
 export type { RootHydrateFunction } from './hydration'
 export type { Slot, Slots, SlotsType } from './componentSlots'

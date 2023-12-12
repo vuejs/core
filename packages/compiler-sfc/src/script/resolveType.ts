@@ -83,6 +83,9 @@ export type SimpleTypeResolveContext = Pick<
 
   // emits
   | 'emitsTypeDecl'
+
+  // customElement
+  | 'isCE'
 > &
   Partial<
     Pick<ScriptCompileContext, 'scope' | 'globalScopes' | 'deps' | 'fs'>
@@ -1475,6 +1478,7 @@ export function inferRuntimeType(
             scope
           )
         }
+        break
       case 'TSMethodSignature':
       case 'TSFunctionType':
         return ['Function']

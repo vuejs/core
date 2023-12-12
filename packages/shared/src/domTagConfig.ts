@@ -27,6 +27,13 @@ const SVG_TAGS =
   'polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,' +
   'text,textPath,title,tspan,unknown,use,view'
 
+// https://developer.mozilla.org/en-US/docs/Web/MathML/Element
+const MATH_TAGS =
+  'math,maction,annotation,annotation-xml,menclose,merror,mfenced,mfrac,mi,' +
+  'mmultiscripts,mn,mo,mover,mpadded,mphantom,mprescripts,mroot,mrow,ms,' +
+  'semantics,mspace,msqrt,mstyle,msub,msup,msubsup,mtable,mtd,mtext,mtr,' +
+  'munder,munderover'
+
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
@@ -40,6 +47,11 @@ export const isHTMLTag = /*#__PURE__*/ makeMap(HTML_TAGS)
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
  */
 export const isSVGTag = /*#__PURE__*/ makeMap(SVG_TAGS)
+/**
+ * Compiler only.
+ * Do NOT use in runtime code paths unless behind `__DEV__` flag.
+ */
+export const isMathMLTag = /*#__PURE__*/ makeMap(MATH_TAGS)
 /**
  * Compiler only.
  * Do NOT use in runtime code paths unless behind `__DEV__` flag.
