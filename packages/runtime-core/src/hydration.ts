@@ -740,7 +740,9 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
       ? includeBooleanAttr(clientValue)
         ? ''
         : false
-      : String(clientValue)
+      : clientValue == null
+        ? false
+        : String(clientValue)
     if (actual !== expected) {
       mismatchType = `attribute`
       mismatchKey = key

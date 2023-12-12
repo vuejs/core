@@ -1397,6 +1397,7 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div spellcheck></div>`, () =>
         h('div', { spellcheck: '' })
       )
+      mountWithHydration(`<div></div>`, () => h('div', { id: undefined }))
       // boolean
       mountWithHydration(`<select multiple></div>`, () =>
         h('select', { multiple: true })
