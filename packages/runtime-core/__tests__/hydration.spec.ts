@@ -864,7 +864,7 @@ describe('SSR hydration', () => {
 
     const AsyncComp = {
       async setup() {
-        await new Promise<void>(r => r())
+        await new Promise<void>(r => setTimeout(r, 10))
         return () => h('h1', 'Async component')
       }
     }
@@ -921,9 +921,7 @@ describe('SSR hydration', () => {
     container.innerHTML = html
     createSSRApp(App).mount(container)
 
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 0)
-    })
+    await new Promise(r => setTimeout(r, 10))
 
     expect(toggle.value).toBe(false)
 
@@ -938,7 +936,7 @@ describe('SSR hydration', () => {
 
     const AsyncComp = {
       async setup() {
-        await new Promise<void>(r => r())
+        await new Promise<void>(r => setTimeout(r, 10))
         return () => h('h1', 'Async component')
       }
     }
@@ -992,9 +990,7 @@ describe('SSR hydration', () => {
     container.innerHTML = html
     createSSRApp(App).mount(container)
 
-    await new Promise<void>(resolve => {
-      setTimeout(resolve, 0)
-    })
+    await new Promise(r => setTimeout(r, 10))
 
     expect(toggle.value).toBe(false)
 
