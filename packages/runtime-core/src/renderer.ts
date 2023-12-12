@@ -1459,12 +1459,10 @@ function baseCreateRenderer(
           // this will cause crash because we don't know the root node yet
           if (nonHydratedAsyncRoot) {
             // only sync the properties and abort the rest of operations
-            toggleRecurse(instance, false)
             if (next) {
               next.el = vnode.el
               updateComponentPreRender(instance, next, optimized)
             }
-            toggleRecurse(instance, true)
             // and continue the rest of operations once the deps are resolved
             nonHydratedAsyncRoot.asyncDep!.then(() => {
               // the instance may be destroyed during the time period
