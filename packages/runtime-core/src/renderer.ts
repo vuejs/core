@@ -1242,18 +1242,17 @@ function baseCreateRenderer(
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
       }
-      return
+    } else {
+      setupRenderEffect(
+        instance,
+        initialVNode,
+        container,
+        anchor,
+        parentSuspense,
+        namespace,
+        optimized
+      )
     }
-
-    setupRenderEffect(
-      instance,
-      initialVNode,
-      container,
-      anchor,
-      parentSuspense,
-      namespace,
-      optimized
-    )
 
     if (__DEV__) {
       popWarningContext()
