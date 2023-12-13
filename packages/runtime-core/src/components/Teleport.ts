@@ -43,7 +43,7 @@ const resolveTarget = <T = RendererElement>(
       return null
     } else {
       const target = select(targetSelector)
-      if (!target) {
+      if (!target && !isTeleportDisabled(props)) {
         __DEV__ &&
           warn(
             `Failed to locate Teleport target with selector "${targetSelector}". ` +
