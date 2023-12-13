@@ -23,9 +23,11 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     const currentDisplay = style.display
     if (isCssString) {
       if (prev !== next) {
-        const _cssVarText = (style as any)[CSS_VAR_TEXT]
-        if (_cssVarText) {
-          ;(next as string) += `; ${_cssVarText}`
+        // #9821
+        let cssVarText = (style as any)[CSS_VAR_TEXT]
+        if (cssVarText) {
+          cssVarText = (next.endsWith(';') ? '' : '; ') + cssVarText
+          ;(next as string) += cssVarText
         }
         style.cssText = next as string
       }
