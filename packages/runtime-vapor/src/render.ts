@@ -50,11 +50,10 @@ export function mountComponent(
 
     const setupFn =
       typeof component === 'function' ? component : component.setup
-
-    const state = setupFn(props, ctx)
     instance.proxy = markRaw(
       new Proxy({ _: instance }, PublicInstanceProxyHandlers),
     )
+    const state = setupFn && setupFn(props, ctx)
     if (state && '__isScriptSetup' in state) {
       instance.setupState = proxyRefs(state)
       return (instance.block = component.render(instance.proxy))

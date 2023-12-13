@@ -20,7 +20,7 @@ export type FunctionalComponent = SetupFn & {
 }
 export interface ObjectComponent {
   props: ComponentPropsOptions
-  setup: SetupFn
+  setup?: SetupFn
   render(ctx: any): Block
 }
 
