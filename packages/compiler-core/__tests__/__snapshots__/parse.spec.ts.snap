@@ -5846,7 +5846,7 @@ exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj"
           "line": 1,
           "offset": 20,
         },
-        "source": "<div :v-foo=\\"obj\\" />",
+        "source": "<div :v-foo="obj" />",
         "start": {
           "column": 1,
           "line": 1,
@@ -5900,7 +5900,7 @@ exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj"
               "line": 1,
               "offset": 17,
             },
-            "source": ":v-foo=\\"obj\\"",
+            "source": ":v-foo="obj"",
             "start": {
               "column": 6,
               "line": 1,
@@ -5929,7 +5929,7 @@ exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj"
       "line": 1,
       "offset": 20,
     },
-    "source": "<div :v-foo=\\"obj\\" />",
+    "source": "<div :v-foo="obj" />",
     "start": {
       "column": 1,
       "line": 1,
