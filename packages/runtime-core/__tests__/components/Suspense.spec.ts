@@ -1684,7 +1684,9 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe('<div>async</div>')
 
     viewRef.value = 1
-    await nextTick() //TypeError: Cannot read properties of null (reading 'parentNode'),This has been fixed
+    await nextTick()
+    // TypeError: Cannot read properties of null (reading 'parentNode')
+    // This has been fixed
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
   })
 
