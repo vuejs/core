@@ -291,6 +291,22 @@ describe('runtime-dom: props patching', () => {
     expect(el.value).toBe('baz')
   })
 
+  // #8780
+  test('embedded tag with width and height', () => {
+    // Width and height of some embedded element such as img、video、source、canvas
+    // must be set as attribute
+    const el = document.createElement('img')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
+  // # 9762 should fallthrough to `key in el` logic for non embedded tags
+  test('width and height on custom elements', () => {
+    const el = document.createElement('foobar')
+    patchProp(el, 'width', null, '24px')
+    expect(el.getAttribute('width')).toBe('24px')
+  })
+
   test('translate attribute', () => {
     const el = document.createElement('div')
     patchProp(el, 'translate', null, 'no')

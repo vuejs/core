@@ -811,8 +811,8 @@ function parseAttribute(
       (isPropShorthand || startsWith(name, ':')
         ? 'bind'
         : startsWith(name, '@')
-        ? 'on'
-        : 'slot')
+          ? 'on'
+          : 'slot')
 
     if (__DEV__) {
       if (name.length === 1) {
@@ -1077,7 +1077,7 @@ function parseTextData(
   ) {
     return rawText
   } else {
-    // DATA or RCDATA containing "&"". Entity decoding required.
+    // DATA or RCDATA containing "&". Entity decoding is required.
     return context.options.decodeEntities(
       rawText,
       mode === TextModes.ATTRIBUTE_VALUE

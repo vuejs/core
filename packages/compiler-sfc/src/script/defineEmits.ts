@@ -58,7 +58,9 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
       .map(n => JSON.stringify(`update:${n}`))
       .join(', ')}]`
     emitsDecl = emitsDecl
-      ? `${ctx.helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
+      ? `/*#__PURE__*/${ctx.helper(
+          'mergeModels'
+        )}(${emitsDecl}, ${modelEmitsDecl})`
       : modelEmitsDecl
   }
   return emitsDecl
