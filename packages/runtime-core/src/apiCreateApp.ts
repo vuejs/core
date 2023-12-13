@@ -27,6 +27,7 @@ import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import { NormalizedPropsOptions } from './componentProps'
 import { ObjectEmitsOptions } from './componentEmits'
+import { DefineComponent } from './apiDefineComponent'
 
 export interface App<HostElement = any> {
   version: string
@@ -40,7 +41,7 @@ export interface App<HostElement = any> {
 
   mixin(mixin: ComponentOptions): this
   component(name: string): Component | undefined
-  component(name: string, component: Component): this
+  component(name: string, component: Component | DefineComponent): this
   directive(name: string): Directive | undefined
   directive(name: string, directive: Directive): this
   mount(

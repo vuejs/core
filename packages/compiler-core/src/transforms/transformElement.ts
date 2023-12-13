@@ -19,7 +19,8 @@ import {
   TemplateTextChildNode,
   DirectiveArguments,
   createVNodeCall,
-  ConstantTypes
+  ConstantTypes,
+  JSChildNode
 } from '../ast'
 import {
   PatchFlags,
@@ -385,6 +386,13 @@ function resolveSetupReference(name: string, context: TransformContext) {
         `${context.helperString(UNREF)}(${fromMaybeRef})`
       : `$setup[${JSON.stringify(fromMaybeRef)}]`
   }
+
+  const fromProps = checkType(BindingTypes.PROPS)
+  if (fromProps) {
+    return `${context.helperString(UNREF)}(${
+      context.inline ? '__props' : '$props'
+    }[${JSON.stringify(fromProps)}])`
+  }
 }
 
 export type PropsExpression = ObjectExpression | CallExpression | ExpressionNode
@@ -450,6 +458,12 @@ export function buildProps(
 
       if (isEventHandler && isReservedProp(name)) {
         hasVnodeHook = true
+      }
+
+      if (isEventHandler && value.type === NodeTypes.JS_CALL_EXPRESSION) {
+        // handler wrapped with internal helper e.g. withModifiers(fn)
+        // extract the actual expression
+        value = value.arguments[0] as JSChildNode
       }
 
       if (
@@ -550,7 +564,7 @@ export function buildProps(
       )
     } else {
       // directives
-      const { name, arg, exp, loc } = prop
+      const { name, arg, exp, loc, modifiers } = prop
       const isVBind = name === 'bind'
       const isVOn = name === 'on'
 
@@ -678,6 +692,11 @@ export function buildProps(
         continue
       }
 
+      // force hydration for v-bind with .prop modifier
+      if (isVBind && modifiers.includes('prop')) {
+        patchFlag |= PatchFlags.NEED_HYDRATION
+      }
+
       const directiveTransform = context.directiveTransforms[name]
       if (directiveTransform) {
         // has built-in directive transform.
@@ -743,12 +762,12 @@ export function buildProps(
       patchFlag |= PatchFlags.PROPS
     }
     if (hasHydrationEventBinding) {
-      patchFlag |= PatchFlags.HYDRATE_EVENTS
+      patchFlag |= PatchFlags.NEED_HYDRATION
     }
   }
   if (
     !shouldUseBlock &&
-    (patchFlag === 0 || patchFlag === PatchFlags.HYDRATE_EVENTS) &&
+    (patchFlag === 0 || patchFlag === PatchFlags.NEED_HYDRATION) &&
     (hasRef || hasVnodeHook || runtimeDirectives.length > 0)
   ) {
     patchFlag |= PatchFlags.NEED_PATCH
