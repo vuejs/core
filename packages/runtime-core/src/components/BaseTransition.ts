@@ -485,10 +485,10 @@ function getInnerChild(vnode: VNode): VNode | undefined {
       ? vnode.component.subTree
       : vnode.children
         ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
-        : isTeleport(vnode.type) && isArray(vnode.children)
-          ? findNonCommentChild(vnode.children as VNode[])
-          : undefined
-    : vnode
+        : undefined
+    : isTeleport(vnode.type)
+      ? findNonCommentChild(vnode.children as VNode[])
+      : vnode
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
