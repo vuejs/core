@@ -1,12 +1,31 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue/vapor'
+import {
+  ref,
+  computed,
+  onMounted,
+  onBeforeMount,
+  getCurrentInstance
+} from 'vue/vapor'
 
+const instance = getCurrentInstance()!
 const count = ref(1)
 const double = computed(() => count.value * 2)
 const html = computed(() => `<button>HTML! ${count.value}</button>`)
 
 const inc = () => count.value++
 const dec = () => count.value--
+
+onBeforeMount(() => {
+  console.log('onBeforeMount', instance.isMounted)
+})
+onMounted(() => {
+  console.log('onMounted', instance.isMounted)
+})
+onMounted(() => {
+  setTimeout(() => {
+    count.value++
+  }, 1000)
+})
 </script>
 
 <template>

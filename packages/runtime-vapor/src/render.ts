@@ -1,5 +1,5 @@
 import { markRaw, proxyRefs } from '@vue/reactivity'
-import { type Data } from '@vue/shared'
+import { invokeArrayFns, type Data } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -62,30 +62,37 @@ export function mountComponent(
     }
     return (instance.block = block)
   })!
+  const { bm, m } = instance
+
+  // hook: beforeMount
+  bm && invokeArrayFns(bm)
   invokeDirectiveHook(instance, 'beforeMount')
+
   insert(block, instance.container)
   instance.isMountedRef.value = true
-  invokeDirectiveHook(instance, 'mounted')
-  unsetCurrentInstance()
 
-  // TODO: lifecycle hooks (mounted, ...)
-  // const { m } = instance
-  // m && invoke(m)
+  // hook: mounted
+  invokeDirectiveHook(instance, 'mounted')
+  m && invokeArrayFns(m)
+  unsetCurrentInstance()
 
   return instance
 }
 
 export function unmountComponent(instance: ComponentInternalInstance) {
-  const { container, block, scope } = instance
+  const { container, block, scope, um, bum } = instance
 
+  // hook: beforeUnmount
+  bum && invokeArrayFns(bum)
   invokeDirectiveHook(instance, 'beforeUnmount')
+
   scope.stop()
   block && remove(block, container)
   instance.isMountedRef.value = false
-  invokeDirectiveHook(instance, 'unmounted')
-  unsetCurrentInstance()
+  instance.isUnmountedRef.value = true
 
-  // TODO: lifecycle hooks (unmounted, ...)
-  // const { um } = instance
-  // um && invoke(um)
+  // hook: unmounted
+  invokeDirectiveHook(instance, 'unmounted')
+  um && invokeArrayFns(um)
+  unsetCurrentInstance()
 }
