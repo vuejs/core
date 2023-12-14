@@ -152,6 +152,28 @@ describe('compiler: element transform', () => {
     expect(node.tag).toBe(`Foo.Example`)
   })
 
+  test('resolve namespaced component from props bindings (inline)', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      inline: true,
+      bindingMetadata: {
+        Foo: BindingTypes.PROPS
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe(`_unref(__props["Foo"]).Example`)
+  })
+
+  test('resolve namespaced component from props bindings (non-inline)', () => {
+    const { root, node } = parseWithElementTransform(`<Foo.Example/>`, {
+      inline: false,
+      bindingMetadata: {
+        Foo: BindingTypes.PROPS
+      }
+    })
+    expect(root.helpers).not.toContain(RESOLVE_COMPONENT)
+    expect(node.tag).toBe('_unref($props["Foo"]).Example')
+  })
+
   test('do not resolve component from non-script-setup bindings', () => {
     const bindingMetadata = {
       Example: BindingTypes.SETUP_MAYBE_REF
@@ -1089,7 +1111,7 @@ describe('compiler: element transform', () => {
       })
     })
 
-    test('HYDRATE_EVENTS', () => {
+    test('NEED_HYDRATION for v-on', () => {
       // ignore click events (has dedicated fast path)
       const { node } = parseWithElementTransform(`<div @click="foo" />`, {
         directiveTransforms: {
@@ -1108,12 +1130,24 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node2.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
+      )
+    })
+
+    test('NEED_HYDRATION for v-bind.prop', () => {
+      const { node } = parseWithBind(`<div v-bind:id.prop="id" />`)
+      expect(node.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
+      )
+
+      const { node: node2 } = parseWithBind(`<div .id="id" />`)
+      expect(node2.patchFlag).toBe(
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
       )
     })
 
     // #5870
-    test('HYDRATE_EVENTS on dynamic component', () => {
+    test('NEED_HYDRATION on dynamic component', () => {
       const { node } = parseWithElementTransform(
         `<component :is="foo" @input="foo" />`,
         {
@@ -1123,8 +1157,22 @@ describe('compiler: element transform', () => {
         }
       )
       expect(node.patchFlag).toBe(
-        genFlagText([PatchFlags.PROPS, PatchFlags.HYDRATE_EVENTS])
+        genFlagText([PatchFlags.PROPS, PatchFlags.NEED_HYDRATION])
       )
+    })
+
+    test('should not have PROPS patchflag for constant v-on handlers', () => {
+      const { node } = parseWithElementTransform(`<div @keydown="foo" />`, {
+        prefixIdentifiers: true,
+        bindingMetadata: {
+          foo: BindingTypes.SETUP_CONST
+        },
+        directiveTransforms: {
+          on: transformOn
+        }
+      })
+      // should only have hydration flag
+      expect(node.patchFlag).toBe(genFlagText(PatchFlags.NEED_HYDRATION))
     })
   })
 

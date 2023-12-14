@@ -50,7 +50,8 @@ import {
   ObjectEmitsOptions,
   EmitFn,
   emit,
-  normalizeEmitsOptions
+  normalizeEmitsOptions,
+  EmitsToProps
 } from './componentEmits'
 import {
   EMPTY_OBJ,
@@ -131,7 +132,7 @@ export interface FunctionalComponent<
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
-    props: P,
+    props: P & EmitsToProps<E>,
     ctx: Omit<SetupContext<E, IfAny<S, {}, SlotsType<S>>>, 'expose'>
   ): any
   props?: ComponentPropsOptions<P>
@@ -922,10 +923,10 @@ export function finishComponentSetup(
           (__ESM_BUNDLER__
             ? ` Configure your bundler to alias "vue" to "vue/dist/vue.esm-bundler.js".`
             : __ESM_BROWSER__
-            ? ` Use "vue.esm-browser.js" instead.`
-            : __GLOBAL__
-            ? ` Use "vue.global.js" instead.`
-            : ``) /* should not happen */
+              ? ` Use "vue.esm-browser.js" instead.`
+              : __GLOBAL__
+                ? ` Use "vue.global.js" instead.`
+                : ``) /* should not happen */
       )
     } else {
       warn(`Component is missing template or render function.`)
