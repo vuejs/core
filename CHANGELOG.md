@@ -1,3 +1,18 @@
+# [3.4.0-beta.2](https://github.com/vuejs/core/compare/v3.4.0-beta.1...v3.4.0-beta.2) (2023-12-14)
+
+
+### Features
+
+* **types:** remove default jsx global registration ([92b8d9c](https://github.com/vuejs/core/commit/92b8d9cef69146540db2bf7f2a5632ab5d38f672))
+
+
+### BREAKING CHANGES
+
+* **types:** Vue no longer registers the global `JSX` namespace by
+default.
+
+
+
 # [3.4.0-beta.1](https://github.com/vuejs/core/compare/v3.3.11...v3.4.0-beta.1) (2023-12-13)
 
 
