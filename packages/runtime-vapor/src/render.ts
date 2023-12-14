@@ -1,6 +1,5 @@
 import { markRaw, proxyRefs } from '@vue/reactivity'
 import { type Data } from '@vue/shared'
-
 import {
   type Component,
   type ComponentInternalInstance,
@@ -8,11 +7,8 @@ import {
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-
 import { initProps } from './componentProps'
-
 import { invokeDirectiveHook } from './directive'
-
 import { insert, remove } from './dom'
 import { PublicInstanceProxyHandlers } from './componentPublicInstance'
 
@@ -61,7 +57,9 @@ export function mountComponent(
     } else {
       block = state as Block
     }
-    if (block instanceof DocumentFragment) block = Array.from(block.childNodes)
+    if (block instanceof DocumentFragment) {
+      block = Array.from(block.childNodes)
+    }
     return (instance.block = block)
   })!
   invokeDirectiveHook(instance, 'beforeMount')

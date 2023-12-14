@@ -1,7 +1,3 @@
-/**
- * @vitest-environment jsdom
- */
-
 import { template, fragment } from '../src'
 
 describe('api: template', () => {

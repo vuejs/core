@@ -24,26 +24,14 @@ describe('directive: v-show', () => {
         function handleClick() {
           visible.value = !visible.value
         }
-        const __returned__ = { visible, handleClick }
-        Object.defineProperty(__returned__, '__isScriptSetup', {
-          enumerable: false,
-          value: true,
-        })
-        return __returned__
-      },
-      render(_ctx: any) {
         const t0 = template('<button>toggle</button><h1>hello world</h1>')
         const n0 = t0()
         const {
           0: [n1],
           1: [n2],
-        } = children(n0 as ChildNode)
-        withDirectives(n2, [[vShow, () => _ctx.visible]])
-        on(
-          n1 as HTMLElement,
-          'click',
-          (...args) => _ctx.handleClick && _ctx.handleClick(...args),
-        )
+        } = children(n0)
+        withDirectives(n2, [[vShow, () => visible.value]])
+        on(n1 as HTMLElement, 'click', (...args) => handleClick(...args))
         return n0
       },
     })

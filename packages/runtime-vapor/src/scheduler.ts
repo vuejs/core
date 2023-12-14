@@ -20,7 +20,7 @@ function flush() {
   queued = undefined
 }
 
-export const nextTick = (fn: any) => p.then(fn)
+export const nextTick = (fn?: any) => (fn ? p.then(fn) : p)
 
 export function effect(fn: any) {
   let run: () => void

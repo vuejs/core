@@ -4,13 +4,11 @@ import {
   effect,
   setText,
   render,
-  getCurrentInstance,
   ref,
   unmountComponent,
 } from '../src'
-import type { ComponentInternalInstance } from '../src'
 import { afterEach, beforeEach, describe, expect } from 'vitest'
-import { defineComponent, nextTick } from '@vue/runtime-core'
+import { defineComponent } from '@vue/runtime-core'
 
 let host: HTMLElement
 
@@ -42,7 +40,6 @@ describe('component', () => {
       },
     })
     const instance = render(Comp as any, {}, '#host')
-    await nextTick()
     expect(host.innerHTML).toBe('<div>0</div>')
     unmountComponent(instance)
     expect(host.innerHTML).toBe('')
