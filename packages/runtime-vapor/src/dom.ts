@@ -42,7 +42,9 @@ export function append(parent: ParentBlock, ...nodes: Node[]) {
 }
 
 export function remove(block: Block, parent: ParentNode) {
-  if (block instanceof Node) {
+  if (block instanceof DocumentFragment) {
+    remove(Array.from(block.childNodes), parent)
+  } else if (block instanceof Node) {
     parent.removeChild(block)
   } else if (isArray(block)) {
     for (const child of block) remove(child, parent)
@@ -52,7 +54,7 @@ export function remove(block: Block, parent: ParentNode) {
   }
 }
 
-export function setText(el: Element, oldVal: any, newVal: any) {
+export function setText(el: Node, oldVal: any, newVal: any) {
   if ((newVal = toDisplayString(newVal)) !== oldVal) {
     el.textContent = newVal
   }
@@ -104,7 +106,7 @@ export function setDynamicProp(el: Element, key: string, val: any) {
 }
 
 type Children = Record<number, [ChildNode, Children]>
-export function children(n: ChildNode): Children {
+export function children(n: Node): Children {
   return { ...Array.from(n.childNodes).map((n) => [n, children(n)]) }
 }
 

@@ -1,4 +1,4 @@
-export const template = (str: string): (() => Node) => {
+export const template = (str: string): (() => DocumentFragment) => {
   let cached = false
   let node: DocumentFragment
   return () => {
@@ -14,7 +14,7 @@ export const template = (str: string): (() => Node) => {
       // repeated renders: clone from cache. This is more performant and
       // efficient when dealing with big lists where the template is repeated
       // many times.
-      return node.cloneNode(true)
+      return node.cloneNode(true) as DocumentFragment
     }
   }
 }

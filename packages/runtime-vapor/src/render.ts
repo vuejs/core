@@ -54,12 +54,15 @@ export function mountComponent(
       new Proxy({ _: instance }, PublicInstanceProxyHandlers),
     )
     const state = setupFn && setupFn(props, ctx)
+    let block: Block | null = null
     if (state && '__isScriptSetup' in state) {
       instance.setupState = proxyRefs(state)
-      return (instance.block = component.render(instance.proxy))
+      block = component.render(instance.proxy)
     } else {
-      return (instance.block = state as Block)
+      block = state as Block
     }
+    if (block instanceof DocumentFragment) block = Array.from(block.childNodes)
+    return (instance.block = block)
   })!
   invokeDirectiveHook(instance, 'beforeMount')
   insert(block, instance.container)
