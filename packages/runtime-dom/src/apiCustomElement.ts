@@ -221,7 +221,7 @@ export class VueElement extends BaseClass {
             this._ce_parent = parent as VueElement
             // If the parent's custom element is asynchronous or not yet resolved
             if (
-              (parent._def as ComponentOptions).__asyncLoader ||
+              (parent._def as ComponentOptions).__asyncLoader &&
               !parent._resolved
             ) {
               // Store the current custom element in the parent's _ce_children
