@@ -346,7 +346,6 @@ export function createHydrationFunctions(
       }
 
       // handle appear transition
-      // this should be before patch props because el will be replaced
       let needCallTransitionHooks = false
       if (isTemplateNode(el)) {
         needCallTransitionHooks =
