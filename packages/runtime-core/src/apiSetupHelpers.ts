@@ -365,8 +365,13 @@ export function useModel(props: Record<string, any>, name: string): Ref {
   }
 
   let localValue: any
+  let propChangeEffect: Function | undefined
   watchSyncEffect(() => {
     localValue = props[name]
+    if (propChangeEffect) {
+      propChangeEffect()
+      propChangeEffect = undefined
+    }
   })
 
   return customRef((track, trigger) => ({
@@ -376,9 +381,13 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     },
     set(value) {
       const rawProps = i.vnode!.props
-      if (!(rawProps && name in rawProps) && hasChanged(value, localValue)) {
-        localValue = value
-        trigger()
+      if (hasChanged(value, localValue)) {
+        if (!(rawProps && name in rawProps)) {
+          localValue = value
+          trigger()
+        } else {
+          propChangeEffect = trigger
+        }
       }
       i.emit(`update:${name}`, value)
     }
