@@ -26,8 +26,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
         // #9821
         let cssVarText = (style as any)[CSS_VAR_TEXT]
         if (cssVarText) {
-          cssVarText = (next.endsWith(';') ? '' : '; ') + cssVarText
-          ;(next as string) += cssVarText
+          ;(next as string) += ';' + cssVarText
         }
         style.cssText = next as string
       }
