@@ -1207,7 +1207,7 @@ describe('SSR hydration', () => {
       </div>
     `)
     expect(vnode.el).toBe(container.firstChild)
-    // expect(`mismatch`).not.toHaveBeenWarned()
+    expect(`mismatch`).not.toHaveBeenWarned()
   })
 
   test('transition appear with v-if', () => {
