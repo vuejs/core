@@ -1453,6 +1453,7 @@ export function inferRuntimeType(
             scope
           )
         }
+        break
       case 'TSMethodSignature':
       case 'TSFunctionType':
         return ['Function']
