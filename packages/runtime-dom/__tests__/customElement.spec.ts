@@ -728,6 +728,7 @@ describe('defineCustomElement', () => {
     })
     test('async & multiple levels of nested custom elements', async () => {
       let fooVal: string | undefined = ''
+      let barVal: string | undefined = ''
       const E = defineCustomElement(
         defineAsyncComponent(() => {
           return Promise.resolve({
@@ -742,6 +743,9 @@ describe('defineCustomElement', () => {
       )
 
       const EChild = defineCustomElement({
+        setup(props) {
+          provide('bar', 'bar')
+        },
         render(this: any) {
           return h('div', null, [renderSlot(this.$slots, 'default')])
         }
@@ -750,6 +754,7 @@ describe('defineCustomElement', () => {
       const EChild2 = defineCustomElement({
         setup(props) {
           fooVal = inject('foo')
+          barVal = inject('bar')
         },
         render(this: any) {
           return h('div', null, 'child')
@@ -764,6 +769,7 @@ describe('defineCustomElement', () => {
       const e = container.childNodes[0] as VueElement
       expect(e.shadowRoot!.innerHTML).toBe(`<div><slot></slot></div>`)
       expect(fooVal).toBe('foo')
+      expect(barVal).toBe('bar')
     })
   })
 })
