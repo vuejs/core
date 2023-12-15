@@ -1690,6 +1690,46 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
   })
 
+  // #6416 follow up
+  test('Suspense patched during HOC async component re-mount', async () => {
+    const key = ref('k')
+    const data = ref('data')
+
+    const Async = defineAsyncComponent({
+      render() {
+        return h('div', 'async')
+      }
+    })
+
+    const Comp = {
+      render() {
+        return h(Async, { key: key.value })
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    const App = {
+      render() {
+        return h(Suspense, null, {
+          default: h(Comp, { data: data.value })
+        })
+      }
+    }
+    render(h(App), root)
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+
+    // async mounted, but key change causing a new async comp to be loaded
+    key.value = 'k1'
+    await nextTick()
+
+    // patch the Suspense
+    // should not throw error due to Suspense vnode.el being null
+    data.value = 'data2'
+    await Promise.all(deps)
+  })
+
   describe('warnings', () => {
     // base function to check if a combination of slots warns or not
     function baseCheckWarn(
