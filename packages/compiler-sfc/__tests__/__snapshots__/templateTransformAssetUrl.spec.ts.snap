@@ -76,6 +76,25 @@ export function render(_ctx, _cache) {
 }"
 `;
 
+exports[`compiler sfc: transform asset url > transform tag asset url 1`] = `
+"import { createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
+import _imports_0 from '@/assets/bar.wav'
+import _imports_1 from '@/assets/bar.mp4'
+import _imports_2 from '@/assets/bar.png'
+
+
+export function render(_ctx, _cache) {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode(\\"audio\\", { src: _imports_0 }),
+    _createElementVNode(\\"video\\", { src: _imports_1 }),
+    _createElementVNode(\\"source\\", { src: _imports_1 }),
+    _createElementVNode(\\"img\\", { src: _imports_2 }),
+    _createElementVNode(\\"image\\", { \\"xlink:href\\": _imports_2 }),
+    _createElementVNode(\\"use\\", { \\"xlink:href\\": _imports_2 })
+  ], 64 /* STABLE_FRAGMENT */))
+}"
+`;
+
 exports[`compiler sfc: transform asset url > transform with stringify 1`] = `
 "import { createElementVNode as _createElementVNode, createStaticVNode as _createStaticVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from \\"vue\\"
 import _imports_0 from './bar.png'
