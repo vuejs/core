@@ -116,7 +116,7 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  */
 export function shallowRef<T>(
   value: T
-): 1 extends (T extends Ref ? 1 : 0)
+): Ref extends T
   ? T extends Ref
     ? IfAny<T, ShallowRef<T>, T>
     : ShallowRef<T>
