@@ -16,7 +16,13 @@ import {
   nextTick,
   ref,
   Ref,
-  watch
+  watch,
+  openBlock,
+  createVNode,
+  createElementVNode,
+  createBlock,
+  createElementBlock,
+  Fragment
 } from '@vue/runtime-test'
 import {
   defineEmits,
@@ -428,6 +434,83 @@ describe('SFC <script setup> helpers', () => {
 
       await nextTick()
       expect(serializeInner(root)).toBe('2')
+    })
+
+    test('pass modelValue to slot (optimized mode) ', async () => {
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
+      const Comp = {
+        render(this: any) {
+          return this.$slots.default()
+        }
+      }
+
+      const childRender = vi.fn()
+      const slotRender = vi.fn()
+      const Child = defineComponent({
+        props: ['modelValue'],
+        emits: ['update:modelValue'],
+        setup(props) {
+          foo = useModel(props, 'modelValue')
+          return () => {
+            childRender()
+            return (
+              openBlock(),
+              createElementBlock(Fragment, null, [
+                createVNode(Comp, null, {
+                  default: () => {
+                    slotRender()
+                    return createElementVNode('div', null, foo.value)
+                  },
+                  _: 1 /* STABLE */
+                })
+              ])
+            )
+          }
+        }
+      })
+
+      const msg = ref('')
+      const setValue = vi.fn(v => (msg.value = v))
+      const root = nodeOps.createElement('div')
+      createApp({
+        render() {
+          return (
+            openBlock(),
+            createBlock(
+              Child,
+              {
+                modelValue: msg.value,
+                'onUpdate:modelValue': setValue
+              },
+              null,
+              8 /* PROPS */,
+              ['modelValue']
+            )
+          )
+        }
+      }).mount(root)
+
+      expect(foo.value).toBe('')
+      expect(msg.value).toBe('')
+      expect(setValue).not.toBeCalled()
+      expect(childRender).toBeCalledTimes(1)
+      expect(slotRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('<div></div>')
+
+      // update from child
+      update()
+
+      await nextTick()
+      expect(msg.value).toBe('bar')
+      expect(foo.value).toBe('bar')
+      expect(setValue).toBeCalledTimes(1)
+      expect(childRender).toBeCalledTimes(2)
+      expect(slotRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('<div>bar</div>')
     })
   })
 
