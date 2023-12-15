@@ -1,6 +1,7 @@
 import { isString, hyphenate, capitalize, isArray } from '@vue/shared'
 import { camelize, warn } from '@vue/runtime-core'
 import { vShowOldKey } from '../directives/vShow'
+import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
 type Style = string | Record<string, string | string[]> | null
 
@@ -22,6 +23,11 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     const currentDisplay = style.display
     if (isCssString) {
       if (prev !== next) {
+        // #9821
+        const cssVarText = (style as any)[CSS_VAR_TEXT]
+        if (cssVarText) {
+          ;(next as string) += ';' + cssVarText
+        }
         style.cssText = next as string
       }
     } else if (prev) {
