@@ -114,9 +114,13 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * @param value - The "inner value" for the shallow ref.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
-export function shallowRef<T>(value: MaybeRef<T>): Ref<T> | ShallowRef<T>
-export function shallowRef<T extends Ref>(value: T): T
-export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T>(
+  value: T
+): 1 extends (T extends Ref ? 1 : 0)
+  ? T extends Ref
+    ? IfAny<T, ShallowRef<T>, T>
+    : ShallowRef<T>
+  : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
