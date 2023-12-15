@@ -139,6 +139,7 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
 }
 
 export function flushPreFlushCbs(
+  instance?: ComponentInternalInstance,
   seen?: CountMap,
   // if currently flushing, skip the current job itself
   i = isFlushing ? flushIndex + 1 : 0
@@ -149,6 +150,9 @@ export function flushPreFlushCbs(
   for (; i < queue.length; i++) {
     const cb = queue[i]
     if (cb && cb.pre) {
+      if (instance && cb.id !== instance.uid) {
+        continue
+      }
       if (__DEV__ && checkRecursiveUpdates(seen!, cb)) {
         continue
       }

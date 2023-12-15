@@ -118,6 +118,6 @@ export const isKnownSvgAttr = /*#__PURE__*/ makeMap(
     `v-mathematical,values,vector-effect,version,vert-adv-y,vert-origin-x,` +
     `vert-origin-y,viewBox,viewTarget,visibility,width,widths,word-spacing,` +
     `writing-mode,x,x-height,x1,x2,xChannelSelector,xlink:actuate,xlink:arcrole,` +
-    `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xml:base,xml:lang,` +
+    `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,` +
     `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`
 )
