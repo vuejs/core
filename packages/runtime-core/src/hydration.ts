@@ -344,6 +344,29 @@ export function createHydrationFunctions(
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
+
+      // handle appear transition
+      // this should be before patch props because el will be replaced
+      let needCallTransitionHooks = false
+      if (isTemplateNode(el)) {
+        needCallTransitionHooks =
+          needTransition(parentSuspense, transition) &&
+          parentComponent &&
+          parentComponent.vnode.props &&
+          parentComponent.vnode.props.appear
+
+        const content = (el as HTMLTemplateElement).content
+          .firstChild as Element
+
+        if (needCallTransitionHooks) {
+          transition!.beforeEnter(content)
+        }
+
+        // replace <template> node with inner children
+        replaceNode(content, el, parentComponent)
+        vnode.el = el = content
+      }
+
       // props
       if (props) {
         if (
@@ -388,27 +411,6 @@ export function createHydrationFunctions(
       let vnodeHooks: VNodeHook | null | undefined
       if ((vnodeHooks = props && props.onVnodeBeforeMount)) {
         invokeVNodeHook(vnodeHooks, parentComponent, vnode)
-      }
-
-      // handle appear transition
-      let needCallTransitionHooks = false
-      if (isTemplateNode(el)) {
-        needCallTransitionHooks =
-          needTransition(parentSuspense, transition) &&
-          parentComponent &&
-          parentComponent.vnode.props &&
-          parentComponent.vnode.props.appear
-
-        const content = (el as HTMLTemplateElement).content
-          .firstChild as Element
-
-        if (needCallTransitionHooks) {
-          transition!.beforeEnter(content)
-        }
-
-        // replace <template> node with inner children
-        replaceNode(content, el, parentComponent)
-        vnode.el = el = content
       }
 
       if (dirs) {
