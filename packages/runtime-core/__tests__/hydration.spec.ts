@@ -1255,6 +1255,41 @@ describe('SSR hydration', () => {
     expect(`mismatch`).not.toHaveBeenWarned()
   })
 
+  test('transition appear w/ event listener', async () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<template><button>0</button></template>`
+    createSSRApp({
+      data() {
+        return {
+          count: 0
+        }
+      },
+      template: `
+        <Transition appear>
+          <button @click="count++">{{count}}</button>
+        </Transition>
+      `
+    }).mount(container)
+
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <button
+        class="v-enter-from v-enter-active"
+      >
+        0
+      </button>
+    `)
+
+    triggerEvent('click', container.querySelector('button')!)
+    await nextTick()
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <button
+        class="v-enter-from v-enter-active"
+      >
+        1
+      </button>
+    `)
+  })
+
   describe('mismatch handling', () => {
     test('text node', () => {
       const { container } = mountWithHydration(`foo`, () => 'bar')
