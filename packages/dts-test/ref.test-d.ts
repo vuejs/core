@@ -202,7 +202,7 @@ if (refStatus.value === 'initial') {
 }
 
 describe('shallowRef with generic', <T extends { name: string }>() => {
-  const r = ref({}) as unknown as T
+  const r = {} as T
   const s = shallowRef(r)
   expectType<string>(s.value.name)
   expectType<ShallowRef<T>>(shallowRef(r))
