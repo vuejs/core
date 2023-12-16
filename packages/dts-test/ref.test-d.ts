@@ -201,10 +201,22 @@ if (refStatus.value === 'initial') {
   expectType<IsAny<typeof a>>(false)
 }
 
-describe('shallowRef with generic', <T>() => {
-  const r = ref({}) as MaybeRef<T>
-  expectType<ShallowRef<T> | Ref<T>>(shallowRef(r))
+describe('shallowRef with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = shallowRef(r)
+  expectType<string>(s.value.name)
+  expectType<ShallowRef<T>>(shallowRef(r))
 })
+
+{
+  // should return ShallowRef<T> | Ref<T>, not ShallowRef<T | Ref<T>>
+  expectType<ShallowRef<{ name: string }> | Ref<{ name: string }>>(
+    shallowRef({} as MaybeRef<{ name: string }>)
+  )
+  expectType<ShallowRef<number> | Ref<string[]> | ShallowRef<string>>(
+    shallowRef('' as Ref<string[]> | string | number)
+  )
+}
 
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
