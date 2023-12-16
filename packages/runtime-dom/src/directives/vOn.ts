@@ -35,19 +35,16 @@ const modifierGuards: Record<
 export const withModifiers = <
   T extends (event: Event, ...args: unknown[]) => any
 >(
-  fn: T & { _withMods?: T },
+  fn: T,
   modifiers: string[]
 ) => {
-  return (
-    fn._withMods ||
-    (fn._withMods = ((event, ...args) => {
-      for (let i = 0; i < modifiers.length; i++) {
-        const guard = modifierGuards[modifiers[i]]
-        if (guard && guard(event, modifiers)) return
-      }
-      return fn(event, ...args)
-    }) as T)
-  )
+  return ((event, ...args) => {
+    for (let i = 0; i < modifiers.length; i++) {
+      const guard = modifierGuards[modifiers[i]]
+      if (guard && guard(event, modifiers)) return
+    }
+    return fn(event, ...args)
+  }) as T
 }
 
 // Kept for 2.x compat.
@@ -66,7 +63,7 @@ const keyNames: Record<string, string | string[]> = {
  * @private
  */
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
-  fn: T & { _withKeys?: T },
+  fn: T,
   modifiers: string[]
 ) => {
   let globalKeyCodes: LegacyConfig['keyCodes']
@@ -88,43 +85,40 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     }
   }
 
-  return (
-    fn._withKeys ||
-    (fn._withKeys = (event => {
-      if (!('key' in event)) {
-        return
-      }
+  return (event => {
+    if (!('key' in event)) {
+      return
+    }
 
-      const eventKey = hyphenate(event.key)
-      if (modifiers.some(k => k === eventKey || keyNames[k] === eventKey)) {
+    const eventKey = hyphenate(event.key)
+    if (modifiers.some(k => k === eventKey || keyNames[k] === eventKey)) {
+      return fn(event)
+    }
+
+    if (__COMPAT__) {
+      const keyCode = String(event.keyCode)
+      if (
+        compatUtils.isCompatEnabled(
+          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+          instance
+        ) &&
+        modifiers.some(mod => mod == keyCode)
+      ) {
         return fn(event)
       }
-
-      if (__COMPAT__) {
-        const keyCode = String(event.keyCode)
-        if (
-          compatUtils.isCompatEnabled(
-            DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance
-          ) &&
-          modifiers.some(mod => mod == keyCode)
-        ) {
-          return fn(event)
-        }
-        if (globalKeyCodes) {
-          for (const mod of modifiers) {
-            const codes = globalKeyCodes[mod]
-            if (codes) {
-              const matches = isArray(codes)
-                ? codes.some(code => String(code) === keyCode)
-                : String(codes) === keyCode
-              if (matches) {
-                return fn(event)
-              }
+      if (globalKeyCodes) {
+        for (const mod of modifiers) {
+          const codes = globalKeyCodes[mod]
+          if (codes) {
+            const matches = isArray(codes)
+              ? codes.some(code => String(code) === keyCode)
+              : String(codes) === keyCode
+            if (matches) {
+              return fn(event)
             }
           }
         }
       }
-    }) as T)
-  )
+    }
+  }) as T
 }
