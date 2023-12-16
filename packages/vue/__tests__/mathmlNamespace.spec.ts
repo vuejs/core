@@ -1,4 +1,4 @@
-// SVG logic is technically dom-specific, but the logic is placed in core
+// MathML logic is technically dom-specific, but the logic is placed in core
 // because splitting it out of core would lead to unnecessary complexity in both
 // the renderer and compiler implementations.
 // Related files:
@@ -8,7 +8,7 @@
 import { vtcKey } from '../../runtime-dom/src/components/Transition'
 import { render, h, ref, nextTick } from '../src'
 
-describe('SVG support', () => {
+describe('MathML support', () => {
   afterEach(() => {
     document.body.innerHTML = ''
   })
@@ -18,25 +18,33 @@ describe('SVG support', () => {
     document.body.appendChild(root)
     const App = {
       template: `
-        <div id="e0">
-          <svg id="e1">
-            <foreignObject id="e2">
-              <div id="e3"/>
-              <svg id="e4"/>
-              <math id="e5"/>
-            </foreignObject>
-          </svg>
-        </div>
+      <math display="block" id="e0">
+        <semantics id="e1">
+          <mrow id="e2">
+            <msup>
+              <mi>x</mi>
+              <mn>2</mn>
+            </msup>
+            <mo>+</mo>
+            <mi>y</mi>
+          </mrow>
+
+          <annotation-xml encoding="text/html" id="e3">
+            <div id="e4" />
+            <svg id="e5" />
+          </annotation-xml>
+        </semantics>
+      </math>
       `
     }
     render(h(App), root)
     const e0 = document.getElementById('e0')!
-    expect(e0.namespaceURI).toMatch('xhtml')
-    expect(e0.querySelector('#e1')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e2')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e3')!.namespaceURI).toMatch('xhtml')
-    expect(e0.querySelector('#e4')!.namespaceURI).toMatch('svg')
-    expect(e0.querySelector('#e5')!.namespaceURI).toMatch('Math')
+    expect(e0.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e1')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e2')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e3')!.namespaceURI).toMatch('Math')
+    expect(e0.querySelector('#e4')!.namespaceURI).toMatch('xhtml')
+    expect(e0.querySelector('#e5')!.namespaceURI).toMatch('svg')
   })
 
   test('should patch elements with correct namespaces', async () => {
@@ -47,11 +55,11 @@ describe('SVG support', () => {
       setup: () => ({ cls }),
       template: `
         <div>
-          <svg id="f1" :class="cls">
-            <foreignObject>
+          <math id="f1" :class="cls">
+            <annotation encoding="text/html">
               <div id="f2" :class="cls"/>
-            </foreignObject>
-          </svg>
+            </annotation>
+          </math>
         </div>
       `
     }

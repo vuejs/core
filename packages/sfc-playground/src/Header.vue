@@ -6,6 +6,7 @@ import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
+import Reload from './icons/Reload.vue'
 import type { ReplStore } from '@vue/repl'
 import VersionSelect from './VersionSelect.vue'
 
@@ -14,7 +15,12 @@ const props = defineProps<{
   dev: boolean
   ssr: boolean
 }>()
-const emit = defineEmits(['toggle-theme', 'toggle-ssr', 'toggle-dev'])
+const emit = defineEmits([
+  'toggle-theme',
+  'toggle-ssr',
+  'toggle-dev',
+  'reload-page'
+])
 
 const { store } = props
 
@@ -24,7 +30,7 @@ const vueVersion = ref(`@${currentCommit}`)
 async function setVueVersion(v: string) {
   vueVersion.value = `loading...`
   await store.setVueVersion(v)
-  vueVersion.value = `v${v}`
+  vueVersion.value = v
 }
 
 function resetVueVersion() {
@@ -104,6 +110,9 @@ function toggleDark() {
       </button>
       <button title="Copy sharable URL" class="share" @click="copyLink">
         <Share />
+      </button>
+      <button title="Reload page" class="reload" @click="$emit('reload-page')">
+        <Reload />
       </button>
       <button
         title="Download project files"

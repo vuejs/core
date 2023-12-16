@@ -6,7 +6,7 @@ import {
   ObjectExpression,
   Expression
 } from '@babel/types'
-import { BindingTypes, isFunctionType } from '@vue/compiler-dom'
+import { BindingTypes, isFunctionType, unwrapTSNode } from '@vue/compiler-dom'
 import { ScriptCompileContext } from './context'
 import {
   TypeResolveContext,
@@ -19,7 +19,6 @@ import {
   concatStrings,
   isLiteralNode,
   isCallOf,
-  unwrapTSNode,
   toRuntimeTypeString,
   getEscapedPropName
 } from './utils'
@@ -282,6 +281,17 @@ function genRuntimePropFromType(
       defaultString
     ])} }`
   } else {
+    // #8989 for custom element, should keep the type
+    if (ctx.isCE) {
+      if (defaultString) {
+        return `${finalKey}: ${`{ ${defaultString}, type: ${toRuntimeTypeString(
+          type
+        )} }`}`
+      } else {
+        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
+      }
+    }
+
     // production: checks are useless
     return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }

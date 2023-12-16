@@ -1600,4 +1600,38 @@ describe('SFC genDefaultAs', () => {
       foo: BindingTypes.SETUP_REF
     })
   })
+
+  describe('parser plugins', () => {
+    test('import attributes', () => {
+      const { content } = compile(`
+        <script setup>
+        import { foo } from './foo.js' with { type: 'foobar' }
+        </script>
+      `)
+      assertCode(content)
+
+      expect(() =>
+        compile(`
+      <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>`)
+      ).toThrow()
+    })
+
+    test('import attributes (user override for deprecated syntax)', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import { foo } from './foo.js' assert { type: 'foobar' }
+        </script>
+      `,
+        {
+          babelParserPlugins: [
+            ['importAttributes', { deprecatedAssertSyntax: true }]
+          ]
+        }
+      )
+      assertCode(content)
+    })
+  })
 })

@@ -1,5 +1,7 @@
 import { type SpyInstance } from 'vitest'
 
+vi.stubGlobal('MathMLElement', class MathMLElement {})
+
 expect.extend({
   toHaveBeenWarned(received: string) {
     asserted.add(received)

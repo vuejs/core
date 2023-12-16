@@ -100,7 +100,6 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -128,9 +127,13 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * @param value - The "inner value" for the shallow ref.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
-export function shallowRef<T>(value: MaybeRef<T>): Ref<T> | ShallowRef<T>
-export function shallowRef<T extends Ref>(value: T): T
-export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T>(
+  value: T
+): Ref extends T
+  ? T extends Ref
+    ? IfAny<T, ShallowRef<T>, T>
+    : ShallowRef<T>
+  : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)

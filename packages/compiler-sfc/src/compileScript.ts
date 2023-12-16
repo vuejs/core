@@ -2,7 +2,8 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
-  walkIdentifiers
+  walkIdentifiers,
+  unwrapTSNode
 } from '@vue/compiler-dom'
 import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
 import { ParserPlugin } from '@babel/parser'
@@ -43,12 +44,7 @@ import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import {
-  isLiteralNode,
-  unwrapTSNode,
-  isCallOf,
-  getImportedName
-} from './script/utils'
+import { isLiteralNode, isCallOf, getImportedName } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -103,11 +99,6 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable macro `defineModel`
-   * @default false
-   */
-  defineModel?: boolean
-  /**
    * (**Experimental**) Enable reactive destructure for `defineProps`
    * @default false
    */
@@ -121,6 +112,10 @@ export interface SFCScriptCompileOptions {
     fileExists(file: string): boolean
     readFile(file: string): string | undefined
   }
+  /**
+   * Transform Vue SFCs into custom elements.
+   */
+  customElement?: boolean | ((filename: string) => boolean)
 }
 
 export interface ImportBinding {
