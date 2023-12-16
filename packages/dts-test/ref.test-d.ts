@@ -163,6 +163,17 @@ const state = reactive({
 
 expectType<string>(state.foo.label)
 
+describe('ref with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = ref(r)
+  expectType<string>(s.value.name)
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = ref(rr) as Ref<T>
+  expectType<string>(ss.value.name)
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
@@ -206,6 +217,11 @@ describe('shallowRef with generic', <T extends { name: string }>() => {
   const s = shallowRef(r)
   expectType<string>(s.value.name)
   expectType<ShallowRef<T>>(shallowRef(r))
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = shallowRef(rr) as Ref<T> | ShallowRef<T>
+  expectType<string>(ss.value.name)
 })
 
 {
