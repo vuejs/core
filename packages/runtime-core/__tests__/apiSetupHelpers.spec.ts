@@ -436,6 +436,7 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('2')
     })
 
+    // #9838
     test('pass modelValue to slot (optimized mode) ', async () => {
       let foo: any
       const update = () => {
