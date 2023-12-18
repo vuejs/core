@@ -163,6 +163,17 @@ const state = reactive({
 
 expectType<string>(state.foo.label)
 
+describe('ref with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = ref(r)
+  expectType<string>(s.value.name)
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = ref(rr) as Ref<T>
+  expectType<string>(ss.value.name)
+})
+
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
 const shallowStatus = shallowRef<Status>('initial')
@@ -201,10 +212,27 @@ if (refStatus.value === 'initial') {
   expectType<IsAny<typeof a>>(false)
 }
 
-describe('shallowRef with generic', <T>() => {
-  const r = ref({}) as MaybeRef<T>
-  expectType<ShallowRef<T> | Ref<T>>(shallowRef(r))
+describe('shallowRef with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = shallowRef(r)
+  expectType<string>(s.value.name)
+  expectType<ShallowRef<T>>(shallowRef(r))
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = shallowRef(rr) as Ref<T> | ShallowRef<T>
+  expectType<string>(ss.value.name)
 })
+
+{
+  // should return ShallowRef<T> | Ref<T>, not ShallowRef<T | Ref<T>>
+  expectType<ShallowRef<{ name: string }> | Ref<{ name: string }>>(
+    shallowRef({} as MaybeRef<{ name: string }>)
+  )
+  expectType<ShallowRef<number> | Ref<string[]> | ShallowRef<string>>(
+    shallowRef('' as Ref<string[]> | string | number)
+  )
+}
 
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
