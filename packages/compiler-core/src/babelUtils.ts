@@ -72,6 +72,7 @@ export function walkIdentifiers(
           knownIds[id]--
           if (knownIds[id] === 0) {
             delete knownIds[id]
+            node.scopeIds = undefined
           }
         }
       }
