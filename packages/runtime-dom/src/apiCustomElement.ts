@@ -216,12 +216,18 @@ export class VueElement extends BaseClass {
         while (
           (parent =
             parent && (parent.parentNode || (parent as ShadowRoot).host))
-          ) {
+        ) {
           if (parent instanceof VueElement) {
             // Find the first custom element in the ancestor and set it to `_ce_parent`
             !isAncestors && (this._ce_parent = parent as VueElement)
-            if(!parent._resolved && (parent._def as ComponentOptions).__asyncLoader){
-              ;(this._ce_parent!._ce_children || (this._ce_parent!._ce_children = [])).push(this)
+            if (
+              !parent._resolved &&
+              (parent._def as ComponentOptions).__asyncLoader
+            ) {
+              ;(
+                this._ce_parent!._ce_children ||
+                (this._ce_parent!._ce_children = [])
+              ).push(this)
               isParentResolved = false
             } else {
               isAncestors = true
