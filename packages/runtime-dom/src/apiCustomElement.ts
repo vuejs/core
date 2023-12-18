@@ -179,7 +179,7 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
-  private _ce_parent?: VueElement[] | null = null
+  private _ce_parent?: VueElement | null = null
   private _ce_children?: VueElement[] | null = null
   constructor(
     private _def: InnerComponentDef,
@@ -212,46 +212,20 @@ export class VueElement extends BaseClass {
       } else {
         let parent: Node | null = this
         let isParentResolved = true
-        const isResolved = (parent: VueElement) => {
-          return (
-            !parent._resolved && (parent._def as ComponentOptions).__asyncLoader
-          )
-        }
-        const setChildToParent = () => {
-          ;(
-            (parent as VueElement)._ce_children ||
-            ((parent as VueElement)._ce_children = [])
-          ).push(this)
-          isParentResolved = false
-        }
+        let isAncestors = false
         while (
           (parent =
             parent && (parent.parentNode || (parent as ShadowRoot).host))
-        ) {
+          ) {
           if (parent instanceof VueElement) {
-            // Inherit the ancestor custom element's `_ce_parent`
-            if (parent._ce_parent) {
-              this._ce_parent = parent._ce_parent
-            } else if (!this._ce_parent) {
-              this._ce_parent = []
-            }
-            // Set the parent custom element of the current custom element
-            this._ce_parent.push(parent)
-
-            // If the parent custom element is asynchronous and has not been resolved,
-            // set the current custom element to the parent
-            if (isResolved(parent)) {
-              setChildToParent()
+            // Find the first custom element in the ancestor and set it to `_ce_parent`
+            !isAncestors && (this._ce_parent = parent as VueElement)
+            if(!parent._resolved && (parent._def as ComponentOptions).__asyncLoader){
+              ;(this._ce_parent!._ce_children || (this._ce_parent!._ce_children = [])).push(this)
+              isParentResolved = false
             } else {
-              // Traverse the custom elements of ancestors to check whether
-              // there is an asynchronous parent custom element
-              // eg. async custom element -> custom element -> ustom element
-              for (const ancestors of this._ce_parent) {
-                if (isResolved(ancestors)) {
-                  setChildToParent()
-                  break
-                }
-              }
+              isAncestors = true
+              continue
             }
             break
           }
@@ -452,10 +426,9 @@ export class VueElement extends BaseClass {
           }
         }
 
-        if (this._ce_parent && this._ce_parent.length) {
-          const _ce_parent = this._ce_parent.shift()!
-          instance.parent = _ce_parent._instance
-          instance.provides = _ce_parent._instance!.provides
+        if (this._ce_parent) {
+          instance.parent = this._ce_parent._instance
+          instance.provides = this._ce_parent._instance!.provides
         }
       }
     }
