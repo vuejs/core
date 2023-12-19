@@ -491,7 +491,6 @@ function installCompatMount(
 
       let container: Element
       if (typeof selectorOrEl === 'string') {
-        // eslint-disable-next-line
         const result = document.querySelector(selectorOrEl)
         if (!result) {
           __DEV__ &&
@@ -502,7 +501,6 @@ function installCompatMount(
         }
         container = result
       } else {
-        // eslint-disable-next-line
         container = selectorOrEl || document.createElement('div')
       }
 
