@@ -112,3 +112,11 @@ expectType<JSX.Element>(
 )
 // @ts-expect-error
 ;<Suspense onResolve={123} />
+
+// svg
+expectType<JSX.Element>(
+  <svg
+    xmlnsXlink="http://www.w3.org/1999/xlink"
+    xmlns="http://www.w3.org/2000/svg"
+  />
+)
