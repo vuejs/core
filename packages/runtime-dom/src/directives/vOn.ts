@@ -35,13 +35,9 @@ const modifierGuards: Record<
 export const withModifiers = <
   T extends (event: Event, ...args: unknown[]) => any
 >(
-  fn: T & { _withMods?: { [key: string]: T } } ,
+  fn: T & { _withMods?: { [key: string]: T } },
   modifiers: string[]
 ) => {
-
-  if(!fn) {
-    return
-  }
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
   return (
