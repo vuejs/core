@@ -36,6 +36,8 @@ module.exports = {
       'ObjectExpression > SpreadElement',
       'AwaitExpression'
     ],
+    'sort-imports': ['error', { ignoreDeclarationSort: true }],
+
     'import/no-nodejs-modules': [
       'error',
       { allow: builtinModules.map(mod => `node:${mod}`) }
