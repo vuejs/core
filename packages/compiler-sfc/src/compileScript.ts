@@ -833,6 +833,7 @@ export function compileScript(
       // inline it right here
       const { code, ast, preamble, tips, errors } = compileTemplate({
         filename,
+        ast: sfc.template.ast,
         source: sfc.template.content,
         inMap: sfc.template.map,
         ...options.templateOptions,
