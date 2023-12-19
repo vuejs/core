@@ -24,10 +24,11 @@ jobs:
 
       - run: pnpm install
 
-      - name: Run eslint
-        run: pnpm run lint --fix
+      # disable temporarily
+      # - name: Run eslint
+      #   run: pnpm run lint --fix
 
-      - name: Run prettier
-        run: pnpm run format
+      # - name: Run prettier
+      #   run: pnpm run format
 
       - uses: autofix-ci/action@bee19d72e71787c12ca0f29de72f2833e437e4c9
