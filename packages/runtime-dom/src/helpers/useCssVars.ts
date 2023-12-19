@@ -85,7 +85,7 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
       if (vars[key] != null) {
         style.setProperty(`--${key}`, vars[key])
         cssText += `--${key}: ${vars[key]};`
-     }
+      }
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }
