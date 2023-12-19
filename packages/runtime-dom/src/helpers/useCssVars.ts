@@ -11,6 +11,7 @@ import {
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
+export const CSS_VAR_TEXT = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
  * Runtime helper for SFC's CSS variable injection feature.
  * @private
@@ -91,9 +92,12 @@ function setVarsOnNode(
       instance.ceSetCssVars && instance.ceSetCssVars(vars)
     } else {
       const style = (el as HTMLElement).style
+      let cssText = ''
       for (const key in vars) {
         style.setProperty(`--${key}`, vars[key])
+        cssText += `--${key}: ${vars[key]};`
       }
+      ;(style as any)[CSS_VAR_TEXT] = cssText
     }
   }
 }
