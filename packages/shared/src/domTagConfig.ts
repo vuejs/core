@@ -27,12 +27,13 @@ const SVG_TAGS =
   'polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,' +
   'text,textPath,title,tspan,unknown,use,view'
 
-// https://developer.mozilla.org/en-US/docs/Web/MathML/Element
+// https://www.w3.org/TR/mathml4/ (content elements excluded)
 const MATH_TAGS =
-  'math,maction,annotation,annotation-xml,menclose,merror,mfenced,mfrac,mi,' +
+  'annotation,annotation-xml,maction,maligngroup,malignmark,math,menclose,' +
+  'merror,mfenced,mfrac,mfraction,mglyph,mi,mlabeledtr,mlongdiv,' +
   'mmultiscripts,mn,mo,mover,mpadded,mphantom,mprescripts,mroot,mrow,ms,' +
-  'semantics,mspace,msqrt,mstyle,msub,msup,msubsup,mtable,mtd,mtext,mtr,' +
-  'munder,munderover'
+  'mscarries,mscarry,msgroup,msline,mspace,msqrt,msrow,mstack,mstyle,msub,' +
+  'msubsup,msup,mtable,mtd,mtext,mtr,munder,munderover,none,semantics'
 
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'

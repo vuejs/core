@@ -296,31 +296,6 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
-  packages/reactivity-transform:
-    dependencies:
-      '@babel/parser':
-        specifier: ^7.23.5
-        version: 7.23.5
-      '@vue/compiler-core':
-        specifier: workspace:*
-        version: link:../compiler-core
-      '@vue/shared':
-        specifier: workspace:*
-        version: link:../shared
-      estree-walker:
-        specifier: ^2.0.2
-        version: 2.0.2
-      magic-string:
-        specifier: ^0.30.5
-        version: 0.30.5
-    devDependencies:
-      '@babel/core':
-        specifier: ^7.23.5
-        version: 7.23.5
-      '@babel/types':
-        specifier: ^7.23.5
-        version: 7.23.5
-
   packages/runtime-core:
     dependencies:
       '@vue/reactivity':
@@ -606,6 +581,7 @@ packages:
   /@babel/highlight@7.23.4:
     resolution: {integrity: sha512-acGdbYSfp2WheJoJm/EBBBLh/ID8KDc64ISZ9DYtBmC8/Q204PZJLHyzeB5qMzJ5trcOkybd78M4x2KWsUq++A==}
     engines: {node: '>=6.9.0'}
+    requiresBuild: true
     dependencies:
       '@babel/helper-validator-identifier': 7.22.20
       chalk: 2.4.2

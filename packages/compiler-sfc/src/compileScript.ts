@@ -99,11 +99,6 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable macro `defineModel`
-   * @default false
-   */
-  defineModel?: boolean
-  /**
    * (**Experimental**) Enable reactive destructure for `defineProps`
    * @default false
    */
@@ -838,6 +833,7 @@ export function compileScript(
       // inline it right here
       const { code, ast, preamble, tips, errors } = compileTemplate({
         filename,
+        ast: sfc.template.ast,
         source: sfc.template.content,
         inMap: sfc.template.map,
         ...options.templateOptions,
