@@ -16,9 +16,10 @@ const banConstEnum = {
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    sourceType: 'module'
+    sourceType: 'module',
+    project: './tsconfig.eslint.json'
   },
-  plugins: ['jest', 'import'],
+  plugins: ['jest', 'import', '@typescript-eslint'],
   rules: {
     'no-debugger': 'error',
     // most of the codebase are expected to be env agnostic
@@ -38,7 +39,23 @@ module.exports = {
     'import/no-nodejs-modules': [
       'error',
       { allow: builtinModules.map(mod => `node:${mod}`) }
-    ]
+    ],
+    // This rule enforces the preference for using '@ts-expect-error' comments in TypeScript
+    // code to indicate intentional type errors, improving code clarity and maintainability.
+    '@typescript-eslint/prefer-ts-expect-error': 'error',
+    // Avoid unnecessary type assertions
+    '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+    // Enforce the use of 'import type' for importing types
+    '@typescript-eslint/consistent-type-imports': [
+      'error',
+      {
+        fixStyle: 'inline-type-imports'
+      }
+    ],
+    // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
+    '@typescript-eslint/no-import-type-side-effects': 'error',
+    // Ensure consistent usage of indexed object access style in TypeScript code.
+    '@typescript-eslint/consistent-indexed-object-style': 'error'
   },
   overrides: [
     // tests, no restrictions (runs in Node / jest with jsdom)
@@ -103,6 +120,11 @@ module.exports = {
       rules: {
         'import/no-nodejs-modules': ['error', { allow: builtinModules }]
       }
+    },
+    {
+      // disable type checking for JS files
+      files: ['*.js'],
+      extends: ['plugin:@typescript-eslint/disable-type-checked']
     }
   ]
 }
