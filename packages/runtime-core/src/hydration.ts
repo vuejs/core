@@ -718,7 +718,7 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
   let actual: any
   let expected: any
   if (key === 'class') {
-    actual = el.className
+    actual = el.getAttribute('class')
     expected = normalizeClass(clientValue)
     if (actual !== expected) {
       mismatchType = mismatchKey = `class`
