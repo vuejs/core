@@ -49,8 +49,9 @@ module.exports = {
     '@typescript-eslint/consistent-type-imports': [
       'error',
       {
-        fixStyle: 'inline-type-imports'
-      }
+        fixStyle: 'inline-type-imports',
+        disallowTypeAnnotations: false
+      },
     ],
     // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
     '@typescript-eslint/no-import-type-side-effects': 'error',
