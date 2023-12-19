@@ -1,5 +1,6 @@
 /* eslint-disable no-restricted-globals */
 
+const { builtinModules } = require('node:module')
 const DOMGlobals = ['window', 'document']
 const NodeGlobals = ['module', 'require']
 
@@ -17,7 +18,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module'
   },
-  plugins: ['jest'],
+  plugins: ['jest', 'import'],
   rules: {
     'no-debugger': 'error',
     // most of the codebase are expected to be env agnostic
@@ -33,6 +34,10 @@ module.exports = {
       // still generates verbose helpers, so spread assignment is also prohiboted
       'ObjectExpression > SpreadElement',
       'AwaitExpression'
+    ],
+    'import/no-nodejs-modules': [
+      'error',
+      { allow: builtinModules.map(mod => `node:${mod}`) }
     ]
   },
   overrides: [
@@ -90,6 +95,13 @@ module.exports = {
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': ['error', banConstEnum]
+      }
+    },
+    // Import nodejs modules in compiler-sfc
+    {
+      files: ['packages/compiler-sfc/**'],
+      rules: {
+        'import/no-nodejs-modules': ['error', { allow: builtinModules }]
       }
     }
   ]
