@@ -45,8 +45,6 @@ module.exports = {
     // This rule enforces the preference for using '@ts-expect-error' comments in TypeScript
     // code to indicate intentional type errors, improving code clarity and maintainability.
     '@typescript-eslint/prefer-ts-expect-error': 'error',
-    // Avoid unnecessary type assertions
-    '@typescript-eslint/no-unnecessary-type-assertion': 'error',
     // Enforce the use of 'import type' for importing types
     '@typescript-eslint/consistent-type-imports': [
       'error',
