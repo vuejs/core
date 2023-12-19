@@ -16,8 +16,7 @@ const banConstEnum = {
 module.exports = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
-    sourceType: 'module',
-    project: './tsconfig.eslint.json'
+    sourceType: 'module'
   },
   plugins: ['jest', 'import', '@typescript-eslint'],
   rules: {
@@ -54,9 +53,7 @@ module.exports = {
       },
     ],
     // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
-    '@typescript-eslint/no-import-type-side-effects': 'error',
-    // Ensure consistent usage of indexed object access style in TypeScript code.
-    '@typescript-eslint/consistent-indexed-object-style': 'error'
+    '@typescript-eslint/no-import-type-side-effects': 'error'
   },
   overrides: [
     // tests, no restrictions (runs in Node / jest with jsdom)
@@ -122,10 +119,5 @@ module.exports = {
         'import/no-nodejs-modules': ['error', { allow: builtinModules }]
       }
     },
-    {
-      // disable type checking for JS files
-      files: ['*.js'],
-      extends: ['plugin:@typescript-eslint/disable-type-checked']
-    }
   ]
 }
