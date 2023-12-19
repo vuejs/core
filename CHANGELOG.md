@@ -1,3 +1,18 @@
+# [3.4.0-beta.4](https://github.com/vuejs/core/compare/v3.3.13...v3.4.0-beta.4) (2023-12-19)
+
+
+### Bug Fixes
+
+* **compile-sfc:** fix identifier prefixing edge case caused by reused AST ([#9867](https://github.com/vuejs/core/issues/9867)) ([eb51b23](https://github.com/vuejs/core/commit/eb51b23d8512f15665d6f8bcdfd51582e0cd8ce8)), closes [#9853](https://github.com/vuejs/core/issues/9853) [#9863](https://github.com/vuejs/core/issues/9863)
+* **ssr:** fix hydration prop mismatch check for class on SVG elements ([e8448b0](https://github.com/vuejs/core/commit/e8448b018d9f837c08eace90cab404a27f68e31a))
+
+
+### Features
+
+* **runtime-core:** throw real error when scheduler detects infinite loop during dev ([#7447](https://github.com/vuejs/core/issues/7447)) ([1d79b64](https://github.com/vuejs/core/commit/1d79b64ebce884d97136d71aa722347470b13e35)), closes [#7437](https://github.com/vuejs/core/issues/7437)
+
+
+
 ## [3.3.13](https://github.com/vuejs/core/compare/v3.3.12...v3.3.13) (2023-12-19)
 
 
