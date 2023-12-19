@@ -55,14 +55,24 @@ export function walkIdentifiers(
         // mark property in destructure pattern
         ;(node as any).inPattern = true
       } else if (isFunctionType(node)) {
-        // walk function expressions and add its arguments to known identifiers
-        // so that we don't prefix them
-        walkFunctionParams(node, id => markScopeIdentifier(node, id, knownIds))
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          // walk function expressions and add its arguments to known identifiers
+          // so that we don't prefix them
+          walkFunctionParams(node, id =>
+            markScopeIdentifier(node, id, knownIds)
+          )
+        }
       } else if (node.type === 'BlockStatement') {
-        // #3445 record block-level local variables
-        walkBlockDeclarations(node, id =>
-          markScopeIdentifier(node, id, knownIds)
-        )
+        if (node.scopeIds) {
+          node.scopeIds.forEach(id => markKnownIds(id, knownIds))
+        } else {
+          // #3445 record block-level local variables
+          walkBlockDeclarations(node, id =>
+            markScopeIdentifier(node, id, knownIds)
+          )
+        }
       }
     },
     leave(node: Node & { scopeIds?: Set<string> }, parent: Node | undefined) {
@@ -227,6 +237,14 @@ export function extractIdentifiers(
   return nodes
 }
 
+function markKnownIds(name: string, knownIds: Record<string, number>) {
+  if (name in knownIds) {
+    knownIds[name]++
+  } else {
+    knownIds[name] = 1
+  }
+}
+
 function markScopeIdentifier(
   node: Node & { scopeIds?: Set<string> },
   child: Identifier,
@@ -236,11 +254,7 @@ function markScopeIdentifier(
   if (node.scopeIds && node.scopeIds.has(name)) {
     return
   }
-  if (name in knownIds) {
-    knownIds[name]++
-  } else {
-    knownIds[name] = 1
-  }
+  markKnownIds(name, knownIds)
   ;(node.scopeIds || (node.scopeIds = new Set())).add(name)
 }
 
