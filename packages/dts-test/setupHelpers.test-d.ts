@@ -260,6 +260,30 @@ describe('defineSlots', () => {
   expectType<Slots>(slotsUntype)
 })
 
+describe('defineSlots generic', <T extends Record<string, any>>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  for (const key of Object.keys(props.item) as (keyof T & string)[]) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+  }
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
 describe('defineModel', () => {
   // overload 1
   const modelValueRequired = defineModel<boolean>({ required: true })
@@ -334,6 +358,78 @@ describe('useAttrs', () => {
 describe('useSlots', () => {
   const slots = useSlots()
   expectType<Slots>(slots)
+})
+
+describe('defineSlots generic', <T extends Record<string, any>>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  // @ts-expect-error slots should be readonly
+  slots.label = () => {}
+
+  // @ts-expect-error non existing slot
+  slots['foo-asdas']?.({
+    item: props.item
+  })
+  for (const key in props.item) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+    slots[`slot-${String(key as keyof T)}`]?.({
+      item: props.item
+    })
+  }
+
+  for (const key of Object.keys(props.item) as (keyof T)[]) {
+    slots[`slot-${String(key)}`]?.({
+      item: props.item
+    })
+  }
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
+})
+
+describe('defineSlots generic strict', <T extends {
+  foo: 'foo'
+  bar: 'bar'
+}>() => {
+  const props = defineProps<{
+    item: T
+  }>()
+
+  const slots = defineSlots<
+    {
+      [K in keyof T as `slot-${K & string}`]?: (props: { item: T }) => any
+    } & {
+      label?: (props: { item: T }) => any
+    }
+  >()
+
+  // slot-bar/foo should be automatically inferred
+  slots['slot-bar']?.({ item: props.item })
+  slots['slot-foo']?.({ item: props.item })
+
+  slots.label?.({ item: props.item })
+
+  // @ts-expect-error not part of the extends
+  slots['slot-RANDOM']?.({ item: props.item })
+
+  // @ts-expect-error slots should be readonly
+  slots.label = () => {}
+
+  // @ts-expect-error calling wrong slot
+  slots.foo({})
 })
 
 // #6420
