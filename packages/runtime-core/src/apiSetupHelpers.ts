@@ -5,7 +5,8 @@ import {
   Prettify,
   UnionToIntersection,
   extend,
-  LooseRequired
+  LooseRequired,
+  hasChanged
 } from '@vue/shared'
 import {
   getCurrentInstance,
@@ -30,8 +31,8 @@ import {
 } from './componentProps'
 import { warn } from './warning'
 import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
-import { Ref, ref } from '@vue/reactivity'
-import { watch } from './apiWatch'
+import { Ref, customRef, ref } from '@vue/reactivity'
+import { watchSyncEffect } from '.'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -218,7 +219,7 @@ export function defineSlots<
 }
 
 /**
- * (**Experimental**) Vue `<script setup>` compiler macro for declaring a
+ * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
  * component. This will declare a prop with the same name and a corresponding
  * `update:propName` event.
@@ -227,9 +228,11 @@ export function defineSlots<
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * The options object can also specify an additional option, `local`. When set
- * to `true`, the ref can be locally mutated even if the parent did not pass
- * the matching `v-model`.
+ * The the returned ref behaves differently depending on whether the parent
+ * provided the corresponding v-model props or not:
+ * - If yes, the returned ref's value will always be in sync with the parent
+ *   prop.
+ * - If not, the returned ref will behave like a normal local ref.
  *
  * @example
  * ```ts
@@ -246,41 +249,31 @@ export function defineSlots<
  *
  * // with specified name and default value
  * const count = defineModel<number>('count', { default: 0 })
- *
- * // local mutable model, can be mutated locally
- * // even if the parent did not pass the matching `v-model`.
- * const count = defineModel<number>('count', { local: true, default: 0 })
  * ```
  */
 export function defineModel<T>(
-  options: { required: true } & PropOptions<T> & DefineModelOptions
+  options: { required: true } & PropOptions<T>
 ): Ref<T>
 export function defineModel<T>(
-  options: { default: any } & PropOptions<T> & DefineModelOptions
+  options: { default: any } & PropOptions<T>
 ): Ref<T>
-export function defineModel<T>(
-  options?: PropOptions<T> & DefineModelOptions
-): Ref<T | undefined>
+export function defineModel<T>(options?: PropOptions<T>): Ref<T | undefined>
 export function defineModel<T>(
   name: string,
-  options: { required: true } & PropOptions<T> & DefineModelOptions
+  options: { required: true } & PropOptions<T>
 ): Ref<T>
 export function defineModel<T>(
   name: string,
-  options: { default: any } & PropOptions<T> & DefineModelOptions
+  options: { default: any } & PropOptions<T>
 ): Ref<T>
 export function defineModel<T>(
   name: string,
-  options?: PropOptions<T> & DefineModelOptions
+  options?: PropOptions<T>
 ): Ref<T | undefined>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
   }
-}
-
-interface DefineModelOptions {
-  local?: boolean
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
@@ -357,14 +350,9 @@ export function useAttrs(): SetupContext['attrs'] {
 
 export function useModel<T extends Record<string, any>, K extends keyof T>(
   props: T,
-  name: K,
-  options?: { local?: boolean }
+  name: K
 ): Ref<T[K]>
-export function useModel(
-  props: Record<string, any>,
-  name: string,
-  options?: { local?: boolean }
-): Ref {
+export function useModel(props: Record<string, any>, name: string): Ref {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
@@ -376,32 +364,30 @@ export function useModel(
     return ref() as any
   }
 
-  if (options && options.local) {
-    const proxy = ref<any>(props[name])
-
-    watch(
-      () => props[name],
-      v => (proxy.value = v)
-    )
-
-    watch(proxy, value => {
-      if (value !== props[name]) {
-        i.emit(`update:${name}`, value)
+  return customRef((track, trigger) => {
+    let localValue: any
+    watchSyncEffect(() => {
+      const propValue = props[name]
+      if (hasChanged(localValue, propValue)) {
+        localValue = propValue
+        trigger()
       }
     })
-
-    return proxy
-  } else {
     return {
-      __v_isRef: true,
-      get value() {
-        return props[name]
+      get() {
+        track()
+        return localValue
       },
-      set value(value) {
+      set(value) {
+        const rawProps = i.vnode!.props
+        if (!(rawProps && name in rawProps) && hasChanged(value, localValue)) {
+          localValue = value
+          trigger()
+        }
         i.emit(`update:${name}`, value)
       }
-    } as any
-  }
+    }
+  })
 }
 
 function getContext(): SetupContext {

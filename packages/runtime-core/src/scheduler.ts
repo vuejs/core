@@ -1,7 +1,6 @@
-import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { Awaited, isArray, NOOP } from '@vue/shared'
 import { ComponentInternalInstance, getComponentName } from './component'
-import { warn } from './warning'
 
 export interface SchedulerJob extends Function {
   id?: number
@@ -271,14 +270,16 @@ function checkRecursiveUpdates(seen: CountMap, fn: SchedulerJob) {
     if (count > RECURSION_LIMIT) {
       const instance = fn.ownerInstance
       const componentName = instance && getComponentName(instance.type)
-      warn(
+      handleError(
         `Maximum recursive updates exceeded${
           componentName ? ` in component <${componentName}>` : ``
         }. ` +
           `This means you have a reactive effect that is mutating its own ` +
           `dependencies and thus recursively triggering itself. Possible sources ` +
           `include component template, render function, updated hook or ` +
-          `watcher source function.`
+          `watcher source function.`,
+        null,
+        ErrorCodes.APP_ERROR_HANDLER
       )
       return true
     } else {

@@ -812,17 +812,17 @@ describe('SSR hydration', () => {
         })
     )
 
-    const bol = ref(true)
+    const toggle = ref(true)
     const App = {
       setup() {
         onMounted(() => {
           // change state, this makes updateComponent(AsyncComp) execute before
           // the async component is resolved
-          bol.value = false
+          toggle.value = false
         })
 
         return () => {
-          return [bol.value ? 'hello' : 'world', h(AsyncComp)]
+          return [toggle.value ? 'hello' : 'world', h(AsyncComp)]
         }
       }
     }
@@ -856,6 +856,147 @@ describe('SSR hydration', () => {
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
       `"<!--[-->world<h1>Async component</h1><!--]-->"`
+    )
+  })
+
+  test('hydrate safely when property used by async setup changed before render', async () => {
+    const toggle = ref(true)
+
+    const AsyncComp = {
+      async setup() {
+        await new Promise<void>(r => setTimeout(r, 10))
+        return () => h('h1', 'Async component')
+      }
+    }
+
+    const AsyncWrapper = {
+      render() {
+        return h(AsyncComp)
+      }
+    }
+
+    const SiblingComp = {
+      setup() {
+        toggle.value = false
+        return () => h('span')
+      }
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(
+            Suspense,
+            {},
+            {
+              default: () => [
+                h('main', {}, [
+                  h(AsyncWrapper, {
+                    prop: toggle.value ? 'hello' : 'world'
+                  }),
+                  h(SiblingComp)
+                ])
+              ]
+            }
+          )
+      }
+    }
+
+    // server render
+    const html = await renderToString(h(App))
+
+    expect(html).toMatchInlineSnapshot(
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
+    )
+
+    expect(toggle.value).toBe(false)
+
+    // hydration
+
+    // reset the value
+    toggle.value = true
+    expect(toggle.value).toBe(true)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    await new Promise(r => setTimeout(r, 10))
+
+    expect(toggle.value).toBe(false)
+
+    // should be hydrated now
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
+    )
+  })
+
+  test('hydrate safely when property used by deep nested async setup changed before render', async () => {
+    const toggle = ref(true)
+
+    const AsyncComp = {
+      async setup() {
+        await new Promise<void>(r => setTimeout(r, 10))
+        return () => h('h1', 'Async component')
+      }
+    }
+
+    const AsyncWrapper = { render: () => h(AsyncComp) }
+    const AsyncWrapperWrapper = { render: () => h(AsyncWrapper) }
+
+    const SiblingComp = {
+      setup() {
+        toggle.value = false
+        return () => h('span')
+      }
+    }
+
+    const App = {
+      setup() {
+        return () =>
+          h(
+            Suspense,
+            {},
+            {
+              default: () => [
+                h('main', {}, [
+                  h(AsyncWrapperWrapper, {
+                    prop: toggle.value ? 'hello' : 'world'
+                  }),
+                  h(SiblingComp)
+                ])
+              ]
+            }
+          )
+      }
+    }
+
+    // server render
+    const html = await renderToString(h(App))
+
+    expect(html).toMatchInlineSnapshot(
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
+    )
+
+    expect(toggle.value).toBe(false)
+
+    // hydration
+
+    // reset the value
+    toggle.value = true
+    expect(toggle.value).toBe(true)
+
+    const container = document.createElement('div')
+    container.innerHTML = html
+    createSSRApp(App).mount(container)
+
+    await new Promise(r => setTimeout(r, 10))
+
+    expect(toggle.value).toBe(false)
+
+    // should be hydrated now
+    expect(container.innerHTML).toMatchInlineSnapshot(
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
     )
   })
 
@@ -1066,7 +1207,7 @@ describe('SSR hydration', () => {
       </div>
     `)
     expect(vnode.el).toBe(container.firstChild)
-    // expect(`mismatch`).not.toHaveBeenWarned()
+    expect(`mismatch`).not.toHaveBeenWarned()
   })
 
   test('transition appear with v-if', () => {
@@ -1112,6 +1253,41 @@ describe('SSR hydration', () => {
     expect((container.firstChild as any)[vShowOldKey]).toBe('')
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
+  })
+
+  test('transition appear w/ event listener', async () => {
+    const container = document.createElement('div')
+    container.innerHTML = `<template><button>0</button></template>`
+    createSSRApp({
+      data() {
+        return {
+          count: 0
+        }
+      },
+      template: `
+        <Transition appear>
+          <button @click="count++">{{count}}</button>
+        </Transition>
+      `
+    }).mount(container)
+
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <button
+        class="v-enter-from v-enter-active"
+      >
+        0
+      </button>
+    `)
+
+    triggerEvent('click', container.querySelector('button')!)
+    await nextTick()
+    expect(container.firstChild).toMatchInlineSnapshot(`
+      <button
+        class="v-enter-from v-enter-active"
+      >
+        1
+      </button>
+    `)
   })
 
   describe('mismatch handling', () => {
@@ -1230,6 +1406,14 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div class="foo bar"></div>`, () =>
         h('div', { class: 'foo bar' })
       )
+      // SVG classes
+      mountWithHydration(`<svg class="foo bar"></svg>`, () =>
+        h('svg', { class: 'foo bar' })
+      )
+      // class with different order
+      mountWithHydration(`<div class="foo bar"></svg>`, () =>
+        h('div', { class: 'bar foo' })
+      )
       expect(`Hydration class mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div class="foo bar"></div>`, () =>
         h('div', { class: 'foo' })
@@ -1256,6 +1440,7 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div spellcheck></div>`, () =>
         h('div', { spellcheck: '' })
       )
+      mountWithHydration(`<div></div>`, () => h('div', { id: undefined }))
       // boolean
       mountWithHydration(`<select multiple></div>`, () =>
         h('select', { multiple: true })
