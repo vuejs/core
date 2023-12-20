@@ -1,4 +1,11 @@
-import { createSSRApp, defineComponent, h, computed, reactive } from 'vue'
+import {
+  createSSRApp,
+  defineComponent,
+  h,
+  computed,
+  reactive,
+  onServerPrefetch
+} from 'vue'
 import { renderToString } from '../src/renderToString'
 
 // #5208 reported memory leak of keeping computed alive during SSR
@@ -39,6 +46,45 @@ test('computed reactivity during SSR', async () => {
   const app = createSSRApp(App)
 
   const html = await renderToString(app)
+  expect(html).toMatch('hello world')
+
+  // should only be called twice since access should be cached
+  // during the render phase
+  expect(getterSpy).toHaveBeenCalledTimes(2)
+})
+
+test('computed reactivity during SSR with onServerPrefetch', async () => {
+  const store = {
+    // initial state could be hydrated
+    state: reactive({ items: null as null | string[] }),
+
+    // pretend to fetch some data from an api
+    async fetchData() {
+      this.state.items = ['hello', 'world']
+    }
+  }
+
+  const getterSpy = vi.fn()
+
+  const App = defineComponent(() => {
+    const msg = computed(() => {
+      getterSpy()
+      return store.state.items?.join(' ')
+    })
+
+    onServerPrefetch(() => store.fetchData())
+
+    // simulate the read from a composable (e.g. filtering a list of results)
+    msg.value
+
+    return () => h('div', null, msg.value)
+  })
+
+  const app = createSSRApp(App)
+
+  // in real world serve this html and append store state for hydration on client
+  const html = await renderToString(app)
+
   expect(html).toMatch('hello world')
 
   // should only be called twice since access should be cached
