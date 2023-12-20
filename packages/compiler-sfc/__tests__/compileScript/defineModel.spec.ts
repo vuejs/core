@@ -8,6 +8,7 @@ describe('defineModel()', () => {
       <script setup>
       const modelValue = defineModel({ required: true })
       const c = defineModel('count')
+      const toString = defineModel('toString', { type: Function })
       </script>
       `,
       { defineModel: true }
@@ -16,18 +17,22 @@ describe('defineModel()', () => {
     expect(content).toMatch('props: {')
     expect(content).toMatch('"modelValue": { required: true },')
     expect(content).toMatch('"count": {},')
-    expect(content).toMatch('emits: ["update:modelValue", "update:count"],')
+    expect(content).toMatch('"toString": { type: Function },')
+    expect(content).toMatch(
+      'emits: ["update:modelValue", "update:count", "update:toString"],'
+    )
     expect(content).toMatch(
       `const modelValue = _useModel(__props, "modelValue")`
     )
     expect(content).toMatch(`const c = _useModel(__props, "count")`)
-    expect(content).toMatch(`return { modelValue, c }`)
+    expect(content).toMatch(`return { modelValue, c, toString }`)
     expect(content).not.toMatch('defineModel')
 
     expect(bindings).toStrictEqual({
       modelValue: BindingTypes.SETUP_REF,
       count: BindingTypes.PROPS,
-      c: BindingTypes.SETUP_REF
+      c: BindingTypes.SETUP_REF,
+      toString: BindingTypes.SETUP_REF
     })
   })
 
@@ -43,7 +48,7 @@ describe('defineModel()', () => {
       { defineModel: true }
     )
     assertCode(content)
-    expect(content).toMatch(`props: _mergeModels({ foo: String }`)
+    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels({ foo: String }`)
     expect(content).toMatch(`"modelValue": { default: 0 }`)
     expect(content).toMatch(`const count = _useModel(__props, "modelValue")`)
     expect(content).not.toMatch('defineModel')
@@ -65,7 +70,7 @@ describe('defineModel()', () => {
       { defineModel: true }
     )
     assertCode(content)
-    expect(content).toMatch(`props: _mergeModels(['foo', 'bar'], {
+    expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
     "count": {},
   })`)
     expect(content).toMatch(`const count = _useModel(__props, "count")`)

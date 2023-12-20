@@ -275,6 +275,14 @@ describe('reactivity/readonly', () => {
             expect(isReactive(value)).toBe(true)
           }
         })
+
+        test('should return undefined from Map.clear() call', () => {
+          const wrapped = readonly(new Collection())
+          expect(wrapped.clear()).toBeUndefined()
+          expect(
+            `Clear operation failed: target is readonly.`
+          ).toHaveBeenWarned()
+        })
       }
     })
   })
@@ -331,6 +339,14 @@ describe('reactivity/readonly', () => {
             expect(isReadonly(v1)).toBe(true)
             expect(isReadonly(v2)).toBe(true)
           }
+        })
+
+        test('should return undefined from Set.clear() call', () => {
+          const wrapped = readonly(new Collection())
+          expect(wrapped.clear()).toBeUndefined()
+          expect(
+            `Clear operation failed: target is readonly.`
+          ).toHaveBeenWarned()
         })
       }
     })

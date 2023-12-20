@@ -85,6 +85,16 @@ describe('SFC scoped CSS', () => {
       ".baz .qux[data-v-test] .foo .bar { color: red;
       }"
     `)
+    expect(compileScoped(`:is(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo :deep(.bar)) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test] .bar) { color: red;
+      }"
+    `)
   })
 
   test('::v-slotted', () => {
@@ -130,6 +140,23 @@ describe('SFC scoped CSS', () => {
     expect(compileScoped(`.baz .qux ::v-global(.foo .bar) { color: red; }`))
       .toMatchInlineSnapshot(`
       ".foo .bar { color: red;
+      }"
+    `)
+  })
+
+  test(':is() and :where() with multiple selectors', () => {
+    expect(compileScoped(`:is(.foo) { color: red; }`)).toMatchInlineSnapshot(`
+      ":is(.foo[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:where(.foo, .bar) { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":where(.foo[data-v-test], .bar[data-v-test]) { color: red;
+      }"
+    `)
+    expect(compileScoped(`:is(.foo, .bar) div { color: red; }`))
+      .toMatchInlineSnapshot(`
+      ":is(.foo, .bar) div[data-v-test] { color: red;
       }"
     `)
   })

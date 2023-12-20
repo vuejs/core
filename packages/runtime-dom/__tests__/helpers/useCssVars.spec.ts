@@ -275,4 +275,53 @@ describe('useCssVars', () => {
       expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
     }
   })
+
+  test('with teleport(disabled)', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const target = document.body
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [h(Teleport, { to: target, disabled: true }, [h('div')])]
+      }
+    }
+
+    expect(() => render(h(App), root)).not.toThrow(TypeError)
+    await nextTick()
+    expect(target.children.length).toBe(0)
+  })
+
+  test('with string style', async () => {
+    document.body.innerHTML = ''
+    const state = reactive({ color: 'red' })
+    const root = document.createElement('div')
+    const disabled = ref(false)
+
+    const App = {
+      setup() {
+        useCssVars(() => state)
+        return () => [
+          h(
+            'div',
+            { style: disabled.value ? 'pointer-events: none' : undefined },
+            'foo'
+          )
+        ]
+      }
+    }
+    render(h(App), root)
+    await nextTick()
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+    disabled.value = true
+    await nextTick()
+
+    for (const c of [].slice.call(root.children as any)) {
+      expect((c as HTMLElement).style.getPropertyValue(`--color`)).toBe('red')
+    }
+  })
 })
