@@ -38,6 +38,38 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     }
   }
 
+  function processOption(plainNode: PlainElementNode) {
+    if (plainNode.tag === 'option') {
+      if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
+        const value = findValueBinding(plainNode)
+        plainNode.ssrCodegenNode!.elements.push(
+          createConditionalExpression(
+            createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
+              createConditionalExpression(
+                createCallExpression(`Array.isArray`, [model]),
+                createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
+                  model,
+                  value
+                ]),
+                createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
+                  model,
+                  value
+                ])
+              )
+            ]),
+            createSimpleExpression(' selected', true),
+            createSimpleExpression('', true),
+            false /* no newline */
+          )
+        )
+      }
+    } else if (plainNode.tag === 'optgroup') {
+      plainNode.children.forEach(option =>
+        processOption(option as PlainElementNode)
+      )
+    }
+  }
+
   if (node.tagType === ElementTypes.ELEMENT) {
     const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
@@ -130,32 +162,9 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       checkDuplicatedValue()
       node.children = [createInterpolation(model, model.loc)]
     } else if (node.tag === 'select') {
-      node.children.forEach(option => {
-        if (option.type === NodeTypes.ELEMENT) {
-          const plainNode = option as PlainElementNode
-          if (plainNode.props.findIndex(p => p.name === 'selected') === -1) {
-            const value = findValueBinding(plainNode)
-            plainNode.ssrCodegenNode!.elements.push(
-              createConditionalExpression(
-                createCallExpression(context.helper(SSR_INCLUDE_BOOLEAN_ATTR), [
-                  createConditionalExpression(
-                    createCallExpression(`Array.isArray`, [model]),
-                    createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
-                      model,
-                      value
-                    ]),
-                    createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
-                      model,
-                      value
-                    ])
-                  )
-                ]),
-                createSimpleExpression(' selected', true),
-                createSimpleExpression('', true),
-                false /* no newline */
-              )
-            )
-          }
+      node.children.forEach(child => {
+        if (child.type === NodeTypes.ELEMENT) {
+          processOption(child as PlainElementNode)
         }
       })
     } else {
