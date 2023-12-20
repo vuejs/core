@@ -1,4 +1,11 @@
-import { Identifier, LVal, Node, RestElement } from '@babel/types'
+import {
+  ArrayPattern,
+  Identifier,
+  LVal,
+  Node,
+  ObjectPattern,
+  RestElement
+} from '@babel/types'
 import { isCallOf } from './utils'
 import { ScriptCompileContext } from './context'
 import { resolveTypeElements, resolveUnionType } from './resolveType'
@@ -29,10 +36,7 @@ export function processDefineEmits(
     ctx.emitsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    ctx.emitIdentifier =
-      declId.type === 'Identifier' ? declId.name : ctx.getString(declId)
-  }
+  ctx.emitDecl = declId
 
   return true
 }
@@ -54,7 +58,9 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
       .map(n => JSON.stringify(`update:${n}`))
       .join(', ')}]`
     emitsDecl = emitsDecl
-      ? `${ctx.helper('mergeModels')}(${emitsDecl}, ${modelEmitsDecl})`
+      ? `/*#__PURE__*/${ctx.helper(
+          'mergeModels'
+        )}(${emitsDecl}, ${modelEmitsDecl})`
       : modelEmitsDecl
   }
   return emitsDecl
@@ -94,7 +100,7 @@ function extractRuntimeEmits(ctx: ScriptCompileContext): Set<string> {
 
 function extractEventNames(
   ctx: ScriptCompileContext,
-  eventName: Identifier | RestElement,
+  eventName: ArrayPattern | Identifier | ObjectPattern | RestElement,
   emits: Set<string>
 ) {
   if (

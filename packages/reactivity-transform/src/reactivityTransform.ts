@@ -448,8 +448,8 @@ export function transformAST(
         const keyStr = isString(key)
           ? `'${key}'`
           : key
-          ? snip(key)
-          : `'${nameId.name}'`
+            ? snip(key)
+            : `'${nameId.name}'`
         const defaultStr = defaultValue ? `, ${snip(defaultValue)}` : ``
         s.appendLeft(
           call.end! + offset,
@@ -636,7 +636,7 @@ export function transformAST(
 
   // check root scope first
   walkScope(ast, true)
-  ;(walk as any)(ast, {
+  walk(ast, {
     enter(node: Node, parent?: Node) {
       parent && parentStack.push(parent)
 

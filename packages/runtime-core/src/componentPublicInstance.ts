@@ -9,13 +9,14 @@ import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
 import {
   EMPTY_OBJ,
   hasOwn,
-  isGloballyWhitelisted,
+  isGloballyAllowed,
   NOOP,
   extend,
   isString,
   isFunction,
   UnionToIntersection,
-  Prettify
+  Prettify,
+  IfAny
 } from '@vue/shared'
 import {
   toRaw,
@@ -187,7 +188,6 @@ export type CreateComponentPublicInstance<
   I,
   S
 >
-
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -206,11 +206,9 @@ export type ComponentPublicInstance<
 > = {
   $: ComponentInternalInstance
   $data: D
-  $props: Prettify<
-    MakeDefaultsOptional extends true
-      ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-      : P & PublicProps
-  >
+  $props: MakeDefaultsOptional extends true
+    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
+    : Prettify<P> & PublicProps
   $attrs: Data
   $refs: Data
   $slots: UnwrapSlotsType<S>
@@ -228,7 +226,7 @@ export type ComponentPublicInstance<
       : (...args: any) => any,
     options?: WatchOptions
   ): WatchStopHandle
-} & P &
+} & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
   ShallowUnwrapRef<B> &
   UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
@@ -511,7 +509,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       return PublicInstanceProxyHandlers.get!(target, key, target)
     },
     has(_: ComponentRenderContext, key: string) {
-      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      const has = key[0] !== '_' && !isGloballyAllowed(key)
       if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
         warn(
           `Property ${JSON.stringify(

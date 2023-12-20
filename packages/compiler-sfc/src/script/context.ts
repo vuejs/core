@@ -1,4 +1,4 @@
-import { Node, ObjectPattern, Program } from '@babel/types'
+import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import { SFCDescriptor } from '../parse'
 import { generateCodeFrame } from '@vue/shared'
 import { parse as babelParse, ParserPlugin } from '@babel/parser'
@@ -12,6 +12,7 @@ import { TypeScope } from './resolveType'
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
+  isCE = false
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
@@ -38,7 +39,8 @@ export class ScriptCompileContext {
   hasDefineModelCall = false
 
   // defineProps
-  propsIdentifier: string | undefined
+  propsCall: CallExpression | undefined
+  propsDecl: Node | undefined
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
@@ -49,10 +51,10 @@ export class ScriptCompileContext {
   // defineEmits
   emitsRuntimeDecl: Node | undefined
   emitsTypeDecl: Node | undefined
-  emitIdentifier: string | undefined
+  emitDecl: Node | undefined
 
   // defineModel
-  modelDecls: Record<string, ModelDecl> = {}
+  modelDecls: Record<string, ModelDecl> = Object.create(null)
 
   // defineOptions
   optionsRuntimeDecl: Node | undefined
@@ -94,6 +96,14 @@ export class ScriptCompileContext {
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
 
+    const customElement = options.customElement
+    const filename = this.descriptor.filename
+    if (customElement) {
+      this.isCE =
+        typeof customElement === 'boolean'
+          ? customElement
+          : customElement(filename)
+    }
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
       (scriptLang || scriptSetupLang)!,
@@ -163,7 +173,7 @@ export function resolveParserPlugins(
   }
   if (lang === 'ts' || lang === 'tsx') {
     plugins.push(['typescript', { dts }])
-    if (!plugins.includes('decorators')) {
+    if (!userPlugins || !userPlugins.includes('decorators')) {
       plugins.push('decorators-legacy')
     }
   }

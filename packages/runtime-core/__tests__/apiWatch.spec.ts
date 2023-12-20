@@ -91,7 +91,7 @@ describe('api: watch', () => {
     array.push(1)
     await nextTick()
     expect(spy).toBeCalledTimes(1)
-    expect(spy).toBeCalledWith([1], expect.anything(), expect.anything())
+    expect(spy).toBeCalledWith([1], [1], expect.anything())
   })
 
   it('should not fire if watched getter result did not change', async () => {
@@ -549,6 +549,98 @@ describe('api: watch', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
+  // #7030
+  it('should not fire on child component unmount w/ flush: pre', async () => {
+    const visible = ref(true)
+    const cb = vi.fn()
+    const Parent = defineComponent({
+      props: ['visible'],
+      render() {
+        return visible.value ? h(Comp) : null
+      }
+    })
+    const Comp = {
+      setup() {
+        watch(visible, cb, { flush: 'pre' })
+      },
+      render() {}
+    }
+    const App = {
+      render() {
+        return h(Parent, {
+          visible: visible.value
+        })
+      }
+    }
+    render(h(App), nodeOps.createElement('div'))
+    expect(cb).not.toHaveBeenCalled()
+    visible.value = false
+    await nextTick()
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  // #7030
+  it('flush: pre watcher in child component should not fire before parent update', async () => {
+    const b = ref(0)
+    const calls: string[] = []
+
+    const Comp = {
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher child')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          b.value
+          calls.push('render child')
+        }
+      }
+    }
+
+    const Parent = {
+      props: ['a'],
+      setup() {
+        watch(
+          () => b.value,
+          val => {
+            calls.push('watcher parent')
+          },
+          { flush: 'pre' }
+        )
+        return () => {
+          b.value
+          calls.push('render parent')
+          return h(Comp)
+        }
+      }
+    }
+
+    const App = {
+      render() {
+        return h(Parent, {
+          a: b.value
+        })
+      }
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+    expect(calls).toEqual(['render parent', 'render child'])
+
+    b.value++
+    await nextTick()
+    expect(calls).toEqual([
+      'render parent',
+      'render child',
+      'watcher parent',
+      'render parent',
+      'watcher child',
+      'render child'
+    ])
+  })
+
   // #1763
   it('flush: pre watcher watching props should fire before child update', async () => {
     const a = ref(0)
@@ -1000,7 +1092,7 @@ describe('api: watch', () => {
       },
       mounted() {
         // this call runs while Comp is currentInstance, but
-        // the effect for this `$watch` should nontheless be registered with Child
+        // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
           () => void 0
@@ -1171,7 +1263,7 @@ describe('api: watch', () => {
     expect(instance!.scope.effects.length).toBe(1)
   })
 
-  test('watchEffect should keep running if created in a detatched scope', async () => {
+  test('watchEffect should keep running if created in a detached scope', async () => {
     const trigger = ref(0)
     let countWE = 0
     let countW = 0
@@ -1204,5 +1296,40 @@ describe('api: watch', () => {
     // both watchers run again event though component has been unmounted
     expect(countWE).toBe(3)
     expect(countW).toBe(2)
+  })
+
+  // #5151
+  test('OnCleanup also needs to be cleaned，', async () => {
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+    const num = ref(0)
+
+    watch(num, (value, oldValue, onCleanup) => {
+      if (value > 1) {
+        return
+      }
+      spy1()
+      onCleanup(() => {
+        // OnCleanup also needs to be cleaned
+        spy2()
+      })
+    })
+
+    num.value++
+    await nextTick()
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(0)
+
+    num.value++
+    await nextTick()
+
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+
+    num.value++
+    await nextTick()
+    // would not be calld when value>1
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
   })
 })

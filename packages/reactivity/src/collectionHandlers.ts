@@ -3,7 +3,7 @@ import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
-export type CollectionTypes = IterableCollections | WeakCollections
+type CollectionTypes = IterableCollections | WeakCollections
 
 type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
@@ -27,7 +27,7 @@ function get(
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
-    if (key !== rawKey) {
+    if (hasChanged(key, rawKey)) {
       track(rawTarget, TrackOpTypes.GET, key)
     }
     track(rawTarget, TrackOpTypes.GET, rawKey)
@@ -50,7 +50,7 @@ function has(this: CollectionTypes, key: unknown, isReadonly = false): boolean {
   const rawTarget = toRaw(target)
   const rawKey = toRaw(key)
   if (!isReadonly) {
-    if (key !== rawKey) {
+    if (hasChanged(key, rawKey)) {
       track(rawTarget, TrackOpTypes.HAS, key)
     }
     track(rawTarget, TrackOpTypes.HAS, rawKey)
@@ -223,7 +223,11 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
         toRaw(this)
       )
     }
-    return type === TriggerOpTypes.DELETE ? false : this
+    return type === TriggerOpTypes.DELETE
+      ? false
+      : type === TriggerOpTypes.CLEAR
+        ? undefined
+        : this
   }
 }
 
@@ -337,8 +341,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-    ? readonlyInstrumentations
-    : mutableInstrumentations
+      ? readonlyInstrumentations
+      : mutableInstrumentations
 
   return (
     target: CollectionTypes,

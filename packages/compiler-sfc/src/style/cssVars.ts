@@ -8,7 +8,7 @@ import {
   BindingMetadata
 } from '@vue/compiler-dom'
 import { SFCDescriptor } from '../parse'
-import { escapeSymbolsRE } from '../script/utils'
+import { getEscapedCssVarName } from '../script/utils'
 import { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
@@ -22,17 +22,25 @@ export function genCssVarsFromList(
 ): string {
   return `{\n  ${vars
     .map(
-      key => `"${isSSR ? `--` : ``}${genVarName(id, key, isProd)}": (${key})`
+      key =>
+        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`
     )
     .join(',\n  ')}\n}`
 }
 
-function genVarName(id: string, raw: string, isProd: boolean): string {
+function genVarName(
+  id: string,
+  raw: string,
+  isProd: boolean,
+  isSSR = false
+): string {
   if (isProd) {
     return hash(id + raw)
   } else {
     // escape ASCII Punctuation & Symbols
-    return `${id}-${raw.replace(escapeSymbolsRE, s => `\\${s}`)}`
+    // #7823 need to double-escape in SSR because the attributes are rendered
+    // into an HTML string
+    return `${id}-${getEscapedCssVarName(raw, isSSR)}`
   }
 }
 
@@ -53,8 +61,9 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
   const vars: string[] = []
   sfc.styles.forEach(style => {
     let match
-    // ignore v-bind() in comments /* ... */
-    const content = style.content.replace(/\/\*([\s\S]*?)\*\//g, '')
+    // ignore v-bind() in comments, eg /* ... */
+    // and // (Less, Sass and Stylus all support the use of // to comment)
+    const content = style.content.replace(/\/\*([\s\S]*?)\*\/|\/\/.*/g, '')
     while ((match = vBindRE.exec(content))) {
       const start = match.index + match[0].length
       const end = lexBinding(content, start)

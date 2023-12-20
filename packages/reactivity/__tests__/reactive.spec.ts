@@ -23,7 +23,7 @@ describe('reactivity/reactive', () => {
     const reactiveObj = reactive(obj)
     expect(isReactive(reactiveObj)).toBe(true)
     // read prop of reactiveObject will cause reactiveObj[prop] to be reactive
-    // @ts-ignore
+    // @ts-expect-error
     const prototype = reactiveObj['__proto__']
     const otherObj = { data: ['a'] }
     expect(isReactive(otherObj)).toBe(false)
@@ -158,6 +158,21 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
+  // #1246
+  test('mutation on objects using reactive as prototype should not trigger', () => {
+    const observed = reactive({ foo: 1 })
+    const original = Object.create(observed)
+    let dummy
+    effect(() => (dummy = original.foo))
+    expect(dummy).toBe(1)
+    observed.foo = 2
+    expect(dummy).toBe(2)
+    original.foo = 3
+    expect(dummy).toBe(2)
+    original.foo = 4
+    expect(dummy).toBe(2)
+  })
+
   test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -166,11 +181,18 @@ describe('reactivity/reactive', () => {
   })
 
   test('toRaw on object using reactive as prototype', () => {
-    const original = reactive({})
-    const obj = Object.create(original)
+    const original = { foo: 1 }
+    const observed = reactive(original)
+    const inherted = Object.create(observed)
+    expect(toRaw(inherted)).toBe(inherted)
+  })
+
+  test('toRaw on user Proxy wrapping reactive', () => {
+    const original = {}
+    const re = reactive(original)
+    const obj = new Proxy(re, {})
     const raw = toRaw(obj)
-    expect(raw).toBe(obj)
-    expect(raw).not.toBe(toRaw(original))
+    expect(raw).toBe(original)
   })
 
   test('should not unwrap Ref<T>', () => {
@@ -204,7 +226,7 @@ describe('reactivity/reactive', () => {
     const dummy = computed(() => observed.a)
     expect(dummy.value).toBe(0)
 
-    // @ts-ignore
+    // @ts-expect-error
     observed.a = bar
     expect(dummy.value).toBe(1)
 
@@ -233,6 +255,9 @@ describe('reactivity/reactive', () => {
     // symbol
     const s = Symbol()
     assertValue(s)
+    // bigint
+    const bn = BigInt('9007199254740991')
+    assertValue(bn)
 
     // built-ins should work and return same value
     const p = Promise.resolve()

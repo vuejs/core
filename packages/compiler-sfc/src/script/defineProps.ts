@@ -17,7 +17,7 @@ import {
   isCallOf,
   unwrapTSNode,
   toRuntimeTypeString,
-  getEscapedKey
+  getEscapedPropName
 } from './utils'
 import { genModelProps } from './defineModel'
 import { getObjectOrArrayExpressionKeys } from './analyzeScriptBindings'
@@ -77,14 +77,13 @@ export function processDefineProps(
     ctx.propsTypeDecl = node.typeParameters.params[0]
   }
 
-  if (declId) {
-    // handle props destructure
-    if (declId.type === 'ObjectPattern') {
-      processPropsDestructure(ctx, declId)
-    } else {
-      ctx.propsIdentifier = ctx.getString(declId)
-    }
+  // handle props destructure
+  if (declId && declId.type === 'ObjectPattern') {
+    processPropsDestructure(ctx, declId)
   }
+
+  ctx.propsCall = node
+  ctx.propsDecl = declId
 
   return true
 }
@@ -97,31 +96,33 @@ function processWithDefaults(
   if (!isCallOf(node, WITH_DEFAULTS)) {
     return false
   }
-  if (processDefineProps(ctx, node.arguments[0], declId)) {
-    if (ctx.propsRuntimeDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS} can only be used with type-based ` +
-          `${DEFINE_PROPS} declaration.`,
-        node
-      )
-    }
-    if (ctx.propsDestructureDecl) {
-      ctx.error(
-        `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
-          `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
-        node.callee
-      )
-    }
-    ctx.propsRuntimeDefaults = node.arguments[1]
-    if (!ctx.propsRuntimeDefaults) {
-      ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
-    }
-  } else {
+  if (!processDefineProps(ctx, node.arguments[0], declId)) {
     ctx.error(
       `${WITH_DEFAULTS}' first argument must be a ${DEFINE_PROPS} call.`,
       node.arguments[0] || node
     )
   }
+
+  if (ctx.propsRuntimeDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS} can only be used with type-based ` +
+        `${DEFINE_PROPS} declaration.`,
+      node
+    )
+  }
+  if (ctx.propsDestructureDecl) {
+    ctx.error(
+      `${WITH_DEFAULTS}() is unnecessary when using destructure with ${DEFINE_PROPS}().\n` +
+        `Prefer using destructure default values, e.g. const { foo = 1 } = defineProps(...).`,
+      node.callee
+    )
+  }
+  ctx.propsRuntimeDefaults = node.arguments[1]
+  if (!ctx.propsRuntimeDefaults) {
+    ctx.error(`The 2nd argument of ${WITH_DEFAULTS} is required.`, node)
+  }
+  ctx.propsCall = node
+
   return true
 }
 
@@ -134,7 +135,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
       const defaults: string[] = []
       for (const key in ctx.propsDestructuredBindings) {
         const d = genDestructuredDefaultValue(ctx, key)
-        const finalKey = getEscapedKey(key)
+        const finalKey = getEscapedPropName(key)
         if (d)
           defaults.push(
             `${finalKey}: ${d.valueString}${
@@ -143,7 +144,7 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
           )
       }
       if (defaults.length) {
-        propsDecls = `${ctx.helper(
+        propsDecls = `/*#__PURE__*/${ctx.helper(
           `mergeDefaults`
         )}(${propsDecls}, {\n  ${defaults.join(',\n  ')}\n})`
       }
@@ -155,7 +156,9 @@ export function genRuntimeProps(ctx: ScriptCompileContext): string | undefined {
   const modelsDecls = genModelProps(ctx)
 
   if (propsDecls && modelsDecls) {
-    return `${ctx.helper('mergeModels')}(${propsDecls}, ${modelsDecls})`
+    return `/*#__PURE__*/${ctx.helper(
+      'mergeModels'
+    )}(${propsDecls}, ${modelsDecls})`
   } else {
     return modelsDecls || propsDecls
   }
@@ -183,9 +186,9 @@ function genRuntimePropsFromTypes(ctx: ScriptCompileContext) {
     ${propStrings.join(',\n    ')}\n  }`
 
   if (ctx.propsRuntimeDefaults && !hasStaticDefaults) {
-    propsDecls = `${ctx.helper('mergeDefaults')}(${propsDecls}, ${ctx.getString(
-      ctx.propsRuntimeDefaults
-    )})`
+    propsDecls = `/*#__PURE__*/${ctx.helper(
+      'mergeDefaults'
+    )}(${propsDecls}, ${ctx.getString(ctx.propsRuntimeDefaults)})`
   }
 
   return propsDecls
@@ -250,7 +253,7 @@ function genRuntimePropFromType(
     }
   }
 
-  const finalKey = getEscapedKey(key)
+  const finalKey = getEscapedPropName(key)
   if (!ctx.options.isProd) {
     return `${finalKey}: { ${concatStrings([
       `type: ${toRuntimeTypeString(type)}`,
@@ -273,6 +276,17 @@ function genRuntimePropFromType(
       defaultString
     ])} }`
   } else {
+    // #8989 for custom element, should keep the type
+    if (ctx.isCE) {
+      if (defaultString) {
+        return `${finalKey}: ${`{ ${defaultString}, type: ${toRuntimeTypeString(
+          type
+        )} }`}`
+      } else {
+        return `${finalKey}: {type: ${toRuntimeTypeString(type)}}`
+      }
+    }
+
     // production: checks are useless
     return `${finalKey}: ${defaultString ? `{ ${defaultString} }` : `{}`}`
   }

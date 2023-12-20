@@ -78,7 +78,8 @@ describe('sfc reactive props destructure', () => {
     // literals can be used as-is, non-literals are always returned from a
     // function
     // functions need to be marked with a skip marker
-    expect(content).toMatch(`props: _mergeDefaults(['foo', 'bar', 'baz'], {
+    expect(content)
+      .toMatch(`props: /*#__PURE__*/_mergeDefaults(['foo', 'bar', 'baz'], {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true
@@ -98,7 +99,7 @@ describe('sfc reactive props destructure', () => {
     // safely infer whether runtime type is Function (e.g. if the runtime decl
     // is imported, or spreads another object)
     expect(content)
-      .toMatch(`props: _mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
+      .toMatch(`props: /*#__PURE__*/_mergeDefaults({ foo: Number, bar: Object, func: Function, ext: null }, {
   foo: 1,
   bar: () => ({}),
   func: () => {}, __skip_func: true,
@@ -122,7 +123,7 @@ describe('sfc reactive props destructure', () => {
     })
 
     expect(content).toMatch(`
-  props: _mergeDefaults(['foo', 'foo:bar'], {
+  props: /*#__PURE__*/_mergeDefaults(['foo', 'foo:bar'], {
   foo: 1,
   "foo:bar": 'foo-bar'
 }),`)
@@ -280,6 +281,58 @@ describe('sfc reactive props destructure', () => {
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS
     })
+  })
+
+  test('multi-variable declaration', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+      a = 1;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #6757
+  test('multi-variable declaration fix #6757 ', () => {
+    const { content } = compile(`
+    <script setup>
+    const a = 1,
+      { item } = defineProps(['item']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 1;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  // #7422
+  test('multi-variable declaration fix #7422', () => {
+    const { content } = compile(`
+    <script setup>
+    const { item } = defineProps(['item']),
+          a = 0,
+          b = 0;
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`const a = 0,`)
+    expect(content).toMatch(`b = 0;`)
+    expect(content).toMatch(`props: ['item'],`)
+  })
+
+  test('defineProps/defineEmits in multi-variable declaration (full removal)', () => {
+    const { content } = compile(`
+    <script setup>
+    const props = defineProps(['item']),
+          emit = defineEmits(['a']);
+    </script>
+  `)
+    assertCode(content)
+    expect(content).toMatch(`props: ['item'],`)
+    expect(content).toMatch(`emits: ['a'],`)
   })
 
   describe('errors', () => {
