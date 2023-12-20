@@ -1582,7 +1582,7 @@ function baseCreateRenderer(
     pauseTracking()
     // props update may have triggered pre-flush watchers.
     // flush them before the render update.
-    flushPreFlushCbs()
+    flushPreFlushCbs(instance)
     resetTracking()
   }
 
@@ -2395,7 +2395,7 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       const c1 = ch1[i] as VNode
       let c2 = ch2[i] as VNode
       if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
-        if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.HYDRATE_EVENTS) {
+        if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.NEED_HYDRATION) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el
         }

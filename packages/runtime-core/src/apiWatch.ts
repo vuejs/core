@@ -60,10 +60,10 @@ type MapSources<T, Immediate> = {
       ? V | undefined
       : V
     : T[K] extends object
-    ? Immediate extends true
-      ? T[K] | undefined
-      : T[K]
-    : never
+      ? Immediate extends true
+        ? T[K] | undefined
+        : T[K]
+      : never
 }
 
 type OnCleanup = (cleanupFn: () => void) => void
@@ -273,10 +273,11 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: () => void
+  let cleanup: (() => void) | undefined
   let onCleanup: OnCleanup = (fn: () => void) => {
     cleanup = effect.onStop = () => {
       callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
+      cleanup = effect.onStop = undefined
     }
   }
 
@@ -333,8 +334,8 @@ function doWatch(
           oldValue === INITIAL_WATCHER_VALUE
             ? undefined
             : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-            ? []
-            : oldValue,
+              ? []
+              : oldValue,
           onCleanup
         ])
         oldValue = newValue
