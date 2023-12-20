@@ -111,22 +111,22 @@ type DefaultKeys<T> = {
 type InferPropType<T> = [T] extends [null]
   ? any // null & true would fail to infer
   : [T] extends [{ type: null | true }]
-  ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
-  : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
-  ? Record<string, any>
-  : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
-  ? boolean
-  : [T] extends [DateConstructor | { type: DateConstructor }]
-  ? Date
-  : [T] extends [(infer U)[] | { type: (infer U)[] }]
-  ? U extends DateConstructor
-    ? Date | InferPropType<U>
-    : InferPropType<U>
-  : [T] extends [Prop<infer V, infer D>]
-  ? unknown extends V
-    ? IfAny<V, V, D>
-    : V
-  : T
+    ? any // As TS issue https://github.com/Microsoft/TypeScript/issues/14829 // somehow `ObjectConstructor` when inferred from { (): T } becomes `any` // `BooleanConstructor` when inferred from PropConstructor(with PropMethod) becomes `Boolean`
+    : [T] extends [ObjectConstructor | { type: ObjectConstructor }]
+      ? Record<string, any>
+      : [T] extends [BooleanConstructor | { type: BooleanConstructor }]
+        ? boolean
+        : [T] extends [DateConstructor | { type: DateConstructor }]
+          ? Date
+          : [T] extends [(infer U)[] | { type: (infer U)[] }]
+            ? U extends DateConstructor
+              ? Date | InferPropType<U>
+              : InferPropType<U>
+            : [T] extends [Prop<infer V, infer D>]
+              ? unknown extends V
+                ? IfAny<V, V, D>
+                : V
+              : T
 
 /**
  * Extract prop types from a runtime props options object.
@@ -725,6 +725,12 @@ function getInvalidTypeMessage(
   value: unknown,
   expectedTypes: string[]
 ): string {
+  if (expectedTypes.length === 0) {
+    return (
+      `Prop type [] for prop "${name}" won't match anything.` +
+      ` Did you mean to use type Array instead?`
+    )
+  }
   let message =
     `Invalid prop: type check failed for prop "${name}".` +
     ` Expected ${expectedTypes.map(capitalize).join(' | ')}`
