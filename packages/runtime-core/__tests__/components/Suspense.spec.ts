@@ -17,9 +17,12 @@ import {
   onUnmounted,
   onErrorCaptured,
   shallowRef,
+  SuspenseProps,
+  resolveDynamicComponent,
   Fragment
 } from '@vue/runtime-test'
 import { createApp, defineComponent } from 'vue'
+import { type RawSlots } from 'packages/runtime-core/src/componentSlots'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
@@ -1182,6 +1185,72 @@ describe('Suspense', () => {
     expect(calls).toEqual([`one mounted`, `one unmounted`, `two mounted`])
   })
 
+  test('mount the fallback content is in the correct position', async () => {
+    const makeComp = (name: string, delay = 0) =>
+      defineAsyncComponent(
+        {
+          setup() {
+            return () => h('div', [name])
+          }
+        },
+        delay
+      )
+
+    const One = makeComp('one')
+    const Two = makeComp('two', 20)
+
+    const view = shallowRef(One)
+
+    const Comp = {
+      setup() {
+        return () =>
+          h('div', [
+            h(
+              Suspense,
+              {
+                timeout: 10
+              },
+              {
+                default: h(view.value),
+                fallback: h('div', 'fallback')
+              }
+            ),
+            h('div', 'three')
+          ])
+      }
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(
+      `<div><div>fallback</div><div>three</div></div>`
+    )
+
+    await deps[0]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>one</div><div>three</div></div>`
+    )
+
+    view.value = Two
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>one</div><div>three</div></div>`
+    )
+
+    await new Promise(r => setTimeout(r, 10))
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>fallback</div><div>three</div></div>`
+    )
+
+    await deps[1]
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>two</div><div>three</div></div>`
+    )
+  })
+
   // #2214
   // Since suspense renders its own root like a component, it should not patch
   // its content in optimized mode.
@@ -1522,5 +1591,76 @@ describe('Suspense', () => {
     await nextTick()
     expected = `<div>outerB</div><div>innerB</div>`
     expect(serializeInner(root)).toBe(expected)
+  })
+
+  describe('warnings', () => {
+    // base function to check if a combination of slots warns or not
+    function baseCheckWarn(
+      shouldWarn: boolean,
+      children: RawSlots,
+      props: SuspenseProps | null = null
+    ) {
+      const Comp = {
+        setup() {
+          return () => h(Suspense, props, children)
+        }
+      }
+
+      const root = nodeOps.createElement('div')
+      render(h(Comp), root)
+
+      if (shouldWarn) {
+        expect(`<Suspense> slots expect a single root node.`).toHaveBeenWarned()
+      } else {
+        expect(
+          `<Suspense> slots expect a single root node.`
+        ).not.toHaveBeenWarned()
+      }
+    }
+
+    // actual function that we use in tests
+    const checkWarn = baseCheckWarn.bind(null, true)
+    const checkNoWarn = baseCheckWarn.bind(null, false)
+
+    test('does not warn on single child', async () => {
+      checkNoWarn({
+        default: h('div'),
+        fallback: h('div')
+      })
+    })
+
+    test('does not warn on null', async () => {
+      checkNoWarn({
+        default: null,
+        fallback: null
+      })
+    })
+
+    test('does not warn on <component :is="null" />', async () => {
+      checkNoWarn({
+        default: () => [resolveDynamicComponent(null)],
+        fallback: () => null
+      })
+    })
+
+    test('does not warn on empty array', async () => {
+      checkNoWarn({
+        default: [],
+        fallback: () => []
+      })
+    })
+
+    test('warns on multiple children in default', async () => {
+      checkWarn({
+        default: [h('div'), h('div')]
+      })
+    })
+
+    test('warns on multiple children in fallback', async () => {
+      checkWarn({
+        default: h('div'),
+        fallback: [h('div'), h('div')]
+      })
+    })
   })
 })
