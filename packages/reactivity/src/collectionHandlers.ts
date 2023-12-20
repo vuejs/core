@@ -3,7 +3,7 @@ import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
 
-export type CollectionTypes = IterableCollections | WeakCollections
+type CollectionTypes = IterableCollections | WeakCollections
 
 type IterableCollections = Map<any, any> | Set<any>
 type WeakCollections = WeakMap<any, any> | WeakSet<any>
@@ -226,8 +226,8 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
     return type === TriggerOpTypes.DELETE
       ? false
       : type === TriggerOpTypes.CLEAR
-      ? undefined
-      : this
+        ? undefined
+        : this
   }
 }
 
@@ -337,8 +337,8 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       ? shallowReadonlyInstrumentations
       : shallowInstrumentations
     : isReadonly
-    ? readonlyInstrumentations
-    : mutableInstrumentations
+      ? readonlyInstrumentations
+      : mutableInstrumentations
 
   return (
     target: CollectionTypes,
