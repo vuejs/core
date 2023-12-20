@@ -1,0 +1,20 @@
+name: Lock Closed Issues
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  issues: write
+
+jobs:
+  action:
+    if: github.repository == 'vuejs/core'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/lock-threads@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-inactive-days: '14'
+          issue-lock-reason: ''
+          process-only: 'issues'

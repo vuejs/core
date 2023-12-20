@@ -130,6 +130,10 @@ export interface SFCScriptCompileOptions {
    * using it, disable this and switch to the [Vue Macros implementation](https://vue-macros.sxzz.moe/features/reactivity-transform.html).
    */
   reactivityTransform?: boolean
+  /**
+   * Transform Vue SFCs into custom elements.
+   */
+  customElement?: boolean | ((filename: string) => boolean)
 }
 
 export interface ImportBinding {
@@ -765,7 +769,7 @@ export function compileScript(
   if (
     sfc.cssVars.length &&
     // no need to do this when targeting SSR
-    !(options.inlineTemplate && options.templateOptions?.ssr)
+    !options.templateOptions?.ssr
   ) {
     ctx.helperImports.add(CSS_VARS_HELPER)
     ctx.helperImports.add('unref')
@@ -1172,8 +1176,8 @@ function walkObjectPattern(
         const type = isDefineCall
           ? BindingTypes.SETUP_CONST
           : isConst
-          ? BindingTypes.SETUP_MAYBE_REF
-          : BindingTypes.SETUP_LET
+            ? BindingTypes.SETUP_MAYBE_REF
+            : BindingTypes.SETUP_LET
         registerBinding(bindings, p.key, type)
       } else {
         walkPattern(p.value, bindings, isConst, isDefineCall)
@@ -1208,8 +1212,8 @@ function walkPattern(
     const type = isDefineCall
       ? BindingTypes.SETUP_CONST
       : isConst
-      ? BindingTypes.SETUP_MAYBE_REF
-      : BindingTypes.SETUP_LET
+        ? BindingTypes.SETUP_MAYBE_REF
+        : BindingTypes.SETUP_LET
     registerBinding(bindings, node, type)
   } else if (node.type === 'RestElement') {
     // argument can only be identifier when destructuring
@@ -1224,8 +1228,8 @@ function walkPattern(
       const type = isDefineCall
         ? BindingTypes.SETUP_CONST
         : isConst
-        ? BindingTypes.SETUP_MAYBE_REF
-        : BindingTypes.SETUP_LET
+          ? BindingTypes.SETUP_MAYBE_REF
+          : BindingTypes.SETUP_LET
       registerBinding(bindings, node.left, type)
     } else {
       walkPattern(node.left, bindings, isConst)
