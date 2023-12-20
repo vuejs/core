@@ -1,5 +1,3 @@
-/* eslint-disable no-restricted-globals */
-
 const { builtinModules } = require('node:module')
 const DOMGlobals = ['window', 'document']
 const NodeGlobals = ['module', 'require']
@@ -68,7 +66,7 @@ module.exports = {
     },
     // shared, may be used in any env
     {
-      files: ['packages/shared/**'],
+      files: ['packages/shared/**', '.eslintrc.cjs'],
       rules: {
         'no-restricted-globals': 'off',
       },
@@ -106,7 +104,7 @@ module.exports = {
     },
     // Node scripts
     {
-      files: ['scripts/**', '*.{js,ts}', 'packages/**/index.js'],
+      files: ['scripts/**', './*.{js,ts}', 'packages/**/index.js'],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': ['error', banConstEnum],
