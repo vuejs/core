@@ -90,6 +90,39 @@ describe('compiler: transform v-model', () => {
     expect(generate(root).code).toMatchSnapshot()
   })
 
+  describe('v-model types on custom elements', () => {
+    const testCustomVModel = (
+      type:
+        | 'checkbox'
+        | 'text-input'
+        | 'textarea'
+        | 'radio'
+        | 'file'
+        | 'select'
+        | void,
+      modelType: any
+    ) => {
+      const root = transformWithModel(`<my-${type} v-model="model" />`, {
+        isCustomElement: tag => tag.startsWith('my-'),
+        customElementType: tag => (tag === `my-${type}` ? type : undefined)
+      })
+
+      // if (type==='select')console.log(root.helpers)
+      expect(root.helpers).toContain(modelType)
+    }
+
+    test('should set checkbox v-model', () =>
+      testCustomVModel('checkbox', V_MODEL_CHECKBOX))
+    test('should set radio v-model', () =>
+      testCustomVModel('radio', V_MODEL_RADIO))
+    test('should set input v-model', () =>
+      testCustomVModel('text-input', V_MODEL_TEXT))
+    test('should set select v-model', () =>
+      testCustomVModel('select', V_MODEL_SELECT))
+    test('should set textarea v-model', () =>
+      testCustomVModel('textarea', V_MODEL_TEXT))
+  })
+
   describe('errors', () => {
     test('plain elements with argument', () => {
       const onError = vi.fn()

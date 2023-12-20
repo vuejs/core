@@ -47,6 +47,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
 
   const { tag } = node
   const isCustomElement = context.isCustomElement(tag)
+  const customElementType = context.customElementType(tag)
   if (
     tag === 'input' ||
     tag === 'textarea' ||
@@ -55,14 +56,17 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
   ) {
     let directiveToUse = V_MODEL_TEXT
     let isInvalidType = false
-    if (tag === 'input' || isCustomElement) {
+    if (
+      tag === 'input' ||
+      (isCustomElement && customElementType !== 'select')
+    ) {
       const type = findProp(node, `type`)
-      if (type) {
-        if (type.type === NodeTypes.DIRECTIVE) {
+      if (type || customElementType) {
+        if (type?.type === NodeTypes.DIRECTIVE) {
           // :type="foo"
           directiveToUse = V_MODEL_DYNAMIC
-        } else if (type.value) {
-          switch (type.value.content) {
+        } else if (type?.value || customElementType) {
+          switch (type?.value?.content || customElementType) {
             case 'radio':
               directiveToUse = V_MODEL_RADIO
               break
@@ -92,7 +96,7 @@ export const transformModel: DirectiveTransform = (dir, node, context) => {
         // text type
         __DEV__ && checkDuplicatedValue()
       }
-    } else if (tag === 'select') {
+    } else if (tag === 'select' || customElementType === 'select') {
       directiveToUse = V_MODEL_SELECT
     } else {
       // textarea

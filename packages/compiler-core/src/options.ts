@@ -14,6 +14,14 @@ export interface ErrorHandlingOptions {
   onError?: (error: CompilerError) => void
 }
 
+type CustomElementFormBindings =
+  | 'checkbox'
+  | 'text-input'
+  | 'textarea'
+  | 'radio'
+  | 'file'
+  | 'select'
+
 export interface ParserOptions
   extends ErrorHandlingOptions,
     CompilerCompatOptions {
@@ -37,6 +45,10 @@ export interface ParserOptions
    * Separate option for end users to extend the native elements list
    */
   isCustomElement?: (tag: string) => boolean | void
+  /**
+   * Separate option for end users to specify type of custom element so appropriate v-model is applied
+   */
+  customElementType?: (tag: string) => CustomElementFormBindings | void
   /**
    * Get tag namespace
    */
@@ -207,6 +219,10 @@ export interface TransformOptions
    * Used by some transforms that expects only native elements
    */
   isCustomElement?: (tag: string) => boolean | void
+  /**
+   * Used by v-model transform to apply correct form bindings for custom elements
+   */
+  customElementType?: (tag: string) => CustomElementFormBindings | void
   /**
    * Transform expressions like {{ foo }} to `_ctx.foo`.
    * If this option is false, the generated code will be wrapped in a
