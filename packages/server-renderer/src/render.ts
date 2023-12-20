@@ -144,7 +144,10 @@ function renderComponentSubTree(
     // perf: enable caching of computed getters during render
     // since there cannot be state mutations during render.
     for (const e of instance.scope.effects) {
-      if (e.computed) e.computed._cacheable = true
+      if (e.computed) {
+        e.computed._dirty = true
+        e.computed._cacheable = true
+      }
     }
 
     const ssrRender = instance.ssrRender || comp.ssrRender
