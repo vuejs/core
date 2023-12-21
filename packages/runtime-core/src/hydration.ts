@@ -173,10 +173,10 @@ export function createHydrationFunctions(
               warn(
                 `Hydration text mismatch in`,
                 node.parentNode,
-                `\n  - rendered on server: ${JSON.stringify(vnode.children)}` +
-                  `\n  - expected on client: ${JSON.stringify(
-                    (node as Text).data
-                  )}`
+                `\n  - rendered on server: ${JSON.stringify(
+                  (node as Text).data
+                )}` +
+                  `\n  - expected on client: ${JSON.stringify(vnode.children)}`
               )
             ;(node as Text).data = vnode.children as string
           }
@@ -431,8 +431,8 @@ export function createHydrationFunctions(
             warn(
               `Hydration text content mismatch on`,
               el,
-              `\n  - rendered on server: ${vnode.children as string}` +
-                `\n  - expected on client: ${el.textContent}`
+              `\n  - rendered on server: ${el.textContent}` +
+                `\n  - expected on client: ${vnode.children as string}`
             )
           el.textContent = vnode.children as string
         }
@@ -613,15 +613,15 @@ export function createHydrationFunctions(
     hasMismatch = true
     ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
       warn(
-        `Hydration node mismatch:\n- Client vnode:`,
-        vnode.type,
-        `\n- Server rendered DOM:`,
+        `Hydration node mismatch:\n- rendered on server:`,
         node,
         node.nodeType === DOMNodeTypes.TEXT
           ? `(text)`
           : isComment(node) && node.data === '['
             ? `(start of fragment)`
-            : ``
+            : ``,
+        `\n- expected on client:`,
+        vnode.type
       )
     vnode.el = null
 
@@ -718,9 +718,11 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
   let actual: any
   let expected: any
   if (key === 'class') {
-    actual = el.className
-    expected = normalizeClass(clientValue)
-    if (actual !== expected) {
+    // classes might be in different order, but that doesn't affect cascade
+    // so we just need to check if the class lists contain the same classes.
+    actual = toClassSet(el.getAttribute('class') || '')
+    expected = toClassSet(normalizeClass(clientValue))
+    if (!isSetEqual(actual, expected)) {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
@@ -740,7 +742,9 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
       ? includeBooleanAttr(clientValue)
         ? ''
         : false
-      : String(clientValue)
+      : clientValue == null
+        ? false
+        : String(clientValue)
     if (actual !== expected) {
       mismatchType = `attribute`
       mismatchKey = key
@@ -762,4 +766,20 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
     return true
   }
   return false
+}
+
+function toClassSet(str: string): Set<string> {
+  return new Set(str.trim().split(/\s+/))
+}
+
+function isSetEqual(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) {
+    return false
+  }
+  for (const s of a) {
+    if (!b.has(s)) {
+      return false
+    }
+  }
+  return true
 }

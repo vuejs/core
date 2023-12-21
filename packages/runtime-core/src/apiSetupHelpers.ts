@@ -364,25 +364,30 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     return ref() as any
   }
 
-  let localValue: any
-  watchSyncEffect(() => {
-    localValue = props[name]
-  })
-
-  return customRef((track, trigger) => ({
-    get() {
-      track()
-      return localValue
-    },
-    set(value) {
-      const rawProps = i.vnode!.props
-      if (!(rawProps && name in rawProps) && hasChanged(value, localValue)) {
-        localValue = value
+  return customRef((track, trigger) => {
+    let localValue: any
+    watchSyncEffect(() => {
+      const propValue = props[name]
+      if (hasChanged(localValue, propValue)) {
+        localValue = propValue
         trigger()
       }
-      i.emit(`update:${name}`, value)
+    })
+    return {
+      get() {
+        track()
+        return localValue
+      },
+      set(value) {
+        const rawProps = i.vnode!.props
+        if (!(rawProps && name in rawProps) && hasChanged(value, localValue)) {
+          localValue = value
+          trigger()
+        }
+        i.emit(`update:${name}`, value)
+      }
     }
-  }))
+  })
 }
 
 function getContext(): SetupContext {

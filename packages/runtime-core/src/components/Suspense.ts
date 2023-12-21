@@ -47,6 +47,9 @@ export interface SuspenseProps {
 
 export const isSuspense = (type: any): boolean => type.__isSuspense
 
+// incrementing unique id for every pending branch
+let suspenseId = 0
+
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -226,22 +229,31 @@ function patchSuspense(
       if (suspense.deps <= 0) {
         suspense.resolve()
       } else if (isInFallback) {
-        patch(
-          activeBranch,
-          newFallback,
-          container,
-          anchor,
-          parentComponent,
-          null, // fallback tree will not have suspense context
-          namespace,
-          slotScopeIds,
-          optimized
-        )
-        setActiveBranch(suspense, newFallback)
+        // It's possible that the app is in hydrating state when patching the
+        // suspense instance. If someone updates the dependency during component
+        // setup in children of suspense boundary, that would be problemtic
+        // because we aren't actually showing a fallback content when
+        // patchSuspense is called. In such case, patch of fallback content
+        // should be no op
+        if (!isHydrating) {
+          patch(
+            activeBranch,
+            newFallback,
+            container,
+            anchor,
+            parentComponent,
+            null, // fallback tree will not have suspense context
+            namespace,
+            slotScopeIds,
+            optimized
+          )
+          setActiveBranch(suspense, newFallback)
+        }
       }
     } else {
       // toggled before pending tree is resolved
-      suspense.pendingId++
+      // increment pending ID. this is used to invalidate async callbacks
+      suspense.pendingId = suspenseId++
       if (isHydrating) {
         // if toggled before hydration is finished, the current DOM tree is
         // no longer valid. set it as the active branch so it will be unmounted
@@ -251,7 +263,6 @@ function patchSuspense(
       } else {
         unmount(pendingBranch, parentComponent, suspense)
       }
-      // increment pending ID. this is used to invalidate async callbacks
       // reset suspense state
       suspense.deps = 0
       // discard effects from pending branch
@@ -342,7 +353,11 @@ function patchSuspense(
       triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
-      suspense.pendingId++
+      if (newBranch.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+        suspense.pendingId = newBranch.component!.suspenseId!
+      } else {
+        suspense.pendingId = suspenseId++
+      }
       patch(
         null,
         newBranch,
