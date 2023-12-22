@@ -984,6 +984,161 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('attribute value with >', () => {
+      const ast = baseParse(
+        '<script setup lang="ts" generic="T extends Record<string>"></script>',
+        { parseMode: 'sfc' }
+      )
+      const element = ast.children[0] as ElementNode
+      expect(element).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'script',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        children: [],
+        innerLoc: {
+          end: {
+            column: 60,
+            line: 1,
+            offset: 59
+          },
+          start: {
+            column: 60,
+            line: 1,
+            offset: 59
+          }
+        },
+        props: [
+          {
+            loc: {
+              end: {
+                column: 14,
+                line: 1,
+                offset: 13
+              },
+              source: 'setup',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8
+              }
+            },
+            name: 'setup',
+            nameLoc: {
+              end: {
+                column: 14,
+                line: 1,
+                offset: 13
+              },
+              source: 'setup',
+              start: {
+                column: 9,
+                line: 1,
+                offset: 8
+              }
+            },
+            type: 6,
+            value: undefined
+          },
+          {
+            loc: {
+              end: {
+                column: 24,
+                line: 1,
+                offset: 23
+              },
+              source: 'lang="ts"',
+              start: {
+                column: 15,
+                line: 1,
+                offset: 14
+              }
+            },
+            name: 'lang',
+            nameLoc: {
+              end: {
+                column: 19,
+                line: 1,
+                offset: 18
+              },
+              source: 'lang',
+              start: {
+                column: 15,
+                line: 1,
+                offset: 14
+              }
+            },
+            type: 6,
+            value: {
+              content: 'ts',
+              loc: {
+                end: {
+                  column: 24,
+                  line: 1,
+                  offset: 23
+                },
+                source: '"ts"',
+                start: {
+                  column: 20,
+                  line: 1,
+                  offset: 19
+                }
+              },
+              type: 2
+            }
+          },
+          {
+            loc: {
+              end: {
+                column: 59,
+                line: 1,
+                offset: 58
+              },
+              source: 'generic="T extends Record<string>"',
+              start: {
+                column: 25,
+                line: 1,
+                offset: 24
+              }
+            },
+            name: 'generic',
+            nameLoc: {
+              end: {
+                column: 32,
+                line: 1,
+                offset: 31
+              },
+              source: 'generic',
+              start: {
+                column: 25,
+                line: 1,
+                offset: 24
+              }
+            },
+            type: 6,
+            value: {
+              content: 'T extends Record<string>',
+              loc: {
+                end: {
+                  column: 59,
+                  line: 1,
+                  offset: 58
+                },
+                source: '"T extends Record<string>"',
+                start: {
+                  column: 33,
+                  line: 1,
+                  offset: 32
+                }
+              },
+              type: 2
+            }
+          }
+        ]
+      })
+    })
+
     test('multiple attributes', () => {
       const ast = baseParse('<div id=a class="c" inert style=\'\'></div>')
       const element = ast.children[0] as ElementNode

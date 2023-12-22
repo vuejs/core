@@ -876,7 +876,7 @@ describe('SFC compile <script setup>', () => {
   describe('with TypeScript', () => {
     test('hoist type declarations', () => {
       const { content } = compile(`
-      <script setup lang="ts" generic="T extends Record<string>">
+      <script setup lang="ts">
         export interface Foo {}
         type Bar = {}
       </script>`)
