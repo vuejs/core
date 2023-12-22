@@ -298,7 +298,7 @@ function typeElementsToMap(
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
-      // capture generic parameter value on node
+      // capture generic parameters on node
       if (typeParameters) {
         ;(e as WithTypeParams).typeParameters = typeParameters
       }
