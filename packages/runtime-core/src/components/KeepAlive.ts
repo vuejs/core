@@ -53,6 +53,7 @@ export interface KeepAliveProps {
   include?: MatchPattern
   exclude?: MatchPattern
   max?: number | string
+  lazy?: boolean
 }
 
 type CacheKey = string | number | symbol | ConcreteComponent
@@ -85,7 +86,8 @@ const KeepAliveImpl: ComponentOptions = {
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
-    max: [String, Number]
+    max: [String, Number],
+    lazy: Boolean
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -134,6 +136,12 @@ const KeepAliveImpl: ComponentOptions = {
       optimized
     ) => {
       const instance = vnode.component!
+
+      if (props.lazy) {
+        // on activation, resume the effect of the component instance and immediately execute the call during the pause process
+        instance.effect.resume(true)
+      }
+
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
       // in case props have changed
       patch(
@@ -166,6 +174,12 @@ const KeepAliveImpl: ComponentOptions = {
 
     sharedContext.deactivate = (vnode: VNode) => {
       const instance = vnode.component!
+
+      if (props.lazy) {
+        // on deactivation, pause the effect of the component instance
+        instance.effect.pause()
+      }
+
       move(vnode, storageContainer, null, MoveType.LEAVE, parentSuspense)
       queuePostRenderEffect(() => {
         if (instance.da) {
