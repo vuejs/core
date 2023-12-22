@@ -939,6 +939,34 @@ describe('resolveType', () => {
         manufacturer: ['Object']
       })
     })
+
+    // #9871
+    test('shared generics with different args', () => {
+      const files = {
+        '/foo.ts': `export interface Foo<T> { value: T }`
+      }
+      const { props } = resolve(
+        `import type { Foo } from './foo'
+        defineProps<Foo<string>>()`,
+        files,
+        undefined,
+        `/One.vue`
+      )
+      expect(props).toStrictEqual({
+        value: ['String']
+      })
+      const { props: props2 } = resolve(
+        `import type { Foo } from './foo'
+        defineProps<Foo<number>>()`,
+        files,
+        undefined,
+        `/Two.vue`,
+        false /* do not invalidate cache */
+      )
+      expect(props2).toStrictEqual({
+        value: ['Number']
+      })
+    })
   })
 
   describe('errors', () => {
@@ -1012,7 +1040,8 @@ function resolve(
   code: string,
   files: Record<string, string> = {},
   options?: Partial<SFCScriptCompileOptions>,
-  sourceFileName: string = '/Test.vue'
+  sourceFileName: string = '/Test.vue',
+  invalidateCache = true
 ) {
   const { descriptor } = parse(`<script setup lang="ts">\n${code}\n</script>`, {
     filename: sourceFileName
@@ -1030,8 +1059,10 @@ function resolve(
     ...options
   })
 
-  for (const file in files) {
-    invalidateTypeCache(file)
+  if (invalidateCache) {
+    for (const file in files) {
+      invalidateTypeCache(file)
+    }
   }
 
   // ctx.userImports is collected when calling compileScript(), but we are
