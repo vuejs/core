@@ -986,7 +986,7 @@ describe('compiler: parse', () => {
 
     test('attribute value with >', () => {
       const ast = baseParse(
-        '<script setup lang="ts" generic="T extends Record<string>"></script>',
+        '<script setup lang="ts" generic="T extends Record<string,string>"></script>',
         { parseMode: 'sfc' }
       )
       const element = ast.children[0] as ElementNode
@@ -998,141 +998,69 @@ describe('compiler: parse', () => {
         codegenNode: undefined,
         children: [],
         innerLoc: {
-          end: {
-            column: 60,
-            line: 1,
-            offset: 59
-          },
-          start: {
-            column: 60,
-            line: 1,
-            offset: 59
-          }
+          start: { column: 67, line: 1, offset: 66 },
+          end: { column: 67, line: 1, offset: 66 }
         },
         props: [
           {
             loc: {
-              end: {
-                column: 14,
-                line: 1,
-                offset: 13
-              },
               source: 'setup',
-              start: {
-                column: 9,
-                line: 1,
-                offset: 8
-              }
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 }
             },
             name: 'setup',
             nameLoc: {
-              end: {
-                column: 14,
-                line: 1,
-                offset: 13
-              },
               source: 'setup',
-              start: {
-                column: 9,
-                line: 1,
-                offset: 8
-              }
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 }
             },
-            type: 6,
+            type: NodeTypes.ATTRIBUTE,
             value: undefined
           },
           {
             loc: {
-              end: {
-                column: 24,
-                line: 1,
-                offset: 23
-              },
               source: 'lang="ts"',
-              start: {
-                column: 15,
-                line: 1,
-                offset: 14
-              }
+              end: { column: 24, line: 1, offset: 23 },
+              start: { column: 15, line: 1, offset: 14 }
             },
             name: 'lang',
             nameLoc: {
-              end: {
-                column: 19,
-                line: 1,
-                offset: 18
-              },
               source: 'lang',
-              start: {
-                column: 15,
-                line: 1,
-                offset: 14
-              }
+              end: { column: 19, line: 1, offset: 18 },
+              start: { column: 15, line: 1, offset: 14 }
             },
-            type: 6,
+            type: NodeTypes.ATTRIBUTE,
             value: {
               content: 'ts',
               loc: {
-                end: {
-                  column: 24,
-                  line: 1,
-                  offset: 23
-                },
                 source: '"ts"',
-                start: {
-                  column: 20,
-                  line: 1,
-                  offset: 19
-                }
+                end: { column: 24, line: 1, offset: 23 },
+                start: { column: 20, line: 1, offset: 19 }
               },
-              type: 2
+              type: NodeTypes.TEXT
             }
           },
           {
             loc: {
-              end: {
-                column: 59,
-                line: 1,
-                offset: 58
-              },
-              source: 'generic="T extends Record<string>"',
-              start: {
-                column: 25,
-                line: 1,
-                offset: 24
-              }
+              source: 'generic="T extends Record<string,string>"',
+              end: { column: 66, line: 1, offset: 65 },
+              start: { column: 25, line: 1, offset: 24 }
             },
             name: 'generic',
             nameLoc: {
-              end: {
-                column: 32,
-                line: 1,
-                offset: 31
-              },
               source: 'generic',
-              start: {
-                column: 25,
-                line: 1,
-                offset: 24
-              }
+              end: { column: 32, line: 1, offset: 31 },
+              start: { column: 25, line: 1, offset: 24 }
             },
-            type: 6,
+            type: NodeTypes.ATTRIBUTE,
             value: {
-              content: 'T extends Record<string>',
+              content: 'T extends Record<string,string>',
               loc: {
-                end: {
-                  column: 59,
-                  line: 1,
-                  offset: 58
-                },
-                source: '"T extends Record<string>"',
-                start: {
-                  column: 33,
-                  line: 1,
-                  offset: 32
-                }
+                source: '"T extends Record<string,string>"',
+                end: { column: 66, line: 1, offset: 65 },
+                start: { column: 33, line: 1, offset: 32 }
               },
-              type: 2
+              type: NodeTypes.TEXT
             }
           }
         ]
