@@ -838,9 +838,9 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template>< 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 13,
+          "column": 12,
           "line": 1,
-          "offset": 12,
+          "offset": 11,
         },
         "source": "<template><",
         "start": {
@@ -908,9 +908,9 @@ exports[`compiler: parse > Errors > EOF_BEFORE_TAG_NAME > <template></ 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 14,
+          "column": 13,
           "line": 1,
-          "offset": 13,
+          "offset": 12,
         },
         "source": "<template></",
         "start": {
@@ -962,9 +962,9 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
           "codegenNode": undefined,
           "loc": {
             "end": {
-              "column": 26,
+              "column": 25,
               "line": 1,
-              "offset": 25,
+              "offset": 24,
             },
             "source": "<svg><![CDATA[",
             "start": {
@@ -983,9 +983,9 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[ 1`] 
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 26,
+          "column": 25,
           "line": 1,
-          "offset": 25,
+          "offset": 24,
         },
         "source": "<template><svg><![CDATA[",
         "start": {
@@ -1055,9 +1055,9 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
           "codegenNode": undefined,
           "loc": {
             "end": {
-              "column": 31,
+              "column": 30,
               "line": 1,
-              "offset": 30,
+              "offset": 29,
             },
             "source": "<svg><![CDATA[cdata",
             "start": {
@@ -1076,9 +1076,9 @@ exports[`compiler: parse > Errors > EOF_IN_CDATA > <template><svg><![CDATA[cdata
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 31,
+          "column": 30,
           "line": 1,
-          "offset": 30,
+          "offset": 29,
         },
         "source": "<template><svg><![CDATA[cdata",
         "start": {
@@ -1128,9 +1128,9 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!-- 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 16,
+          "column": 15,
           "line": 1,
-          "offset": 15,
+          "offset": 14,
         },
         "source": "<template><!--",
         "start": {
@@ -1198,9 +1198,9 @@ exports[`compiler: parse > Errors > EOF_IN_COMMENT > <template><!--comment 1`] =
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 23,
+          "column": 22,
           "line": 1,
-          "offset": 22,
+          "offset": 21,
         },
         "source": "<template><!--comment",
         "start": {
@@ -1250,9 +1250,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <div></div 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 12,
+          "column": 11,
           "line": 1,
-          "offset": 11,
+          "offset": 10,
         },
         "source": "<div></div",
         "start": {
@@ -1302,9 +1302,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div  1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 17,
+          "column": 16,
           "line": 1,
-          "offset": 16,
+          "offset": 15,
         },
         "source": "<template><div ",
         "start": {
@@ -1354,9 +1354,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 16,
+          "column": 15,
           "line": 1,
-          "offset": 15,
+          "offset": 14,
         },
         "source": "<template><div",
         "start": {
@@ -1406,9 +1406,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id  1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 20,
+          "column": 19,
           "line": 1,
-          "offset": 19,
+          "offset": 18,
         },
         "source": "<template><div id ",
         "start": {
@@ -1458,9 +1458,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id = 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 21,
+          "column": 20,
           "line": 1,
-          "offset": 20,
+          "offset": 19,
         },
         "source": "<template><div id =",
         "start": {
@@ -1510,9 +1510,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 19,
+          "column": 18,
           "line": 1,
-          "offset": 18,
+          "offset": 17,
         },
         "source": "<template><div id",
         "start": {
@@ -1562,9 +1562,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 24,
+          "column": 23,
           "line": 1,
-          "offset": 23,
+          "offset": 22,
         },
         "source": "<template><div id="abc",
         "start": {
@@ -1614,9 +1614,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc" 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 25,
+          "column": 24,
           "line": 1,
-          "offset": 24,
+          "offset": 23,
         },
         "source": "<template><div id="abc"",
         "start": {
@@ -1684,9 +1684,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id="abc"/ 1`] = 
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 26,
+          "column": 25,
           "line": 1,
-          "offset": 25,
+          "offset": 24,
         },
         "source": "<template><div id="abc"/",
         "start": {
@@ -1736,9 +1736,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 24,
+          "column": 23,
           "line": 1,
-          "offset": 23,
+          "offset": 22,
         },
         "source": "<template><div id='abc",
         "start": {
@@ -1788,9 +1788,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc' 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 25,
+          "column": 24,
           "line": 1,
-          "offset": 24,
+          "offset": 23,
         },
         "source": "<template><div id='abc'",
         "start": {
@@ -1858,9 +1858,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id='abc'/ 1`] = 
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 26,
+          "column": 25,
           "line": 1,
-          "offset": 25,
+          "offset": 24,
         },
         "source": "<template><div id='abc'/",
         "start": {
@@ -1928,9 +1928,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc / 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 25,
+          "column": 24,
           "line": 1,
-          "offset": 24,
+          "offset": 23,
         },
         "source": "<template><div id=abc /",
         "start": {
@@ -1980,9 +1980,9 @@ exports[`compiler: parse > Errors > EOF_IN_TAG > <template><div id=abc 1`] = `
       "codegenNode": undefined,
       "loc": {
         "end": {
-          "column": 23,
+          "column": 22,
           "line": 1,
-          "offset": 22,
+          "offset": 21,
         },
         "source": "<template><div id=abc",
         "start": {

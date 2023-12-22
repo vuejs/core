@@ -984,6 +984,89 @@ describe('compiler: parse', () => {
       })
     })
 
+    test('attribute value with >', () => {
+      const ast = baseParse(
+        '<script setup lang="ts" generic="T extends Record<string,string>"></script>',
+        { parseMode: 'sfc' }
+      )
+      const element = ast.children[0] as ElementNode
+      expect(element).toMatchObject({
+        type: NodeTypes.ELEMENT,
+        ns: Namespaces.HTML,
+        tag: 'script',
+        tagType: ElementTypes.ELEMENT,
+        codegenNode: undefined,
+        children: [],
+        innerLoc: {
+          start: { column: 67, line: 1, offset: 66 },
+          end: { column: 67, line: 1, offset: 66 }
+        },
+        props: [
+          {
+            loc: {
+              source: 'setup',
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 }
+            },
+            name: 'setup',
+            nameLoc: {
+              source: 'setup',
+              end: { column: 14, line: 1, offset: 13 },
+              start: { column: 9, line: 1, offset: 8 }
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: undefined
+          },
+          {
+            loc: {
+              source: 'lang="ts"',
+              end: { column: 24, line: 1, offset: 23 },
+              start: { column: 15, line: 1, offset: 14 }
+            },
+            name: 'lang',
+            nameLoc: {
+              source: 'lang',
+              end: { column: 19, line: 1, offset: 18 },
+              start: { column: 15, line: 1, offset: 14 }
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: {
+              content: 'ts',
+              loc: {
+                source: '"ts"',
+                end: { column: 24, line: 1, offset: 23 },
+                start: { column: 20, line: 1, offset: 19 }
+              },
+              type: NodeTypes.TEXT
+            }
+          },
+          {
+            loc: {
+              source: 'generic="T extends Record<string,string>"',
+              end: { column: 66, line: 1, offset: 65 },
+              start: { column: 25, line: 1, offset: 24 }
+            },
+            name: 'generic',
+            nameLoc: {
+              source: 'generic',
+              end: { column: 32, line: 1, offset: 31 },
+              start: { column: 25, line: 1, offset: 24 }
+            },
+            type: NodeTypes.ATTRIBUTE,
+            value: {
+              content: 'T extends Record<string,string>',
+              loc: {
+                source: '"T extends Record<string,string>"',
+                end: { column: 66, line: 1, offset: 65 },
+                start: { column: 33, line: 1, offset: 32 }
+              },
+              type: NodeTypes.TEXT
+            }
+          }
+        ]
+      })
+    })
+
     test('multiple attributes', () => {
       const ast = baseParse('<div id=a class="c" inert style=\'\'></div>')
       const element = ast.children[0] as ElementNode
