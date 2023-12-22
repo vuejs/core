@@ -100,6 +100,10 @@ export interface MaybeWithScope {
   _ownerScope?: TypeScope
 }
 
+interface WithTypeParams {
+  typeParameters?: Record<string, Node>
+}
+
 interface ResolvedElements {
   props: Record<
     string,
@@ -294,10 +298,9 @@ function typeElementsToMap(
   const res: ResolvedElements = { props: {} }
   for (const e of elements) {
     if (e.type === 'TSPropertySignature' || e.type === 'TSMethodSignature') {
-      // capture generic parameters on node's scope
+      // capture generic parameter value on node
       if (typeParameters) {
-        scope = createChildScope(scope)
-        Object.assign(scope.types, typeParameters)
+        ;(e as WithTypeParams).typeParameters = typeParameters
       }
       ;(e as MaybeWithScope)._ownerScope = scope
       const name = getId(e.key)
@@ -1447,6 +1450,7 @@ export function inferRuntimeType(
       }
       case 'TSPropertySignature':
         if (node.typeAnnotation) {
+          Object.assign(scope.types, (node as WithTypeParams).typeParameters)
           return inferRuntimeType(
             ctx,
             node.typeAnnotation.typeAnnotation,
