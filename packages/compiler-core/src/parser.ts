@@ -147,10 +147,7 @@ const tokenizer = new Tokenizer(stack, {
     }
     if (tokenizer.inSFCRoot) {
       // in SFC mode, generate locations for root-level tags' inner content.
-      currentOpenTag.innerLoc = getLoc(
-        end + fastForward(end, CharCodes.Gt) + 1,
-        end
-      )
+      currentOpenTag.innerLoc = getLoc(end + fastForwardGt(end) + 1, end)
     }
   },
 
@@ -616,7 +613,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + fastForward(end, CharCodes.Gt) + 1)
+    setLocEnd(el.loc, end + fastForwardGt(end) + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -738,12 +735,21 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
   }
 }
 
-function fastForward(start: number, c: number) {
-  let offset = 0
+function fastForwardGt(start: number) {
+  let offset = 0,
+    isInQuote = 0,
+    charCode
   while (
-    currentInput.charCodeAt(start + offset) !== CharCodes.Gt &&
+    (charCode = currentInput.charCodeAt(start + offset)) &&
     start + offset < currentInput.length
   ) {
+    isInQuote +=
+      charCode === CharCodes.DoubleQuote || charCode === CharCodes.SingleQuote
+        ? isInQuote
+          ? -1
+          : 1
+        : 0
+    if (charCode === CharCodes.Gt && !isInQuote) break
     offset++
   }
   return offset
