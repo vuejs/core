@@ -293,7 +293,7 @@ export function generate(
       }
 
       for (const { operations } of ir.effect) {
-        pushNewline(`${vaporHelper('effect')}(() => {`)
+        pushNewline(`${vaporHelper('watchEffect')}(() => {`)
         withIndent(() => {
           for (const operation of operations) {
             genOperation(operation, ctx)

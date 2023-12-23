@@ -4,7 +4,7 @@ import {
   on,
   ref,
   template,
-  effect,
+  watchEffect,
   setText,
   render as renderComponent // TODO:
 } from '@vue/vapor'
@@ -35,7 +35,7 @@ export default {
       0: [n1]
     } = children(n0)
     on(n1, 'click', _ctx.handleClick)
-    effect(() => {
+    watchEffect(() => {
       setText(n1, void 0, _ctx.count)
     })
 
@@ -96,7 +96,7 @@ const child = {
     const {
       0: [n1]
     } = children(n0)
-    effect(() => {
+    watchEffect(() => {
       setText(n1, void 0, _ctx.count + ' * 2 = ' + _ctx.inlineDouble)
     })
     return n0

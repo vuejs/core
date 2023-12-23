@@ -1,11 +1,11 @@
 import {
   template,
   children,
-  effect,
   setText,
   render,
   ref,
   unmountComponent,
+  watchEffect,
 } from '../src'
 import { afterEach, beforeEach, describe, expect } from 'vitest'
 import { defineComponent } from '@vue/runtime-core'
@@ -33,7 +33,7 @@ describe('component', () => {
         const {
           0: [n1],
         } = children(n0)
-        effect(() => {
+        watchEffect(() => {
           setText(n1, void 0, count.value)
         })
         return n0
