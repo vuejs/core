@@ -3,7 +3,7 @@ import type { ObjectDirective } from '../directive'
 const vShowMap = new WeakMap<HTMLElement, string>()
 
 export const vShow: ObjectDirective<HTMLElement> = {
-  beforeMount(node, { source: value }) {
+  beforeMount(node, { value }) {
     vShowMap.set(node, node.style.display === 'none' ? '' : node.style.display)
     setDisplay(node, value)
   },
@@ -13,7 +13,7 @@ export const vShow: ObjectDirective<HTMLElement> = {
     setDisplay(node, value)
   },
 
-  beforeUnmount(node, { source: value }) {
+  beforeUnmount(node, { value }) {
     setDisplay(node, value)
   },
 }
