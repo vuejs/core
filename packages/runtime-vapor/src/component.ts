@@ -10,7 +10,7 @@ import {
 } from './componentProps'
 
 import type { Data } from '@vue/shared'
-import { VaporLifecycleHooks } from './apiLifecycle'
+import { VaporLifecycleHooks } from './enums'
 
 export type Component = FunctionalComponent | ObjectComponent
 

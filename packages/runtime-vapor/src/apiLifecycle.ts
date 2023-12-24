@@ -1,38 +1,53 @@
-import { type ComponentInternalInstance, currentInstance } from './component'
-
-export enum VaporLifecycleHooks {
-  BEFORE_CREATE = 'bc',
-  CREATED = 'c',
-  BEFORE_MOUNT = 'bm',
-  MOUNTED = 'm',
-  BEFORE_UPDATE = 'bu',
-  UPDATED = 'u',
-  BEFORE_UNMOUNT = 'bum',
-  UNMOUNTED = 'um',
-  DEACTIVATED = 'da',
-  ACTIVATED = 'a',
-  RENDER_TRIGGERED = 'rtg',
-  RENDER_TRACKED = 'rtc',
-  ERROR_CAPTURED = 'ec',
-  // SERVER_PREFETCH = 'sp',
-}
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  setCurrentInstance,
+  unsetCurrentInstance,
+} from './component'
+import { warn } from './warning'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
+import { toHandlerKey } from '@vue/shared'
+import { VaporLifecycleHooks } from './enums'
 
 export const injectHook = (
   type: VaporLifecycleHooks,
-  hook: Function,
+  hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false,
 ) => {
   if (target) {
     const hooks = target[type] || (target[type] = [])
+    const wrappedHook =
+      hook.__weh ||
+      (hook.__weh = (...args: unknown[]) => {
+        if (target.isUnmounted) {
+          return
+        }
+        pauseTracking()
+        setCurrentInstance(target)
+        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        unsetCurrentInstance()
+        resetTracking()
+        return res
+      })
     if (prepend) {
-      hooks.unshift(hook)
+      hooks.unshift(wrappedHook)
     } else {
-      hooks.push(hook)
+      hooks.push(wrappedHook)
     }
-    return hook
+    return wrappedHook
   } else if (__DEV__) {
-    // TODO: warn need
+    const apiName = toHandlerKey(ErrorTypeStrings[type].replace(/ hook$/, ''))
+    warn(
+      `${apiName} is called when there is no active component instance to be ` +
+        `associated with. ` +
+        `Lifecycle injection APIs can only be used during execution of setup().` +
+        (__FEATURE_SUSPENSE__
+          ? ` If you are using async setup(), make sure to register lifecycle ` +
+            `hooks before the first await statement.`
+          : ``),
+    )
   }
 }
 export const createHook =
@@ -46,3 +61,16 @@ export const onBeforeUpdate = createHook(VaporLifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(VaporLifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(VaporLifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(VaporLifecycleHooks.UNMOUNTED)
+
+export type ErrorCapturedHook<TError = unknown> = (
+  err: TError,
+  instance: ComponentInternalInstance | null,
+  info: string,
+) => boolean | void
+
+export function onErrorCaptured<TError = Error>(
+  hook: ErrorCapturedHook<TError>,
+  target: ComponentInternalInstance | null = currentInstance,
+) {
+  injectHook(VaporLifecycleHooks.ERROR_CAPTURED, hook, target)
+}
