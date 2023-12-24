@@ -1,4 +1,4 @@
-import { type SpyInstance } from 'vitest'
+import { type MockInstance } from 'vitest'
 
 vi.stubGlobal('MathMLElement', class MathMLElement {})
 
@@ -67,7 +67,7 @@ expect.extend({
   }
 })
 
-let warn: SpyInstance
+let warn: MockInstance
 const asserted: Set<string> = new Set()
 
 beforeEach(() => {
