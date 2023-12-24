@@ -37,9 +37,6 @@ export interface ComponentInternalInstance {
 
   parent: ComponentInternalInstance | null
 
-  // TODO: type
-  proxy: Data | null
-
   // state
   props: Data
   setupState: Data
@@ -144,7 +141,6 @@ export const createComponentInstance = (
     // resolved props and emits options
     propsOptions: normalizePropsOptions(component),
     // emitsOptions: normalizeEmitsOptions(type, appContext), // TODO:
-    proxy: null,
 
     // state
     props: EMPTY_OBJ,

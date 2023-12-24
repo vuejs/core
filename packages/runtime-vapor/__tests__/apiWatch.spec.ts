@@ -137,7 +137,7 @@ describe('watchEffect and onEffectCleanup', () => {
     }
 
     const instance = render(demo as any, {}, '#host')
-    const { change } = instance.proxy as any
+    const { change } = instance.setupState as any
 
     expect(calls).toEqual(['pre 0', 'sync 0', 'render 0'])
     calls.length = 0

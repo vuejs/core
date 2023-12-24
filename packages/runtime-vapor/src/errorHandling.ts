@@ -113,8 +113,6 @@ export function handleError(
 ) {
   if (instance) {
     let cur = instance.parent
-    // the exposed instance is the render proxy to keep it consistent with 2.x
-    const exposedInstance = ('proxy' in instance && instance.proxy) || null
     // in production the hook receives only the error code
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
@@ -123,9 +121,7 @@ export function handleError(
       const errorCapturedHooks = 'ec' in cur ? cur.ec : null
       if (errorCapturedHooks) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
-          if (
-            errorCapturedHooks[i](err, exposedInstance, errorInfo) === false
-          ) {
+          if (errorCapturedHooks[i](err, instance, errorInfo) === false) {
             return
           }
         }

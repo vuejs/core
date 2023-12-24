@@ -10,7 +10,6 @@ import {
 import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directive'
 import { insert, remove } from './dom'
-import { PublicInstanceProxyHandlers } from './componentPublicInstance'
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
@@ -51,9 +50,6 @@ export function mountComponent(
 
     const setupFn =
       typeof component === 'function' ? component : component.setup
-    instance.proxy = markRaw(
-      new Proxy({ _: instance }, PublicInstanceProxyHandlers),
-    )
     const state = setupFn && setupFn(props, ctx)
     let block: Block | null = null
     if (state && '__isScriptSetup' in state) {
@@ -61,7 +57,7 @@ export function mountComponent(
       const currentlyRenderingActivity = isRenderingActivity
       isRenderingActivity = true
       try {
-        block = component.render(instance.proxy)
+        block = component.render(instance.setupState)
       } finally {
         isRenderingActivity = currentlyRenderingActivity
       }
