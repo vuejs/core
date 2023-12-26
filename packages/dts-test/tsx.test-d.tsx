@@ -14,7 +14,7 @@ expectType<JSX.Element>(<input value="foo" />)
 // allow array styles and nested array styles
 expectType<JSX.Element>(<div style={[{ color: 'red' }]} />)
 expectType<JSX.Element>(
-  <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />
+  <div style={[{ color: 'red' }, [{ fontSize: '1em' }]]} />,
 )
 
 // allow undefined, string, object, array and nested array classes
@@ -26,7 +26,7 @@ expectType<JSX.Element>(<div class={['foo', ['bar'], [['baz']]]} />)
 expectType<JSX.Element>(<div class={{ foo: true, bar: false, baz: true }} />)
 expectType<JSX.Element>(<div class={{}} />)
 expectType<JSX.Element>(
-  <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />
+  <div class={['foo', ['bar'], { baz: true }, [{ qux: true }]]} />,
 )
 expectType<JSX.Element>(
   <div
@@ -37,9 +37,9 @@ expectType<JSX.Element>(
       { qux: '' },
       { quux: null },
       { corge: undefined },
-      { grault: NaN }
+      { grault: NaN },
     ]}
-  />
+  />,
 )
 expectType<JSX.Element>(
   <div
@@ -48,9 +48,9 @@ expectType<JSX.Element>(
       { bar: 'not-empty' },
       { baz: 1 },
       { qux: {} },
-      { quux: [] }
+      { quux: [] },
     ]}
-  />
+  />,
 )
 
 // #7955
@@ -83,7 +83,7 @@ expectType<JSX.Element>(
       // infer correct event type
       expectType<EventTarget | null>(e.target)
     }}
-  />
+  />,
 )
 
 // built-in types
@@ -108,7 +108,7 @@ expectType<JSX.Element>(<KeepAlive key="1" />)
 expectType<JSX.Element>(<Suspense />)
 expectType<JSX.Element>(<Suspense key="1" />)
 expectType<JSX.Element>(
-  <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />
+  <Suspense onResolve={() => {}} onFallback={() => {}} onPending={() => {}} />,
 )
 // @ts-expect-error
 ;<Suspense onResolve={123} />
@@ -118,5 +118,5 @@ expectType<JSX.Element>(
   <svg
     xmlnsXlink="http://www.w3.org/1999/xlink"
     xmlns="http://www.w3.org/2000/svg"
-  />
+  />,
 )

@@ -1,17 +1,17 @@
 import {
-  NodeTypes,
-  ElementNode,
-  locStub,
-  Namespaces,
+  type ElementNode,
   ElementTypes,
-  VNodeCall
+  Namespaces,
+  NodeTypes,
+  type VNodeCall,
+  locStub,
 } from '../src'
 import {
-  isString,
-  PatchFlags,
   PatchFlagNames,
+  type PatchFlags,
+  type ShapeFlags,
   isArray,
-  ShapeFlags
+  isString,
 } from '@vue/shared'
 
 const leadingBracketRE = /^\[/
@@ -30,16 +30,16 @@ export function createObjectMatcher(obj: Record<string, any>) {
       key: {
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: key.replace(bracketsRE, ''),
-        isStatic: !leadingBracketRE.test(key)
+        isStatic: !leadingBracketRE.test(key),
       },
       value: isString(obj[key])
         ? {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: obj[key].replace(bracketsRE, ''),
-            isStatic: !leadingBracketRE.test(obj[key])
+            isStatic: !leadingBracketRE.test(obj[key]),
           }
-        : obj[key]
-    }))
+        : obj[key],
+    })),
   }
 }
 
@@ -48,7 +48,7 @@ export function createElementWithCodegen(
   props?: VNodeCall['props'],
   children?: VNodeCall['children'],
   patchFlag?: VNodeCall['patchFlag'],
-  dynamicProps?: VNodeCall['dynamicProps']
+  dynamicProps?: VNodeCall['dynamicProps'],
 ): ElementNode {
   return {
     type: NodeTypes.ELEMENT,
@@ -69,15 +69,15 @@ export function createElementWithCodegen(
       isBlock: false,
       disableTracking: false,
       isComponent: false,
-      loc: locStub
-    }
+      loc: locStub,
+    },
   }
 }
 
 type Flags = PatchFlags | ShapeFlags
 export function genFlagText(
   flag: Flags | Flags[],
-  names: { [k: number]: string } = PatchFlagNames
+  names: { [k: number]: string } = PatchFlagNames,
 ) {
   if (isArray(flag)) {
     let f = 0

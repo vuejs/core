@@ -1,5 +1,5 @@
 import { analyzeScriptBindings } from './analyzeScriptBindings'
-import { ScriptCompileContext } from './context'
+import type { ScriptCompileContext } from './context'
 import MagicString from 'magic-string'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { genNormalScriptCssVarsCode } from '../style/cssVars'
@@ -8,7 +8,7 @@ export const normalScriptDefaultVar = `__default__`
 
 export function processNormalScript(
   ctx: ScriptCompileContext,
-  scopeId: string
+  scopeId: string,
 ) {
   const script = ctx.descriptor.script!
   if (script.lang && !ctx.isJS && !ctx.isTS) {
@@ -34,7 +34,7 @@ export function processNormalScript(
           bindings,
           scopeId,
           !!isProd,
-          defaultVar
+          defaultVar,
         )
       }
       if (!genDefaultAs) {
@@ -46,7 +46,7 @@ export function processNormalScript(
       content,
       map,
       bindings,
-      scriptAst: scriptAst.body
+      scriptAst: scriptAst.body,
     }
   } catch (e: any) {
     // silently fallback if parse fails since user may be using custom

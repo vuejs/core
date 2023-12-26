@@ -1,4 +1,4 @@
-import { reactive, effect, toRaw, isReactive } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   function coverCollectionFn(collection: Map<any, any>, fnName: string) {
@@ -409,7 +409,7 @@ describe('reactivity/collections', () => {
       const map = reactive(raw)
       map.set(key, 2)
       expect(
-        `Reactive Map contains both the raw and reactive`
+        `Reactive Map contains both the raw and reactive`,
       ).toHaveBeenWarned()
     })
 

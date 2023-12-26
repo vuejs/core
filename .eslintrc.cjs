@@ -117,5 +117,5 @@ module.exports = {
         'import/no-nodejs-modules': ['error', { allow: builtinModules }],
       },
     },
-  ]
+  ],
 }

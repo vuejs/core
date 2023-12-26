@@ -1,11 +1,11 @@
-import { LVal, Node, ObjectProperty, TSType } from '@babel/types'
-import { ScriptCompileContext } from './context'
+import type { LVal, Node, ObjectProperty, TSType } from '@babel/types'
+import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import {
   UNKNOWN_TYPE,
   concatStrings,
   isCallOf,
-  toRuntimeTypeString
+  toRuntimeTypeString,
 } from './utils'
 import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 
@@ -20,7 +20,7 @@ export interface ModelDecl {
 export function processDefineModel(
   ctx: ScriptCompileContext,
   node: Node,
-  declId?: LVal
+  declId?: LVal,
 ): boolean {
   if (!isCallOf(node, DEFINE_MODEL)) {
     return false
@@ -50,7 +50,8 @@ export function processDefineModel(
   ctx.modelDecls[modelName] = {
     type,
     options: optionsString,
-    identifier: declId && declId.type === 'Identifier' ? declId.name : undefined
+    identifier:
+      declId && declId.type === 'Identifier' ? declId.name : undefined,
   }
   // register binding type
   ctx.bindingMetadata[modelName] = BindingTypes.PROPS
@@ -62,7 +63,7 @@ export function processDefineModel(
         p =>
           p.type === 'ObjectProperty' &&
           ((p.key.type === 'Identifier' && p.key.name === 'local') ||
-            (p.key.type === 'StringLiteral' && p.key.value === 'local'))
+            (p.key.type === 'StringLiteral' && p.key.value === 'local')),
       ) as ObjectProperty
 
       if (local) {
@@ -85,7 +86,7 @@ export function processDefineModel(
     ctx.startOffset! + node.end!,
     `${ctx.helper('useModel')}(__props, ${JSON.stringify(modelName)}${
       runtimeOptions ? `, ${runtimeOptions}` : ``
-    })`
+    })`,
   )
 
   return true
@@ -120,7 +121,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
     const codegenOptions = concatStrings([
       runtimeType && `type: ${runtimeType}`,
-      skipCheck && 'skipCheck: true'
+      skipCheck && 'skipCheck: true',
     ])
 
     let decl: string

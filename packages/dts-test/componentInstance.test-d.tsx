@@ -3,20 +3,20 @@ import {
   FunctionalComponent,
   ComponentPublicInstance,
   ComponentInstance,
-  ref
+  ref,
 } from 'vue'
 import { expectType, describe } from './utils'
 
 describe('defineComponent', () => {
   const CompSetup = defineComponent({
     props: {
-      test: String
+      test: String,
     },
     setup() {
       return {
-        a: 1
+        a: 1,
       }
-    }
+    },
   })
   const compSetup: ComponentInstance<typeof CompSetup> = {} as any
 
@@ -43,23 +43,23 @@ describe('options component', () => {
   // Options
   const CompOptions = defineComponent({
     props: {
-      test: String
+      test: String,
     },
     data() {
       return {
-        a: 1
+        a: 1,
       }
     },
     computed: {
       b() {
         return 'test'
-      }
+      },
     },
     methods: {
       func(a: string) {
         return true
-      }
-    }
+      },
+    },
   })
   const compOptions: ComponentInstance<typeof CompOptions> = {} as any
   expectType<string | undefined>(compOptions.test)
@@ -73,13 +73,13 @@ describe('object no defineComponent', () => {
 
   const CompObjectSetup = {
     props: {
-      test: String
+      test: String,
     },
     setup() {
       return {
-        a: 1
+        a: 1,
       }
-    }
+    },
   }
   const compObjectSetup: ComponentInstance<typeof CompObjectSetup> = {} as any
   expectType<string | undefined>(compObjectSetup.test)
@@ -88,13 +88,13 @@ describe('object no defineComponent', () => {
 
   const CompObjectData = {
     props: {
-      test: String
+      test: String,
     },
     data() {
       return {
-        a: 1
+        a: 1,
       }
-    }
+    },
   }
   const compObjectData: ComponentInstance<typeof CompObjectData> = {} as any
   expectType<string | undefined>(compObjectData.test)
@@ -104,9 +104,9 @@ describe('object no defineComponent', () => {
   const CompObjectNoProps = {
     data() {
       return {
-        a: 1
+        a: 1,
       }
-    }
+    },
   }
   const compObjectNoProps: ComponentInstance<typeof CompObjectNoProps> =
     {} as any
@@ -129,7 +129,7 @@ describe('Generic component', () => {
           {props.msg} {count.value}
         </div>
       )
-    }
+    },
   )
 
   // defaults to known types since types are resolved on instantiation

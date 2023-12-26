@@ -1,15 +1,15 @@
 import {
-  defineProps,
+  type Ref,
+  type Slots,
+  type VNode,
   defineEmits,
+  defineModel,
+  defineProps,
+  defineSlots,
+  toRefs,
   useAttrs,
   useSlots,
   withDefaults,
-  Slots,
-  defineSlots,
-  VNode,
-  Ref,
-  defineModel,
-  toRefs
 } from 'vue'
 import { describe, expectType } from './utils'
 import { defineComponent } from 'vue'
@@ -63,8 +63,8 @@ describe('defineProps w/ type declaration + withDefaults', () => {
       fn: () => {},
       genStr: () => '',
       y: undefined,
-      z: 'string'
-    }
+      z: 'string',
+    },
   )
 
   res.number + 1
@@ -97,8 +97,8 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
       union1: 123,
       union2: () => [123],
       union3: () => ({ x: 123 }),
-      union4: () => 123
-    }
+      union4: () => 123,
+    },
   )
 })
 
@@ -124,8 +124,8 @@ describe('defineProps w/ generic type declaration + withDefaults', <T extends
       generic2: () => ({ x: 123 }) as { x: T },
 
       generic3: () => 'test' as TString,
-      generic4: () => ({ a: 'test' }) as TA
-    }
+      generic4: () => ({ a: 'test' }) as TA,
+    },
   )
 
   res.n + 1
@@ -147,7 +147,7 @@ describe('withDefaults w/ boolean type', () => {
     defineProps<{
       bool?: boolean
     }>(),
-    { bool: false }
+    { bool: false },
   )
   expectType<boolean>(res1.bool)
 
@@ -156,8 +156,8 @@ describe('withDefaults w/ boolean type', () => {
       bool?: boolean
     }>(),
     {
-      bool: undefined
-    }
+      bool: undefined,
+    },
   )
   expectType<boolean | undefined>(res2.bool)
 })
@@ -168,12 +168,12 @@ describe('defineProps w/ runtime declaration', () => {
     foo: String,
     bar: {
       type: Number,
-      default: 1
+      default: 1,
     },
     baz: {
       type: Array,
-      required: true
-    }
+      required: true,
+    },
   })
   expectType<{
     foo?: string
@@ -233,7 +233,7 @@ describe('defineEmits w/ alt type declaration', () => {
 describe('defineEmits w/ runtime declaration', () => {
   const emit = defineEmits({
     foo: () => {},
-    bar: null
+    bar: null,
   })
   emit('foo')
   emit('bar', 123)
@@ -275,7 +275,7 @@ describe('defineSlots generic', <T extends Record<string, any>>() => {
 
   for (const key of Object.keys(props.item) as (keyof T & string)[]) {
     slots[`slot-${String(key)}`]?.({
-      item: props.item
+      item: props.item,
     })
   }
   slots.label?.({ item: props.item })
@@ -329,20 +329,20 @@ describe('useModel', () => {
 
       // @ts-expect-error
       useModel(props, 'bar')
-    }
+    },
   })
 
   defineComponent({
     props: {
       foo: String,
       bar: { type: Number, required: true },
-      baz: { type: Boolean }
+      baz: { type: Boolean },
     },
     setup(props) {
       expectType<Ref<string | undefined>>(useModel(props, 'foo'))
       expectType<Ref<number>>(useModel(props, 'bar'))
       expectType<Ref<boolean>>(useModel(props, 'baz'))
-    }
+    },
   })
 })
 
@@ -374,20 +374,20 @@ describe('defineSlots generic', <T extends Record<string, any>>() => {
 
   // @ts-expect-error non existing slot
   slots['foo-asdas']?.({
-    item: props.item
+    item: props.item,
   })
   for (const key in props.item) {
     slots[`slot-${String(key)}`]?.({
-      item: props.item
+      item: props.item,
     })
     slots[`slot-${String(key as keyof T)}`]?.({
-      item: props.item
+      item: props.item,
     })
   }
 
   for (const key of Object.keys(props.item) as (keyof T)[]) {
     slots[`slot-${String(key)}`]?.({
-      item: props.item
+      item: props.item,
     })
   }
   slots.label?.({ item: props.item })

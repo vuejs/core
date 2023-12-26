@@ -7,7 +7,7 @@ import dts from 'rollup-plugin-dts'
 
 if (!existsSync('temp/packages')) {
   console.warn(
-    'no temp dts files found. run `tsc -p tsconfig.build.json` first.'
+    'no temp dts files found. run `tsc -p tsconfig.build.json` first.',
   )
   process.exit(1)
 }
@@ -25,7 +25,7 @@ export default targetPackages.map(
       input: `./temp/packages/${pkg}/src/index.d.ts`,
       output: {
         file: `packages/${pkg}/dist/${pkg}.d.ts`,
-        format: 'es'
+        format: 'es',
       },
       plugins: [dts(), patchTypes(pkg), ...(pkg === 'vue' ? [copyMts()] : [])],
       onwarn(warning, warn) {
@@ -37,9 +37,9 @@ export default targetPackages.map(
           return
         }
         warn(warning)
-      }
+      },
     }
-  }
+  },
 )
 
 /**
@@ -60,7 +60,7 @@ function patchTypes(pkg) {
       const s = new MagicString(code)
       const ast = parse(code, {
         plugins: ['typescript'],
-        sourceType: 'module'
+        sourceType: 'module',
       })
 
       /**
@@ -109,8 +109,8 @@ function patchTypes(pkg) {
             throw new Error(
               `unhandled declare const with more than one declarators:\n${code.slice(
                 node.start,
-                node.end
-              )}`
+                node.end,
+              )}`,
             )
           }
         } else if (
@@ -156,7 +156,7 @@ function patchTypes(pkg) {
                   prev
                     ? (assert(typeof prev.end === 'number'), prev.end)
                     : spec.start,
-                  spec.end
+                  spec.end,
                 )
               }
               removed++
@@ -181,7 +181,7 @@ function patchTypes(pkg) {
             .join('\n')
       }
       return code
-    }
+    },
   }
 }
 
@@ -199,6 +199,6 @@ function copyMts() {
     writeBundle(_, bundle) {
       assert('code' in bundle['vue.d.ts'])
       writeFileSync('packages/vue/dist/vue.d.mts', bundle['vue.d.ts'].code)
-    }
+    },
   }
 }

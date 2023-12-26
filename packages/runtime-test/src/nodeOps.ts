@@ -3,7 +3,7 @@ import { markRaw } from '@vue/reactivity'
 export enum TestNodeTypes {
   TEXT = 'text',
   ELEMENT = 'element',
-  COMMENT = 'comment'
+  COMMENT = 'comment',
 }
 
 export enum NodeOpTypes {
@@ -12,7 +12,7 @@ export enum NodeOpTypes {
   REMOVE = 'remove',
   SET_TEXT = 'setText',
   SET_ELEMENT_TEXT = 'setElementText',
-  PATCH = 'patch'
+  PATCH = 'patch',
 }
 
 export interface TestElement {
@@ -79,13 +79,13 @@ function createElement(tag: string): TestElement {
     children: [],
     props: {},
     parentNode: null,
-    eventListeners: null
+    eventListeners: null,
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
     nodeType: TestNodeTypes.ELEMENT,
     targetNode: node,
-    tag
+    tag,
   })
   // avoid test nodes from being observed
   markRaw(node)
@@ -97,13 +97,13 @@ function createText(text: string): TestText {
     id: nodeId++,
     type: TestNodeTypes.TEXT,
     text,
-    parentNode: null
+    parentNode: null,
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
     nodeType: TestNodeTypes.TEXT,
     targetNode: node,
-    text
+    text,
   })
   // avoid test nodes from being observed
   markRaw(node)
@@ -115,13 +115,13 @@ function createComment(text: string): TestComment {
     id: nodeId++,
     type: TestNodeTypes.COMMENT,
     text,
-    parentNode: null
+    parentNode: null,
   }
   logNodeOp({
     type: NodeOpTypes.CREATE,
     nodeType: TestNodeTypes.COMMENT,
     targetNode: node,
-    text
+    text,
   })
   // avoid test nodes from being observed
   markRaw(node)
@@ -132,7 +132,7 @@ function setText(node: TestText, text: string) {
   logNodeOp({
     type: NodeOpTypes.SET_TEXT,
     targetNode: node,
-    text
+    text,
   })
   node.text = text
 }
@@ -151,7 +151,7 @@ function insert(child: TestNode, parent: TestElement, ref?: TestNode | null) {
     type: NodeOpTypes.INSERT,
     targetNode: child,
     parentNode: parent,
-    refNode: ref
+    refNode: ref,
   })
   // remove the node first, but don't log it as a REMOVE op
   remove(child, false)
@@ -173,7 +173,7 @@ function remove(child: TestNode, logOp = true) {
       logNodeOp({
         type: NodeOpTypes.REMOVE,
         targetNode: child,
-        parentNode: parent
+        parentNode: parent,
       })
     }
     const i = parent.children.indexOf(child)
@@ -192,7 +192,7 @@ function setElementText(el: TestElement, text: string) {
   logNodeOp({
     type: NodeOpTypes.SET_ELEMENT_TEXT,
     targetNode: el,
-    text
+    text,
   })
   el.children.forEach(c => {
     c.parentNode = null
@@ -205,8 +205,8 @@ function setElementText(el: TestElement, text: string) {
         id: nodeId++,
         type: TestNodeTypes.TEXT,
         text,
-        parentNode: el
-      }
+        parentNode: el,
+      },
     ]
   }
 }
@@ -243,5 +243,5 @@ export const nodeOps = {
   parentNode,
   nextSibling,
   querySelector,
-  setScopeId
+  setScopeId,
 }

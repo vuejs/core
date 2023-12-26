@@ -1,47 +1,47 @@
 import {
-  ConcreteComponent,
-  getCurrentInstance,
-  SetupContext,
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
+  type SetupContext,
   currentInstance,
   getComponentName,
-  ComponentOptions
+  getCurrentInstance,
 } from '../component'
 import {
-  VNode,
+  type VNode,
+  type VNodeProps,
   cloneVNode,
-  isVNode,
-  VNodeProps,
   invokeVNodeHook,
-  isSameVNodeType
+  isSameVNodeType,
+  isVNode,
 } from '../vnode'
 import { warn } from '../warning'
 import {
-  onBeforeUnmount,
   injectHook,
-  onUnmounted,
+  onBeforeUnmount,
   onMounted,
-  onUpdated
+  onUnmounted,
+  onUpdated,
 } from '../apiLifecycle'
 import {
-  isString,
+  ShapeFlags,
+  invokeArrayFns,
   isArray,
   isRegExp,
-  ShapeFlags,
+  isString,
   remove,
-  invokeArrayFns
 } from '@vue/shared'
 import { watch } from '../apiWatch'
 import {
-  RendererInternals,
-  queuePostRenderEffect,
+  type ElementNamespace,
   MoveType,
-  RendererElement,
-  RendererNode,
-  ElementNamespace
+  type RendererElement,
+  type RendererInternals,
+  type RendererNode,
+  queuePostRenderEffect,
 } from '../renderer'
 import { setTransitionHooks } from './BaseTransition'
-import { ComponentRenderContext } from '../componentPublicInstance'
+import type { ComponentRenderContext } from '../componentPublicInstance'
 import { devtoolsComponentAdded } from '../devtools'
 import { isAsyncWrapper } from '../apiAsyncComponent'
 import { isSuspense } from './Suspense'
@@ -66,7 +66,7 @@ export interface KeepAliveContext extends ComponentRenderContext {
     container: RendererElement,
     anchor: RendererNode | null,
     namespace: ElementNamespace,
-    optimized: boolean
+    optimized: boolean,
   ) => void
   deactivate: (vnode: VNode) => void
 }
@@ -85,7 +85,7 @@ const KeepAliveImpl: ComponentOptions = {
   props: {
     include: [String, RegExp, Array],
     exclude: [String, RegExp, Array],
-    max: [String, Number]
+    max: [String, Number],
   },
 
   setup(props: KeepAliveProps, { slots }: SetupContext) {
@@ -121,8 +121,8 @@ const KeepAliveImpl: ComponentOptions = {
         p: patch,
         m: move,
         um: _unmount,
-        o: { createElement }
-      }
+        o: { createElement },
+      },
     } = sharedContext
     const storageContainer = createElement('div')
 
@@ -131,7 +131,7 @@ const KeepAliveImpl: ComponentOptions = {
       container,
       anchor,
       namespace,
-      optimized
+      optimized,
     ) => {
       const instance = vnode.component!
       move(vnode, container, anchor, MoveType.ENTER, parentSuspense)
@@ -145,7 +145,7 @@ const KeepAliveImpl: ComponentOptions = {
         parentSuspense,
         namespace,
         vnode.slotScopeIds,
-        optimized
+        optimized,
       )
       queuePostRenderEffect(() => {
         instance.isDeactivated = false
@@ -220,7 +220,7 @@ const KeepAliveImpl: ComponentOptions = {
         exclude && pruneCache(name => !matches(exclude, name))
       },
       // prune post-render after `current` has been updated
-      { flush: 'post', deep: true }
+      { flush: 'post', deep: true },
     )
 
     // cache sub tree after render
@@ -282,7 +282,7 @@ const KeepAliveImpl: ComponentOptions = {
       const name = getComponentName(
         isAsyncWrapper(vnode)
           ? (vnode.type as ComponentOptions).__asyncResolved || {}
-          : comp
+          : comp,
       )
 
       const { include, exclude, max } = props
@@ -338,7 +338,7 @@ const KeepAliveImpl: ComponentOptions = {
       current = vnode
       return isSuspense(rawVNode.type) ? rawVNode : vnode
     }
-  }
+  },
 }
 
 if (__COMPAT__) {
@@ -371,14 +371,14 @@ function matches(pattern: MatchPattern, name: string): boolean {
 
 export function onActivated(
   hook: Function,
-  target?: ComponentInternalInstance | null
+  target?: ComponentInternalInstance | null,
 ) {
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
 export function onDeactivated(
   hook: Function,
-  target?: ComponentInternalInstance | null
+  target?: ComponentInternalInstance | null,
 ) {
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
@@ -386,7 +386,7 @@ export function onDeactivated(
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
-  target: ComponentInternalInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance,
 ) {
   // cache the deactivate branch check wrapper for injected hooks so the same
   // hook can be properly deduped by the scheduler. "__wdc" stands for "with
@@ -425,7 +425,7 @@ function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
   target: ComponentInternalInstance,
-  keepAliveRoot: ComponentInternalInstance
+  keepAliveRoot: ComponentInternalInstance,
 ) {
   // injectHook wraps the original for error handling, so make sure to remove
   // the wrapped version.

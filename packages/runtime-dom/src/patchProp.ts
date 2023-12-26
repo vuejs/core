@@ -3,8 +3,8 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
-import { RendererOptions } from '@vue/runtime-core'
+import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import type { RendererOptions } from '@vue/runtime-core'
 
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
@@ -24,7 +24,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   prevChildren,
   parentComponent,
   parentSuspense,
-  unmountChildren
+  unmountChildren,
 ) => {
   const isSVG = namespace === 'svg'
   if (key === 'class') {
@@ -50,7 +50,7 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
       prevChildren,
       parentComponent,
       parentSuspense,
-      unmountChildren
+      unmountChildren,
     )
   } else {
     // special case for <input v-model type="checkbox"> with
@@ -70,7 +70,7 @@ function shouldSetAsProp(
   el: Element,
   key: string,
   value: unknown,
-  isSVG: boolean
+  isSVG: boolean,
 ) {
   if (isSVG) {
     // most keys must be set as attribute on svg elements to work

@@ -2,49 +2,56 @@ import {
   BindingTypes,
   UNREF,
   isFunctionType,
+  unwrapTSNode,
   walkIdentifiers,
-  unwrapTSNode
 } from '@vue/compiler-dom'
-import { DEFAULT_FILENAME, SFCDescriptor, SFCScriptBlock } from './parse'
-import { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
 import {
-  Node,
-  Declaration,
-  ObjectPattern,
+  DEFAULT_FILENAME,
+  type SFCDescriptor,
+  type SFCScriptBlock,
+} from './parse'
+import type { ParserPlugin } from '@babel/parser'
+import { generateCodeFrame } from '@vue/shared'
+import type {
   ArrayPattern,
-  Identifier,
+  CallExpression,
+  Declaration,
   ExportSpecifier,
+  Identifier,
+  Node,
+  ObjectPattern,
   Statement,
-  CallExpression
 } from '@babel/types'
 import { walk } from 'estree-walker'
-import { RawSourceMap } from 'source-map-js'
+import type { RawSourceMap } from 'source-map-js'
 import {
+  normalScriptDefaultVar,
   processNormalScript,
-  normalScriptDefaultVar
 } from './script/normalScript'
 import { CSS_VARS_HELPER, genCssVarsCode } from './style/cssVars'
-import { compileTemplate, SFCTemplateCompileOptions } from './compileTemplate'
+import {
+  type SFCTemplateCompileOptions,
+  compileTemplate,
+} from './compileTemplate'
 import { warnOnce } from './warn'
 import { transformDestructuredProps } from './script/definePropsDestructure'
 import { ScriptCompileContext } from './script/context'
 import {
-  processDefineProps,
-  genRuntimeProps,
   DEFINE_PROPS,
-  WITH_DEFAULTS
+  WITH_DEFAULTS,
+  genRuntimeProps,
+  processDefineProps,
 } from './script/defineProps'
 import {
-  processDefineEmits,
+  DEFINE_EMITS,
   genRuntimeEmits,
-  DEFINE_EMITS
+  processDefineEmits,
 } from './script/defineEmits'
 import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
-import { isLiteralNode, isCallOf, getImportedName } from './script/utils'
+import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
@@ -134,13 +141,13 @@ export interface ImportBinding {
  */
 export function compileScript(
   sfc: SFCDescriptor,
-  options: SFCScriptCompileOptions
+  options: SFCScriptCompileOptions,
 ): SFCScriptBlock {
   if (!options.id) {
     warnOnce(
       `compileScript now requires passing the \`id\` option.\n` +
         `Upgrade your vite or vue-loader version for compatibility with ` +
-        `the latest experimental proposals.`
+        `the latest experimental proposals.`,
     )
   }
 
@@ -164,7 +171,7 @@ export function compileScript(
   if (script && scriptLang !== scriptSetupLang) {
     throw new Error(
       `[@vue/compiler-sfc] <script> and <script setup> must have the same ` +
-        `language type.`
+        `language type.`,
     )
   }
 
@@ -213,7 +220,7 @@ export function compileScript(
     imported: string,
     isType: boolean,
     isFromSetup: boolean,
-    needTemplateUsageCheck: boolean
+    needTemplateUsageCheck: boolean,
   ) {
     // template usage check is only needed in non-inline mode, so we can skip
     // the work if inlineTemplate is true.
@@ -234,7 +241,7 @@ export function compileScript(
       local,
       source,
       isFromSetup,
-      isUsedInTemplate
+      isUsedInTemplate,
     }
   }
 
@@ -249,7 +256,7 @@ export function compileScript(
             `setup() function. If your component options require initialization ` +
             `in the module scope, use a separate normal <script> to export ` +
             `the options instead.`,
-          id
+          id,
         )
       }
     })
@@ -273,7 +280,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             false,
-            !options.inlineTemplate
+            !options.inlineTemplate,
           )
         }
       }
@@ -299,7 +306,7 @@ export function compileScript(
             : current.start! + startOffset,
           next && !removeLeft
             ? next.start! + startOffset
-            : current.end! + startOffset
+            : current.end! + startOffset,
         )
       }
 
@@ -316,7 +323,7 @@ export function compileScript(
             imported === DEFINE_EXPOSE)
         ) {
           warnOnce(
-            `\`${imported}\` is a compiler macro and no longer needs to be imported.`
+            `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
           )
           removeSpecifier(i)
         } else if (existing) {
@@ -326,7 +333,7 @@ export function compileScript(
           } else {
             ctx.error(
               `different imports aliased to same local name.`,
-              specifier
+              specifier,
             )
           }
         } else {
@@ -338,7 +345,7 @@ export function compileScript(
               (specifier.type === 'ImportSpecifier' &&
                 specifier.importKind === 'type'),
             true,
-            !options.inlineTemplate
+            !options.inlineTemplate,
           )
         }
       }
@@ -403,7 +410,8 @@ export function compileScript(
         ctx.s.overwrite(start, end, `const ${normalScriptDefaultVar} = `)
       } else if (node.type === 'ExportNamedDeclaration') {
         const defaultSpecifier = node.specifiers.find(
-          s => s.exported.type === 'Identifier' && s.exported.name === 'default'
+          s =>
+            s.exported.type === 'Identifier' && s.exported.name === 'default',
         ) as ExportSpecifier
         if (defaultSpecifier) {
           defaultExport = node
@@ -411,12 +419,12 @@ export function compileScript(
           if (node.specifiers.length > 1) {
             ctx.s.remove(
               defaultSpecifier.start! + scriptStartOffset!,
-              defaultSpecifier.end! + scriptStartOffset!
+              defaultSpecifier.end! + scriptStartOffset!,
             )
           } else {
             ctx.s.remove(
               node.start! + scriptStartOffset!,
-              node.end! + scriptStartOffset!
+              node.end! + scriptStartOffset!,
             )
           }
           if (node.source) {
@@ -424,14 +432,14 @@ export function compileScript(
             // rewrite to `import { x as __default__ } from './x'` and
             // add to top
             ctx.s.prepend(
-              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`
+              `import { ${defaultSpecifier.local.name} as ${normalScriptDefaultVar} } from '${node.source.value}'\n`,
             )
           } else {
             // export { x as default }
             // rewrite to `const __default__ = x` and move to end
             ctx.s.appendLeft(
               scriptEndOffset!,
-              `\nconst ${normalScriptDefaultVar} = ${defaultSpecifier.local.name}\n`
+              `\nconst ${normalScriptDefaultVar} = ${defaultSpecifier.local.name}\n`,
             )
           }
         }
@@ -441,7 +449,7 @@ export function compileScript(
             node.declaration,
             scriptBindings,
             vueImportAliases,
-            hoistStatic
+            hoistStatic,
           )
         }
       } else if (
@@ -456,7 +464,7 @@ export function compileScript(
           node,
           scriptBindings,
           vueImportAliases,
-          hoistStatic
+          hoistStatic,
         )
       }
     }
@@ -491,7 +499,7 @@ export function compileScript(
         ctx.s.overwrite(
           callee.start! + startOffset,
           callee.end! + startOffset,
-          '__expose'
+          '__expose',
         )
       } else {
         processDefineModel(ctx, expr)
@@ -510,7 +518,7 @@ export function compileScript(
           if (processDefineOptions(ctx, init)) {
             ctx.error(
               `${DEFINE_OPTIONS}() has no returning value, it cannot be assigned.`,
-              node
+              node,
             )
           }
 
@@ -548,7 +556,7 @@ export function compileScript(
             ctx.s.overwrite(
               startOffset + init.start!,
               startOffset + init.end!,
-              '__emit'
+              '__emit',
             )
           } else {
             lastNonRemoved = i
@@ -571,7 +579,7 @@ export function compileScript(
         node,
         setupBindings,
         vueImportAliases,
-        hoistStatic
+        hoistStatic,
       )
     }
 
@@ -613,13 +621,13 @@ export function compileScript(
               ctx,
               child,
               needsSemi,
-              parent!.type === 'ExpressionStatement'
+              parent!.type === 'ExpressionStatement',
             )
           }
         },
         exit(node: Node) {
           if (node.type === 'BlockStatement') scope.pop()
-        }
+        },
       })
     }
 
@@ -632,7 +640,7 @@ export function compileScript(
         `<script setup> cannot contain ES module exports. ` +
           `If you are using a previous version of <script setup>, please ` +
           `consult the updated RFC at https://github.com/vuejs/rfcs/pull/227.`,
-        node
+        node,
       )
     }
 
@@ -689,7 +697,7 @@ export function compileScript(
     Object.assign(ctx.bindingMetadata, analyzeScriptBindings(scriptAst.body))
   }
   for (const [key, { isType, imported, source }] of Object.entries(
-    ctx.userImports
+    ctx.userImports,
   )) {
     if (isType) continue
     ctx.bindingMetadata[key] =
@@ -726,8 +734,8 @@ export function compileScript(
         sfc.cssVars,
         ctx.bindingMetadata,
         scopeId,
-        !!options.isProd
-      )}\n`
+        !!options.isProd,
+      )}\n`,
     )
   }
 
@@ -748,19 +756,19 @@ export function compileScript(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
         `${ctx.helper(`createPropsRestProxy`)}(__props, ${JSON.stringify(
-          Object.keys(ctx.propsDestructuredBindings)
-        )})`
+          Object.keys(ctx.propsDestructuredBindings),
+        )})`,
       )
       ctx.s.overwrite(
         startOffset + ctx.propsDestructureDecl!.start!,
         startOffset + ctx.propsDestructureDecl!.end!,
-        ctx.propsDestructureRestId
+        ctx.propsDestructureRestId,
       )
     } else if (!ctx.propsDestructureDecl) {
       ctx.s.overwrite(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
-        '__props'
+        '__props',
       )
     }
   }
@@ -792,7 +800,7 @@ export function compileScript(
     // return bindings from script and script setup
     const allBindings: Record<string, any> = {
       ...scriptBindings,
-      ...setupBindings
+      ...setupBindings,
     }
     for (const key in ctx.userImports) {
       if (
@@ -846,8 +854,8 @@ export function compileScript(
             options.templateOptions.compilerOptions),
           inline: true,
           isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata
-        }
+          bindingMetadata: ctx.bindingMetadata,
+        },
       })
       if (tips.length) {
         tips.forEach(warnOnce)
@@ -864,7 +872,7 @@ export function compileScript(
             generateCodeFrame(
               source,
               err.loc.start.offset,
-              err.loc.end.offset
+              err.loc.end.offset,
             ) +
             `\n`
         }
@@ -893,7 +901,7 @@ export function compileScript(
       `\nconst __returned__ = ${returned}\n` +
         `Object.defineProperty(__returned__, '__isScriptSetup', { enumerable: false, value: true })\n` +
         `return __returned__` +
-        `\n}\n\n`
+        `\n}\n\n`,
     )
   } else {
     ctx.s.appendRight(endOffset, `\nreturn ${returned}\n}\n\n`)
@@ -945,10 +953,10 @@ export function compileScript(
     ctx.s.prependLeft(
       startOffset,
       `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
-        `defineComponent`
+        `defineComponent`,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
-      }setup(${args}) {\n${exposeCall}`
+      }setup(${args}) {\n${exposeCall}`,
     )
     ctx.s.appendRight(endOffset, `})`)
   } else {
@@ -960,14 +968,14 @@ export function compileScript(
         `\n${genDefaultAs} /*#__PURE__*/Object.assign(${
           defaultExport ? `${normalScriptDefaultVar}, ` : ''
         }${definedOptions ? `${definedOptions}, ` : ''}{${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
       )
       ctx.s.appendRight(endOffset, `})`)
     } else {
       ctx.s.prependLeft(
         startOffset,
         `\n${genDefaultAs} {${runtimeOptions}\n  ` +
-          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`
+          `${hasAwait ? `async ` : ``}setup(${args}) {\n${exposeCall}`,
       )
       ctx.s.appendRight(endOffset, `}`)
     }
@@ -978,7 +986,7 @@ export function compileScript(
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
-        .join(', ')} } from 'vue'\n`
+        .join(', ')} } from 'vue'\n`,
     )
   }
 
@@ -992,19 +1000,19 @@ export function compileScript(
         ? (ctx.s.generateMap({
             source: filename,
             hires: true,
-            includeContent: true
+            includeContent: true,
           }) as unknown as RawSourceMap)
         : undefined,
     scriptAst: scriptAst?.body,
     scriptSetupAst: scriptSetupAst?.body,
-    deps: ctx.deps ? [...ctx.deps] : undefined
+    deps: ctx.deps ? [...ctx.deps] : undefined,
   }
 }
 
 function registerBinding(
   bindings: Record<string, BindingTypes>,
   node: Identifier,
-  type: BindingTypes
+  type: BindingTypes,
 ) {
   bindings[node.name] = type
 }
@@ -1014,7 +1022,7 @@ function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
-  hoistStatic: boolean
+  hoistStatic: boolean,
 ): boolean {
   let isAllLiteral = false
 
@@ -1023,7 +1031,7 @@ function walkDeclaration(
     isAllLiteral =
       isConst &&
       node.declarations.every(
-        decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!)
+        decl => decl.id.type === 'Identifier' && isStaticNode(decl.init!),
       )
 
     // export const foo = ...
@@ -1033,7 +1041,7 @@ function walkDeclaration(
         isConst &&
         isCallOf(
           init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS
+          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS,
         )
       )
       if (id.type === 'Identifier') {
@@ -1068,7 +1076,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
-                m === DEFINE_MODEL
+                m === DEFINE_MODEL,
             )
           ) {
             bindingType = BindingTypes.SETUP_REF
@@ -1092,7 +1100,7 @@ function walkDeclaration(
     }
   } else if (node.type === 'TSEnumDeclaration') {
     isAllLiteral = node.members.every(
-      member => !member.initializer || isStaticNode(member.initializer)
+      member => !member.initializer || isStaticNode(member.initializer),
     )
     bindings[node.id!.name] = isAllLiteral
       ? BindingTypes.LITERAL_CONST
@@ -1113,7 +1121,7 @@ function walkObjectPattern(
   node: ObjectPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isDefineCall = false
+  isDefineCall = false,
 ) {
   for (const p of node.properties) {
     if (p.type === 'ObjectProperty') {
@@ -1141,7 +1149,7 @@ function walkArrayPattern(
   node: ArrayPattern,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isDefineCall = false
+  isDefineCall = false,
 ) {
   for (const e of node.elements) {
     e && walkPattern(e, bindings, isConst, isDefineCall)
@@ -1152,7 +1160,7 @@ function walkPattern(
   node: Node,
   bindings: Record<string, BindingTypes>,
   isConst: boolean,
-  isDefineCall = false
+  isDefineCall = false,
 ) {
   if (node.type === 'Identifier') {
     const type = isDefineCall
@@ -1201,7 +1209,7 @@ function canNeverBeRef(node: Node, userReactiveImport?: string): boolean {
     case 'SequenceExpression':
       return canNeverBeRef(
         node.expressions[node.expressions.length - 1],
-        userReactiveImport
+        userReactiveImport,
       )
     default:
       if (isLiteralNode(node)) {

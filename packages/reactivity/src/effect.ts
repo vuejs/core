@@ -1,8 +1,12 @@
 import { NOOP, extend } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
+import {
+  DirtyLevels,
+  type TrackOpTypes,
+  type TriggerOpTypes,
+} from './constants'
 import type { Dep } from './dep'
-import { EffectScope, recordEffectScope } from './effectScope'
+import { type EffectScope, recordEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
 
@@ -66,7 +70,7 @@ export class ReactiveEffect<T = any> {
     public fn: () => T,
     public trigger: () => void,
     public scheduler?: EffectScheduler,
-    scope?: EffectScope
+    scope?: EffectScope,
   ) {
     recordEffectScope(this, scope)
   }
@@ -183,7 +187,7 @@ export interface ReactiveEffectRunner<T = any> {
  */
 export function effect<T = any>(
   fn: () => T,
-  options?: ReactiveEffectOptions
+  options?: ReactiveEffectOptions,
 ): ReactiveEffectRunner {
   if ((fn as ReactiveEffectRunner).effect instanceof ReactiveEffect) {
     fn = (fn as ReactiveEffectRunner).effect.fn
@@ -258,7 +262,7 @@ export function resetScheduling() {
 export function trackEffect(
   effect: ReactiveEffect,
   dep: Dep,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   if (dep.get(effect) !== effect._trackId) {
     dep.set(effect, effect._trackId)
@@ -282,7 +286,7 @@ const queueEffectSchedulers: (() => void)[] = []
 export function triggerEffects(
   dep: Dep,
   dirtyLevel: DirtyLevels,
-  debuggerEventExtraInfo?: DebuggerEventExtraInfo
+  debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {

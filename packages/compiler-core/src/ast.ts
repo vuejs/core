@@ -1,20 +1,20 @@
 import { isString } from '@vue/shared'
 import {
-  RENDER_SLOT,
-  CREATE_SLOTS,
-  RENDER_LIST,
-  OPEN_BLOCK,
-  FRAGMENT,
-  WITH_DIRECTIVES,
-  WITH_MEMO,
-  CREATE_VNODE,
-  CREATE_ELEMENT_VNODE,
   CREATE_BLOCK,
-  CREATE_ELEMENT_BLOCK
+  CREATE_ELEMENT_BLOCK,
+  CREATE_ELEMENT_VNODE,
+  type CREATE_SLOTS,
+  CREATE_VNODE,
+  type FRAGMENT,
+  OPEN_BLOCK,
+  type RENDER_LIST,
+  type RENDER_SLOT,
+  WITH_DIRECTIVES,
+  type WITH_MEMO,
 } from './runtimeHelpers'
-import { PropsExpression } from './transforms/transformElement'
-import { ImportItem, TransformContext } from './transform'
-import { Node as BabelNode } from '@babel/types'
+import type { PropsExpression } from './transforms/transformElement'
+import type { ImportItem, TransformContext } from './transform'
+import type { Node as BabelNode } from '@babel/types'
 
 // Vue template is a platform-agnostic superset of HTML (syntax only).
 // More namespaces can be declared by platform specific compilers.
@@ -23,7 +23,7 @@ export type Namespace = number
 export enum Namespaces {
   HTML,
   SVG,
-  MATH_ML
+  MATH_ML,
 }
 
 export enum NodeTypes {
@@ -57,14 +57,14 @@ export enum NodeTypes {
   JS_IF_STATEMENT,
   JS_ASSIGNMENT_EXPRESSION,
   JS_SEQUENCE_EXPRESSION,
-  JS_RETURN_STATEMENT
+  JS_RETURN_STATEMENT,
 }
 
 export enum ElementTypes {
   ELEMENT,
   COMPONENT,
   SLOT,
-  TEMPLATE
+  TEMPLATE,
 }
 
 export interface Node {
@@ -219,7 +219,7 @@ export enum ConstantTypes {
   NOT_CONSTANT = 0,
   CAN_SKIP_PATCH,
   CAN_HOIST,
-  CAN_STRINGIFY
+  CAN_STRINGIFY,
 }
 
 export interface SimpleExpressionNode extends Node {
@@ -495,7 +495,7 @@ export interface RenderSlotCall extends CallExpression {
         string,
         string | ExpressionNode,
         PropsExpression | '{}',
-        TemplateChildNode[]
+        TemplateChildNode[],
       ]
 }
 
@@ -582,12 +582,12 @@ export interface ForIteratorExpression extends FunctionExpression {
 export const locStub: SourceLocation = {
   start: { line: 1, column: 1, offset: 0 },
   end: { line: 1, column: 1, offset: 0 },
-  source: ''
+  source: '',
 }
 
 export function createRoot(
   children: TemplateChildNode[],
-  source = ''
+  source = '',
 ): RootNode {
   return {
     type: NodeTypes.ROOT,
@@ -601,7 +601,7 @@ export function createRoot(
     cached: 0,
     temps: 0,
     codegenNode: undefined,
-    loc: locStub
+    loc: locStub,
   }
 }
 
@@ -616,7 +616,7 @@ export function createVNodeCall(
   isBlock: VNodeCall['isBlock'] = false,
   disableTracking: VNodeCall['disableTracking'] = false,
   isComponent: VNodeCall['isComponent'] = false,
-  loc = locStub
+  loc = locStub,
 ): VNodeCall {
   if (context) {
     if (isBlock) {
@@ -641,41 +641,41 @@ export function createVNodeCall(
     isBlock,
     disableTracking,
     isComponent,
-    loc
+    loc,
   }
 }
 
 export function createArrayExpression(
   elements: ArrayExpression['elements'],
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
 ): ArrayExpression {
   return {
     type: NodeTypes.JS_ARRAY_EXPRESSION,
     loc,
-    elements
+    elements,
   }
 }
 
 export function createObjectExpression(
   properties: ObjectExpression['properties'],
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
 ): ObjectExpression {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
     loc,
-    properties
+    properties,
   }
 }
 
 export function createObjectProperty(
   key: Property['key'] | string,
-  value: Property['value']
+  value: Property['value'],
 ): Property {
   return {
     type: NodeTypes.JS_PROPERTY,
     loc: locStub,
     key: isString(key) ? createSimpleExpression(key, true) : key,
-    value
+    value,
   }
 }
 
@@ -683,38 +683,38 @@ export function createSimpleExpression(
   content: SimpleExpressionNode['content'],
   isStatic: SimpleExpressionNode['isStatic'] = false,
   loc: SourceLocation = locStub,
-  constType: ConstantTypes = ConstantTypes.NOT_CONSTANT
+  constType: ConstantTypes = ConstantTypes.NOT_CONSTANT,
 ): SimpleExpressionNode {
   return {
     type: NodeTypes.SIMPLE_EXPRESSION,
     loc,
     content,
     isStatic,
-    constType: isStatic ? ConstantTypes.CAN_STRINGIFY : constType
+    constType: isStatic ? ConstantTypes.CAN_STRINGIFY : constType,
   }
 }
 
 export function createInterpolation(
   content: InterpolationNode['content'] | string,
-  loc: SourceLocation
+  loc: SourceLocation,
 ): InterpolationNode {
   return {
     type: NodeTypes.INTERPOLATION,
     loc,
     content: isString(content)
       ? createSimpleExpression(content, false, loc)
-      : content
+      : content,
   }
 }
 
 export function createCompoundExpression(
   children: CompoundExpressionNode['children'],
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
 ): CompoundExpressionNode {
   return {
     type: NodeTypes.COMPOUND_EXPRESSION,
     loc,
-    children
+    children,
   }
 }
 
@@ -725,13 +725,13 @@ type InferCodegenNodeType<T> = T extends typeof RENDER_SLOT
 export function createCallExpression<T extends CallExpression['callee']>(
   callee: T,
   args: CallExpression['arguments'] = [],
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
 ): InferCodegenNodeType<T> {
   return {
     type: NodeTypes.JS_CALL_EXPRESSION,
     loc,
     callee,
-    arguments: args
+    arguments: args,
   } as InferCodegenNodeType<T>
 }
 
@@ -740,7 +740,7 @@ export function createFunctionExpression(
   returns: FunctionExpression['returns'] = undefined,
   newline: boolean = false,
   isSlot: boolean = false,
-  loc: SourceLocation = locStub
+  loc: SourceLocation = locStub,
 ): FunctionExpression {
   return {
     type: NodeTypes.JS_FUNCTION_EXPRESSION,
@@ -748,7 +748,7 @@ export function createFunctionExpression(
     returns,
     newline,
     isSlot,
-    loc
+    loc,
   }
 }
 
@@ -756,7 +756,7 @@ export function createConditionalExpression(
   test: ConditionalExpression['test'],
   consequent: ConditionalExpression['consequent'],
   alternate: ConditionalExpression['alternate'],
-  newline = true
+  newline = true,
 ): ConditionalExpression {
   return {
     type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
@@ -764,87 +764,87 @@ export function createConditionalExpression(
     consequent,
     alternate,
     newline,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createCacheExpression(
   index: number,
   value: JSChildNode,
-  isVNode: boolean = false
+  isVNode: boolean = false,
 ): CacheExpression {
   return {
     type: NodeTypes.JS_CACHE_EXPRESSION,
     index,
     value,
     isVNode,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createBlockStatement(
-  body: BlockStatement['body']
+  body: BlockStatement['body'],
 ): BlockStatement {
   return {
     type: NodeTypes.JS_BLOCK_STATEMENT,
     body,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createTemplateLiteral(
-  elements: TemplateLiteral['elements']
+  elements: TemplateLiteral['elements'],
 ): TemplateLiteral {
   return {
     type: NodeTypes.JS_TEMPLATE_LITERAL,
     elements,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createIfStatement(
   test: IfStatement['test'],
   consequent: IfStatement['consequent'],
-  alternate?: IfStatement['alternate']
+  alternate?: IfStatement['alternate'],
 ): IfStatement {
   return {
     type: NodeTypes.JS_IF_STATEMENT,
     test,
     consequent,
     alternate,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createAssignmentExpression(
   left: AssignmentExpression['left'],
-  right: AssignmentExpression['right']
+  right: AssignmentExpression['right'],
 ): AssignmentExpression {
   return {
     type: NodeTypes.JS_ASSIGNMENT_EXPRESSION,
     left,
     right,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createSequenceExpression(
-  expressions: SequenceExpression['expressions']
+  expressions: SequenceExpression['expressions'],
 ): SequenceExpression {
   return {
     type: NodeTypes.JS_SEQUENCE_EXPRESSION,
     expressions,
-    loc: locStub
+    loc: locStub,
   }
 }
 
 export function createReturnStatement(
-  returns: ReturnStatement['returns']
+  returns: ReturnStatement['returns'],
 ): ReturnStatement {
   return {
     type: NodeTypes.JS_RETURN_STATEMENT,
     returns,
-    loc: locStub
+    loc: locStub,
   }
 }
 
@@ -858,7 +858,7 @@ export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
 
 export function convertToBlock(
   node: VNodeCall,
-  { helper, removeHelper, inSSR }: TransformContext
+  { helper, removeHelper, inSSR }: TransformContext,
 ) {
   if (!node.isBlock) {
     node.isBlock = true

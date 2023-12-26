@@ -1,8 +1,8 @@
 import {
-  SourceLocation,
-  CompilerError,
+  type CompilerError,
+  DOMErrorCodes,
+  type SourceLocation,
   createCompilerError,
-  DOMErrorCodes
 } from '@vue/compiler-dom'
 
 export interface SSRCompilerError extends CompilerError {
@@ -11,7 +11,7 @@ export interface SSRCompilerError extends CompilerError {
 
 export function createSSRCompilerError(
   code: SSRErrorCodes,
-  loc?: SourceLocation
+  loc?: SourceLocation,
 ) {
   return createCompilerError(code, loc, SSRErrorMessages) as SSRCompilerError
 }
@@ -19,7 +19,7 @@ export function createSSRCompilerError(
 export enum SSRErrorCodes {
   X_SSR_UNSAFE_ATTR_NAME = 65 /* DOMErrorCodes.__EXTEND_POINT__ */,
   X_SSR_NO_TELEPORT_TARGET,
-  X_SSR_INVALID_AST_NODE
+  X_SSR_INVALID_AST_NODE,
 }
 
 if (__TEST__) {
@@ -30,7 +30,7 @@ if (__TEST__) {
     throw new Error(
       `SSRErrorCodes need to be updated to ${
         DOMErrorCodes.__EXTEND_POINT__ + 1
-      } to match extension point from core DOMErrorCodes.`
+      } to match extension point from core DOMErrorCodes.`,
     )
   }
 }
@@ -38,5 +38,5 @@ if (__TEST__) {
 export const SSRErrorMessages: { [code: number]: string } = {
   [SSRErrorCodes.X_SSR_UNSAFE_ATTR_NAME]: `Unsafe attribute name for SSR.`,
   [SSRErrorCodes.X_SSR_NO_TELEPORT_TARGET]: `Missing the 'to' prop on teleport element.`,
-  [SSRErrorCodes.X_SSR_INVALID_AST_NODE]: `Invalid AST node during SSR transform.`
+  [SSRErrorCodes.X_SSR_INVALID_AST_NODE]: `Invalid AST node during SSR transform.`,
 }

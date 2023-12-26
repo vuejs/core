@@ -1,13 +1,13 @@
 import {
-  NodeTransform,
-  NodeTypes,
   ElementTypes,
-  locStub,
+  type NodeTransform,
+  NodeTypes,
+  type ParentNode,
+  type RootNode,
+  type TemplateChildNode,
   createSimpleExpression,
-  RootNode,
-  TemplateChildNode,
-  ParentNode,
-  findDir
+  findDir,
+  locStub,
 } from '@vue/compiler-dom'
 
 const filterChild = (node: ParentNode) =>
@@ -85,7 +85,7 @@ function injectFallthroughAttrs(node: RootNode | TemplateChildNode) {
       arg: undefined,
       exp: createSimpleExpression(`_attrs`, false),
       modifiers: [],
-      loc: locStub
+      loc: locStub,
     })
   }
 }

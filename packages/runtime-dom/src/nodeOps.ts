@@ -1,4 +1,4 @@
-import { RendererOptions } from '@vue/runtime-core'
+import type { RendererOptions } from '@vue/runtime-core'
 
 export const svgNS = 'http://www.w3.org/2000/svg'
 export const mathmlNS = 'http://www.w3.org/1998/Math/MathML'
@@ -96,7 +96,7 @@ export const nodeOps: Omit<RendererOptions<Node, Element>, 'patchProp'> = {
       // first
       before ? before.nextSibling! : parent.firstChild!,
       // last
-      anchor ? anchor.previousSibling! : parent.lastChild!
+      anchor ? anchor.previousSibling! : parent.lastChild!,
     ]
-  }
+  },
 }
