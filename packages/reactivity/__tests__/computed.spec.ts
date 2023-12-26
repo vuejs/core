@@ -11,7 +11,6 @@ import {
   ITERATE_KEY,
   TriggerOpTypes
 } from '../src'
-import { expect } from 'vitest'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
