@@ -1,4 +1,4 @@
-import { markRaw, proxyRefs } from '@vue/reactivity'
+import { proxyRefs } from '@vue/reactivity'
 import { invokeArrayFns, type Data } from '@vue/shared'
 import {
   type Component,
