@@ -37,7 +37,7 @@ export type DebuggerEvent = {
 } & DebuggerEventExtraInfo
 
 export type DebuggerEventExtraInfo = {
-  target: object
+  target: Record<any, any>
   type: TrackOpTypes | TriggerOpTypes
   key: any
   newValue?: any
@@ -244,7 +244,11 @@ export function resetTracking() {
  * @param type - Defines the type of access to the reactive property.
  * @param key - Identifier of the reactive property to track.
  */
-export function track(target: object, type: TrackOpTypes, key: unknown) {
+export function track(
+  target: Record<any, any>,
+  type: TrackOpTypes,
+  key: unknown
+) {
   if (shouldTrack && activeEffect) {
     let depsMap = targetMap.get(target)
     if (!depsMap) {
@@ -303,7 +307,7 @@ export function trackEffects(
  * @param key - Can be used to target a specific reactive property in the target object.
  */
 export function trigger(
-  target: object,
+  target: Record<any, any>,
   type: TriggerOpTypes,
   key?: unknown,
   newValue?: unknown,

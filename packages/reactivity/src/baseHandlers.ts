@@ -79,7 +79,7 @@ function createArrayInstrumentations() {
   return instrumentations
 }
 
-function hasOwnProperty(this: object, key: string) {
+function hasOwnProperty(this: Record<any, any>, key: string) {
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
   return obj.hasOwnProperty(key)
@@ -91,7 +91,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     protected readonly _shallow = false
   ) {}
 
-  get(target: Target, key: string | symbol, receiver: object) {
+  get(target: Target, key: string | symbol, receiver: Record<keyof any, any>) {
     const isReadonly = this._isReadonly,
       shallow = this._shallow
     if (key === ReactiveFlags.IS_REACTIVE) {
@@ -168,12 +168,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
   }
 
   set(
-    target: object,
+    target: Record<keyof any, any>,
     key: string | symbol,
     value: unknown,
-    receiver: object
+    receiver: Record<string | symbol, any>
   ): boolean {
-    let oldValue = (target as any)[key]
+    let oldValue = target[key]
     if (!this._shallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
@@ -208,9 +208,12 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  deleteProperty(target: object, key: string | symbol): boolean {
+  deleteProperty(
+    target: Record<string | symbol, any>,
+    key: string | symbol
+  ): boolean {
     const hadKey = hasOwn(target, key)
-    const oldValue = (target as any)[key]
+    const oldValue = target[key]
     const result = Reflect.deleteProperty(target, key)
     if (result && hadKey) {
       trigger(target, TriggerOpTypes.DELETE, key, undefined, oldValue)
@@ -218,14 +221,14 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
-  has(target: object, key: string | symbol): boolean {
+  has(target: Record<keyof any, any>, key: string | symbol): boolean {
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
   }
-  ownKeys(target: object): (string | symbol)[] {
+  ownKeys(target: Record<keyof any, any>): (string | symbol)[] {
     track(
       target,
       TrackOpTypes.ITERATE,
@@ -240,7 +243,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     super(true, shallow)
   }
 
-  set(target: object, key: string | symbol) {
+  set(target: Record<keyof any, any>, key: string | symbol) {
     if (__DEV__) {
       warn(
         `Set operation on key "${String(key)}" failed: target is readonly.`,
@@ -250,7 +253,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     return true
   }
 
-  deleteProperty(target: object, key: string | symbol) {
+  deleteProperty(target: Record<keyof any, any>, key: string | symbol) {
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
