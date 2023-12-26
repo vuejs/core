@@ -11,6 +11,7 @@ import {
   ITERATE_KEY,
   TriggerOpTypes
 } from '../src'
+import { expect } from 'vitest'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -452,23 +453,12 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
   })
 
-  it('should not track during self access', () => {
-    const fnSpy = vi.fn()
-    const v = ref(1)
+  it('should throw an error during self-referencing', () => {
     // @ts-ignore
     const c = computed(() => {
-      return `${c.value || ''}${v.value}`
+      return c.value
     })
 
-    effect(() => {
-      fnSpy()
-      c.value
-    })
-
-    expect(fnSpy).toBeCalledTimes(1)
-    expect(c.value).toBe('1')
-    v.value = 2
-    expect(fnSpy).toBeCalledTimes(2)
-    expect(c.value).toBe('12')
+    expect(() => c.value).toThrow('computed detected recursive calculation.')
   })
 })
