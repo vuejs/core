@@ -60,7 +60,7 @@ export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
-export { useAttrs, useSlots, type DefineProps } from './apiSetupHelpers'
+export { useAttrs, useSlots } from './apiSetupHelpers'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -74,6 +74,8 @@ export {
   defineModel,
   withDefaults,
   useModel,
+  type DefineProps,
+  type ModelRef,
 } from './apiSetupHelpers'
 
 /**

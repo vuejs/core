@@ -1,4 +1,5 @@
 import {
+  EMPTY_OBJ,
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
@@ -218,6 +219,9 @@ export function defineSlots<
   return null as any
 }
 
+export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
+  [ModelRef<T, M>, Record<M, true | undefined>]
+
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -251,25 +255,27 @@ export function defineSlots<
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T>(
-  options: { required: true } & PropOptions<T>,
-): Ref<T>
-export function defineModel<T>(
-  options: { default: any } & PropOptions<T>,
-): Ref<T>
-export function defineModel<T>(options?: PropOptions<T>): Ref<T | undefined>
-export function defineModel<T>(
+export function defineModel<T, M extends string | number | symbol = string>(
+  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
+  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
+  options?: PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T | undefined, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { required: true } & PropOptions<T>,
-): Ref<T>
-export function defineModel<T>(
+  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { default: any } & PropOptions<T>,
-): Ref<T>
-export function defineModel<T>(
+  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options?: PropOptions<T>,
-): Ref<T | undefined>
+  options?: PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T | undefined, M>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -348,11 +354,21 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T extends Record<string, any>, K extends keyof T>(
-  props: T,
-  name: K,
-): Ref<T[K]>
-export function useModel(props: Record<string, any>, name: string): Ref {
+type UseModelOptions<T = any> = {
+  get?: (v: T) => any
+  set?: (v: T) => any
+}
+
+export function useModel<
+  M extends string | number | symbol,
+  T extends Record<string, any>,
+  K extends keyof T,
+>(props: T, name: K, options?: UseModelOptions<T[K]>): ModelRef<T[K], M>
+export function useModel(
+  props: Record<string, any>,
+  name: string,
+  options: UseModelOptions = EMPTY_OBJ,
+): Ref {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
@@ -364,7 +380,7 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     return ref() as any
   }
 
-  return customRef((track, trigger) => {
+  const res = customRef((track, trigger) => {
     let localValue: any
     watchSyncEffect(() => {
       const propValue = props[name]
@@ -376,7 +392,7 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     return {
       get() {
         track()
-        return localValue
+        return options.get ? options.get(localValue) : localValue
       },
       set(value) {
         const rawProps = i.vnode!.props
@@ -384,10 +400,29 @@ export function useModel(props: Record<string, any>, name: string): Ref {
           localValue = value
           trigger()
         }
-        i.emit(`update:${name}`, value)
+        i.emit(`update:${name}`, options.set ? options.set(value) : value)
       },
     }
   })
+
+  const modifierKey =
+    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
+
+  // @ts-expect-error
+  res[Symbol.iterator] = () => {
+    let i = 0
+    return {
+      next() {
+        if (i < 2) {
+          return { value: i++ ? props[modifierKey] : res, done: false }
+        } else {
+          return { done: true }
+        }
+      },
+    }
+  }
+
+  return res
 }
 
 function getContext(): SetupContext {

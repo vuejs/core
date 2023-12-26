@@ -513,6 +513,73 @@ describe('SFC <script setup> helpers', () => {
       expect(slotRender).toBeCalledTimes(2)
       expect(serializeInner(root)).toBe('<div>bar</div>')
     })
+
+    test('with modifiers & transformers', async () => {
+      let childMsg: Ref<string>
+      let childModifiers: Record<string, true | undefined>
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['msg', 'msgModifiers'],
+        emits: ['update:msg'],
+        setup(props) {
+          ;[childMsg, childModifiers] = useModel(props, 'msg', {
+            get(val) {
+              return val.toLowerCase()
+            },
+            set(val) {
+              if (childModifiers.upper) {
+                return val.toUpperCase()
+              }
+            },
+          })
+          return () => {
+            compRender()
+            return childMsg.value
+          }
+        },
+      })
+
+      const msg = ref('HI')
+      const Parent = defineComponent({
+        setup() {
+          return () =>
+            h(Comp, {
+              msg: msg.value,
+              msgModifiers: { upper: true },
+              'onUpdate:msg': val => {
+                msg.value = val
+              },
+            })
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      render(h(Parent), root)
+
+      // should be lowered
+      expect(serializeInner(root)).toBe('hi')
+
+      // child update
+      childMsg!.value = 'Hmm'
+
+      await nextTick()
+      expect(childMsg!.value).toBe('hmm')
+      expect(serializeInner(root)).toBe('hmm')
+      // parent should get uppercase value
+      expect(msg.value).toBe('HMM')
+
+      // parent update
+      msg.value = 'Ughh'
+      await nextTick()
+      expect(serializeInner(root)).toBe('ughh')
+      expect(msg.value).toBe('Ughh')
+
+      // child update again
+      childMsg!.value = 'ughh'
+      await nextTick()
+      expect(msg.value).toBe('UGHH')
+    })
   })
 
   test('createPropsRestProxy', () => {

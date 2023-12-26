@@ -69,6 +69,7 @@ describe('defineModel()', () => {
     assertCode(content)
     expect(content).toMatch(`props: /*#__PURE__*/_mergeModels(['foo', 'bar'], {
     "count": {},
+    "countModifiers": {},
   })`)
     expect(content).toMatch(`const count = _useModel(__props, "count")`)
     expect(content).not.toMatch('defineModel')
@@ -77,29 +78,6 @@ describe('defineModel()', () => {
       bar: BindingTypes.PROPS,
       count: BindingTypes.SETUP_REF,
     })
-  })
-
-  test('w/ local flag', () => {
-    const { content } = compile(
-      `<script setup>
-      const foo = defineModel({ local: true, default: 1 })
-      const bar = defineModel('bar', { [key]: true })
-      const baz = defineModel('baz', { ...x })
-      const qux = defineModel('qux', x)
-
-      const foo2 = defineModel('foo2', { local: true, ...x })
-
-      const local = true
-      const hoist = defineModel('hoist', { local })
-      </script>`,
-    )
-    assertCode(content)
-    expect(content).toMatch(`_useModel(__props, "modelValue", { local: true })`)
-    expect(content).toMatch(`_useModel(__props, "bar", { [key]: true })`)
-    expect(content).toMatch(`_useModel(__props, "baz", { ...x })`)
-    expect(content).toMatch(`_useModel(__props, "qux", x)`)
-    expect(content).toMatch(`_useModel(__props, "foo2", { local: true })`)
-    expect(content).toMatch(`_useModel(__props, "hoist", { local })`)
   })
 
   test('w/ types, basic usage', () => {
@@ -115,6 +93,7 @@ describe('defineModel()', () => {
     )
     assertCode(content)
     expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
+    expect(content).toMatch('"modelModifiers": {}')
     expect(content).toMatch('"count": { type: Number }')
     expect(content).toMatch(
       '"disabled": { type: Number, ...{ required: false } }',
@@ -175,5 +154,44 @@ describe('defineModel()', () => {
       str: BindingTypes.SETUP_REF,
       optional: BindingTypes.SETUP_REF,
     })
+  })
+
+  test('get / set transformers', () => {
+    const { content } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel({
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+        required: true
+      })
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch(/"modelValue": {\s+required: true,?\s+}/m)
+    expect(content).toMatch(
+      `_useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })`,
+    )
+
+    const { content: content2 } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel({
+        default: 0,
+        get(v) { return v - 1 },
+        required: true,
+        set: (v) => { return v + 1 },
+      })
+      </script>
+      `,
+    )
+    assertCode(content2)
+    expect(content2).toMatch(
+      /"modelValue": {\s+default: 0,\s+required: true,?\s+}/m,
+    )
+    expect(content2).toMatch(
+      `_useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })`,
+    )
   })
 })

@@ -314,6 +314,37 @@ describe('defineModel', () => {
   const inferredRequired = defineModel({ default: 123, required: true })
   expectType<Ref<number>>(inferredRequired)
 
+  // modifiers
+  const [_, modifiers] = defineModel<string>()
+  expectType<true | undefined>(modifiers.foo)
+
+  // limit supported modifiers
+  const [__, typedModifiers] = defineModel<string, 'trim' | 'capitalize'>()
+  expectType<true | undefined>(typedModifiers.trim)
+  expectType<true | undefined>(typedModifiers.capitalize)
+  // @ts-expect-error
+  typedModifiers.foo
+
+  // transformers with type
+  defineModel<string>({
+    get(val) {
+      return val.toLowerCase()
+    },
+    set(val) {
+      return val.toUpperCase()
+    },
+  })
+  // transformers with runtime type
+  defineModel({
+    type: String,
+    get(val) {
+      return val.toLowerCase()
+    },
+    set(val) {
+      return val.toUpperCase()
+    },
+  })
+
   // @ts-expect-error type / default mismatch
   defineModel<string>({ default: 123 })
   // @ts-expect-error unknown props option
