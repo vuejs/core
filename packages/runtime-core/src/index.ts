@@ -116,7 +116,9 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn } from './warning'
+import { warn as _warn } from './warning'
+export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
+
 /** @internal */
 export { assertNumber } from './warning'
 export {
@@ -146,11 +148,22 @@ import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
  * @internal
  */
 export const ErrorTypeStrings = (
-  __ESM_BUNDLER__ || __DEV__ ? _ErrorTypeStrings : null
+  __ESM_BUNDLER__ || __NODE_JS__ || __DEV__ ? _ErrorTypeStrings : null
 ) as typeof _ErrorTypeStrings
 
 // For devtools
-export { devtools, setDevtoolsHook } from './devtools'
+import {
+  devtools as _devtools,
+  setDevtoolsHook as _setDevtoolsHook,
+  DevtoolsHook
+} from './devtools'
+
+export const devtools = (
+  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _devtools : undefined
+) as DevtoolsHook
+export const setDevtoolsHook = (
+  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _setDevtoolsHook : NOOP
+) as typeof _setDevtoolsHook
 
 // Types -------------------------------------------------------------------------
 
@@ -378,6 +391,7 @@ import {
   softAssertCompatEnabled
 } from './compat/compatConfig'
 import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
+import { NOOP } from '@vue/shared'
 
 /**
  * @internal only exposed in compat builds

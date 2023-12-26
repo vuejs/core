@@ -77,6 +77,18 @@ describe('should unwrap Map correctly', () => {
   expectType<number>(wm2.get({})!.wrap)
 })
 
+describe('should unwrap extended Map correctly', () => {
+  class ExtendendMap1 extends Map<string, { wrap: Ref<number> }> {
+    foo = ref('foo')
+    bar = 1
+  }
+
+  const emap1 = reactive(new ExtendendMap1())
+  expectType<string>(emap1.foo)
+  expectType<number>(emap1.bar)
+  expectType<number>(emap1.get('a')!.wrap)
+})
+
 describe('should unwrap Set correctly', () => {
   const set = reactive(new Set<Ref<number>>())
   expectType<Set<Ref<number>>>(set)
@@ -89,4 +101,15 @@ describe('should unwrap Set correctly', () => {
 
   const ws2 = reactive(new WeakSet<{ wrap: Ref<number> }>())
   expectType<WeakSet<{ wrap: number }>>(ws2)
+})
+
+describe('should unwrap extended Set correctly', () => {
+  class ExtendendSet1 extends Set<{ wrap: Ref<number> }> {
+    foo = ref('foo')
+    bar = 1
+  }
+
+  const eset1 = reactive(new ExtendendSet1())
+  expectType<string>(eset1.foo)
+  expectType<number>(eset1.bar)
 })

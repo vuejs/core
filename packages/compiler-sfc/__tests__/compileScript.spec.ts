@@ -938,6 +938,14 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`return { get Baz() { return Baz } }`)
       assertCode(content)
     })
+
+    test('with generic attribute', () => {
+      const { content } = compile(`
+      <script setup lang="ts" generic="T extends Record<string,string>">
+        type Bar = {}
+      </script>`)
+      assertCode(content)
+    })
   })
 
   describe('async/await detection', () => {

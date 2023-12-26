@@ -1406,6 +1406,14 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div class="foo bar"></div>`, () =>
         h('div', { class: 'foo bar' })
       )
+      // SVG classes
+      mountWithHydration(`<svg class="foo bar"></svg>`, () =>
+        h('svg', { class: 'foo bar' })
+      )
+      // class with different order
+      mountWithHydration(`<div class="foo bar"></div>`, () =>
+        h('div', { class: 'bar foo' })
+      )
       expect(`Hydration class mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div class="foo bar"></div>`, () =>
         h('div', { class: 'foo' })

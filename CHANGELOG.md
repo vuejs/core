@@ -1,3 +1,56 @@
+# [3.4.0-rc.2](https://github.com/vuejs/core/compare/v3.4.0-rc.1...v3.4.0-rc.2) (2023-12-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @vue/repl to ^3.1.0 ([#9911](https://github.com/vuejs/core/issues/9911)) ([f96c413](https://github.com/vuejs/core/commit/f96c413e8ef2f24cacda5bb499492922f62c6e8b))
+* **types:** fix distribution of union types when unwrapping setup bindings ([#9909](https://github.com/vuejs/core/issues/9909)) ([0695c69](https://github.com/vuejs/core/commit/0695c69e0dfaf99882a623fe75b433c9618ea648)), closes [#9903](https://github.com/vuejs/core/issues/9903)
+* **warning:** ensure prod hydration warnings actually work ([b4ebe7a](https://github.com/vuejs/core/commit/b4ebe7ae8b904f28cdda33caf87bc05718d3a08a))
+
+
+### Features
+
+* **compiler-sfc:** export aggregated error messages for compiler-core and compiler-dom ([25c726e](https://github.com/vuejs/core/commit/25c726eca81fc384b41fafbeba5e8dfcda1f030f))
+
+
+
+# [3.4.0-rc.1](https://github.com/vuejs/core/compare/v3.4.0-beta.4...v3.4.0-rc.1) (2023-12-25)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix parsing `<script setup>` generics with > ([7aa3f25](https://github.com/vuejs/core/commit/7aa3f250f26d58ee2db82af907de8b9105e6e418)), closes [#9890](https://github.com/vuejs/core/issues/9890)
+* **compiler-sfc:** fix type resolution for shared type w/ different generic parameters ([a8d0b1b](https://github.com/vuejs/core/commit/a8d0b1b38b092ec2d10b32bedcee2eea33b77657)), closes [#9871](https://github.com/vuejs/core/issues/9871)
+* **ssr:** avoid hydration mismatch warning for classes with different order ([e585b0d](https://github.com/vuejs/core/commit/e585b0db43150c8b8b3d78f71e12efccc018a38d))
+
+
+
+# [3.4.0-beta.4](https://github.com/vuejs/core/compare/v3.3.13...v3.4.0-beta.4) (2023-12-19)
+
+
+### Bug Fixes
+
+* **compile-sfc:** fix identifier prefixing edge case caused by reused AST ([#9867](https://github.com/vuejs/core/issues/9867)) ([eb51b23](https://github.com/vuejs/core/commit/eb51b23d8512f15665d6f8bcdfd51582e0cd8ce8)), closes [#9853](https://github.com/vuejs/core/issues/9853) [#9863](https://github.com/vuejs/core/issues/9863)
+* **ssr:** fix hydration prop mismatch check for class on SVG elements ([e8448b0](https://github.com/vuejs/core/commit/e8448b018d9f837c08eace90cab404a27f68e31a))
+
+
+### Features
+
+* **runtime-core:** throw real error when scheduler detects infinite loop during dev ([#7447](https://github.com/vuejs/core/issues/7447)) ([1d79b64](https://github.com/vuejs/core/commit/1d79b64ebce884d97136d71aa722347470b13e35)), closes [#7437](https://github.com/vuejs/core/issues/7437)
+
+
+
+## [3.3.13](https://github.com/vuejs/core/compare/v3.3.12...v3.3.13) (2023-12-19)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix v-on with modifiers on inline expression of undefined ([#9866](https://github.com/vuejs/core/issues/9866)) ([bae79dd](https://github.com/vuejs/core/commit/bae79ddf8564a2da4a5365cfeb8d811990f42335)), closes [#9865](https://github.com/vuejs/core/issues/9865)
+* **runtime-dom:** cache event handlers by key/modifiers ([#9851](https://github.com/vuejs/core/issues/9851)) ([04d2c05](https://github.com/vuejs/core/commit/04d2c05054c26b02fbc1d84839b0ed5cd36455b6)), closes [#9849](https://github.com/vuejs/core/issues/9849)
+* **types:** extract properties from extended collections ([#9854](https://github.com/vuejs/core/issues/9854)) ([24b1c1d](https://github.com/vuejs/core/commit/24b1c1dd57fd55d998aa231a147500e010b10219)), closes [#9852](https://github.com/vuejs/core/issues/9852)
+
+
+
 # [3.4.0-beta.3](https://github.com/vuejs/core/compare/v3.3.12...v3.4.0-beta.3) (2023-12-16)
 
 

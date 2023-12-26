@@ -115,7 +115,7 @@ export class TypeScope {
     public types: Record<string, ScopeTypeNode> = Object.create(null),
     public declares: Record<string, ScopeTypeNode> = Object.create(null)
   ) {}
-
+  isGenericScope = false
   resolvedImportSources: Record<string, string> = Object.create(null)
   exportedTypes: Record<string, ScopeTypeNode> = Object.create(null)
   exportedDeclares: Record<string, ScopeTypeNode> = Object.create(null)
@@ -146,15 +146,17 @@ export function resolveTypeElements(
   scope?: TypeScope,
   typeParameters?: Record<string, Node>
 ): ResolvedElements {
-  if (node._resolvedElements) {
+  const canCache = !typeParameters
+  if (canCache && node._resolvedElements) {
     return node._resolvedElements
   }
-  return (node._resolvedElements = innerResolveTypeElements(
+  const resolved = innerResolveTypeElements(
     ctx,
     node,
     node._ownerScope || scope || ctxToScope(ctx),
     typeParameters
-  ))
+  )
+  return canCache ? (node._resolvedElements = resolved) : resolved
 }
 
 function innerResolveTypeElements(
@@ -215,17 +217,18 @@ function innerResolveTypeElements(
       }
       const resolved = resolveTypeReference(ctx, node, scope)
       if (resolved) {
-        const typeParams: Record<string, Node> = Object.create(null)
+        let typeParams: Record<string, Node> | undefined
         if (
           (resolved.type === 'TSTypeAliasDeclaration' ||
             resolved.type === 'TSInterfaceDeclaration') &&
           resolved.typeParameters &&
           node.typeParameters
         ) {
+          typeParams = Object.create(null)
           resolved.typeParameters.params.forEach((p, i) => {
             let param = typeParameters && typeParameters[p.name]
             if (!param) param = node.typeParameters!.params[i]
-            typeParams[p.name] = param
+            typeParams![p.name] = param
           })
         }
         return resolveTypeElements(
@@ -322,6 +325,7 @@ function typeElementsToMap(
       // capture generic parameters on node's scope
       if (typeParameters) {
         scope = createChildScope(scope)
+        scope.isGenericScope = true
         Object.assign(scope.types, typeParameters)
       }
       ;(e as MaybeWithScope)._ownerScope = scope
@@ -694,16 +698,18 @@ function resolveTypeReference(
   name?: string,
   onlyExported = false
 ): ScopeTypeNode | undefined {
-  if (node._resolvedReference) {
+  const canCache = !scope?.isGenericScope
+  if (canCache && node._resolvedReference) {
     return node._resolvedReference
   }
-  return (node._resolvedReference = innerResolveTypeReference(
+  const resolved = innerResolveTypeReference(
     ctx,
     scope || ctxToScope(ctx),
     name || getReferenceName(node),
     node,
     onlyExported
-  ))
+  )
+  return canCache ? (node._resolvedReference = resolved) : resolved
 }
 
 function innerResolveTypeReference(

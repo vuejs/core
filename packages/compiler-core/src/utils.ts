@@ -169,7 +169,7 @@ export const isMemberExpressionNode = __BROWSER__
         return (
           ret.type === 'MemberExpression' ||
           ret.type === 'OptionalMemberExpression' ||
-          ret.type === 'Identifier'
+          (ret.type === 'Identifier' && ret.name !== 'undefined')
         )
       } catch (e) {
         return false

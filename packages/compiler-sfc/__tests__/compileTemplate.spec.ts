@@ -4,6 +4,7 @@ import {
   SFCTemplateCompileOptions
 } from '../src/compileTemplate'
 import { parse, SFCTemplateBlock } from '../src/parse'
+import { compileScript } from '../src'
 
 function compile(opts: Omit<SFCTemplateCompileOptions, 'id'>) {
   return compileTemplate({
@@ -395,6 +396,35 @@ test('dynamic v-on + static v-on should merged', () => {
   const result = compile({ filename: 'example.vue', source })
 
   expect(result.code).toMatchSnapshot()
+})
+
+// #9853 regression found in Nuxt tests
+// walkIdentifiers can get called multiple times on the same node
+// due to #9729 calling it during SFC template usage check.
+// conditions needed:
+// 1. `<script setup lang="ts">`
+// 2. Has import
+// 3. inlineTemplate: false
+// 4. AST being reused
+test('prefixing edge case for reused AST', () => {
+  const src = `
+  <script setup lang="ts">
+    import { Foo } from './foo'
+  </script>
+  <template>
+    {{ list.map((t, index) => ({ t: t })) }}
+  </template>
+  `
+  const { descriptor } = parse(src)
+  // compileScript triggers importUsageCheck
+  compileScript(descriptor, { id: 'xxx' })
+  const { code } = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content
+  })
+  expect(code).not.toMatch(`_ctx.t`)
 })
 
 interface Pos {

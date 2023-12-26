@@ -21,7 +21,7 @@ enum DevtoolsHooks {
   PERFORMANCE_END = 'perf:end'
 }
 
-interface DevtoolsHook {
+export interface DevtoolsHook {
   enabled?: boolean
   emit: (event: string, ...payload: any[]) => void
   on: (event: string, handler: Function) => void

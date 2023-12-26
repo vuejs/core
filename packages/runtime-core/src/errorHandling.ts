@@ -55,7 +55,7 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [ErrorCodes.ASYNC_COMPONENT_LOADER]: 'async component loader',
   [ErrorCodes.SCHEDULER]:
     'scheduler flush. This is likely a Vue internals bug. ' +
-    'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core'
+    'Please open an issue at https://github.com/vuejs/core .'
 }
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes

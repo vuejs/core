@@ -718,9 +718,11 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
   let actual: any
   let expected: any
   if (key === 'class') {
-    actual = el.className
-    expected = normalizeClass(clientValue)
-    if (actual !== expected) {
+    // classes might be in different order, but that doesn't affect cascade
+    // so we just need to check if the class lists contain the same classes.
+    actual = toClassSet(el.getAttribute('class') || '')
+    expected = toClassSet(normalizeClass(clientValue))
+    if (!isSetEqual(actual, expected)) {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
@@ -764,4 +766,20 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
     return true
   }
   return false
+}
+
+function toClassSet(str: string): Set<string> {
+  return new Set(str.trim().split(/\s+/))
+}
+
+function isSetEqual(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) {
+    return false
+  }
+  for (const s of a) {
+    if (!b.has(s)) {
+      return false
+    }
+  }
+  return true
 }

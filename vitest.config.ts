@@ -25,7 +25,7 @@ export default defineConfig({
   plugins: [codspeedPlugin()],
   test: {
     globals: true,
-    setupFiles: 'scripts/setupVitest.ts',
+    setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
       ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom']
     ],

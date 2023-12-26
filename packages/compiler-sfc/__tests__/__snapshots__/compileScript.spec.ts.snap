@@ -1383,6 +1383,21 @@ return { D, C, B, Foo }
 })"
 `;
 
+exports[`SFC compile <script setup> > with TypeScript > with generic attribute 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+type Bar = {}
+      
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+        
+return {  }
+}
+
+})"
+`;
+
 exports[`SFC genDefaultAs > <script setup> only 1`] = `
 "const a = 1
       

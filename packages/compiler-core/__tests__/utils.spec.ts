@@ -95,6 +95,10 @@ describe('isMemberExpression', () => {
     expect(fn(`123[a]`)).toBe(true)
     expect(fn(`foo() as string`)).toBe(false)
     expect(fn(`a + b as string`)).toBe(false)
+    // #9865
+    expect(fn('""')).toBe(false)
+    expect(fn('undefined')).toBe(false)
+    expect(fn('null')).toBe(false)
   })
 })
 

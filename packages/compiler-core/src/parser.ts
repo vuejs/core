@@ -145,13 +145,6 @@ const tokenizer = new Tokenizer(stack, {
       loc: getLoc(start - 1, end),
       codegenNode: undefined
     }
-    if (tokenizer.inSFCRoot) {
-      // in SFC mode, generate locations for root-level tags' inner content.
-      currentOpenTag.innerLoc = getLoc(
-        end + fastForward(end, CharCodes.Gt) + 1,
-        end
-      )
-    }
   },
 
   onopentagend(end) {
@@ -572,6 +565,10 @@ function getSlice(start: number, end: number) {
 }
 
 function endOpenTag(end: number) {
+  if (tokenizer.inSFCRoot) {
+    // in SFC mode, generate locations for root-level tags' inner content.
+    currentOpenTag!.innerLoc = getLoc(end + 1, end + 1)
+  }
   addNode(currentOpenTag!)
   const { tag, ns } = currentOpenTag!
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
@@ -616,7 +613,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + fastForward(end, CharCodes.Gt) + 1)
+    setLocEnd(el.loc, end + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -736,17 +733,6 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
       }
     }
   }
-}
-
-function fastForward(start: number, c: number) {
-  let offset = 0
-  while (
-    currentInput.charCodeAt(start + offset) !== CharCodes.Gt &&
-    start + offset < currentInput.length
-  ) {
-    offset++
-  }
-  return offset
 }
 
 function backTrack(index: number, c: number) {
