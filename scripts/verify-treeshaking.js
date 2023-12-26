@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import { execa } from 'execa'
 
-execa('node', ['scripts/build.js', 'vue', '-f', 'global-runtime']).then(() => {
+execa('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
   const errors = []
 
   const devBuild = fs.readFileSync(
