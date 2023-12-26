@@ -116,7 +116,9 @@ export { useSSRContext, ssrContextKey } from './helpers/useSsrContext'
 
 export { createRenderer, createHydrationRenderer } from './renderer'
 export { queuePostFlushCb } from './scheduler'
-export { warn } from './warning'
+import { warn as _warn } from './warning'
+export const warn = (__DEV__ ? _warn : NOOP) as typeof _warn
+
 /** @internal */
 export { assertNumber } from './warning'
 export {
