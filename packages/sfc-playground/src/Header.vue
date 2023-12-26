@@ -19,7 +19,7 @@ const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
-  'reload-page'
+  'reload-page',
 ])
 
 const { store } = props
@@ -53,7 +53,7 @@ function toggleDark() {
   cls.toggle('dark')
   localStorage.setItem(
     'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+    String(cls.contains('dark')),
   )
   emit('toggle-theme', cls.contains('dark'))
 }

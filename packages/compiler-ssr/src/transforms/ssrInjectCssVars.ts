@@ -1,12 +1,12 @@
 import {
-  NodeTransform,
-  NodeTypes,
   ElementTypes,
-  locStub,
+  type NodeTransform,
+  NodeTypes,
+  type RootNode,
+  type TemplateChildNode,
   createSimpleExpression,
-  RootNode,
-  TemplateChildNode,
-  findDir
+  findDir,
+  locStub,
 } from '@vue/compiler-dom'
 
 export const ssrInjectCssVars: NodeTransform = (node, context) => {
@@ -61,7 +61,7 @@ function injectCssVars(node: RootNode | TemplateChildNode) {
         arg: undefined,
         exp: createSimpleExpression(`_cssVars`, false),
         modifiers: [],
-        loc: locStub
+        loc: locStub,
       })
     }
   }

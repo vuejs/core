@@ -8,7 +8,7 @@ export {
   type CodegenOptions,
   type HoistTransform,
   type BindingMetadata,
-  BindingTypes
+  BindingTypes,
 } from './options'
 export { baseParse } from './parser'
 export {
@@ -19,7 +19,7 @@ export {
   createStructuralDirectiveTransform,
   type NodeTransform,
   type StructuralDirectiveTransform,
-  type DirectiveTransform
+  type DirectiveTransform,
 } from './transform'
 export { generate, type CodegenContext, type CodegenResult } from './codegen'
 export {
@@ -27,7 +27,7 @@ export {
   errorMessages,
   createCompilerError,
   type CoreCompilerError,
-  type CompilerError
+  type CompilerError,
 } from './errors'
 
 export * from './ast'
@@ -45,20 +45,20 @@ export { processFor, createForLoopParams } from './transforms/vFor'
 export {
   transformExpression,
   processExpression,
-  stringifyExpression
+  stringifyExpression,
 } from './transforms/transformExpression'
 export {
   buildSlots,
   type SlotFnBuilder,
   trackVForSlotScopes,
-  trackSlotScopes
+  trackSlotScopes,
 } from './transforms/vSlot'
 export {
   transformElement,
   resolveComponentType,
   buildProps,
   buildDirectiveArgs,
-  type PropsExpression
+  type PropsExpression,
 } from './transforms/transformElement'
 export { processSlotOutlet } from './transforms/transformSlotOutlet'
 export { getConstantType } from './transforms/hoistStatic'
@@ -68,5 +68,5 @@ export { generateCodeFrame } from '@vue/shared'
 export {
   checkCompatEnabled,
   warnDeprecation,
-  CompilerDeprecationTypes
+  CompilerDeprecationTypes,
 } from './compat/compatConfig'

@@ -20,7 +20,7 @@ import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
-import { gzipSync, brotliCompressSync } from 'node:zlib'
+import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
 import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
@@ -64,11 +64,11 @@ async function run() {
           'build-dts',
           ...(targets.length
             ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
-            : [])
+            : []),
         ],
         {
-          stdio: 'inherit'
-        }
+          stdio: 'inherit',
+        },
       )
     }
   } finally {
@@ -147,12 +147,12 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``
+        sourceMap ? `SOURCE_MAP:true` : ``,
       ]
         .filter(Boolean)
-        .join(',')
+        .join(','),
     ],
-    { stdio: 'inherit' }
+    { stdio: 'inherit' },
   )
 }
 
@@ -202,10 +202,10 @@ async function checkFileSize(filePath) {
 
   console.log(
     `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
-      file.length
+      file.length,
     )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
-      brotli.length
-    )}`
+      brotli.length,
+    )}`,
   )
 
   if (writeSize)
@@ -215,8 +215,8 @@ async function checkFileSize(filePath) {
         file: fileName,
         size: file.length,
         gzip: gzipped.length,
-        brotli: brotli.length
+        brotli: brotli.length,
       }),
-      'utf-8'
+      'utf-8',
     )
 }

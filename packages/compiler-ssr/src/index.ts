@@ -1,24 +1,24 @@
 import {
-  CodegenResult,
+  type CodegenResult,
+  type CompilerOptions,
+  type RootNode,
   baseParse,
-  parserOptions,
-  transform,
   generate,
-  CompilerOptions,
-  transformExpression,
-  trackVForSlotScopes,
-  trackSlotScopes,
   noopDirectiveTransform,
+  parserOptions,
+  trackSlotScopes,
+  trackVForSlotScopes,
+  transform,
   transformBind,
-  transformStyle,
+  transformExpression,
   transformOn,
-  RootNode
+  transformStyle,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
 import {
+  rawOptionsMap,
   ssrTransformComponent,
-  rawOptionsMap
 } from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrTransformIf } from './transforms/ssrVIf'
@@ -30,7 +30,7 @@ import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
 export function compile(
   source: string | RootNode,
-  options: CompilerOptions = {}
+  options: CompilerOptions = {},
 ): CodegenResult {
   options = {
     ...options,
@@ -42,7 +42,7 @@ export function compile(
     prefixIdentifiers: true,
     // disable optimizations that are unnecessary for ssr
     cacheHandlers: false,
-    hoistStatic: false
+    hoistStatic: false,
   }
 
   const ast = typeof source === 'string' ? baseParse(source, options) : source
@@ -66,7 +66,7 @@ export function compile(
       ssrTransformComponent,
       trackSlotScopes,
       transformStyle,
-      ...(options.nodeTransforms || []) // user transforms
+      ...(options.nodeTransforms || []), // user transforms
     ],
     directiveTransforms: {
       // reusing core v-bind
@@ -80,8 +80,8 @@ export function compile(
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
       memo: noopDirectiveTransform,
-      ...(options.directiveTransforms || {}) // user transforms
-    }
+      ...(options.directiveTransforms || {}), // user transforms
+    },
   })
 
   // traverse the template AST and convert into SSR codegen AST

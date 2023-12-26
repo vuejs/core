@@ -10,5 +10,5 @@ app.directive<HTMLElement, string>('custom', {
 
     // @ts-expect-error not any
     expectType<number>(binding.value)
-  }
+  },
 })

@@ -1,31 +1,31 @@
 import {
+  type Target,
+  isReadonly,
+  isShallow,
   reactive,
-  readonly,
-  toRaw,
-  Target,
-  readonlyMap,
   reactiveMap,
+  readonly,
+  readonlyMap,
   shallowReactiveMap,
   shallowReadonlyMap,
-  isReadonly,
-  isShallow
+  toRaw,
 } from './reactive'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
-  pauseTracking,
-  resetTracking,
   pauseScheduling,
-  resetScheduling
+  pauseTracking,
+  resetScheduling,
+  resetTracking,
 } from './effect'
-import { track, trigger, ITERATE_KEY } from './reactiveEffect'
+import { ITERATE_KEY, track, trigger } from './reactiveEffect'
 import {
-  isObject,
-  hasOwn,
-  isSymbol,
   hasChanged,
+  hasOwn,
   isArray,
   isIntegerKey,
-  makeMap
+  isObject,
+  isSymbol,
+  makeMap,
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
@@ -40,7 +40,7 @@ const builtInSymbols = new Set(
     // function
     .filter(key => key !== 'arguments' && key !== 'caller')
     .map(key => (Symbol as any)[key])
-    .filter(isSymbol)
+    .filter(isSymbol),
 )
 
 const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
@@ -89,7 +89,7 @@ function hasOwnProperty(this: object, key: string) {
 class BaseReactiveHandler implements ProxyHandler<Target> {
   constructor(
     protected readonly _isReadonly = false,
-    protected readonly _shallow = false
+    protected readonly _shallow = false,
   ) {}
 
   get(target: Target, key: string | symbol, receiver: object) {
@@ -172,7 +172,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     target: object,
     key: string | symbol,
     value: unknown,
-    receiver: object
+    receiver: object,
   ): boolean {
     let oldValue = (target as any)[key]
     if (!this._shallow) {
@@ -230,7 +230,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     track(
       target,
       TrackOpTypes.ITERATE,
-      isArray(target) ? 'length' : ITERATE_KEY
+      isArray(target) ? 'length' : ITERATE_KEY,
     )
     return Reflect.ownKeys(target)
   }
@@ -245,7 +245,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     if (__DEV__) {
       warn(
         `Set operation on key "${String(key)}" failed: target is readonly.`,
-        target
+        target,
       )
     }
     return true
@@ -255,7 +255,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
-        target
+        target,
       )
     }
     return true
@@ -269,7 +269,7 @@ export const readonlyHandlers: ProxyHandler<object> =
   /*#__PURE__*/ new ReadonlyReactiveHandler()
 
 export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
-  true
+  true,
 )
 
 // Props handlers are special in the sense that it should not unwrap top-level

@@ -1,5 +1,8 @@
 import { patchProp } from '../src/patchProp'
-import { ElementWithTransition, vtcKey } from '../src/components/Transition'
+import {
+  type ElementWithTransition,
+  vtcKey,
+} from '../src/components/Transition'
 import { svgNS } from '../src/nodeOps'
 
 describe('runtime-dom: class patching', () => {

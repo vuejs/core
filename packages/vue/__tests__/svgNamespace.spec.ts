@@ -6,7 +6,7 @@
 // - compiler-core/src/transforms/transformElement.ts
 
 import { vtcKey } from '../../runtime-dom/src/components/Transition'
-import { render, h, ref, nextTick } from '../src'
+import { h, nextTick, ref, render } from '../src'
 
 describe('SVG support', () => {
   afterEach(() => {
@@ -27,7 +27,7 @@ describe('SVG support', () => {
             </foreignObject>
           </svg>
         </div>
-      `
+      `,
     }
     render(h(App), root)
     const e0 = document.getElementById('e0')!
@@ -53,7 +53,7 @@ describe('SVG support', () => {
             </foreignObject>
           </svg>
         </div>
-      `
+      `,
     }
     render(h(App), root)
     const f1 = document.querySelector('#f1')!

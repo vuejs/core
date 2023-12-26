@@ -1,25 +1,25 @@
 import {
-  VNode,
-  VNodeProps,
+  type Comment,
+  type Fragment,
+  type Text,
+  type VNode,
+  type VNodeArrayChildren,
+  type VNodeProps,
   createVNode,
-  VNodeArrayChildren,
-  Fragment,
-  Text,
-  Comment,
-  isVNode
+  isVNode,
 } from './vnode'
-import { Teleport, TeleportProps } from './components/Teleport'
-import { Suspense, SuspenseProps } from './components/Suspense'
-import { isObject, isArray } from '@vue/shared'
-import { RawSlots } from './componentSlots'
-import {
-  FunctionalComponent,
+import type { Teleport, TeleportProps } from './components/Teleport'
+import type { Suspense, SuspenseProps } from './components/Suspense'
+import { isArray, isObject } from '@vue/shared'
+import type { RawSlots } from './componentSlots'
+import type {
   Component,
   ComponentOptions,
-  ConcreteComponent
+  ConcreteComponent,
+  FunctionalComponent,
 } from './component'
-import { EmitsOptions } from './componentEmits'
-import { DefineComponent } from './apiDefineComponent'
+import type { EmitsOptions } from './componentEmits'
+import type { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
 // props when possible. It is intended for manually written render functions.
@@ -77,7 +77,7 @@ interface Constructor<P = any> {
 
 type HTMLElementEventHandler = {
   [K in keyof HTMLElementEventMap as `on${Capitalize<K>}`]?: (
-    ev: HTMLElementEventMap[K]
+    ev: HTMLElementEventMap[K],
   ) => any
 }
 
@@ -87,12 +87,12 @@ type HTMLElementEventHandler = {
 // element
 export function h<K extends keyof HTMLElementTagNameMap>(
   type: K,
-  children?: RawChildren
+  children?: RawChildren,
 ): VNode
 export function h<K extends keyof HTMLElementTagNameMap>(
   type: K,
   props?: (RawProps & HTMLElementEventHandler) | null,
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // custom element
@@ -100,32 +100,32 @@ export function h(type: string, children?: RawChildren): VNode
 export function h(
   type: string,
   props?: RawProps | null,
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // text/comment
 export function h(
   type: typeof Text | typeof Comment,
-  children?: string | number | boolean
+  children?: string | number | boolean,
 ): VNode
 export function h(
   type: typeof Text | typeof Comment,
   props?: null,
-  children?: string | number | boolean
+  children?: string | number | boolean,
 ): VNode
 // fragment
 export function h(type: typeof Fragment, children?: VNodeArrayChildren): VNode
 export function h(
   type: typeof Fragment,
   props?: RawProps | null,
-  children?: VNodeArrayChildren
+  children?: VNodeArrayChildren,
 ): VNode
 
 // teleport (target prop is required)
 export function h(
   type: typeof Teleport,
   props: RawProps & TeleportProps,
-  children: RawChildren | RawSlots
+  children: RawChildren | RawSlots,
 ): VNode
 
 // suspense
@@ -133,18 +133,18 @@ export function h(type: typeof Suspense, children?: RawChildren): VNode
 export function h(
   type: typeof Suspense,
   props?: (RawProps & SuspenseProps) | null,
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // functional component
 export function h<
   P,
   E extends EmitsOptions = {},
-  S extends Record<string, any> = {}
+  S extends Record<string, any> = {},
 >(
   type: FunctionalComponent<P, E, S>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // catch-all for generic component types
@@ -153,26 +153,26 @@ export function h(type: Component, children?: RawChildren): VNode
 // concrete component
 export function h<P>(
   type: ConcreteComponent | string,
-  children?: RawChildren
+  children?: RawChildren,
 ): VNode
 export function h<P>(
   type: ConcreteComponent<P> | string,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren
+  children?: RawChildren,
 ): VNode
 
 // component without props
 export function h<P>(
   type: Component<P>,
   props?: (RawProps & P) | null,
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // exclude `defineComponent` constructors
 export function h<P>(
   type: ComponentOptions<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // fake constructor type returned by `defineComponent` or class component
@@ -180,7 +180,7 @@ export function h(type: Constructor, children?: RawChildren): VNode
 export function h<P>(
   type: Constructor<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // fake constructor type returned by `defineComponent`
@@ -188,7 +188,7 @@ export function h(type: DefineComponent, children?: RawChildren): VNode
 export function h<P>(
   type: DefineComponent<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // catch all types
@@ -196,7 +196,7 @@ export function h(type: string | Component, children?: RawChildren): VNode
 export function h<P>(
   type: string | Component<P>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots
+  children?: RawChildren | RawSlots,
 ): VNode
 
 // Actual implementation
