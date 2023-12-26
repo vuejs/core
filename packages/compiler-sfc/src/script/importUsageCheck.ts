@@ -4,7 +4,7 @@ import {
   NodeTypes,
   SimpleExpressionNode,
   createRoot,
-  forAliasRE,
+  matchForAlias,
   parserOptions,
   transform,
   walkIdentifiers
@@ -95,11 +95,11 @@ function processExp(exp: string, dir?: string): string {
     } else if (dir === 'on') {
       exp = `()=>{return ${exp}}`
     } else if (dir === 'for') {
-      const inMatch = exp.match(forAliasRE)
+      const inMatch = matchForAlias(exp)
       if (inMatch) {
-        let [, LHS, RHS] = inMatch
+        let { LHS, RHS } = inMatch
         // #6088
-        LHS = LHS.trim().replace(/^\(|\)$/g, '')
+        LHS = LHS.replace(/^\(|\)$/g, '')
         return processExp(`(${LHS})=>{}`) + processExp(RHS)
       }
     }

@@ -38,7 +38,7 @@ import {
   isSlotOutlet,
   injectProp,
   findDir,
-  forAliasRE
+  matchForAlias
 } from '../utils'
 import {
   RENDER_LIST,
@@ -327,17 +327,13 @@ export function parseForExpression(
 ): ForParseResult | undefined {
   const loc = input.loc
   const exp = input.content
-  const inMatch = exp.match(forAliasRE)
-  if (!inMatch) return
 
-  const [, LHS, RHS] = inMatch
+  const inMatch = matchForAlias(exp)
+  if (!inMatch) return
+  const { LHS, RHS } = inMatch
 
   const result: ForParseResult = {
-    source: createAliasExpression(
-      loc,
-      RHS.trim(),
-      exp.indexOf(RHS, LHS.length)
-    ),
+    source: createAliasExpression(loc, RHS, exp.indexOf(RHS, LHS.length)),
     value: undefined,
     key: undefined,
     index: undefined
@@ -352,7 +348,7 @@ export function parseForExpression(
     validateBrowserExpression(result.source as SimpleExpressionNode, context)
   }
 
-  let valueContent = LHS.trim().replace(stripParensRE, '').trim()
+  let valueContent = LHS.replace(stripParensRE, '').trim()
   const trimmedOffset = LHS.indexOf(valueContent)
 
   const iteratorMatch = valueContent.match(forIteratorRE)
