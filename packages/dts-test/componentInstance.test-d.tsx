@@ -1,11 +1,11 @@
 import {
+  type ComponentInstance,
+  type ComponentPublicInstance,
+  type FunctionalComponent,
   defineComponent,
-  FunctionalComponent,
-  ComponentPublicInstance,
-  ComponentInstance,
   ref,
 } from 'vue'
-import { expectType, describe } from './utils'
+import { describe, expectType } from './utils'
 
 describe('defineComponent', () => {
   const CompSetup = defineComponent({

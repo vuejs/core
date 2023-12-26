@@ -104,7 +104,12 @@ module.exports = {
     },
     // Node scripts
     {
-      files: ['scripts/**', './*.{js,ts}', 'packages/**/index.js'],
+      files: [
+        'scripts/**',
+        './*.{js,ts}',
+        'packages/*/*.js',
+        'packages/vue/*/*.js',
+      ],
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': ['error', banConstEnum],

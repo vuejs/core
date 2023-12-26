@@ -5,7 +5,7 @@
 // smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
-import { resolve, relative, dirname } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import minimist from 'minimist'

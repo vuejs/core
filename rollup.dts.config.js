@@ -1,7 +1,7 @@
 // @ts-check
 import assert from 'node:assert/strict'
 import { parse } from '@babel/parser'
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import MagicString from 'magic-string'
 import dts from 'rollup-plugin-dts'
 
