@@ -148,7 +148,7 @@ import { ErrorTypeStrings as _ErrorTypeStrings } from './errorHandling'
  * @internal
  */
 export const ErrorTypeStrings = (
-  __ESM_BUNDLER__ || __DEV__ ? _ErrorTypeStrings : null
+  __ESM_BUNDLER__ || __NODE_JS__ || __DEV__ ? _ErrorTypeStrings : null
 ) as typeof _ErrorTypeStrings
 
 // For devtools
