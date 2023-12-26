@@ -16,6 +16,7 @@ import {
 import {
   ComponentInternalInstance,
   ComponentOptions,
+  ConcreteComponent,
   createComponentInstance,
   Data,
   setupComponent
@@ -58,7 +59,12 @@ import {
 } from './components/Suspense'
 import { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isKeepAlive, KeepAliveContext } from './components/KeepAlive'
-import { registerHMR, unregisterHMR, isHmrUpdating } from './hmr'
+import {
+  registerHMR,
+  unregisterHMR,
+  isHmrUpdating,
+  hmrDirtyComponents
+} from './hmr'
 import { createHydrationFunctions, RootHydrateFunction } from './hydration'
 import { invokeDirectiveHook } from './directives'
 import { startMeasure, endMeasure } from './profiling'
@@ -1488,7 +1494,16 @@ function baseCreateRenderer(
 
         if (__DEV__) {
           startMeasure(instance, `patch`)
+          /**
+           * #7908
+           * During the hmr reload process, in some cases (such as "ref + v-for"),
+           * instance.update will be triggered twice.
+           */
+          if (hmrDirtyComponents.has(nextTree.type as ConcreteComponent)) {
+            toggleRecurse(instance, false)
+          }
         }
+
         patch(
           prevTree,
           nextTree,
@@ -1500,8 +1515,13 @@ function baseCreateRenderer(
           parentSuspense,
           isSVG
         )
+
         if (__DEV__) {
           endMeasure(instance, `patch`)
+
+          if (hmrDirtyComponents.has(nextTree.type as ConcreteComponent)) {
+            toggleRecurse(instance, true)
+          }
         }
         next.el = nextTree.el
         if (originNext === null) {
