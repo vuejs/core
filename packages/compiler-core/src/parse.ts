@@ -1,5 +1,5 @@
 import { ErrorHandlingOptions, ParserOptions } from './options'
-import { NO, isArray, makeMap, extend } from '@vue/shared'
+import { NO, isArray, makeMap, extend, NOOP } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
@@ -73,6 +73,7 @@ export const defaultParserOptions: MergedParserOptions = {
   isVoidTag: NO,
   isPreTag: NO,
   isCustomElement: NO,
+  customElementType: NOOP,
   decodeEntities: (rawText: string): string =>
     rawText.replace(decodeRE, (_, p1) => decodeMap[p1]),
   onError: defaultOnError,
