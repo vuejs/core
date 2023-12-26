@@ -209,8 +209,9 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    getter = () => source
-    deep = true
+    deep = isShallow(source) ? false : deep ?? true
+    getter = deep ? () => source : () => shallowTraverse(source)
+    forceTrigger = true
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
@@ -460,6 +461,26 @@ export function traverse(value: unknown, seen?: Set<unknown>) {
   } else if (isPlainObject(value)) {
     for (const key in value) {
       traverse(value[key], seen)
+    }
+  }
+  return value
+}
+
+export function shallowTraverse(value: unknown) {
+  if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
+    return value
+  }
+  if (isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i]
+    }
+  } else if (isSet(value) || isMap(value)) {
+    value.forEach((v: any) => {
+      v
+    })
+  } else if (isPlainObject(value)) {
+    for (const key in value) {
+      value[key]
     }
   }
   return value

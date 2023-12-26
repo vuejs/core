@@ -156,6 +156,38 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })
 
+  it('directly watching reactive object: deep: false', async () => {
+    const src = reactive({
+      state: {
+        count: 0
+      }
+    })
+    let dummy
+    watch(
+      src,
+      ({ state }) => {
+        dummy = state
+      },
+      {
+        deep: false
+      }
+    )
+    src.state.count++
+    await nextTick()
+    expect(dummy).toBe(undefined)
+  })
+
+  it('directly watching reactive array', async () => {
+    const src = reactive([0])
+    let dummy
+    watch(src, v => {
+      dummy = v
+    })
+    src.push(1)
+    await nextTick()
+    expect(dummy).toMatchObject([0, 1])
+  })
+
   it('watching multiple sources', async () => {
     const state = reactive({ count: 1 })
     const count = ref(1)
