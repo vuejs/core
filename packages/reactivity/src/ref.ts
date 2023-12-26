@@ -476,16 +476,11 @@ type BaseTypes = string | number | boolean
  */
 export interface RefUnwrapBailTypes {}
 
-type DistrubuteRef<T> = T extends Ref<infer V>
-  ? unknown extends V
-    ? never
-    : V
-  : T
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: T[K] extends Ref<infer V>
-    ? V // if `V` is `unknown` that means it does not extend `Ref` and is undefined
-    : DistrubuteRef<T[K]>
+  [K in keyof T]: DistrubuteRef<T[K]>
 }
+
+type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
 
 export type UnwrapRef<T> = T extends ShallowRef<infer V>
   ? V

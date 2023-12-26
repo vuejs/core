@@ -244,13 +244,19 @@ expectType<typeof r1>(p1)
 // proxyRefs: `ShallowUnwrapRef`
 const r2 = {
   a: ref(1),
+  c: computed(() => 1),
+  u: undefined,
   obj: {
     k: ref('foo')
-  }
+  },
+  union: Math.random() > 0 - 5 ? ref({ name: 'yo' }) : null
 }
 const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
+expectType<number>(p2.c)
+expectType<undefined>(p2.u)
 expectType<Ref<string>>(p2.obj.k)
+expectType<{ name: string } | null>(p2.union)
 
 // toRef and toRefs
 {
