@@ -44,7 +44,6 @@ import { convertLegacyComponent } from './compat/component'
 import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentPublicInstance'
 
 export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
@@ -69,13 +68,12 @@ export type VNodeTypes =
   | typeof Suspense
   | typeof SuspenseImpl
 
-export type VNodeRef =
-  | string
-  | Ref
-  | ((
-      ref: Element | ComponentPublicInstance | null,
-      refs: Record<string, any>
-    ) => void)
+// T is the actual Ref Type, S is to allow supporting string type
+// but when using TSX we need to prevent it from being a string
+export type VNodeRef<T = object, S = string> =
+  | S
+  | Ref<T | null>
+  | ((ref: T | null, refs: Record<string, any>) => void)
 
 export type VNodeNormalizedRefAtom = {
   i: ComponentInternalInstance
@@ -97,9 +95,9 @@ export type VNodeHook =
   | VNodeUpdateHook[]
 
 // https://github.com/microsoft/TypeScript/issues/33099
-export type VNodeProps = {
+export type VNodeProps<ComponentInstance = object> = {
   key?: string | number | symbol
-  ref?: VNodeRef
+  ref?: VNodeRef<ComponentInstance>
   ref_for?: boolean
   ref_key?: string
 

@@ -1390,12 +1390,17 @@ import { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
   key?: string | number | symbol
-  ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
 }
 
 export type NativeElements = {
   [K in keyof IntrinsicElementAttributes]: IntrinsicElementAttributes[K] &
-    ReservedProps
+    ReservedProps & {
+      ref?: VNodeRef<
+        K extends keyof HTMLElementTagNameMap
+          ? HTMLElementTagNameMap[K]
+          : HTMLElement
+      >
+    }
 }

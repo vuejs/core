@@ -287,7 +287,7 @@ describe('with object props', () => {
       style={{ color: 'red' }}
       // should allow key
       key={'foo'}
-      // should allow ref
+      // @ts-expect-error cannot be string #3455
       ref={'foo'}
       ref_for={true}
     />

@@ -7,6 +7,7 @@ const Foo = (props: { foo: number }) => h(Text, null, props.foo)
 // TSX
 expectType<JSX.Element>(<Foo foo={1} />)
 expectType<JSX.Element>(<Foo foo={1} key="1" />)
+// @ts-expect-error should allow ref
 expectType<JSX.Element>(<Foo foo={1} ref="ref" />)
 // @ts-expect-error
 ;<Foo />
