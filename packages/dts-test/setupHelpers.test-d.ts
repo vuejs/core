@@ -11,25 +11,28 @@ import {
   defineModel,
   toRefs
 } from 'vue'
-import { describe, expectType } from './utils'
+import { OptionalKeys, describe, expectType } from './utils'
 import { defineComponent } from 'vue'
 import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
-  // type declaration
   const props = defineProps<{
     foo: string
     bool?: boolean
     boolAndUndefined: boolean | undefined
     file?: File | File[]
   }>()
-  // explicitly declared type should be refined
-  expectType<string>(props.foo)
-  // @ts-expect-error
-  props.bar
 
+  // @ts-expect-error
+  props.notExist
+
+  expectType<string>(props.foo)
   expectType<boolean>(props.bool)
   expectType<boolean>(props.boolAndUndefined)
+  expectType<File | File[] | undefined>(props.file)
+
+  // no optional keys
+  expectType<never>('' as OptionalKeys<typeof props>)
 })
 
 describe('defineProps w/ generics', () => {
@@ -163,7 +166,6 @@ describe('withDefaults w/ boolean type', () => {
 })
 
 describe('defineProps w/ runtime declaration', () => {
-  // runtime declaration
   const props = defineProps({
     foo: String,
     bar: {
@@ -173,13 +175,23 @@ describe('defineProps w/ runtime declaration', () => {
     baz: {
       type: Array,
       required: true
+    },
+    bool: Boolean,
+    boolAndUndefined: {
+      type: Boolean,
+      default: undefined
     }
   })
   expectType<{
-    foo?: string
+    foo: string | undefined
     bar: number
     baz: unknown[]
+    bool: boolean
+    boolAndUndefined: boolean | undefined
   }>(props)
+
+  // no optional keys
+  expectType<never>('' as OptionalKeys<typeof props>)
 
   props.foo && props.foo + 'bar'
   props.bar + 1
@@ -438,4 +450,10 @@ describe('toRefs w/ type declaration', () => {
     file?: File | File[]
   }>()
   expectType<Ref<File | File[] | undefined>>(toRefs(props).file)
+})
+describe('toRefs w/ runtime declaration', () => {
+  const props = defineProps({
+    foo: String
+  })
+  expectType<Ref<string | undefined>>(toRefs(props).foo)
 })

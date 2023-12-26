@@ -19,3 +19,10 @@ export type IsUnion<T, U extends T = T> = (
 export type IsAny<T> = 0 extends 1 & T ? true : false
 
 export type Prettify<T> = { [K in keyof T]: T[K] } & {}
+
+// https://github.com/unional/type-plus/blob/a89e140ca7c0ce6b744fbd1b157686cdfa4332c7/type-plus/ts/object/optional_key.ts#L29C1-L31C9
+export type OptionalKeys<T> = T extends unknown
+  ? {
+      [k in keyof T]-?: Record<keyof any, any> extends Pick<T, k> ? k : never
+    }[keyof T]
+  : never
