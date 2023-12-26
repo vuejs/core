@@ -1,4 +1,4 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
+import { activeEffect, DebuggerOptions, ReactiveEffect } from './effect'
 import { Ref, trackRefValue, triggerRefValue } from './ref'
 import { hasChanged, isFunction, NOOP } from '@vue/shared'
 import { toRaw } from './reactive'
@@ -53,7 +53,9 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    trackRefValue(self)
+    if (this.effect !== activeEffect) {
+      trackRefValue(self)
+    }
     if (!self._cacheable || self.effect.dirty) {
       if (hasChanged(self._value, (self._value = self.effect.run()!))) {
         triggerRefValue(self, DirtyLevels.ComputedValueDirty)
