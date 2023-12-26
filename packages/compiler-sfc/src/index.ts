@@ -12,6 +12,17 @@ import { SFCParseResult, parseCache as _parseCache } from './parse'
 // #9521 export parseCache as a simple map to avoid exposing LRU types
 export const parseCache = _parseCache as Map<string, SFCParseResult>
 
+// error messages
+import {
+  errorMessages as coreErrorMessages,
+  DOMErrorMessages
+} from '@vue/compiler-dom'
+
+export const errorMessages = {
+  ...coreErrorMessages,
+  ...DOMErrorMessages
+}
+
 // Utilities
 export { parse as babelParse } from '@babel/parser'
 import MagicString from 'magic-string'
