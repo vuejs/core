@@ -150,7 +150,18 @@ export const ErrorTypeStrings = (
 ) as typeof _ErrorTypeStrings
 
 // For devtools
-export { devtools, setDevtoolsHook } from './devtools'
+import {
+  devtools as _devtools,
+  setDevtoolsHook as _setDevtoolsHook,
+  DevtoolsHook
+} from './devtools'
+
+export const devtools = (
+  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _devtools : undefined
+) as DevtoolsHook
+export const setDevtoolsHook = (
+  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _setDevtoolsHook : NOOP
+) as typeof _setDevtoolsHook
 
 // Types -------------------------------------------------------------------------
 
@@ -377,6 +388,7 @@ import {
   softAssertCompatEnabled
 } from './compat/compatConfig'
 import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
+import { NOOP } from '@vue/shared'
 
 /**
  * @internal only exposed in compat builds
