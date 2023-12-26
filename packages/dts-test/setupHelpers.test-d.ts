@@ -4,6 +4,7 @@ import {
   useAttrs,
   useSlots,
   withDefaults,
+  PropType,
   Slots,
   defineSlots,
   VNode,
@@ -191,6 +192,25 @@ describe('defineProps w/ runtime declaration', () => {
   props2.foo + props2.bar
   // @ts-expect-error
   props2.baz
+})
+
+describe('defineProps w/ generics and runtime declarations', () => {
+  function test<T extends Record<string, any>>() {
+    const props = defineProps({
+      foo: {
+        type: Object as PropType<T>,
+        required: false,
+        default: null
+      },
+      bar: {
+        type: Object as PropType<T>,
+        required: true
+      }
+    })
+    expectType<T | null>(props.foo)
+    expectType<T>(props.bar)
+  }
+  test()
 })
 
 describe('defineEmits w/ type declaration', () => {
