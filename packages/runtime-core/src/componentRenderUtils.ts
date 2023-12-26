@@ -2,7 +2,8 @@ import {
   ComponentInternalInstance,
   FunctionalComponent,
   Data,
-  getComponentName
+  getComponentName,
+  ConcreteComponent
 } from './component'
 import {
   VNode,
@@ -15,7 +16,14 @@ import {
   blockStack
 } from './vnode'
 import { handleError, ErrorCodes } from './errorHandling'
-import { PatchFlags, ShapeFlags, isOn, isModelListener } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isOn,
+  isModelListener,
+  isObject,
+  isArray
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import { NormalizedProps } from './componentProps'
@@ -148,8 +156,23 @@ export function renderComponentRoot(
   }
 
   if (fallthroughAttrs && inheritAttrs !== false) {
+    const { shapeFlag, type, props } = root
+    // fix #8969 should not fallthrough attr if it has been declared as a prop in the root component
+    if (shapeFlag & ShapeFlags.COMPONENT && props) {
+      Object.keys(fallthroughAttrs).forEach(key => {
+        if (key in props) {
+          const propsDef = (type as ConcreteComponent).props
+          if (
+            propsDef &&
+            ((isObject(propsDef) && key in propsDef) ||
+              (isArray(propsDef) && propsDef.includes(key)))
+          )
+            delete fallthroughAttrs![key]
+        }
+      })
+    }
+
     const keys = Object.keys(fallthroughAttrs)
-    const { shapeFlag } = root
     if (keys.length) {
       if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
         if (propsOptions && keys.some(isModelListener)) {
