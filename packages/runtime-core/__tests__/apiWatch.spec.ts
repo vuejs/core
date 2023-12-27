@@ -1472,4 +1472,24 @@ describe('api: watch', () => {
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
   })
+  it('watching reactive with deep: false', async () => {
+    const state = reactive({
+      foo: {
+        a: 2,
+      },
+      bar: 'bar',
+    })
+
+    const spy = vi.fn()
+
+    watch(state, spy, { deep: false })
+
+    state.foo.a++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(0)
+
+    state.bar = 'bar2'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })

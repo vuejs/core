@@ -234,8 +234,8 @@ function doWatch(
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
+    if (!deep || isShallow(source)) depth = 1
     deep = true
-    if (isShallow(source)) depth = 1
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
