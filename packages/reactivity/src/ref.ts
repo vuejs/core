@@ -53,7 +53,6 @@ export function trackRefValue(ref: RefBase<any>) {
 }
 
 export function triggerRefValue(ref: RefBase<any>, newVal?: any) {
-  ref = toRaw(ref)
   const dep = ref.dep
   if (dep) {
     if (__DEV__) {
