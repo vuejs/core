@@ -437,6 +437,135 @@ describe('compiler: transform v-on', () => {
     })
   })
 
+  test('should handle inline arrow function expression wrapped in parentheses', () => {
+    const { node } = parseWithVOn(`<div @click="(foo => bar = foo)" />`)
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(foo => bar = foo)'
+    })
+  })
+
+  test('should handle inline arrow function expression wrapped in parentheses (with Typescript)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="((foo: any): any => bar = foo)" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '((foo: any): any => bar = foo)'
+    })
+  })
+
+  test('should handle inline function expression wrapped in parentheses', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(function (foo) { bar = foo })" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(function (foo) { bar = foo })'
+    })
+  })
+
+  test('should handle inline function expression wrapped in parentheses (with Typescript)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(function (foo: any): any { bar = foo })" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(function (foo: any): any { bar = foo })'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters', () => {
+    const { node } = parseWithVOn(
+      `<div @click="async foo => await fetch(foo)" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: 'async foo => await fetch(foo)'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters (with Typescript)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="async (foo: any): Promise<any> => await fetch(foo)" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: 'async (foo: any): Promise<any> => await fetch(foo)'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters wrapped in parentheses', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(async foo => await fetch(foo))" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(async foo => await fetch(foo))'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters wrapped in parentheses (with Typescript)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(async (foo: any): Promise<any> => await fetch(foo))" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(async (foo: any): Promise<any> => await fetch(foo))'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters wrapped in parentheses', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(async function (foo) {\nawait fetch(foo)\nbar = foo\n})" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content: '(async function (foo) {\nawait fetch(foo)\nbar = foo\n})'
+    })
+  })
+
+  test('should handle inline async arrow function expression with parameters wrapped in parentheses (with Typescript)', () => {
+    const { node } = parseWithVOn(
+      `<div @click="(async function (foo: any): Promise<any> {\nawait fetch(foo)\nbar = foo\n}})" />`
+    )
+    const vnodeCall = node.codegenNode as VNodeCall
+    expect(
+      (vnodeCall.props as ObjectExpression).properties[0].value
+    ).toMatchObject({
+      type: NodeTypes.SIMPLE_EXPRESSION,
+      content:
+        '(async function (foo: any): Promise<any> {\nawait fetch(foo)\nbar = foo\n}})'
+    })
+  })
+
   // TODO remove in 3.4
   test('case conversion for vnode hooks', () => {
     const { node } = parseWithVOn(`<div v-on:vnode-mounted="onMount"/>`)
