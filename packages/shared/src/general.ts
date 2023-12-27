@@ -152,6 +152,7 @@ export const def = (obj: object, key: string | symbol, value: any) => {
  * This is used for the .number modifier in v-model
  */
 export const looseToNumber = (val: any): any => {
+  if (val === '') return null
   const n = parseFloat(val)
   return isNaN(n) ? val : n
 }
