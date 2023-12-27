@@ -1,7 +1,16 @@
 import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
-import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
+import {
+  capitalize,
+  hasOwn,
+  hasChanged,
+  toRawType,
+  isMap,
+  isWeakMap,
+  isSet,
+  isWeakSet
+} from '@vue/shared'
 
 type CollectionTypes = IterableCollections | WeakCollections
 
@@ -335,6 +344,36 @@ const [
   shallowReadonlyInstrumentations
 ] = /* #__PURE__*/ createInstrumentations()
 
+const mapNeedToIgnoreInstrumentationKeys = ['add']
+const weakMapNeedToIgnoreInstrumentationKeys = [
+  'size',
+  'add',
+  'clear',
+  'forEach',
+  'keys',
+  'values',
+  'entries',
+  Symbol.iterator
+]
+const setNeedToIgnoreInstrumentationKeys = ['get', 'set']
+const weakSetNeedToIgnoreInstrumentationKeys = [
+  'get',
+  'size',
+  'set',
+  'clear',
+  'forEach',
+  'keys',
+  'values',
+  'entries',
+  Symbol.iterator
+]
+const needToIgnoreInstrumentationMap = {
+  Map: mapNeedToIgnoreInstrumentationKeys,
+  WeakMap: weakMapNeedToIgnoreInstrumentationKeys,
+  Set: setNeedToIgnoreInstrumentationKeys,
+  WeakSet: weakSetNeedToIgnoreInstrumentationKeys
+}
+
 function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
   const instrumentations = shallow
     ? isReadonly
@@ -357,10 +396,30 @@ function createInstrumentationGetter(isReadonly: boolean, shallow: boolean) {
       return target
     }
 
+    let needToIgnoreInstrumentationKeys: (string | symbol)[] = []
+
+    const targetType = isMap(target)
+      ? 'Map'
+      : isWeakMap(target)
+      ? 'WeakMap'
+      : isSet(target)
+      ? 'Set'
+      : isWeakSet(target)
+      ? 'WeakSet'
+      : ''
+
+    if (targetType) {
+      needToIgnoreInstrumentationKeys =
+        needToIgnoreInstrumentationMap[targetType]
+    }
+
+    const shouldUseInstrumentations =
+      hasOwn(instrumentations, key) &&
+      key in target &&
+      !needToIgnoreInstrumentationKeys.includes(key)
+
     return Reflect.get(
-      hasOwn(instrumentations, key) && key in target
-        ? instrumentations
-        : target,
+      shouldUseInstrumentations ? instrumentations : target,
       key,
       receiver
     )

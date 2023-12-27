@@ -38,8 +38,12 @@ export const hasOwn = (
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'
+export const isWeakMap = (val: unknown): val is WeakMap<any, any> =>
+  toTypeString(val) === '[object WeakMap]'
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
+export const isWeakSet = (val: unknown): val is WeakSet<any> =>
+  toTypeString(val) === '[object WeakSet]'
 
 export const isDate = (val: unknown): val is Date =>
   toTypeString(val) === '[object Date]'
