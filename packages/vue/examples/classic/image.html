@@ -1,0 +1,10 @@
+<script src="../../dist/vue.global.js"></script>
+
+<div id="app">
+  <img style="display: none" src="./lazyload.jpg" loading="lazy" />
+</div>
+
+<script>
+  const app = Vue.createApp({})
+  app.mount(document.querySelector('#app'))
+</script>

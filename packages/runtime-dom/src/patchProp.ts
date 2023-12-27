@@ -4,7 +4,7 @@ import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
 import { isOn, isString, isFunction, isModelListener } from '@vue/shared'
-import { RendererOptions } from '@vue/runtime-core'
+import { RendererOptions, VNodeTypes } from '@vue/runtime-core'
 
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
@@ -14,6 +14,19 @@ const isNativeOn = (key: string) =>
   key.charCodeAt(2) < 123
 
 type DOMRendererOptions = RendererOptions<Node, Element>
+
+const IMGPRIORPROPS = ['loading']
+export function getPriorityProps(type: VNodeTypes) {
+  let result: Array<string> = []
+  switch (type) {
+    case 'img':
+      result = IMGPRIORPROPS
+      break
+    default:
+      break
+  }
+  return result
+}
 
 export const patchProp: DOMRendererOptions['patchProp'] = (
   el,
