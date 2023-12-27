@@ -203,24 +203,6 @@ describe('api: template refs', () => {
     expect(spy).toHaveBeenCalledWith('div')
   })
 
-  it('should work with direct reactive property', () => {
-    const root = nodeOps.createElement('div')
-    const state = reactive({
-      refKey: null
-    })
-
-    const Comp = {
-      setup() {
-        return state
-      },
-      render() {
-        return h('div', { ref: 'refKey' })
-      }
-    }
-    render(h(Comp), root)
-    expect(state.refKey).toBe(root.children[0])
-  })
-
   test('multiple root refs', () => {
     const root = nodeOps.createElement('div')
     const refKey1 = ref(null)
@@ -538,5 +520,39 @@ describe('api: template refs', () => {
     expect(serializeInner(root)).toBe(
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>'
     )
+  })
+
+  // #7529
+  test('named ref, Non-ref data should not be contaminated', async () => {
+    const root = nodeOps.createElement('div')
+
+    const refKey1 = 1
+    const refKey2 = reactive({ a: 1 })
+    const refKey3 = [1]
+    const refKey4 = { a: 1 }
+
+    const Comp = {
+      setup() {
+        return {
+          refKey1,
+          refKey2,
+          refKey3,
+          refKey4
+        }
+      },
+      render() {
+        return [
+          h('div', { ref: 'refKey1' }),
+          h('div', { ref: 'refKey2' }),
+          h('div', { ref: 'refKey3' }),
+          h('div', { ref: 'refKey4' })
+        ]
+      }
+    }
+    render(h(Comp), root)
+    expect(refKey1).toBe(1)
+    expect(refKey2.a).toEqual(1)
+    expect(refKey3[0]).toEqual(1)
+    expect(refKey4.a).toEqual(1)
   })
 })
