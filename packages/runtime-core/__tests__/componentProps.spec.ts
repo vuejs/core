@@ -331,6 +331,8 @@ describe('component props', () => {
       props: {
         bool: { type: Boolean },
         str: { type: String },
+        symStr: { type: String },
+        sym: { type: Symbol },
         num: { type: Number },
         arr: { type: Array },
         obj: { type: Object },
@@ -347,6 +349,8 @@ describe('component props', () => {
       h(Comp, {
         bool: 'true',
         str: 100,
+        symStr: Symbol(),
+        sym: 'symbol',
         num: '100',
         arr: {},
         obj: 'false',
@@ -362,6 +366,12 @@ describe('component props', () => {
     ).toHaveBeenWarned()
     expect(
       `Invalid prop: type check failed for prop "str". Expected String with value "100", got Number with value 100.`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "symStr". Expected String, got Symbol`
+    ).toHaveBeenWarned()
+    expect(
+      `Invalid prop: type check failed for prop "sym". Expected Symbol, got String with value "symbol".`
     ).toHaveBeenWarned()
     expect(
       `Invalid prop: type check failed for prop "num". Expected Number with value 100, got String with value "100".`
