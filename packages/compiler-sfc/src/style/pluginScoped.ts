@@ -4,15 +4,18 @@ import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
+type pluginParam = { id: string; filename?: string }
 
-const scopedPlugin: PluginCreator<string> = (id = '') => {
+const scopedPlugin: PluginCreator<pluginParam> = (
+  params: pluginParam | undefined
+) => {
   const keyframes = Object.create(null)
-  const shortId = id.replace(/^data-v-/, '')
+  const shortId = params!.id.replace(/^data-v-/, '')
 
   return {
     postcssPlugin: 'vue-sfc-scoped',
     Rule(rule) {
-      processRule(id, rule)
+      processRule(params!.id, rule, params!.filename)
     },
     AtRule(node) {
       if (
@@ -61,7 +64,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
 
 const processedRules = new WeakSet<Rule>()
 
-function processRule(id: string, rule: Rule) {
+function processRule(id: string, rule: Rule, filename = '') {
   if (
     processedRules.has(rule) ||
     (rule.parent &&
@@ -73,7 +76,7 @@ function processRule(id: string, rule: Rule) {
   processedRules.add(rule)
   rule.selector = selectorParser(selectorRoot => {
     selectorRoot.each(selector => {
-      rewriteSelector(id, selector, selectorRoot)
+      rewriteSelector(id, selector, selectorRoot, filename)
     })
   }).processSync(rule.selector)
 }
@@ -82,6 +85,7 @@ function rewriteSelector(
   id: string,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
+  filename = '',
   slotted = false
 ) {
   let node: selectorParser.Node | null = null
@@ -89,6 +93,7 @@ function rewriteSelector(
   // find the last child node to insert attribute selector
   selector.each(n => {
     // DEPRECATED ">>>" and "/deep/" combinator
+
     if (
       n.type === 'combinator' &&
       (n.value === '>>>' || n.value === '/deep/')
@@ -96,8 +101,8 @@ function rewriteSelector(
       n.value = ' '
       n.spaces.before = n.spaces.after = ''
       warn(
-        `the >>> and /deep/ combinators have been deprecated. ` +
-          `Use :deep() instead.`
+        `the >>> and /deep/ combinators have been deprecated.   ` +
+          `Use :deep() instead.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
       )
       return false
     }
@@ -131,7 +136,7 @@ function rewriteSelector(
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
             `${value} usage as a combinator has been deprecated. ` +
-              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.(${filename}(${n.source?.start?.line} : ${n.source?.start?.column}))`
           )
 
           const prev = selector.at(selector.index(n) - 1)
@@ -147,7 +152,13 @@ function rewriteSelector(
       // instead.
       // ::v-slotted(.foo) -> .foo[xxxxxxx-s]
       if (value === ':slotted' || value === '::v-slotted') {
-        rewriteSelector(id, n.nodes[0], selectorRoot, true /* slotted */)
+        rewriteSelector(
+          id,
+          n.nodes[0],
+          selectorRoot,
+          filename,
+          true /* slotted */
+        )
         let last: selectorParser.Selector['nodes'][0] = n
         n.nodes[0].each(ss => {
           selector.insertAfter(last, ss)

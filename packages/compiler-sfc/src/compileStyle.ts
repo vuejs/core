@@ -117,7 +117,7 @@ export function doCompileStyle(
     plugins.push(trimPlugin())
   }
   if (scoped) {
-    plugins.push(scopedPlugin(longId))
+    plugins.push(scopedPlugin({ id: longId, filename: filename }))
   }
   let cssModules: Record<string, string> | undefined
   if (modules) {
