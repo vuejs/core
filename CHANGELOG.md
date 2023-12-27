@@ -1,3 +1,17 @@
+# [3.4.0-rc.3](https://github.com/vuejs/core/compare/v3.4.0-rc.2...v3.4.0-rc.3) (2023-12-27)
+
+
+### Bug Fixes
+
+* also export runtime error strings in all cjs builds ([38706e4](https://github.com/vuejs/core/commit/38706e4a1e5e5380e7df910b2a784d0a9bc9db29))
+
+
+### Features
+
+* **defineModel:** support modifiers and transformers ([a772031](https://github.com/vuejs/core/commit/a772031ea8431bd732ffeaeaac09bd76a0daec9b))
+
+
+
 # [3.4.0-rc.2](https://github.com/vuejs/core/compare/v3.4.0-rc.1...v3.4.0-rc.2) (2023-12-26)
 
 
