@@ -274,6 +274,8 @@ export interface ForNode extends Node {
   parseResult: ForParseResult
   children: TemplateChildNode[]
   codegenNode?: ForCodegenNode
+  isTemplateFor?: boolean
+  templateProps?: Array<AttributeNode | DirectiveNode>
 }
 
 export interface TextCallNode extends Node {

@@ -202,6 +202,30 @@ describe('compiler: v-for', () => {
       expect(forNode.valueAlias).toBeUndefined()
       expect((forNode.source as SimpleExpressionNode).content).toBe('items')
     })
+
+    test('is template property', () => {
+      const { node: spanForNode } = parseWithForTransform(
+        '<span v-for="index in 5" />'
+      )
+      const { node: templateForNode } = parseWithForTransform(
+        '<template v-for="index in 5" />'
+      )
+      expect(spanForNode.isTemplateFor).toBe(false)
+      expect(templateForNode.isTemplateFor).toBe(true)
+    })
+
+    test('key props in template', () => {
+      const { node: spanForNode } = parseWithForTransform(
+        '<span v-for="index in 5" :key="index" />'
+      )
+      const { node: templateForNode } = parseWithForTransform(
+        '<template v-for="index in 5" :key="index" />'
+      )
+
+      expect(spanForNode.templateProps).toBeUndefined()
+      expect(templateForNode.templateProps).toHaveLength(1)
+      expect(templateForNode.templateProps![0].type).toBe(NodeTypes.DIRECTIVE)
+    })
   })
 
   describe('errors', () => {
