@@ -150,8 +150,8 @@ function parseChildren(
   const nodes: TemplateChildNode[] = []
 
   while (!isEnd(context, mode, ancestors)) {
-    __TEST__ && assert(context.source.length > 0)
     const s = context.source
+    __TEST__ && assert(s.length > 0)
     let node: TemplateChildNode | TemplateChildNode[] | undefined = undefined
 
     if (mode === TextModes.DATA || mode === TextModes.RCDATA) {
