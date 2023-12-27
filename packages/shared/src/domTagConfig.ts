@@ -27,6 +27,7 @@ const SVG_TAGS =
   'polygon,polyline,radialGradient,rect,set,solidcolor,stop,switch,symbol,' +
   'text,textPath,title,tspan,unknown,use,view'
 
+// https://developer.mozilla.org/en-US/docs/Glossary/Void_element
 const VOID_TAGS =
   'area,base,br,col,embed,hr,img,input,link,meta,param,source,track,wbr'
 
