@@ -821,6 +821,31 @@ describe('reactivity/effect', () => {
     expect(dummy).toBe(3)
   })
 
+  it('stop with multiple dependencies', () => {
+    let dummy1, dummy2
+    const obj1 = reactive({ prop: 1 })
+    const obj2 = reactive({ prop: 1 })
+    const runner = effect(() => {
+      dummy1 = obj1.prop
+      dummy2 = obj2.prop
+    })
+
+    obj1.prop = 2
+    expect(dummy1).toBe(2)
+
+    obj2.prop = 3
+    expect(dummy2).toBe(3)
+
+    stop(runner)
+
+    obj1.prop = 4
+    obj2.prop = 5
+
+    // Check that both dependencies have been cleared
+    expect(dummy1).toBe(2)
+    expect(dummy2).toBe(3)
+  })
+
   // #5707
   // when an effect completes its run, it should clear the tracking bits of
   // its tracked deps. However, if the effect stops itself, the deps list is
