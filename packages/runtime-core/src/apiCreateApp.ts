@@ -50,6 +50,7 @@ export interface App<HostElement = any> {
     isSVG?: boolean
   ): ComponentPublicInstance
   unmount(): void
+  onUnmount(cb: () => void): void
   provide<T>(key: InjectionKey<T> | string, value: T): this
 
   /**
@@ -212,6 +213,7 @@ export function createAppAPI<HostElement>(
     }
 
     const context = createAppContext()
+    const pluginCleanupFns: Array<() => any> = []
 
     // TODO remove in 3.4
     if (__DEV__) {
@@ -369,9 +371,23 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      onUnmount(cleanupFn: () => void) {
+        if (typeof cleanupFn === 'function') pluginCleanupFns.push(cleanupFn)
+        else if (__DEV__) {
+          warn(
+            `Expected function as first argument to app.onUnmount(), but got ${typeof cleanupFn}`
+          )
+        }
+      },
+
       unmount() {
         if (isMounted) {
           render(null, app._container)
+          pluginCleanupFns.map(fn => {
+            try {
+              fn()
+            } catch {}
+          })
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
             devtoolsUnmountApp(app)
