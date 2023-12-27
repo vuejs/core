@@ -1,8 +1,9 @@
-import { hyphenate, isArray } from '@vue/shared'
+import { hyphenate, isArray, isString, isFunction } from '@vue/shared'
 import {
   ErrorCodes,
   ComponentInternalInstance,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
+  warn
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -36,7 +37,7 @@ export function patchEvent(
   el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
-  nextValue: EventValue | null,
+  nextValue: EventValue | unknown,
   instance: ComponentInternalInstance | null = null
 ) {
   // vei = vue event invokers
@@ -44,12 +45,15 @@ export function patchEvent(
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = nextValue
+    existingInvoker.value = sanitizeEventValue(nextValue, rawName)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
-      const invoker = (invokers[rawName] = createInvoker(nextValue, instance))
+      const invoker = (invokers[rawName] = createInvoker(
+        sanitizeEventValue(nextValue, rawName),
+        instance
+      ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
       // remove
@@ -116,6 +120,22 @@ function createInvoker(
   return invoker
 }
 
+function sanitizeEventValue(value: unknown, propName: string): EventValue {
+  if (isFunction(value) || isArray(value)) {
+    return value as EventValue
+  }
+
+  if (__DEV__) {
+    warn(
+      'Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' +
+        propName +
+        '=' +
+        (isString(value) ? value : typeof value)
+    )
+  }
+  return () => {}
+}
+
 function patchStopImmediatePropagation(
   e: Event,
   value: EventValue
@@ -126,7 +146,9 @@ function patchStopImmediatePropagation(
       originalStop.call(e)
       ;(e as any)._stopped = true
     }
-    return value.map(fn => (e: Event) => !(e as any)._stopped && fn && fn(e))
+    return (value as Function[]).map(
+      fn => (e: Event) => !(e as any)._stopped && fn && fn(e)
+    )
   } else {
     return value
   }
