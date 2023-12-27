@@ -2,6 +2,7 @@
 import { App } from './apiCreateApp'
 import { Fragment, Text, Comment, Static } from './vnode'
 import { ComponentInternalInstance } from './component'
+import { isFunction } from '@vue/shared'
 
 interface AppRecord {
   id: number
@@ -115,7 +116,7 @@ export const devtoolsComponentRemoved = (
 ) => {
   if (
     devtools &&
-    typeof devtools.cleanupBuffer === 'function' &&
+    isFunction(devtools.cleanupBuffer) &&
     // remove the component if it wasn't buffered
     !devtools.cleanupBuffer(component)
   ) {

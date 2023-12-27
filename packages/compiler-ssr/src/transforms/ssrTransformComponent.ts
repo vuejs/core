@@ -54,7 +54,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup
 } from './ssrTransformTransitionGroup'
-import { isSymbol, isObject, isArray } from '@vue/shared'
+import { isSymbol, isObject, isArray, isString } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -175,7 +175,7 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
       ? buildSlots(node, context, buildSSRSlotFn).slots
       : `null`
 
-    if (typeof component !== 'string') {
+    if (!isString(component)) {
       // dynamic component that resolved to a `resolveDynamicComponent` call
       // expression - since the resolved result may be a plain element (string)
       // or a VNode, handle it with `renderVNode`.
@@ -254,7 +254,7 @@ export function ssrProcessComponent(
       node.ssrCodegenNode.arguments.push(`_scopeId`)
     }
 
-    if (typeof component === 'string') {
+    if (isString(component)) {
       // static component
       context.pushStatement(
         createCallExpression(`_push`, [node.ssrCodegenNode])
