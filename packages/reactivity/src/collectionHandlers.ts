@@ -1,4 +1,10 @@
-import { toRaw, ReactiveFlags, toReactive, toReadonly } from './reactive'
+import {
+  toRaw,
+  ReactiveFlags,
+  toReactive,
+  toReadonly,
+  isProxy
+} from './reactive'
 import { track, trigger, ITERATE_KEY, MAP_KEY_ITERATE_KEY } from './effect'
 import { TrackOpTypes, TriggerOpTypes } from './operations'
 import { capitalize, hasOwn, hasChanged, toRawType, isMap } from '@vue/shared'
@@ -67,7 +73,9 @@ function size(target: IterableCollections, isReadonly = false) {
 }
 
 function add(this: SetTypes, value: unknown) {
-  value = toRaw(value)
+  if (!isProxy(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const proto = getProto(target)
   const hadKey = proto.has.call(target, value)
@@ -79,7 +87,9 @@ function add(this: SetTypes, value: unknown) {
 }
 
 function set(this: MapTypes, key: unknown, value: unknown) {
-  value = toRaw(value)
+  if (!isProxy(value)) {
+    value = toRaw(value)
+  }
   const target = toRaw(this)
   const { has, get } = getProto(target)
 
