@@ -299,6 +299,16 @@ function parseChildren(
           node.content = node.content.replace(/\r\n/g, '\n')
         }
       }
+      // #9229 innerHTML normalize \r\n or \r into a single \n in the DOM
+      else if (
+        node.type === NodeTypes.INTERPOLATION &&
+        node.content.type === NodeTypes.SIMPLE_EXPRESSION
+      ) {
+        node.content.content = node.content.content.replace(
+          /\\r\\n|\\r/g,
+          '\\n'
+        )
+      }
       // Remove comment nodes if desired by configuration.
       else if (node.type === NodeTypes.COMMENT && !context.options.comments) {
         removedWhitespace = true
