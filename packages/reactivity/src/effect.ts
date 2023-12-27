@@ -424,6 +424,6 @@ function triggerEffect(
   }
 }
 
-export function getDepFromReactive(object: any, key: string | number | symbol) {
+export function getDepFromReactive(object: any, key: keyof any) {
   return targetMap.get(object)?.get(key)
 }

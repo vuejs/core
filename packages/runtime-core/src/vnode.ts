@@ -98,7 +98,7 @@ export type VNodeHook =
 
 // https://github.com/microsoft/TypeScript/issues/33099
 export type VNodeProps = {
-  key?: string | number | symbol
+  key?: keyof any
   ref?: VNodeRef
   ref_for?: boolean
   ref_key?: string
@@ -148,7 +148,7 @@ export interface VNode<
 
   type: VNodeTypes
   props: (VNodeProps & ExtraProps) | null
-  key: string | number | symbol | null
+  key: keyof any | null
   ref: VNodeNormalizedRef | null
   /**
    * SFC only. This is assigned on vnode creation using currentScopeId
