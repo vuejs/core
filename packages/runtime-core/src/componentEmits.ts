@@ -91,10 +91,17 @@ export function emit(
             event.startsWith(compatModelEventPrefix))
         )
       ) {
-        if (!propsOptions || !(toHandlerKey(event) in propsOptions)) {
+        if (
+          !propsOptions ||
+          !(
+            // only checking on camelized handler keys since that is what developers should use
+            // https://github.com/vuejs/vue-next/pull/4804#discussion_r736462241
+            toHandlerKey(camelize(event)) in propsOptions
+          )
+        ) {
           warn(
-            `Component emitted event "${event}" but it is neither declared in ` +
-              `the emits option nor as an "${toHandlerKey(event)}" prop.`
+            `Component emitted event "${event}" but didn't declare a "${toHandlerKey(camelize(event))}" prop ` +
+              `or a "${camelize(event)}" emit option.`
           )
         }
       } else {

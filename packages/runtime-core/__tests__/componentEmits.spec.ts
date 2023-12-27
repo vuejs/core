@@ -160,7 +160,7 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`
+      `Component emitted event "bar" but didn't declare a "onBar" prop or a "bar" emit option.`
     ).toHaveBeenWarned()
   })
 
@@ -177,7 +177,7 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "bar" but it is neither declared`
+      `Component emitted event "bar" but didn't declare a "onBar" prop or a "bar" emit option.`
     ).toHaveBeenWarned()
   })
 
@@ -193,7 +193,23 @@ describe('component: emit', () => {
     })
     render(h(Foo), nodeOps.createElement('div'))
     expect(
-      `Component emitted event "foo" but it is neither declared`
+      `Component emitted event "foo" but didn't declare a "onFoo" prop or a "foo" emit option.`
+    ).not.toHaveBeenWarned()
+  })
+
+  test('should not warn if has equivalent onXXX prop with kebap-cased event', () => {
+    const Foo = defineComponent({
+      props: ['onFooBar'],
+      emits: [],
+      render() {},
+      created() {
+        // @ts-expect-error `$emit` argument type is inferred from empty component `emits` and thus is `never` here
+        this.$emit('foo-bar')
+      }
+    })
+    render(h(Foo), nodeOps.createElement('div'))
+    expect(
+      `Component emitted event "foo-bar" but didn't declare a "onFooBar" prop or a "foo-bar" emit option.`
     ).not.toHaveBeenWarned()
   })
 
