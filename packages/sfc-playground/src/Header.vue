@@ -27,6 +27,12 @@ const { store } = props
 const currentCommit = __COMMIT__
 const vueVersion = ref(`@${currentCommit}`)
 
+const vueURL = store.getImportMap().imports.vue
+if (vueURL && !vueURL.startsWith(location.origin)) {
+  const versionMatch = vueURL.match(/runtime-dom@([^/]+)/)
+  if (versionMatch) vueVersion.value = versionMatch[1]
+}
+
 async function setVueVersion(v: string) {
   vueVersion.value = `loading...`
   await store.setVueVersion(v)
