@@ -234,7 +234,8 @@ function doWatch(
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
     getter = () => source
-    if (!deep) deep = true
+    deep = true
+    if (isShallow(source)) depth = 1
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
@@ -243,7 +244,7 @@ function doWatch(
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
-          return traverse(s)
+          return traverse(s, isShallow(s) ? 1 : depth)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
@@ -286,7 +287,7 @@ function doWatch(
         isArray(val) &&
         checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
-        traverse(val)
+        traverse(val, depth)
       }
       return val
     }

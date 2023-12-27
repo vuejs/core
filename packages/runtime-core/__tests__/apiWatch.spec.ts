@@ -30,7 +30,8 @@ import {
   shallowRef,
   Ref,
   effectScope,
-  toRef
+  toRef,
+  shallowReactive
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -1438,5 +1439,37 @@ describe('api: watch', () => {
     arr.value.pop()
     await nextTick()
     expect(cb).toHaveBeenCalledTimes(4)
+  })
+
+  it('shallowReactive', async () => {
+    const state = shallowReactive({
+      msg: ref('hello'),
+      foo: {
+        a: ref(1),
+        b: 2
+      },
+      bar: 'bar'
+    })
+
+    const spy = vi.fn()
+
+    watch(state, spy)
+
+    state.msg.value = 'hi'
+    await nextTick()
+    expect(spy).not.toHaveBeenCalled()
+
+    state.bar = 'bar2'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    state.foo.a.value++
+    state.foo.b++
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+
+    state.bar = 'bar3'
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(2)
   })
 })
