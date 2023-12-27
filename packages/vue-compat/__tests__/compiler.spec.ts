@@ -7,7 +7,7 @@ import { triggerEvent } from './utils'
 beforeEach(() => {
   toggleDeprecationWarning(false)
   Vue.configureCompat({
-    MODE: 2
+    MODE: 2,
   })
 })
 
@@ -21,14 +21,14 @@ afterEach(() => {
 
 test('COMPILER_IS_ON_ELEMENT', () => {
   const MyButton = {
-    template: `<div><slot/></div>`
+    template: `<div><slot/></div>`,
   }
 
   const vm = new Vue({
     template: `<button is="my-button">text</button>`,
     components: {
-      MyButton
-    }
+      MyButton,
+    },
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)
@@ -38,14 +38,14 @@ test('COMPILER_IS_ON_ELEMENT', () => {
 
 test('COMPILER_IS_ON_ELEMENT (dynamic)', () => {
   const MyButton = {
-    template: `<div><slot/></div>`
+    template: `<div><slot/></div>`,
   }
 
   const vm = new Vue({
     template: `<button :is="'MyButton'">text</button>`,
     components: {
-      MyButton
-    }
+      MyButton,
+    },
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)
@@ -56,19 +56,19 @@ test('COMPILER_IS_ON_ELEMENT (dynamic)', () => {
 test('COMPILER_V_BIND_SYNC', async () => {
   const MyButton = {
     props: ['foo'],
-    template: `<button @click="$emit('update:foo', 1)">{{ foo }}</button>`
+    template: `<button @click="$emit('update:foo', 1)">{{ foo }}</button>`,
   }
 
   const vm = new Vue({
     data() {
       return {
-        foo: 0
+        foo: 0,
       }
     },
     template: `<my-button :foo.sync="foo" />`,
     components: {
-      MyButton
-    }
+      MyButton,
+    },
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
@@ -83,13 +83,13 @@ test('COMPILER_V_BIND_SYNC', async () => {
 
 test('COMPILER_V_BIND_OBJECT_ORDER', () => {
   const vm = new Vue({
-    template: `<div id="foo" v-bind="{ id: 'bar', class: 'baz' }" />`
+    template: `<div id="foo" v-bind="{ id: 'bar', class: 'baz' }" />`,
   }).$mount()
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)
   expect(vm.$el.id).toBe('foo')
   expect(vm.$el.className).toBe('baz')
   expect(
-    CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER
+    CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
   ).toHaveBeenWarned()
 })
 
@@ -99,12 +99,12 @@ test('COMPILER_V_ON_NATIVE', () => {
     template: `<child @click="spy" @click.native="spy" />`,
     components: {
       child: {
-        template: `<button />`
-      }
+        template: `<button />`,
+      },
     },
     methods: {
-      spy
-    }
+      spy,
+    },
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLButtonElement)
@@ -116,13 +116,13 @@ test('COMPILER_V_ON_NATIVE', () => {
 test('COMPILER_V_IF_V_FOR_PRECEDENCE', () => {
   new Vue({ template: `<div v-if="true" v-for="i in 1"/>` }).$mount()
   expect(
-    CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE
+    CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
   ).toHaveBeenWarned()
 })
 
 test('COMPILER_NATIVE_TEMPLATE', () => {
   const vm = new Vue({
-    template: `<div><template><div/></template></div>`
+    template: `<div><template><div/></template></div>`,
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)
@@ -137,9 +137,9 @@ test('COMPILER_INLINE_TEMPLATE', () => {
       foo: {
         data() {
           return { n: 123 }
-        }
-      }
-    }
+        },
+      },
+    },
   }).$mount()
 
   expect(vm.$el).toBeInstanceOf(HTMLDivElement)

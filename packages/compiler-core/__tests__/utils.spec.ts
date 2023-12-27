@@ -1,10 +1,10 @@
-import { TransformContext } from '../src'
-import { Position } from '../src/ast'
+import type { TransformContext } from '../src'
+import type { Position } from '../src/ast'
 import {
   advancePositionWithClone,
-  isMemberExpressionNode,
   isMemberExpressionBrowser,
-  toValidAssetId
+  isMemberExpressionNode,
+  toValidAssetId,
 } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
@@ -108,6 +108,6 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('div', 'filter')).toBe('_filter_div')
   expect(toValidAssetId('foo-bar', 'component')).toBe('_component_foo_bar')
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
-    '_component_test_2797935797_1'
+    '_component_test_2797935797_1',
   )
 })

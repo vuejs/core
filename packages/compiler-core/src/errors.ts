@@ -1,4 +1,4 @@
-import { SourceLocation } from './ast'
+import type { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
   code: number | string
@@ -25,7 +25,7 @@ export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
   messages?: { [code: number]: string },
-  additionalMessage?: string
+  additionalMessage?: string,
 ): InferCompilerError<T> {
   const msg =
     __DEV__ || !__BROWSER__
@@ -101,7 +101,7 @@ export enum ErrorCodes {
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
-  __EXTEND_POINT__
+  __EXTEND_POINT__,
 }
 
 export const errorMessages: Record<ErrorCodes, string> = {
@@ -182,5 +182,5 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
   // just to fulfill types
-  [ErrorCodes.__EXTEND_POINT__]: ``
+  [ErrorCodes.__EXTEND_POINT__]: ``,
 }

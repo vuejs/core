@@ -18,7 +18,7 @@ export {
   type ShallowRef,
   type ShallowUnwrapRef,
   type RefUnwrapBailTypes,
-  type CustomRefFactory
+  type CustomRefFactory,
 } from './ref'
 export {
   reactive,
@@ -34,7 +34,7 @@ export {
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
-  type UnwrapNestedRefs
+  type UnwrapNestedRefs,
 } from './reactive'
 export {
   computed,
@@ -42,7 +42,7 @@ export {
   type WritableComputedRef,
   type WritableComputedOptions,
   type ComputedGetter,
-  type ComputedSetter
+  type ComputedSetter,
 } from './computed'
 export { deferredComputed } from './deferredComputed'
 export {
@@ -59,13 +59,13 @@ export {
   type EffectScheduler,
   type DebuggerOptions,
   type DebuggerEvent,
-  type DebuggerEventExtraInfo
+  type DebuggerEventExtraInfo,
 } from './effect'
 export { trigger, track, ITERATE_KEY } from './reactiveEffect'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
-  onScopeDispose
+  onScopeDispose,
 } from './effectScope'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

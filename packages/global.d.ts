@@ -41,7 +41,7 @@ declare module 'estree-walker' {
       enter?: (node: T, parent: T | undefined) => any
       leave?: (node: T, parent: T | undefined) => any
       exit?: (node: T) => any
-    } & ThisType<{ skip: () => void }>
+    } & ThisType<{ skip: () => void }>,
   )
 }
 

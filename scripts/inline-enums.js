@@ -17,7 +17,7 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
-  writeFileSync
+  writeFileSync,
 } from 'node:fs'
 import * as path from 'node:path'
 import { parse } from '@babel/parser'
@@ -58,7 +58,7 @@ export function scanEnums() {
     const content = readFileSync(file, 'utf-8')
     const ast = parse(content, {
       plugins: ['typescript'],
-      sourceType: 'module'
+      sourceType: 'module',
     })
 
     /** @type {Set<string>} */
@@ -73,7 +73,7 @@ export function scanEnums() {
         const id = decl.id.name
         if (enumIds.has(id)) {
           throw new Error(
-            `not support declaration merging for enum ${id} in ${file}`
+            `not support declaration merging for enum ${id} in ${file}`,
           )
         }
         enumIds.add(id)
@@ -95,7 +95,7 @@ export function scanEnums() {
             }
             members.push({
               name: key,
-              value
+              value,
             })
             defines[fullKey] = JSON.stringify(value)
           }
@@ -112,7 +112,7 @@ export function scanEnums() {
             // e.g. 1 << 2
             else if (init.type === 'BinaryExpression') {
               const resolveValue = (
-                /** @type {import('@babel/types').Expression | import('@babel/types').PrivateName} */ node
+                /** @type {import('@babel/types').Expression | import('@babel/types').PrivateName} */ node,
               ) => {
                 assert.ok(typeof node.start === 'number')
                 assert.ok(typeof node.end === 'number')
@@ -127,13 +127,13 @@ export function scanEnums() {
                   )
                   if (!(exp in defines)) {
                     throw new Error(
-                      `unhandled enum initialization expression ${exp} in ${file}`
+                      `unhandled enum initialization expression ${exp} in ${file}`,
                     )
                   }
                   return defines[exp]
                 } else {
                   throw new Error(
-                    `unhandled BinaryExpression operand type ${node.type} in ${file}`
+                    `unhandled BinaryExpression operand type ${node.type} in ${file}`,
                   )
                 }
               }
@@ -150,12 +150,12 @@ export function scanEnums() {
                 value = evaluate(exp)
               } else {
                 throw new Error(
-                  `unhandled UnaryExpression argument type ${init.argument.type} in ${file}`
+                  `unhandled UnaryExpression argument type ${init.argument.type} in ${file}`,
                 )
               }
             } else {
               throw new Error(
-                `unhandled initializer type ${init.type} for ${fullKey} in ${file}`
+                `unhandled initializer type ${init.type} for ${fullKey} in ${file}`,
               )
             }
             lastInitialized = value
@@ -183,7 +183,7 @@ export function scanEnums() {
         declarations[file].push({
           id,
           range: [node.start, node.end],
-          members
+          members,
         })
       }
     }
@@ -195,7 +195,7 @@ export function scanEnums() {
   /** @type {EnumData} */
   const enumData = {
     declarations,
-    defines
+    defines,
   }
 
   writeFileSync(ENUM_CACHE_PATH, JSON.stringify(enumData))
@@ -237,7 +237,7 @@ export function inlineEnums() {
           const {
             range: [start, end],
             id,
-            members
+            members,
           } = declaration
           s.update(
             start,
@@ -252,16 +252,16 @@ export function inlineEnums() {
                 // see https://www.typescriptlang.org/docs/handbook/enums.html#reverse-mappings
                 return typeof value === 'string'
                   ? [
-                      forwardMapping
+                      forwardMapping,
                       // string enum members do not get a reverse mapping generated at all
                     ]
                   : [
                       forwardMapping,
                       // other enum members should support enum reverse mapping
-                      reverseMapping
+                      reverseMapping,
                     ]
               })
-              .join(',\n')}}`
+              .join(',\n')}}`,
           )
         }
       }
@@ -269,10 +269,10 @@ export function inlineEnums() {
       if (s) {
         return {
           code: s.toString(),
-          map: s.generateMap()
+          map: s.generateMap(),
         }
       }
-    }
+    },
   }
 
   return [plugin, enumData.defines]

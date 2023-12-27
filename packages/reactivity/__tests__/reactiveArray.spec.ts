@@ -1,5 +1,5 @@
-import { reactive, isReactive, toRaw } from '../src/reactive'
-import { ref, isRef } from '../src/ref'
+import { isReactive, reactive, toRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
 
 describe('reactivity/reactive/Array', () => {

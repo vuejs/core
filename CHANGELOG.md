@@ -1,3 +1,44 @@
+# [3.4.0-rc.3](https://github.com/vuejs/core/compare/v3.4.0-rc.2...v3.4.0-rc.3) (2023-12-27)
+
+
+### Bug Fixes
+
+* also export runtime error strings in all cjs builds ([38706e4](https://github.com/vuejs/core/commit/38706e4a1e5e5380e7df910b2a784d0a9bc9db29))
+
+
+### Features
+
+* **defineModel:** support modifiers and transformers ([a772031](https://github.com/vuejs/core/commit/a772031ea8431bd732ffeaeaac09bd76a0daec9b))
+
+
+
+# [3.4.0-rc.2](https://github.com/vuejs/core/compare/v3.4.0-rc.1...v3.4.0-rc.2) (2023-12-26)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @vue/repl to ^3.1.0 ([#9911](https://github.com/vuejs/core/issues/9911)) ([f96c413](https://github.com/vuejs/core/commit/f96c413e8ef2f24cacda5bb499492922f62c6e8b))
+* **types:** fix distribution of union types when unwrapping setup bindings ([#9909](https://github.com/vuejs/core/issues/9909)) ([0695c69](https://github.com/vuejs/core/commit/0695c69e0dfaf99882a623fe75b433c9618ea648)), closes [#9903](https://github.com/vuejs/core/issues/9903)
+* **warning:** ensure prod hydration warnings actually work ([b4ebe7a](https://github.com/vuejs/core/commit/b4ebe7ae8b904f28cdda33caf87bc05718d3a08a))
+
+
+### Features
+
+* **compiler-sfc:** export aggregated error messages for compiler-core and compiler-dom ([25c726e](https://github.com/vuejs/core/commit/25c726eca81fc384b41fafbeba5e8dfcda1f030f))
+
+
+
+# [3.4.0-rc.1](https://github.com/vuejs/core/compare/v3.4.0-beta.4...v3.4.0-rc.1) (2023-12-25)
+
+
+### Bug Fixes
+
+* **compiler-core:** fix parsing `<script setup>` generics with > ([7aa3f25](https://github.com/vuejs/core/commit/7aa3f250f26d58ee2db82af907de8b9105e6e418)), closes [#9890](https://github.com/vuejs/core/issues/9890)
+* **compiler-sfc:** fix type resolution for shared type w/ different generic parameters ([a8d0b1b](https://github.com/vuejs/core/commit/a8d0b1b38b092ec2d10b32bedcee2eea33b77657)), closes [#9871](https://github.com/vuejs/core/issues/9871)
+* **ssr:** avoid hydration mismatch warning for classes with different order ([e585b0d](https://github.com/vuejs/core/commit/e585b0db43150c8b8b3d78f71e12efccc018a38d))
+
+
+
 # [3.4.0-beta.4](https://github.com/vuejs/core/compare/v3.3.13...v3.4.0-beta.4) (2023-12-19)
 
 

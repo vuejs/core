@@ -1,7 +1,7 @@
-import { SourceLocation } from '../ast'
-import { CompilerError } from '../errors'
-import { MergedParserOptions } from '../parser'
-import { TransformContext } from '../transform'
+import type { SourceLocation } from '../ast'
+import type { CompilerError } from '../errors'
+import type { MergedParserOptions } from '../parser'
+import type { TransformContext } from '../transform'
 
 export type CompilerCompatConfig = Partial<
   Record<CompilerDeprecationTypes, boolean | 'suppress-warning'>
@@ -21,7 +21,7 @@ export enum CompilerDeprecationTypes {
   COMPILER_V_IF_V_FOR_PRECEDENCE = 'COMPILER_V_IF_V_FOR_PRECEDENCE',
   COMPILER_NATIVE_TEMPLATE = 'COMPILER_NATIVE_TEMPLATE',
   COMPILER_INLINE_TEMPLATE = 'COMPILER_INLINE_TEMPLATE',
-  COMPILER_FILTERS = 'COMPILER_FILTER'
+  COMPILER_FILTERS = 'COMPILER_FILTER',
 }
 
 type DeprecationData = {
@@ -35,7 +35,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `Platform-native elements with "is" prop will no longer be ` +
       `treated as components in Vue 3 unless the "is" value is explicitly ` +
       `prefixed with "vue:".`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/custom-elements-interop.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_V_BIND_SYNC]: {
@@ -43,7 +43,7 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `.sync modifier for v-bind has been removed. Use v-model with ` +
       `argument instead. \`v-bind:${key}.sync\` should be changed to ` +
       `\`v-model:${key}\`.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-model.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER]: {
@@ -53,12 +53,12 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `that appears before v-bind in the case of conflict. ` +
       `To retain 2.x behavior, move v-bind to make it the first attribute. ` +
       `You can also suppress this warning if the usage is intended.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-bind.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-bind.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_V_ON_NATIVE]: {
     message: `.native modifier for v-on has been removed as is no longer necessary.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-on-native-modifier-removed.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE]: {
@@ -68,18 +68,18 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `access to v-for scope variables. It is best to avoid the ambiguity ` +
       `with <template> tags or use a computed property that filters v-for ` +
       `data source.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/v-if-v-for.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE]: {
     message:
       `<template> with no special directives will render as a native template ` +
-      `element instead of its inner content in Vue 3.`
+      `element instead of its inner content in Vue 3.`,
   },
 
   [CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE]: {
     message: `"inline-template" has been removed in Vue 3.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/inline-template-attribute.html`
+    link: `https://v3-migration.vuejs.org/breaking-changes/inline-template-attribute.html`,
   },
 
   [CompilerDeprecationTypes.COMPILER_FILTERS]: {
@@ -87,13 +87,13 @@ const deprecationData: Record<CompilerDeprecationTypes, DeprecationData> = {
       `filters have been removed in Vue 3. ` +
       `The "|" symbol will be treated as native JavaScript bitwise OR operator. ` +
       `Use method calls or computed properties instead.`,
-    link: `https://v3-migration.vuejs.org/breaking-changes/filters.html`
-  }
+    link: `https://v3-migration.vuejs.org/breaking-changes/filters.html`,
+  },
 }
 
 function getCompatValue(
   key: CompilerDeprecationTypes | 'MODE',
-  { compatConfig }: MergedParserOptions | TransformContext
+  { compatConfig }: MergedParserOptions | TransformContext,
 ) {
   const value = compatConfig && compatConfig[key]
   if (key === 'MODE') {
@@ -105,7 +105,7 @@ function getCompatValue(
 
 export function isCompatEnabled(
   key: CompilerDeprecationTypes,
-  context: MergedParserOptions | TransformContext
+  context: MergedParserOptions | TransformContext,
 ) {
   const mode = getCompatValue('MODE', context)
   const value = getCompatValue(key, context)

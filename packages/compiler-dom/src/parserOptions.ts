@@ -1,5 +1,5 @@
-import { ParserOptions, NodeTypes, Namespaces } from '@vue/compiler-core'
-import { isVoidTag, isHTMLTag, isSVGTag, isMathMLTag } from '@vue/shared'
+import { Namespaces, NodeTypes, type ParserOptions } from '@vue/compiler-core'
+import { isHTMLTag, isMathMLTag, isSVGTag, isVoidTag } from '@vue/shared'
 import { TRANSITION, TRANSITION_GROUP } from './runtimeHelpers'
 import { decodeHtmlBrowser } from './decodeHtmlBrowser'
 
@@ -33,7 +33,7 @@ export const parserOptions: ParserOptions = {
               a.name === 'encoding' &&
               a.value != null &&
               (a.value.content === 'text/html' ||
-                a.value.content === 'application/xhtml+xml')
+                a.value.content === 'application/xhtml+xml'),
           )
         ) {
           ns = Namespaces.HTML
@@ -64,5 +64,5 @@ export const parserOptions: ParserOptions = {
       }
     }
     return ns
-  }
+  },
 }

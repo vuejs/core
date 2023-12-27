@@ -120,7 +120,7 @@ export enum PatchFlags {
    * render functions, which should always be fully diffed)
    * OR manually cloneVNodes
    */
-  BAIL = -2
+  BAIL = -2,
 }
 
 /**
@@ -140,5 +140,5 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
   [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
   [PatchFlags.HOISTED]: `HOISTED`,
-  [PatchFlags.BAIL]: `BAIL`
+  [PatchFlags.BAIL]: `BAIL`,
 }
