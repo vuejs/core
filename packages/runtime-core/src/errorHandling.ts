@@ -1,7 +1,7 @@
 import { VNode } from './vnode'
 import { ComponentInternalInstance } from './component'
 import { warn, pushWarningContext, popWarningContext } from './warning'
-import { isPromise, isFunction } from '@vue/shared'
+import { isPromise, isFunction, isString } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -81,6 +81,9 @@ export function callWithAsyncErrorHandling(
   type: ErrorTypes,
   args?: unknown[]
 ): any[] {
+  if (isString(fn)) {
+    fn = new Function(fn)
+  }
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {
