@@ -609,11 +609,9 @@ function defineReactive(obj: any, key: string, val: any) {
   if (isObject(val) && !isReactive(val) && !patched.has(val)) {
     const reactiveVal = reactive(val)
     if (isArray(val)) {
-      methodsToPatch.forEach(m => {
-        // @ts-ignore
+      methodsToPatch.forEach((m: any) => {
         val[m] = (...args: any[]) => {
-          // @ts-ignore
-          Array.prototype[m].call(reactiveVal, ...args)
+          Array.prototype[m].apply(reactiveVal, args)
         }
       })
     } else {
