@@ -1156,13 +1156,14 @@ function baseCreateRenderer(
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
       if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
-        ;(parentComponent!.ctx as KeepAliveContext).activate(
-          n2,
-          container,
-          anchor,
-          isSVG,
-          optimized
-        )
+        isKeepAlive(parentComponent!.vnode) &&
+          (parentComponent!.ctx as KeepAliveContext).activate(
+            n2,
+            container,
+            anchor,
+            isSVG,
+            optimized
+          )
       } else {
         mountComponent(
           n2,
@@ -2078,7 +2079,8 @@ function baseCreateRenderer(
     }
 
     if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
-      ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
+      isKeepAlive(parentComponent!.vnode) &&
+        (parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
 
