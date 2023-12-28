@@ -1,4 +1,4 @@
-import { ref, computed, watch, defineComponent } from 'vue'
+import { computed, defineComponent, ref, shallowRef, watch } from 'vue'
 import { expectType } from './utils'
 
 const source = ref('foo')
@@ -29,7 +29,7 @@ watch(
     expectType<string>(value)
     expectType<string | undefined>(oldValue)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 watch(
@@ -37,10 +37,10 @@ watch(
   (values, oldValues) => {
     expectType<[string, string, number]>(values)
     expectType<[string | undefined, string | undefined, number | undefined]>(
-      oldValues
+      oldValues,
     )
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // const array
@@ -52,12 +52,12 @@ watch(
       Readonly<[string | undefined, string | undefined, number | undefined]>
     >(oldValues)
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 // should provide correct ref.value inner type to callbacks
 const nestedRefSource = ref({
-  foo: ref(1)
+  foo: ref(1),
 })
 
 watch(nestedRefSource, (v, ov) => {
@@ -88,7 +88,21 @@ defineComponent({
       (v, ov) => {
         expectType<number>(v)
         expectType<number>(ov)
-      }
+      },
     )
-  }
+  },
 })
+
+{
+  //#7852
+  type Steps = { step: '1' } | { step: '2' }
+  const shallowUnionGenParam = shallowRef<Steps>({ step: '1' })
+  const shallowUnionAsCast = shallowRef({ step: '1' } as Steps)
+
+  watch(shallowUnionGenParam, value => {
+    expectType<Steps>(value)
+  })
+  watch(shallowUnionAsCast, value => {
+    expectType<Steps>(value)
+  })
+}
