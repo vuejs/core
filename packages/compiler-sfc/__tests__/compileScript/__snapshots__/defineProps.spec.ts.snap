@@ -59,25 +59,6 @@ return { props }
 })"
 `;
 
-exports[`defineProps > custom element retains the props type w/ production mode 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-
-export default /*#__PURE__*/_defineComponent({
-  __name: 'app.ce',
-  props: {
-    foo: {type: Number}
-  },
-  setup(__props: any, { expose: __expose }) {
-  __expose();
-
-      const props = __props
-      
-return { props }
-}
-
-})"
-`;
-
 exports[`defineProps > defineProps w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
