@@ -1,4 +1,4 @@
-import { describe, bench } from 'vitest'
+import { bench, describe } from 'vitest'
 import { ref } from '../src/index'
 
 describe('ref', () => {

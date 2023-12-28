@@ -1,11 +1,11 @@
 import {
-  ref,
-  readonly,
-  shallowReadonly,
-  Ref,
-  reactive,
+  type Ref,
   markRaw,
-  toRaw
+  reactive,
+  readonly,
+  ref,
+  shallowReadonly,
+  toRaw,
 } from 'vue'
 import { describe, expectType } from './utils'
 
@@ -29,18 +29,18 @@ describe('should support markRaw', () => {
   }
   const test = new Test<number>()
   const plain = {
-    ref: ref(1)
+    ref: ref(1),
   }
 
   const r = reactive({
     class: {
       raw: markRaw(test),
-      reactive: test
+      reactive: test,
     },
     plain: {
       raw: markRaw(plain),
-      reactive: plain
-    }
+      reactive: plain,
+    },
   })
 
   expectType<Test<number>>(r.class.raw)
@@ -128,7 +128,7 @@ describe('readonly raw type', () => {
   const foo: Foo = {
     a: 1,
     b: 'b',
-    c: { d: 2 }
+    c: { d: 2 },
   }
 
   // readonly

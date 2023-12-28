@@ -41,7 +41,7 @@ bench('create watcher', () => {
     'update ref to trigger watchEffect (scheduled but not executed)',
     () => {
       v.value = i++
-    }
+    },
   )
 }
 

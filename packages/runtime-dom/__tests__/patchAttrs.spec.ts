@@ -4,15 +4,15 @@ import { xlinkNS } from '../src/modules/attrs'
 describe('runtime-dom: attrs patching', () => {
   test('xlink attributes', () => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
-    patchProp(el, 'xlink:href', null, 'a', true)
+    patchProp(el, 'xlink:href', null, 'a', 'svg')
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe('a')
-    patchProp(el, 'xlink:href', 'a', null, true)
+    patchProp(el, 'xlink:href', 'a', null, 'svg')
     expect(el.getAttributeNS(xlinkNS, 'href')).toBe(null)
   })
 
   test('textContent attributes /w svg', () => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'use')
-    patchProp(el, 'textContent', null, 'foo', true)
+    patchProp(el, 'textContent', null, 'foo', 'svg')
     expect(el.attributes.length).toBe(0)
     expect(el.innerHTML).toBe('foo')
   })
