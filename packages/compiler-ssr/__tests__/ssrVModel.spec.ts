@@ -36,8 +36,8 @@ describe('ssr: v-model', () => {
   test('<select v-model>', () => {
     expect(
       compileWithWrapper(
-        `<select v-model="model"><option value="1"></option></select>`
-      ).code
+        `<select v-model="model"><option value="1"></option></select>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -54,8 +54,8 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(
-        `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`
-      ).code
+        `<select multiple v-model="model"><option value="1" selected></option><option value="2"></option></select>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -72,7 +72,7 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(`<select multiple v-model="model"><slot/></select>`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -89,7 +89,7 @@ describe('ssr: v-model', () => {
           <optgroup label="foo">
             <option value="bar">bar</option>
           </optgroup>
-        </select>`).code
+        </select>`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrLooseContain: _ssrLooseContain, ssrLooseEqual: _ssrLooseEqual, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -110,7 +110,7 @@ describe('ssr: v-model', () => {
           <optgroup label="foo">
             <slot/>
           </optgroup>
-        </select>`).code
+        </select>`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -124,7 +124,7 @@ describe('ssr: v-model', () => {
 
   test('<input type="radio">', () => {
     expect(
-      compileWithWrapper(`<input type="radio" value="foo" v-model="bar">`).code
+      compileWithWrapper(`<input type="radio" value="foo" v-model="bar">`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -156,7 +156,7 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(`<input type="checkbox" value="foo" v-model="bar">`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { ssrLooseContain: _ssrLooseContain, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -173,8 +173,8 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(
-        `<input type="checkbox" :true-value="foo" :false-value="bar" v-model="baz">`
-      ).code
+        `<input type="checkbox" :true-value="foo" :false-value="bar" v-model="baz">`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -189,8 +189,8 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(
-        `<input type="checkbox" true-value="foo" false-value="bar" v-model="baz">`
-      ).code
+        `<input type="checkbox" true-value="foo" false-value="bar" v-model="baz">`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrLooseEqual: _ssrLooseEqual, ssrIncludeBooleanAttr: _ssrIncludeBooleanAttr, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -236,7 +236,7 @@ describe('ssr: v-model', () => {
       `)
 
     expect(
-      compileWithWrapper(`<input :type="x" v-model="foo" value="bar">`).code
+      compileWithWrapper(`<input :type="x" v-model="foo" value="bar">`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -252,7 +252,7 @@ describe('ssr: v-model', () => {
     `)
 
     expect(
-      compileWithWrapper(`<input :type="x" v-model="foo" :value="bar">`).code
+      compileWithWrapper(`<input :type="x" v-model="foo" :value="bar">`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttr: _ssrRenderAttr, ssrRenderDynamicModel: _ssrRenderDynamicModel, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -289,7 +289,7 @@ describe('ssr: v-model', () => {
 
     expect(
       compileWithWrapper(`<input id="x" v-bind="obj" v-model="foo" class="y">`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
       const { ssrRenderAttrs: _ssrRenderAttrs, ssrGetDynamicModelProps: _ssrGetDynamicModelProps } = require("vue/server-renderer")

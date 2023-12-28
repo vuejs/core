@@ -1,5 +1,5 @@
 import { compile } from '../src'
-import { ssrHelpers, SSR_RENDER_SLOT_INNER } from '../src/runtimeHelpers'
+import { SSR_RENDER_SLOT_INNER, ssrHelpers } from '../src/runtimeHelpers'
 
 describe('ssr: <slot>', () => {
   test('basic', () => {
@@ -62,8 +62,8 @@ describe('ssr: <slot>', () => {
   test('with scopeId', async () => {
     expect(
       compile(`<slot/>`, {
-        scopeId: 'hello'
-      }).code
+        scopeId: 'hello',
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require("vue/server-renderer")
 
@@ -77,8 +77,8 @@ describe('ssr: <slot>', () => {
     expect(
       compile(`<slot/>`, {
         scopeId: 'hello',
-        slotted: false
-      }).code
+        slotted: false,
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require("vue/server-renderer")
 
@@ -91,8 +91,8 @@ describe('ssr: <slot>', () => {
   test('with forwarded scopeId', async () => {
     expect(
       compile(`<Comp><slot/></Comp>`, {
-        scopeId: 'hello'
-      }).code
+        scopeId: 'hello',
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderSlot: _renderSlot } = require("vue")
       const { ssrRenderSlot: _ssrRenderSlot, ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")

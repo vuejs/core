@@ -1,7 +1,8 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`defineEmits > basic usage 1`] = `
-"export default {
+"
+export default {
   emits: ['foo', 'bar'],
   setup(__props, { expose: __expose, emit: __emit }) {
   __expose();
