@@ -261,7 +261,7 @@ describe('vModel', () => {
           trim: null,
           lazy: null,
           trimNumber: null,
-          trimLazy: null
+          trimLazy: null,
         }
       },
       render() {
@@ -295,13 +295,13 @@ describe('vModel', () => {
               class: 'trim-lazy',
               'onUpdate:modelValue': (val: any) => {
                 this.trimLazy = val
-              }
+              },
             }),
             this.trim,
             {
               trim: true,
-              lazy: true
-            }
+              lazy: true,
+            },
           ),
           withVModel(
             h('input', {

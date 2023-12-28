@@ -296,7 +296,7 @@ describe('vnode', () => {
     expect(original5.ref).toMatchObject({
       i: mockInstance2,
       r: '111',
-      k: 'foo'
+      k: 'foo',
     })
     const cloned9 = cloneVNode(original5)
     expect(cloned9.ref).toMatchObject({ i: mockInstance2, r: '111', k: 'foo' })
