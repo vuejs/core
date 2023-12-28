@@ -3,11 +3,11 @@ import {
   isShallow,
   reactive,
   shallowReactive,
-  shallowReadonly
+  shallowReadonly,
 } from '../src/reactive'
 
 import { effect } from '../src/effect'
-import { Ref, isRef, ref } from '../src/ref'
+import { type Ref, isRef, ref } from '../src/ref'
 
 describe('shallowReactive', () => {
   test('should not make non-reactive properties reactive', () => {
@@ -50,7 +50,7 @@ describe('shallowReactive', () => {
   // vuejs/vue#12597
   test('should not unwrap refs', () => {
     const foo = shallowReactive({
-      bar: ref(123)
+      bar: ref(123),
     })
     expect(isRef(foo.bar)).toBe(true)
     expect(foo.bar.value).toBe(123)
@@ -60,7 +60,7 @@ describe('shallowReactive', () => {
   test('should not mutate refs', () => {
     const original = ref(123)
     const foo = shallowReactive<{ bar: Ref<number> | number }>({
-      bar: original
+      bar: original,
     })
     expect(foo.bar).toBe(original)
     foo.bar = 234
@@ -133,8 +133,8 @@ describe('shallowReactive', () => {
           a = Array.from(shallowSet)
         },
         {
-          onTrack: onTrackFn
-        }
+          onTrack: onTrackFn,
+        },
       )
 
       expect(a).toMatchObject([])
@@ -178,8 +178,8 @@ describe('shallowReactive', () => {
           a = Array.from(shallowArray)
         },
         {
-          onTrack: onTrackFn
-        }
+          onTrack: onTrackFn,
+        },
       )
 
       expect(a).toMatchObject([])

@@ -1,16 +1,16 @@
 import {
-  TestElement,
-  TestNode,
+  type TestComment,
+  type TestElement,
+  type TestNode,
   TestNodeTypes,
-  TestText,
-  TestComment
+  type TestText,
 } from './nodeOps'
 import { isOn } from '@vue/shared'
 
 export function serialize(
   node: TestNode,
   indent: number = 0,
-  depth: number = 0
+  depth: number = 0,
 ): string {
   if (node.type === TestNodeTypes.ELEMENT) {
     return serializeElement(node, indent, depth)
@@ -22,7 +22,7 @@ export function serialize(
 export function serializeInner(
   node: TestElement,
   indent: number = 0,
-  depth: number = 0
+  depth: number = 0,
 ) {
   const newLine = indent ? `\n` : ``
   return node.children.length
@@ -35,7 +35,7 @@ export function serializeInner(
 function serializeElement(
   node: TestElement,
   indent: number,
-  depth: number
+  depth: number,
 ): string {
   const props = Object.keys(node.props)
     .map(key => {
@@ -59,7 +59,7 @@ function serializeElement(
 function serializeText(
   node: TestText | TestComment,
   indent: number,
-  depth: number
+  depth: number,
 ): string {
   const padding = indent ? ` `.repeat(indent).repeat(depth) : ``
   return (

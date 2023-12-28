@@ -1,13 +1,13 @@
-import { NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 import { findDir } from '../utils'
 import {
+  ElementTypes,
+  type MemoExpression,
+  NodeTypes,
+  type PlainElementNode,
   convertToBlock,
   createCallExpression,
   createFunctionExpression,
-  ElementTypes,
-  MemoExpression,
-  NodeTypes,
-  PlainElementNode
 } from '../ast'
 import { WITH_MEMO } from '../runtimeHelpers'
 
@@ -33,7 +33,7 @@ export const transformMemo: NodeTransform = (node, context) => {
           dir.exp!,
           createFunctionExpression(undefined, codegenNode),
           `_cache`,
-          String(context.cached++)
+          String(context.cached++),
         ]) as MemoExpression
       }
     }

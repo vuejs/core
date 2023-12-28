@@ -1,4 +1,4 @@
-import {
+import type {
   CallExpression,
   Expression,
   Identifier,
@@ -6,10 +6,9 @@ import {
   ImportNamespaceSpecifier,
   ImportSpecifier,
   Node,
-  StringLiteral
+  StringLiteral,
 } from '@babel/types'
 import path from 'path'
-import { TS_NODE_TYPES } from '@vue/compiler-dom'
 
 export const UNKNOWN_TYPE = 'Unknown'
 
@@ -32,17 +31,9 @@ export function isLiteralNode(node: Node) {
   return node.type.endsWith('Literal')
 }
 
-export function unwrapTSNode(node: Node): Node {
-  if (TS_NODE_TYPES.includes(node.type)) {
-    return unwrapTSNode((node as any).expression)
-  } else {
-    return node
-  }
-}
-
 export function isCallOf(
   node: Node | null | undefined,
-  test: string | ((id: string) => boolean) | null | undefined
+  test: string | ((id: string) => boolean) | null | undefined,
 ): node is CallExpression {
   return !!(
     node &&
@@ -60,7 +51,10 @@ export function toRuntimeTypeString(types: string[]) {
 }
 
 export function getImportedName(
-  specifier: ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier
+  specifier:
+    | ImportSpecifier
+    | ImportDefaultSpecifier
+    | ImportNamespaceSpecifier,
 ) {
   if (specifier.type === 'ImportSpecifier')
     return specifier.imported.type === 'Identifier'
@@ -123,6 +117,6 @@ export const cssVarNameEscapeSymbolsRE = /[ !"#$%&'()*+,./:;<=>?@[\\\]^`{|}~]/g
 
 export function getEscapedCssVarName(key: string, doubleEscape: boolean) {
   return key.replace(cssVarNameEscapeSymbolsRE, s =>
-    doubleEscape ? `\\\\${s}` : `\\${s}`
+    doubleEscape ? `\\\\${s}` : `\\${s}`,
   )
 }

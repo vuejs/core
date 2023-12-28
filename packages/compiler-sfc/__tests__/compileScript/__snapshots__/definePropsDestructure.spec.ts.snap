@@ -177,7 +177,8 @@ return () => {}
 `;
 
 exports[`sfc reactive props destructure > defineProps/defineEmits in multi-variable declaration (full removal) 1`] = `
-"export default {
+"
+export default {
   props: ['item'],
   emits: ['a'],
   setup(__props, { emit: __emit }) {
@@ -192,7 +193,8 @@ return () => {}
 `;
 
 exports[`sfc reactive props destructure > multi-variable declaration 1`] = `
-"export default {
+"
+export default {
   props: ['item'],
   setup(__props) {
 
@@ -205,7 +207,8 @@ return () => {}
 `;
 
 exports[`sfc reactive props destructure > multi-variable declaration fix #6757  1`] = `
-"export default {
+"
+export default {
   props: ['item'],
   setup(__props) {
 
@@ -218,7 +221,8 @@ return () => {}
 `;
 
 exports[`sfc reactive props destructure > multi-variable declaration fix #7422 1`] = `
-"export default {
+"
+export default {
   props: ['item'],
   setup(__props) {
 
@@ -250,7 +254,8 @@ return (_ctx, _cache) => {
 `;
 
 exports[`sfc reactive props destructure > nested scope 1`] = `
-"export default {
+"
+export default {
   props: ['foo', 'bar'],
   setup(__props) {
 
