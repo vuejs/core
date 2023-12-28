@@ -1,15 +1,13 @@
-import { LVal, Node, ObjectProperty, TSType } from '@babel/types'
-import { ScriptCompileContext } from './context'
+import type { LVal, Node, TSType } from '@babel/types'
+import type { ScriptCompileContext } from './context'
 import { inferRuntimeType } from './resolveType'
 import {
   UNKNOWN_TYPE,
   concatStrings,
   isCallOf,
   toRuntimeTypeString,
-  unwrapTSNode
 } from './utils'
-import { BindingTypes } from '@vue/compiler-dom'
-import { warnOnce } from '../warn'
+import { BindingTypes, unwrapTSNode } from '@vue/compiler-dom'
 
 export const DEFINE_MODEL = 'defineModel'
 
@@ -22,26 +20,11 @@ export interface ModelDecl {
 export function processDefineModel(
   ctx: ScriptCompileContext,
   node: Node,
-  declId?: LVal
+  declId?: LVal,
 ): boolean {
   if (!isCallOf(node, DEFINE_MODEL)) {
     return false
   }
-
-  if (!ctx.options.defineModel) {
-    warnOnce(
-      `defineModel() is an experimental feature and disabled by default.\n` +
-        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
-    )
-    return false
-  }
-
-  warnOnce(
-    `This project is using defineModel(), which is an experimental ` +
-      `feature. It may receive breaking changes or be removed in the future, so ` +
-      `use at your own risk.\n` +
-      `To stay updated, follow the RFC at https://github.com/vuejs/rfcs/discussions/503.`
-  )
 
   ctx.hasDefineModelCall = true
 
@@ -62,47 +45,58 @@ export function processDefineModel(
     ctx.error(`duplicate model name ${JSON.stringify(modelName)}`, node)
   }
 
-  const optionsString = options && ctx.getString(options)
-
-  ctx.modelDecls[modelName] = {
-    type,
-    options: optionsString,
-    identifier: declId && declId.type === 'Identifier' ? declId.name : undefined
-  }
-  // register binding type
-  ctx.bindingMetadata[modelName] = BindingTypes.PROPS
-
+  let optionsString = options && ctx.getString(options)
   let runtimeOptions = ''
+  let transformOptions = ''
+
   if (options) {
     if (options.type === 'ObjectExpression') {
-      const local = options.properties.find(
-        p =>
-          p.type === 'ObjectProperty' &&
-          ((p.key.type === 'Identifier' && p.key.name === 'local') ||
-            (p.key.type === 'StringLiteral' && p.key.value === 'local'))
-      ) as ObjectProperty
-
-      if (local) {
-        runtimeOptions = `{ ${ctx.getString(local)} }`
-      } else {
-        for (const p of options.properties) {
-          if (p.type === 'SpreadElement' || p.computed) {
-            runtimeOptions = optionsString!
-            break
-          }
+      for (let i = options.properties.length - 1; i >= 0; i--) {
+        const p = options.properties[i]
+        if (p.type === 'SpreadElement' || p.computed) {
+          runtimeOptions = optionsString!
+          break
         }
+        if (
+          (p.type === 'ObjectProperty' || p.type === 'ObjectMethod') &&
+          ((p.key.type === 'Identifier' &&
+            (p.key.name === 'get' || p.key.name === 'set')) ||
+            (p.key.type === 'StringLiteral' &&
+              (p.key.value === 'get' || p.key.value === 'set')))
+        ) {
+          transformOptions = ctx.getString(p) + ', ' + transformOptions
+
+          // remove transform option from prop options to avoid duplicates
+          const offset = p.start! - options.start!
+          const next = options.properties[i + 1]
+          const end = (next ? next.start! : options.end! - 1) - options.start!
+          optionsString =
+            optionsString.slice(0, offset) + optionsString.slice(end)
+        }
+      }
+      if (!runtimeOptions && transformOptions) {
+        runtimeOptions = `{ ${transformOptions} }`
       }
     } else {
       runtimeOptions = optionsString!
     }
   }
 
+  ctx.modelDecls[modelName] = {
+    type,
+    options: optionsString,
+    identifier:
+      declId && declId.type === 'Identifier' ? declId.name : undefined,
+  }
+  // register binding type
+  ctx.bindingMetadata[modelName] = BindingTypes.PROPS
+
   ctx.s.overwrite(
     ctx.startOffset! + node.start!,
     ctx.startOffset! + node.end!,
     `${ctx.helper('useModel')}(__props, ${JSON.stringify(modelName)}${
       runtimeOptions ? `, ${runtimeOptions}` : ``
-    })`
+    })`,
   )
 
   return true
@@ -137,7 +131,7 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
     const codegenOptions = concatStrings([
       runtimeType && `type: ${runtimeType}`,
-      skipCheck && 'skipCheck: true'
+      skipCheck && 'skipCheck: true',
     ])
 
     let decl: string
@@ -149,6 +143,12 @@ export function genModelProps(ctx: ScriptCompileContext) {
       decl = options || (runtimeType ? `{ ${codegenOptions} }` : '{}')
     }
     modelPropsDecl += `\n    ${JSON.stringify(name)}: ${decl},`
+
+    // also generate modifiers prop
+    const modifierPropName = JSON.stringify(
+      name === 'modelValue' ? `modelModifiers` : `${name}Modifiers`,
+    )
+    modelPropsDecl += `\n    ${modifierPropName}: {},`
   }
   return `{${modelPropsDecl}\n  }`
 }
