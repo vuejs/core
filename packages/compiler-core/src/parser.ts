@@ -1,20 +1,20 @@
 import {
-  AttributeNode,
+  type AttributeNode,
   ConstantTypes,
-  DirectiveNode,
-  ElementNode,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  ForParseResult,
+  type ForParseResult,
   Namespaces,
   NodeTypes,
-  RootNode,
-  SimpleExpressionNode,
-  SourceLocation,
-  TemplateChildNode,
+  type RootNode,
+  type SimpleExpressionNode,
+  type SourceLocation,
+  type TemplateChildNode,
   createRoot,
-  createSimpleExpression
+  createSimpleExpression,
 } from './ast'
-import { ParserOptions } from './options'
+import type { ParserOptions } from './options'
 import Tokenizer, {
   CharCodes,
   ParseMode,
@@ -22,33 +22,33 @@ import Tokenizer, {
   Sequences,
   State,
   isWhitespace,
-  toCharCodes
+  toCharCodes,
 } from './tokenizer'
 import {
-  CompilerCompatOptions,
+  type CompilerCompatOptions,
   CompilerDeprecationTypes,
   checkCompatEnabled,
   isCompatEnabled,
-  warnDeprecation
+  warnDeprecation,
 } from './compat/compatConfig'
 import { NO, extend } from '@vue/shared'
 import {
   ErrorCodes,
   createCompilerError,
   defaultOnError,
-  defaultOnWarn
+  defaultOnWarn,
 } from './errors'
 import {
   forAliasRE,
   isCoreComponent,
   isSimpleIdentifier,
-  isStaticArgOf
+  isStaticArgOf,
 } from './utils'
 import { decodeHTML } from 'entities/lib/decode.js'
 import {
+  type ParserOptions as BabelOptions,
   parse,
   parseExpression,
-  type ParserOptions as BabelOptions
 } from '@babel/parser'
 
 type OptionalOptions =
@@ -76,7 +76,7 @@ export const defaultParserOptions: MergedParserOptions = {
   onError: defaultOnError,
   onWarn: defaultOnWarn,
   comments: __DEV__,
-  prefixIdentifiers: false
+  prefixIdentifiers: false,
 }
 
 let currentOptions: MergedParserOptions = defaultParserOptions
@@ -129,7 +129,7 @@ const tokenizer = new Tokenizer(stack, {
     addNode({
       type: NodeTypes.INTERPOLATION,
       content: createExp(exp, false, getLoc(innerStart, innerEnd)),
-      loc: getLoc(start, end)
+      loc: getLoc(start, end),
     })
   },
 
@@ -143,14 +143,7 @@ const tokenizer = new Tokenizer(stack, {
       props: [],
       children: [],
       loc: getLoc(start - 1, end),
-      codegenNode: undefined
-    }
-    if (tokenizer.inSFCRoot) {
-      // in SFC mode, generate locations for root-level tags' inner content.
-      currentOpenTag.innerLoc = getLoc(
-        end + fastForward(end, CharCodes.Gt) + 1,
-        end
-      )
+      codegenNode: undefined,
     }
   },
 
@@ -198,7 +191,7 @@ const tokenizer = new Tokenizer(stack, {
       name: getSlice(start, end),
       nameLoc: getLoc(start, end),
       value: undefined,
-      loc: getLoc(start)
+      loc: getLoc(start),
     }
   },
 
@@ -223,7 +216,7 @@ const tokenizer = new Tokenizer(stack, {
         name: raw,
         nameLoc: getLoc(start, end),
         value: undefined,
-        loc: getLoc(start)
+        loc: getLoc(start),
       }
     } else {
       currentProp = {
@@ -233,7 +226,7 @@ const tokenizer = new Tokenizer(stack, {
         exp: undefined,
         arg: undefined,
         modifiers: raw === '.' ? ['prop'] : [],
-        loc: getLoc(start)
+        loc: getLoc(start),
       }
       if (name === 'pre') {
         inVPre = tokenizer.inVPre = true
@@ -261,7 +254,7 @@ const tokenizer = new Tokenizer(stack, {
         isStatic ? arg : arg.slice(1, -1),
         isStatic,
         getLoc(start, end),
-        isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
+        isStatic ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT,
       )
     }
   },
@@ -305,7 +298,7 @@ const tokenizer = new Tokenizer(stack, {
     // check duplicate attrs
     if (
       currentOpenTag!.props.some(
-        p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name
+        p => (p.type === NodeTypes.DIRECTIVE ? p.rawName : p.name) === name,
       )
     ) {
       emitError(ErrorCodes.DUPLICATE_ATTRIBUTE, start)
@@ -321,7 +314,7 @@ const tokenizer = new Tokenizer(stack, {
         if (__BROWSER__ && currentAttrValue.includes('&')) {
           currentAttrValue = currentOptions.decodeEntities!(
             currentAttrValue,
-            true
+            true,
           )
         }
 
@@ -343,7 +336,7 @@ const tokenizer = new Tokenizer(stack, {
             loc:
               quote === QuoteType.Unquoted
                 ? getLoc(currentAttrStartIndex, currentAttrEndIndex)
-                : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1)
+                : getLoc(currentAttrStartIndex - 1, currentAttrEndIndex + 1),
           }
           if (
             tokenizer.inSFCRoot &&
@@ -376,7 +369,7 @@ const tokenizer = new Tokenizer(stack, {
             false,
             getLoc(currentAttrStartIndex, currentAttrEndIndex),
             ConstantTypes.NOT_CONSTANT,
-            expParseMode
+            expParseMode,
           )
           if (currentProp.name === 'for') {
             currentProp.forParseResult = parseForExpression(currentProp.exp)
@@ -391,7 +384,7 @@ const tokenizer = new Tokenizer(stack, {
               CompilerDeprecationTypes.COMPILER_V_BIND_SYNC,
               currentOptions,
               currentProp.loc,
-              currentProp.rawName
+              currentProp.rawName,
             )
           ) {
             currentProp.name = 'model'
@@ -415,7 +408,7 @@ const tokenizer = new Tokenizer(stack, {
       addNode({
         type: NodeTypes.COMMENT,
         content: getSlice(start, end),
-        loc: getLoc(start - 4, end + 3)
+        loc: getLoc(start - 4, end + 3),
       })
     }
   },
@@ -433,7 +426,7 @@ const tokenizer = new Tokenizer(stack, {
         case State.InterpolationClose:
           emitError(
             ErrorCodes.X_MISSING_INTERPOLATION_END,
-            tokenizer.sectionStart
+            tokenizer.sectionStart,
           )
           break
         case State.InCommentLike:
@@ -483,10 +476,10 @@ const tokenizer = new Tokenizer(stack, {
     if ((stack[0] ? stack[0].ns : currentOptions.ns) === Namespaces.HTML) {
       emitError(
         ErrorCodes.UNEXPECTED_QUESTION_MARK_INSTEAD_OF_TAG_NAME,
-        start - 1
+        start - 1,
       )
     }
-  }
+  },
 })
 
 // This regex doesn't cover the case if key or index aliases have destructuring,
@@ -495,7 +488,7 @@ const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 const stripParensRE = /^\(|\)$/g
 
 function parseForExpression(
-  input: SimpleExpressionNode
+  input: SimpleExpressionNode,
 ): ForParseResult | undefined {
   const loc = input.loc
   const exp = input.content
@@ -507,7 +500,7 @@ function parseForExpression(
   const createAliasExpression = (
     content: string,
     offset: number,
-    asParam = false
+    asParam = false,
   ) => {
     const start = loc.start.offset + offset
     const end = start + content.length
@@ -516,7 +509,7 @@ function parseForExpression(
       false,
       getLoc(start, end),
       ConstantTypes.NOT_CONSTANT,
-      asParam ? ExpParseMode.Params : ExpParseMode.Normal
+      asParam ? ExpParseMode.Params : ExpParseMode.Normal,
     )
   }
 
@@ -525,7 +518,7 @@ function parseForExpression(
     value: undefined,
     key: undefined,
     index: undefined,
-    finalized: false
+    finalized: false,
   }
 
   let valueContent = LHS.trim().replace(stripParensRE, '').trim()
@@ -552,9 +545,9 @@ function parseForExpression(
             indexContent,
             result.key
               ? keyOffset! + keyContent.length
-              : trimmedOffset + valueContent.length
+              : trimmedOffset + valueContent.length,
           ),
-          true
+          true,
         )
       }
     }
@@ -572,6 +565,10 @@ function getSlice(start: number, end: number) {
 }
 
 function endOpenTag(end: number) {
+  if (tokenizer.inSFCRoot) {
+    // in SFC mode, generate locations for root-level tags' inner content.
+    currentOpenTag!.innerLoc = getLoc(end + 1, end + 1)
+  }
   addNode(currentOpenTag!)
   const { tag, ns } = currentOpenTag!
   if (ns === Namespaces.HTML && currentOptions.isPreTag(tag)) {
@@ -605,7 +602,7 @@ function onText(content: string, start: number, end: number) {
     parent.children.push({
       type: NodeTypes.TEXT,
       content,
-      loc: getLoc(start, end)
+      loc: getLoc(start, end),
     })
   }
 }
@@ -616,7 +613,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + fastForward(end, CharCodes.Gt) + 1)
+    setLocEnd(el.loc, end + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -628,7 +625,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     }
     el.innerLoc!.source = getSlice(
       el.innerLoc!.start.offset,
-      el.innerLoc!.end.offset
+      el.innerLoc!.end.offset,
     )
   }
 
@@ -669,7 +666,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
       __DEV__ &&
       isCompatEnabled(
         CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
-        currentOptions
+        currentOptions,
       )
     ) {
       let hasIf = false
@@ -687,7 +684,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
           warnDeprecation(
             CompilerDeprecationTypes.COMPILER_V_IF_V_FOR_PRECEDENCE,
             currentOptions,
-            el.loc
+            el.loc,
           )
           break
         }
@@ -697,7 +694,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     if (
       isCompatEnabled(
         CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
-        currentOptions
+        currentOptions,
       ) &&
       el.tag === 'template' &&
       !isFragmentTemplate(el)
@@ -706,7 +703,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
         warnDeprecation(
           CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
           currentOptions,
-          el.loc
+          el.loc,
         )
       // unwrap
       const parent = stack[0] || currentRoot
@@ -715,14 +712,14 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     }
 
     const inlineTemplateProp = props.find(
-      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template'
+      p => p.type === NodeTypes.ATTRIBUTE && p.name === 'inline-template',
     ) as AttributeNode
     if (
       inlineTemplateProp &&
       checkCompatEnabled(
         CompilerDeprecationTypes.COMPILER_INLINE_TEMPLATE,
         currentOptions,
-        inlineTemplateProp.loc
+        inlineTemplateProp.loc,
       ) &&
       el.children.length
     ) {
@@ -730,23 +727,12 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
         type: NodeTypes.TEXT,
         content: getSlice(
           el.children[0].loc.start.offset,
-          el.children[el.children.length - 1].loc.end.offset
+          el.children[el.children.length - 1].loc.end.offset,
         ),
-        loc: inlineTemplateProp.loc
+        loc: inlineTemplateProp.loc,
       }
     }
   }
-}
-
-function fastForward(start: number, c: number) {
-  let offset = 0
-  while (
-    currentInput.charCodeAt(start + offset) !== CharCodes.Gt &&
-    start + offset < currentInput.length
-  ) {
-    offset++
-  }
-  return offset
 }
 
 function backTrack(index: number, c: number) {
@@ -796,7 +782,7 @@ function isComponent({ tag, props }: ElementNode): boolean {
           checkCompatEnabled(
             CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
             currentOptions,
-            p.loc
+            p.loc,
           )
         ) {
           return true
@@ -810,7 +796,7 @@ function isComponent({ tag, props }: ElementNode): boolean {
       checkCompatEnabled(
         CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
         currentOptions,
-        p.loc
+        p.loc,
       )
     ) {
       return true
@@ -826,7 +812,7 @@ function isUpperCase(c: number) {
 const windowsNewlineRE = /\r\n/g
 function condenseWhitespace(
   nodes: TemplateChildNode[],
-  tag?: string
+  tag?: string,
 ): TemplateChildNode[] {
   const shouldCondense = currentOptions.whitespace !== 'preserve'
   let removedWhitespace = false
@@ -929,7 +915,7 @@ function getLoc(start: number, end?: number): SourceLocation {
     // @ts-expect-error allow late attachment
     end: end == null ? end : tokenizer.getPos(end),
     // @ts-expect-error allow late attachment
-    source: end == null ? end : getSlice(start, end)
+    source: end == null ? end : getSlice(start, end),
   }
 }
 
@@ -944,10 +930,10 @@ function dirToAttr(dir: DirectiveNode): AttributeNode {
     name: dir.rawName!,
     nameLoc: getLoc(
       dir.loc.start.offset,
-      dir.loc.start.offset + dir.rawName!.length
+      dir.loc.start.offset + dir.rawName!.length,
     ),
     value: undefined,
-    loc: dir.loc
+    loc: dir.loc,
   }
   if (dir.exp) {
     // account for quotes
@@ -961,7 +947,7 @@ function dirToAttr(dir: DirectiveNode): AttributeNode {
     attr.value = {
       type: NodeTypes.TEXT,
       content: (dir.exp as SimpleExpressionNode).content,
-      loc
+      loc,
     }
   }
   return attr
@@ -971,7 +957,7 @@ enum ExpParseMode {
   Normal,
   Params,
   Statements,
-  Skip
+  Skip,
 }
 
 function createExp(
@@ -979,7 +965,7 @@ function createExp(
   isStatic: SimpleExpressionNode['isStatic'] = false,
   loc: SourceLocation,
   constType: ConstantTypes = ConstantTypes.NOT_CONSTANT,
-  parseMode = ExpParseMode.Normal
+  parseMode = ExpParseMode.Normal,
 ) {
   const exp = createSimpleExpression(content, isStatic, loc, constType)
   if (
@@ -996,7 +982,7 @@ function createExp(
     try {
       const plugins = currentOptions.expressionPlugins
       const options: BabelOptions = {
-        plugins: plugins ? [...plugins, 'typescript'] : ['typescript']
+        plugins: plugins ? [...plugins, 'typescript'] : ['typescript'],
       }
       if (parseMode === ExpParseMode.Statements) {
         // v-on with multi-inline-statements, pad 1 char
@@ -1017,7 +1003,7 @@ function createExp(
 
 function emitError(code: ErrorCodes, index: number, message?: string) {
   currentOptions.onError(
-    createCompilerError(code, getLoc(index, index), undefined, message)
+    createCompilerError(code, getLoc(index, index), undefined, message),
   )
 }
 
@@ -1040,7 +1026,7 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     let key: keyof ParserOptions
     for (key in options) {
       if (options[key] != null) {
-        // @ts-ignore
+        // @ts-expect-error
         currentOptions[key] = options[key]
       }
     }
@@ -1050,11 +1036,11 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
     if (!__BROWSER__ && currentOptions.decodeEntities) {
       console.warn(
         `[@vue/compiler-core] decodeEntities option is passed but will be ` +
-          `ignored in non-browser builds.`
+          `ignored in non-browser builds.`,
       )
     } else if (__BROWSER__ && !currentOptions.decodeEntities) {
       throw new Error(
-        `[@vue/compiler-core] decodeEntities option is required in browser builds.`
+        `[@vue/compiler-core] decodeEntities option is required in browser builds.`,
       )
     }
   }

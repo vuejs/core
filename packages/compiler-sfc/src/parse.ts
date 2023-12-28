@@ -1,18 +1,18 @@
 import {
+  type BindingMetadata,
+  type CompilerError,
+  type ElementNode,
   NodeTypes,
-  ElementNode,
-  SourceLocation,
-  CompilerError,
-  BindingMetadata,
-  RootNode,
-  createRoot
+  type RootNode,
+  type SourceLocation,
+  createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { RawSourceMap, SourceMapGenerator } from 'source-map-js'
-import { TemplateCompiler } from './compileTemplate'
+import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
-import { ImportBinding } from './compileScript'
+import type { ImportBinding } from './compileScript'
 import { isImportUsed } from './script/importUsageCheck'
 
 export const DEFAULT_FILENAME = 'anonymous.vue'
@@ -106,8 +106,8 @@ export function parse(
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
-    parseExpressions = true
-  }: SFCParseOptions = {}
+    parseExpressions = true,
+  }: SFCParseOptions = {},
 ): SFCParseResult {
   const sourceKey =
     source + sourceMap + filename + sourceRoot + pad + compiler.parse
@@ -126,7 +126,7 @@ export function parse(
     customBlocks: [],
     cssVars: [],
     slotted: false,
-    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor)
+    shouldForceReload: prevImports => hmrShouldReload(prevImports, descriptor),
   }
 
   const errors: (CompilerError | SyntaxError)[] = []
@@ -135,7 +135,7 @@ export function parse(
     prefixIdentifiers: parseExpressions,
     onError: e => {
       errors.push(e)
-    }
+    },
   })
   ast.children.forEach(node => {
     if (node.type !== NodeTypes.ELEMENT) {
@@ -157,7 +157,7 @@ export function parse(
           const templateBlock = (descriptor.template = createBlock(
             node,
             source,
-            false
+            false,
           ) as SFCTemplateBlock)
 
           if (!templateBlock.attrs.src) {
@@ -170,10 +170,10 @@ export function parse(
               `<template functional> is no longer supported in Vue 3, since ` +
                 `functional components no longer have significant performance ` +
                 `difference from stateful ones. Just use a normal <template> ` +
-                `instead.`
+                `instead.`,
             ) as CompilerError
             err.loc = node.props.find(
-              p => p.type === NodeTypes.ATTRIBUTE && p.name === 'functional'
+              p => p.type === NodeTypes.ATTRIBUTE && p.name === 'functional',
             )!.loc
             errors.push(err)
           }
@@ -200,8 +200,8 @@ export function parse(
           errors.push(
             new SyntaxError(
               `<style vars> has been replaced by a new proposal: ` +
-                `https://github.com/vuejs/rfcs/pull/231`
-            )
+                `https://github.com/vuejs/rfcs/pull/231`,
+            ),
           )
         }
         descriptor.styles.push(styleBlock)
@@ -214,8 +214,8 @@ export function parse(
   if (!descriptor.template && !descriptor.script && !descriptor.scriptSetup) {
     errors.push(
       new SyntaxError(
-        `At least one <template> or <script> is required in a single file component.`
-      )
+        `At least one <template> or <script> is required in a single file component.`,
+      ),
     )
   }
   if (descriptor.scriptSetup) {
@@ -223,8 +223,8 @@ export function parse(
       errors.push(
         new SyntaxError(
           `<script setup> cannot use the "src" attribute because ` +
-            `its syntax will be ambiguous outside of the component.`
-        )
+            `its syntax will be ambiguous outside of the component.`,
+        ),
       )
       descriptor.scriptSetup = null
     }
@@ -232,8 +232,8 @@ export function parse(
       errors.push(
         new SyntaxError(
           `<script> cannot use the "src" attribute when <script setup> is ` +
-            `also present because they must be processed together.`
-        )
+            `also present because they must be processed together.`,
+        ),
       )
       descriptor.script = null
     }
@@ -246,7 +246,7 @@ export function parse(
     (descriptor.template.lang === 'pug' || descriptor.template.lang === 'jade')
   ) {
     ;[descriptor.template.content, templateColumnOffset] = dedent(
-      descriptor.template.content
+      descriptor.template.content,
     )
   }
 
@@ -259,7 +259,7 @@ export function parse(
           block.content,
           sourceRoot,
           !pad || block.type === 'template' ? block.loc.start.line - 1 : 0,
-          columnOffset
+          columnOffset,
         )
       }
     }
@@ -275,12 +275,12 @@ export function parse(
   // check if the SFC uses :slotted
   const slottedRE = /(?:::v-|:)slotted\(/
   descriptor.slotted = descriptor.styles.some(
-    s => s.scoped && slottedRE.test(s.content)
+    s => s.scoped && slottedRE.test(s.content),
   )
 
   const result = {
     descriptor,
-    errors
+    errors,
   }
   parseCache.set(sourceKey, result)
   return result
@@ -288,12 +288,12 @@ export function parse(
 
 function createDuplicateBlockError(
   node: ElementNode,
-  isScriptSetup = false
+  isScriptSetup = false,
 ): CompilerError {
   const err = new SyntaxError(
     `Single file component can contain only one <${node.tag}${
       isScriptSetup ? ` setup` : ``
-    }> element`
+    }> element`,
   ) as CompilerError
   err.loc = node.loc
   return err
@@ -302,7 +302,7 @@ function createDuplicateBlockError(
 function createBlock(
   node: ElementNode,
   source: string,
-  pad: SFCParseOptions['pad']
+  pad: SFCParseOptions['pad'],
 ): SFCBlock {
   const type = node.tag
   const loc = node.innerLoc!
@@ -311,7 +311,7 @@ function createBlock(
     type,
     content: source.slice(loc.start.offset, loc.end.offset),
     loc,
-    attrs
+    attrs,
   }
   if (pad) {
     block.content = padContent(source, block, pad) + block.content
@@ -348,11 +348,11 @@ function generateSourceMap(
   generated: string,
   sourceRoot: string,
   lineOffset: number,
-  columnOffset: number
+  columnOffset: number,
 ): RawSourceMap {
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
-    sourceRoot: sourceRoot.replace(/\\/g, '/')
+    sourceRoot: sourceRoot.replace(/\\/g, '/'),
   })
   map.setSourceContent(filename, source)
   map._sources.add(filename)
@@ -368,8 +368,8 @@ function generateSourceMap(
             generatedLine,
             generatedColumn: i,
             source: filename,
-            // @ts-ignore
-            name: null
+            // @ts-expect-error
+            name: null,
           })
         }
       }
@@ -381,7 +381,7 @@ function generateSourceMap(
 function padContent(
   content: string,
   block: SFCBlock,
-  pad: SFCParseOptions['pad']
+  pad: SFCParseOptions['pad'],
 ): string {
   content = content.slice(0, block.loc.start.offset)
   if (pad === 'space') {
@@ -423,7 +423,7 @@ function isEmpty(node: ElementNode) {
  */
 export function hmrShouldReload(
   prevImports: Record<string, ImportBinding>,
-  next: SFCDescriptor
+  next: SFCDescriptor,
 ): boolean {
   if (
     !next.scriptSetup ||
@@ -469,6 +469,6 @@ function dedent(s: string): [string, number] {
         return line.slice(minIndent)
       })
       .join('\n'),
-    minIndent
+    minIndent,
   ]
 }

@@ -1,8 +1,8 @@
-import { DebuggerOptions, ReactiveEffect } from './effect'
-import { Ref, trackRefValue, triggerRefValue } from './ref'
-import { hasChanged, isFunction, NOOP } from '@vue/shared'
+import { type DebuggerOptions, ReactiveEffect } from './effect'
+import { type Ref, trackRefValue, triggerRefValue } from './ref'
+import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
-import { Dep } from './dep'
+import type { Dep } from './dep'
 import { DirtyLevels, ReactiveFlags } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
@@ -39,11 +39,11 @@ export class ComputedRefImpl<T> {
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
-    isSSR: boolean
+    isSSR: boolean,
   ) {
     this.effect = new ReactiveEffect(
       () => getter(this._value),
-      () => triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty)
+      () => triggerRefValue(this, DirtyLevels.ComputedValueMaybeDirty),
     )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
@@ -112,16 +112,16 @@ export class ComputedRefImpl<T> {
  */
 export function computed<T>(
   getter: ComputedGetter<T>,
-  debugOptions?: DebuggerOptions
+  debugOptions?: DebuggerOptions,
 ): ComputedRef<T>
 export function computed<T>(
   options: WritableComputedOptions<T>,
-  debugOptions?: DebuggerOptions
+  debugOptions?: DebuggerOptions,
 ): WritableComputedRef<T>
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
-  isSSR = false
+  isSSR = false,
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>

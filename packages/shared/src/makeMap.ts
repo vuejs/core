@@ -7,7 +7,7 @@
  */
 export function makeMap(
   str: string,
-  expectsLowerCase?: boolean
+  expectsLowerCase?: boolean,
 ): (key: string) => boolean {
   const set = new Set(str.split(','))
   return expectsLowerCase

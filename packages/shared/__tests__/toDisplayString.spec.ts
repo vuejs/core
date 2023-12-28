@@ -27,19 +27,19 @@ describe('toDisplayString', () => {
       foo: 555,
       toString() {
         return 'override'
-      }
+      },
     }
     expect(toDisplayString(objWithToStringOverride)).toBe('override')
 
     const objWithNonInvokableToString = {
       foo: 555,
-      toString: null
+      toString: null,
     }
     expect(toDisplayString(objWithNonInvokableToString)).toBe(
       `{
   "foo": 555,
   "toString": null
-}`
+}`,
     )
 
     // object created from null does not have .toString in its prototype
@@ -48,7 +48,7 @@ describe('toDisplayString', () => {
     expect(toDisplayString(nullObjectWithoutToString)).toBe(
       `{
   "bar": 1
-}`
+}`,
     )
 
     // array toString override is ignored
@@ -60,7 +60,7 @@ describe('toDisplayString', () => {
   1,
   2,
   3
-]`
+]`,
     )
   })
 
@@ -70,8 +70,8 @@ describe('toDisplayString', () => {
     expect(
       toDisplayString({
         n,
-        np
-      })
+        np,
+      }),
     ).toBe(JSON.stringify({ n: 1, np: 2 }, null, 2))
   })
 
@@ -100,7 +100,7 @@ describe('toDisplayString', () => {
   test('Map and Set', () => {
     const m = new Map<any, any>([
       [1, 'foo'],
-      [{ baz: 1 }, { foo: 'bar', qux: 2 }]
+      [{ baz: 1 }, { foo: 'bar', qux: 2 }],
     ])
     const s = new Set<any>([1, { foo: 'bar' }, m])
 
@@ -138,8 +138,8 @@ describe('toDisplayString', () => {
     expect(
       toDisplayString({
         m,
-        s
-      })
+        s,
+      }),
     ).toMatchInlineSnapshot(`
       "{
         "m": {
@@ -177,7 +177,7 @@ describe('toDisplayString', () => {
     const m = new Map<any, any>([
       [Symbol(), 'foo'],
       [Symbol(), 'bar'],
-      [Symbol('baz'), 'baz']
+      [Symbol('baz'), 'baz'],
     ])
     expect(toDisplayString(m)).toMatchInlineSnapshot(`
       "{
@@ -190,7 +190,7 @@ describe('toDisplayString', () => {
     `)
     // confirming the symbol renders Symbol(foo)
     expect(toDisplayString(new Map([[Symbol('foo'), 'foo']]))).toContain(
-      String(Symbol('foo'))
+      String(Symbol('foo')),
     )
   })
 

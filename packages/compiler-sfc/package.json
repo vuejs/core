@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.4.0-beta.4",
+  "version": "3.4.0-rc.3",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -32,7 +32,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.23.5",
+    "@babel/parser": "^7.23.6",
     "@vue/compiler-core": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/compiler-ssr": "workspace:*",
@@ -43,7 +43,7 @@
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.23.5",
+    "@babel/types": "^7.23.6",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^10.1.0",

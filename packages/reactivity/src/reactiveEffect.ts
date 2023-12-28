@@ -1,13 +1,13 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
-import { createDep, Dep } from './dep'
+import { DirtyLevels, type TrackOpTypes, TriggerOpTypes } from './constants'
+import { type Dep, createDep } from './dep'
 import {
   activeEffect,
   pauseScheduling,
   resetScheduling,
   shouldTrack,
   trackEffect,
-  triggerEffects
+  triggerEffects,
 } from './effect'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -47,9 +47,9 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
         ? {
             target,
             type,
-            key
+            key,
           }
-        : void 0
+        : void 0,
     )
   }
 }
@@ -68,7 +68,7 @@ export function trigger(
   key?: unknown,
   newValue?: unknown,
   oldValue?: unknown,
-  oldTarget?: Map<unknown, unknown> | Set<unknown>
+  oldTarget?: Map<unknown, unknown> | Set<unknown>,
 ) {
   const depsMap = targetMap.get(target)
   if (!depsMap) {
@@ -136,9 +136,9 @@ export function trigger(
               key,
               newValue,
               oldValue,
-              oldTarget
+              oldTarget,
             }
-          : void 0
+          : void 0,
       )
     }
   }

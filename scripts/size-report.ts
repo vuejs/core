@@ -54,7 +54,7 @@ async function renderFiles() {
         fileName,
         `${prettyBytes(curr.size)}${getDiff(curr.size, prev?.size)}`,
         `${prettyBytes(curr.gzip)}${getDiff(curr.gzip, prev?.gzip)}`,
-        `${prettyBytes(curr.brotli)}${getDiff(curr.brotli, prev?.brotli)}`
+        `${prettyBytes(curr.brotli)}${getDiff(curr.brotli, prev?.brotli)}`,
       ])
   }
 
@@ -65,10 +65,10 @@ async function renderFiles() {
 
 async function renderUsages() {
   const curr = (await importJSON<UsageResult>(
-    path.resolve(currDir, '_usages.json')
+    path.resolve(currDir, '_usages.json'),
   ))!
   const prev = await importJSON<UsageResult>(
-    path.resolve(prevDir, '_usages.json')
+    path.resolve(prevDir, '_usages.json'),
   )
   output += '\n### Usages\n\n'
 
@@ -83,7 +83,7 @@ async function renderUsages() {
         usage.name,
         `${prettyBytes(usage.size)}${diffSize}`,
         `${prettyBytes(usage.gzip)}${diffGzipped}`,
-        `${prettyBytes(usage.brotli)}${diffBrotli}`
+        `${prettyBytes(usage.brotli)}${diffBrotli}`,
       ]
     })
     .filter((usage): usage is string[] => !!usage)

@@ -1,15 +1,15 @@
 import {
-  computed,
-  reactive,
-  effect,
-  ref,
-  WritableComputedRef,
-  isReadonly,
-  DebuggerEvent,
-  toRaw,
-  TrackOpTypes,
+  type DebuggerEvent,
   ITERATE_KEY,
-  TriggerOpTypes
+  TrackOpTypes,
+  TriggerOpTypes,
+  type WritableComputedRef,
+  computed,
+  effect,
+  isReadonly,
+  reactive,
+  ref,
+  toRaw,
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -140,7 +140,7 @@ describe('reactivity/computed', () => {
       get: () => n.value + 1,
       set: val => {
         n.value = val - 1
-      }
+      },
     })
 
     expect(plusOne.value).toBe(2)
@@ -157,7 +157,7 @@ describe('reactivity/computed', () => {
       get: () => n.value + 1,
       set: val => {
         n.value = val - 1
-      }
+      },
     })
 
     let dummy
@@ -193,7 +193,7 @@ describe('reactivity/computed', () => {
     ;(plusOne as WritableComputedRef<number>).value++ // Type cast to prevent TS from preventing the error
 
     expect(
-      'Write operation failed: computed value is readonly'
+      'Write operation failed: computed value is readonly',
     ).toHaveBeenWarnedLast()
   })
 
@@ -209,7 +209,7 @@ describe('reactivity/computed', () => {
       },
       set(v) {
         a = v
-      }
+      },
     })
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
@@ -228,7 +228,7 @@ describe('reactivity/computed', () => {
     })
     const obj = reactive({ foo: 1, bar: 2 })
     const c = computed(() => (obj.foo, 'bar' in obj, Object.keys(obj)), {
-      onTrack
+      onTrack,
     })
     expect(c.value).toEqual(['foo', 'bar'])
     expect(onTrack).toHaveBeenCalledTimes(3)
@@ -237,20 +237,20 @@ describe('reactivity/computed', () => {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -274,7 +274,7 @@ describe('reactivity/computed', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.foo
@@ -285,7 +285,7 @@ describe('reactivity/computed', () => {
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -294,7 +294,7 @@ describe('reactivity/computed', () => {
     const cSpy = vi.fn()
 
     const a = ref<null | { v: number }>({
-      v: 1
+      v: 1,
     })
     const b = computed(() => {
       return a.value

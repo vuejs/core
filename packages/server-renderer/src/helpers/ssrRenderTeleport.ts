@@ -1,12 +1,17 @@
-import { ComponentInternalInstance, ssrContextKey } from 'vue'
-import { createBuffer, PushFn, SSRBufferItem, SSRContext } from '../render'
+import { type ComponentInternalInstance, ssrContextKey } from 'vue'
+import {
+  type PushFn,
+  type SSRBufferItem,
+  type SSRContext,
+  createBuffer,
+} from '../render'
 
 export function ssrRenderTeleport(
   parentPush: PushFn,
   contentRenderFn: (push: PushFn) => void,
   target: string,
   disabled: boolean,
-  parentComponent: ComponentInternalInstance
+  parentComponent: ComponentInternalInstance,
 ) {
   parentPush('<!--teleport start-->')
 

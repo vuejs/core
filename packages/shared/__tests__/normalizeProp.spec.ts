@@ -11,7 +11,7 @@ describe('normalizeClass', () => {
 
   test('handles array correctly', () => {
     expect(normalizeClass(['foo', undefined, true, false, 'bar'])).toEqual(
-      'foo bar'
+      'foo bar',
     )
   })
 
@@ -25,7 +25,7 @@ describe('normalizeClass', () => {
 
   test('handles object correctly', () => {
     expect(normalizeClass({ foo: true, bar: false, baz: true })).toEqual(
-      'foo baz'
+      'foo baz',
     )
   })
 
@@ -35,7 +35,7 @@ describe('normalizeClass', () => {
 
   test('handles arrays and objects correctly', () => {
     expect(
-      normalizeClass(['foo', ['bar'], { baz: true }, [{ qux: true }]])
+      normalizeClass(['foo', ['bar'], { baz: true }, [{ qux: true }]]),
     ).toEqual('foo bar baz qux')
   })
 
@@ -48,8 +48,8 @@ describe('normalizeClass', () => {
         { qux: '' },
         { quux: null },
         { corge: undefined },
-        { grault: NaN }
-      ])
+        { grault: NaN },
+      ]),
     ).toEqual('')
   })
 
@@ -60,8 +60,8 @@ describe('normalizeClass', () => {
         { bar: 'not-empty' },
         { baz: 1 },
         { qux: {} },
-        { quux: [] }
-      ])
+        { quux: [] },
+      ]),
     ).toEqual('foo bar baz qux quux')
   })
 
@@ -76,7 +76,7 @@ describe('normalizeClass', () => {
         #ccc 0.5em,
         white 0,
         white 0.75em
-      );`)
+      );`),
     ).toMatchInlineSnapshot(`
       {
         "background": "linear-gradient(white, white) padding-box,
