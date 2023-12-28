@@ -1372,7 +1372,7 @@ describe('api: watch', () => {
     expect(spy2).toHaveBeenCalledTimes(1)
   })
 
-  it('Control object listening depth using the depth option', async () => {
+  it('watching reactive depth', async () => {
     const state = reactive({
       a: {
         b: {
@@ -1404,7 +1404,27 @@ describe('api: watch', () => {
     expect(cb).toHaveBeenCalledTimes(2)
   })
 
-  it('observation array depth', async () => {
+  it('watching ref depth', async () => {
+    const state = ref({
+      a: {
+        b: 2,
+      },
+    })
+
+    const cb = vi.fn()
+
+    watch(state, cb, { deep: true, depth: 1 })
+
+    state.value.a.b = 3
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(0)
+
+    state.value.a = { b: 3 }
+    await nextTick()
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('watching array depth', async () => {
     const arr = ref([
       {
         a: {
