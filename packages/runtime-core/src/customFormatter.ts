@@ -1,8 +1,8 @@
-import { isReactive, isReadonly, isRef, Ref, toRaw } from '@vue/reactivity'
+import { type Ref, isReactive, isReadonly, isRef, toRaw } from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
 import { isShallow } from '../../reactivity/src/reactive'
-import { ComponentInternalInstance, ComponentOptions } from './component'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import type { ComponentInternalInstance, ComponentOptions } from './component'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 
 export function initCustomFormatter() {
   /* eslint-disable no-restricted-globals */
@@ -33,7 +33,7 @@ export function initCustomFormatter() {
           ['span', vueStyle, genRefFlag(obj)],
           '<',
           formatValue(obj.value),
-          `>`
+          `>`,
         ]
       } else if (isReactive(obj)) {
         return [
@@ -42,7 +42,7 @@ export function initCustomFormatter() {
           ['span', vueStyle, isShallow(obj) ? 'ShallowReactive' : 'Reactive'],
           '<',
           formatValue(obj),
-          `>${isReadonly(obj) ? ` (readonly)` : ``}`
+          `>${isReadonly(obj) ? ` (readonly)` : ``}`,
         ]
       } else if (isReadonly(obj)) {
         return [
@@ -51,7 +51,7 @@ export function initCustomFormatter() {
           ['span', vueStyle, isShallow(obj) ? 'ShallowReadonly' : 'Readonly'],
           '<',
           formatValue(obj),
-          '>'
+          '>',
         ]
       }
       return null
@@ -64,10 +64,10 @@ export function initCustomFormatter() {
         return [
           'div',
           {},
-          ...formatInstance((obj as ComponentPublicInstance).$)
+          ...formatInstance((obj as ComponentPublicInstance).$),
         ]
       }
-    }
+    },
   }
 
   function formatInstance(instance: ComponentInternalInstance) {
@@ -96,11 +96,11 @@ export function initCustomFormatter() {
       [
         'span',
         {
-          style: keywordStyle.style + ';opacity:0.66'
+          style: keywordStyle.style + ';opacity:0.66',
         },
-        '$ (internal): '
+        '$ (internal): ',
       ],
-      ['object', { object: instance }]
+      ['object', { object: instance }],
     ])
     return blocks
   }
@@ -116,24 +116,24 @@ export function initCustomFormatter() {
       [
         'div',
         {
-          style: 'color:#476582'
+          style: 'color:#476582',
         },
-        type
+        type,
       ],
       [
         'div',
         {
-          style: 'padding-left:1.25em'
+          style: 'padding-left:1.25em',
         },
         ...Object.keys(target).map(key => {
           return [
             'div',
             {},
             ['span', keywordStyle, key + ': '],
-            formatValue(target[key], false)
+            formatValue(target[key], false),
           ]
-        })
-      ]
+        }),
+      ],
     ]
   }
 

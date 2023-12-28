@@ -1,17 +1,17 @@
 import {
+  type Plugin,
   createApp,
+  defineComponent,
+  getCurrentInstance,
   h,
-  nodeOps,
-  serializeInner,
-  provide,
   inject,
+  nodeOps,
+  provide,
+  ref,
   resolveComponent,
   resolveDirective,
+  serializeInner,
   withDirectives,
-  Plugin,
-  ref,
-  getCurrentInstance,
-  defineComponent
 } from '@vue/runtime-test'
 
 describe('api: createApp', () => {
@@ -19,12 +19,12 @@ describe('api: createApp', () => {
     const Comp = defineComponent({
       props: {
         count: {
-          default: 0
-        }
+          default: 0,
+        },
       },
       setup(props) {
         return () => props.count
-      }
+      },
     })
 
     const root1 = nodeOps.createElement('div')
@@ -33,7 +33,7 @@ describe('api: createApp', () => {
     //#5571 mount multiple apps to the same host element
     createApp(Comp).mount(root1)
     expect(
-      `There is already an app instance mounted on the host container`
+      `There is already an app instance mounted on the host container`,
     ).toHaveBeenWarned()
 
     // mount with props
@@ -53,12 +53,12 @@ describe('api: createApp', () => {
     const Comp = defineComponent({
       props: {
         count: {
-          default: 0
-        }
+          default: 0,
+        },
       },
       setup(props) {
         return () => props.count
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -80,7 +80,7 @@ describe('api: createApp', () => {
         // test override
         provide('foo', 3)
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -91,7 +91,7 @@ describe('api: createApp', () => {
           inject('__proto__')
         } catch (e: any) {}
         return () => `${foo},${bar}`
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -114,7 +114,7 @@ describe('api: createApp', () => {
       setup() {
         provide('foo', 'should not be seen')
         return () => h('div')
-      }
+      },
     })
     app.provide('foo', 1)
 
@@ -129,7 +129,7 @@ describe('api: createApp', () => {
     const Root = {
       // local override
       components: {
-        BarBaz: () => 'barbaz-local!'
+        BarBaz: () => 'barbaz-local!',
       },
       setup() {
         // resolve in setup
@@ -139,7 +139,7 @@ describe('api: createApp', () => {
           const BarBaz = resolveComponent('bar-baz') as any
           return h('div', [h(FooBar), h(BarBaz)])
         }
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -152,7 +152,7 @@ describe('api: createApp', () => {
 
     app.component('BarBaz', () => 'barbaz!')
     expect(
-      'Component "BarBaz" has already been registered in target app.'
+      'Component "BarBaz" has already been registered in target app.',
     ).toHaveBeenWarnedTimes(1)
 
     const root = nodeOps.createElement('div')
@@ -168,7 +168,7 @@ describe('api: createApp', () => {
     const Root = {
       // local override
       directives: {
-        BarBaz: { mounted: spy3 }
+        BarBaz: { mounted: spy3 },
       },
       setup() {
         // resolve in setup
@@ -178,7 +178,7 @@ describe('api: createApp', () => {
           const BarBaz = resolveDirective('bar-baz')!
           return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -188,14 +188,14 @@ describe('api: createApp', () => {
     expect(app.directive('FooBar')).toBe(FooBar)
 
     app.directive('BarBaz', {
-      mounted: spy2
+      mounted: spy2,
     })
 
     app.directive('BarBaz', {
-      mounted: spy2
+      mounted: spy2,
     })
     expect(
-      'Directive "BarBaz" has already been registered in target app.'
+      'Directive "BarBaz" has already been registered in target app.',
     ).toHaveBeenWarnedTimes(1)
 
     const root = nodeOps.createElement('div')
@@ -206,7 +206,7 @@ describe('api: createApp', () => {
 
     app.directive('bind', FooBar)
     expect(
-      `Do not use built-in directive ids as custom directive id: bind`
+      `Do not use built-in directive ids as custom directive id: bind`,
     ).toHaveBeenWarned()
   })
 
@@ -215,7 +215,7 @@ describe('api: createApp', () => {
     const mixinA = {
       data() {
         return {
-          a: 1
+          a: 1,
         }
       },
       created(this: any) {
@@ -226,13 +226,13 @@ describe('api: createApp', () => {
       },
       mounted() {
         calls.push('mixinA mounted')
-      }
+      },
     }
     const mixinB = {
       name: 'mixinB',
       data() {
         return {
-          b: 2
+          b: 2,
         }
       },
       created(this: any) {
@@ -243,12 +243,12 @@ describe('api: createApp', () => {
       },
       mounted() {
         calls.push('mixinB mounted')
-      }
+      },
     }
     const Comp = {
       data() {
         return {
-          c: 3
+          c: 3,
         }
       },
       created(this: any) {
@@ -262,7 +262,7 @@ describe('api: createApp', () => {
       },
       render(this: any) {
         return `${this.a}${this.b}${this.c}`
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -272,10 +272,10 @@ describe('api: createApp', () => {
     app.mixin(mixinA)
     app.mixin(mixinB)
     expect(
-      'Mixin has already been applied to target app'
+      'Mixin has already been applied to target app',
     ).toHaveBeenWarnedTimes(2)
     expect(
-      'Mixin has already been applied to target app: mixinB'
+      'Mixin has already been applied to target app: mixinB',
     ).toHaveBeenWarnedTimes(1)
 
     const root = nodeOps.createElement('div')
@@ -288,14 +288,14 @@ describe('api: createApp', () => {
       'comp created',
       'mixinA mounted',
       'mixinB mounted',
-      'comp mounted'
+      'comp mounted',
     ])
   })
 
   test('use', () => {
     const PluginA: Plugin = app => app.provide('foo', 1)
     const PluginB: Plugin = {
-      install: (app, arg1, arg2) => app.provide('bar', arg1 + arg2)
+      install: (app, arg1, arg2) => app.provide('bar', arg1 + arg2),
     }
     class PluginC {
       someProperty = {}
@@ -310,7 +310,7 @@ describe('api: createApp', () => {
         const foo = inject('foo')
         const bar = inject('bar')
         return () => `${foo},${bar}`
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -324,13 +324,13 @@ describe('api: createApp', () => {
 
     app.use(PluginA)
     expect(
-      `Plugin has already been applied to target app`
+      `Plugin has already been applied to target app`,
     ).toHaveBeenWarnedTimes(1)
 
     app.use(PluginD)
     expect(
       `A plugin must either be a function or an object with an "install" ` +
-        `function.`
+        `function.`,
     ).toHaveBeenWarnedTimes(1)
   })
 
@@ -348,12 +348,12 @@ describe('api: createApp', () => {
       setup() {
         const count = ref(0)
         return {
-          count
+          count,
         }
       },
       render() {
         throw error
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -374,7 +374,7 @@ describe('api: createApp', () => {
       name: 'Hello',
       setup() {
         ctx = getCurrentInstance()
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -391,80 +391,80 @@ describe('api: createApp', () => {
         name: 'div',
         render() {
           return null
-        }
+        },
       }
 
       const app = createApp(Root)
 
       Object.defineProperty(app.config, 'isNativeTag', {
         value: isNativeTag,
-        writable: false
+        writable: false,
       })
 
       app.mount(nodeOps.createElement('div'))
       expect(
-        `Do not use built-in or reserved HTML elements as component id: div`
+        `Do not use built-in or reserved HTML elements as component id: div`,
       ).toHaveBeenWarned()
     })
 
     test('Component.components', () => {
       const Root = {
         components: {
-          div: () => 'div'
+          div: () => 'div',
         },
         render() {
           return null
-        }
+        },
       }
 
       const app = createApp(Root)
       Object.defineProperty(app.config, 'isNativeTag', {
         value: isNativeTag,
-        writable: false
+        writable: false,
       })
 
       app.mount(nodeOps.createElement('div'))
       expect(
-        `Do not use built-in or reserved HTML elements as component id: div`
+        `Do not use built-in or reserved HTML elements as component id: div`,
       ).toHaveBeenWarned()
     })
 
     test('Component.directives', () => {
       const Root = {
         directives: {
-          bind: () => {}
+          bind: () => {},
         },
         render() {
           return null
-        }
+        },
       }
 
       const app = createApp(Root)
       Object.defineProperty(app.config, 'isNativeTag', {
         value: isNativeTag,
-        writable: false
+        writable: false,
       })
 
       app.mount(nodeOps.createElement('div'))
       expect(
-        `Do not use built-in directive ids as custom directive id: bind`
+        `Do not use built-in directive ids as custom directive id: bind`,
       ).toHaveBeenWarned()
     })
 
     test('register using app.component', () => {
       const app = createApp({
-        render() {}
+        render() {},
       })
 
       Object.defineProperty(app.config, 'isNativeTag', {
         value: isNativeTag,
-        writable: false
+        writable: false,
       })
 
       app.component('div', () => 'div')
       app.mount(nodeOps.createElement('div'))
       expect(
-        `Do not use built-in or reserved HTML elements as component id: div`
+        `Do not use built-in or reserved HTML elements as component id: div`,
       ).toHaveBeenWarned()
     })
   })
@@ -478,12 +478,12 @@ describe('api: createApp', () => {
       foo: 'local',
       beforeCreate() {
         merged = this.$options.foo
-      }
+      },
     })
 
     const app = createApp(App)
     app.mixin({
-      foo: 'global'
+      foo: 'global',
     })
     app.config.optionMergeStrategies.foo = (a, b) => (a ? `${a},` : ``) + b
 
@@ -495,7 +495,7 @@ describe('api: createApp', () => {
     const app = createApp({
       render() {
         return this.foo
-      }
+      },
     })
     app.config.globalProperties.foo = 'hello'
     const root = nodeOps.createElement('div')
@@ -507,21 +507,21 @@ describe('api: createApp', () => {
     const Comp = defineComponent({
       setup() {
         return {
-          _: ref(0) // return property "_" should not overwrite "ctx._"
+          _: ref(0), // return property "_" should not overwrite "ctx._"
         }
       },
       render() {
         return h('input', {
-          ref: 'input'
+          ref: 'input',
         })
-      }
+      },
     })
 
     const root1 = nodeOps.createElement('div')
     createApp(Comp).mount(root1)
 
     expect(
-      `setup() return property "_" should not start with "$" or "_" which are reserved prefixes for Vue internals.`
+      `setup() return property "_" should not start with "$" or "_" which are reserved prefixes for Vue internals.`,
     ).toHaveBeenWarned()
   })
 
@@ -530,14 +530,14 @@ describe('api: createApp', () => {
       setup() {
         return {
           _: ref(0), // return property "_" should not overwrite "ctx._"
-          __isScriptSetup: true // mock __isScriptSetup = true
+          __isScriptSetup: true, // mock __isScriptSetup = true
         }
       },
       render() {
         return h('input', {
-          ref: 'input'
+          ref: 'input',
         })
-      }
+      },
     })
 
     const root1 = nodeOps.createElement('div')
@@ -547,7 +547,7 @@ describe('api: createApp', () => {
     app.$refs.input
 
     expect(
-      `TypeError: Cannot read property '__isScriptSetup' of undefined`
+      `TypeError: Cannot read property '__isScriptSetup' of undefined`,
     ).not.toHaveBeenWarned()
   })
 

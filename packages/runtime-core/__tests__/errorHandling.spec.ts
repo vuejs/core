@@ -1,15 +1,15 @@
 import {
-  onMounted,
-  onErrorCaptured,
-  render,
-  h,
-  nodeOps,
-  watch,
-  ref,
-  nextTick,
+  createApp,
   defineComponent,
+  h,
+  nextTick,
+  nodeOps,
+  onErrorCaptured,
+  onMounted,
+  ref,
+  render,
+  watch,
   watchEffect,
-  createApp
 } from '@vue/runtime-test'
 
 describe('error handling', () => {
@@ -24,7 +24,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -33,7 +33,7 @@ describe('error handling', () => {
           fn(err, info, 'child')
         })
         return () => h(GrandChild)
-      }
+      },
     }
 
     const GrandChild = {
@@ -42,7 +42,7 @@ describe('error handling', () => {
           throw err
         })
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -62,7 +62,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -72,7 +72,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(GrandChild)
-      }
+      },
     }
 
     const GrandChild = {
@@ -81,7 +81,7 @@ describe('error handling', () => {
           throw err
         })
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -100,7 +100,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -109,7 +109,7 @@ describe('error handling', () => {
           throw err
         })
       },
-      render() {}
+      render() {},
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -130,7 +130,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -139,7 +139,7 @@ describe('error handling', () => {
           throw err2
         })
         return () => h(GrandChild)
-      }
+      },
     }
 
     const GrandChild = {
@@ -148,7 +148,7 @@ describe('error handling', () => {
           throw err
         })
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -168,14 +168,14 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
       setup() {
         throw err
       },
-      render() {}
+      render() {},
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -195,21 +195,21 @@ describe('error handling', () => {
           return false
         })
         return () => [h(Child1), h(Child2)]
-      }
+      },
     }
 
     const Child1 = {
       created() {
         throw err
       },
-      render() {}
+      render() {},
     }
 
     const Child2 = {
       beforeCreate() {
         throw err
       },
-      render() {}
+      render() {},
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -228,7 +228,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -236,7 +236,7 @@ describe('error handling', () => {
         return () => {
           throw err
         }
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -257,7 +257,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = defineComponent(() => () => h('div', { ref }))
@@ -277,7 +277,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -286,7 +286,7 @@ describe('error handling', () => {
           throw err
         })
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -304,7 +304,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -313,10 +313,10 @@ describe('error handling', () => {
           () => {
             throw err
           },
-          () => {}
+          () => {},
         )
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -334,7 +334,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const count = ref(0)
@@ -344,10 +344,10 @@ describe('error handling', () => {
           () => count.value,
           () => {
             throw err
-          }
+          },
         )
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -369,7 +369,7 @@ describe('error handling', () => {
           return false
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
@@ -381,7 +381,7 @@ describe('error handling', () => {
           })
         })
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -405,16 +405,16 @@ describe('error handling', () => {
           h(Child, {
             onFoo: () => {
               throw err
-            }
+            },
           })
-      }
+      },
     }
 
     const Child = {
       setup(props: any, { emit }: any) {
         emit('foo')
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -435,9 +435,9 @@ describe('error handling', () => {
           h(Child, {
             async onFoo() {
               throw err
-            }
+            },
           })
-      }
+      },
     }
 
     const Child = {
@@ -445,7 +445,7 @@ describe('error handling', () => {
       setup(props: any, { emit }: any) {
         emit('foo')
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -473,17 +473,17 @@ describe('error handling', () => {
           h(Child, {
             onFoo: [
               createAsyncHandler(Promise.reject(err)),
-              createAsyncHandler(Promise.resolve(1))
-            ]
+              createAsyncHandler(Promise.resolve(1)),
+            ],
           })
-      }
+      },
     }
 
     const Child = {
       setup(props: any, { emit }: any) {
         emit('foo')
         return () => null
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -511,14 +511,14 @@ describe('error handling', () => {
           fn(err, info)
         })
         return () => h(Child)
-      }
+      },
     }
 
     const Child = {
       setup() {
         throw err
       },
-      render() {}
+      render() {},
     }
 
     let caughtError
@@ -529,7 +529,7 @@ describe('error handling', () => {
     }
     expect(fn).toHaveBeenCalledWith(err, 'setup function')
     expect(
-      `Unhandled error during execution of setup function`
+      `Unhandled error during execution of setup function`,
     ).toHaveBeenWarned()
     expect(caughtError).toBe(err)
 
@@ -553,14 +553,14 @@ describe('error handling', () => {
           () => {
             throw error1
           },
-          { immediate: true }
+          { immediate: true },
         )
         watch(
           count,
           async () => {
             throw error2
           },
-          { immediate: true }
+          { immediate: true },
         )
         watchEffect(() => {
           throw error3
@@ -569,7 +569,7 @@ describe('error handling', () => {
           throw error4
         })
       },
-      render() {}
+      render() {},
     })
 
     app.config.errorHandler = handler
