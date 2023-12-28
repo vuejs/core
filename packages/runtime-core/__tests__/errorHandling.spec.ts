@@ -598,7 +598,7 @@ describe('error handling', () => {
         return () => {
           throw error
         }
-      }
+      },
     })
 
     app.config.errorHandler = handler
