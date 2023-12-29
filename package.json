@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "3.4.0-rc.3",
+  "version": "3.4.0",
   "packageManager": "pnpm@8.12.1",
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache --ext .js,.ts,.tsx .",
+    "lint": "eslint --cache --ext .js,.ts,.tsx . --ignore-path .gitignore",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
