@@ -15,7 +15,7 @@ Vue.compile = (() => {
             ? ` Use "vue.esm-browser.js" instead.`
             : __GLOBAL__
               ? ` Use "vue.global.js" instead.`
-              : ``) /* should not happen */
+              : ``) /* should not happen */,
     )
   }
 }) as any

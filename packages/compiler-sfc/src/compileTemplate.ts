@@ -1,29 +1,29 @@
 import {
-  CompilerOptions,
-  CodegenResult,
-  CompilerError,
-  NodeTransform,
-  ParserOptions,
-  RootNode,
+  type CodegenResult,
+  type CompilerError,
+  type CompilerOptions,
+  type ElementNode,
+  type NodeTransform,
   NodeTypes,
-  ElementNode,
-  createRoot
+  type ParserOptions,
+  type RootNode,
+  createRoot,
 } from '@vue/compiler-core'
 import {
+  type RawSourceMap,
   SourceMapConsumer,
   SourceMapGenerator,
-  RawSourceMap
 } from 'source-map-js'
 import {
-  transformAssetUrl,
-  AssetURLOptions,
+  type AssetURLOptions,
+  type AssetURLTagConfig,
   createAssetUrlTransformWithOptions,
-  AssetURLTagConfig,
-  normalizeOptions
+  normalizeOptions,
+  transformAssetUrl,
 } from './template/transformAssetUrl'
 import {
+  createSrcsetTransformWithOptions,
   transformSrcset,
-  createSrcsetTransformWithOptions
 } from './template/transformSrcset'
 import { generateCodeFrame, isObject } from '@vue/shared'
 import * as CompilerDOM from '@vue/compiler-dom'
@@ -79,13 +79,13 @@ interface PreProcessor {
   render(
     source: string,
     options: any,
-    cb: (err: Error | null, res: string) => void
+    cb: (err: Error | null, res: string) => void,
   ): void
 }
 
 function preprocess(
   { source, filename, preprocessOptions }: SFCTemplateCompileOptions,
-  preprocessor: PreProcessor
+  preprocessor: PreProcessor,
 ): string {
   // Consolidate exposes a callback based API, but the callback is in fact
   // called synchronously for most templating engines. In our case, we have to
@@ -100,7 +100,7 @@ function preprocess(
     (_err, _res) => {
       if (_err) err = _err
       res = _res
-    }
+    },
   )
 
   if (err) throw err
@@ -108,7 +108,7 @@ function preprocess(
 }
 
 export function compileTemplate(
-  options: SFCTemplateCompileOptions
+  options: SFCTemplateCompileOptions,
 ): SFCTemplateCompileResults {
   const { preprocessLang, preprocessCustomRequire } = options
 
@@ -120,7 +120,7 @@ export function compileTemplate(
     throw new Error(
       `[@vue/compiler-sfc] Template preprocessing in the browser build must ` +
         `provide the \`preprocessCustomRequire\` option to return the in-browser ` +
-        `version of the preprocessor in the shape of { render(): string }.`
+        `version of the preprocessor in the shape of { render(): string }.`,
     )
   }
 
@@ -136,14 +136,14 @@ export function compileTemplate(
       return doCompileTemplate({
         ...options,
         source: preprocess(options, preprocessor),
-        ast: undefined // invalidate AST if template goes through preprocessor
+        ast: undefined, // invalidate AST if template goes through preprocessor
       })
     } catch (e: any) {
       return {
         code: `export default function render() {}`,
         source: options.source,
         tips: [],
-        errors: [e]
+        errors: [e],
       }
     }
   } else if (preprocessLang) {
@@ -151,11 +151,11 @@ export function compileTemplate(
       code: `export default function render() {}`,
       source: options.source,
       tips: [
-        `Component ${options.filename} uses lang ${preprocessLang} for template. Please install the language preprocessor.`
+        `Component ${options.filename} uses lang ${preprocessLang} for template. Please install the language preprocessor.`,
       ],
       errors: [
-        `Component ${options.filename} uses lang ${preprocessLang} for template, however it is not installed.`
-      ]
+        `Component ${options.filename} uses lang ${preprocessLang} for template, however it is not installed.`,
+      ],
     }
   } else {
     return doCompileTemplate(options)
@@ -175,7 +175,7 @@ function doCompileTemplate({
   isProd = false,
   compiler,
   compilerOptions = {},
-  transformAssetUrls
+  transformAssetUrls,
 }: SFCTemplateCompileOptions): SFCTemplateCompileResults {
   const errors: CompilerError[] = []
   const warnings: CompilerError[] = []
@@ -185,7 +185,7 @@ function doCompileTemplate({
     const assetOptions = normalizeOptions(transformAssetUrls)
     nodeTransforms = [
       createAssetUrlTransformWithOptions(assetOptions),
-      createSrcsetTransformWithOptions(assetOptions)
+      createSrcsetTransformWithOptions(assetOptions),
     ]
   } else if (transformAssetUrls !== false) {
     nodeTransforms = [transformAssetUrl, transformSrcset]
@@ -194,7 +194,7 @@ function doCompileTemplate({
   if (ssr && !ssrCssVars) {
     warnOnce(
       `compileTemplate is called with \`ssr: true\` but no ` +
-        `corresponding \`cssVars\` option.\`.`
+        `corresponding \`cssVars\` option.\`.`,
     )
   }
   if (!id) {
@@ -220,10 +220,10 @@ function doCompileTemplate({
     // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
       parseMode: 'sfc',
-      onError: e => errors.push(e)
+      onError: e => errors.push(e),
     })
     const template = newAST.children.find(
-      node => node.type === NodeTypes.ELEMENT && node.tag === 'template'
+      node => node.type === NodeTypes.ELEMENT && node.tag === 'template',
     ) as ElementNode
     inAST = createRoot(template.children, inAST.source)
   }
@@ -245,7 +245,7 @@ function doCompileTemplate({
     nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
     filename,
     onError: e => errors.push(e),
-    onWarn: w => warnings.push(w)
+    onWarn: w => warnings.push(w),
   })
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
@@ -266,7 +266,7 @@ function doCompileTemplate({
       msg += `\n${generateCodeFrame(
         inAST?.source || source,
         w.loc.start.offset,
-        w.loc.end.offset
+        w.loc.end.offset,
       )}`
     }
     return msg
@@ -290,7 +290,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
 
     const origPosInOldMap = oldMapConsumer.originalPositionFor({
       line: m.originalLine,
-      column: m.originalColumn
+      column: m.originalColumn,
     })
 
     if (origPosInOldMap.source == null) {
@@ -300,16 +300,16 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
     mergedMapGenerator.addMapping({
       generated: {
         line: m.generatedLine,
-        column: m.generatedColumn
+        column: m.generatedColumn,
       },
       original: {
         line: origPosInOldMap.line, // map line
         // use current column, since the oldMap produced by @vue/compiler-sfc
         // does not
-        column: m.originalColumn
+        column: m.originalColumn,
       },
       source: origPosInOldMap.source,
-      name: origPosInOldMap.name
+      name: origPosInOldMap.name,
     })
   })
 
@@ -331,7 +331,7 @@ function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {
 function patchErrors(
   errors: CompilerError[],
   source: string,
-  inMap: RawSourceMap
+  inMap: RawSourceMap,
 ) {
   const originalSource = inMap.sourcesContent![0]
   const offset = originalSource.indexOf(source)

@@ -1,14 +1,14 @@
 import {
-  baseParse as parse,
-  CompilerOptions,
-  ElementNode,
+  type CompilerOptions,
+  type ElementNode,
   ErrorCodes,
-  TO_HANDLER_KEY,
-  helperNameMap,
   NodeTypes,
-  ObjectExpression,
+  type ObjectExpression,
+  TO_HANDLER_KEY,
+  type VNodeCall,
+  helperNameMap,
+  baseParse as parse,
   transform,
-  VNodeCall
 } from '../../src'
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
@@ -19,13 +19,13 @@ function parseWithVOn(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms: [transformExpression, transformElement],
     directiveTransforms: {
-      on: transformOn
+      on: transformOn,
     },
-    ...options
+    ...options,
   })
   return {
     root: ast,
-    node: ast.children[0] as ElementNode
+    node: ast.children[0] as ElementNode,
   }
 }
 
@@ -41,13 +41,13 @@ describe('compiler: transform v-on', () => {
             loc: {
               start: {
                 line: 1,
-                column: 11
+                column: 11,
               },
               end: {
                 line: 1,
-                column: 16
-              }
-            }
+                column: 16,
+              },
+            },
           },
           value: {
             content: `onClick`,
@@ -55,16 +55,16 @@ describe('compiler: transform v-on', () => {
             loc: {
               start: {
                 line: 1,
-                column: 18
+                column: 18,
               },
               end: {
                 line: 1,
-                column: 25
-              }
-            }
-          }
-        }
-      ]
+                column: 25,
+              },
+            },
+          },
+        },
+      ],
     })
   })
 
@@ -78,22 +78,22 @@ describe('compiler: transform v-on', () => {
             children: [
               `_${helperNameMap[TO_HANDLER_KEY]}(`,
               { content: `event` },
-              `)`
-            ]
+              `)`,
+            ],
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `handler`,
-            isStatic: false
-          }
-        }
-      ]
+            isStatic: false,
+          },
+        },
+      ],
     })
   })
 
   test('dynamic arg with prefixing', () => {
     const { node } = parseWithVOn(`<div v-on:[event]="handler"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -103,22 +103,22 @@ describe('compiler: transform v-on', () => {
             children: [
               `_${helperNameMap[TO_HANDLER_KEY]}(`,
               { content: `_ctx.event` },
-              `)`
-            ]
+              `)`,
+            ],
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `_ctx.handler`,
-            isStatic: false
-          }
-        }
-      ]
+            isStatic: false,
+          },
+        },
+      ],
     })
   })
 
   test('dynamic arg with complex exp prefixing', () => {
     const { node } = parseWithVOn(`<div v-on:[event(foo)]="handler"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -131,16 +131,16 @@ describe('compiler: transform v-on', () => {
               `(`,
               { content: `_ctx.foo` },
               `)`,
-              `)`
-            ]
+              `)`,
+            ],
           },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `_ctx.handler`,
-            isStatic: false
-          }
-        }
-      ]
+            isStatic: false,
+          },
+        },
+      ],
     })
   })
 
@@ -152,10 +152,10 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.COMPOUND_EXPRESSION,
-            children: [`$event => (`, { content: `i++` }, `)`]
-          }
-        }
-      ]
+            children: [`$event => (`, { content: `i++` }, `)`],
+          },
+        },
+      ],
     })
   })
 
@@ -170,10 +170,10 @@ describe('compiler: transform v-on', () => {
             // should wrap with `{` for multiple statements
             // in this case the return value is discarded and the behavior is
             // consistent with 2.x
-            children: [`$event => {`, { content: `foo();bar()` }, `}`]
-          }
-        }
-      ]
+            children: [`$event => {`, { content: `foo();bar()` }, `}`],
+          },
+        },
+      ],
     })
   })
 
@@ -188,16 +188,16 @@ describe('compiler: transform v-on', () => {
             // should wrap with `{` for multiple statements
             // in this case the return value is discarded and the behavior is
             // consistent with 2.x
-            children: [`$event => {`, { content: `\nfoo();\nbar()\n` }, `}`]
-          }
-        }
-      ]
+            children: [`$event => {`, { content: `\nfoo();\nbar()\n` }, `}`],
+          },
+        },
+      ],
     })
   })
 
   test('inline statement w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="foo($event)"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -214,20 +214,20 @@ describe('compiler: transform v-on', () => {
                   `(`,
                   // should NOT prefix $event
                   { content: `$event` },
-                  `)`
-                ]
+                  `)`,
+                ],
               },
-              `)`
-            ]
-          }
-        }
-      ]
+              `)`,
+            ],
+          },
+        },
+      ],
     })
   })
 
   test('multiple inline statements w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="foo($event);bar()"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -245,14 +245,14 @@ describe('compiler: transform v-on', () => {
                   { content: `$event` },
                   `);`,
                   { content: `_ctx.bar` },
-                  `()`
-                ]
+                  `()`,
+                ],
               },
-              `}`
-            ]
-          }
-        }
-      ]
+              `}`,
+            ],
+          },
+        },
+      ],
     })
   })
 
@@ -264,10 +264,10 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `$event => foo($event)`
-          }
-        }
-      ]
+            content: `$event => foo($event)`,
+          },
+        },
+      ],
     })
   })
 
@@ -279,10 +279,10 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `(e: any): any => foo(e)`
-          }
-        }
-      ]
+            content: `(e: any): any => foo(e)`,
+          },
+        },
+      ],
     })
   })
 
@@ -292,7 +292,7 @@ describe('compiler: transform v-on', () => {
       $event => {
         foo($event)
       }
-    "/>`
+    "/>`,
     )
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -304,10 +304,10 @@ describe('compiler: transform v-on', () => {
       $event => {
         foo($event)
       }
-    `
-          }
-        }
-      ]
+    `,
+          },
+        },
+      ],
     })
   })
 
@@ -317,7 +317,7 @@ describe('compiler: transform v-on', () => {
       function($event) {
         foo($event)
       }
-    "/>`
+    "/>`,
     )
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -329,10 +329,10 @@ describe('compiler: transform v-on', () => {
       function($event) {
         foo($event)
       }
-    `
-          }
-        }
-      ]
+    `,
+          },
+        },
+      ],
     })
   })
 
@@ -344,16 +344,16 @@ describe('compiler: transform v-on', () => {
           key: { content: `onClick` },
           value: {
             type: NodeTypes.SIMPLE_EXPRESSION,
-            content: `a['b' + c]`
-          }
-        }
-      ]
+            content: `a['b' + c]`,
+          },
+        },
+      ],
     })
   })
 
   test('complex member expression w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="a['b' + c]"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -365,17 +365,17 @@ describe('compiler: transform v-on', () => {
               { content: `_ctx.a` },
               `['b' + `,
               { content: `_ctx.c` },
-              `]`
-            ]
-          }
-        }
-      ]
+              `]`,
+            ],
+          },
+        },
+      ],
     })
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
     const { node } = parseWithVOn(`<div @click="e => foo(e)"/>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
@@ -389,11 +389,11 @@ describe('compiler: transform v-on', () => {
               { content: `_ctx.foo` },
               `(`,
               { content: `e` },
-              `)`
-            ]
-          }
-        }
-      ]
+              `)`,
+            ],
+          },
+        },
+      ],
     })
   })
 
@@ -405,13 +405,13 @@ describe('compiler: transform v-on', () => {
       loc: {
         start: {
           line: 1,
-          column: 6
+          column: 6,
         },
         end: {
           line: 1,
-          column: 16
-        }
-      }
+          column: 16,
+        },
+      },
     })
   })
 
@@ -427,13 +427,13 @@ describe('compiler: transform v-on', () => {
       properties: [
         {
           key: {
-            content: `onFooBar`
+            content: `onFooBar`,
           },
           value: {
-            content: `onMount`
-          }
-        }
-      ]
+            content: `onMount`,
+          },
+        },
+      ],
     })
   })
 
@@ -445,39 +445,39 @@ describe('compiler: transform v-on', () => {
       loc: {
         start: {
           line: 1,
-          column: 11
+          column: 11,
         },
         end: {
           line: 1,
-          column: 24
-        }
-      }
+          column: 24,
+        },
+      },
     })
   })
 
   test('vue: prefixed events', () => {
     const { node } = parseWithVOn(
-      `<div v-on:vue:mounted="onMount" @vue:before-update="onBeforeUpdate" />`
+      `<div v-on:vue:mounted="onMount" @vue:before-update="onBeforeUpdate" />`,
     )
     expect((node.codegenNode as VNodeCall).props).toMatchObject({
       properties: [
         {
           key: {
-            content: `onVnodeMounted`
+            content: `onVnodeMounted`,
           },
           value: {
-            content: `onMount`
-          }
+            content: `onMount`,
+          },
         },
         {
           key: {
-            content: `onVnodeBeforeUpdate`
+            content: `onVnodeBeforeUpdate`,
           },
           value: {
-            content: `onBeforeUpdate`
-          }
-        }
-      ]
+            content: `onBeforeUpdate`,
+          },
+        },
+      ],
     })
   })
 
@@ -485,35 +485,35 @@ describe('compiler: transform v-on', () => {
     test('empty handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click.prevent />`, {
         prefixIdentifiers: true,
-        cacheHandlers: true
+        cacheHandlers: true,
       })
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
         value: {
           type: NodeTypes.SIMPLE_EXPRESSION,
-          content: `() => {}`
-        }
+          content: `() => {}`,
+        },
       })
     })
 
     test('member expression handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="foo" />`, {
         prefixIdentifiers: true,
-        cacheHandlers: true
+        cacheHandlers: true,
       })
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
@@ -522,23 +522,23 @@ describe('compiler: transform v-on', () => {
           children: [
             `(...args) => (`,
             { content: `_ctx.foo && _ctx.foo(...args)` },
-            `)`
-          ]
-        }
+            `)`,
+          ],
+        },
       })
     })
 
     test('compound member expression handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="foo.bar" />`, {
         prefixIdentifiers: true,
-        cacheHandlers: true
+        cacheHandlers: true,
       })
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
@@ -555,12 +555,12 @@ describe('compiler: transform v-on', () => {
                 { content: `_ctx.foo` },
                 `.`,
                 { content: `bar` },
-                `(...args)`
-              ]
+                `(...args)`,
+              ],
             },
-            `)`
-          ]
-        }
+            `)`,
+          ],
+        },
       })
     })
 
@@ -568,7 +568,7 @@ describe('compiler: transform v-on', () => {
       const { root } = parseWithVOn(`<comp v-on:click="foo" />`, {
         prefixIdentifiers: true,
         cacheHandlers: true,
-        isNativeTag: tag => tag === 'div'
+        isNativeTag: tag => tag === 'div',
       })
       expect(root.cached).toBe(0)
     })
@@ -578,8 +578,8 @@ describe('compiler: transform v-on', () => {
         `<div v-once><div v-on:click="foo"/></div>`,
         {
           prefixIdentifiers: true,
-          cacheHandlers: true
-        }
+          cacheHandlers: true,
+        },
       )
       expect(root.cached).not.toBe(2)
       expect(root.cached).toBe(1)
@@ -588,21 +588,21 @@ describe('compiler: transform v-on', () => {
     test('inline function expression handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="() => foo()" />`, {
         prefixIdentifiers: true,
-        cacheHandlers: true
+        cacheHandlers: true,
       })
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`() => `, { content: `_ctx.foo` }, `()`]
-        }
+          children: [`() => `, { content: `_ctx.foo` }, `()`],
+        },
       })
     })
 
@@ -611,22 +611,22 @@ describe('compiler: transform v-on', () => {
         `<div v-on:click="async () => await foo()" />`,
         {
           prefixIdentifiers: true,
-          cacheHandlers: true
-        }
+          cacheHandlers: true,
+        },
       )
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
         value: {
           type: NodeTypes.COMPOUND_EXPRESSION,
-          children: [`async () => await `, { content: `_ctx.foo` }, `()`]
-        }
+          children: [`async () => await `, { content: `_ctx.foo` }, `()`],
+        },
       })
     })
 
@@ -635,15 +635,15 @@ describe('compiler: transform v-on', () => {
         `<div v-on:click="async function () { await foo() } " />`,
         {
           prefixIdentifiers: true,
-          cacheHandlers: true
-        }
+          cacheHandlers: true,
+        },
       )
       expect(root.cached).toBe(1)
       const vnodeCall = node.codegenNode as VNodeCall
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
@@ -652,16 +652,16 @@ describe('compiler: transform v-on', () => {
           children: [
             `async function () { await `,
             { content: `_ctx.foo` },
-            `() } `
-          ]
-        }
+            `() } `,
+          ],
+        },
       })
     })
 
     test('inline statement handler', () => {
       const { root, node } = parseWithVOn(`<div v-on:click="foo++" />`, {
         prefixIdentifiers: true,
-        cacheHandlers: true
+        cacheHandlers: true,
       })
       expect(root.cached).toBe(1)
       expect(root.cached).toBe(1)
@@ -669,7 +669,7 @@ describe('compiler: transform v-on', () => {
       // should not treat cached handler as dynamicProp, so no flags
       expect(vnodeCall.patchFlag).toBeUndefined()
       expect(
-        (vnodeCall.props as ObjectExpression).properties[0].value
+        (vnodeCall.props as ObjectExpression).properties[0].value,
       ).toMatchObject({
         type: NodeTypes.JS_CACHE_EXPRESSION,
         index: 0,
@@ -678,9 +678,9 @@ describe('compiler: transform v-on', () => {
           children: [
             `$event => (`,
             { children: [{ content: `_ctx.foo` }, `++`] },
-            `)`
-          ]
-        }
+            `)`,
+          ],
+        },
       })
     })
   })

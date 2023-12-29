@@ -1,15 +1,15 @@
 import {
-  processExpression,
-  createTransformContext,
-  createSimpleExpression,
-  createRoot,
+  type BindingMetadata,
   NodeTypes,
-  SimpleExpressionNode,
-  BindingMetadata
+  type SimpleExpressionNode,
+  createRoot,
+  createSimpleExpression,
+  createTransformContext,
+  processExpression,
 } from '@vue/compiler-dom'
-import { SFCDescriptor } from '../parse'
+import type { SFCDescriptor } from '../parse'
 import { getEscapedCssVarName } from '../script/utils'
-import { PluginCreator } from 'postcss'
+import type { PluginCreator } from 'postcss'
 import hash from 'hash-sum'
 
 export const CSS_VARS_HELPER = `useCssVars`
@@ -18,12 +18,12 @@ export function genCssVarsFromList(
   vars: string[],
   id: string,
   isProd: boolean,
-  isSSR = false
+  isSSR = false,
 ): string {
   return `{\n  ${vars
     .map(
       key =>
-        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`
+        `"${isSSR ? `--` : ``}${genVarName(id, key, isProd, isSSR)}": (${key})`,
     )
     .join(',\n  ')}\n}`
 }
@@ -32,7 +32,7 @@ function genVarName(
   id: string,
   raw: string,
   isProd: boolean,
-  isSSR = false
+  isSSR = false,
 ): string {
   if (isProd) {
     return hash(id + raw)
@@ -81,7 +81,7 @@ export function parseCssVars(sfc: SFCDescriptor): string[] {
 enum LexerState {
   inParens,
   inSingleQuoteString,
-  inDoubleQuoteString
+  inDoubleQuoteString,
 }
 
 function lexBinding(content: string, start: number): number | null {
@@ -152,7 +152,7 @@ export const cssVarsPlugin: PluginCreator<CssVarsPluginOptions> = opts => {
         }
         decl.value = transformed + value.slice(lastIndex)
       }
-    }
+    },
   }
 }
 cssVarsPlugin.postcss = true
@@ -161,14 +161,14 @@ export function genCssVarsCode(
   vars: string[],
   bindings: BindingMetadata,
   id: string,
-  isProd: boolean
+  isProd: boolean,
 ) {
   const varsExp = genCssVarsFromList(vars, id, isProd)
   const exp = createSimpleExpression(varsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings,
   })
   const transformed = processExpression(exp, context)
   const transformedString =
@@ -192,7 +192,7 @@ export function genNormalScriptCssVarsCode(
   bindings: BindingMetadata,
   id: string,
   isProd: boolean,
-  defaultVar: string
+  defaultVar: string,
 ): string {
   return (
     `\nimport { ${CSS_VARS_HELPER} as _${CSS_VARS_HELPER} } from 'vue'\n` +
@@ -200,7 +200,7 @@ export function genNormalScriptCssVarsCode(
       cssVars,
       bindings,
       id,
-      isProd
+      isProd,
     )}}\n` +
     `const __setup__ = ${defaultVar}.setup\n` +
     `${defaultVar}.setup = __setup__\n` +

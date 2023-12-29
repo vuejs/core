@@ -1,36 +1,36 @@
 import {
-  watch,
-  watchEffect,
-  reactive,
+  type ComponentInternalInstance,
+  type ComponentPublicInstance,
   computed,
-  nextTick,
-  ref,
   defineComponent,
   getCurrentInstance,
-  ComponentInternalInstance,
-  ComponentPublicInstance
+  nextTick,
+  reactive,
+  ref,
+  watch,
+  watchEffect,
 } from '../src/index'
 import {
-  render,
-  nodeOps,
-  serializeInner,
-  TestElement,
-  h,
+  type TestElement,
   createApp,
+  h,
+  nodeOps,
+  onMounted,
+  render,
+  serializeInner,
   watchPostEffect,
   watchSyncEffect,
-  onMounted
 } from '@vue/runtime-test'
 import {
+  type DebuggerEvent,
   ITERATE_KEY,
-  DebuggerEvent,
+  type Ref,
   TrackOpTypes,
   TriggerOpTypes,
-  triggerRef,
-  shallowRef,
-  Ref,
   effectScope,
-  toRef
+  shallowRef,
+  toRef,
+  triggerRef,
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -61,7 +61,7 @@ describe('api: watch', () => {
         if (prevCount) {
           prevCount + 1
         }
-      }
+      },
     )
     state.count++
     await nextTick()
@@ -135,8 +135,8 @@ describe('api: watch', () => {
         dummy = [c, prevCount]
       },
       {
-        deep: true
-      }
+        deep: true,
+      },
     )
     count.value++
     await nextTick()
@@ -145,7 +145,7 @@ describe('api: watch', () => {
 
   it('directly watching reactive object (with automatic deep: true)', async () => {
     const src = reactive({
-      count: 0
+      count: 0,
     })
     let dummy
     watch(src, ({ count }) => {
@@ -174,7 +174,7 @@ describe('api: watch', () => {
     await nextTick()
     expect(dummy).toMatchObject([
       [2, 2, 3],
-      [1, 1, 2]
+      [1, 1, 2],
     ])
   })
 
@@ -189,7 +189,7 @@ describe('api: watch', () => {
         expect([newA, newB]).toMatchObject([undefined, undefined])
         expect([oldA, oldB]).toMatchObject([undefined, undefined])
       },
-      { immediate: true }
+      { immediate: true },
     )
     await nextTick()
     expect(called).toBe(true)
@@ -214,7 +214,7 @@ describe('api: watch', () => {
     await nextTick()
     expect(dummy).toMatchObject([
       [2, true],
-      [1, false]
+      [1, false],
     ])
   })
 
@@ -264,7 +264,7 @@ describe('api: watch', () => {
       () => state.count,
       count => {
         dummy = count
-      }
+      },
     )
 
     state.count++
@@ -345,7 +345,7 @@ describe('api: watch', () => {
           assertion(count.value, count2.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -375,10 +375,10 @@ describe('api: watch', () => {
           () => {
             assertion(count.value)
           },
-          { flush: 'post' }
+          { flush: 'post' },
         )
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -404,7 +404,7 @@ describe('api: watch', () => {
           assertion(count.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -444,11 +444,11 @@ describe('api: watch', () => {
             assertion(count.value)
           },
           {
-            flush: 'sync'
-          }
+            flush: 'sync',
+          },
         )
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -490,7 +490,7 @@ describe('api: watch', () => {
           assertion(count.value)
         })
         return () => count.value
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -513,12 +513,12 @@ describe('api: watch', () => {
       setup() {
         watch(toggle, cb, { flush: 'post' })
       },
-      render() {}
+      render() {},
     }
     const App = {
       render() {
         return toggle.value ? h(Comp) : null
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(cb).not.toHaveBeenCalled()
@@ -535,12 +535,12 @@ describe('api: watch', () => {
       setup() {
         watch(toggle, cb, { flush: 'pre' })
       },
-      render() {}
+      render() {},
     }
     const App = {
       render() {
         return toggle.value ? h(Comp) : null
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(cb).not.toHaveBeenCalled()
@@ -557,20 +557,20 @@ describe('api: watch', () => {
       props: ['visible'],
       render() {
         return visible.value ? h(Comp) : null
-      }
+      },
     })
     const Comp = {
       setup() {
         watch(visible, cb, { flush: 'pre' })
       },
-      render() {}
+      render() {},
     }
     const App = {
       render() {
         return h(Parent, {
-          visible: visible.value
+          visible: visible.value,
         })
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(cb).not.toHaveBeenCalled()
@@ -591,13 +591,13 @@ describe('api: watch', () => {
           val => {
             calls.push('watcher child')
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         return () => {
           b.value
           calls.push('render child')
         }
-      }
+      },
     }
 
     const Parent = {
@@ -608,22 +608,22 @@ describe('api: watch', () => {
           val => {
             calls.push('watcher parent')
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         return () => {
           b.value
           calls.push('render parent')
           return h(Comp)
         }
-      }
+      },
     }
 
     const App = {
       render() {
         return h(Parent, {
-          a: b.value
+          a: b.value,
         })
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -637,7 +637,7 @@ describe('api: watch', () => {
       'watcher parent',
       'render parent',
       'watcher child',
-      'render child'
+      'render child',
     ])
   })
 
@@ -657,7 +657,7 @@ describe('api: watch', () => {
             calls.push('watcher 1')
             c.value++
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
 
         // #1777 chained pre-watcher
@@ -666,19 +666,19 @@ describe('api: watch', () => {
           () => {
             calls.push('watcher 2')
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         return () => {
           c.value
           calls.push('render')
         }
-      }
+      },
     }
 
     const App = {
       render() {
         return h(Comp, { a: a.value, b: b.value })
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -705,7 +705,7 @@ describe('api: watch', () => {
           () => {
             calls.push('watch ' + count.value)
           },
-          { flush: 'pre' }
+          { flush: 'pre' },
         )
         onMounted(() => {
           calls.push('mounted')
@@ -714,7 +714,7 @@ describe('api: watch', () => {
         count.value++
         count.value++
         count.value++
-      }
+      },
     }
     render(h(App), nodeOps.createElement('div'))
     expect(calls).toMatchObject(['watch 3', 'mounted'])
@@ -734,13 +734,13 @@ describe('api: watch', () => {
           () => {
             dom = domRef.value
           },
-          { flush: 'post' }
+          { flush: 'post' },
         )
 
         return () => {
           return toggle.value ? h('p', { ref: domRef }) : null
         }
-      }
+      },
     }
 
     render(h(App), nodeOps.createElement('div'))
@@ -754,14 +754,14 @@ describe('api: watch', () => {
   it('deep', async () => {
     const state = reactive({
       nested: {
-        count: ref(0)
+        count: ref(0),
       },
       array: [1, 2, 3],
       map: new Map([
         ['a', 1],
-        ['b', 2]
+        ['b', 2],
       ]),
-      set: new Set([1, 2, 3])
+      set: new Set([1, 2, 3]),
     })
 
     let dummy
@@ -772,10 +772,10 @@ describe('api: watch', () => {
           state.nested.count,
           state.array[0],
           state.map.get('a'),
-          state.set.has(1)
+          state.set.has(1),
         ]
       },
-      { deep: true }
+      { deep: true },
     )
 
     state.nested.count++
@@ -809,7 +809,7 @@ describe('api: watch', () => {
       state => {
         dummy = [state[0].value, state[1].value]
       },
-      { deep: true }
+      { deep: true },
     )
 
     count.value++
@@ -860,7 +860,7 @@ describe('api: watch', () => {
         dummy = count.value
       },
       // @ts-expect-error
-      { immediate: false }
+      { immediate: false },
     )
     expect(dummy).toBe(0)
     expect(`"immediate" option is only respected`).toHaveBeenWarned()
@@ -879,7 +879,7 @@ describe('api: watch', () => {
         return arr
       },
       // @ts-expect-error
-      { deep: true }
+      { deep: true },
     )
     expect(spy).toHaveBeenCalledTimes(1)
     ;(arr.value[1] as Array<number>)[0] = 3
@@ -899,7 +899,7 @@ describe('api: watch', () => {
       () => {
         dummy = [obj.foo, 'bar' in obj, Object.keys(obj)]
       },
-      { onTrack }
+      { onTrack },
     )
     await nextTick()
     expect(dummy).toEqual([1, true, ['foo', 'bar']])
@@ -908,18 +908,18 @@ describe('api: watch', () => {
       {
         target: obj,
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         target: obj,
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         target: obj,
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -934,7 +934,7 @@ describe('api: watch', () => {
       () => {
         dummy = obj.foo
       },
-      { onTrigger }
+      { onTrigger },
     )
     await nextTick()
     expect(dummy).toBe(1)
@@ -947,7 +947,7 @@ describe('api: watch', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
     delete obj.foo
@@ -957,7 +957,7 @@ describe('api: watch', () => {
     expect(events[1]).toMatchObject({
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
   })
 
@@ -971,8 +971,8 @@ describe('api: watch', () => {
         ++calls
       },
       {
-        flush: 'sync'
-      }
+        flush: 'sync',
+      },
     )
 
     expect(calls).toBe(0)
@@ -1073,7 +1073,7 @@ describe('api: watch', () => {
       mounted() {
         instance = getCurrentInstance()
       },
-      unmounted() {}
+      unmounted() {},
     })
 
     const Comp = defineComponent({
@@ -1086,7 +1086,7 @@ describe('api: watch', () => {
       render() {
         return this.show
           ? h(Child, {
-              ref: vm => void (this.comp = vm as ComponentPublicInstance)
+              ref: vm => void (this.comp = vm as ComponentPublicInstance),
             })
           : null
       },
@@ -1095,9 +1095,9 @@ describe('api: watch', () => {
         // the effect for this `$watch` should nonetheless be registered with Child
         this.comp!.$watch(
           () => this.show,
-          () => void 0
+          () => void 0,
         )
-      }
+      },
     })
 
     render(h(Comp), nodeOps.createElement('div'))
@@ -1124,7 +1124,7 @@ describe('api: watch', () => {
       created(this: any) {
         instance = this
         this.$watch(source, function () {})
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1141,7 +1141,7 @@ describe('api: watch', () => {
       render() {},
       setup() {
         watch(source, () => {})
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1162,17 +1162,17 @@ describe('api: watch', () => {
       watch: {
         a() {
           b.value
-        }
+        },
       },
       render() {
         return h('div', this.a)
-      }
+      },
     })
 
     const Parent = defineComponent({
       render() {
         return h(Child, { a: a.value })
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1195,19 +1195,19 @@ describe('api: watch', () => {
       data() {
         return {
           a: {
-            b: 1
-          }
+            b: 1,
+          },
         }
       },
       watch: {
-        'a.b': spy
+        'a.b': spy,
       },
       created(this: any) {
         this.$watch('a.b', spy)
       },
       mounted(this: any) {
         this.a.b++
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -1250,11 +1250,11 @@ describe('api: watch', () => {
         effectScope(true).run(() => {
           watch(
             () => 1,
-            () => {}
+            () => {},
           )
         })
         return () => ''
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
@@ -1277,7 +1277,7 @@ describe('api: watch', () => {
           watch(trigger, () => countW++)
         })
         return () => ''
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(Comp), root)
@@ -1302,20 +1302,20 @@ describe('api: watch', () => {
     { name: 'only trigger once watch' },
     {
       deep: true,
-      name: 'only trigger once watch with deep'
+      name: 'only trigger once watch with deep',
     },
     {
       flush: 'sync',
-      name: 'only trigger once watch with flush: sync'
+      name: 'only trigger once watch with flush: sync',
     },
     {
       flush: 'pre',
-      name: 'only trigger once watch with flush: pre'
+      name: 'only trigger once watch with flush: pre',
     },
     {
       immediate: true,
-      name: 'only trigger once watch with immediate'
-    }
+      name: 'only trigger once watch with immediate',
+    },
   ] as const
   test.each(options)('$name', async option => {
     const count = ref(0)

@@ -1,13 +1,13 @@
 import {
-  baseParse as parse,
-  NodeTypes,
-  ElementNode,
-  TextNode,
-  ElementTypes,
-  InterpolationNode,
-  AttributeNode,
+  type AttributeNode,
   ConstantTypes,
-  Namespaces
+  type ElementNode,
+  ElementTypes,
+  type InterpolationNode,
+  Namespaces,
+  NodeTypes,
+  type TextNode,
+  baseParse as parse,
 } from '@vue/compiler-core'
 import { parserOptions } from '../src/parserOptions'
 
@@ -16,7 +16,7 @@ describe('DOM parser', () => {
     test('textarea handles comments/elements as just text', () => {
       const ast = parse(
         '<textarea>some<div>text</div>and<!--comment--></textarea>',
-        parserOptions
+        parserOptions,
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
@@ -27,8 +27,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 46, line: 1, column: 47 },
-          source: 'some<div>text</div>and<!--comment-->'
-        }
+          source: 'some<div>text</div>and<!--comment-->',
+        },
       })
     })
 
@@ -43,8 +43,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 15, line: 1, column: 16 },
-          source: '&amp;'
-        }
+          source: '&amp;',
+        },
       })
     })
 
@@ -58,16 +58,16 @@ describe('DOM parser', () => {
           content: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             content: `foo`,
-            isStatic: false
-          }
-        }
+            isStatic: false,
+          },
+        },
       ])
     })
 
     test('style handles comments/elements as just a text', () => {
       const ast = parse(
         '<style>some<div>text</div>and<!--comment--></style>',
-        parserOptions
+        parserOptions,
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
@@ -78,8 +78,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 43, line: 1, column: 44 },
-          source: 'some<div>text</div>and<!--comment-->'
-        }
+          source: 'some<div>text</div>and<!--comment-->',
+        },
       })
     })
 
@@ -94,8 +94,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 12, line: 1, column: 13 },
-          source: '&amp;'
-        }
+          source: '&amp;',
+        },
       })
     })
 
@@ -109,8 +109,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 14, line: 1, column: 15 },
           end: { offset: 23, line: 1, column: 24 },
-          source: 'some text'
-        }
+          source: 'some text',
+        },
       })
     })
 
@@ -120,21 +120,21 @@ describe('DOM parser', () => {
       expect((ast.children[0] as ElementNode).children).toMatchObject([
         {
           type: NodeTypes.TEXT,
-          content: `  \na   `
+          content: `  \na   `,
         },
         {
           type: NodeTypes.ELEMENT,
           children: [
             {
               type: NodeTypes.TEXT,
-              content: `foo \n bar`
-            }
-          ]
+              content: `foo \n bar`,
+            },
+          ],
         },
         {
           type: NodeTypes.TEXT,
-          content: `   \n   c`
-        }
+          content: `   \n   c`,
+        },
       ])
     })
 
@@ -145,7 +145,7 @@ describe('DOM parser', () => {
       expect((ast.children[0] as ElementNode).children).toMatchObject([
         {
           type: NodeTypes.TEXT,
-          content: `hello`
+          content: `hello`,
         },
         {
           type: NodeTypes.ELEMENT,
@@ -153,10 +153,10 @@ describe('DOM parser', () => {
             {
               type: NodeTypes.TEXT,
               // should not remove the leading newline for nested elements
-              content: `\nbye`
-            }
-          ]
-        }
+              content: `\nbye`,
+            },
+          ],
+        },
       ])
     })
 
@@ -166,7 +166,7 @@ describe('DOM parser', () => {
       const ast = parse(`foo&nbsp;&nbsp;bar`, parserOptions)
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.TEXT,
-        content: `foo${nbsp}${nbsp}bar`
+        content: `foo${nbsp}${nbsp}bar`,
       })
     })
 
@@ -181,8 +181,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 11, line: 1, column: 12 },
-          source: '&ampersand;'
-        }
+          source: '&ampersand;',
+        },
       })
     })
 
@@ -190,7 +190,7 @@ describe('DOM parser', () => {
     test('HTML entities compatibility in attribute', () => {
       const ast = parse(
         '<div a="&ampersand;" b="&amp;ersand;" c="&amp!"></div>',
-        parserOptions
+        parserOptions,
       )
       const element = ast.children[0] as ElementNode
       const text1 = (element.props[0] as AttributeNode).value
@@ -203,8 +203,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 7, line: 1, column: 8 },
           end: { offset: 20, line: 1, column: 21 },
-          source: '"&ampersand;"'
-        }
+          source: '"&ampersand;"',
+        },
       })
       expect(text2).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -212,8 +212,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 23, line: 1, column: 24 },
           end: { offset: 37, line: 1, column: 38 },
-          source: '"&amp;ersand;"'
-        }
+          source: '"&amp;ersand;"',
+        },
       })
       expect(text3).toStrictEqual({
         type: NodeTypes.TEXT,
@@ -221,8 +221,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 40, line: 1, column: 41 },
           end: { offset: 47, line: 1, column: 48 },
-          source: '"&amp!"'
-        }
+          source: '"&amp!"',
+        },
       })
     })
 
@@ -236,8 +236,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 6, line: 1, column: 7 },
-          source: '&#x86;'
-        }
+          source: '&#x86;',
+        },
       })
     })
   })
@@ -258,14 +258,14 @@ describe('DOM parser', () => {
           loc: {
             start: { offset: 8, line: 1, column: 9 },
             end: { offset: 16, line: 1, column: 17 },
-            source: 'a &lt; b'
-          }
+            source: 'a &lt; b',
+          },
         },
         loc: {
           start: { offset: 5, line: 1, column: 6 },
           end: { offset: 19, line: 1, column: 20 },
-          source: '{{ a &lt; b }}'
-        }
+          source: '{{ a &lt; b }}',
+        },
       })
     })
   })
@@ -285,9 +285,9 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 0, line: 1, column: 1 },
           end: { offset: 5, line: 1, column: 6 },
-          source: '<img>'
+          source: '<img>',
         },
-        codegenNode: undefined
+        codegenNode: undefined,
       })
     })
 
@@ -297,26 +297,26 @@ describe('DOM parser', () => {
       expect(ast.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'div',
-        tagType: ElementTypes.ELEMENT
+        tagType: ElementTypes.ELEMENT,
       })
 
       expect(ast.children[1]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
 
       expect(ast.children[2]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tag: 'Comp',
-        tagType: ElementTypes.COMPONENT
+        tagType: ElementTypes.COMPONENT,
       })
     })
 
     test('Strict end tag detection for textarea.', () => {
       const ast = parse(
         '<textarea>hello</textarea</textarea0></texTArea>',
-        parserOptions
+        parserOptions,
       )
       const element = ast.children[0] as ElementNode
       const text = element.children[0] as TextNode
@@ -328,8 +328,8 @@ describe('DOM parser', () => {
         loc: {
           start: { offset: 10, line: 1, column: 11 },
           end: { offset: 37, line: 1, column: 38 },
-          source: 'hello</textarea</textarea0>'
-        }
+          source: 'hello</textarea</textarea0>',
+        },
       })
     })
   })
@@ -359,7 +359,7 @@ describe('DOM parser', () => {
     test('SVG in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml><svg></svg></annotation-xml></math>',
-        parserOptions
+        parserOptions,
       )
       const elementMath = ast.children[0] as ElementNode
       const elementAnnotation = elementMath.children[0] as ElementNode
@@ -372,7 +372,7 @@ describe('DOM parser', () => {
     test('html text/html in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml encoding="text/html"><test/></annotation-xml></math>',
-        parserOptions
+        parserOptions,
       )
 
       const elementMath = ast.children[0] as ElementNode
@@ -386,7 +386,7 @@ describe('DOM parser', () => {
     test('html application/xhtml+xml in MATH_ML namespace', () => {
       const ast = parse(
         '<math><annotation-xml encoding="application/xhtml+xml"><test/></annotation-xml></math>',
-        parserOptions
+        parserOptions,
       )
       const elementMath = ast.children[0] as ElementNode
       const elementAnnotation = elementMath.children[0] as ElementNode
@@ -399,7 +399,7 @@ describe('DOM parser', () => {
     test('mtext malignmark in MATH_ML namespace', () => {
       const ast = parse(
         '<math><mtext><malignmark/></mtext></math>',
-        parserOptions
+        parserOptions,
       )
       const elementMath = ast.children[0] as ElementNode
       const elementText = elementMath.children[0] as ElementNode
@@ -422,7 +422,7 @@ describe('DOM parser', () => {
     test('foreignObject tag in SVG namespace', () => {
       const ast = parse(
         '<svg><foreignObject><test/></foreignObject></svg>',
-        parserOptions
+        parserOptions,
       )
       const elementSvg = ast.children[0] as ElementNode
       const elementForeignObject = elementSvg.children[0] as ElementNode
@@ -473,7 +473,7 @@ describe('DOM parser', () => {
     test('root ns', () => {
       const ast = parse('<foreignObject><test/></foreignObject>', {
         ...parserOptions,
-        ns: Namespaces.SVG
+        ns: Namespaces.SVG,
       })
       const elementForieng = ast.children[0] as ElementNode
       const element = elementForieng.children[0] as ElementNode
@@ -487,13 +487,13 @@ describe('DOM parser', () => {
       // treatment for <script>, <style>, <textarea> etc.
       const ast = parse('<script><g/><g/></script>', {
         ...parserOptions,
-        ns: Namespaces.SVG
+        ns: Namespaces.SVG,
       })
       const elementSvg = ast.children[0] as ElementNode
       // should parse as nodes instead of text
       expect(elementSvg.children).toMatchObject([
         { type: NodeTypes.ELEMENT, tag: 'g' },
-        { type: NodeTypes.ELEMENT, tag: 'g' }
+        { type: NodeTypes.ELEMENT, tag: 'g' },
       ])
     })
   })

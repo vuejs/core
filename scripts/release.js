@@ -28,8 +28,8 @@ const args = minimist(process.argv.slice(2), {
     skipBuild: 'skip-build',
     skipTests: 'skip-tests',
     skipGit: 'skip-git',
-    skipPrompts: 'skip-prompts'
-  }
+    skipPrompts: 'skip-prompts',
+  },
 })
 
 const preId = args.preid || semver.prerelease(currentVersion)?.[0]
@@ -47,7 +47,7 @@ const packages = fs
     const pkgRoot = path.resolve(__dirname, '../packages', p)
     if (fs.statSync(pkgRoot).isDirectory()) {
       const pkg = JSON.parse(
-        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8')
+        fs.readFileSync(path.resolve(pkgRoot, 'package.json'), 'utf-8'),
       )
       return !pkg.private
     }
@@ -90,7 +90,7 @@ const versionIncrements = [
   'major',
   ...(preId
     ? /** @type {const} */ (['prepatch', 'preminor', 'premajor', 'prerelease'])
-    : [])
+    : []),
 ]
 
 const inc = (/** @type {import('semver').ReleaseType} */ i) =>
@@ -98,12 +98,12 @@ const inc = (/** @type {import('semver').ReleaseType} */ i) =>
 const run = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('execa').Options} */ opts = {}
+  /** @type {import('execa').Options} */ opts = {},
 ) => execa(bin, args, { stdio: 'inherit', ...opts })
 const dryRun = async (
   /** @type {string} */ bin,
   /** @type {ReadonlyArray<string>} */ args,
-  /** @type {import('execa').Options} */ opts = {}
+  /** @type {import('execa').Options} */ opts = {},
 ) => console.log(pico.blue(`[dryrun] ${bin} ${args.join(' ')}`), opts)
 const runIfNotDry = isDryRun ? dryRun : run
 const getPkgRoot = (/** @type {string} */ pkg) =>
@@ -143,7 +143,7 @@ async function main() {
       const { stdout } = await run(
         'pnpm',
         ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
-        { stdio: 'pipe' }
+        { stdio: 'pipe' },
       )
       let versions = JSON.parse(stdout)
       versions = Array.isArray(versions) ? versions : [versions]
@@ -177,7 +177,9 @@ async function main() {
       type: 'select',
       name: 'release',
       message: 'Select release type',
-      choices: versionIncrements.map(i => `${i} (${inc(i)})`).concat(['custom'])
+      choices: versionIncrements
+        .map(i => `${i} (${inc(i)})`)
+        .concat(['custom']),
     })
 
     if (release === 'custom') {
@@ -186,7 +188,7 @@ async function main() {
         type: 'input',
         name: 'version',
         message: 'Input custom version',
-        initial: currentVersion
+        initial: currentVersion,
       })
       targetVersion = result.version
     } else {
@@ -202,14 +204,14 @@ async function main() {
     step(
       isCanary
         ? `Releasing canary version v${targetVersion}...`
-        : `Releasing v${targetVersion}...`
+        : `Releasing v${targetVersion}...`,
     )
   } else {
     /** @type {{ yes: boolean }} */
     const { yes: confirmRelease } = await prompt({
       type: 'confirm',
       name: 'yes',
-      message: `Releasing v${targetVersion}. Confirm?`
+      message: `Releasing v${targetVersion}. Confirm?`,
     })
 
     if (!confirmRelease) {
@@ -227,7 +229,7 @@ async function main() {
       const { yes: promptSkipTests } = await prompt({
         type: 'confirm',
         name: 'yes',
-        message: `CI for this commit passed. Skip local tests?`
+        message: `CI for this commit passed. Skip local tests?`,
       })
 
       skipTests = promptSkipTests
@@ -249,7 +251,7 @@ async function main() {
   step('\nUpdating cross dependencies...')
   updateVersions(
     targetVersion,
-    isCanary ? renamePackageToCanary : keepThePackageName
+    isCanary ? renamePackageToCanary : keepThePackageName,
   )
   versionUpdated = true
 
@@ -272,7 +274,7 @@ async function main() {
     const { yes: changelogOk } = await prompt({
       type: 'confirm',
       name: 'yes',
-      message: `Changelog generated. Does it look good?`
+      message: `Changelog generated. Does it look good?`,
     })
 
     if (!changelogOk) {
@@ -335,9 +337,9 @@ async function main() {
     console.log(
       pico.yellow(
         `The following packages are skipped and NOT published:\n- ${skippedPackages.join(
-          '\n- '
-        )}`
-      )
+          '\n- ',
+        )}`,
+      ),
     )
   }
   console.log()
@@ -348,7 +350,7 @@ async function getCIResult() {
     const sha = await getSha()
     const res = await fetch(
       `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
-        `&status=success&exclude_pull_requests=true`
+        `&status=success&exclude_pull_requests=true`,
     )
     const data = await res.json()
     return data.workflow_runs.length > 0
@@ -362,7 +364,7 @@ async function isInSyncWithRemote() {
   try {
     const branch = await getBranch()
     const res = await fetch(
-      `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`
+      `https://api.github.com/repos/vuejs/core/commits/${branch}?per_page=1`,
     )
     const data = await res.json()
     if (data.sha === (await getSha())) {
@@ -373,14 +375,14 @@ async function isInSyncWithRemote() {
         type: 'confirm',
         name: 'yes',
         message: pico.red(
-          `Local HEAD is not up-to-date with remote. Are you sure you want to continue?`
-        )
+          `Local HEAD is not up-to-date with remote. Are you sure you want to continue?`,
+        ),
       })
       return yes
     }
   } catch (e) {
     console.error(
-      pico.red('Failed to check whether local HEAD is up-to-date with remote.')
+      pico.red('Failed to check whether local HEAD is up-to-date with remote.'),
     )
     return false
   }
@@ -403,7 +405,7 @@ function updateVersions(version, getNewPackageName = keepThePackageName) {
   updatePackage(path.resolve(__dirname, '..'), version, getNewPackageName)
   // 2. update all packages
   packages.forEach(p =>
-    updatePackage(getPkgRoot(p), version, getNewPackageName)
+    updatePackage(getPkgRoot(p), version, getNewPackageName),
   )
 }
 
@@ -439,7 +441,7 @@ function updateDeps(pkg, depType, version, getNewPackageName) {
       const newName = getNewPackageName(dep)
       const newVersion = newName === dep ? version : `npm:${newName}@${version}`
       console.log(
-        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`)
+        pico.yellow(`${pkg.name} -> ${depType} -> ${dep}@${newVersion}`),
       )
       deps[dep] = newVersion
     }
@@ -478,12 +480,12 @@ async function publishPackage(pkgName, version, additionalFlags) {
         ...(releaseTag ? ['--tag', releaseTag] : []),
         '--access',
         'public',
-        ...additionalFlags
+        ...additionalFlags,
       ],
       {
         cwd: getPkgRoot(pkgName),
-        stdio: 'pipe'
-      }
+        stdio: 'pipe',
+      },
     )
     console.log(pico.green(`Successfully published ${pkgName}@${version}`))
   } catch (/** @type {any} */ e) {

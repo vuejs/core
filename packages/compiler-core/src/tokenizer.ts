@@ -23,7 +23,7 @@ IN THE SOFTWARE.
  */
 
 import { ErrorCodes } from './errors'
-import { ElementNode, Position } from './ast'
+import type { ElementNode, Position } from './ast'
 
 /**
  * Note: entities is a non-browser-build-only dependency.
@@ -32,16 +32,16 @@ import { ElementNode, Position } from './ast'
  * so that it can be properly treeshaken.
  */
 import {
-  EntityDecoder,
   DecodingMode,
+  EntityDecoder,
+  fromCodePoint,
   htmlDecodeTree,
-  fromCodePoint
 } from 'entities/lib/decode.js'
 
 export enum ParseMode {
   BASE,
   HTML,
-  SFC
+  SFC,
 }
 
 export enum CharCodes {
@@ -77,7 +77,7 @@ export enum CharCodes {
   Colon = 0x3a, // ":"
   At = 0x40, // "@"
   LeftSquare = 91, // "["
-  RightSquare = 93 // "]"
+  RightSquare = 93, // "]"
 }
 
 const defaultDelimitersOpen = new Uint8Array([123, 123]) // "{{"
@@ -134,7 +134,7 @@ export enum State {
 
   InEntity,
 
-  InSFCRootTagName
+  InSFCRootTagName,
 }
 
 /**
@@ -174,7 +174,7 @@ export enum QuoteType {
   NoValue = 0,
   Unquoted = 1,
   Single = 2,
-  Double = 3
+  Double = 3,
 }
 
 export interface Callbacks {
@@ -221,8 +221,8 @@ export const Sequences = {
   StyleEnd: new Uint8Array([0x3c, 0x2f, 0x73, 0x74, 0x79, 0x6c, 0x65]), // `</style`
   TitleEnd: new Uint8Array([0x3c, 0x2f, 0x74, 0x69, 0x74, 0x6c, 0x65]), // `</title`
   TextareaEnd: new Uint8Array([
-    0x3c, 0x2f, 116, 101, 120, 116, 97, 114, 101, 97
-  ]) // `</textarea
+    0x3c, 0x2f, 116, 101, 120, 116, 97, 114, 101, 97,
+  ]), // `</textarea
 }
 
 export default class Tokenizer {
@@ -256,11 +256,11 @@ export default class Tokenizer {
 
   constructor(
     private readonly stack: ElementNode[],
-    private readonly cbs: Callbacks
+    private readonly cbs: Callbacks,
   ) {
     if (!__BROWSER__) {
       this.entityDecoder = new EntityDecoder(htmlDecodeTree, (cp, consumed) =>
-        this.emitCodePoint(cp, consumed)
+        this.emitCodePoint(cp, consumed),
       )
     }
   }
@@ -299,7 +299,7 @@ export default class Tokenizer {
     return {
       column,
       line,
-      offset: index
+      offset: index,
     }
   }
 
@@ -647,7 +647,7 @@ export default class Tokenizer {
       if ((__DEV__ || !__BROWSER__) && c === CharCodes.Eq) {
         this.cbs.onerr(
           ErrorCodes.UNEXPECTED_EQUALS_SIGN_BEFORE_ATTRIBUTE_NAME,
-          this.index
+          this.index,
         )
       }
       this.handleAttrStart(c)
@@ -694,7 +694,7 @@ export default class Tokenizer {
     ) {
       this.cbs.onerr(
         ErrorCodes.UNEXPECTED_CHARACTER_IN_ATTRIBUTE_NAME,
-        this.index
+        this.index,
       )
     }
   }
@@ -733,7 +733,7 @@ export default class Tokenizer {
       if (__DEV__ || !__BROWSER__) {
         this.cbs.onerr(
           ErrorCodes.X_MISSING_DYNAMIC_DIRECTIVE_ARGUMENT_END,
-          this.index
+          this.index,
         )
       }
     }
@@ -785,7 +785,7 @@ export default class Tokenizer {
       this.sectionStart = -1
       this.cbs.onattribend(
         quote === CharCodes.DoubleQuote ? QuoteType.Double : QuoteType.Single,
-        this.index + 1
+        this.index + 1,
       )
       this.state = State.BeforeAttrName
     } else if (!__BROWSER__ && c === CharCodes.Amp) {
@@ -814,7 +814,7 @@ export default class Tokenizer {
     ) {
       this.cbs.onerr(
         ErrorCodes.UNEXPECTED_CHARACTER_IN_UNQUOTED_ATTRIBUTE_VALUE,
-        this.index
+        this.index,
       )
     } else if (!__BROWSER__ && c === CharCodes.Amp) {
       this.startEntity()
@@ -892,7 +892,7 @@ export default class Tokenizer {
       this.entityDecoder!.startEntity(
         this.baseState === State.Text || this.baseState === State.InRCDATA
           ? DecodingMode.Legacy
-          : DecodingMode.Attribute
+          : DecodingMode.Attribute,
       )
     }
   }
@@ -1156,7 +1156,7 @@ export default class Tokenizer {
         this.cbs.onattribentity(
           fromCodePoint(cp),
           this.entityStart,
-          this.sectionStart
+          this.sectionStart,
         )
       } else {
         if (this.sectionStart < this.entityStart) {
@@ -1168,7 +1168,7 @@ export default class Tokenizer {
         this.cbs.ontextentity(
           fromCodePoint(cp),
           this.entityStart,
-          this.sectionStart
+          this.sectionStart,
         )
       }
     }

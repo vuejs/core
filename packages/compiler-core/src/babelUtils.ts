@@ -1,12 +1,12 @@
 // should only use types from @babel/types
 // do not import runtime methods
 import type {
+  BlockStatement,
+  Function,
   Identifier,
   Node,
-  Function,
   ObjectProperty,
-  BlockStatement,
-  Program
+  Program,
 } from '@babel/types'
 import { walk } from 'estree-walker'
 
@@ -17,11 +17,11 @@ export function walkIdentifiers(
     parent: Node,
     parentStack: Node[],
     isReference: boolean,
-    isLocal: boolean
+    isLocal: boolean,
   ) => void,
   includeAll = false,
   parentStack: Node[] = [],
-  knownIds: Record<string, number> = Object.create(null)
+  knownIds: Record<string, number> = Object.create(null),
 ) {
   if (__BROWSER__) {
     return
@@ -61,7 +61,7 @@ export function walkIdentifiers(
           // walk function expressions and add its arguments to known identifiers
           // so that we don't prefix them
           walkFunctionParams(node, id =>
-            markScopeIdentifier(node, id, knownIds)
+            markScopeIdentifier(node, id, knownIds),
           )
         }
       } else if (node.type === 'BlockStatement') {
@@ -70,7 +70,7 @@ export function walkIdentifiers(
         } else {
           // #3445 record block-level local variables
           walkBlockDeclarations(node, id =>
-            markScopeIdentifier(node, id, knownIds)
+            markScopeIdentifier(node, id, knownIds),
           )
         }
       }
@@ -85,14 +85,14 @@ export function walkIdentifiers(
           }
         }
       }
-    }
+    },
   })
 }
 
 export function isReferencedIdentifier(
   id: Identifier,
   parent: Node | null,
-  parentStack: Node[]
+  parentStack: Node[],
 ) {
   if (__BROWSER__) {
     return false
@@ -127,7 +127,7 @@ export function isReferencedIdentifier(
 
 export function isInDestructureAssignment(
   parent: Node,
-  parentStack: Node[]
+  parentStack: Node[],
 ): boolean {
   if (
     parent &&
@@ -148,7 +148,7 @@ export function isInDestructureAssignment(
 
 export function walkFunctionParams(
   node: Function,
-  onIdent: (id: Identifier) => void
+  onIdent: (id: Identifier) => void,
 ) {
   for (const p of node.params) {
     for (const id of extractIdentifiers(p)) {
@@ -159,7 +159,7 @@ export function walkFunctionParams(
 
 export function walkBlockDeclarations(
   block: BlockStatement | Program,
-  onIdent: (node: Identifier) => void
+  onIdent: (node: Identifier) => void,
 ) {
   for (const stmt of block.body) {
     if (stmt.type === 'VariableDeclaration') {
@@ -194,7 +194,7 @@ export function walkBlockDeclarations(
 
 export function extractIdentifiers(
   param: Node,
-  nodes: Identifier[] = []
+  nodes: Identifier[] = [],
 ): Identifier[] {
   switch (param.type) {
     case 'Identifier':
@@ -248,7 +248,7 @@ function markKnownIds(name: string, knownIds: Record<string, number>) {
 function markScopeIdentifier(
   node: Node & { scopeIds?: Set<string> },
   child: Identifier,
-  knownIds: Record<string, number>
+  knownIds: Record<string, number>,
 ) {
   const { name } = child
   if (node.scopeIds && node.scopeIds.has(name)) {
@@ -453,7 +453,7 @@ export const TS_NODE_TYPES = [
   'TSTypeAssertion', // (<number>foo)
   'TSNonNullExpression', // foo!
   'TSInstantiationExpression', // foo<string>
-  'TSSatisfiesExpression' // foo satisfies T
+  'TSSatisfiesExpression', // foo satisfies T
 ]
 
 export function unwrapTSNode(node: Node): Node {
