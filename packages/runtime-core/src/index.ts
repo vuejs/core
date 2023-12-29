@@ -220,7 +220,7 @@ export type {
   WatchOptionsBase,
   WatchCallback,
   WatchSource,
-  WatchStopHandle
+  WatchStopHandle,
 } from './apiWatch'
 export type { InjectionKey } from './apiInject'
 export type {
