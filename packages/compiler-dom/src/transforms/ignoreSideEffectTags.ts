@@ -1,4 +1,4 @@
-import { NodeTransform, NodeTypes, ElementTypes } from '@vue/compiler-core'
+import { ElementTypes, type NodeTransform, NodeTypes } from '@vue/compiler-core'
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const ignoreSideEffectTags: NodeTransform = (node, context) => {
@@ -11,8 +11,8 @@ export const ignoreSideEffectTags: NodeTransform = (node, context) => {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG,
-          node.loc
-        )
+          node.loc,
+        ),
       )
     context.removeNode()
   }

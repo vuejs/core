@@ -2,10 +2,10 @@
 
 // Using esbuild for faster dev builds.
 // We are still using Rollup for production builds because it generates
-// smaller files w/ better tree-shaking.
+// smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
-import { resolve, relative, dirname } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import minimist from 'minimist'
@@ -24,8 +24,8 @@ const pkg = require(`../packages/${target}/package.json`)
 const outputFormat = format.startsWith('global')
   ? 'iife'
   : format === 'cjs'
-  ? 'cjs'
-  : 'esm'
+    ? 'cjs'
+    : 'esm'
 
 const postfix = format.endsWith('-runtime')
   ? `runtime.${format.replace(/-runtime$/, '')}`
@@ -35,12 +35,13 @@ const outfile = resolve(
   __dirname,
   `../packages/${target}/dist/${
     target === 'vue-compat' ? `vue` : target
-  }.${postfix}.${prod ? `prod.` : ``}js`
+  }.${postfix}.${prod ? `prod.` : ``}js`,
 )
 const relativeOutfile = relative(process.cwd(), outfile)
 
 // resolve externals
 // TODO this logic is largely duplicated from rollup.config.js
+/** @type {string[]} */
 let external = []
 if (!inlineDeps) {
   // cjs & esm-bundler: external all deps
@@ -52,7 +53,7 @@ if (!inlineDeps) {
       // for @vue/compiler-sfc / server-renderer
       'path',
       'url',
-      'stream'
+      'stream',
     ]
   }
 
@@ -60,11 +61,11 @@ if (!inlineDeps) {
     const consolidatePkgPath = require.resolve(
       '@vue/consolidate/package.json',
       {
-        paths: [resolve(__dirname, `../packages/${target}/`)]
-      }
+        paths: [resolve(__dirname, `../packages/${target}/`)],
+      },
     )
     const consolidateDeps = Object.keys(
-      require(consolidatePkgPath).devDependencies
+      require(consolidatePkgPath).devDependencies,
     )
     external = [
       ...external,
@@ -76,11 +77,11 @@ if (!inlineDeps) {
       'teacup/lib/express',
       'arc-templates/dist/es5',
       'then-pug',
-      'then-jade'
+      'then-jade',
     ]
   }
 }
-
+/** @type {Array<import('esbuild').Plugin>} */
 const plugins = [
   {
     name: 'log-rebuild',
@@ -88,11 +89,11 @@ const plugins = [
       build.onEnd(() => {
         console.log(`built: ${relativeOutfile}`)
       })
-    }
-  }
+    },
+  },
 ]
 
-if (format === 'cjs' || pkg.buildOptions?.enableNonBrowserBranches) {
+if (format !== 'cjs' && pkg.buildOptions?.enableNonBrowserBranches) {
   plugins.push(polyfillNode())
 }
 
@@ -113,7 +114,7 @@ esbuild
       __DEV__: prod ? `false` : `true`,
       __TEST__: `false`,
       __BROWSER__: String(
-        format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches
+        format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
       ),
       __GLOBAL__: String(format === 'global'),
       __ESM_BUNDLER__: String(format.includes('esm-bundler')),
@@ -123,7 +124,8 @@ esbuild
       __COMPAT__: String(target === 'vue-compat'),
       __FEATURE_SUSPENSE__: `true`,
       __FEATURE_OPTIONS_API__: `true`,
-      __FEATURE_PROD_DEVTOOLS__: `false`
-    }
+      __FEATURE_PROD_DEVTOOLS__: `false`,
+      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`,
+    },
   })
   .then(ctx => ctx.watch())

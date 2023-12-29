@@ -2,8 +2,8 @@ import { nodeOps, svgNS } from '../src/nodeOps'
 
 describe('runtime-dom: node-ops', () => {
   test("the <select>'s multiple attr should be set in createElement", () => {
-    const el = nodeOps.createElement('select', false, undefined, {
-      multiple: ''
+    const el = nodeOps.createElement('select', undefined, undefined, {
+      multiple: '',
     }) as HTMLSelectElement
     const option1 = nodeOps.createElement('option') as HTMLOptionElement
     const option2 = nodeOps.createElement('option') as HTMLOptionElement
@@ -20,12 +20,12 @@ describe('runtime-dom: node-ops', () => {
   test('create custom elements', () => {
     const spyCreateElement = vi.spyOn(document, 'createElement')
 
-    nodeOps.createElement('custom-element', false)
+    nodeOps.createElement('custom-element')
     expect(spyCreateElement).toHaveBeenLastCalledWith('custom-element')
 
-    nodeOps.createElement('custom-element', false, 'li')
+    nodeOps.createElement('custom-element', undefined, 'li')
     expect(spyCreateElement).toHaveBeenLastCalledWith('custom-element', {
-      is: 'li'
+      is: 'li',
     })
 
     spyCreateElement.mockClear()
@@ -35,7 +35,12 @@ describe('runtime-dom: node-ops', () => {
     test('fresh insertion', () => {
       const content = `<div>one</div><div>two</div>three`
       const parent = document.createElement('div')
-      const nodes = nodeOps.insertStaticContent!(content, parent, null, false)
+      const nodes = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        null,
+        undefined,
+      )
       expect(parent.innerHTML).toBe(content)
       expect(nodes[0]).toBe(parent.firstChild)
       expect(nodes[1]).toBe(parent.lastChild)
@@ -47,7 +52,12 @@ describe('runtime-dom: node-ops', () => {
       const parent = document.createElement('div')
       parent.innerHTML = existing
       const anchor = parent.firstChild
-      const nodes = nodeOps.insertStaticContent!(content, parent, anchor, false)
+      const nodes = nodeOps.insertStaticContent!(
+        content,
+        parent,
+        anchor,
+        undefined,
+      )
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)
       expect(nodes[1]).toBe(parent.childNodes[parent.childNodes.length - 2])
@@ -60,7 +70,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         null,
-        true
+        'svg',
       )
       expect(parent.innerHTML).toBe(content)
       expect(first).toBe(parent.firstChild)
@@ -79,7 +89,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         anchor,
-        true
+        'svg',
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(first).toBe(parent.firstChild)
@@ -102,9 +112,9 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         anchor,
-        false,
+        undefined,
         cached.firstChild,
-        cached.lastChild
+        cached.lastChild,
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)
