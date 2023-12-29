@@ -1,19 +1,19 @@
 import {
-  NodeTransform,
+  ElementTypes,
+  type NodeTransform,
+  NodeTypes,
+  type SlotOutletNode,
+  TRANSITION,
+  createCallExpression,
+  createFunctionExpression,
   isSlotOutlet,
   processSlotOutlet,
-  createCallExpression,
-  SlotOutletNode,
-  createFunctionExpression,
-  NodeTypes,
-  ElementTypes,
   resolveComponentType,
-  TRANSITION
 } from '@vue/compiler-dom'
 import { SSR_RENDER_SLOT, SSR_RENDER_SLOT_INNER } from '../runtimeHelpers'
 import {
-  SSRTransformContext,
-  processChildrenAsStatement
+  type SSRTransformContext,
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
 export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
@@ -27,7 +27,7 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
       // fallback content placeholder. will be replaced in the process phase
       `null`,
       `_push`,
-      `_parent`
+      `_parent`,
     ]
 
     // inject slot scope id if current template uses :slotted
@@ -62,7 +62,7 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
 
 export function ssrProcessSlotOutlet(
   node: SlotOutletNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
 ) {
   const renderCall = node.ssrCodegenNode!
 
