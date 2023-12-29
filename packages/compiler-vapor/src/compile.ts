@@ -1,11 +1,11 @@
 import {
-  type CodegenResult,
   type CompilerOptions as BaseCompilerOptions,
-  type RootNode,
-  parse,
-  defaultOnError,
-  createCompilerError,
+  type CodegenResult,
   ErrorCodes,
+  type RootNode,
+  createCompilerError,
+  defaultOnError,
+  parse,
 } from '@vue/compiler-dom'
 import { extend, isString } from '@vue/shared'
 import {

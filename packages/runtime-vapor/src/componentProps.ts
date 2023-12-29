@@ -1,7 +1,7 @@
 // NOTE: runtime-core/src/componentProps.ts
 
 import {
-  Data,
+  type Data,
   EMPTY_ARR,
   EMPTY_OBJ,
   camelize,
@@ -13,7 +13,7 @@ import {
   isReservedProp,
 } from '@vue/shared'
 import { shallowReactive, toRaw } from '@vue/reactivity'
-import { type ComponentInternalInstance, type Component } from './component'
+import type { Component, ComponentInternalInstance } from './component'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>

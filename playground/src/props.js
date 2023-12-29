@@ -3,10 +3,10 @@ import {
   children,
   on,
   ref,
-  template,
-  watchEffect,
+  render as renderComponent,
   setText,
-  render as renderComponent // TODO:
+  template,
+  watchEffect, // TODO:
 } from '@vue/vapor'
 
 export default {
@@ -22,7 +22,7 @@ export default {
 
     Object.defineProperty(__returned__, '__isScriptSetup', {
       enumerable: false,
-      value: true
+      value: true,
     })
 
     return __returned__
@@ -32,7 +32,7 @@ export default {
     const t0 = template('<button></button>')
     const n0 = t0()
     const {
-      0: [n1]
+      0: [n1],
     } = children(n0)
     on(n1, 'click', _ctx.handleClick)
     watchEffect(() => {
@@ -55,36 +55,36 @@ export default {
         /* <Comp :inline-double="count * 2" /> */
         get inlineDouble() {
           return _ctx.count * 2
-        }
+        },
       },
-      n0
+      n0,
     )
 
     return n0
-  }
+  },
 }
 
 const child = {
   props: {
     count: { type: Number, default: 1 },
-    inlineDouble: { type: Number, default: 2 }
+    inlineDouble: { type: Number, default: 2 },
   },
 
   setup(props) {
     watch(
       () => props.count,
-      v => console.log('count changed', v)
+      v => console.log('count changed', v),
     )
     watch(
       () => props.inlineDouble,
-      v => console.log('inlineDouble changed', v)
+      v => console.log('inlineDouble changed', v),
     )
 
     const __returned__ = {}
 
     Object.defineProperty(__returned__, '__isScriptSetup', {
       enumerable: false,
-      value: true
+      value: true,
     })
 
     return __returned__
@@ -94,11 +94,11 @@ const child = {
     const t0 = template('<p></p>')
     const n0 = t0()
     const {
-      0: [n1]
+      0: [n1],
     } = children(n0)
     watchEffect(() => {
       setText(n1, void 0, _ctx.count + ' * 2 = ' + _ctx.inlineDouble)
     })
     return n0
-  }
+  },
 }

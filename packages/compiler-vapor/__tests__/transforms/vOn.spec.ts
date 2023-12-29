@@ -1,11 +1,11 @@
-import { BindingTypes, ErrorCodes, parse, NodeTypes } from '@vue/compiler-dom'
+import { BindingTypes, ErrorCodes, NodeTypes, parse } from '@vue/compiler-dom'
 import {
   type CompilerOptions,
-  compile as _compile,
-  RootIRNode,
-  transform,
-  generate,
   IRNodeTypes,
+  type RootIRNode,
+  compile as _compile,
+  generate,
+  transform,
 } from '../../src'
 
 import { transformVOn } from '../../src/transforms/vOn'

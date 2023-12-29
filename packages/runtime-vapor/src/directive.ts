@@ -1,5 +1,5 @@
 import { isFunction } from '@vue/shared'
-import { currentInstance, type ComponentInternalInstance } from './component'
+import { type ComponentInternalInstance, currentInstance } from './component'
 import { watchEffect } from './apiWatch'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>

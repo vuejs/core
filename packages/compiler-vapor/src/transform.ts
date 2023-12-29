@@ -1,24 +1,24 @@
 import {
+  type AllNode,
+  type TransformOptions as BaseTransformOptions,
+  type CompilerCompatOptions,
+  type ElementNode,
+  NodeTypes,
+  type ParentNode,
   type RootNode,
   type TemplateChildNode,
-  type ElementNode,
-  type TransformOptions as BaseTransformOptions,
-  type ParentNode,
-  type AllNode,
-  type CompilerCompatOptions,
-  NodeTypes,
   defaultOnError,
   defaultOnWarn,
 } from '@vue/compiler-dom'
-import { EMPTY_OBJ, NOOP, isArray } from '@vue/shared'
+import { EMPTY_OBJ, NOOP, extend, isArray } from '@vue/shared'
 import {
-  type OperationNode,
-  type RootIRNode,
   type IRDynamicInfo,
   type IRExpression,
   IRNodeTypes,
+  type OperationNode,
+  type RootIRNode,
 } from './ir'
-import type { VaporDirectiveNode, HackOptions } from './ir'
+import type { HackOptions, VaporDirectiveNode } from './ir'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -73,30 +73,33 @@ function createRootContext(
     parent: null,
     index: 0,
     root: null!, // set later
-    options: {
-      filename: '',
-      prefixIdentifiers: false,
-      hoistStatic: false,
-      hmr: false,
-      cacheHandlers: false,
-      nodeTransforms: [],
-      directiveTransforms: {},
-      transformHoist: null,
-      isBuiltInComponent: NOOP,
-      isCustomElement: NOOP,
-      expressionPlugins: [],
-      scopeId: null,
-      slotted: true,
-      ssr: false,
-      inSSR: false,
-      ssrCssVars: ``,
-      bindingMetadata: EMPTY_OBJ,
-      inline: false,
-      isTS: false,
-      onError: defaultOnError,
-      onWarn: defaultOnWarn,
-      ...options,
-    },
+    options: extend(
+      {},
+      {
+        filename: '',
+        prefixIdentifiers: false,
+        hoistStatic: false,
+        hmr: false,
+        cacheHandlers: false,
+        nodeTransforms: [],
+        directiveTransforms: {},
+        transformHoist: null,
+        isBuiltInComponent: NOOP,
+        isCustomElement: NOOP,
+        expressionPlugins: [],
+        scopeId: null,
+        slotted: true,
+        ssr: false,
+        inSSR: false,
+        ssrCssVars: ``,
+        bindingMetadata: EMPTY_OBJ,
+        inline: false,
+        isTS: false,
+        onError: defaultOnError,
+        onWarn: defaultOnWarn,
+      },
+      options,
+    ),
     dynamic: ir.dynamic,
     inVOnce: false,
 
@@ -175,8 +178,7 @@ function createContext<T extends TemplateChildNode>(
   parent: TransformContext<ParentNode>,
   index: number,
 ): TransformContext<T> {
-  const ctx: TransformContext<T> = {
-    ...parent,
+  const ctx: TransformContext<T> = extend({}, parent, {
     node,
     parent,
     index,
@@ -190,7 +192,7 @@ function createContext<T extends TemplateChildNode>(
       placeholder: null,
       children: {},
     },
-  }
+  })
   return ctx
 }
 

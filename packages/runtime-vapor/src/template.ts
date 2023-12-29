@@ -4,6 +4,7 @@ export const template = (str: string): (() => DocumentFragment) => {
   return () => {
     if (!cached) {
       cached = true
+      // eslint-disable-next-line no-restricted-globals
       const t = document.createElement('template')
       t.innerHTML = str
       // first render: insert the node directly.

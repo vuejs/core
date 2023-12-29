@@ -1,12 +1,12 @@
 import {
-  createCompilerError,
   ElementTypes,
   ErrorCodes,
+  createCompilerError,
 } from '@vue/compiler-core'
 import type { DirectiveTransform } from '../transform'
-import { IRNodeTypes, KeyOverride, SetEventIRNode } from '../ir'
+import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { resolveModifiers } from '@vue/compiler-dom'
-import { camelize } from '@vue/shared'
+import { camelize, extend } from '@vue/shared'
 
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
@@ -54,7 +54,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
 
   if (nonKeyModifiers.includes('right')) {
     if (isStaticClick) {
-      arg = { ...arg, content: 'contextmenu' }
+      arg = extend({}, arg, { content: 'contextmenu' })
     } else if (!arg.isStatic) {
       keyOverride = ['click', 'contextmenu']
     }
@@ -64,7 +64,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       // TODO error here
     }
     if (isStaticClick) {
-      arg = { ...arg, content: 'mouseup' }
+      arg = extend({}, arg, { content: 'mouseup' })
     } else if (!arg.isStatic) {
       keyOverride = ['click', 'mouseup']
     }

@@ -1,12 +1,12 @@
 import {
-  type ElementNode,
   type AttributeNode,
-  NodeTypes,
+  type ElementNode,
   ElementTypes,
+  NodeTypes,
 } from '@vue/compiler-dom'
 import { isBuiltInDirective, isVoidTag } from '@vue/shared'
-import { NodeTransform, TransformContext } from '../transform'
-import { VaporDirectiveNode, IRNodeTypes } from '../ir'
+import type { NodeTransform, TransformContext } from '../transform'
+import { IRNodeTypes, type VaporDirectiveNode } from '../ir'
 
 export const transformElement: NodeTransform = (node, ctx) => {
   return function postTransformElement() {

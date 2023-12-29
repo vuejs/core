@@ -1,13 +1,13 @@
 import {
-  ComputedRef,
-  Ref,
+  type ComputedRef,
+  type DebuggerOptions,
+  type EffectScheduler,
+  ReactiveEffect,
+  ReactiveFlags,
+  type Ref,
+  getCurrentScope,
   isReactive,
   isRef,
-  ReactiveEffect,
-  EffectScheduler,
-  DebuggerOptions,
-  getCurrentScope,
-  ReactiveFlags,
 } from '@vue/reactivity'
 import {
   EMPTY_OBJ,
@@ -25,10 +25,10 @@ import {
 import { currentInstance } from './component'
 import {
   type Scheduler,
+  type SchedulerJob,
   getVaporSchedulerByFlushMode,
   vaporPostScheduler,
   vaporSyncScheduler,
-  SchedulerJob,
 } from './scheduler'
 import {
   VaporErrorCodes,

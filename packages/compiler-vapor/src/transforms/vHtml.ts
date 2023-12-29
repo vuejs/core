@@ -1,5 +1,5 @@
 import { IRNodeTypes } from '../ir'
-import { DirectiveTransform } from '../transform'
+import type { DirectiveTransform } from '../transform'
 import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
 
 export const transformVHtml: DirectiveTransform = (dir, node, context) => {

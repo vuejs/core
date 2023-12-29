@@ -1,6 +1,6 @@
-import { template, children, withDirectives, on, vShow, render } from '../src'
-import { ref, defineComponent, nextTick } from 'vue'
-import { beforeEach, afterEach, describe, test, expect } from 'vitest'
+import { children, on, render, template, vShow, withDirectives } from '../src'
+import { defineComponent, nextTick, ref } from 'vue'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 
 let host: HTMLElement
 

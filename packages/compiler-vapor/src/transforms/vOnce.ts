@@ -1,5 +1,5 @@
 import { NodeTypes, findDir } from '@vue/compiler-dom'
-import { NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 
 const seen = new WeakSet()
 

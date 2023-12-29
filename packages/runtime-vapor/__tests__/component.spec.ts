@@ -1,9 +1,9 @@
 import {
-  template,
   children,
-  setText,
-  render,
   ref,
+  render,
+  setText,
+  template,
   unmountComponent,
   watchEffect,
 } from '../src'

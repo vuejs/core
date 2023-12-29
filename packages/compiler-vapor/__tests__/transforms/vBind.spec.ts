@@ -1,14 +1,14 @@
 import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
-  type RootIRNode,
   type CompilerOptions,
-  parse,
-  transform,
-  transformVBind,
-  transformElement,
   IRNodeTypes,
+  type RootIRNode,
   compile as _compile,
   generate,
+  parse,
+  transform,
+  transformElement,
+  transformVBind,
 } from '../../src'
 
 function compileWithVBind(

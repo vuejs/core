@@ -6,11 +6,11 @@ import {
 } from '@vue/compiler-dom'
 import {
   type CompilerOptions,
-  compile as _compile,
-  RootIRNode,
-  transform,
-  generate,
   IRNodeTypes,
+  type RootIRNode,
+  compile as _compile,
+  generate,
+  transform,
 } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
 

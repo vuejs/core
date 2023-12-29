@@ -1,11 +1,11 @@
 import { BindingTypes, NodeTypes, parse } from '@vue/compiler-dom'
 import {
   type CompilerOptions,
-  compile as _compile,
-  transform,
-  generate as generate,
   IRNodeTypes,
-  RootIRNode,
+  type RootIRNode,
+  compile as _compile,
+  generate as generate,
+  transform,
 } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
 

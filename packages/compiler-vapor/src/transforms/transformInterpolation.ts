@@ -1,5 +1,5 @@
-import { NodeTypes, SimpleExpressionNode } from '@vue/compiler-dom'
-import { NodeTransform } from '../transform'
+import { NodeTypes, type SimpleExpressionNode } from '@vue/compiler-dom'
+import type { NodeTransform } from '../transform'
 import { IRNodeTypes } from '../ir'
 
 export const transformInterpolation: NodeTransform = (node, ctx) => {

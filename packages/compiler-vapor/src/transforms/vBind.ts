@@ -1,7 +1,7 @@
 import {
+  ErrorCodes,
   createCompilerError,
   createSimpleExpression,
-  ErrorCodes,
 } from '@vue/compiler-core'
 import { camelize } from '@vue/shared'
 import { IRNodeTypes } from '../ir'

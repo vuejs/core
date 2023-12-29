@@ -1,5 +1,5 @@
-import { ReactiveEffect } from '@vue/reactivity'
-import { ComponentInternalInstance } from './component'
+import type { ReactiveEffect } from '@vue/reactivity'
+import type { ComponentInternalInstance } from './component'
 import { getIsRendering } from '.'
 
 export interface SchedulerJob extends Function {

@@ -1,8 +1,8 @@
-import { EffectScope, Ref, ref } from '@vue/reactivity'
+import { EffectScope, type Ref, ref } from '@vue/reactivity'
 
 import { EMPTY_OBJ } from '@vue/shared'
-import { Block } from './render'
-import { type DirectiveBinding } from './directive'
+import type { Block } from './render'
+import type { DirectiveBinding } from './directive'
 import {
   type ComponentPropsOptions,
   type NormalizedPropsOptions,

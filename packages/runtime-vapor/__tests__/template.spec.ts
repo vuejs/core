@@ -1,4 +1,4 @@
-import { template, fragment } from '../src'
+import { fragment, template } from '../src'
 
 describe('api: template', () => {
   test('create element', () => {

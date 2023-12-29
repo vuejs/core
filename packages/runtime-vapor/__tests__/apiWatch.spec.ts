@@ -1,4 +1,4 @@
-import { EffectScope, Ref, ref } from '@vue/reactivity'
+import { EffectScope, type Ref, ref } from '@vue/reactivity'
 import {
   onEffectCleanup,
   watchEffect,

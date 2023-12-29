@@ -1,4 +1,4 @@
-import { type RootNode, BindingTypes } from '@vue/compiler-dom'
+import { BindingTypes, type RootNode } from '@vue/compiler-dom'
 import { type CompilerOptions, compile as _compile } from '../src'
 
 function compile(template: string | RootNode, options: CompilerOptions = {}) {

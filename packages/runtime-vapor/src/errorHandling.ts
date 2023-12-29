@@ -3,7 +3,7 @@
 // The ultimate aim is to uncouple this replicated code and
 // facilitate its shared use between two runtimes.
 
-import { type ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
 import { VaporLifecycleHooks } from './enums'
