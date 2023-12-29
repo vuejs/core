@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const resolveEntryForPkg = (/** @type {string} */ p) =>
   path.resolve(
     fileURLToPath(import.meta.url),
-    `../../packages/${p}/src/index.ts`
+    `../../packages/${p}/src/index.ts`,
   )
 
 const dirs = readdirSync(new URL('../packages', import.meta.url))
@@ -17,7 +17,7 @@ const entries = {
   vue: resolveEntryForPkg('vue'),
   'vue/compiler-sfc': resolveEntryForPkg('compiler-sfc'),
   'vue/server-renderer': resolveEntryForPkg('server-renderer'),
-  '@vue/compat': resolveEntryForPkg('vue-compat')
+  '@vue/compat': resolveEntryForPkg('vue-compat'),
 }
 
 const nonSrcPackages = ['sfc-playground', 'template-explorer', 'dts-test']

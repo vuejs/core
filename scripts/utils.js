@@ -40,8 +40,8 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
     console.log()
     console.error(
       `  ${pico.white(pico.bgRed(' ERROR '))} ${pico.red(
-        `Target ${pico.underline(partialTargets.toString())} not found!`
-      )}`
+        `Target ${pico.underline(partialTargets.toString())} not found!`,
+      )}`,
     )
     console.log()
 

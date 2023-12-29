@@ -1,18 +1,18 @@
-import {
+import type {
   ElementNode,
   Namespace,
-  TemplateChildNode,
+  Namespaces,
   ParentNode,
-  Namespaces
+  TemplateChildNode,
 } from './ast'
-import { CompilerError } from './errors'
-import {
-  NodeTransform,
+import type { CompilerError } from './errors'
+import type {
   DirectiveTransform,
-  TransformContext
+  NodeTransform,
+  TransformContext,
 } from './transform'
-import { CompilerCompatOptions } from './compat/compatConfig'
-import { ParserPlugin } from '@babel/parser'
+import type { CompilerCompatOptions } from './compat/compatConfig'
+import type { ParserPlugin } from '@babel/parser'
 
 export interface ErrorHandlingOptions {
   onWarn?: (warning: CompilerError) => void
@@ -66,7 +66,7 @@ export interface ParserOptions
   getNamespace?: (
     tag: string,
     parent: ElementNode | undefined,
-    rootNamespace: Namespace
+    rootNamespace: Namespace,
   ) => Namespace
   /**
    * @default ['{{', '}}']
@@ -102,7 +102,7 @@ export interface ParserOptions
 export type HoistTransform = (
   children: TemplateChildNode[],
   context: TransformContext,
-  parent: ParentNode
+  parent: ParentNode,
 ) => void
 
 export enum BindingTypes {
@@ -148,7 +148,7 @@ export enum BindingTypes {
   /**
    * a literal constant, e.g. 'foo', 1, true
    */
-  LITERAL_CONST = 'literal-const'
+  LITERAL_CONST = 'literal-const',
 }
 
 export type BindingMetadata = {

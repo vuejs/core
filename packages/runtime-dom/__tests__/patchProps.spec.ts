@@ -1,5 +1,5 @@
 import { patchProp } from '../src/patchProp'
-import { render, h } from '../src'
+import { h, render } from '../src'
 
 describe('runtime-dom: props patching', () => {
   test('basic', () => {
@@ -106,7 +106,7 @@ describe('runtime-dom: props patching', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -122,7 +122,7 @@ describe('runtime-dom: props patching', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -137,7 +137,7 @@ describe('runtime-dom: props patching', () => {
     const fn = vi.fn()
     const comp = {
       render: () => 'foo',
-      unmounted: fn
+      unmounted: fn,
     }
     const root = document.createElement('div')
     render(h('div', null, [h(comp)]), root)
@@ -169,7 +169,7 @@ describe('runtime-dom: props patching', () => {
     Object.defineProperty(el, 'someProp', {
       set() {
         throw new TypeError('Invalid type')
-      }
+      },
     })
     patchProp(el, 'someProp', null, 'foo')
 
@@ -265,7 +265,7 @@ describe('runtime-dom: props patching', () => {
     patchProp(el, 'willValidate', true, null)
     expect(el.willValidate).toBe(true)
     expect(
-      'Failed setting prop "willValidate" on <select>'
+      'Failed setting prop "willValidate" on <select>',
     ).toHaveBeenWarnedLast()
   })
 
@@ -274,9 +274,9 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'foo' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'bar' }, 'bar')
+        h('option', { value: 'bar' }, 'bar'),
       ]),
-      root
+      root,
     )
     const el = root.children[0] as HTMLSelectElement
     expect(el.value).toBe('foo')
@@ -284,9 +284,9 @@ describe('runtime-dom: props patching', () => {
     render(
       h('select', { value: 'baz' }, [
         h('option', { value: 'foo' }, 'foo'),
-        h('option', { value: 'baz' }, 'baz')
+        h('option', { value: 'baz' }, 'baz'),
       ]),
-      root
+      root,
     )
     expect(el.value).toBe('baz')
   })

@@ -26,7 +26,7 @@
 //                 Kanitkorn Sujautra <https://github.com/lukyth>
 //                 Sebastian Silbermann <https://github.com/eps1lon>
 
-import * as CSS from 'csstype'
+import type * as CSS from 'csstype'
 
 export interface CSSProperties
   extends CSS.Properties<string | number>,
@@ -1386,7 +1386,7 @@ type EventHandlers<E> = {
     : (payload: E[K]) => void
 }
 
-import { VNodeRef } from '@vue/runtime-core'
+import type { VNodeRef } from '@vue/runtime-core'
 
 export type ReservedProps = {
   key?: string | number | symbol

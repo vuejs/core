@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { rollup } from 'rollup'
 import nodeResolve from '@rollup/plugin-node-resolve'
@@ -9,7 +9,7 @@ import { brotliCompressSync, gzipSync } from 'node:zlib'
 const sizeDir = path.resolve('temp/size')
 const vue = path.resolve('./packages/vue/dist/vue.runtime.esm-bundler.js')
 const vapor = path.resolve(
-  './packages/vue-vapor/dist/vue-vapor.runtime.esm-bundler.js'
+  './packages/vue-vapor/dist/vue-vapor.runtime.esm-bundler.js',
 )
 
 interface Preset {
@@ -24,7 +24,7 @@ const presets: Preset[] = [
   {
     name: 'defineCustomElement',
     imports: ['defineCustomElement'],
-    from: vue
+    from: vue,
   },
   { name: 'vapor', imports: '*', from: vapor },
   {
@@ -35,10 +35,10 @@ const presets: Preset[] = [
       'watch',
       'Transition',
       'KeepAlive',
-      'Suspense'
+      'Suspense',
     ],
-    from: vue
-  }
+    from: vue,
+  },
 ]
 
 main()
@@ -50,14 +50,14 @@ async function main() {
   }
 
   const results = Object.fromEntries(
-    (await Promise.all(tasks)).map(r => [r.name, r])
+    (await Promise.all(tasks)).map(r => [r.name, r]),
   )
 
   await mkdir(sizeDir, { recursive: true })
   await writeFile(
     path.resolve(sizeDir, '_usages.json'),
     JSON.stringify(results),
-    'utf-8'
+    'utf-8',
   )
 }
 
@@ -79,7 +79,7 @@ async function generateBundle(preset: Preset) {
         },
         load(_id) {
           if (_id === id) return content
-        }
+        },
       },
       nodeResolve(),
       replace({
@@ -87,9 +87,9 @@ async function generateBundle(preset: Preset) {
         __VUE_PROD_DEVTOOLS__: 'false',
         __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
         __VUE_OPTIONS_API__: 'true',
-        preventAssignment: true
-      })
-    ]
+        preventAssignment: true,
+      }),
+    ],
   })
 
   const generated = await result.generate({})
@@ -97,7 +97,7 @@ async function generateBundle(preset: Preset) {
   const minified = (
     await minify(bundled, {
       module: true,
-      toplevel: true
+      toplevel: true,
     })
   ).code!
 
@@ -109,6 +109,6 @@ async function generateBundle(preset: Preset) {
     name: preset.name,
     size,
     gzip,
-    brotli
+    brotli,
   }
 }

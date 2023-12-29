@@ -13,9 +13,9 @@
     "size-esm-runtime": "node scripts/build.js vue vue-vapor -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-dom runtime-vapor runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache --ext .ts packages/*/{src,__tests__}/**.ts",
-    "format": "prettier --write --cache \"**/*.[tj]s?(x)\"",
-    "format-check": "prettier --check --cache \"**/*.[tj]s?(x)\"",
+    "lint": "eslint --cache --ext .js,.ts,.tsx . --ignore-path .gitignore",
+    "format": "prettier --write --cache .",
+    "format-check": "prettier --check --cache .",
     "test": "vitest",
     "test-unit": "vitest -c vitest.unit.config.ts",
     "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
@@ -52,7 +52,7 @@
       "prettier --write"
     ],
     "*.ts?(x)": [
-      "eslint",
+      "eslint --fix",
       "prettier --parser=typescript --write"
     ]
   },
@@ -73,6 +73,7 @@
     "@types/minimist": "^1.2.5",
     "@types/node": "^20.10.5",
     "@types/semver": "^7.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.15.0",
     "@vitest/coverage-istanbul": "^1.1.0",
     "@vue/consolidate": "0.17.3",
@@ -82,6 +83,7 @@
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^8.56.0",
     "eslint-define-config": "^1.24.1",
+    "eslint-plugin-import": "npm:eslint-plugin-i@^2.29.1",
     "eslint-plugin-jest": "^27.6.0",
     "estree-walker": "^2.0.2",
     "execa": "^8.0.1",

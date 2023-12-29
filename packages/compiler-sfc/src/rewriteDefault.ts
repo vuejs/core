@@ -7,11 +7,11 @@ import { resolveParserPlugins } from './script/context'
 export function rewriteDefault(
   input: string,
   as: string,
-  parserPlugins?: ParserPlugin[]
+  parserPlugins?: ParserPlugin[],
 ): string {
   const ast = parse(input, {
     sourceType: 'module',
-    plugins: resolveParserPlugins('js', parserPlugins)
+    plugins: resolveParserPlugins('js', parserPlugins),
   }).program.body
   const s = new MagicString(input)
 
@@ -27,7 +27,7 @@ export function rewriteDefault(
 export function rewriteDefaultAST(
   ast: Statement[],
   s: MagicString,
-  as: string
+  as: string,
 ): void {
   if (!hasDefaultExport(ast)) {
     s.append(`\nconst ${as} = {}`)
@@ -60,7 +60,7 @@ export function rewriteDefaultAST(
           if (node.source) {
             if (specifier.local.name === 'default') {
               s.prepend(
-                `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`
+                `import { default as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
               const end = specifierEnd(s, specifier.local.end!, node.end!)
               s.remove(specifier.start!, end)
@@ -70,8 +70,8 @@ export function rewriteDefaultAST(
               s.prepend(
                 `import { ${s.slice(
                   specifier.local.start!,
-                  specifier.local.end!
-                )} as __VUE_DEFAULT__ } from '${node.source.value}'\n`
+                  specifier.local.end!,
+                )} as __VUE_DEFAULT__ } from '${node.source.value}'\n`,
               )
               const end = specifierEnd(s, specifier.exported.end!, node.end!)
               s.remove(specifier.start!, end)
@@ -96,7 +96,7 @@ export function hasDefaultExport(ast: Statement[]): boolean {
     } else if (
       stmt.type === 'ExportNamedDeclaration' &&
       stmt.specifiers.some(
-        spec => (spec.exported as Identifier).name === 'default'
+        spec => (spec.exported as Identifier).name === 'default',
       )
     ) {
       return true

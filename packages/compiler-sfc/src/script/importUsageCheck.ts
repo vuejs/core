@@ -1,11 +1,11 @@
-import { SFCDescriptor } from '../parse'
+import type { SFCDescriptor } from '../parse'
 import {
+  type ExpressionNode,
   NodeTypes,
-  SimpleExpressionNode,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
   parserOptions,
   walkIdentifiers,
-  TemplateChildNode,
-  ExpressionNode
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'

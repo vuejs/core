@@ -1,25 +1,25 @@
 import {
-  Component,
+  type Component,
+  type ComponentPublicInstance,
+  type EmitsOptions,
+  type FunctionalComponent,
+  type PropType,
+  type Ref,
+  type SetupContext,
+  type ShallowUnwrapRef,
   defineComponent,
-  PropType,
   ref,
-  Ref,
-  ShallowUnwrapRef,
-  FunctionalComponent,
-  ComponentPublicInstance,
   toRefs,
-  SetupContext,
-  EmitsOptions
 } from 'vue'
-import { describe, expectAssignable, expectType, IsAny } from './utils'
+import { type IsAny, describe, expectAssignable, expectType } from './utils'
 
 declare function extractComponentOptions<
   Props,
   RawBindings,
   Emits extends EmitsOptions | Record<string, any[]>,
-  Slots extends Record<string, any>
+  Slots extends Record<string, any>,
 >(
-  obj: Component<Props, RawBindings, any, any, any, Emits, Slots>
+  obj: Component<Props, RawBindings, any, any, any, Emits, Slots>,
 ): {
   props: Props
   emits: Emits
@@ -79,24 +79,24 @@ describe('object props', () => {
         // required should make property non-void
         b: {
           type: String,
-          required: true
+          required: true,
         },
         e: Function,
         // default value should infer type and make it non-void
         bb: {
-          default: 'hello'
+          default: 'hello',
         },
         bbb: {
           // Note: default function value requires arrow syntax + explicit
           // annotation
-          default: (props: any) => (props.bb as string) || 'foo'
+          default: (props: any) => (props.bb as string) || 'foo',
         },
         // explicit type casting
         cc: Array as PropType<string[]>,
         // required + type casting
         dd: {
           type: Object as PropType<{ n: 1 }>,
-          required: true
+          required: true,
         },
         // return type
         ee: Function as PropType<() => string>,
@@ -107,39 +107,39 @@ describe('object props', () => {
         // required + constructor type casting
         ddd: {
           type: Array as () => string[],
-          required: true
+          required: true,
         },
         // required + object return
         eee: {
           type: Function as PropType<() => { a: string }>,
-          required: true
+          required: true,
         },
         // required + arguments + object return
         fff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          required: true
+          required: true,
         },
         hhh: {
           type: Boolean,
-          required: true
+          required: true,
         },
         // default + type casting
         ggg: {
           type: String as PropType<'foo' | 'bar'>,
-          default: 'foo'
+          default: 'foo',
         },
         // default + function
         ffff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          default: (_a: number, _b: string) => ({ a: true })
+          default: (_a: number, _b: string) => ({ a: true }),
         },
         validated: {
           type: String,
           // validator requires explicit annotation
-          validator: (val: unknown) => val !== ''
+          validator: (val: unknown) => val !== '',
         },
         object: Object as PropType<object>,
-        zzz: Object as PropType<any>
+        zzz: Object as PropType<any>,
       },
       setup(props) {
         const refs = toRefs(props)
@@ -167,12 +167,12 @@ describe('object props', () => {
           setupA: 1,
           setupB: ref(1),
           setupC: {
-            a: ref(2)
+            a: ref(2),
           },
           setupD: undefined as Ref<number> | undefined,
-          setupProps: props
+          setupProps: props,
         }
-      }
+      },
     })
 
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -262,24 +262,24 @@ describe('object props', () => {
         // required should make property non-void
         b: {
           type: String,
-          required: true
+          required: true,
         },
         e: Function,
         // default value should infer type and make it non-void
         bb: {
-          default: 'hello'
+          default: 'hello',
         },
         bbb: {
           // Note: default function value requires arrow syntax + explicit
           // annotation
-          default: (props: any) => (props.bb as string) || 'foo'
+          default: (props: any) => (props.bb as string) || 'foo',
         },
         // explicit type casting
         cc: Array as PropType<string[]>,
         // required + type casting
         dd: {
           type: Object as PropType<{ n: 1 }>,
-          required: true
+          required: true,
         },
         // return type
         ee: Function as PropType<() => string>,
@@ -290,45 +290,45 @@ describe('object props', () => {
         // required + constructor type casting
         ddd: {
           type: Array as () => string[],
-          required: true
+          required: true,
         },
         // required + object return
         eee: {
           type: Function as PropType<() => { a: string }>,
-          required: true
+          required: true,
         },
         // required + arguments + object return
         fff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          required: true
+          required: true,
         },
         hhh: {
           type: Boolean,
-          required: true
+          required: true,
         },
         // default + type casting
         ggg: {
           type: String as PropType<'foo' | 'bar'>,
-          default: 'foo'
+          default: 'foo',
         },
         // default + function
         ffff: {
           type: Function as PropType<(a: number, b: string) => { a: boolean }>,
-          default: (_a: number, _b: string) => ({ a: true })
+          default: (_a: number, _b: string) => ({ a: true }),
         },
         validated: {
           type: String,
           // validator requires explicit annotation
-          validator: (val: unknown) => val !== ''
+          validator: (val: unknown) => val !== '',
         },
-        object: Object as PropType<object>
+        object: Object as PropType<object>,
       },
 
       setup() {
         return {
-          setupA: 1
+          setupA: 1,
         }
-      }
+      },
     } as const
 
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -367,9 +367,9 @@ describe('array props', () => {
       props: ['a', 'b'],
       setup() {
         return {
-          c: 1
+          c: 1,
         }
-      }
+      },
     })
 
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -388,9 +388,9 @@ describe('array props', () => {
       props: ['a', 'b'] as const,
       setup() {
         return {
-          c: 1
+          c: 1,
         }
-      }
+      },
     }
 
     const { props, rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -412,9 +412,9 @@ describe('no props', () => {
     const MyComponent = defineComponent({
       setup() {
         return {
-          setupA: 1
+          setupA: 1,
         }
-      }
+      },
     })
 
     const { rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -433,9 +433,9 @@ describe('no props', () => {
     const MyComponent = {
       setup() {
         return {
-          setupA: 1
+          setupA: 1,
         }
-      }
+      },
     }
 
     const { rawBindings, setup } = extractComponentOptions(MyComponent)
@@ -469,7 +469,7 @@ describe('functional', () => {
 
     const MyComponent: FunctionalComponent<Props, Emits, Slots> = (
       props,
-      { emit, slots }
+      { emit, slots },
     ) => {
       expectType<Props>(props)
       expectType<{
@@ -508,7 +508,7 @@ describe('SetupContext', () => {
 
   describe('short emits', () => {
     const {
-      emit
+      emit,
     }: SetupContext<{
       a: [val: string]
       b: [val: number]

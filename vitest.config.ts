@@ -17,20 +17,20 @@ export default defineConfig({
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
     __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
-    __COMPAT__: true
+    __COMPAT__: true,
   },
   resolve: {
-    alias: entries
+    alias: entries,
   },
   plugins: [codspeedPlugin()],
   test: {
     globals: true,
     setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom']
+      ['packages/{vue,vue-compat,runtime-dom,runtime-vapor}/**', 'jsdom'],
     ],
     sequence: {
-      hooks: 'list'
+      hooks: 'list',
     },
     coverage: {
       provider: 'istanbul',
@@ -40,8 +40,8 @@ export default defineConfig({
         // DOM transitions are tested via e2e so no coverage is collected
         'packages/runtime-dom/src/components/Transition*',
         // mostly entries
-        'packages/vue-compat/**'
-      ]
-    }
-  }
+        'packages/vue-compat/**',
+      ],
+    },
+  },
 })

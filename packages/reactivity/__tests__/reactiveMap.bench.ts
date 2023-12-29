@@ -1,5 +1,5 @@
 import { bench } from 'vitest'
-import { reactive, computed, ComputedRef } from '../src'
+import { type ComputedRef, computed, reactive } from '../src'
 
 function createMap(obj: Record<string, any>) {
   const map = new Map()

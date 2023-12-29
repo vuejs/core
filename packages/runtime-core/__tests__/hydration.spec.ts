@@ -3,27 +3,27 @@
  */
 
 import {
-  createSSRApp,
-  h,
-  ref,
-  nextTick,
-  VNode,
-  Teleport,
-  createStaticVNode,
   Suspense,
-  onMounted,
-  defineAsyncComponent,
-  defineComponent,
+  Teleport,
+  Transition,
+  type VNode,
+  createCommentVNode,
+  createSSRApp,
+  createStaticVNode,
   createTextVNode,
   createVNode,
-  withDirectives,
-  vModelCheckbox,
+  defineAsyncComponent,
+  defineComponent,
+  h,
+  nextTick,
+  onMounted,
+  ref,
   renderSlot,
-  Transition,
-  createCommentVNode,
-  vShow
+  vModelCheckbox,
+  vShow,
+  withDirectives,
 } from '@vue/runtime-dom'
-import { renderToString, SSRContext } from '@vue/server-renderer'
+import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
 import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
 
@@ -31,13 +31,13 @@ function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
   container.innerHTML = html
   const app = createSSRApp({
-    render
+    render,
   })
   return {
     vnode: app.mount(container).$.subTree as VNode<Node, Element> & {
       el: Element
     },
-    container
+    container,
   }
 }
 
@@ -63,7 +63,7 @@ describe('SSR hydration', () => {
 
   test('empty text', async () => {
     const { container } = mountWithHydration('<div></div>', () =>
-      h('div', createTextVNode(''))
+      h('div', createTextVNode('')),
     )
     expect(container.textContent).toBe('')
     expect(`Hydration children mismatch in <div>`).not.toHaveBeenWarned()
@@ -78,7 +78,7 @@ describe('SSR hydration', () => {
   test('static', () => {
     const html = '<div><span>hello</span></div>'
     const { vnode, container } = mountWithHydration(html, () =>
-      createStaticVNode('', 1)
+      createStaticVNode('', 1),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.el.outerHTML).toBe(html)
@@ -109,7 +109,7 @@ describe('SSR hydration', () => {
   test('static (with text node as starting node)', () => {
     const html = ` A <span>foo</span> B`
     const { vnode, container } = mountWithHydration(html, () =>
-      createStaticVNode(` A <span>foo</span> B`, 3)
+      createStaticVNode(` A <span>foo</span> B`, 3),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.anchor).toBe(container.lastChild)
@@ -119,7 +119,7 @@ describe('SSR hydration', () => {
   test('static with content adoption', () => {
     const html = ` A <span>foo</span> B`
     const { vnode, container } = mountWithHydration(html, () =>
-      createStaticVNode(``, 3)
+      createStaticVNode(``, 3),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(vnode.anchor).toBe(container.lastChild)
@@ -131,7 +131,7 @@ describe('SSR hydration', () => {
     const msg = ref('foo')
     const { vnode, container } = mountWithHydration(
       '<div class="foo">foo</div>',
-      () => h('div', { class: msg.value }, msg.value)
+      () => h('div', { class: msg.value }, msg.value),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(container.firstChild!.textContent).toBe('foo')
@@ -148,15 +148,15 @@ describe('SSR hydration', () => {
       () =>
         h('div', [
           h('span', msg.value),
-          h('span', { class: msg.value, onClick: fn })
-        ])
+          h('span', { class: msg.value, onClick: fn }),
+        ]),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect((vnode.children as VNode[])[0].el).toBe(
-      container.firstChild!.childNodes[0]
+      container.firstChild!.childNodes[0],
     )
     expect((vnode.children as VNode[])[1].el).toBe(
-      container.firstChild!.childNodes[1]
+      container.firstChild!.childNodes[1],
     )
 
     // event handler
@@ -171,7 +171,7 @@ describe('SSR hydration', () => {
   test('element with ref', () => {
     const el = ref()
     const { vnode, container } = mountWithHydration('<div></div>', () =>
-      h('div', { ref: el })
+      h('div', { ref: el }),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(el.value).toBe(vnode.el)
@@ -184,13 +184,16 @@ describe('SSR hydration', () => {
       '<div><!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]--></div>',
       () =>
         h('div', [
-          [h('span', msg.value), [h('span', { class: msg.value, onClick: fn })]]
-        ])
+          [
+            h('span', msg.value),
+            [h('span', { class: msg.value, onClick: fn })],
+          ],
+        ]),
     )
     expect(vnode.el).toBe(container.firstChild)
 
     expect(vnode.el.innerHTML).toBe(
-      `<!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]-->`
+      `<!--[--><span>foo</span><!--[--><span class="foo"></span><!--]--><!--]-->`,
     )
 
     // start fragment 1
@@ -224,7 +227,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(vnode.el.innerHTML).toBe(
-      `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`
+      `<!--[--><span>bar</span><!--[--><span class="bar"></span><!--]--><!--]-->`,
     )
   })
 
@@ -241,8 +244,8 @@ describe('SSR hydration', () => {
       () =>
         h(Teleport, { to: '#teleport' }, [
           h('span', msg.value),
-          h('span', { class: msg.value, onClick: fn })
-        ])
+          h('span', { class: msg.value, onClick: fn }),
+        ]),
     )
 
     expect(vnode.el).toBe(container.firstChild)
@@ -250,10 +253,10 @@ describe('SSR hydration', () => {
 
     expect(vnode.target).toBe(teleportContainer)
     expect((vnode.children as VNode[])[0].el).toBe(
-      teleportContainer.childNodes[0]
+      teleportContainer.childNodes[0],
     )
     expect((vnode.children as VNode[])[1].el).toBe(
-      teleportContainer.childNodes[1]
+      teleportContainer.childNodes[1],
     )
     expect(vnode.targetAnchor).toBe(teleportContainer.childNodes[2])
 
@@ -264,7 +267,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toBe(
-      `<span>bar</span><span class="bar"></span><!--teleport anchor-->`
+      `<span>bar</span><span class="bar"></span><!--teleport anchor-->`,
     )
   })
 
@@ -276,12 +279,12 @@ describe('SSR hydration', () => {
     const Comp = () => [
       h(Teleport, { to: '#teleport2' }, [
         h('span', msg.value),
-        h('span', { class: msg.value, onClick: fn1 })
+        h('span', { class: msg.value, onClick: fn1 }),
       ]),
       h(Teleport, { to: '#teleport2' }, [
         h('span', msg.value + '2'),
-        h('span', { class: msg.value + '2', onClick: fn2 })
-      ])
+        h('span', { class: msg.value + '2', onClick: fn2 }),
+      ]),
     ]
 
     const teleportContainer = document.createElement('div')
@@ -289,12 +292,12 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     const mainHtml = await renderToString(h(Comp), ctx)
     expect(mainHtml).toMatchInlineSnapshot(
-      `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`
+      `"<!--[--><!--teleport start--><!--teleport end--><!--teleport start--><!--teleport end--><!--]-->"`,
     )
 
     const teleportHtml = ctx.teleports!['#teleport2']
     expect(teleportHtml).toMatchInlineSnapshot(
-      `"<span>foo</span><span class="foo"></span><!--teleport anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`
+      `"<span>foo</span><span class="foo"></span><!--teleport anchor--><span>foo2</span><span class="foo2"></span><!--teleport anchor-->"`,
     )
 
     teleportContainer.innerHTML = teleportHtml
@@ -311,13 +314,13 @@ describe('SSR hydration', () => {
 
     expect(teleportVnode1.target).toBe(teleportContainer)
     expect((teleportVnode1 as any).children[0].el).toBe(
-      teleportContainer.childNodes[0]
+      teleportContainer.childNodes[0],
     )
     expect(teleportVnode1.targetAnchor).toBe(teleportContainer.childNodes[2])
 
     expect(teleportVnode2.target).toBe(teleportContainer)
     expect((teleportVnode2 as any).children[0].el).toBe(
-      teleportContainer.childNodes[3]
+      teleportContainer.childNodes[3],
     )
     expect(teleportVnode2.targetAnchor).toBe(teleportContainer.childNodes[5])
 
@@ -331,7 +334,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(teleportContainer.innerHTML).toMatchInlineSnapshot(
-      `"<span>bar</span><span class="bar"></span><!--teleport anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`
+      `"<span>bar</span><span class="bar"></span><!--teleport anchor--><span>bar2</span><span class="bar2"></span><!--teleport anchor-->"`,
     )
   })
 
@@ -344,9 +347,9 @@ describe('SSR hydration', () => {
       h('div', 'foo'),
       h(Teleport, { to: '#teleport3', disabled: true }, [
         h('span', msg.value),
-        h('span', { class: msg.value, onClick: fn1 })
+        h('span', { class: msg.value, onClick: fn1 }),
       ]),
-      h('div', { class: msg.value + '2', onClick: fn2 }, 'bar')
+      h('div', { class: msg.value + '2', onClick: fn2 }, 'bar'),
     ]
 
     const teleportContainer = document.createElement('div')
@@ -354,7 +357,7 @@ describe('SSR hydration', () => {
     const ctx: SSRContext = {}
     const mainHtml = await renderToString(h(Comp), ctx)
     expect(mainHtml).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`
+      `"<!--[--><div>foo</div><!--teleport start--><span>foo</span><span class="foo"></span><!--teleport end--><div class="foo2">bar</div><!--]-->"`,
     )
 
     const teleportHtml = ctx.teleports!['#teleport3']
@@ -372,10 +375,10 @@ describe('SSR hydration', () => {
     const teleportVnode = children[1]
     expect(teleportVnode.el).toBe(container.childNodes[2])
     expect((teleportVnode.children as VNode[])[0].el).toBe(
-      container.childNodes[3]
+      container.childNodes[3],
     )
     expect((teleportVnode.children as VNode[])[1].el).toBe(
-      container.childNodes[4]
+      container.childNodes[4],
     )
     expect(teleportVnode.anchor).toBe(container.childNodes[5])
     expect(children[2].el).toBe(container.childNodes[6])
@@ -393,7 +396,7 @@ describe('SSR hydration', () => {
     msg.value = 'bar'
     await nextTick()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`
+      `"<!--[--><div>foo</div><!--teleport start--><span>bar</span><span class="bar"></span><!--teleport end--><div class="bar2">bar</div><!--]-->"`,
     )
   })
 
@@ -405,17 +408,17 @@ describe('SSR hydration', () => {
         h('div', 'Parent fragment'),
         h(() =>
           h(Teleport, { to: 'body', disabled: true }, [
-            h('div', 'Teleport content')
-          ])
-        )
-      ]
+            h('div', 'Teleport content'),
+          ]),
+        ),
+      ],
     )
     expect(document.body.innerHTML).toBe('')
     expect(container.innerHTML).toBe(
-      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->'
+      '<!--[--><div>Parent fragment</div><!--teleport start--><div>Teleport content</div><!--teleport end--><!--]-->',
     )
     expect(
-      `Hydration completed but contains mismatches.`
+      `Hydration completed but contains mismatches.`,
     ).not.toHaveBeenWarned()
   })
 
@@ -428,12 +431,12 @@ describe('SSR hydration', () => {
     const wrapper = {
       render() {
         return h(Teleport, { to: '#teleport4' }, ['hello'])
-      }
+      },
     }
 
     const { vnode, container } = mountWithHydration(
       '<div><!--teleport start--><!--teleport end--><div></div></div>',
-      () => h('div', [h(wrapper), h('div')])
+      () => h('div', [h(wrapper), h('div')]),
     )
     expect(vnode.el).toBe(container.firstChild)
     // component el
@@ -458,8 +461,8 @@ describe('SSR hydration', () => {
       '<!--teleport start--><!--teleport end-->',
       () =>
         h(Teleport, { to: '#teleport5' }, [
-          h('div', [h(Teleport, { to: '#teleport5' }, [h('div', 'child')])])
-        ])
+          h('div', [h(Teleport, { to: '#teleport5' }, [h('div', 'child')])]),
+        ]),
     )
 
     expect(vnode.el).toBe(container.firstChild)
@@ -476,7 +479,7 @@ describe('SSR hydration', () => {
 
     expect(childTeleportVNode.targetAnchor).toBe(teleportContainer.lastChild)
     expect(childTeleportVNode.children[0].el).toBe(
-      teleportContainer.lastChild?.previousSibling
+      teleportContainer.lastChild?.previousSibling,
     )
   })
 
@@ -492,8 +495,8 @@ describe('SSR hydration', () => {
           count: 0,
           text: 'hello',
           style: {
-            color: 'red'
-          }
+            color: 'red',
+          },
         }
       },
       mounted() {
@@ -508,7 +511,7 @@ describe('SSR hydration', () => {
         <span class="text">{{ text }}</span>
         <input v-model="text">
       </div>
-      `
+      `,
     }
 
     const App = {
@@ -530,11 +533,11 @@ describe('SSR hydration', () => {
           <span>hello</span>
         </div>`,
       components: {
-        Child
+        Child,
       },
       methods: {
-        log
-      }
+        log,
+      },
     }
 
     const container = document.createElement('div')
@@ -586,7 +589,7 @@ describe('SSR hydration', () => {
       template: `
         <div>
           <button class="parent-click" @click="throwError">click me</button>
-        </div>`
+        </div>`,
     }
 
     const container = document.createElement('div')
@@ -613,7 +616,7 @@ describe('SSR hydration', () => {
       template: `
         <div>
           <input class="parent-click" @blur="throwError"/>
-        </div>`
+        </div>`,
     }
 
     const container = document.createElement('div')
@@ -639,14 +642,14 @@ describe('SSR hydration', () => {
             {
               onClick: () => {
                 count.value++
-              }
+              },
             },
-            count.value
+            count.value,
           )
-      }
+      },
     }
     const { vnode, container } = mountWithHydration('<span>0</span>', () =>
-      h(Suspense, () => h(AsyncChild))
+      h(Suspense, () => h(AsyncChild)),
     )
     expect(vnode.el).toBe(container.firstChild)
     // wait for hydration to finish
@@ -676,11 +679,11 @@ describe('SSR hydration', () => {
             {
               onClick: () => {
                 count.value++
-              }
+              },
             },
-            count.value
+            count.value,
           )
-      }
+      },
     })
 
     const done = vi.fn()
@@ -693,18 +696,18 @@ describe('SSR hydration', () => {
         </div>
       </Suspense>`,
       components: {
-        AsyncChild
+        AsyncChild,
       },
       methods: {
-        done
-      }
+        done,
+      },
     }
 
     const container = document.createElement('div')
     // server render
     container.innerHTML = await renderToString(h(App))
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<div><span>1</span><span>2</span></div>"`
+      `"<div><span>1</span><span>2</span></div>"`,
     )
     // reset asyncDeps from ssr
     asyncDeps.length = 0
@@ -721,21 +724,21 @@ describe('SSR hydration', () => {
     // should flush buffered effects
     expect(mountedCalls).toMatchObject([1, 2])
     expect(container.innerHTML).toMatch(
-      `<div><span>1</span><span>2</span></div>`
+      `<div><span>1</span><span>2</span></div>`,
     )
 
     const span1 = container.querySelector('span')!
     triggerEvent('click', span1)
     await nextTick()
     expect(container.innerHTML).toMatch(
-      `<div><span>2</span><span>2</span></div>`
+      `<div><span>2</span><span>2</span></div>`,
     )
 
     const span2 = span1.nextSibling as Element
     triggerEvent('click', span2)
     await nextTick()
     expect(container.innerHTML).toMatch(
-      `<div><span>2</span><span>3</span></div>`
+      `<div><span>2</span><span>3</span></div>`,
     )
   })
 
@@ -745,9 +748,9 @@ describe('SSR hydration', () => {
       h(
         'button',
         {
-          onClick: spy
+          onClick: spy,
         },
-        'hello!'
+        'hello!',
       )
 
     let serverResolve: any
@@ -755,13 +758,13 @@ describe('SSR hydration', () => {
       () =>
         new Promise(r => {
           serverResolve = r
-        })
+        }),
     )
 
     const App = {
       render() {
         return ['hello', h(AsyncComp), 'world']
-      }
+      },
     }
 
     // server render
@@ -769,7 +772,7 @@ describe('SSR hydration', () => {
     serverResolve(Comp)
     const html = await htmlPromise
     expect(html).toMatchInlineSnapshot(
-      `"<!--[-->hello<button>hello!</button>world<!--]-->"`
+      `"<!--[-->hello<button>hello!</button>world<!--]-->"`,
     )
 
     // hydration
@@ -778,7 +781,7 @@ describe('SSR hydration', () => {
       () =>
         new Promise(r => {
           clientResolve = r
-        })
+        }),
     )
 
     const container = document.createElement('div')
@@ -802,14 +805,14 @@ describe('SSR hydration', () => {
     const Comp = {
       render() {
         return h('h1', 'Async component')
-      }
+      },
     }
     let serverResolve: any
     let AsyncComp = defineAsyncComponent(
       () =>
         new Promise(r => {
           serverResolve = r
-        })
+        }),
     )
 
     const toggle = ref(true)
@@ -824,7 +827,7 @@ describe('SSR hydration', () => {
         return () => {
           return [toggle.value ? 'hello' : 'world', h(AsyncComp)]
         }
-      }
+      },
     }
 
     // server render
@@ -832,7 +835,7 @@ describe('SSR hydration', () => {
     serverResolve(Comp)
     const html = await htmlPromise
     expect(html).toMatchInlineSnapshot(
-      `"<!--[-->hello<h1>Async component</h1><!--]-->"`
+      `"<!--[-->hello<h1>Async component</h1><!--]-->"`,
     )
 
     // hydration
@@ -841,7 +844,7 @@ describe('SSR hydration', () => {
       () =>
         new Promise(r => {
           clientResolve = r
-        })
+        }),
     )
 
     const container = document.createElement('div')
@@ -855,7 +858,7 @@ describe('SSR hydration', () => {
     // should be hydrated now
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<!--[-->world<h1>Async component</h1><!--]-->"`
+      `"<!--[-->world<h1>Async component</h1><!--]-->"`,
     )
   })
 
@@ -866,20 +869,20 @@ describe('SSR hydration', () => {
       async setup() {
         await new Promise<void>(r => setTimeout(r, 10))
         return () => h('h1', 'Async component')
-      }
+      },
     }
 
     const AsyncWrapper = {
       render() {
         return h(AsyncComp)
-      }
+      },
     }
 
     const SiblingComp = {
       setup() {
         toggle.value = false
         return () => h('span')
-      }
+      },
     }
 
     const App = {
@@ -892,21 +895,21 @@ describe('SSR hydration', () => {
               default: () => [
                 h('main', {}, [
                   h(AsyncWrapper, {
-                    prop: toggle.value ? 'hello' : 'world'
+                    prop: toggle.value ? 'hello' : 'world',
                   }),
-                  h(SiblingComp)
-                ])
-              ]
-            }
+                  h(SiblingComp),
+                ]),
+              ],
+            },
           )
-      }
+      },
     }
 
     // server render
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`,
     )
 
     expect(toggle.value).toBe(false)
@@ -927,7 +930,7 @@ describe('SSR hydration', () => {
 
     // should be hydrated now
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`,
     )
   })
 
@@ -938,7 +941,7 @@ describe('SSR hydration', () => {
       async setup() {
         await new Promise<void>(r => setTimeout(r, 10))
         return () => h('h1', 'Async component')
-      }
+      },
     }
 
     const AsyncWrapper = { render: () => h(AsyncComp) }
@@ -948,7 +951,7 @@ describe('SSR hydration', () => {
       setup() {
         toggle.value = false
         return () => h('span')
-      }
+      },
     }
 
     const App = {
@@ -961,21 +964,21 @@ describe('SSR hydration', () => {
               default: () => [
                 h('main', {}, [
                   h(AsyncWrapperWrapper, {
-                    prop: toggle.value ? 'hello' : 'world'
+                    prop: toggle.value ? 'hello' : 'world',
                   }),
-                  h(SiblingComp)
-                ])
-              ]
-            }
+                  h(SiblingComp),
+                ]),
+              ],
+            },
           )
-      }
+      },
     }
 
     // server render
     const html = await renderToString(h(App))
 
     expect(html).toMatchInlineSnapshot(
-      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`
+      `"<main><h1 prop="hello">Async component</h1><span></span></main>"`,
     )
 
     expect(toggle.value).toBe(false)
@@ -996,7 +999,7 @@ describe('SSR hydration', () => {
 
     // should be hydrated now
     expect(container.innerHTML).toMatchInlineSnapshot(
-      `"<main><h1 prop="world">Async component</h1><span></span></main>"`
+      `"<main><h1 prop="world">Async component</h1><span></span></main>"`,
     )
   })
 
@@ -1007,7 +1010,7 @@ describe('SSR hydration', () => {
       () =>
         new Promise(r => {
           resolve = r
-        })
+        }),
     )
 
     const show = ref(true)
@@ -1017,7 +1020,7 @@ describe('SSR hydration', () => {
     createSSRApp({
       render() {
         return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
-      }
+      },
     }).mount(root)
 
     show.value = false
@@ -1032,7 +1035,7 @@ describe('SSR hydration', () => {
       () =>
         new Promise(r => {
           resolve = r
-        })
+        }),
     )
 
     const show = ref(true)
@@ -1042,7 +1045,7 @@ describe('SSR hydration', () => {
     createSSRApp({
       render() {
         return h('div', [show.value ? h(AsyncComp) : h('div', 'hi')])
-      }
+      },
     }).mount(root)
 
     show.value = false
@@ -1054,7 +1057,7 @@ describe('SSR hydration', () => {
   test('elements with camel-case in svg ', () => {
     const { vnode, container } = mountWithHydration(
       '<animateTransform></animateTransform>',
-      () => h('animateTransform')
+      () => h('animateTransform'),
     )
     expect(vnode.el).toBe(container.firstChild)
     expect(`Hydration node mismatch`).not.toHaveBeenWarned()
@@ -1064,7 +1067,7 @@ describe('SSR hydration', () => {
     const svgContainer = document.createElement('svg')
     svgContainer.innerHTML = '<g></g>'
     const app = createSSRApp({
-      render: () => h('g')
+      render: () => h('g'),
     })
 
     expect(
@@ -1072,7 +1075,7 @@ describe('SSR hydration', () => {
         app.mount(svgContainer).$.subTree as VNode<Node, Element> & {
           el: Element
         }
-      ).el instanceof SVGElement
+      ).el instanceof SVGElement,
     )
   })
 
@@ -1082,8 +1085,8 @@ describe('SSR hydration', () => {
       () =>
         h('input', {
           type: 'checkbox',
-          '.indeterminate': true
-        })
+          '.indeterminate': true,
+        }),
     )
     expect((container.firstChild! as any).indeterminate).toBe(true)
   })
@@ -1098,10 +1101,10 @@ describe('SSR hydration', () => {
             { type: 'checkbox', 'true-value': true },
             null,
             PatchFlags.PROPS,
-            ['true-value']
+            ['true-value'],
           ),
-          [[vModelCheckbox, true]]
-        )
+          [[vModelCheckbox, true]],
+        ),
     )
     expect((container.firstChild as any)._trueValue).toBe(true)
   })
@@ -1114,8 +1117,8 @@ describe('SSR hydration', () => {
           'input',
           { type: 'checkbox', indeterminate: '' },
           null,
-          PatchFlags.HOISTED
-        )
+          PatchFlags.HOISTED,
+        ),
     )
     expect((container.firstChild as any).indeterminate).toBe(true)
   })
@@ -1126,8 +1129,8 @@ describe('SSR hydration', () => {
       () =>
         h('select', [
           // hoisted because bound value is a constant...
-          createVNode('option', { value: true }, null, -1 /* HOISTED */)
-        ])
+          createVNode('option', { value: true }, null, -1 /* HOISTED */),
+        ]),
     )
     expect((container.firstChild!.firstChild as any)._value).toBe(true)
   })
@@ -1137,12 +1140,12 @@ describe('SSR hydration', () => {
     const Comp = {
       render(this: any) {
         return renderSlot(this.$slots, 'default', {}, () => [
-          createTextVNode('')
+          createTextVNode(''),
         ])
-      }
+      },
     }
     const { container, vnode } = mountWithHydration('<!--[--><!--]-->', () =>
-      h(Comp)
+      h(Comp),
     )
     expect(container.childNodes.length).toBe(3)
     const text = container.childNodes[1]
@@ -1163,9 +1166,9 @@ describe('SSR hydration', () => {
 
         return () =>
           h('button', {
-            onClick: () => count.value++
+            onClick: () => count.value++,
           })
-      }
+      },
     })
 
     const app = createSSRApp(App)
@@ -1182,7 +1185,7 @@ describe('SSR hydration', () => {
   // #6637
   test('stringified root fragment', () => {
     mountWithHydration(`<!--[--><div></div><!--]-->`, () =>
-      createStaticVNode(`<div></div>`, 1)
+      createStaticVNode(`<div></div>`, 1),
     )
     expect(`mismatch`).not.toHaveBeenWarned()
   })
@@ -1195,9 +1198,9 @@ describe('SSR hydration', () => {
           Transition,
           { appear: true },
           {
-            default: () => h('div', 'foo')
-          }
-        )
+            default: () => h('div', 'foo'),
+          },
+        ),
     )
     expect(container.firstChild).toMatchInlineSnapshot(`
       <div
@@ -1219,9 +1222,9 @@ describe('SSR hydration', () => {
           Transition,
           { appear: true },
           {
-            default: () => (show ? h('div', 'foo') : createCommentVNode(''))
-          }
-        )
+            default: () => (show ? h('div', 'foo') : createCommentVNode('')),
+          },
+        ),
     )
     expect(container.firstChild).toMatchInlineSnapshot('<!---->')
     expect(vnode.el).toBe(container.firstChild)
@@ -1238,9 +1241,9 @@ describe('SSR hydration', () => {
           { appear: true },
           {
             default: () =>
-              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]])
-          }
-        )
+              withDirectives(createVNode('div', null, 'foo'), [[vShow, show]]),
+          },
+        ),
     )
     expect(container.firstChild).toMatchInlineSnapshot(`
       <div
@@ -1261,14 +1264,14 @@ describe('SSR hydration', () => {
     createSSRApp({
       data() {
         return {
-          count: 0
+          count: 0,
         }
       },
       template: `
         <Transition appear>
           <button @click="count++">{{count}}</button>
         </Transition>
-      `
+      `,
     }).mount(container)
 
     expect(container.firstChild).toMatchInlineSnapshot(`
@@ -1299,7 +1302,7 @@ describe('SSR hydration', () => {
 
     test('element text content', () => {
       const { container } = mountWithHydration(`<div>foo</div>`, () =>
-        h('div', 'bar')
+        h('div', 'bar'),
       )
       expect(container.innerHTML).toBe('<div>bar</div>')
       expect(`Hydration text content mismatch`).toHaveBeenWarned()
@@ -1307,10 +1310,10 @@ describe('SSR hydration', () => {
 
     test('not enough children', () => {
       const { container } = mountWithHydration(`<div></div>`, () =>
-        h('div', [h('span', 'foo'), h('span', 'bar')])
+        h('div', [h('span', 'foo'), h('span', 'bar')]),
       )
       expect(container.innerHTML).toBe(
-        '<div><span>foo</span><span>bar</span></div>'
+        '<div><span>foo</span><span>bar</span></div>',
       )
       expect(`Hydration children mismatch`).toHaveBeenWarned()
     })
@@ -1318,7 +1321,7 @@ describe('SSR hydration', () => {
     test('too many children', () => {
       const { container } = mountWithHydration(
         `<div><span>foo</span><span>bar</span></div>`,
-        () => h('div', [h('span', 'foo')])
+        () => h('div', [h('span', 'foo')]),
       )
       expect(container.innerHTML).toBe('<div><span>foo</span></div>')
       expect(`Hydration children mismatch`).toHaveBeenWarned()
@@ -1327,7 +1330,7 @@ describe('SSR hydration', () => {
     test('complete mismatch', () => {
       const { container } = mountWithHydration(
         `<div><span>foo</span><span>bar</span></div>`,
-        () => h('div', [h('div', 'foo'), h('p', 'bar')])
+        () => h('div', [h('div', 'foo'), h('p', 'bar')]),
       )
       expect(container.innerHTML).toBe('<div><div>foo</div><p>bar</p></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarnedTimes(2)
@@ -1336,7 +1339,7 @@ describe('SSR hydration', () => {
     test('fragment mismatch removal', () => {
       const { container } = mountWithHydration(
         `<div><!--[--><div>foo</div><div>bar</div><!--]--></div>`,
-        () => h('div', [h('span', 'replaced')])
+        () => h('div', [h('span', 'replaced')]),
       )
       expect(container.innerHTML).toBe('<div><span>replaced</span></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
@@ -1345,10 +1348,10 @@ describe('SSR hydration', () => {
     test('fragment not enough children', () => {
       const { container } = mountWithHydration(
         `<div><!--[--><div>foo</div><!--]--><div>baz</div></div>`,
-        () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')])
+        () => h('div', [[h('div', 'foo'), h('div', 'bar')], h('div', 'baz')]),
       )
       expect(container.innerHTML).toBe(
-        '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>'
+        '<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>',
       )
       expect(`Hydration node mismatch`).toHaveBeenWarned()
     })
@@ -1356,10 +1359,10 @@ describe('SSR hydration', () => {
     test('fragment too many children', () => {
       const { container } = mountWithHydration(
         `<div><!--[--><div>foo</div><div>bar</div><!--]--><div>baz</div></div>`,
-        () => h('div', [[h('div', 'foo')], h('div', 'baz')])
+        () => h('div', [[h('div', 'foo')], h('div', 'baz')]),
       )
       expect(container.innerHTML).toBe(
-        '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>'
+        '<div><!--[--><div>foo</div><!--]--><div>baz</div></div>',
       )
       // fragment ends early and attempts to hydrate the extra <div>bar</div>
       // as 2nd fragment child.
@@ -1374,7 +1377,7 @@ describe('SSR hydration', () => {
       document.body.appendChild(teleportContainer)
 
       mountWithHydration('<!--teleport start--><!--teleport end-->', () =>
-        h(Teleport, { to: '#teleport' }, [h('span', 'value')])
+        h(Teleport, { to: '#teleport' }, [h('span', 'value')]),
       )
       expect(teleportContainer.innerHTML).toBe(`<span>value</span>`)
       expect(`Hydration children mismatch`).toHaveBeenWarned()
@@ -1382,7 +1385,7 @@ describe('SSR hydration', () => {
 
     test('comment mismatch (element)', () => {
       const { container } = mountWithHydration(`<div><span></span></div>`, () =>
-        h('div', [createCommentVNode('hi')])
+        h('div', [createCommentVNode('hi')]),
       )
       expect(container.innerHTML).toBe('<div><!--hi--></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
@@ -1390,7 +1393,7 @@ describe('SSR hydration', () => {
 
     test('comment mismatch (text)', () => {
       const { container } = mountWithHydration(`<div>foobar</div>`, () =>
-        h('div', [createCommentVNode('hi')])
+        h('div', [createCommentVNode('hi')]),
       )
       expect(container.innerHTML).toBe('<div><!--hi--></div>')
       expect(`Hydration node mismatch`).toHaveBeenWarned()
@@ -1398,39 +1401,39 @@ describe('SSR hydration', () => {
 
     test('class mismatch', () => {
       mountWithHydration(`<div class="foo bar"></div>`, () =>
-        h('div', { class: ['foo', 'bar'] })
+        h('div', { class: ['foo', 'bar'] }),
       )
       mountWithHydration(`<div class="foo bar"></div>`, () =>
-        h('div', { class: { foo: true, bar: true } })
+        h('div', { class: { foo: true, bar: true } }),
       )
       mountWithHydration(`<div class="foo bar"></div>`, () =>
-        h('div', { class: 'foo bar' })
+        h('div', { class: 'foo bar' }),
       )
       // SVG classes
       mountWithHydration(`<svg class="foo bar"></svg>`, () =>
-        h('svg', { class: 'foo bar' })
+        h('svg', { class: 'foo bar' }),
       )
       // class with different order
       mountWithHydration(`<div class="foo bar"></div>`, () =>
-        h('div', { class: 'bar foo' })
+        h('div', { class: 'bar foo' }),
       )
       expect(`Hydration class mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div class="foo bar"></div>`, () =>
-        h('div', { class: 'foo' })
+        h('div', { class: 'foo' }),
       )
       expect(`Hydration class mismatch`).toHaveBeenWarned()
     })
 
     test('style mismatch', () => {
       mountWithHydration(`<div style="color:red;"></div>`, () =>
-        h('div', { style: { color: 'red' } })
+        h('div', { style: { color: 'red' } }),
       )
       mountWithHydration(`<div style="color:red;"></div>`, () =>
-        h('div', { style: `color:red;` })
+        h('div', { style: `color:red;` }),
       )
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div style="color:red;"></div>`, () =>
-        h('div', { style: { color: 'green' } })
+        h('div', { style: { color: 'green' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarned()
     })
@@ -1438,15 +1441,15 @@ describe('SSR hydration', () => {
     test('attr mismatch', () => {
       mountWithHydration(`<div id="foo"></div>`, () => h('div', { id: 'foo' }))
       mountWithHydration(`<div spellcheck></div>`, () =>
-        h('div', { spellcheck: '' })
+        h('div', { spellcheck: '' }),
       )
       mountWithHydration(`<div></div>`, () => h('div', { id: undefined }))
       // boolean
       mountWithHydration(`<select multiple></div>`, () =>
-        h('select', { multiple: true })
+        h('select', { multiple: true }),
       )
       mountWithHydration(`<select multiple></div>`, () =>
-        h('select', { multiple: 'multiple' })
+        h('select', { multiple: 'multiple' }),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 

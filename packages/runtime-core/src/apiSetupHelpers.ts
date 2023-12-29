@@ -1,37 +1,38 @@
 import {
-  isArray,
-  isPromise,
-  isFunction,
-  Prettify,
-  UnionToIntersection,
+  EMPTY_OBJ,
+  type LooseRequired,
+  type Prettify,
+  type UnionToIntersection,
   extend,
-  LooseRequired,
-  hasChanged
+  hasChanged,
+  isArray,
+  isFunction,
+  isPromise,
 } from '@vue/shared'
 import {
+  type SetupContext,
+  createSetupContext,
   getCurrentInstance,
   setCurrentInstance,
-  SetupContext,
-  createSetupContext,
-  unsetCurrentInstance
+  unsetCurrentInstance,
 } from './component'
-import { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
-import {
+import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+import type {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
   ComputedOptions,
-  MethodOptions
+  MethodOptions,
 } from './componentOptions'
-import {
-  ComponentPropsOptions,
+import type {
   ComponentObjectPropsOptions,
+  ComponentPropsOptions,
   ExtractPropTypes,
   NormalizedProps,
-  PropOptions
+  PropOptions,
 } from './componentProps'
 import { warn } from './warning'
-import { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
-import { Ref, customRef, ref } from '@vue/reactivity'
+import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
+import { type Ref, customRef, ref } from '@vue/reactivity'
 import { watchSyncEffect } from '.'
 
 // dev only
@@ -39,7 +40,7 @@ const warnRuntimeUsage = (method: string) =>
   warn(
     `${method}() is a compiler-hint helper that is only usable inside ` +
       `<script setup> of a single file component. Its arguments should be ` +
-      `compiled away and passing it at runtime has no effect.`
+      `compiled away and passing it at runtime has no effect.`,
   )
 
 /**
@@ -76,11 +77,11 @@ const warnRuntimeUsage = (method: string) =>
  */
 // overload 1: runtime props w/ array
 export function defineProps<PropNames extends string = string>(
-  props: PropNames[]
+  props: PropNames[],
 ): Prettify<Readonly<{ [key in PropNames]?: any }>>
 // overload 2: runtime props w/ object
 export function defineProps<
-  PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions
+  PP extends ComponentObjectPropsOptions = ComponentObjectPropsOptions,
 >(props: PP): Prettify<Readonly<ExtractPropTypes<PP>>>
 // overload 3: typed-based declaration
 export function defineProps<TypeProps>(): DefineProps<
@@ -133,13 +134,13 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
  */
 // overload 1: runtime emits w/ array
 export function defineEmits<EE extends string = string>(
-  emitOptions: EE[]
+  emitOptions: EE[],
 ): EmitFn<EE[]>
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
-  emitOptions: E
+  emitOptions: E,
 ): EmitFn<E>
 export function defineEmits<
-  T extends ((...args: any[]) => any) | Record<string, any[]>
+  T extends ((...args: any[]) => any) | Record<string, any[]>,
 >(): T extends (...args: any[]) => any ? T : ShortEmits<T>
 // implementation
 export function defineEmits() {
@@ -172,7 +173,7 @@ type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
  * @see {@link https://vuejs.org/api/sfc-script-setup.html#defineexpose}
  */
 export function defineExpose<
-  Exposed extends Record<string, any> = Record<string, any>
+  Exposed extends Record<string, any> = Record<string, any>,
 >(exposed?: Exposed) {
   if (__DEV__) {
     warnRuntimeUsage(`defineExpose`)
@@ -192,7 +193,7 @@ export function defineOptions<
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
 >(
   options?: ComponentOptionsWithoutProps<
     {},
@@ -202,7 +203,7 @@ export function defineOptions<
     M,
     Mixin,
     Extends
-  > & { emits?: undefined; expose?: undefined; slots?: undefined }
+  > & { emits?: undefined; expose?: undefined; slots?: undefined },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
@@ -210,13 +211,16 @@ export function defineOptions<
 }
 
 export function defineSlots<
-  S extends Record<string, any> = Record<string, any>
+  S extends Record<string, any> = Record<string, any>,
 >(): StrictUnwrapSlotsType<SlotsType<S>> {
   if (__DEV__) {
     warnRuntimeUsage(`defineSlots`)
   }
   return null as any
 }
+
+export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
+  [ModelRef<T, M>, Record<M, true | undefined>]
 
 /**
  * Vue `<script setup>` compiler macro for declaring a
@@ -251,25 +255,27 @@ export function defineSlots<
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export function defineModel<T>(
-  options: { required: true } & PropOptions<T>
-): Ref<T>
-export function defineModel<T>(
-  options: { default: any } & PropOptions<T>
-): Ref<T>
-export function defineModel<T>(options?: PropOptions<T>): Ref<T | undefined>
-export function defineModel<T>(
+export function defineModel<T, M extends string | number | symbol = string>(
+  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
+  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
+  options?: PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T | undefined, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { required: true } & PropOptions<T>
-): Ref<T>
-export function defineModel<T>(
+  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { default: any } & PropOptions<T>
-): Ref<T>
-export function defineModel<T>(
+  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T, M>
+export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options?: PropOptions<T>
-): Ref<T | undefined>
+  options?: PropOptions<T> & UseModelOptions<T>,
+): ModelRef<T | undefined, M>
 export function defineModel(): any {
   if (__DEV__) {
     warnRuntimeUsage('defineModel')
@@ -291,7 +297,7 @@ type InferDefault<P, T> =
 type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
-  BKeys extends keyof T
+  BKeys extends keyof T,
 > = Readonly<Omit<T, keyof Defaults>> & {
   readonly [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
@@ -329,10 +335,10 @@ type PropsWithDefaults<
 export function withDefaults<
   T,
   BKeys extends keyof T,
-  Defaults extends InferDefaults<T>
+  Defaults extends InferDefaults<T>,
 >(
   props: DefineProps<T, BKeys>,
-  defaults: Defaults
+  defaults: Defaults,
 ): PropsWithDefaults<T, Defaults, BKeys> {
   if (__DEV__) {
     warnRuntimeUsage(`withDefaults`)
@@ -348,11 +354,21 @@ export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
 }
 
-export function useModel<T extends Record<string, any>, K extends keyof T>(
-  props: T,
-  name: K
-): Ref<T[K]>
-export function useModel(props: Record<string, any>, name: string): Ref {
+type UseModelOptions<T = any> = {
+  get?: (v: T) => any
+  set?: (v: T) => any
+}
+
+export function useModel<
+  M extends string | number | symbol,
+  T extends Record<string, any>,
+  K extends keyof T,
+>(props: T, name: K, options?: UseModelOptions<T[K]>): ModelRef<T[K], M>
+export function useModel(
+  props: Record<string, any>,
+  name: string,
+  options: UseModelOptions = EMPTY_OBJ,
+): Ref {
   const i = getCurrentInstance()!
   if (__DEV__ && !i) {
     warn(`useModel() called without active instance.`)
@@ -364,7 +380,7 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     return ref() as any
   }
 
-  return customRef((track, trigger) => {
+  const res = customRef((track, trigger) => {
     let localValue: any
     watchSyncEffect(() => {
       const propValue = props[name]
@@ -376,7 +392,7 @@ export function useModel(props: Record<string, any>, name: string): Ref {
     return {
       get() {
         track()
-        return localValue
+        return options.get ? options.get(localValue) : localValue
       },
       set(value) {
         const rawProps = i.vnode!.props
@@ -384,10 +400,29 @@ export function useModel(props: Record<string, any>, name: string): Ref {
           localValue = value
           trigger()
         }
-        i.emit(`update:${name}`, value)
-      }
+        i.emit(`update:${name}`, options.set ? options.set(value) : value)
+      },
     }
   })
+
+  const modifierKey =
+    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
+
+  // @ts-expect-error
+  res[Symbol.iterator] = () => {
+    let i = 0
+    return {
+      next() {
+        if (i < 2) {
+          return { value: i++ ? props[modifierKey] : res, done: false }
+        } else {
+          return { done: true }
+        }
+      },
+    }
+  }
+
+  return res
 }
 
 function getContext(): SetupContext {
@@ -402,12 +437,12 @@ function getContext(): SetupContext {
  * @internal
  */
 export function normalizePropsOrEmits(
-  props: ComponentPropsOptions | EmitsOptions
+  props: ComponentPropsOptions | EmitsOptions,
 ) {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
-        {} as ComponentObjectPropsOptions | ObjectEmitsOptions
+        {} as ComponentObjectPropsOptions | ObjectEmitsOptions,
       )
     : props
 }
@@ -419,7 +454,7 @@ export function normalizePropsOrEmits(
  */
 export function mergeDefaults(
   raw: ComponentPropsOptions,
-  defaults: Record<string, any>
+  defaults: Record<string, any>,
 ): ComponentObjectPropsOptions {
   const props = normalizePropsOrEmits(raw)
   for (const key in defaults) {
@@ -450,7 +485,7 @@ export function mergeDefaults(
  */
 export function mergeModels(
   a: ComponentPropsOptions | EmitsOptions,
-  b: ComponentPropsOptions | EmitsOptions
+  b: ComponentPropsOptions | EmitsOptions,
 ) {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)
@@ -464,14 +499,14 @@ export function mergeModels(
  */
 export function createPropsRestProxy(
   props: any,
-  excludedKeys: string[]
+  excludedKeys: string[],
 ): Record<string, any> {
   const ret: Record<string, any> = {}
   for (const key in props) {
     if (!excludedKeys.includes(key)) {
       Object.defineProperty(ret, key, {
         enumerable: true,
-        get: () => props[key]
+        get: () => props[key],
       })
     }
   }
@@ -501,7 +536,7 @@ export function withAsyncContext(getAwaitable: () => any) {
   if (__DEV__ && !ctx) {
     warn(
       `withAsyncContext called without active current instance. ` +
-        `This is likely a bug.`
+        `This is likely a bug.`,
     )
   }
   let awaitable = getAwaitable()

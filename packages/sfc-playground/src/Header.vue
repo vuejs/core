@@ -19,13 +19,19 @@ const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
-  'reload-page'
+  'reload-page',
 ])
 
 const { store } = props
 
 const currentCommit = __COMMIT__
 const vueVersion = ref(`@${currentCommit}`)
+
+const vueURL = store.getImportMap().imports.vue
+if (vueURL && !vueURL.startsWith(location.origin)) {
+  const versionMatch = vueURL.match(/runtime-dom@([^/]+)/)
+  if (versionMatch) vueVersion.value = versionMatch[1]
+}
 
 async function setVueVersion(v: string) {
   vueVersion.value = `loading...`
@@ -53,7 +59,7 @@ function toggleDark() {
   cls.toggle('dark')
   localStorage.setItem(
     'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+    String(cls.contains('dark')),
   )
   emit('toggle-theme', cls.contains('dark'))
 }

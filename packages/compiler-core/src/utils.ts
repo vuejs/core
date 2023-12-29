@@ -1,45 +1,45 @@
 import {
-  Position,
-  ElementNode,
-  NodeTypes,
-  CallExpression,
-  createCallExpression,
-  DirectiveNode,
+  type BlockCodegenNode,
+  type CallExpression,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  TemplateChildNode,
-  RootNode,
-  ObjectExpression,
-  Property,
-  JSChildNode,
+  type ExpressionNode,
+  type IfBranchNode,
+  type InterpolationNode,
+  type JSChildNode,
+  type MemoExpression,
+  NodeTypes,
+  type ObjectExpression,
+  type Position,
+  type Property,
+  type RenderSlotCall,
+  type RootNode,
+  type SimpleExpressionNode,
+  type SlotOutletNode,
+  type TemplateChildNode,
+  type TemplateNode,
+  type TextNode,
+  type VNodeCall,
+  createCallExpression,
   createObjectExpression,
-  SlotOutletNode,
-  TemplateNode,
-  RenderSlotCall,
-  ExpressionNode,
-  IfBranchNode,
-  TextNode,
-  InterpolationNode,
-  VNodeCall,
-  SimpleExpressionNode,
-  BlockCodegenNode,
-  MemoExpression
 } from './ast'
-import { TransformContext } from './transform'
+import type { TransformContext } from './transform'
 import {
-  MERGE_PROPS,
-  TELEPORT,
-  SUSPENSE,
-  KEEP_ALIVE,
   BASE_TRANSITION,
-  TO_HANDLERS,
-  NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
-  WITH_MEMO
+  KEEP_ALIVE,
+  MERGE_PROPS,
+  NORMALIZE_PROPS,
+  SUSPENSE,
+  TELEPORT,
+  TO_HANDLERS,
+  WITH_MEMO,
 } from './runtimeHelpers'
-import { isString, isObject, NOOP } from '@vue/shared'
-import { PropsExpression } from './transforms/transformElement'
+import { NOOP, isObject, isString } from '@vue/shared'
+import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
-import { Expression } from '@babel/types'
+import type { Expression } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
@@ -70,7 +70,7 @@ enum MemberExpLexState {
   inMemberExp,
   inBrackets,
   inParens,
-  inString
+  inString,
 }
 
 const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
@@ -155,15 +155,15 @@ export const isMemberExpressionBrowser = (path: string): boolean => {
 export const isMemberExpressionNode = __BROWSER__
   ? (NOOP as any as (
       path: string,
-      options: Pick<TransformContext, 'expressionPlugins'>
+      options: Pick<TransformContext, 'expressionPlugins'>,
     ) => boolean)
   : (
       path: string,
-      options: Pick<TransformContext, 'expressionPlugins'>
+      options: Pick<TransformContext, 'expressionPlugins'>,
     ): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
-          plugins: options.expressionPlugins
+          plugins: options.expressionPlugins,
         })
         ret = unwrapTSNode(ret) as Expression
         return (
@@ -183,16 +183,16 @@ export const isMemberExpression = __BROWSER__
 export function advancePositionWithClone(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   return advancePositionWithMutation(
     {
       offset: pos.offset,
       line: pos.line,
-      column: pos.column
+      column: pos.column,
     },
     source,
-    numberOfCharacters
+    numberOfCharacters,
   )
 }
 
@@ -201,7 +201,7 @@ export function advancePositionWithClone(
 export function advancePositionWithMutation(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   let linesCount = 0
   let lastNewLinePos = -1
@@ -233,7 +233,7 @@ export function assert(condition: boolean, msg?: string) {
 export function findDir(
   node: ElementNode,
   name: string | RegExp,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): DirectiveNode | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -251,7 +251,7 @@ export function findProp(
   node: ElementNode,
   name: string,
   dynamicOnly: boolean = false,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -272,7 +272,7 @@ export function findProp(
 
 export function isStaticArgOf(
   arg: DirectiveNode['arg'],
-  name: string
+  name: string,
 ): boolean {
   return !!(arg && isStaticExp(arg) && arg.content === name)
 }
@@ -284,12 +284,12 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
       p.name === 'bind' &&
       (!p.arg || // v-bind="obj"
         p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
-        !p.arg.isStatic) // v-bind:[foo]
+        !p.arg.isStatic), // v-bind:[foo]
   )
 }
 
 export function isText(
-  node: TemplateChildNode
+  node: TemplateChildNode,
 ): node is TextNode | InterpolationNode {
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 }
@@ -299,7 +299,7 @@ export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
 }
 
 export function isTemplateNode(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is TemplateNode {
   return (
     node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
@@ -307,7 +307,7 @@ export function isTemplateNode(
 }
 
 export function isSlotOutlet(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is SlotOutletNode {
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
 }
@@ -316,7 +316,7 @@ const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
   props: PropsExpression | '{}',
-  callPath: CallExpression[] = []
+  callPath: CallExpression[] = [],
 ): [PropsExpression | '{}', CallExpression[]] {
   if (
     props &&
@@ -327,7 +327,7 @@ function getUnnormalizedProps(
     if (!isString(callee) && propsHelperSet.has(callee)) {
       return getUnnormalizedProps(
         props.arguments[0] as PropsExpression,
-        callPath.concat(props)
+        callPath.concat(props),
       )
     }
   }
@@ -336,7 +336,7 @@ function getUnnormalizedProps(
 export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
-  context: TransformContext
+  context: TransformContext,
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
@@ -379,7 +379,7 @@ export function injectProp(
         // #2366
         propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
           createObjectExpression([prop]),
-          props
+          props,
         ])
       } else {
         props.arguments.unshift(createObjectExpression([prop]))
@@ -395,7 +395,7 @@ export function injectProp(
     // single v-bind with expression, return a merged replacement
     propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
       createObjectExpression([prop]),
-      props
+      props,
     ])
     // in the case of nested helper call, e.g. `normalizeProps(guardReactiveProps(props))`,
     // it will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
@@ -427,7 +427,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
     result = props.properties.some(
       p =>
         p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-        p.key.content === propKeyName
+        p.key.content === propKeyName,
     )
   }
   return result
@@ -435,7 +435,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive' | 'filter'
+  type: 'component' | 'directive' | 'filter',
 ): string {
   // see issue#4422, we need adding identifier on validAssetId if variable `name` has specific character
   return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
@@ -446,7 +446,7 @@ export function toValidAssetId(
 // Check if a node contains expressions that reference current context scope ids
 export function hasScopeRef(
   node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
-  ids: TransformContext['identifiers']
+  ids: TransformContext['identifiers'],
 ): boolean {
   if (!node || Object.keys(ids).length === 0) {
     return false

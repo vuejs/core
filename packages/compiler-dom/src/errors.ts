@@ -1,8 +1,8 @@
 import {
-  SourceLocation,
-  CompilerError,
+  type CompilerError,
+  ErrorCodes,
+  type SourceLocation,
   createCompilerError,
-  ErrorCodes
 } from '@vue/compiler-core'
 
 export interface DOMCompilerError extends CompilerError {
@@ -11,12 +11,12 @@ export interface DOMCompilerError extends CompilerError {
 
 export function createDOMCompilerError(
   code: DOMErrorCodes,
-  loc?: SourceLocation
+  loc?: SourceLocation,
 ) {
   return createCompilerError(
     code,
     loc,
-    __DEV__ || !__BROWSER__ ? DOMErrorMessages : undefined
+    __DEV__ || !__BROWSER__ ? DOMErrorMessages : undefined,
   ) as DOMCompilerError
 }
 
@@ -32,7 +32,7 @@ export enum DOMErrorCodes {
   X_V_SHOW_NO_EXPRESSION,
   X_TRANSITION_INVALID_CHILDREN,
   X_IGNORED_SIDE_EFFECT_TAG,
-  __EXTEND_POINT__
+  __EXTEND_POINT__,
 }
 
 if (__TEST__) {
@@ -43,7 +43,7 @@ if (__TEST__) {
     throw new Error(
       `DOMErrorCodes need to be updated to ${
         ErrorCodes.__EXTEND_POINT__ + 1
-      } to match extension point from core ErrorCodes.`
+      } to match extension point from core ErrorCodes.`,
     )
   }
 }
@@ -62,5 +62,5 @@ export const DOMErrorMessages: Record<DOMErrorCodes, string> = {
   [DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`,
 
   // just to fulfill types
-  [DOMErrorCodes.__EXTEND_POINT__]: ``
+  [DOMErrorCodes.__EXTEND_POINT__]: ``,
 }

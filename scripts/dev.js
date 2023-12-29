@@ -5,7 +5,7 @@
 // smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
-import { resolve, relative, dirname } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import minimist from 'minimist'
@@ -36,7 +36,7 @@ for (const target of targets) {
     __dirname,
     `../packages/${target}/dist/${
       target === 'vue-compat' ? `vue` : target
-    }.${postfix}.${prod ? `prod.` : ``}js`
+    }.${postfix}.${prod ? `prod.` : ``}js`,
   )
   const relativeOutfile = relative(process.cwd(), outfile)
 
@@ -54,7 +54,7 @@ for (const target of targets) {
         // for @vue/compiler-sfc / server-renderer
         'path',
         'url',
-        'stream'
+        'stream',
       ]
     }
 
@@ -62,11 +62,11 @@ for (const target of targets) {
       const consolidatePkgPath = require.resolve(
         '@vue/consolidate/package.json',
         {
-          paths: [resolve(__dirname, `../packages/${target}/`)]
-        }
+          paths: [resolve(__dirname, `../packages/${target}/`)],
+        },
       )
       const consolidateDeps = Object.keys(
-        require(consolidatePkgPath).devDependencies
+        require(consolidatePkgPath).devDependencies,
       )
       external = [
         ...external,
@@ -78,7 +78,7 @@ for (const target of targets) {
         'teacup/lib/express',
         'arc-templates/dist/es5',
         'then-pug',
-        'then-jade'
+        'then-jade',
       ]
     }
   }
@@ -90,8 +90,8 @@ for (const target of targets) {
         build.onEnd(() => {
           console.log(`built: ${relativeOutfile}`)
         })
-      }
-    }
+      },
+    },
   ]
 
   if (format !== 'cjs' && pkg.buildOptions?.enableNonBrowserBranches) {
@@ -115,7 +115,7 @@ for (const target of targets) {
         __DEV__: prod ? `false` : `true`,
         __TEST__: `false`,
         __BROWSER__: String(
-          format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches
+          format !== 'cjs' && !pkg.buildOptions?.enableNonBrowserBranches,
         ),
         __GLOBAL__: String(format === 'global'),
         __ESM_BUNDLER__: String(format.includes('esm-bundler')),
@@ -126,8 +126,8 @@ for (const target of targets) {
         __FEATURE_SUSPENSE__: `true`,
         __FEATURE_OPTIONS_API__: `true`,
         __FEATURE_PROD_DEVTOOLS__: `false`,
-        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`
-      }
+        __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: `false`,
+      },
     })
     .then(ctx => ctx.watch())
 }

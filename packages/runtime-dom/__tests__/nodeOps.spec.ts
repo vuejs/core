@@ -3,7 +3,7 @@ import { nodeOps, svgNS } from '../src/nodeOps'
 describe('runtime-dom: node-ops', () => {
   test("the <select>'s multiple attr should be set in createElement", () => {
     const el = nodeOps.createElement('select', undefined, undefined, {
-      multiple: ''
+      multiple: '',
     }) as HTMLSelectElement
     const option1 = nodeOps.createElement('option') as HTMLOptionElement
     const option2 = nodeOps.createElement('option') as HTMLOptionElement
@@ -25,7 +25,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         null,
-        undefined
+        undefined,
       )
       expect(parent.innerHTML).toBe(content)
       expect(nodes[0]).toBe(parent.firstChild)
@@ -42,7 +42,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         anchor,
-        undefined
+        undefined,
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)
@@ -56,7 +56,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         null,
-        'svg'
+        'svg',
       )
       expect(parent.innerHTML).toBe(content)
       expect(first).toBe(parent.firstChild)
@@ -75,7 +75,7 @@ describe('runtime-dom: node-ops', () => {
         content,
         parent,
         anchor,
-        'svg'
+        'svg',
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(first).toBe(parent.firstChild)
@@ -100,7 +100,7 @@ describe('runtime-dom: node-ops', () => {
         anchor,
         undefined,
         cached.firstChild,
-        cached.lastChild
+        cached.lastChild,
       )
       expect(parent.innerHTML).toBe(content + existing)
       expect(nodes[0]).toBe(parent.firstChild)

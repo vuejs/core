@@ -1,10 +1,10 @@
 import {
-  ComputedRef,
+  type ComputedRef,
   computed,
   effect,
   reactive,
   shallowRef as ref,
-  toRaw
+  toRaw,
 } from '../src/index'
 import { getDepFromReactive } from '../src/reactiveEffect'
 
