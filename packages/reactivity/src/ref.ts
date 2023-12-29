@@ -358,7 +358,7 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
     return new Proxy(object, {
       get(target, key: string) {
         return propertyToRef(target, key)
-      }
+      },
     }) as ToRefs<T>
   }
 }

@@ -376,7 +376,7 @@ describe('reactivity/ref', () => {
 
   test('toRefs should add new properties', () => {
     const a = reactive<{ foo: string; bar?: string }>({
-      foo: 'foo'
+      foo: 'foo',
     })
 
     const { foo, bar } = toRefs(a)
