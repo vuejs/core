@@ -9,6 +9,7 @@ import {
   toRefs,
   useAttrs,
   useSlots,
+  watch,
   withDefaults,
 } from 'vue'
 import { describe, expectType } from './utils'
@@ -349,6 +350,15 @@ describe('defineModel', () => {
   defineModel<string>({ default: 123 })
   // @ts-expect-error unknown props option
   defineModel({ foo: 123 })
+
+  // usage with watch
+  const model = defineModel<string>()
+  watch(model, val => {
+    expectType<string | undefined>(val)
+  })
+  watch([model], ([val]) => {
+    expectType<string | undefined>(val)
+  })
 })
 
 describe('useModel', () => {

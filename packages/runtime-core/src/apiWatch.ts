@@ -43,6 +43,7 @@ import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from '@vue/runtime-core'
+import type { ModelRef } from './apiSetupHelpers'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -114,6 +115,13 @@ export function watchSyncEffect(
 const INITIAL_WATCHER_VALUE = {}
 
 type MultiWatchSources = (WatchSource<unknown> | object)[]
+
+// overload: ModelRef
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  sources: ModelRef<T>,
+  cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
+  options?: WatchOptions<Immediate>,
+): WatchStopHandle
 
 // overload: array of multiple sources + cb
 export function watch<
