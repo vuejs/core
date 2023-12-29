@@ -1,14 +1,14 @@
 import {
+  type CompilerOptions,
+  type PlainElementNode,
   baseParse as parse,
   transform,
-  PlainElementNode,
-  CompilerOptions
 } from '@vue/compiler-core'
 import { transformVHtml } from '../../src/transforms/vHtml'
 import { transformElement } from '../../../compiler-core/src/transforms/transformElement'
 import {
   createObjectMatcher,
-  genFlagText
+  genFlagText,
 } from '../../../compiler-core/__tests__/testUtils'
 import { PatchFlags } from '@vue/shared'
 import { DOMErrorCodes } from '../../src/errors'
@@ -18,9 +18,9 @@ function transformWithVHtml(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms: [transformElement],
     directiveTransforms: {
-      html: transformVHtml
+      html: transformVHtml,
     },
-    ...options
+    ...options,
   })
   return ast
 }
@@ -31,40 +31,40 @@ describe('compiler: v-html transform', () => {
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        innerHTML: `[test]`
+        innerHTML: `[test]`,
       }),
       children: undefined,
       patchFlag: genFlagText(PatchFlags.PROPS),
-      dynamicProps: `["innerHTML"]`
+      dynamicProps: `["innerHTML"]`,
     })
   })
 
   it('should raise error and ignore children when v-html is present', () => {
     const onError = vi.fn()
     const ast = transformWithVHtml(`<div v-html="test">hello</div>`, {
-      onError
+      onError,
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }]
+      [{ code: DOMErrorCodes.X_V_HTML_WITH_CHILDREN }],
     ])
     expect((ast.children[0] as PlainElementNode).codegenNode).toMatchObject({
       tag: `"div"`,
       props: createObjectMatcher({
-        innerHTML: `[test]`
+        innerHTML: `[test]`,
       }),
       children: undefined, // <-- children should have been removed
       patchFlag: genFlagText(PatchFlags.PROPS),
-      dynamicProps: `["innerHTML"]`
+      dynamicProps: `["innerHTML"]`,
     })
   })
 
   it('should raise error if has no expression', () => {
     const onError = vi.fn()
     transformWithVHtml(`<div v-html></div>`, {
-      onError
+      onError,
     })
     expect(onError.mock.calls).toMatchObject([
-      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }]
+      [{ code: DOMErrorCodes.X_V_HTML_NO_EXPRESSION }],
     ])
   })
 })
