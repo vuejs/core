@@ -21,7 +21,7 @@
       "console": "integratedTerminal",
       "sourceMaps": true,
       "windows": {
-        "program": "${workspaceFolder}/node_modules/jest/bin/jest",
+        "program": "${workspaceFolder}/node_modules/jest/bin/jest"
       }
     }
   ]
