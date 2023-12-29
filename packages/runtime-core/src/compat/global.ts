@@ -464,7 +464,7 @@ function installCompatMount(
 
     const hasNoRender =
       !isFunction(component) && !component.render && !component.template
-    const emptyRender = () => {}
+    const emptyRender = NOOP
 
     // create root instance
     const instance = createComponentInstance(vnode, null, null)
