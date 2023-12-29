@@ -121,21 +121,6 @@ export type UnwrapMixinsType<
 
 type EnsureNonVoid<T> = T extends void ? {} : T
 
-/**
- * 
-  P = {}, // props type extracted from props option
-  B = {}, // raw bindings returned from setup()
-  D = {}, // return from data()
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  E extends EmitsOptions = {},
-  PublicProps = P,
-  Defaults = {},
-  MakeDefaultsOptional extends boolean = false,
-  Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  I extends ComponentInjectOptions = {},
-  S extends SlotsType = {}
- */
 export type ComponentPublicInstanceConstructor<
   T extends ComponentPublicInstance<
     Props,
@@ -238,14 +223,6 @@ export type ComponentPropsWithDefault<
         Partial<Defaults>
     : Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
   : Prettify<P> & PublicProps
-
-// declare const a: ComponentPropsWithDefault<
-//   { a: string; b: boolean },
-//   'b',
-//   PublicProps,
-//   true
-// >
-// a.b
 
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)

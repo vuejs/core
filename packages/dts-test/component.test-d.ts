@@ -21,8 +21,6 @@ declare function extractComponentOptions<T>(obj: T): {
   slots: ExtractComponentSlotOptions<T>
 
   data: ComponentData<T>
-  // rawBindings: RawBindings
-  // setup: ShallowUnwrapRef<RawBindings>
 }
 
 declare function extractComponentProps<T>(obj: T): ComponentProps<T>
@@ -201,31 +199,6 @@ describe('object props', () => {
     expectType<ExpectedProps['validated']>(props.validated)
     expectType<ExpectedProps['object']>(props.object)
 
-    // // raw bindings
-    // expectType<Number>(rawBindings.setupA)
-    // expectType<Ref<Number>>(rawBindings.setupB)
-    // expectType<Ref<Number>>(rawBindings.setupC.a)
-    // expectType<Ref<Number> | undefined>(rawBindings.setupD)
-
-    // // raw bindings props
-    // expectType<ExpectedProps['a']>(rawBindings.setupProps.a)
-    // expectType<ExpectedProps['b']>(rawBindings.setupProps.b)
-    // expectType<ExpectedProps['e']>(rawBindings.setupProps.e)
-    // expectType<ExpectedProps['bb']>(rawBindings.setupProps.bb)
-    // expectType<ExpectedProps['bbb']>(rawBindings.setupProps.bbb)
-    // expectType<ExpectedProps['cc']>(rawBindings.setupProps.cc)
-    // expectType<ExpectedProps['dd']>(rawBindings.setupProps.dd)
-    // expectType<ExpectedProps['ee']>(rawBindings.setupProps.ee)
-    // expectType<ExpectedProps['ff']>(rawBindings.setupProps.ff)
-    // expectType<ExpectedProps['ccc']>(rawBindings.setupProps.ccc)
-    // expectType<ExpectedProps['ddd']>(rawBindings.setupProps.ddd)
-    // expectType<ExpectedProps['eee']>(rawBindings.setupProps.eee)
-    // expectType<ExpectedProps['fff']>(rawBindings.setupProps.fff)
-    // expectType<ExpectedProps['hhh']>(rawBindings.setupProps.hhh)
-    // expectType<ExpectedProps['ggg']>(rawBindings.setupProps.ggg)
-    // expectType<ExpectedProps['ffff']>(rawBindings.setupProps.ffff)
-    // expectType<ExpectedProps['validated']>(rawBindings.setupProps.validated)
-
     // setup
     expectType<number>(data.setupA)
     expectType<number>(data.setupB)
@@ -382,6 +355,8 @@ describe('array props', () => {
     props.a = 1
     expectType<any>(props.a)
     expectType<any>(props.b)
+    // @ts-expect-error should not be any
+    expectType<string>(props.DoesNotExist)
 
     expectType<number>(data.c)
   })

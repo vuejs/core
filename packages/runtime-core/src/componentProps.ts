@@ -502,7 +502,7 @@ function resolvePropValue(
 }
 
 export function normalizePropsOptions(
-  comp: ConcreteComponent<any>,
+  comp: ConcreteComponent,
   appContext: AppContext,
   asMixin = false,
 ): NormalizedPropsOptions {

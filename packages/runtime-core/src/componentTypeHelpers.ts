@@ -1,9 +1,9 @@
 import type { ComponentOptionsBase } from './componentOptions'
-import {
-  type DefineComponent,
-  type DefineComponentOptions,
-  type RawOptionsSymbol,
-  type ResolveProps,
+import type {
+  DefineComponent,
+  DefineComponentOptions,
+  RawOptionsSymbol,
+  ResolveProps,
   defineComponent,
 } from './apiDefineComponent'
 import type { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
@@ -69,10 +69,6 @@ export type ExtractComponentPropOptions<T> = T extends { props: infer P }
       ? P
       : {}
 
-// T extends (props: infer P, ctx?: any) => any
-// ? P
-// :
-// {a:  String }
 /**
  * Extracts the component slots as the component was created
  */
@@ -463,11 +459,3 @@ export type DeclareComponent<
         Slots,
         Options
       >
-
-const Comp = defineComponent({
-  emits: {
-    foo: (test: string) => true,
-  },
-})
-const emits = {} as ExtractComponentEmitOptions<typeof Comp>
-emits.foo // (test: string) => true

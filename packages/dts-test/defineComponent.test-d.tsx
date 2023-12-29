@@ -195,7 +195,7 @@ describe('with object props', () => {
     provide() {
       return {}
     },
-    render(): null {
+    render() {
       const props = this.$props
       expectType<ExpectedProps['a']>(props.a)
       expectType<ExpectedProps['b']>(props.b)
@@ -579,7 +579,7 @@ describe('with mixins', () => {
       expectType<any>(props.bP2)
       expectType<string>(props.z)
     },
-    render(): null {
+    render() {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -674,7 +674,7 @@ describe('with extends', () => {
         required: true,
       },
     },
-    render(): null {
+    render() {
       const props = this.$props
       // props
       expectType<boolean | undefined>(props.aP1)
@@ -738,8 +738,6 @@ describe('extends with mixins', () => {
         type: Number,
         default: 2,
       },
-
-      // should be something
       p3: {
         type: Boolean,
         required: true,
@@ -767,7 +765,7 @@ describe('extends with mixins', () => {
         required: true,
       },
     },
-    render(): null {
+    render() {
       const props = this.$props
       // props
       expectType<((...args: any[]) => any) | undefined>(props.onClick)
@@ -1197,7 +1195,7 @@ describe('async setup', () => {
 
 // #5948
 describe('DefineComponent should infer correct types when assigning to Component', () => {
-  let component: Component<any, any, any, any, any>
+  let component: Component
   component = defineComponent({
     setup(_, { attrs, slots }) {
       // @ts-expect-error should not be any
@@ -1206,7 +1204,6 @@ describe('DefineComponent should infer correct types when assigning to Component
       expectType<[]>(slots)
     },
   })
-
   expectType<Component>(component)
 })
 
@@ -1308,7 +1305,6 @@ describe('function syntax w/ emits', () => {
       emits: ['foo'],
     },
   )
-
   expectType<JSX.Element>(<Foo msg="hi" onFoo={() => {}} />)
   // @ts-expect-error
   expectType<JSX.Element>(<Foo msg="hi" onBar={() => {}} />)
@@ -1504,9 +1500,6 @@ describe('should work when props type is incompatible with setup returned type '
   expectType<ComponentPublicInstance>(CompA)
   expectType<number>(CompA.size)
   expectType<SizeType>(CompA.$props.size)
-
-  const temp = {} as DefineComponent<{ size: SizeType }>
-  new temp().$props.size
 })
 
 describe('overriding public instance props should still allow it to work', () => {
@@ -1595,67 +1588,86 @@ describe('type should be inferred correctly', () => {
     },
   })
 
-  new a().test
+  expectType<boolean>(new a().test)
 })
 
-// @ts-expect-error should not allow non object and functions
-defineComponent(1)
-// @ts-expect-error should not allow
-defineComponent('test-my-component')
-declare function test<T>(comp: DefineComponent<T, any, any>): T
-test(defineComponent({}))
-const a = defineComponent({})
-test(a)
+declare function fnDefineComponentArg<T>(comp: DefineComponent<T, any, any>): T
+describe('defineComponent usages', () => {
+  // @ts-expect-error should not allow non object and functions
+  defineComponent(1)
+  // @ts-expect-error should not allow
+  defineComponent('test-my-component')
+  fnDefineComponentArg(defineComponent({}))
+  const a = defineComponent({})
+  fnDefineComponentArg(a)
 
-defineComponent({
-  render() {
-    return null
-  },
+  defineComponent({
+    render() {
+      return null
+    },
+  })
+
+  defineComponent({
+    props: {
+      n: Number,
+    },
+    data: () => ({ msg: 'hello' }),
+    render() {
+      expectType<string>(this.msg)
+      // @ts-expect-error not any
+      expectType<number>(this.msg)
+
+      return h('div', this.n)
+    },
+  })
+
+  defineComponent({
+    props: {
+      n: Number,
+    },
+    data() {
+      return { msg: 'hello' }
+    },
+    mounted() {
+      expectType<string>(this.msg)
+      // @ts-expect-error not any
+      expectType<number>(this.msg)
+    },
+    render() {
+      expectType<string>(this.msg)
+      // @ts-expect-error not any
+      expectType<number>(this.msg)
+
+      expectType<{
+        msg: string
+      }>(this.$data)
+      // @ts-expect-error not any
+      expectType<number>(this.$data)
+
+      return h('div', this.n)
+    },
+  })
+
+  defineComponent({
+    mixins: [
+      defineComponent({
+        data() {
+          return { msg: 'hello' }
+        },
+        render() {
+          expectType<{
+            msg: string
+          }>(this.$data)
+          // @ts-expect-error not any
+          expectType<number>(this.$data)
+          return h('div', this.msg)
+        },
+      }),
+    ],
+  })
 })
 
-defineComponent({
-  props: {
-    n: Number,
-  },
-  data: () => ({ msg: 'hello' }),
-  render() {
-    this.msg
-    return h('div', this.n)
-  },
-})
-
-defineComponent({
-  props: {
-    n: Number,
-  },
-  data() {
-    return { msg: 'hello' }
-  },
-  mounted() {
-    this.msg
-  },
-  render() {
-    this.msg
-    this.$data
-    return h('div', this.n)
-  },
-})
-
-defineComponent({
-  mixins: [
-    defineComponent({
-      data() {
-        return { msg: 'hello' }
-      },
-      render() {
-        this.$data
-        return h('div', this.msg)
-      },
-    }),
-  ],
-})
-
-describe('withKeys and withModifiers as pro', () => {
+describe('withKeys and withModifiers as props', () => {
   const onKeydown = withKeys(e => {}, [''])
   const onClick = withModifiers(e => {}, [''])
   ;<input onKeydown={onKeydown} onClick={onClick} />

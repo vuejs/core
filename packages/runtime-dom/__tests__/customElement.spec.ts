@@ -327,7 +327,6 @@ describe('defineCustomElement', () => {
           })
       },
     })
-
     const E = defineCustomElement(CompDef)
     customElements.define('my-el-emits', E)
 

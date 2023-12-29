@@ -6,10 +6,8 @@ const _CustomPropsNotErased = defineComponent({
 })
 
 export const RegularComponent = defineComponent({
-  props: {
-    // a: String
-  },
-  setup(props) {
+  props: {},
+  setup() {
     return () => {}
   },
 })
