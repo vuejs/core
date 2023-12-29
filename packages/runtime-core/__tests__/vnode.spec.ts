@@ -14,7 +14,7 @@ import {
 import type { Data } from '../src/component'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
 import { h, isReactive, reactive, ref, setBlockTracking, withCtx } from '../src'
-import { createApp, nodeOps, serializeInner } from '@vue/runtime-test'
+import { createApp, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import { setCurrentRenderingInstance } from '../src/componentRenderContext'
 
 describe('vnode', () => {

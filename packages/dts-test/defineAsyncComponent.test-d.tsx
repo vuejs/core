@@ -8,5 +8,5 @@ defineAsyncComponent(async () => ({
 
     // @ts-expect-error not any
     expectType<string>(props.n)
-  }
+  },
 }))

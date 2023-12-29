@@ -289,7 +289,7 @@ describe('component props', () => {
         props: {
           foo: {
             type: Number,
-            validator: (value, props) => mockFn(value, props),
+            validator: (value: unknown, props: unknown) => mockFn(value, props),
           },
           bar: {
             type: Number,
@@ -311,11 +311,11 @@ describe('component props', () => {
         props: {
           foo: {
             type: Number,
-            validator: (value, props) => !!(props.bar = 1),
+            validator: (value: unknown, props: any) => !!(props.bar = 1),
           },
           bar: {
             type: Number,
-            validator: value => mockFn(value),
+            validator: (value: unknown) => mockFn(value),
           },
         },
         template: `<div />`,
