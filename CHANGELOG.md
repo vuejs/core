@@ -11,7 +11,7 @@
    - nuxt@^3.9.0 (if using Nuxt)
    - vue-loader@^17.4.0 (if using webpack or vue-cli)
 
-2. If using TSX with Vue, check actions needed in [Removed: Global JSX Namespace](https://blog.vuejs.org/posts/vue-3-4#removed-global-jsx-namespace).
+2. If using TSX with Vue, check actions needed in [Removed: Global JSX Namespace](https://blog.vuejs.org/posts/vue-3-4#global-jsx-namespace).
 
 3. Make sure you are no longer using any deprecated features (if you are, you should have warnings in the console telling you so). They may have been [removed in 3.4](https://blog.vuejs.org/posts/vue-3-4#other-removed-features).
 
