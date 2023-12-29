@@ -9,7 +9,6 @@ import {
   type ComponentPublicInstance,
   type ComponentSlots,
   type DeclareComponent,
-  ExtractComponentEmitOptions,
   type ExtractComponentOptions,
   type FunctionalComponent,
   type PropType,

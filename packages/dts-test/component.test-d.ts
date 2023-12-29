@@ -1,5 +1,4 @@
 import {
-  type Component,
   type ComponentData,
   type ComponentProps,
   type ComponentPublicInstance,
