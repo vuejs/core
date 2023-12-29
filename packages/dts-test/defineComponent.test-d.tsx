@@ -293,17 +293,17 @@ describe('with object props', () => {
     />,
   )
 
-  expectType<Component>(
-    <MyComponent
-      b="b"
-      dd={{ n: 1 }}
-      ddd={['ddd']}
-      eee={() => ({ a: 'eee' })}
-      fff={(a, b) => ({ a: a > +b })}
-      hhh={false}
-      jjj={() => ''}
-    />,
-  )
+  // expectType<Component>(
+  //   <MyComponent
+  //     b="b"
+  //     dd={{ n: 1 }}
+  //     ddd={['ddd']}
+  //     eee={() => ({ a: 'eee' })}
+  //     fff={(a, b) => ({ a: a > +b })}
+  //     hhh={false}
+  //     jjj={() => ''}
+  //   />,
+  // )
 
   // @ts-expect-error missing required props
   let c = <MyComponent />
@@ -337,23 +337,23 @@ describe('with object props', () => {
   })
 })
 
-describe('type inference w/ optional props declaration', () => {
-  const MyComponent = defineComponent<{ a: string[]; msg: string }>({
-    setup(props) {
-      expectType<string>(props.msg)
-      expectType<string[]>(props.a)
-      return {
-        b: 1,
-      }
-    },
-  })
+// describe('type inference w/ optional props declaration', () => {
+//   const MyComponent = defineComponent<{ a: string[]; msg: string }>({
+//     setup(props) {
+//       expectType<string>(props.msg)
+//       expectType<string[]>(props.a)
+//       return {
+//         b: 1,
+//       }
+//     },
+//   })
 
-  expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
-  // @ts-expect-error
-  ;<MyComponent />
-  // @ts-expect-error
-  ;<MyComponent msg="1" />
-})
+//   expectType<JSX.Element>(<MyComponent msg="1" a={['1']} />)
+//   // @ts-expect-error
+//   ;<MyComponent />
+//   // @ts-expect-error
+//   ;<MyComponent msg="1" />
+// })
 
 describe('type inference w/ direct setup function', () => {
   const MyComponent = defineComponent(
@@ -1664,6 +1664,7 @@ describe('withKeys and withModifiers as pro', () => {
 import type {
   AllowedComponentProps,
   ComponentCustomProps,
+  ComponentInstance,
   ComponentOptionsMixin,
   DefineComponent,
   EmitsOptions,

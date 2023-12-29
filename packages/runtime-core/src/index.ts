@@ -272,7 +272,11 @@ export type {
   RuntimeCompilerOptions,
   ComponentInjectOptions,
 } from './componentOptions'
-export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+export type {
+  EmitsOptions,
+  ObjectEmitsOptions,
+  EmitsToProps,
+} from './componentEmits'
 export type {
   ComponentPublicInstance,
   ComponentCustomProperties,

@@ -118,22 +118,25 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
   infer E
 >
   ? E
-  : T extends {
-        emits: infer E
-      }
-    ? E
+  : T extends FunctionalComponent<any, infer Emits>
+    ? Emits
     : T extends { emits: infer E extends EmitsOptions }
       ? E
-      : T extends (
-            props: any,
-            opts: { emits: infer E extends EmitsOptions },
-          ) => any
-        ? E
-        : T extends { $options: infer Options }
-          ? Options extends { emits: infer E }
+      : T extends {
+            emits: infer E extends Readonly<Array<string>>
+          }
+        ? E extends Readonly<Array<infer A extends string>>
+          ? Record<A, null>
+          : E
+        : T extends (props: any, ctx: infer Context) => any
+          ? Context extends { emit: infer E }
             ? E
+            : never
+          : T extends { $options: infer Options }
+            ? Options extends { emits: infer E }
+              ? E
+              : {}
             : {}
-          : {}
 
 /**
  * Helper to resolve mixins
@@ -297,7 +300,9 @@ export type ComponentSlots<T> = ExtractComponentSlotOptions<T> extends infer S
 export type ComponentEmits<T> = ExtractComponentEmitOptions<T> extends infer E
   ? {} extends E
     ? () => void
-    : EmitFn<E>
+    : E extends EmitFn
+      ? E
+      : EmitFn<E>
   : () => void
 
 // Helper method to extract the data from a component

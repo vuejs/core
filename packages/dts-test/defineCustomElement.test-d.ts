@@ -1,5 +1,6 @@
 import {
   type VueElementConstructor,
+  defineAsyncComponent,
   defineComponent,
   defineCustomElement,
 } from 'vue'

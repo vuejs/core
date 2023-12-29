@@ -1,9 +1,11 @@
 import {
   type Component,
+  type ConcreteComponent,
   type DefineComponent,
   Fragment,
   Suspense,
   Teleport,
+  type VNode,
   defineComponent,
   h,
   ref,

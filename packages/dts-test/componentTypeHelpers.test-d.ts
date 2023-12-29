@@ -2,12 +2,14 @@ import { describe, expectType } from './utils'
 
 import {
   type ComponentData,
+  type ComponentEmits,
   type ComponentExpectedProps,
   type ComponentInstance,
   type ComponentProps,
   type ComponentPublicInstance,
   type ComponentSlots,
   type DeclareComponent,
+  ExtractComponentEmitOptions,
   type ExtractComponentOptions,
   type FunctionalComponent,
   type PropType,
@@ -31,6 +33,10 @@ const propsOptions = {
     default(arg: { msg: string }) {},
   },
   foo: 'bar',
+  emits: {
+    a: (arg: string) => arg === 'foo',
+    b: (arg: number) => arg === 1,
+  },
   data() {
     return {
       test: 1,
@@ -45,6 +51,10 @@ const arrayOptions = {
     default(arg: { msg: string }) {},
   },
   foo: 'bar',
+  emits: {
+    a: (arg: string) => arg === 'foo',
+    b: (arg: number) => arg === 1,
+  },
   data() {
     return {
       testA: 1,
@@ -57,6 +67,10 @@ const noPropsOptions = {
     default(arg: { msg: string }) {},
   },
   foo: 'bar',
+  emits: {
+    a: (arg: string) => arg === 'foo',
+    b: (arg: number) => arg === 1,
+  },
   data() {
     return {
       testN: 1,
@@ -72,6 +86,9 @@ const fakeClassComponent = {} as {
       default: (arg: { msg: string }) => any
     }
 
+    $emits: ((event: 'a', arg: string) => void) &
+      ((event: 'b', arg: number) => void)
+
     someMethod: (a: number) => void
     foo: number
 
@@ -83,7 +100,10 @@ const functionalComponent =
   (
     props: { a: string },
     ctx: SetupContext<
-      {},
+      {
+        a: (arg: string) => true
+        b: (arg: number) => true
+      },
       SlotsType<{
         foo: (arg: { bar: string }) => any
       }>
@@ -283,6 +303,122 @@ describe('Component Props', () => {
     expectType<{ a: string }>(props)
     // @ts-expect-error not any
     expectType<boolean>(props)
+  })
+})
+
+describe('Component Emits', () => {
+  describe('string array', () => {
+    const emitArray = {
+      emits: ['a', 'b'] as ['a', 'b'],
+    }
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof emitArray>)
+    // @ts-expect-error not empty function
+    expectType<() => void>({} as ComponentEmits<typeof emitArray>)
+
+    const constEmitArray = {
+      emits: ['a', 'b'] as const,
+    }
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof constEmitArray>)
+    // @ts-expect-error not empty function
+    expectType<() => void>({} as ComponentEmits<typeof constEmitArray>)
+  })
+
+  describe('defineComponent', () => {
+    // Component with props
+    const CompProps = defineComponent(propsOptions)
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof CompProps>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>({} as ComponentEmits<typeof CompProps>)
+
+    // component array props
+    const CompPropsArray = defineComponent(arrayOptions)
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof CompPropsArray>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof CompPropsArray>)
+
+    // component no props
+    const CompNoProps = defineComponent(noPropsOptions)
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof CompNoProps>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof CompNoProps>)
+  })
+
+  describe('async component', () => {
+    const Component = defineAsyncComponent({
+      loader: () =>
+        Promise.resolve(
+          defineComponent({
+            emits: {
+              a: (arg: string) => arg === 'foo',
+            },
+          }),
+        ),
+    })
+
+    // NOTE not sure if this is the intention since Component.foo is undefined
+    expectType<(event: 'a', arg: string) => void>(
+      {} as ComponentEmits<typeof Component>,
+    )
+  })
+
+  describe('options object', () => {
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof propsOptions>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>({} as ComponentEmits<typeof propsOptions>)
+
+    // component array props
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >({} as ComponentEmits<typeof arrayOptions>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof arrayOptions>)
+
+    // component no props
+    expectType<{}>({} as ComponentEmits<typeof noPropsOptions>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof noPropsOptions>)
+  })
+
+  describe('functional', () => {
+    const emits = {} as ComponentEmits<typeof functionalComponent>
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >(emits)
+    // @ts-expect-error not empty function
+    expectType<() => void>(emits)
+    // @ts-expect-error not any
+    expectType<boolean>(emits)
+  })
+  describe('functional typed', () => {
+    const emits = {} as ComponentEmits<
+      FunctionalComponent<
+        { a: string },
+        {
+          a: (arg: string) => true
+          b: (arg: number) => true
+        },
+        {}
+      >
+    >
+    expectType<
+      ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
+    >(emits)
+    // @ts-expect-error not empty function
+    expectType<() => void>(emits)
+    // @ts-expect-error not any
+    expectType<boolean>(emits)
   })
 })
 

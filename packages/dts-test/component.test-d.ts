@@ -3,6 +3,7 @@ import {
   type ComponentData,
   type ComponentProps,
   type ComponentPublicInstance,
+  type EmitsToProps,
   type ExtractComponentEmitOptions,
   type ExtractComponentSlotOptions,
   type FunctionalComponent,
@@ -14,7 +15,6 @@ import {
   toRefs,
 } from 'vue'
 import { type IsAny, describe, expectAssignable, expectType } from './utils'
-import type { EmitsToProps } from 'packages/runtime-core/src/componentEmits'
 
 declare function extractComponentOptions<T>(obj: T): {
   props: ComponentProps<T>
