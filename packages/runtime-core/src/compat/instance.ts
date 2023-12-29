@@ -1,21 +1,21 @@
 import {
+  NOOP,
   extend,
   looseEqual,
   looseIndexOf,
   looseToNumber,
-  NOOP,
-  toDisplayString
+  toDisplayString,
 } from '@vue/shared'
-import {
+import type {
   ComponentPublicInstance,
-  PublicPropertiesMap
+  PublicPropertiesMap,
 } from '../componentPublicInstance'
 import { getCompatChildren } from './instanceChildren'
 import {
-  ComponentOptionsCompat,
+  type ComponentOptionsCompat,
   DeprecationTypes,
   assertCompatEnabled,
-  isCompatEnabled
+  isCompatEnabled,
 } from './compatConfig'
 import { off, on, once } from './instanceEventEmitter'
 import { getCompatListeners } from './instanceListeners'
@@ -33,14 +33,14 @@ import {
   legacyPrependModifier,
   legacyRenderSlot,
   legacyRenderStatic,
-  legacyresolveScopedSlots
+  legacyresolveScopedSlots,
 } from './renderHelpers'
 import { resolveFilter } from '../helpers/resolveAssets'
-import { InternalSlots, Slots } from '../componentSlots'
-import { ContextualRenderFn } from '../componentRenderContext'
+import type { InternalSlots, Slots } from '../componentSlots'
+import type { ContextualRenderFn } from '../componentRenderContext'
 import {
-  MergedComponentOptions,
-  resolveMergedOptions
+  type MergedComponentOptions,
+  resolveMergedOptions,
 } from '../componentOptions'
 
 export type LegacyPublicInstance = ComponentPublicInstance &
@@ -83,7 +83,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $mount: i => {
       assertCompatEnabled(
         DeprecationTypes.GLOBAL_MOUNT,
-        null /* this warning is global */
+        null /* this warning is global */,
       )
       // root mount override from ./global.ts in installCompatMount
       return i.ctx._compat_mount || NOOP
@@ -124,7 +124,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
     $off: i => off.bind(null, i),
 
     $children: getCompatChildren,
-    $listeners: getCompatListeners
+    $listeners: getCompatListeners,
   } as PublicPropertiesMap)
 
   /* istanbul ignore if */
@@ -138,7 +138,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       $options: i => {
         const res = extend(
           {},
-          resolveMergedOptions(i)
+          resolveMergedOptions(i),
         ) as MergedComponentOptions & ComponentOptionsCompat
         res.parent = i.proxy!.$parent
         res.propsData = i.vnode.props
@@ -171,7 +171,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       _u: () => legacyresolveScopedSlots,
       _g: () => legacyBindObjectListeners,
       _d: () => legacyBindDynamicKeys,
-      _p: () => legacyPrependModifier
+      _p: () => legacyPrependModifier,
     } as PublicPropertiesMap)
   }
 }

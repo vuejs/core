@@ -1,13 +1,13 @@
-import { extend, ShapeFlags } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
-import { callWithErrorHandling, ErrorCodes } from '../errorHandling'
-import { VNode } from '../vnode'
+import { ShapeFlags, extend } from '@vue/shared'
+import type { ComponentInternalInstance } from '../component'
+import { ErrorCodes, callWithErrorHandling } from '../errorHandling'
+import type { VNode } from '../vnode'
 import { popWarningContext, pushWarningContext } from '../warning'
 import {
+  type ComponentOptionsCompat,
   DeprecationTypes,
-  warnDeprecation,
   isCompatEnabled,
-  ComponentOptionsCompat
+  warnDeprecation,
 } from './compatConfig'
 
 export const compatModelEventPrefix = `onModelCompat:`
@@ -24,7 +24,7 @@ export function convertLegacyVModelProps(vnode: VNode) {
         // this is a special case where we want to use the vnode component's
         // compat config instead of the current rendering instance (which is the
         // parent of the component that exposes v-model)
-        { type } as any
+        { type } as any,
       )
     ) {
       return
@@ -68,7 +68,7 @@ function applyModelFromMixins(model: any, mixins?: ComponentOptionsCompat[]) {
 export function compatModelEmit(
   instance: ComponentInternalInstance,
   event: string,
-  args: any[]
+  args: any[],
 ) {
   if (!isCompatEnabled(DeprecationTypes.COMPONENT_V_MODEL, instance)) {
     return
@@ -80,7 +80,7 @@ export function compatModelEmit(
       modelHandler,
       instance,
       ErrorCodes.COMPONENT_EVENT_HANDLER,
-      args
+      args,
     )
   }
 }

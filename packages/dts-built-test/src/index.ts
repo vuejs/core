@@ -1,8 +1,8 @@
-import { PropType, defineComponent } from 'vue'
+import { type PropType, defineComponent } from 'vue'
 
 const _CustomPropsNotErased = defineComponent({
   props: {},
-  setup() {}
+  setup() {},
 })
 
 export const RegularComponent = defineComponent({
@@ -11,7 +11,7 @@ export const RegularComponent = defineComponent({
   },
   setup(props) {
     return () => {}
-  }
+  },
 })
 
 type MyInterface =
@@ -22,11 +22,11 @@ type MyInterface =
 export const RegularComponentProps = defineComponent({
   props: {
     a: Object as () => MyInterface,
-    b: Object as PropType<MyInterface>
+    b: Object as PropType<MyInterface>,
   },
   setup(props) {
     return () => {}
-  }
+  },
 })
 // #8376
 export const CustomPropsNotErased =

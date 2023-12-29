@@ -1,19 +1,20 @@
-import { expectType, describe } from './utils'
+import { describe, expectType } from './utils'
 
 import {
-  ExtractComponentOptions,
-  ComponentProps,
-  defineComponent,
+  type ComponentData,
+  type ComponentExpectedProps,
+  type ComponentInstance,
+  type ComponentProps,
+  type ComponentPublicInstance,
+  type ComponentSlots,
+  type DeclareComponent,
+  type ExtractComponentOptions,
+  type FunctionalComponent,
+  type PropType,
+  type SetupContext,
+  type SlotsType,
   defineAsyncComponent,
-  ComponentInstance,
-  ComponentPublicInstance,
-  ComponentExpectedProps,
-  SlotsType,
-  ComponentData,
-  ComponentSlots,
-  SetupContext,
-  DeclareComponent,
-  PropType
+  defineComponent,
 } from 'vue'
 
 const propsOptions = {
@@ -23,44 +24,44 @@ const propsOptions = {
 
     bb: {
       type: Boolean,
-      required: true as true
-    }
+      required: true as true,
+    },
   },
   slots: {
-    default(arg: { msg: string }) {}
+    default(arg: { msg: string }) {},
   },
   foo: 'bar',
   data() {
     return {
-      test: 1
+      test: 1,
     }
-  }
+  },
 }
 
 const arrayOptions = {
   // preventing from set as readonly otherwise it breaks typing
   props: ['a', 'b', 'c'] as ['a', 'b', 'c'],
   slots: {
-    default(arg: { msg: string }) {}
+    default(arg: { msg: string }) {},
   },
   foo: 'bar',
   data() {
     return {
-      testA: 1
+      testA: 1,
     }
-  }
+  },
 }
 
 const noPropsOptions = {
   slots: {
-    default(arg: { msg: string }) {}
+    default(arg: { msg: string }) {},
   },
   foo: 'bar',
   data() {
     return {
-      testN: 1
+      testN: 1,
     }
-  }
+  },
 }
 
 const fakeClassComponent = {} as {
@@ -86,7 +87,7 @@ const functionalComponent =
       SlotsType<{
         foo: (arg: { bar: string }) => any
       }>
-    >
+    >,
   ) =>
   () => {}
 
@@ -112,12 +113,12 @@ describe('Extract Component Options', () => {
 
     const Mixins = defineComponent({
       props: ['a1'],
-      mixins: [propsOptions, arrayOptions, noPropsOptions]
+      mixins: [propsOptions, arrayOptions, noPropsOptions],
     })
 
     expectType<ExtractComponentOptions<typeof Mixins>>({
       props: ['a1'],
-      mixins: [propsOptions, arrayOptions, noPropsOptions]
+      mixins: [propsOptions, arrayOptions, noPropsOptions],
     })
     // @ts-expect-error checking if is not any
     expectType<ExtractComponentOptions<typeof Mixins>>({ bar: 'foo' })
@@ -156,7 +157,7 @@ describe('Extract Component Options', () => {
 
   describe('class component', () => {
     expectType<ExtractComponentOptions<typeof fakeClassComponent>>(
-      fakeClassComponent
+      fakeClassComponent,
     )
   })
 })
@@ -196,7 +197,7 @@ describe('Component Props', () => {
       setup(props) {
         props.a, props.a1
         props.bb
-      }
+      },
     })
     expectType<{
       a1?: any
@@ -213,10 +214,10 @@ describe('Component Props', () => {
         Promise.resolve(
           defineComponent({
             props: {
-              foo: String
-            }
-          })
-        )
+              foo: String,
+            },
+          }),
+        ),
     })
 
     // NOTE not sure if this is the intention since Component.foo is undefined
@@ -251,7 +252,7 @@ describe('Component Props', () => {
     const mixin = {
       props: ['a1'] as ['a1'],
       // casting cost to keep the types
-      mixins: [propsOptions, arrayOptions, noPropsOptions] as const
+      mixins: [propsOptions, arrayOptions, noPropsOptions] as const,
     }
     expectType<{
       a1?: any
@@ -263,7 +264,25 @@ describe('Component Props', () => {
   })
 
   describe('class component', () => {
-    expectType<{ a: string }>({} as ComponentProps<typeof fakeClassComponent>)
+    const props = {} as ComponentProps<typeof fakeClassComponent>
+    expectType<{ a: string }>(props)
+    // @ts-expect-error not any
+    expectType<boolean>(props)
+  })
+
+  describe('functional', () => {
+    const props = {} as ComponentProps<typeof functionalComponent>
+    expectType<{ a: string }>(props)
+    // @ts-expect-error not any
+    expectType<boolean>(props)
+  })
+  describe('functional typed', () => {
+    const props = {} as ComponentProps<
+      FunctionalComponent<{ a: string }, {}, {}>
+    >
+    expectType<{ a: string }>(props)
+    // @ts-expect-error not any
+    expectType<boolean>(props)
   })
 })
 
@@ -307,7 +326,7 @@ describe('ComponentPropsWithDefaultOptional', () => {
       setup(props) {
         props.a, props.a1
         props.bb
-      }
+      },
     })
     const mixin = getOptionalProps(Mixin)
     expectType<{
@@ -327,10 +346,10 @@ describe('ComponentPropsWithDefaultOptional', () => {
         Promise.resolve(
           defineComponent({
             props: {
-              foo: String
-            }
-          })
-        )
+              foo: String,
+            },
+          }),
+        ),
     })
     const component = getOptionalProps(Component)
 
@@ -374,8 +393,8 @@ describe('ComponentPropsWithDefaultOptional', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
-      ]
+        defineComponent(noPropsOptions),
+      ],
     })
     expectType<{
       a1?: any
@@ -438,7 +457,7 @@ describe('ComponentData', () => {
       setup(props) {
         props.a, props.a1
         props.bb
-      }
+      },
     })
     const mixin = getData(Mixin)
     expectType<{
@@ -497,8 +516,8 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
-      ]
+        defineComponent(noPropsOptions),
+      ],
     })
     expectType<{ test: number; testA: number; testN: number }>(mixin)
     // @ts-expect-error checking if is not any
@@ -525,10 +544,10 @@ describe('ComponentData', () => {
       defineComponent({
         setup() {
           return {
-            a: 1
+            a: 1,
           }
-        }
-      })
+        },
+      }),
     )
     expectType<{ a: number }>(setup)
     // @ts-expect-error
@@ -539,10 +558,10 @@ describe('ComponentData', () => {
         data: () => ({ a: 1 }),
         setup() {
           return {
-            b: 1
+            b: 1,
           }
-        }
-      })
+        },
+      }),
     )
     expectType<{ a: number; b: number }>(dataSetup)
     // @ts-expect-error
@@ -554,10 +573,10 @@ describe('ComponentData', () => {
 
         setup() {
           return {
-            foo: '1'
+            foo: '1',
           }
-        }
-      })
+        },
+      }),
     )
     expectType<{ foo: string }>(setupOverride)
     // @ts-expect-error
@@ -568,9 +587,9 @@ describe('ComponentData', () => {
         mixins: [
           defineComponent(propsOptions),
           defineComponent(arrayOptions),
-          defineComponent(noPropsOptions)
-        ]
-      })
+          defineComponent(noPropsOptions),
+        ],
+      }),
     )
 
     expectType<{
@@ -585,11 +604,11 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       data() {
         return { foo: 1 }
-      }
+      },
     })
     expectType<{
       test: number
@@ -604,11 +623,11 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       data() {
         return { test: 'string' }
-      }
+      },
     })
     expectType<{
       test: string
@@ -622,11 +641,11 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       setup() {
         return { foo: 1 }
-      }
+      },
     })
     expectType<{
       test: number
@@ -641,11 +660,11 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       setup() {
         return { test: 'string' }
-      }
+      },
     })
 
     expectType<{
@@ -660,14 +679,14 @@ describe('ComponentData', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       setup() {
         return { test: 'string' }
       },
       data() {
         return { test: { a: 1 } }
-      }
+      },
     })
 
     expectType<{
@@ -683,8 +702,8 @@ describe('ComponentData', () => {
         extends: defineComponent(propsOptions),
         data() {
           return { foo: 1 }
-        }
-      })
+        },
+      }),
     )
     expectType<{
       test: number
@@ -737,7 +756,7 @@ describe('ComponentSlots', () => {
       setup(props) {
         props.a, props.a1
         props.bb
-      }
+      },
     })
     const mixin = getSlots(Mixin)
     expectType<{
@@ -754,8 +773,8 @@ describe('ComponentSlots', () => {
         slots: {} as SlotsType<{
           default: { foo: number }
           test: { bar?: string }
-        }>
-      })
+        }>,
+      }),
     )
 
     expectType<{
@@ -768,9 +787,9 @@ describe('ComponentSlots', () => {
     const objSlots = getSlots(
       defineComponent({
         slots: {
-          test: {} as { a: number }
-        }
-      })
+          test: {} as { a: number },
+        },
+      }),
     )
 
     expectType<{
@@ -790,9 +809,9 @@ describe('ComponentSlots', () => {
           defineComponent({
             slots: {} as SlotsType<{
               test: { foo: number }
-            }>
-          })
-        )
+            }>,
+          }),
+        ),
     })
     const component = getSlots(Component)
 
@@ -830,12 +849,12 @@ describe('ComponentSlots', () => {
       mixins: [
         defineComponent(propsOptions),
         defineComponent(arrayOptions),
-        defineComponent(noPropsOptions)
+        defineComponent(noPropsOptions),
       ],
       slots: {} as SlotsType<{
         default: (arg: { test: number }) => any
         test: { foo: string }
-      }>
+      }>,
     })
     expectType<{
       default: (arg: { test: number }) => any
@@ -850,7 +869,7 @@ describe('ComponentSlots', () => {
       slots: {} as SlotsType<{
         default: { foo: number }
         test: { bar?: string }
-      }>
+      }>,
     })
 
     expectType<{
@@ -862,8 +881,8 @@ describe('ComponentSlots', () => {
 
     const objSlots = getSlots({
       slots: {
-        test: {} as { a: number }
-      }
+        test: {} as { a: number },
+      },
     })
 
     expectType<{
@@ -900,7 +919,7 @@ describe('ComponentSlots', () => {
             }): any
           }
         }
-      }
+      },
     )
 
     expectType<{
@@ -936,9 +955,9 @@ describe('DeclareComponent', () => {
     props: {
       test: {
         type: String,
-        required: true
-      }
-    }
+        required: true,
+      },
+    },
   }) as DeclareComponent<{
     new <T extends string>(): {
       $props: {
@@ -962,19 +981,19 @@ describe('DeclareComponent', () => {
 // Component Instance
 
 declare function retrieveComponentInstance<T>(
-  component: T
+  component: T,
 ): ComponentInstance<T>
 
 expectType<ComponentPublicInstance>(
-  retrieveComponentInstance(defineComponent({}))
+  retrieveComponentInstance(defineComponent({})),
 )
 
 expectType<ComponentPublicInstance>(
   retrieveComponentInstance(
     defineComponent({
       props: {
-        a: String
-      }
-    })
-  )
+        a: String,
+      },
+    }),
+  ),
 )

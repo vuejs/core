@@ -1,6 +1,6 @@
-import { DeclareComponent, defineComponent } from 'vue'
+import { type DeclareComponent, defineComponent } from 'vue'
 import { expectType } from './utils'
-import { SlotsType } from 'vue'
+import type { SlotsType } from 'vue'
 
 declare module 'vue' {
   interface ComponentCustomOptions {
@@ -21,8 +21,8 @@ export const Custom = defineComponent({
     bar: String,
     baz: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
 
   data: () => ({ counter: 0 }),
@@ -43,8 +43,8 @@ export const Custom = defineComponent({
       this.state = 'not valid'
       // @ts-expect-error
       this.$.appContext.config.globalProperties.state = 'not valid'
-    }
-  }
+    },
+  },
 })
 
 expectType<JSX.Element>(<Custom baz={1} />)
@@ -80,11 +80,11 @@ const Comp = ErrorComponent(
     props: {
       type: {
         type: String as () => ErrorLevel,
-        default: 'debug'
-      }
+        default: 'debug',
+      },
     },
-    emits: ['debug', 'warning', 'error']
-  })
+    emits: ['debug', 'warning', 'error'],
+  }),
 )
 ;<Comp type="debug" onDebug={() => {}} />
 // @ts-expect-error onError is not there

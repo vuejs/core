@@ -1,46 +1,47 @@
 import {
-  toRaw,
+  TriggerOpTypes,
   shallowReactive,
+  shallowReadonly,
+  toRaw,
   trigger,
-  TriggerOpTypes
 } from '@vue/reactivity'
 import {
-  EMPTY_OBJ,
-  camelize,
-  hyphenate,
-  capitalize,
-  isString,
-  isFunction,
-  isArray,
-  isObject,
-  hasOwn,
-  toRawType,
-  PatchFlags,
-  makeMap,
-  isReservedProp,
   EMPTY_ARR,
+  EMPTY_OBJ,
+  type IfAny,
+  PatchFlags,
+  camelize,
+  capitalize,
   def,
   extend,
+  hasOwn,
+  hyphenate,
+  isArray,
+  isFunction,
+  isObject,
   isOn,
-  IfAny
+  isReservedProp,
+  isString,
+  makeMap,
+  toRawType,
 } from '@vue/shared'
 import { warn } from './warning'
 import {
-  Data,
-  ComponentInternalInstance,
-  ComponentOptions,
-  ConcreteComponent,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
+  type Data,
   setCurrentInstance,
-  unsetCurrentInstance
+  unsetCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
-import { AppContext } from './apiCreateApp'
+import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import {
-  ComponentOptionsCompat,
+  type ComponentOptionsCompat,
   isCompatEnabled,
-  softAssertCompatEnabled
+  softAssertCompatEnabled,
 } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
@@ -60,7 +61,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown): boolean
+  validator?(value: unknown, props: Data): boolean
   /**
    * @internal
    */
@@ -82,7 +83,7 @@ type PropConstructor<T = any> =
   | PropMethod<T>
 
 type PropMethod<T, TConstructor = any> = [T] extends [
-  ((...args: any) => any) | undefined
+  ((...args: any) => any) | undefined,
 ] // if is function with args, allowing non-required functions
   ? { new (): TConstructor; (): T; readonly prototype: TConstructor } // Create Function like constructor
   : never
@@ -166,9 +167,9 @@ export type ExtractPublicPropTypes<O> = {
   [K in keyof Pick<O, PublicOptionalKeys<O>>]?: InferPropType<O[K]>
 }
 
-const enum BooleanFlags {
+enum BooleanFlags {
   shouldCast,
-  shouldCastTrue
+  shouldCastTrue,
 }
 
 // extract props which defined with default from prop options
@@ -193,7 +194,7 @@ export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
   isStateful: number, // result of bitwise flag comparison
-  isSSR = false
+  isSSR = false,
 ) {
   const props: Data = {}
   const attrs: Data = {}
@@ -241,12 +242,12 @@ export function updateProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
   rawPrevProps: Data | null,
-  optimized: boolean
+  optimized: boolean,
 ) {
   const {
     props,
     attrs,
-    vnode: { patchFlag }
+    vnode: { patchFlag },
   } = instance
   const rawCurrentProps = toRaw(props)
   const [options] = instance.propsOptions
@@ -288,7 +289,7 @@ export function updateProps(
               camelizedKey,
               value,
               instance,
-              false /* isAbsent */
+              false /* isAbsent */,
             )
           }
         } else {
@@ -337,7 +338,7 @@ export function updateProps(
               key,
               undefined,
               instance,
-              true /* isAbsent */
+              true /* isAbsent */,
             )
           }
         } else {
@@ -375,7 +376,7 @@ function setFullProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
   props: Data,
-  attrs: Data
+  attrs: Data,
 ) {
   const [options, needCastKeys] = instance.propsOptions
   let hasAttrsChanged = false
@@ -392,7 +393,7 @@ function setFullProps(
           softAssertCompatEnabled(
             DeprecationTypes.INSTANCE_EVENT_HOOKS,
             instance,
-            key.slice(2).toLowerCase()
+            key.slice(2).toLowerCase(),
           )
         }
         if (key === 'inline-template') {
@@ -440,7 +441,7 @@ function setFullProps(
         key,
         castValues[key],
         instance,
-        !hasOwn(castValues, key)
+        !hasOwn(castValues, key),
       )
     }
   }
@@ -454,7 +455,7 @@ function resolvePropValue(
   key: string,
   value: unknown,
   instance: ComponentInternalInstance,
-  isAbsent: boolean
+  isAbsent: boolean,
 ) {
   const opt = options[key]
   if (opt != null) {
@@ -477,7 +478,7 @@ function resolvePropValue(
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
               ? createPropsDefaultThis(instance, props, key)
               : null,
-            props
+            props,
           )
           unsetCurrentInstance()
         }
@@ -503,7 +504,7 @@ function resolvePropValue(
 export function normalizePropsOptions(
   comp: ConcreteComponent<any>,
   appContext: AppContext,
-  asMixin = false
+  asMixin = false,
 ): NormalizedPropsOptions {
   const cache = appContext.propsCache
   const cached = cache.get(comp)
@@ -609,7 +610,7 @@ function isSameType(a: Prop<any>, b: Prop<any>): boolean {
 
 function getTypeIndex(
   type: Prop<any>,
-  expectedTypes: PropType<any> | void | null | true
+  expectedTypes: PropType<any> | void | null | true,
 ): number {
   if (isArray(expectedTypes)) {
     return expectedTypes.findIndex(t => isSameType(t, type))
@@ -625,7 +626,7 @@ function getTypeIndex(
 function validateProps(
   rawProps: Data,
   props: Data,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ) {
   const resolvedValues = toRaw(props)
   const options = instance.propsOptions[0]
@@ -636,7 +637,8 @@ function validateProps(
       key,
       resolvedValues[key],
       opt,
-      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key))
+      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
+      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
     )
   }
 }
@@ -648,7 +650,8 @@ function validateProp(
   name: string,
   value: unknown,
   prop: PropOptions,
-  isAbsent: boolean
+  props: Data,
+  isAbsent: boolean,
 ) {
   const { type, required, validator, skipCheck } = prop
   // required!
@@ -677,13 +680,13 @@ function validateProp(
     }
   }
   // custom validator
-  if (validator && !validator(value)) {
+  if (validator && !validator(value, props)) {
     warn('Invalid prop: custom validator check failed for prop "' + name + '".')
   }
 }
 
 const isSimpleType = /*#__PURE__*/ makeMap(
-  'String,Number,Boolean,Function,Symbol,BigInt'
+  'String,Number,Boolean,Function,Symbol,BigInt',
 )
 
 type AssertionResult = {
@@ -696,7 +699,7 @@ type AssertionResult = {
  */
 function assertType(
   value: unknown,
-  type: PropConstructor | null
+  type: PropConstructor | null,
 ): AssertionResult {
   let valid
   const expectedType = getType(type)
@@ -718,7 +721,7 @@ function assertType(
   }
   return {
     valid,
-    expectedType
+    expectedType,
   }
 }
 
@@ -728,7 +731,7 @@ function assertType(
 function getInvalidTypeMessage(
   name: string,
   value: unknown,
-  expectedTypes: string[]
+  expectedTypes: string[],
 ): string {
   if (expectedTypes.length === 0) {
     return (

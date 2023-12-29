@@ -1,32 +1,32 @@
 import {
-  Component,
-  ConcreteComponent,
+  type Component,
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  type ConcreteComponent,
   currentInstance,
-  ComponentInternalInstance,
   isInSSRComponentSetup,
-  ComponentOptions
 } from './component'
-import { isFunction, isObject } from '@vue/shared'
-import { ComponentPublicInstance } from './componentPublicInstance'
-import { createVNode, VNode } from './vnode'
-import {
-  DefineComponentFromOptions,
-  DefineComponentOptions,
-  defineComponent
-} from './apiDefineComponent'
-import { warn } from './warning'
-import { ref } from '@vue/reactivity'
-import { handleError, ErrorCodes } from './errorHandling'
-import { isKeepAlive } from './components/KeepAlive'
-import { queueJob } from './scheduler'
-import {
+import type {
   ComponentInjectOptions,
   ComponentOptionsMixin,
   ComputedOptions,
-  EmitsOptions,
   MethodOptions,
-  SlotsType
-} from '.'
+} from './componentOptions'
+import type { EmitsOptions } from './componentEmits'
+import type { SlotsType } from './componentSlots'
+import { isFunction, isObject } from '@vue/shared'
+import type { ComponentPublicInstance } from './componentPublicInstance'
+import { type VNode, createVNode } from './vnode'
+import {
+  type DefineComponentFromOptions,
+  type DefineComponentOptions,
+  defineComponent,
+} from './apiDefineComponent'
+import { warn } from './warning'
+import { ref } from '@vue/reactivity'
+import { ErrorCodes, handleError } from './errorHandling'
+import { isKeepAlive } from './components/KeepAlive'
+import { queueJob } from './scheduler'
 
 export type AsyncComponentResolveResult<T = Component> = T | { default: T } // es modules
 
@@ -45,7 +45,7 @@ export interface AsyncComponentOptions<T = any> {
     error: Error,
     retry: () => void,
     fail: () => void,
-    attempts: number
+    attempts: number,
   ) => any
 }
 
@@ -54,7 +54,7 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineAsyncComponent<
-  T extends Component = { new (): ComponentPublicInstance }
+  T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T
 
 export function defineAsyncComponent<
@@ -70,7 +70,7 @@ export function defineAsyncComponent<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 >(
   source:
     | AsyncComponentLoader<
@@ -106,7 +106,7 @@ export function defineAsyncComponent<
           S,
           Options
         >
-      >
+      >,
 ): DefineComponentFromOptions<
   Props,
   RawBindings,
@@ -125,7 +125,7 @@ export function defineAsyncComponent<
 
 // Implementation
 export function defineAsyncComponent<
-  T extends Component = { new (): ComponentPublicInstance }
+  T extends Component = { new (): ComponentPublicInstance },
 >(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
   if (isFunction(source)) {
     source = { loader: source }
@@ -138,7 +138,7 @@ export function defineAsyncComponent<
     delay = 200,
     timeout, // undefined = never times out
     suspensible = true,
-    onError: userOnError
+    onError: userOnError,
   } = source
 
   let pendingRequest: Promise<ConcreteComponent> | null = null
@@ -176,7 +176,7 @@ export function defineAsyncComponent<
             if (__DEV__ && !comp) {
               warn(
                 `Async component loader resolved to undefined. ` +
-                  `If you are using retry(), make sure to return its return value.`
+                  `If you are using retry(), make sure to return its return value.`,
               )
             }
             // interop module default
@@ -218,7 +218,7 @@ export function defineAsyncComponent<
           err,
           instance,
           ErrorCodes.ASYNC_COMPONENT_LOADER,
-          !errorComponent /* do not throw in dev if user provided error component */
+          !errorComponent /* do not throw in dev if user provided error component */,
         )
       }
 
@@ -236,7 +236,7 @@ export function defineAsyncComponent<
             return () =>
               errorComponent
                 ? createVNode(errorComponent as ConcreteComponent, {
-                    error: err
+                    error: err,
                   })
                 : null
           })
@@ -256,7 +256,7 @@ export function defineAsyncComponent<
         setTimeout(() => {
           if (!loaded.value && !error.value) {
             const err = new Error(
-              `Async component timed out after ${timeout}ms.`
+              `Async component timed out after ${timeout}ms.`,
             )
             onError(err)
             error.value = err
@@ -270,6 +270,7 @@ export function defineAsyncComponent<
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
+            instance.parent.effect.dirty = true
             queueJob(instance.parent.update)
           }
         })
@@ -283,19 +284,19 @@ export function defineAsyncComponent<
           return createInnerComp(resolvedComp, instance)
         } else if (error.value && errorComponent) {
           return createVNode(errorComponent, {
-            error: error.value
+            error: error.value,
           })
         } else if (loadingComponent && !delayed.value) {
           return createVNode(loadingComponent)
         }
       }
-    }
+    },
   }) as unknown as T
 }
 
 function createInnerComp(
   comp: ConcreteComponent,
-  parent: ComponentInternalInstance
+  parent: ComponentInternalInstance,
 ) {
   const { ref, props, children, ce } = parent.vnode
   const vnode = createVNode(comp, props, children)

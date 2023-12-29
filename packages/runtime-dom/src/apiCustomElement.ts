@@ -1,23 +1,23 @@
 import {
-  ComponentOptionsMixin,
-  ComputedOptions,
-  EmitsOptions,
-  MethodOptions,
-  ComponentInternalInstance,
-  VNode,
-  RootHydrateFunction,
-  ExtractPropTypes,
+  type ComponentInjectOptions,
+  type ComponentInternalInstance,
+  type ComponentObjectPropsOptions,
+  type ComponentOptions,
+  type ComponentOptionsMixin,
+  type ComputedOptions,
+  type ConcreteComponent,
+  type DefineComponent,
+  type DefineComponentOptions,
+  type EmitsOptions,
+  type ExtractPropTypes,
+  type MethodOptions,
+  type RootHydrateFunction,
+  type SlotsType,
+  type VNode,
   createVNode,
   defineComponent,
   nextTick,
   warn,
-  ConcreteComponent,
-  ComponentOptions,
-  ComponentInjectOptions,
-  SlotsType,
-  DefineComponentOptions,
-  ComponentObjectPropsOptions,
-  DefineComponent
 } from '@vue/runtime-core'
 import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
 import { hydrate, render } from '.'
@@ -31,7 +31,7 @@ export type VueElementConstructor<P = {}> = {
 
 // overload 1: defining a custom element from the returned value of
 export function defineCustomElement<P>(
-  options: DefineComponent<P, any, any, any>
+  options: DefineComponent<P, any, any, any>,
 ): VueElementConstructor<ExtractPropTypes<P>>
 
 // overload 2: defining with options
@@ -48,7 +48,7 @@ export function defineCustomElement<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 >(
   options: DefineComponentOptions<
     Props,
@@ -64,7 +64,7 @@ export function defineCustomElement<
     II,
     S,
     Options
-  > & { styles?: string[] }
+  > & { styles?: string[] },
 ): VueElementConstructor<
   [Props] extends [string]
     ? { [key in Props]?: any }
@@ -78,7 +78,7 @@ export function defineCustomElement<
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
-  hydrate?: RootHydrateFunction
+  hydrate?: RootHydrateFunction,
 ): VueElementConstructor {
   const Comp = defineComponent(options) as any
   class VueCustomElement extends VueElement {
@@ -93,7 +93,7 @@ export function defineCustomElement(
 
 /*! #__NO_SIDE_EFFECTS__ */
 export const defineSSRCustomElement = ((options: any) => {
-  // @ts-ignore
+  // @ts-expect-error
   return defineCustomElement(options, hydrate)
 }) as typeof defineCustomElement
 
@@ -117,7 +117,7 @@ export class VueElement extends BaseClass {
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
-    hydrate?: RootHydrateFunction
+    hydrate?: RootHydrateFunction,
   ) {
     super()
     if (this.shadowRoot && hydrate) {
@@ -126,7 +126,7 @@ export class VueElement extends BaseClass {
       if (__DEV__ && this.shadowRoot) {
         warn(
           `Custom element has pre-rendered declarative shadow root but is not ` +
-            `defined as hydratable. Use \`defineSSRCustomElement\`.`
+            `defined as hydratable. Use \`defineSSRCustomElement\`.`,
         )
       }
       this.attachShadow({ mode: 'open' })
@@ -246,7 +246,7 @@ export class VueElement extends BaseClass {
         },
         set(val) {
           this._setProp(key, val)
-        }
+        },
       })
     }
   }
@@ -274,7 +274,7 @@ export class VueElement extends BaseClass {
     key: string,
     val: any,
     shouldReflect = true,
-    shouldUpdate = true
+    shouldUpdate = true,
   ) {
     if (val !== this._props[key]) {
       this._props[key] = val
@@ -321,8 +321,8 @@ export class VueElement extends BaseClass {
         const dispatch = (event: string, args: any[]) => {
           this.dispatchEvent(
             new CustomEvent(event, {
-              detail: args
-            })
+              detail: args,
+            }),
           )
         }
 

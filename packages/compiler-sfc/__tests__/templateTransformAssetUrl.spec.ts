@@ -1,14 +1,14 @@
 import {
-  generate,
+  type TransformOptions,
   baseParse,
+  generate,
   transform,
-  TransformOptions
 } from '@vue/compiler-core'
 import {
-  transformAssetUrl,
+  type AssetURLOptions,
   createAssetUrlTransformWithOptions,
-  AssetURLOptions,
-  normalizeOptions
+  normalizeOptions,
+  transformAssetUrl,
 } from '../src/template/transformAssetUrl'
 import { transformElement } from '../../compiler-core/src/transforms/transformElement'
 import { transformBind } from '../../compiler-core/src/transforms/vBind'
@@ -17,7 +17,7 @@ import { stringifyStatic } from '../../compiler-dom/src/transforms/stringifyStat
 function compileWithAssetUrls(
   template: string,
   options?: AssetURLOptions,
-  transformOptions?: TransformOptions
+  transformOptions?: TransformOptions,
 ) {
   const ast = baseParse(template)
   const t = options
@@ -26,9 +26,9 @@ function compileWithAssetUrls(
   transform(ast, {
     nodeTransforms: [t, transformElement],
     directiveTransforms: {
-      bind: transformBind
+      bind: transformBind,
     },
-    ...transformOptions
+    ...transformOptions,
   })
   return generate(ast, { mode: 'module' })
 }
@@ -57,8 +57,8 @@ describe('compiler sfc: transform asset url', () => {
         '<use href="~@svg/file.svg#fragment"></use>',
       {},
       {
-        hoistStatic: true
-      }
+        hoistStatic: true,
+      },
     )
     expect(result.code).toMatchSnapshot()
   })
@@ -79,8 +79,8 @@ describe('compiler sfc: transform asset url', () => {
         `<img src="~bar.png"></img>` + // -> still converts to import
         `<img src="@theme/bar.png"></img>`, // -> still converts to import
       {
-        base: '/foo'
-      }
+        base: '/foo',
+      },
     )
     expect(code).toMatch(`import _imports_0 from 'bar.png'`)
     expect(code).toMatch(`import _imports_1 from '@theme/bar.png'`)
@@ -94,8 +94,8 @@ describe('compiler sfc: transform asset url', () => {
         `<img src="https://foo.bar/baz.png"/>` +
         `<img src="//foo.bar/baz.png"/>`,
       {
-        includeAbsolute: true
-      }
+        includeAbsolute: true,
+      },
     )
     expect(code).toMatchSnapshot()
   })
@@ -108,7 +108,7 @@ describe('compiler sfc: transform asset url', () => {
           <circle id="myCircle" cx="0" cy="0" r="5" />
         </defs>
         <use x="5" y="5" xlink:href="#myCircle" />
-      </svg>`
+      </svg>`,
     )
     // should not remove it
     expect(code).toMatch(`"xlink:href": "#myCircle"`)
@@ -116,7 +116,7 @@ describe('compiler sfc: transform asset url', () => {
 
   test('should allow for full base URLs, with paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
-      base: 'http://localhost:3000/src/'
+      base: 'http://localhost:3000/src/',
     })
 
     expect(code).toMatchSnapshot()
@@ -124,7 +124,7 @@ describe('compiler sfc: transform asset url', () => {
 
   test('should allow for full base URLs, without paths', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
-      base: 'http://localhost:3000'
+      base: 'http://localhost:3000',
     })
 
     expect(code).toMatchSnapshot()
@@ -132,7 +132,7 @@ describe('compiler sfc: transform asset url', () => {
 
   test('should allow for full base URLs, without port', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
-      base: 'http://localhost'
+      base: 'http://localhost',
     })
 
     expect(code).toMatchSnapshot()
@@ -140,7 +140,7 @@ describe('compiler sfc: transform asset url', () => {
 
   test('should allow for full base URLs, without protocol', () => {
     const { code } = compileWithAssetUrls(`<img src="./logo.png" />`, {
-      base: '//localhost'
+      base: '//localhost',
     })
 
     expect(code).toMatchSnapshot()
@@ -156,12 +156,12 @@ describe('compiler sfc: transform asset url', () => {
         `<img src="./bar.png"/>` +
         `</div>`,
       {
-        includeAbsolute: true
+        includeAbsolute: true,
       },
       {
         hoistStatic: true,
-        transformHoist: stringifyStatic
-      }
+        transformHoist: stringifyStatic,
+      },
     )
     expect(code).toMatch(`_createStaticVNode`)
     expect(code).toMatchSnapshot()
@@ -171,12 +171,12 @@ describe('compiler sfc: transform asset url', () => {
     const { code } = compileWithAssetUrls(
       `<div><img src="/foo bar.png"/></div>`,
       {
-        includeAbsolute: true
+        includeAbsolute: true,
       },
       {
         hoistStatic: true,
-        transformHoist: stringifyStatic
-      }
+        transformHoist: stringifyStatic,
+      },
     )
     expect(code).toMatch(`_createElementVNode`)
     expect(code).toContain(`import _imports_0 from '/foo bar.png'`)
@@ -186,12 +186,12 @@ describe('compiler sfc: transform asset url', () => {
     const { code } = compileWithAssetUrls(
       `<div><img src="./foo bar.png"/></div>`,
       {
-        includeAbsolute: true
+        includeAbsolute: true,
       },
       {
         hoistStatic: true,
-        transformHoist: stringifyStatic
-      }
+        transformHoist: stringifyStatic,
+      },
     )
     expect(code).toMatch(`_createElementVNode`)
     expect(code).toContain(`import _imports_0 from './foo bar.png'`)

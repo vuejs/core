@@ -1,19 +1,19 @@
 import {
-  h,
-  createVNode,
-  render,
-  nodeOps,
-  TestNodeTypes,
-  TestElement,
   Fragment,
-  resetOps,
-  dumpOps,
   NodeOpTypes,
-  serializeInner,
-  createTextVNode,
+  type TestElement,
+  TestNodeTypes,
   createBlock,
+  createCommentVNode,
+  createTextVNode,
+  createVNode,
+  dumpOps,
+  h,
+  nodeOps,
   openBlock,
-  createCommentVNode
+  render,
+  resetOps,
+  serializeInner,
 } from '@vue/runtime-test'
 import { PatchFlags } from '@vue/shared'
 import { renderList } from '../src/helpers/renderList'
@@ -23,7 +23,7 @@ describe('renderer: fragment', () => {
     const App = {
       render() {
         return [h('div', 'one'), 'two']
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -33,23 +33,23 @@ describe('renderer: fragment', () => {
     expect(root.children.length).toBe(4)
     expect(root.children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: ''
+      text: '',
     })
     expect(root.children[1]).toMatchObject({
       type: TestNodeTypes.ELEMENT,
-      tag: 'div'
+      tag: 'div',
     })
     expect((root.children[1] as TestElement).children[0]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'one'
+      text: 'one',
     })
     expect(root.children[2]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: 'two'
+      text: 'two',
     })
     expect(root.children[3]).toMatchObject({
       type: TestNodeTypes.TEXT,
-      text: ''
+      text: '',
     })
   })
 
@@ -64,22 +64,22 @@ describe('renderer: fragment', () => {
     const root = nodeOps.createElement('div')
     render(
       h(Fragment, [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>one</div><div>two</div>`)
 
     resetOps()
     render(
       h(Fragment, [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>two</div><div>one</div>`)
     const ops = dumpOps()
     // should be moving nodes instead of re-creating or patching them
     expect(ops).toMatchObject([
       {
-        type: NodeOpTypes.INSERT
-      }
+        type: NodeOpTypes.INSERT,
+      },
     ])
   })
 
@@ -95,11 +95,11 @@ describe('renderer: fragment', () => {
     // should be patching nodes instead of moving or re-creating them
     expect(ops).toMatchObject([
       {
-        type: NodeOpTypes.SET_ELEMENT_TEXT
+        type: NodeOpTypes.SET_ELEMENT_TEXT,
       },
       {
-        type: NodeOpTypes.SET_ELEMENT_TEXT
-      }
+        type: NodeOpTypes.SET_ELEMENT_TEXT,
+      },
     ])
   })
 
@@ -111,11 +111,11 @@ describe('renderer: fragment', () => {
         null,
         [
           createVNode('div', null, 'one', PatchFlags.TEXT),
-          createTextVNode('two')
+          createTextVNode('two'),
         ],
-        PatchFlags.UNKEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT,
       ),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>one</div>two`)
 
@@ -126,11 +126,11 @@ describe('renderer: fragment', () => {
         [
           createVNode('div', null, 'foo', PatchFlags.TEXT),
           createTextVNode('bar'),
-          createTextVNode('baz')
+          createTextVNode('baz'),
         ],
-        PatchFlags.UNKEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT,
       ),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>foo</div>barbaz`)
 
@@ -140,11 +140,11 @@ describe('renderer: fragment', () => {
         null,
         [
           createTextVNode('baz'),
-          createVNode('div', null, 'foo', PatchFlags.TEXT)
+          createVNode('div', null, 'foo', PatchFlags.TEXT),
         ],
-        PatchFlags.UNKEYED_FRAGMENT
+        PatchFlags.UNKEYED_FRAGMENT,
       ),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`baz<div>foo</div>`)
   })
@@ -157,9 +157,9 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 1 }, 'one'), h('div', { key: 2 }, 'two')],
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.KEYED_FRAGMENT,
       ),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>one</div><div>two</div>`)
 
@@ -169,17 +169,17 @@ describe('renderer: fragment', () => {
         Fragment,
         null,
         [h('div', { key: 2 }, 'two'), h('div', { key: 1 }, 'one')],
-        PatchFlags.KEYED_FRAGMENT
+        PatchFlags.KEYED_FRAGMENT,
       ),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(`<div>two</div><div>one</div>`)
     const ops = dumpOps()
     // should be moving nodes instead of re-creating or patching them
     expect(ops).toMatchObject([
       {
-        type: NodeOpTypes.INSERT
-      }
+        type: NodeOpTypes.INSERT,
+      },
     ])
   })
 
@@ -190,13 +190,13 @@ describe('renderer: fragment', () => {
         h('div', { key: 1 }, 'outer'),
         h(Fragment, { key: 2 }, [
           h('div', { key: 1 }, 'one'),
-          h('div', { key: 2 }, 'two')
-        ])
+          h('div', { key: 2 }, 'two'),
+        ]),
       ]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(
-      `<div><div>outer</div><div>one</div><div>two</div></div>`
+      `<div><div>outer</div><div>one</div><div>two</div></div>`,
     )
 
     resetOps()
@@ -204,14 +204,14 @@ describe('renderer: fragment', () => {
       h('div', [
         h(Fragment, { key: 2 }, [
           h('div', { key: 2 }, 'two'),
-          h('div', { key: 1 }, 'one')
+          h('div', { key: 1 }, 'one'),
         ]),
-        h('div', { key: 1 }, 'outer')
+        h('div', { key: 1 }, 'outer'),
       ]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(
-      `<div><div>two</div><div>one</div><div>outer</div></div>`
+      `<div><div>two</div><div>one</div><div>outer</div></div>`,
     )
     const ops = dumpOps()
     // should be moving nodes instead of re-creating them
@@ -224,7 +224,7 @@ describe('renderer: fragment', () => {
       { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
-      { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } }
+      { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } },
     ])
   })
 
@@ -236,13 +236,13 @@ describe('renderer: fragment', () => {
         h('div', { key: 1 }, 'outer'),
         h(Fragment, { key: 2 }, [
           h('div', { key: 1 }, 'one'),
-          h('div', { key: 2 }, 'two')
-        ])
+          h('div', { key: 2 }, 'two'),
+        ]),
       ]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(
-      `<div>outer</div><div>one</div><div>two</div>`
+      `<div>outer</div><div>one</div><div>two</div>`,
     )
 
     resetOps()
@@ -250,14 +250,14 @@ describe('renderer: fragment', () => {
       h(Fragment, [
         h(Fragment, { key: 2 }, [
           h('div', { key: 2 }, 'two'),
-          h('div', { key: 1 }, 'one')
+          h('div', { key: 1 }, 'one'),
         ]),
-        h('div', { key: 1 }, 'outer')
+        h('div', { key: 1 }, 'outer'),
       ]),
-      root
+      root,
     )
     expect(serializeInner(root)).toBe(
-      `<div>two</div><div>one</div><div>outer</div>`
+      `<div>two</div><div>one</div><div>outer</div>`,
     )
     const ops = dumpOps()
     // should be moving nodes instead of re-creating them
@@ -266,7 +266,7 @@ describe('renderer: fragment', () => {
       { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
       { type: NodeOpTypes.INSERT, targetNode: { type: 'element' } },
-      { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } }
+      { type: NodeOpTypes.INSERT, targetNode: { type: 'text', text: '' } },
     ])
 
     // should properly remove nested fragments
@@ -294,25 +294,25 @@ describe('renderer: fragment', () => {
                 [
                   createCommentVNode('comment'),
                   hoisted,
-                  createVNode('div', null, item, PatchFlags.TEXT)
+                  createVNode('div', null, item, PatchFlags.TEXT),
                 ],
-                PatchFlags.STABLE_FRAGMENT
+                PatchFlags.STABLE_FRAGMENT,
               )
             )
           }),
-          PatchFlags.KEYED_FRAGMENT
+          PatchFlags.KEYED_FRAGMENT,
         )
       )
     }
 
     render(renderFn(['one', 'two']), root)
     expect(serializeInner(root)).toBe(
-      `<!--comment--><span></span><div>one</div><!--comment--><span></span><div>two</div>`
+      `<!--comment--><span></span><div>one</div><!--comment--><span></span><div>two</div>`,
     )
 
     render(renderFn(['two', 'one']), root)
     expect(serializeInner(root)).toBe(
-      `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`
+      `<!--comment--><span></span><div>two</div><!--comment--><span></span><div>one</div>`,
     )
   })
 
@@ -334,13 +334,13 @@ describe('renderer: fragment', () => {
                 { key: item },
                 [
                   createTextVNode('text'),
-                  createVNode('div', null, item, PatchFlags.TEXT)
+                  createVNode('div', null, item, PatchFlags.TEXT),
                 ],
-                PatchFlags.STABLE_FRAGMENT
+                PatchFlags.STABLE_FRAGMENT,
               )
             )
           }),
-          PatchFlags.KEYED_FRAGMENT
+          PatchFlags.KEYED_FRAGMENT,
         )
       )
     }

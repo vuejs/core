@@ -1,13 +1,13 @@
 import {
+  NOOP,
   includeBooleanAttr,
   isSpecialBooleanAttr,
   makeMap,
-  NOOP
 } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
+  DeprecationTypes,
   compatUtils,
-  ComponentInternalInstance,
-  DeprecationTypes
 } from '@vue/runtime-core'
 
 export const xlinkNS = 'http://www.w3.org/1999/xlink'
@@ -17,7 +17,7 @@ export function patchAttr(
   key: string,
   value: any,
   isSVG: boolean,
-  instance?: ComponentInternalInstance | null
+  instance?: ComponentInternalInstance | null,
 ) {
   if (isSVG && key.startsWith('xlink:')) {
     if (value == null) {
@@ -50,7 +50,7 @@ export function compatCoerceAttr(
   el: Element,
   key: string,
   value: unknown,
-  instance: ComponentInternalInstance | null = null
+  instance: ComponentInternalInstance | null = null,
 ): boolean {
   if (isEnumeratedAttr(key)) {
     const v2CoercedValue =
@@ -66,7 +66,7 @@ export function compatCoerceAttr(
         instance,
         key,
         value,
-        v2CoercedValue
+        v2CoercedValue,
       )
     ) {
       el.setAttribute(key, v2CoercedValue)
@@ -78,7 +78,7 @@ export function compatCoerceAttr(
     compatUtils.softAssertCompatEnabled(
       DeprecationTypes.ATTR_FALSE_VALUE,
       instance,
-      key
+      key,
     )
   ) {
     el.removeAttribute(key)

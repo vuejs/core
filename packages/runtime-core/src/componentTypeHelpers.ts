@@ -1,27 +1,28 @@
-import { ComponentOptionsBase } from './componentOptions'
+import type { ComponentOptionsBase } from './componentOptions'
 import {
-  DefineComponent,
-  DefineComponentOptions,
-  RawOptionsSymbol,
-  ResolveProps,
-  defineComponent
+  type DefineComponent,
+  type DefineComponentOptions,
+  type RawOptionsSymbol,
+  type ResolveProps,
+  defineComponent,
 } from './apiDefineComponent'
-import { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
-import {
+import type { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
-  PropType
+  PropType,
 } from './componentProps'
-import { Slots, SlotsType, UnwrapSlotsType } from './componentSlots'
-import { VNode } from './vnode'
-import { FunctionalComponent, Component, SetupContext } from './component'
-import {
+import type { Slots, SlotsType, UnwrapSlotsType } from './componentSlots'
+import type { VNode } from './vnode'
+import type { Component, FunctionalComponent, SetupContext } from './component'
+import type {
   ComponentPublicInstance,
   ComponentPublicInstanceConstructor,
   IntersectionMixin,
-  UnwrapMixinsType
+  UnwrapMixinsType,
 } from './componentPublicInstance'
+import type { ShallowUnwrapRef } from '.'
 
 /**
  * Extracts the component original options
@@ -62,12 +63,16 @@ export type ExtractComponentOptions<T> = T extends {
  */
 export type ExtractComponentPropOptions<T> = T extends { props: infer P }
   ? P
-  : T extends (props: infer P) => any
+  : T extends (props: infer P, ctx?: any) => any
     ? P
     : T extends { new (): { $props: infer P } }
       ? P
       : {}
 
+// T extends (props: infer P, ctx?: any) => any
+// ? P
+// :
+// {a:  String }
 /**
  * Extracts the component slots as the component was created
  */
@@ -121,7 +126,7 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
       ? E
       : T extends (
             props: any,
-            opts: { emits: infer E extends EmitsOptions }
+            opts: { emits: infer E extends EmitsOptions },
           ) => any
         ? E
         : T extends { $options: infer Options }
@@ -151,7 +156,7 @@ type ResolveMixin<T> = [T] extends [
       any,
       any
     >
-  >
+  >,
 ]
   ? IntersectionMixin<M> & IntersectionMixin<E>
   : {}
@@ -248,19 +253,16 @@ export type ComponentEmitsAsProps<T> =
  * }
  * ```
  */
-export type ComponentProps<T> = T extends { $props: infer P }
-  ? P
-  : (ExtractComponentPropOptions<T> extends infer P
-      ? P extends Readonly<Array<infer V>>
-        ? [V] extends [string]
-          ? Readonly<{ [key in V]?: any }>
-          : {}
-        : P extends ComponentPropsOptions
-          ? ExtractPropTypes<P>
-          : P
-      : {}) &
-      // props to be omitted since we don't need them here
-      ResolveMixinProps<T>
+export type ComponentProps<T> = (ExtractComponentPropOptions<T> extends infer P
+  ? P extends Readonly<Array<infer V>>
+    ? [V] extends [string]
+      ? Readonly<{ [key in V]?: any }>
+      : {}
+    : P extends ComponentPropsOptions
+      ? ExtractPropTypes<P>
+      : P
+  : {}) & // props to be omitted since we don't need them here
+  (T extends { props: any } ? ResolveMixinProps<T> : {})
 
 type RetrieveSlotArgument<T extends any[] = any[]> =
   | ((...args: T) => any)
@@ -308,7 +310,7 @@ type ComponentDataHelper<T> = {
   M: ResolveMixinData<T>
   R: T extends { setup(...args: any[]): infer S }
     ? S extends Record<string, any>
-      ? S
+      ? ShallowUnwrapRef<S>
       : {}
     : {}
 }
@@ -325,7 +327,10 @@ export type ComponentData<T> = ComponentDataHelper<T> extends {
   : {}
 
 /**
- * Retrieves the component public instance
+ * Public utility type for extracting the instance type of a component.
+ * Works with all valid component definition types. This is intended to replace
+ * the usage of `InstanceType<typeof Comp>` which only works for
+ * constructor-based component definition types.
  *
  * @example
  * ```ts
@@ -418,7 +423,7 @@ export type DeclareComponent<
   RawBindings extends Record<string, any> = {},
   Emits extends EmitsOptions = {},
   Slots extends SlotsType = {},
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 > =
   // short-circuit to allow Generics
   Props extends {
@@ -456,8 +461,8 @@ export type DeclareComponent<
 
 const Comp = defineComponent({
   emits: {
-    foo: (test: string) => true
-  }
+    foo: (test: string) => true,
+  },
 })
 const emits = {} as ExtractComponentEmitOptions<typeof Comp>
 emits.foo // (test: string) => true

@@ -1,30 +1,30 @@
-import {
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsMixin,
-  RenderFunction,
+import type {
   ComponentInjectOptions,
   ComponentOptions,
-  ComponentOptionsBase
+  ComponentOptionsBase,
+  ComponentOptionsMixin,
+  ComputedOptions,
+  MethodOptions,
+  RenderFunction,
 } from './componentOptions'
-import {
-  SetupContext,
+import type {
   AllowedComponentProps,
-  ComponentCustomProps
+  ComponentCustomProps,
+  SetupContext,
 } from './component'
-import {
+import type {
   ComponentObjectPropsOptions,
+  ExtractDefaultPropTypes,
   ExtractPropTypes,
-  ExtractDefaultPropTypes
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
+import type { EmitsOptions, EmitsToProps } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
-import { VNodeProps } from './vnode'
-import {
+import type { VNodeProps } from './vnode'
+import type {
+  ComponentPublicInstanceConstructor,
   CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
-import { SlotsType } from './componentSlots'
+import type { SlotsType } from './componentSlots'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -34,16 +34,16 @@ export type ResolveProps<Props, E extends EmitsOptions> = Readonly<
   ([Props] extends [string]
     ? { [key in Props]?: any }
     : [Props] extends [ComponentObjectPropsOptions]
-    ? ExtractPropTypes<Props>
-    : Props extends never[]
-    ? {}
-    : [Props] extends [string[]]
-    ? { [key: string]: any }
-    : [Props] extends [never]
-    ? {}
-    : [Props] extends [undefined]
-    ? {}
-    : Props) &
+      ? ExtractPropTypes<Props>
+      : Props extends never[]
+        ? {}
+        : [Props] extends [string[]]
+          ? { [key: string]: any }
+          : [Props] extends [never]
+            ? {}
+            : [Props] extends [undefined]
+              ? {}
+              : Props) &
     ({} extends E ? {} : EmitsToProps<E>)
 >
 
@@ -65,7 +65,7 @@ export type DefineComponent<
   I extends ComponentInjectOptions = any,
   II extends string = string,
   S extends SlotsType = any,
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -118,7 +118,7 @@ type BuildComponentInstance<
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
   Defaults extends Record<string, any> = {},
-  Options = {}
+  Options = {},
 > = CreateComponentPublicInstance<
   Props,
   RawBindings,
@@ -139,10 +139,10 @@ type BuildComponentInstance<
 type NamedProps<PropNames> = [PropNames] extends [string]
   ? PropNames[]
   : PropNames extends string[]
-  ? PropNames
-  : PropNames extends never[]
-  ? PropNames
-  : never
+    ? PropNames
+    : PropNames extends never[]
+      ? PropNames
+      : never
 type OptionProps<Props> = [Props] extends [ComponentObjectPropsOptions]
   ? Props
   : never
@@ -166,17 +166,17 @@ export type DefineComponentOptions<
       [Props] extends [string]
         ? { [K in Props]: any }
         : [Props] extends [string[]]
-        ? { [K in string]: any }
-        : [Props] extends [never]
-        ? {}
-        : [Props] extends [undefined]
-        ? {}
-        : [Props] extends [never[]]
-        ? {}
-        : Props
+          ? { [K in string]: any }
+          : [Props] extends [never]
+            ? {}
+            : [Props] extends [undefined]
+              ? {}
+              : [Props] extends [never[]]
+                ? {}
+                : Props
     > &
       EmitsToProps<E>
-  >
+  >,
 > =
   | (Options & {
       props?: NamedProps<Props> | OptionProps<Props> | undefined
@@ -217,7 +217,7 @@ export type DefineComponentOptions<
       >)
   | (((
       props: Props,
-      ctx: SetupContext<E, S>
+      ctx: SetupContext<E, S>,
     ) => RenderFunction | Promise<RenderFunction>) &
       Options)
 
@@ -234,15 +234,15 @@ export type DefineComponentFromOptions<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 > = DefineComponent<
   [Props] extends [string]
     ? Props[]
     : undefined extends Props
-    ? {}
-    : Props extends never[]
-    ? string[]
-    : Props,
+      ? {}
+      : Props extends never[]
+        ? string[]
+        : Props,
   RawBindings,
   D,
   C,
@@ -270,33 +270,33 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
-  }
+  },
 ): (props: Props & EmitsToProps<E>) => any
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
-  }
+  },
 ): (props: Props & EmitsToProps<E>) => any
 
 // overload 3: DefineComponentOptions
@@ -313,7 +313,7 @@ export function defineComponent<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-  Options extends Record<PropertyKey, any> = {}
+  Options extends Record<PropertyKey, any> = {},
 >(
   options: DefineComponentOptions<
     Props,
@@ -329,7 +329,7 @@ export function defineComponent<
     II,
     S,
     Options
-  >
+  >,
 ): DefineComponentFromOptions<
   undefined extends Props ? {} : Props,
   RawBindings,

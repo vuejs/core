@@ -1,9 +1,9 @@
 import {
+  type TestElement,
   h,
-  render,
+  serializeInner as inner,
   nodeOps,
-  TestElement,
-  serializeInner as inner
+  render,
 } from '@vue/runtime-test'
 
 describe('renderer: element', () => {
