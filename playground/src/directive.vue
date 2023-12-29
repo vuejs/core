@@ -16,7 +16,7 @@ const vDirective: ObjectDirective<HTMLDivElement, undefined> = {
   },
   mounted(node) {
     if (node.parentElement) node.textContent += 'mounted, '
-  }
+  },
 }
 const vDirectiveSimple: FunctionDirective<HTMLDivElement> = (node, binding) => {
   console.log(node, binding)

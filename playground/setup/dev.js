@@ -34,8 +34,8 @@ export function DevPlugin({ browser = false } = {}) {
             '@vue/compiler-ssr': resolve('compiler-ssr/src'),
 
             '@vue/reactivity': resolve('reactivity/src'),
-            '@vue/shared': resolve('shared/src')
-          }
+            '@vue/shared': resolve('shared/src'),
+          },
         },
         define: {
           __COMMIT__: `"__COMMIT__"`,
@@ -59,9 +59,9 @@ export function DevPlugin({ browser = false } = {}) {
           // feature flags
           __FEATURE_SUSPENSE__: `true`,
           __FEATURE_OPTIONS_API__: `true`,
-          __FEATURE_PROD_DEVTOOLS__: `false`
-        }
+          __FEATURE_PROD_DEVTOOLS__: `false`,
+        },
       }
-    }
+    },
   }
 }

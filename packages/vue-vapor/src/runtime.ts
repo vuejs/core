@@ -20,7 +20,7 @@ export const compile = () => {
             ? ` Use "vue-vapor.esm-browser.js" instead.`
             : __GLOBAL__
               ? ` Use "vue-vapor.global.js" instead.`
-              : ``) /* should not happen */
+              : ``) /* should not happen */,
     )
   }
 }

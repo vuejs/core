@@ -8,7 +8,7 @@ startVite(
   { plugins: [DevPlugin()] },
   {
     deps: {
-      inline: ['@vitejs/plugin-vue']
-    }
-  }
+      inline: ['@vitejs/plugin-vue'],
+    },
+  },
 )

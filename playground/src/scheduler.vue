@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { onEffectCleanup, ref, watch, watchEffect, watchPostEffect, watchSyncEffect } from 'vue/vapor'
+import {
+  onEffectCleanup,
+  ref,
+  watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect,
+} from 'vue/vapor'
 
 const source = ref(0)
 const add = () => source.value++
@@ -39,9 +46,7 @@ const onUpdate = (arg: any) => {
   <div>
     <p>Please check the console</p>
     <div>
-      <button @click="add">
-        Add
-      </button>
+      <button @click="add">Add</button>
       |
       <span>{{ onUpdate(source) }}</span>
     </div>

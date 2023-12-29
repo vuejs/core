@@ -7,17 +7,17 @@ import * as CompilerSFC from '@vue/compiler-sfc'
 
 export default defineConfig({
   build: {
-    target: 'esnext'
+    target: 'esnext',
   },
   clearScreen: false,
   plugins: [
     Vue({
       template: {
-        compiler: CompilerVapor as any
+        compiler: CompilerVapor as any,
       },
-      compiler: CompilerSFC
+      compiler: CompilerSFC,
     }),
     DevPlugin(),
-    Inspect()
-  ]
+    Inspect(),
+  ],
 })

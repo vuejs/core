@@ -4,7 +4,7 @@ import {
   computed,
   onMounted,
   onBeforeMount,
-  getCurrentInstance
+  getCurrentInstance,
 } from 'vue/vapor'
 
 const instance = getCurrentInstance()!
