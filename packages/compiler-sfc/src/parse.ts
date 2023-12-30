@@ -3,6 +3,7 @@ import {
   type CompilerError,
   type ElementNode,
   NodeTypes,
+  type ParserOptions,
   type RootNode,
   type SourceLocation,
   createRoot,
@@ -24,6 +25,11 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+  templateParseOptions?: ParserOptions
+  /**
+   * TODO remove in 3.5
+   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
+   */
   parseExpressions?: boolean
 }
 
@@ -106,6 +112,7 @@ export function parse(
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
+    templateParseOptions = {},
     parseExpressions = true,
   }: SFCParseOptions = {},
 ): SFCParseResult {
@@ -133,6 +140,7 @@ export function parse(
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
     prefixIdentifiers: parseExpressions,
+    ...templateParseOptions,
     onError: e => {
       errors.push(e)
     },

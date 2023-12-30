@@ -42,7 +42,7 @@ import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
-import { useSSRContext } from '@vue/runtime-core'
+import { useSSRContext } from './helpers/useSsrContext'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -116,6 +116,13 @@ const INITIAL_WATCHER_VALUE = {}
 
 type MultiWatchSources = (WatchSource<unknown> | object)[]
 
+// overload: single source + cb
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  options?: WatchOptions<Immediate>,
+): WatchStopHandle
+
 // overload: array of multiple sources + cb
 export function watch<
   T extends MultiWatchSources,
@@ -135,13 +142,6 @@ export function watch<
 >(
   source: T,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>,
-): WatchStopHandle
-
-// overload: single source + cb
-export function watch<T, Immediate extends Readonly<boolean> = false>(
-  source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
@@ -233,9 +233,11 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    getter = () => source
-    if (!deep || isShallow(source)) depth = 1
-    deep = true
+    getter =
+      isShallow(source) || deep === false
+        ? () => traverse(source, 1)
+        : () => traverse(source)
+    forceTrigger = true
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
@@ -244,7 +246,7 @@ function doWatch(
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
-          return traverse(s, isShallow(s) ? 1 : depth)
+          return traverse(s, isShallow(s) || deep === false ? 1 : undefined)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {

@@ -1,5 +1,10 @@
 import { parse } from '../src'
-import { baseCompile, createRoot } from '@vue/compiler-core'
+import {
+  ElementTypes,
+  NodeTypes,
+  baseCompile,
+  createRoot,
+} from '@vue/compiler-core'
 import { SourceMapConsumer } from 'source-map-js'
 
 describe('compiler:sfc', () => {
@@ -348,6 +353,20 @@ h1 { color: red }
     )
     expect(errors.length).toBe(0)
     expect(descriptor.customBlocks[0].content).toBe(` <-& `)
+  })
+
+  test('should accept parser options', () => {
+    const { errors, descriptor } = parse(`<template><hello/></template>`, {
+      templateParseOptions: {
+        isCustomElement: t => t === 'hello',
+      },
+    })
+    expect(errors.length).toBe(0)
+    expect(descriptor.template!.ast!.children[0]).toMatchObject({
+      type: NodeTypes.ELEMENT,
+      tag: 'hello',
+      tagType: ElementTypes.ELEMENT,
+    })
   })
 
   describe('warnings', () => {
