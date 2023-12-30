@@ -12,6 +12,7 @@ import type {
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
+import type { ComponentInstance } from './componentTypeHelpers'
 import type { EmitsOptions } from './componentEmits'
 import type { SlotsType } from './componentSlots'
 import { isFunction, isObject } from '@vue/shared'
@@ -34,6 +35,12 @@ export type AsyncComponentLoader<T = any> = () => Promise<
   AsyncComponentResolveResult<T>
 >
 
+export type DefineAsyncComponent<TComponent> = {
+  name: 'AsyncComponentWrapper'
+  __asyncLoader: AsyncComponentLoader<TComponent>
+  get __asyncResolved(): TComponent | undefined
+} & { new (): ComponentInstance<TComponent> }
+
 export interface AsyncComponentOptions<T = any> {
   loader: AsyncComponentLoader<T>
   loadingComponent?: Component
@@ -55,7 +62,9 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
->(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T
+>(
+  source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
+): DefineAsyncComponent<T>
 
 export function defineAsyncComponent<
   Props = undefined,
@@ -107,26 +116,28 @@ export function defineAsyncComponent<
           Options
         >
       >,
-): DefineComponentFromOptions<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  I,
-  II,
-  S,
-  Options
+): DefineAsyncComponent<
+  DefineComponentFromOptions<
+    Props,
+    RawBindings,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    EE,
+    I,
+    II,
+    S,
+    Options
+  >
 >
 
 // Implementation
-export function defineAsyncComponent<
-  T extends Component = { new (): ComponentPublicInstance },
->(source: AsyncComponentLoader<T> | AsyncComponentOptions<T>): T {
+export function defineAsyncComponent<T extends ConcreteComponent>(
+  source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
+): DefineAsyncComponent<T> {
   if (isFunction(source)) {
     source = { loader: source }
   }
@@ -141,8 +152,8 @@ export function defineAsyncComponent<
     onError: userOnError,
   } = source
 
-  let pendingRequest: Promise<ConcreteComponent> | null = null
-  let resolvedComp: ConcreteComponent | undefined
+  let pendingRequest: Promise<T> | null = null
+  let resolvedComp: T | undefined
 
   let retries = 0
   const retry = () => {
@@ -151,7 +162,7 @@ export function defineAsyncComponent<
     return load()
   }
 
-  const load = (): Promise<ConcreteComponent> => {
+  const load = (): Promise<T> => {
     let thisRequest: Promise<ConcreteComponent>
     return (
       pendingRequest ||
@@ -291,7 +302,8 @@ export function defineAsyncComponent<
         }
       }
     },
-  }) as unknown as T
+    // casting as unknown to avoid too much of a complex type
+  }) as unknown as DefineAsyncComponent<T>
 }
 
 function createInnerComp(

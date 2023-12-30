@@ -75,6 +75,11 @@ export function defineCustomElement<
         : ExtractPropTypes<Props>
 >
 
+// overload 3: just Rendered component
+export function defineCustomElement<P>(options: {
+  new (): { $props: P }
+}): VueElementConstructor<P>
+
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineCustomElement(
   options: any,
