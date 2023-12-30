@@ -7,36 +7,36 @@
 // - This transform is only applied in non-browser builds because it relies on
 //   an additional JavaScript parser. In the browser, there is no source-map
 //   support and the code is wrapped in `with (this) { ... }`.
-import { NodeTransform, TransformContext } from '../transform'
+import type { NodeTransform, TransformContext } from '../transform'
 import {
+  type CompoundExpressionNode,
+  ConstantTypes,
+  type ExpressionNode,
   NodeTypes,
-  createSimpleExpression,
-  ExpressionNode,
-  SimpleExpressionNode,
-  CompoundExpressionNode,
+  type SimpleExpressionNode,
   createCompoundExpression,
-  ConstantTypes
+  createSimpleExpression,
 } from '../ast'
 import {
   isInDestructureAssignment,
   isStaticProperty,
   isStaticPropertyKey,
-  walkIdentifiers
+  walkIdentifiers,
 } from '../babelUtils'
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
-  isGloballyAllowed,
-  makeMap,
+  genPropsAccessExp,
   hasOwn,
+  isGloballyAllowed,
   isString,
-  genPropsAccessExp
+  makeMap,
 } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
-import {
-  Node,
-  Identifier,
+import { ErrorCodes, createCompilerError } from '../errors'
+import type {
   AssignmentExpression,
-  UpdateExpression
+  Identifier,
+  Node,
+  UpdateExpression,
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
 import { parse } from '@babel/parser'
@@ -53,7 +53,7 @@ export const transformExpression: NodeTransform = (node, context) => {
   if (node.type === NodeTypes.INTERPOLATION) {
     node.content = processExpression(
       node.content as SimpleExpressionNode,
-      context
+      context,
     )
   } else if (node.type === NodeTypes.ELEMENT) {
     // handle directives on element
@@ -74,7 +74,7 @@ export const transformExpression: NodeTransform = (node, context) => {
             exp,
             context,
             // slot args must be processed as function params
-            dir.name === 'slot'
+            dir.name === 'slot',
           )
         }
         if (arg && arg.type === NodeTypes.SIMPLE_EXPRESSION && !arg.isStatic) {
@@ -104,7 +104,7 @@ export function processExpression(
   asParams = false,
   // v-on handler values may contain multiple statements
   asRawStatements = false,
-  localVars: Record<string, number> = Object.create(context.identifiers)
+  localVars: Record<string, number> = Object.create(context.identifiers),
 ): ExpressionNode {
   if (__BROWSER__) {
     if (__DEV__) {
@@ -163,8 +163,8 @@ export function processExpression(
               context,
               false,
               false,
-              knownIds
-            )
+              knownIds,
+            ),
           )
           return `${context.helperString(IS_REF)}(${raw})${
             context.isTS ? ` //@ts-ignore\n` : ``
@@ -223,14 +223,26 @@ export function processExpression(
   // bail constant on parens (function invocation) and dot (member access)
   const bailConstant = constantBailRE.test(rawExp)
 
-  if (isSimpleIdentifier(rawExp)) {
+  let ast = node.ast
+
+  if (ast === false) {
+    // ast being false means it has caused an error already during parse phase
+    return node
+  }
+
+  if (ast === null || (!ast && isSimpleIdentifier(rawExp))) {
     const isScopeVarReference = context.identifiers[rawExp]
     const isAllowedGlobal = isGloballyAllowed(rawExp)
     const isLiteral = isLiteralWhitelisted(rawExp)
-    if (!asParams && !isScopeVarReference && !isAllowedGlobal && !isLiteral) {
+    if (
+      !asParams &&
+      !isScopeVarReference &&
+      !isLiteral &&
+      (!isAllowedGlobal || bindingMetadata[rawExp])
+    ) {
       // const bindings exposed from setup can be skipped for patching but
       // cannot be hoisted to module scope
-      if (isConst(bindingMetadata[node.content])) {
+      if (isConst(bindingMetadata[rawExp])) {
         node.constType = ConstantTypes.CAN_SKIP_PATCH
       }
       node.content = rewriteIdentifier(rawExp)
@@ -244,29 +256,30 @@ export function processExpression(
     return node
   }
 
-  let ast: any
-  // exp needs to be parsed differently:
-  // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
-  //    exp, but make sure to pad with spaces for consistent ranges
-  // 2. Expressions: wrap with parens (for e.g. object expressions)
-  // 3. Function arguments (v-for, v-slot): place in a function argument position
-  const source = asRawStatements
-    ? ` ${rawExp} `
-    : `(${rawExp})${asParams ? `=>{}` : ``}`
-  try {
-    ast = parse(source, {
-      plugins: context.expressionPlugins
-    }).program
-  } catch (e: any) {
-    context.onError(
-      createCompilerError(
-        ErrorCodes.X_INVALID_EXPRESSION,
-        node.loc,
-        undefined,
-        e.message
+  if (!ast) {
+    // exp needs to be parsed differently:
+    // 1. Multiple inline statements (v-on, with presence of `;`): parse as raw
+    //    exp, but make sure to pad with spaces for consistent ranges
+    // 2. Expressions: wrap with parens (for e.g. object expressions)
+    // 3. Function arguments (v-for, v-slot): place in a function argument position
+    const source = asRawStatements
+      ? ` ${rawExp} `
+      : `(${rawExp})${asParams ? `=>{}` : ``}`
+    try {
+      ast = parse(source, {
+        plugins: context.expressionPlugins,
+      }).program
+    } catch (e: any) {
+      context.onError(
+        createCompilerError(
+          ErrorCodes.X_INVALID_EXPRESSION,
+          node.loc,
+          undefined,
+          e.message,
+        ),
       )
-    )
-    return node
+      return node
+    }
   }
 
   type QualifiedId = Identifier & PrefixMeta
@@ -307,7 +320,7 @@ export function processExpression(
     },
     true, // invoke on ALL identifiers
     parentStack,
-    knownIds
+    knownIds,
   )
 
   // We break up the compound expression into an array of strings and sub
@@ -331,12 +344,14 @@ export function processExpression(
         id.name,
         false,
         {
-          source,
           start: advancePositionWithClone(node.loc.start, source, start),
-          end: advancePositionWithClone(node.loc.start, source, end)
+          end: advancePositionWithClone(node.loc.start, source, end),
+          source,
         },
-        id.isConstant ? ConstantTypes.CAN_STRINGIFY : ConstantTypes.NOT_CONSTANT
-      )
+        id.isConstant
+          ? ConstantTypes.CAN_STRINGIFY
+          : ConstantTypes.NOT_CONSTANT,
+      ),
     )
     if (i === ids.length - 1 && end < rawExp.length) {
       children.push(rawExp.slice(end))
@@ -346,6 +361,7 @@ export function processExpression(
   let ret
   if (children.length) {
     ret = createCompoundExpression(children, node.loc)
+    ret.ast = ast
   } else {
     ret = node
     ret.constType = bailConstant
