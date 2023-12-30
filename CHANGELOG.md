@@ -1,3 +1,14 @@
+## [3.4.2](https://github.com/vuejs/core/compare/v3.4.1...v3.4.2) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix dev regression for dot / namespace component usage ([dce99c1](https://github.com/vuejs/core/commit/dce99c12df981ca45a4d848c37ba8b16496025f0)), closes [#9947](https://github.com/vuejs/core/issues/9947)
+* **runtime-core:** support deep: false when watch reactive ([#9928](https://github.com/vuejs/core/issues/9928)) ([4f703d1](https://github.com/vuejs/core/commit/4f703d120d76d711084346f73ea295c73e6ef6b6)), closes [#9916](https://github.com/vuejs/core/issues/9916)
+* **ssr:** fix hydration error for slot outlet inside transition-group ([#9937](https://github.com/vuejs/core/issues/9937)) ([6cb00ed](https://github.com/vuejs/core/commit/6cb00ed0f9b64428ec18fada0f68467d6a813fde)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+
+
+
 ## [3.4.1](https://github.com/vuejs/core/compare/v3.4.0...v3.4.1) (2023-12-30)
 
 
