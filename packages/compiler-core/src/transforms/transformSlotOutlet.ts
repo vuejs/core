@@ -1,15 +1,15 @@
-import { NodeTransform, TransformContext } from '../transform'
+import type { NodeTransform, TransformContext } from '../transform'
 import {
+  type CallExpression,
+  type ExpressionNode,
   NodeTypes,
-  CallExpression,
+  type SlotOutletNode,
   createCallExpression,
-  ExpressionNode,
-  SlotOutletNode,
-  createFunctionExpression
+  createFunctionExpression,
 } from '../ast'
 import { isSlotOutlet, isStaticArgOf, isStaticExp } from '../utils'
-import { buildProps, PropsExpression } from './transformElement'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { type PropsExpression, buildProps } from './transformElement'
+import { ErrorCodes, createCompilerError } from '../errors'
 import { RENDER_SLOT } from '../runtimeHelpers'
 import { camelize } from '@vue/shared'
 
@@ -23,7 +23,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
       slotName,
       '{}',
       'undefined',
-      'true'
+      'true',
     ]
     let expectedLen = 2
 
@@ -45,7 +45,7 @@ export const transformSlotOutlet: NodeTransform = (node, context) => {
     node.codegenNode = createCallExpression(
       context.helper(RENDER_SLOT),
       slotArgs,
-      loc
+      loc,
     )
   }
 }
@@ -57,7 +57,7 @@ interface SlotOutletProcessResult {
 
 export function processSlotOutlet(
   node: SlotOutletNode,
-  context: TransformContext
+  context: TransformContext,
 ): SlotOutletProcessResult {
   let slotName: string | ExpressionNode = `"default"`
   let slotProps: PropsExpression | undefined = undefined
@@ -92,7 +92,7 @@ export function processSlotOutlet(
       context,
       nonNameProps,
       false,
-      false
+      false,
     )
     slotProps = props
 
@@ -100,14 +100,14 @@ export function processSlotOutlet(
       context.onError(
         createCompilerError(
           ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
-          directives[0].loc
-        )
+          directives[0].loc,
+        ),
       )
     }
   }
 
   return {
     slotName,
-    slotProps
+    slotProps,
   }
 }
