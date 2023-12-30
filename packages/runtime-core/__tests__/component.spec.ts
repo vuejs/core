@@ -1,5 +1,5 @@
 import {
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   getCurrentInstance,
   h,
   nodeOps,
