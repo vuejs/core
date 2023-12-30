@@ -143,20 +143,6 @@ describe('Extract Component Options', () => {
     expectType<ExtractComponentOptions<typeof Mixins>>({ bar: 'foo' })
   })
 
-  // describe('async component', () => {
-  //   const Component = defineAsyncComponent({
-  //     loader: () =>
-  //       Promise.resolve(
-  //         defineComponent({
-  //           foo: 'bar'
-  //         })
-  //       )
-  //   })
-
-  //   // NOTE not sure if this is the intention since Component.foo is undefined
-  //   expectType<ExtractComponentOptions<typeof Component>>({})
-  // })
-
   describe('options object', () => {
     // Component with props
     expectType<ExtractComponentOptions<typeof propsOptions>>(propsOptions)
@@ -239,7 +225,6 @@ describe('Component Props', () => {
         ),
     })
 
-    // NOTE not sure if this is the intention since Component.foo is undefined
     expectType<{
       foo?: string | undefined
     }>({} as ComponentProps<typeof Component>)
@@ -364,10 +349,14 @@ describe('Component Emits', () => {
         ),
     })
 
-    // NOTE not sure if this is the intention since Component.foo is undefined
     expectType<(event: 'a', arg: string) => void>(
       {} as ComponentEmits<typeof Component>,
     )
+
+    // @ts-expect-error checking if is not any
+    expectType<() => void>({} as ComponentEmits<typeof Component>)
+    // @ts-expect-error checking if is not any
+    expectType<{ bar: string }>({} as ComponentEmits<typeof Component>)
   })
 
   describe('options object', () => {
@@ -488,7 +477,6 @@ describe('ComponentPropsWithDefaultOptional', () => {
     })
     const component = getOptionalProps(Component)
 
-    // NOTE not sure if this is the intention since Component.foo is undefined
     expectType<{
       foo?: string | undefined
     }>(component)
@@ -604,24 +592,24 @@ describe('ComponentData', () => {
     expectType<{ random: true }>(mixin)
   })
 
-  // describe('async component', () => {
-  //   const Component = defineAsyncComponent({
-  //     loader: () =>
-  //       Promise.resolve(
-  //         defineComponent({
-  //           props: {
-  //             foo: String
-  //           }
-  //         })
-  //       )
-  //   })
-  //   const component = getData(Component)
-
-  //   // NOTE not sure if this is the intention since Component.foo is undefined
-  //   expectType<{
-  //     foo?: string | undefined
-  //   }>(component)
-  // })
+  describe('async component', () => {
+    const Component = defineAsyncComponent({
+      loader: () =>
+        Promise.resolve(
+          defineComponent({
+            data() {
+              return {
+                foo: 'foo',
+              }
+            },
+          }),
+        ),
+    })
+    const component = getData(Component)
+    expectType<{
+      foo?: string
+    }>(component)
+  })
 
   describe('options object', () => {
     const options = getData(propsOptions)
@@ -949,8 +937,6 @@ describe('ComponentSlots', () => {
         ),
     })
     const component = getSlots(Component)
-
-    // NOTE not sure if this is the intention since Component.foo is undefined
     expectType<{
       test: (arg: { foo: number }) => any
     }>(component)
@@ -1111,6 +1097,37 @@ describe('DeclareComponent', () => {
 
   // @ts-expect-error not any
   expectType<{ a: 1 }>(GenericComp.$props.test)
+
+  describe('Full Generic example', () => {
+    const Comp = defineComponent({
+      props: {
+        multiple: Boolean,
+        modelValue: {
+          type: null,
+          required: true,
+        },
+        options: {
+          type: Array,
+          required: true,
+        },
+      },
+    }) as unknown as DeclareComponent<{
+      new <TOption, Multiple extends boolean = false>(): {
+        $props: {
+          multiple?: Multiple
+          modelValue: Multiple extends true ? Array<TOption> : TOption
+          options: Array<{ label: string; value: TOption }>
+        }
+      }
+    }>
+
+    ;<Comp options={[{ label: 'foo', value: 1 }]} modelValue={1} />
+    // @ts-expect-error not right value
+    ;<Comp options={[{ label: 'foo', value: 1 }]} modelValue={'1'} />
+    ;<Comp multiple options={[{ label: 'foo', value: 1 }]} modelValue={[1]} />
+    // @ts-expect-error not right value
+    ;<Comp multiple options={[{ label: 'foo', value: 1 }]} modelValue={['1']} />
+  })
 })
 
 // Component Instance

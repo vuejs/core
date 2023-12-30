@@ -132,7 +132,9 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
             ? Options extends { emits: infer E }
               ? E
               : {}
-            : {}
+            : T extends { new (): { $emit: infer E } }
+              ? E
+              : {}
 
 /**
  * Helper to resolve mixins
@@ -307,7 +309,9 @@ type ComponentDataHelper<T> = {
     ? D
     : T extends new () => { data: () => infer D }
       ? D
-      : {}
+      : T extends { new (): { $data: infer D } }
+        ? D
+        : {}
   M: ResolveMixinData<T>
   R: T extends { setup(...args: any[]): infer S }
     ? S extends Record<string, any>
@@ -421,7 +425,7 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
  */
 export type DeclareComponent<
   Props extends Record<string, any> | { new (): ComponentPublicInstance } = {},
-  RawBindings extends Record<string, any> = {},
+  Data extends Record<string, any> = {},
   Emits extends EmitsOptions = {},
   Slots extends SlotsType = {},
   Options extends Record<PropertyKey, any> = {},
@@ -431,7 +435,7 @@ export type DeclareComponent<
     new (): infer PublicInstance
   }
     ? Props &
-        DeclareComponent<{}, RawBindings, Emits, Slots, Options> & {
+        DeclareComponent<{}, Data, Emits, Slots, Options> & {
           // We need to NOT make any changes to Prop, we fake the
           // object props, because passing to the DeclareComponent
           // will break the generic inferrance.
@@ -443,7 +447,7 @@ export type DeclareComponent<
         }
     : DefineComponent<
         ObjectToComponentProps<Props>,
-        RawBindings,
+        Data,
         {},
         {},
         {},
