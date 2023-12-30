@@ -5,7 +5,6 @@ import {
   ReactiveEffect,
   ReactiveFlags,
   type Ref,
-  getCurrentScope,
   isReactive,
   isRef,
   isShallow,
@@ -220,8 +219,7 @@ function doWatch(
     )
   }
 
-  const instance =
-    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+  const instance = currentInstance
   const reactiveGetter = (source: object) =>
     deep === true
       ? source // traverse will happen in wrapped getter below
@@ -261,9 +259,6 @@ function doWatch(
     } else {
       // no cb -> simple effect
       getter = () => {
-        if (instance && instance.isUnmounted) {
-          return
-        }
         if (cleanup) {
           cleanup()
         }
