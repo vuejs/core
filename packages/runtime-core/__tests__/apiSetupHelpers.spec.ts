@@ -279,6 +279,41 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('bar')
     })
 
+    test('without parent listener (local mutation)', async () => {
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['foo'],
+        emits: ['update:foo'],
+        setup(props) {
+          foo = useModel(props, 'foo')
+          return () => {
+            compRender()
+            return foo.value
+          }
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      // provide initial value
+      render(h(Comp, { foo: 'initial' }), root)
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('initial')
+
+      expect(foo.value).toBe('initial')
+      update()
+      // when parent didn't provide value, local mutation is enabled
+      expect(foo.value).toBe('bar')
+
+      await nextTick()
+      expect(compRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('bar')
+    })
+
     test('default value', async () => {
       let count: any
       const inc = () => {
