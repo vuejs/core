@@ -30,7 +30,9 @@ import {
   shallowRef,
   Ref,
   effectScope,
-  toRef
+  toRef,
+  shallowReactive,
+  type ShallowRef
 } from '@vue/reactivity'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
@@ -156,7 +158,7 @@ describe('api: watch', () => {
     expect(dummy).toBe(1)
   })
 
-  it('directly watching reactive object: deep: false', async () => {
+  it('directly watching reactive object with explicit deep: false', async () => {
     const src = reactive({
       state: {
         count: 0
@@ -166,26 +168,47 @@ describe('api: watch', () => {
     watch(
       src,
       ({ state }) => {
-        dummy = state
+        dummy = state?.count
       },
       {
         deep: false
       }
     )
+
+    // nested should not trigger
     src.state.count++
     await nextTick()
     expect(dummy).toBe(undefined)
+
+    // root level should trigger
+    src.state = { count: 1 }
+    await nextTick()
+    expect(dummy).toBe(1)
   })
 
-  it('directly watching reactive array', async () => {
-    const src = reactive([0])
-    let dummy
-    watch(src, v => {
-      dummy = v
-    })
-    src.push(1)
+  // #9916
+  it('directly watching shallow reactive array', async () => {
+    class foo {
+      prop1: ShallowRef<string> = shallowRef('')
+      prop2: string = ''
+    }
+
+    const obj1 = new foo()
+    const obj2 = new foo()
+
+    const collection = shallowReactive([obj1, obj2])
+    const cb = vi.fn()
+    watch(collection, cb)
+
+    collection[0].prop1.value = 'foo'
     await nextTick()
-    expect(dummy).toMatchObject([0, 1])
+    // should not trigger
+    expect(cb).toBeCalledTimes(0)
+
+    collection.push(new foo())
+    await nextTick()
+    // should trigger on array self mutation
+    expect(cb).toBeCalledTimes(1)
   })
 
   it('watching multiple sources', async () => {
