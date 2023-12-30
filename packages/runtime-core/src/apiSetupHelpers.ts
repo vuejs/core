@@ -414,7 +414,7 @@ export function useModel(
     return {
       next() {
         if (i < 2) {
-          return { value: i++ ? props[modifierKey] : res, done: false }
+          return { value: i++ ? props[modifierKey] || {} : res, done: false }
         } else {
           return { done: true }
         }
