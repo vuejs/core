@@ -42,7 +42,7 @@ import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
-import { useSSRContext } from '@vue/runtime-core'
+import { useSSRContext } from './helpers/useSsrContext'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
