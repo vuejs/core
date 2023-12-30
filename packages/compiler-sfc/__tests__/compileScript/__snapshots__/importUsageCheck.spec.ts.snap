@@ -124,6 +124,21 @@ return { get FooBaz() { return FooBaz }, get Last() { return Last } }
 })"
 `;
 
+exports[`namespace / dot component usage 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+import * as Foo from './foo'
+    
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      
+return { get Foo() { return Foo } }
+}
+
+})"
+`;
+
 exports[`property access (whitespace) 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { Foo, Bar, Baz } from './foo'
