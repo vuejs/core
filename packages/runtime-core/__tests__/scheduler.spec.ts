@@ -1,10 +1,10 @@
 import {
-  queueJob,
-  nextTick,
-  queuePostFlushCb,
-  invalidateJob,
   flushPostFlushCbs,
-  flushPreFlushCbs
+  flushPreFlushCbs,
+  invalidateJob,
+  nextTick,
+  queueJob,
+  queuePostFlushCb,
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -497,7 +497,7 @@ describe('scheduler', () => {
       expect(e).toBe(err)
     }
     expect(
-      `Unhandled error during execution of scheduler flush`
+      `Unhandled error during execution of scheduler flush`,
     ).toHaveBeenWarned()
 
     // this one should no longer error
@@ -571,7 +571,7 @@ describe('scheduler', () => {
 
     // simulate parent component that toggles child
     const job1 = () => {
-      // @ts-ignore
+      // @ts-expect-error
       job2.active = false
     }
     // simulate child that's triggered by the same reactive change that
