@@ -48,7 +48,9 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
       parent &&
       parent.type === NodeTypes.ELEMENT &&
       parent.tagType === ElementTypes.COMPONENT &&
-      ((componentType = resolveComponentType(parent, context, true)) === TRANSITION || componentType===TRANSITION_GROUP) &&
+      ((componentType = resolveComponentType(parent, context, true)) ===
+        TRANSITION ||
+        componentType === TRANSITION_GROUP) &&
       parent.children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
     ) {
       method = SSR_RENDER_SLOT_INNER
