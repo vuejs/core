@@ -467,7 +467,7 @@ export function traverse(
   value: unknown,
   depth?: number,
   currentDepth = 0,
-  seen?: Set<unknown>
+  seen?: Set<unknown>,
 ) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value

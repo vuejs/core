@@ -161,8 +161,8 @@ describe('api: watch', () => {
   it('directly watching reactive object with explicit deep: false', async () => {
     const src = reactive({
       state: {
-        count: 0
-      }
+        count: 0,
+      },
     })
     let dummy
     watch(
@@ -171,8 +171,8 @@ describe('api: watch', () => {
         dummy = state?.count
       },
       {
-        deep: false
-      }
+        deep: false,
+      },
     )
 
     // nested should not trigger
