@@ -1,3 +1,12 @@
+## [3.4.3](https://github.com/vuejs/core/compare/v3.4.2...v3.4.3) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** respect sfc parse options in cache key ([b8d58ec](https://github.com/vuejs/core/commit/b8d58ec4f42cbeb9443bf06138add46158db9af0))
+
+
+
 ## [3.4.2](https://github.com/vuejs/core/compare/v3.4.1...v3.4.2) (2023-12-30)
 
 
