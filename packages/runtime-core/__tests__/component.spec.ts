@@ -3,7 +3,7 @@ import {
   getCurrentInstance,
   h,
   nodeOps,
-  render
+  render,
 } from '@vue/runtime-test'
 import { formatComponentName } from '../src/component'
 
@@ -14,7 +14,7 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -31,7 +31,7 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -46,7 +46,7 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     Comp.components.ToggleButton = Comp
     render(h(Comp), nodeOps.createElement('div'))
@@ -60,15 +60,15 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     const Parent = {
       components: {
-        list_item: Comp
+        list_item: Comp,
       },
       render() {
         return h(Comp)
-      }
+      },
     }
     render(h(Parent), nodeOps.createElement('div'))
 
@@ -85,7 +85,7 @@ describe('formatComponentName', () => {
 
   test('Name from file', () => {
     const Comp = {
-      __file: './src/locale-dropdown.vue'
+      __file: './src/locale-dropdown.vue',
     }
 
     expect(formatComponentName(null, Comp)).toBe('LocaleDropdown')
@@ -93,7 +93,7 @@ describe('formatComponentName', () => {
 
   test('inferred name', () => {
     const Comp = {
-      __name: 'MainSidebar'
+      __name: 'MainSidebar',
     }
 
     expect(formatComponentName(null, Comp)).toBe('MainSidebar')
@@ -105,7 +105,7 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
 
@@ -122,13 +122,13 @@ describe('formatComponentName', () => {
       setup() {
         instance = getCurrentInstance()
         return () => null
-      }
+      },
     }
     const Parent = {
       components: { Dummy } as any,
       render() {
         return h(Comp)
-      }
+      },
     }
     render(h(Parent), nodeOps.createElement('div'))
 
