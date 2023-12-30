@@ -219,3 +219,17 @@ test('property access (whitespace)', () => {
   expect(content).toMatch('return { get Foo() { return Foo } }')
   assertCode(content)
 })
+
+// #9974
+test('namespace / dot component usage', () => {
+  const { content } = compile(`
+    <script setup lang="ts">
+      import * as Foo from './foo'
+    </script>
+    <template>
+      <Foo.Bar />
+    </template>
+    `)
+  expect(content).toMatch('return { get Foo() { return Foo } }')
+  assertCode(content)
+})
