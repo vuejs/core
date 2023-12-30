@@ -9,7 +9,7 @@ describe('ssr: renderList', () => {
 
   it('should render items in an array', () => {
     ssrRenderList(['1', '2', '3'], (item, index) =>
-      stack.push(`node ${index}: ${item}`)
+      stack.push(`node ${index}: ${item}`),
     )
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
@@ -27,13 +27,13 @@ describe('ssr: renderList', () => {
   it('should warn when given a non-integer N', () => {
     ssrRenderList(3.1, () => {})
     expect(
-      `The v-for range expect an integer value but got 3.1.`
+      `The v-for range expect an integer value but got 3.1.`,
     ).toHaveBeenWarned()
   })
 
   it('should render properties in an object', () => {
     ssrRenderList({ a: 1, b: 2, c: 3 }, (item, key, index) =>
-      stack.push(`node ${index}/${key}: ${item}`)
+      stack.push(`node ${index}/${key}: ${item}`),
     )
     expect(stack).toEqual(['node 0/a: 1', 'node 1/b: 2', 'node 2/c: 3'])
   })
@@ -46,14 +46,14 @@ describe('ssr: renderList', () => {
     }
 
     ssrRenderList(iterable(), (item, index) =>
-      stack.push(`node ${index}: ${item}`)
+      stack.push(`node ${index}: ${item}`),
     )
     expect(stack).toEqual(['node 0: 1', 'node 1: 2', 'node 2: 3'])
   })
 
   it('should not render items when source is undefined', () => {
     ssrRenderList(undefined, (item, index) =>
-      stack.push(`node ${index}: ${item}`)
+      stack.push(`node ${index}: ${item}`),
     )
     expect(stack).toEqual([])
   })

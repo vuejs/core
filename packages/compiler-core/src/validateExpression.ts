@@ -1,6 +1,6 @@
-import { SimpleExpressionNode } from './ast'
-import { TransformContext } from './transform'
-import { createCompilerError, ErrorCodes } from './errors'
+import type { SimpleExpressionNode } from './ast'
+import type { TransformContext } from './transform'
+import { ErrorCodes, createCompilerError } from './errors'
 
 // these keywords should not appear inside expressions, but operators like
 // 'typeof', 'instanceof', and 'in' are allowed
@@ -13,7 +13,7 @@ const prohibitedKeywordRE = new RegExp(
     )
       .split(',')
       .join('\\b|\\b') +
-    '\\b'
+    '\\b',
 )
 
 // strip strings in expressions
@@ -29,7 +29,7 @@ export function validateBrowserExpression(
   node: SimpleExpressionNode,
   context: TransformContext,
   asParams = false,
-  asRawStatements = false
+  asRawStatements = false,
 ) {
   const exp = node.content
 
@@ -43,7 +43,7 @@ export function validateBrowserExpression(
     new Function(
       asRawStatements
         ? ` ${exp} `
-        : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`
+        : `return ${asParams ? `(${exp}) => {}` : `(${exp})`}`,
     )
   } catch (e: any) {
     let message = e.message
@@ -58,8 +58,8 @@ export function validateBrowserExpression(
         ErrorCodes.X_INVALID_EXPRESSION,
         node.loc,
         undefined,
-        message
-      )
+        message,
+      ),
     )
   }
 }

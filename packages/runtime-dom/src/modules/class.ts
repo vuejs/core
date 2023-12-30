@@ -1,4 +1,4 @@
-import { ElementWithTransition, vtcKey } from '../components/Transition'
+import { type ElementWithTransition, vtcKey } from '../components/Transition'
 
 // compiler should normalize class + :class bindings on the same element
 // into a single binding ['staticClass', dynamic]

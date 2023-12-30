@@ -3,8 +3,8 @@ import { renderToString } from '../src/renderToString'
 
 const components = {
   one: {
-    template: `<div><slot/></div>`
-  }
+    template: `<div><slot/></div>`,
+  },
 }
 
 describe('ssr: slot', () => {
@@ -13,9 +13,9 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components,
-          template: `<one>hello</one>`
-        })
-      )
+          template: `<one>hello</one>`,
+        }),
+      ),
     ).toBe(`<div><!--[-->hello<!--]--></div>`)
   })
 
@@ -24,9 +24,9 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components,
-          template: `<one><div>hi</div></one>`
-        })
-      )
+          template: `<one><div>hi</div></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><div>hi</div><!--]--></div>`)
   })
 
@@ -36,12 +36,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<div><slot/></div>`
-            }
+              template: `<div><slot/></div>`,
+            },
           },
-          template: `<one><template v-if="false"/></one>`
-        })
-      )
+          template: `<one><template v-if="false"/></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
@@ -51,12 +51,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<div><slot/></div>`
-            }
+              template: `<div><slot/></div>`,
+            },
           },
-          template: `<one><!--hello--></one>`
-        })
-      )
+          template: `<one><!--hello--></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
@@ -66,12 +66,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<div><slot/></div>`
-            }
+              template: `<div><slot/></div>`,
+            },
           },
-          template: `<one><!--he\nllo--></one>`
-        })
-      )
+          template: `<one><!--he\nllo--></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><!--]--></div>`)
   })
 
@@ -80,9 +80,9 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components,
-          template: `<one><div>one</div><div>two</div></one>`
-        })
-      )
+          template: `<one><div>one</div><div>two</div></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><div>one</div><div>two</div><!--]--></div>`)
   })
 
@@ -91,9 +91,9 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components,
-          template: `<one><template v-if="true">hello</template></one>`
-        })
-      )
+          template: `<one><template v-if="true">hello</template></one>`,
+        }),
+      ),
     ).toBe(`<div><!--[--><!--[-->hello<!--]--><!--]--></div>`)
   })
 
@@ -102,11 +102,11 @@ describe('ssr: slot', () => {
       await renderToString(
         createApp({
           components,
-          template: `<one><template v-if="true"><div>one</div><div>two</div></template></one>`
-        })
-      )
+          template: `<one><template v-if="true"><div>one</div><div>two</div></template></one>`,
+        }),
+      ),
     ).toBe(
-      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--]--></div>`
+      `<div><!--[--><!--[--><div>one</div><div>two</div><!--]--><!--]--></div>`,
     )
   })
 
@@ -116,12 +116,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<transition><slot/></transition>`
-            }
+              template: `<transition><slot/></transition>`,
+            },
           },
-          template: `<one><div v-if="false">foo</div></one>`
-        })
-      )
+          template: `<one><div v-if="false">foo</div></one>`,
+        }),
+      ),
     ).toBe(`<!---->`)
 
     expect(
@@ -129,12 +129,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<transition><slot/></transition>`
-            }
+              template: `<transition><slot/></transition>`,
+            },
           },
-          template: `<one><div v-if="true">foo</div></one>`
-        })
-      )
+          template: `<one><div v-if="true">foo</div></one>`,
+        }),
+      ),
     ).toBe(`<div>foo</div>`)
   })
 })

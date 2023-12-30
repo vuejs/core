@@ -4,19 +4,19 @@
 // using DOM renderer because this case is mostly DOM-specific
 
 import {
-  h,
-  render,
-  nextTick,
-  mergeProps,
-  ref,
-  onUpdated,
-  defineComponent,
-  openBlock,
-  createBlock,
-  FunctionalComponent,
-  createCommentVNode,
   Fragment,
-  withModifiers
+  type FunctionalComponent,
+  createBlock,
+  createCommentVNode,
+  defineComponent,
+  h,
+  mergeProps,
+  nextTick,
+  onUpdated,
+  openBlock,
+  ref,
+  render,
+  withModifiers,
 } from '@vue/runtime-dom'
 import { PatchFlags } from '@vue/shared'
 
@@ -41,9 +41,9 @@ describe('attribute fallthrough', () => {
             class: 'c' + count.value,
             style: { color: count.value ? 'red' : 'green' },
             onClick: inc,
-            'data-id': count.value + 1
+            'data-id': count.value + 1,
           })
-      }
+      },
     }
 
     const Child = {
@@ -54,11 +54,11 @@ describe('attribute fallthrough', () => {
             'div',
             {
               class: 'c2',
-              style: { fontWeight: 'bold' }
+              style: { fontWeight: 'bold' },
             },
-            props.foo
+            props.foo,
           )
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -103,7 +103,7 @@ describe('attribute fallthrough', () => {
         id: 'test',
         class: 'c' + count.value,
         style: { color: count.value ? 'red' : 'green' },
-        onClick: inc
+        onClick: inc,
       })
 
     const Child = (props: any) => {
@@ -112,9 +112,9 @@ describe('attribute fallthrough', () => {
         'div',
         {
           class: 'c2',
-          style: { fontWeight: 'bold' }
+          style: { fontWeight: 'bold' },
         },
-        props.foo
+        props.foo,
       )
     }
 
@@ -161,7 +161,7 @@ describe('attribute fallthrough', () => {
         id: 'test',
         class: 'c' + count.value,
         style: { color: count.value ? 'red' : 'green' },
-        onClick: inc
+        onClick: inc,
       })
 
     const Child = (props: { foo: number }) => {
@@ -170,9 +170,9 @@ describe('attribute fallthrough', () => {
         'div',
         {
           class: 'c2',
-          style: { fontWeight: 'bold' }
+          style: { fontWeight: 'bold' },
         },
-        props.foo
+        props.foo,
       )
     }
     Child.props = ['foo']
@@ -220,9 +220,9 @@ describe('attribute fallthrough', () => {
             id: 'test',
             class: 'c' + count.value,
             style: { color: count.value ? 'red' : 'green' },
-            onClick: inc
+            onClick: inc,
           })
-      }
+      },
     }
 
     const Child = {
@@ -232,13 +232,13 @@ describe('attribute fallthrough', () => {
         // this will result in merging the same attrs, but should be deduped by
         // `mergeProps`.
         return () => h(GrandChild, props)
-      }
+      },
     }
 
     const GrandChild = defineComponent({
       props: {
         id: String,
-        foo: Number
+        foo: Number,
       },
       setup(props) {
         onUpdated(grandChildUpdated)
@@ -248,11 +248,11 @@ describe('attribute fallthrough', () => {
             {
               id: props.id,
               class: 'c2',
-              style: { fontWeight: 'bold' }
+              style: { fontWeight: 'bold' },
             },
-            props.foo
+            props.foo,
           )
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -287,7 +287,7 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent' })
-      }
+      },
     }
 
     const Child = defineComponent({
@@ -295,7 +295,7 @@ describe('attribute fallthrough', () => {
       inheritAttrs: false,
       render() {
         return h('div', this.foo)
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -311,11 +311,11 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent' })
-      }
+      },
     }
 
     const mixin = {
-      inheritAttrs: false
+      inheritAttrs: false,
     }
 
     const Child = defineComponent({
@@ -323,7 +323,7 @@ describe('attribute fallthrough', () => {
       props: ['foo'],
       render() {
         return h('div', this.foo)
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -338,7 +338,7 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent' })
-      }
+      },
     }
 
     const Child = defineComponent({
@@ -349,13 +349,13 @@ describe('attribute fallthrough', () => {
           'div',
           mergeProps(
             {
-              class: 'child'
+              class: 'child',
             },
-            this.$attrs
+            this.$attrs,
           ),
-          this.foo
+          this.foo,
         )
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -370,14 +370,14 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div')]
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -400,7 +400,7 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { onClick: inc })
-      }
+      },
     }
 
     const Child = defineComponent({
@@ -409,12 +409,12 @@ describe('attribute fallthrough', () => {
           'div',
           mergeProps(
             {
-              onClick: withModifiers(() => {}, ['prevent', 'stop'])
+              onClick: withModifiers(() => {}, ['prevent', 'stop']),
             },
-            this.$attrs
-          )
+            this.$attrs,
+          ),
         )
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -431,14 +431,14 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child = defineComponent({
       props: ['foo'],
       render() {
         return [h('div'), h('div', this.$attrs)]
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -455,14 +455,14 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child = defineComponent({
       props: ['foo'],
       setup(_props, { attrs }) {
         return () => [h('div'), h('div', attrs)]
-      }
+      },
     })
 
     const root = document.createElement('div')
@@ -479,12 +479,12 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child: FunctionalComponent = (_, { attrs }) => [
       h('div'),
-      h('div', attrs)
+      h('div', attrs),
     ]
 
     Child.props = ['foo']
@@ -502,7 +502,7 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child = (props: any) => [h('div'), h('div', { class: props.class })]
@@ -520,7 +520,7 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { foo: 1, class: 'parent', onBar: () => {} })
-      }
+      },
     }
 
     const Child: FunctionalComponent = () => [h('div'), h('div')]
@@ -543,14 +543,14 @@ describe('attribute fallthrough', () => {
     const Parent = {
       render() {
         return h(Child, { 'aria-hidden': aria.value, class: cls.value })
-      }
+      },
     }
 
     const Child = {
       props: [],
       render() {
         return openBlock(), createBlock('div')
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -577,20 +577,20 @@ describe('attribute fallthrough', () => {
           {
             onClick: () => {
               this.$emit('click', 'custom')
-            }
+            },
           },
-          'hello'
+          'hello',
         )
-      }
+      },
     })
 
     const onClick = vi.fn()
     const App = {
       render() {
         return h(Child, {
-          onClick
+          onClick,
         })
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -610,7 +610,7 @@ describe('attribute fallthrough', () => {
       return h('button', {
         onClick: () => {
           emit('click', 'custom')
-        }
+        },
       })
     }
     Child.emits = ['click']
@@ -619,9 +619,9 @@ describe('attribute fallthrough', () => {
     const App = {
       render() {
         return h(Child, {
-          onClick
+          onClick,
         })
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -640,7 +640,7 @@ describe('attribute fallthrough', () => {
     const Hello = {
       setup() {
         return () => h(Child, { class: 'foo', onClick: click })
-      }
+      },
     }
 
     const Child = {
@@ -653,12 +653,12 @@ describe('attribute fallthrough', () => {
             [
               createCommentVNode('hello'),
               h('button'),
-              createCommentVNode('world')
+              createCommentVNode('world'),
             ],
-            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
           )
         )
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -666,7 +666,7 @@ describe('attribute fallthrough', () => {
     render(h(Hello), root)
 
     expect(root.innerHTML).toBe(
-      `<!--hello--><button class="foo"></button><!--world-->`
+      `<!--hello--><button class="foo"></button><!--world-->`,
     )
     const button = root.children[0] as HTMLElement
     button.dispatchEvent(new CustomEvent('click'))
@@ -686,9 +686,9 @@ describe('attribute fallthrough', () => {
             modelValue: textFoo,
             'onUpdate:modelValue': (val: string) => {
               textFoo = val
-            }
+            },
           })
-      }
+      },
     })
 
     const Child = defineComponent({
@@ -700,9 +700,9 @@ describe('attribute fallthrough', () => {
             'onUpdate:modelValue': (val: string) => {
               textBar = val
               emit('update:modelValue', 'from Child')
-            }
+            },
           })
-      }
+      },
     })
 
     const GrandChild = defineComponent({
@@ -713,9 +713,9 @@ describe('attribute fallthrough', () => {
             onClick() {
               click()
               emit('update:modelValue', 'from GrandChild')
-            }
+            },
           })
-      }
+      },
     })
 
     const root = document.createElement('div')

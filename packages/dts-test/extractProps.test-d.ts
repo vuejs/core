@@ -1,16 +1,16 @@
-import { ExtractPropTypes, ExtractPublicPropTypes } from 'vue'
-import { expectType, Prettify } from './utils'
+import type { ExtractPropTypes, ExtractPublicPropTypes } from 'vue'
+import { type Prettify, expectType } from './utils'
 
 const propsOptions = {
   foo: {
-    default: 1
+    default: 1,
   },
   bar: {
     type: String,
-    required: true
+    required: true,
   },
   baz: Boolean,
-  qux: Array
+  qux: Array,
 } as const
 
 // internal facing props

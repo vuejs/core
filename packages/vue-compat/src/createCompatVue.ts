@@ -2,14 +2,14 @@
 // `dist/vue.esm-bundler.js` which is used by default for bundlers.
 import { initDev } from './dev'
 import {
-  compatUtils,
-  createApp,
+  DeprecationTypes,
+  KeepAlive,
   Transition,
   TransitionGroup,
-  KeepAlive,
-  DeprecationTypes,
+  compatUtils,
+  createApp,
+  vModelDynamic,
   vShow,
-  vModelDynamic
 } from '@vue/runtime-dom'
 import { extend } from '@vue/shared'
 
@@ -20,7 +20,7 @@ if (__DEV__) {
 import * as runtimeDom from '@vue/runtime-dom'
 
 function wrappedCreateApp(...args: any[]) {
-  // @ts-ignore
+  // @ts-expect-error
   const app = createApp(...args)
   if (compatUtils.isCompatEnabled(DeprecationTypes.RENDER_FUNCTION, null)) {
     // register built-in components so that they can be resolved via strings

@@ -1,11 +1,11 @@
-import { ComponentPublicInstance, Directive } from '@vue/runtime-core'
+import type { ComponentPublicInstance, Directive } from '@vue/runtime-core'
 
 export function ssrGetDirectiveProps(
   instance: ComponentPublicInstance,
   dir: Directive,
   value?: any,
   arg?: string,
-  modifiers: Record<string, boolean> = {}
+  modifiers: Record<string, boolean> = {},
 ): Record<string, any> {
   if (typeof dir !== 'function' && dir.getSSRProps) {
     return (
@@ -16,9 +16,9 @@ export function ssrGetDirectiveProps(
           value,
           oldValue: undefined,
           arg,
-          modifiers
+          modifiers,
         },
-        null as any
+        null as any,
       ) || {}
     )
   }

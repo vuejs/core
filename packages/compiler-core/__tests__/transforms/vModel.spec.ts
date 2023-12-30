@@ -1,17 +1,17 @@
 import {
+  BindingTypes,
+  type CompilerOptions,
+  type ComponentNode,
+  type ElementNode,
+  type ForNode,
+  NORMALIZE_PROPS,
+  NodeTypes,
+  type ObjectExpression,
+  type PlainElementNode,
+  type VNodeCall,
+  generate,
   baseParse as parse,
   transform,
-  generate,
-  ElementNode,
-  ObjectExpression,
-  CompilerOptions,
-  ForNode,
-  PlainElementNode,
-  ComponentNode,
-  NodeTypes,
-  VNodeCall,
-  NORMALIZE_PROPS,
-  BindingTypes
 } from '../../src'
 import { ErrorCodes } from '../../src/errors'
 import { transformModel } from '../../src/transforms/vModel'
@@ -19,7 +19,7 @@ import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
 import { transformFor } from '../../src/transforms/vFor'
 import { trackSlotScopes } from '../../src/transforms/vSlot'
-import { CallExpression } from '@babel/types'
+import type { CallExpression } from '@babel/types'
 
 function parseWithVModel(template: string, options: CompilerOptions = {}) {
   const ast = parse(template)
@@ -29,13 +29,13 @@ function parseWithVModel(template: string, options: CompilerOptions = {}) {
       transformFor,
       transformExpression,
       transformElement,
-      trackSlotScopes
+      trackSlotScopes,
     ],
     directiveTransforms: {
       ...options.directiveTransforms,
-      model: transformModel
+      model: transformModel,
     },
-    ...options
+    ...options,
   })
 
   return ast
@@ -51,29 +51,29 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: 'model',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           '$event => ((',
           {
             content: 'model',
-            isStatic: false
+            isStatic: false,
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -81,7 +81,7 @@ describe('compiler: transform v-model', () => {
 
   test('simple expression (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model="model" />', {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
@@ -90,29 +90,29 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: '_ctx.model',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           '$event => ((',
           {
             content: '_ctx.model',
-            isStatic: false
+            isStatic: false,
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
@@ -128,29 +128,29 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: '\n model\n.\nfoo \n',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           '$event => ((',
           {
             content: '\n model\n.\nfoo \n',
-            isStatic: false
+            isStatic: false,
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -165,29 +165,29 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: 'model[index]',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           '$event => ((',
           {
             content: 'model[index]',
-            isStatic: false
+            isStatic: false,
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -195,7 +195,7 @@ describe('compiler: transform v-model', () => {
 
   test('compound expression (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model="model[index]" />', {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const node = root.children[0] as ElementNode
     const props = ((node.codegenNode as VNodeCall).props as ObjectExpression)
@@ -204,28 +204,28 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           {
             content: '_ctx.model',
-            isStatic: false
+            isStatic: false,
           },
           '[',
           {
             content: '_ctx.index',
-            isStatic: false
+            isStatic: false,
           },
-          ']'
-        ]
-      }
+          ']',
+        ],
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:modelValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
@@ -234,19 +234,19 @@ describe('compiler: transform v-model', () => {
             children: [
               {
                 content: '_ctx.model',
-                isStatic: false
+                isStatic: false,
               },
               '[',
               {
                 content: '_ctx.index',
-                isStatic: false
+                isStatic: false,
               },
-              ']'
-            ]
+              ']',
+            ],
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
@@ -260,29 +260,29 @@ describe('compiler: transform v-model', () => {
     expect(props[0]).toMatchObject({
       key: {
         content: 'foo-value',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         content: 'model',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     })
 
     expect(props[1]).toMatchObject({
       key: {
         content: 'onUpdate:fooValue',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         children: [
           '$event => ((',
           {
             content: 'model',
-            isStatic: false
+            isStatic: false,
           },
-          ') = $event)'
-        ]
-      }
+          ') = $event)',
+        ],
+      },
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -304,12 +304,12 @@ describe('compiler: transform v-model', () => {
             {
               key: {
                 content: 'value',
-                isStatic: false
+                isStatic: false,
               },
               value: {
                 content: 'model',
-                isStatic: false
-              }
+                isStatic: false,
+              },
             },
             {
               key: {
@@ -317,24 +317,24 @@ describe('compiler: transform v-model', () => {
                   '"onUpdate:" + ',
                   {
                     content: 'value',
-                    isStatic: false
-                  }
-                ]
+                    isStatic: false,
+                  },
+                ],
               },
               value: {
                 children: [
                   '$event => ((',
                   {
                     content: 'model',
-                    isStatic: false
+                    isStatic: false,
                   },
-                  ') = $event)'
-                ]
-              }
-            }
-          ]
-        }
-      ]
+                  ') = $event)',
+                ],
+              },
+            },
+          ],
+        },
+      ],
     })
 
     expect(generate(root).code).toMatchSnapshot()
@@ -342,7 +342,7 @@ describe('compiler: transform v-model', () => {
 
   test('with dynamic argument (with prefixIdentifiers)', () => {
     const root = parseWithVModel('<input v-model:[value]="model" />', {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const node = root.children[0] as ElementNode
     const props = (node.codegenNode as VNodeCall)
@@ -358,12 +358,12 @@ describe('compiler: transform v-model', () => {
             {
               key: {
                 content: '_ctx.value',
-                isStatic: false
+                isStatic: false,
               },
               value: {
                 content: '_ctx.model',
-                isStatic: false
-              }
+                isStatic: false,
+              },
             },
             {
               key: {
@@ -371,24 +371,24 @@ describe('compiler: transform v-model', () => {
                   '"onUpdate:" + ',
                   {
                     content: '_ctx.value',
-                    isStatic: false
-                  }
-                ]
+                    isStatic: false,
+                  },
+                ],
               },
               value: {
                 children: [
                   '$event => ((',
                   {
                     content: '_ctx.model',
-                    isStatic: false
+                    isStatic: false,
                   },
-                  ') = $event)'
-                ]
-              }
-            }
-          ]
-        }
-      ]
+                  ') = $event)',
+                ],
+              },
+            },
+          ],
+        },
+      ],
     })
 
     expect(generate(root, { mode: 'module' }).code).toMatchSnapshot()
@@ -397,7 +397,7 @@ describe('compiler: transform v-model', () => {
   test('should cache update handler w/ cacheHandlers: true', () => {
     const root = parseWithVModel('<input v-model="foo" />', {
       prefixIdentifiers: true,
-      cacheHandlers: true
+      cacheHandlers: true,
     })
     expect(root.cached).toBe(1)
     const codegen = (root.children[0] as PlainElementNode)
@@ -405,7 +405,7 @@ describe('compiler: transform v-model', () => {
     // should not list cached prop in dynamicProps
     expect(codegen.dynamicProps).toBe(`["modelValue"]`)
     expect((codegen.props as ObjectExpression).properties[1].value.type).toBe(
-      NodeTypes.JS_CACHE_EXPRESSION
+      NodeTypes.JS_CACHE_EXPRESSION,
     )
   })
 
@@ -414,8 +414,8 @@ describe('compiler: transform v-model', () => {
       '<input v-for="i in list" v-model="foo[i]" />',
       {
         prefixIdentifiers: true,
-        cacheHandlers: true
-      }
+        cacheHandlers: true,
+      },
     )
     expect(root.cached).toBe(0)
     const codegen = (
@@ -423,14 +423,14 @@ describe('compiler: transform v-model', () => {
     ).codegenNode as VNodeCall
     expect(codegen.dynamicProps).toBe(`["modelValue", "onUpdate:modelValue"]`)
     expect(
-      (codegen.props as ObjectExpression).properties[1].value.type
+      (codegen.props as ObjectExpression).properties[1].value.type,
     ).not.toBe(NodeTypes.JS_CACHE_EXPRESSION)
   })
 
   test('should not cache update handler if it inside v-once', () => {
     const root = parseWithVModel('<div v-once><input v-model="foo" /></div>', {
       prefixIdentifiers: true,
-      cacheHandlers: true
+      cacheHandlers: true,
     })
     expect(root.cached).not.toBe(2)
     expect(root.cached).toBe(1)
@@ -440,8 +440,8 @@ describe('compiler: transform v-model', () => {
     const root = parseWithVModel(
       '<Comp v-slot="{ foo }"><input v-model="foo.bar"/></Comp>',
       {
-        prefixIdentifiers: true
-      }
+        prefixIdentifiers: true,
+      },
     )
     const codegen = (
       (root.children[0] as ComponentNode).children[0] as PlainElementNode
@@ -451,7 +451,7 @@ describe('compiler: transform v-model', () => {
 
   test('should generate modelModifiers for component v-model', () => {
     const root = parseWithVModel('<Comp v-model.trim.bar-baz="foo" />', {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     const vnodeCall = (root.children[0] as ComponentNode)
       .codegenNode as VNodeCall
@@ -462,9 +462,12 @@ describe('compiler: transform v-model', () => {
         { key: { content: `onUpdate:modelValue` } },
         {
           key: { content: 'modelModifiers' },
-          value: { content: `{ trim: true, "bar-baz": true }`, isStatic: false }
-        }
-      ]
+          value: {
+            content: `{ trim: true, "bar-baz": true }`,
+            isStatic: false,
+          },
+        },
+      ],
     })
     // should NOT include modelModifiers in dynamicPropNames because it's never
     // gonna change
@@ -475,8 +478,8 @@ describe('compiler: transform v-model', () => {
     const root = parseWithVModel(
       '<Comp v-model:foo.trim="foo" v-model:bar.number="bar" />',
       {
-        prefixIdentifiers: true
-      }
+        prefixIdentifiers: true,
+      },
     )
     const vnodeCall = (root.children[0] as ComponentNode)
       .codegenNode as VNodeCall
@@ -487,20 +490,20 @@ describe('compiler: transform v-model', () => {
         { key: { content: `onUpdate:foo` } },
         {
           key: { content: 'fooModifiers' },
-          value: { content: `{ trim: true }`, isStatic: false }
+          value: { content: `{ trim: true }`, isStatic: false },
         },
         { key: { content: `bar` } },
         { key: { content: `onUpdate:bar` } },
         {
           key: { content: 'barModifiers' },
-          value: { content: `{ number: true }`, isStatic: false }
-        }
-      ]
+          value: { content: `{ number: true }`, isStatic: false },
+        },
+      ],
     })
     // should NOT include modelModifiers in dynamicPropNames because it's never
     // gonna change
     expect(vnodeCall.dynamicProps).toBe(
-      `["foo", "onUpdate:foo", "bar", "onUpdate:bar"]`
+      `["foo", "onUpdate:foo", "bar", "onUpdate:bar"]`,
     )
   })
 
@@ -512,8 +515,8 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_NO_EXPRESSION
-        })
+          code: ErrorCodes.X_V_MODEL_NO_EXPRESSION,
+        }),
       )
     })
 
@@ -524,8 +527,8 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
-        })
+          code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION,
+        }),
       )
     })
 
@@ -536,8 +539,8 @@ describe('compiler: transform v-model', () => {
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION
-        })
+          code: ErrorCodes.X_V_MODEL_MALFORMED_EXPRESSION,
+        }),
       )
     })
 
@@ -552,14 +555,14 @@ describe('compiler: transform v-model', () => {
       const onError = vi.fn()
       parseWithVModel('<span v-for="i in list" v-model="i" />', {
         onError,
-        prefixIdentifiers: true
+        prefixIdentifiers: true,
       })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE
-        })
+          code: ErrorCodes.X_V_MODEL_ON_SCOPE_VARIABLE,
+        }),
       )
     })
 
@@ -568,15 +571,15 @@ describe('compiler: transform v-model', () => {
       parseWithVModel('<div v-model="p" />', {
         onError,
         bindingMetadata: {
-          p: BindingTypes.PROPS
-        }
+          p: BindingTypes.PROPS,
+        },
       })
 
       expect(onError).toHaveBeenCalledTimes(1)
       expect(onError).toHaveBeenCalledWith(
         expect.objectContaining({
-          code: ErrorCodes.X_V_MODEL_ON_PROPS
-        })
+          code: ErrorCodes.X_V_MODEL_ON_PROPS,
+        }),
       )
     })
   })

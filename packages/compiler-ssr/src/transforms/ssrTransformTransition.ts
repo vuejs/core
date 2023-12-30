@@ -1,16 +1,19 @@
 import {
-  ComponentNode,
-  findProp,
+  type ComponentNode,
   NodeTypes,
-  TransformContext
+  type TransformContext,
+  findProp,
 } from '@vue/compiler-dom'
-import { processChildren, SSRTransformContext } from '../ssrCodegenTransform'
+import {
+  type SSRTransformContext,
+  processChildren,
+} from '../ssrCodegenTransform'
 
 const wipMap = new WeakMap<ComponentNode, Boolean>()
 
 export function ssrTransformTransition(
   node: ComponentNode,
-  context: TransformContext
+  context: TransformContext,
 ) {
   return () => {
     const appear = findProp(node, 'appear', false, true)
@@ -20,7 +23,7 @@ export function ssrTransformTransition(
 
 export function ssrProcessTransition(
   node: ComponentNode,
-  context: SSRTransformContext
+  context: SSRTransformContext,
 ) {
   // #5351: filter out comment children inside transition
   node.children = node.children.filter(c => c.type !== NodeTypes.COMMENT)

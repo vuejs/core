@@ -1,4 +1,4 @@
-import { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance } from './component'
 import { devtoolsComponentUpdated } from './devtools'
 import { setBlockTracking } from './vnode'
 
@@ -20,7 +20,7 @@ export let currentScopeId: string | null = null
  * ```
  */
 export function setCurrentRenderingInstance(
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ): ComponentInternalInstance | null {
   const prev = currentRenderingInstance
   currentRenderingInstance = instance
@@ -70,7 +70,7 @@ export type ContextualRenderFn = {
 export function withCtx(
   fn: Function,
   ctx: ComponentInternalInstance | null = currentRenderingInstance,
-  isNonScopedSlot?: boolean // __COMPAT__ only
+  isNonScopedSlot?: boolean, // __COMPAT__ only
 ) {
   if (!ctx) return fn
 

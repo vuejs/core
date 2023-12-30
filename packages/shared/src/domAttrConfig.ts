@@ -21,7 +21,7 @@ export const isBooleanAttr = /*#__PURE__*/ makeMap(
   specialBooleanAttrs +
     `,async,autofocus,autoplay,controls,default,defer,disabled,hidden,` +
     `inert,loop,open,required,reversed,scoped,seamless,` +
-    `checked,muted,multiple,selected`
+    `checked,muted,multiple,selected`,
 )
 
 /**
@@ -50,7 +50,7 @@ export const propsToAttrMap: Record<string, string | undefined> = {
   acceptCharset: 'accept-charset',
   className: 'class',
   htmlFor: 'for',
-  httpEquiv: 'http-equiv'
+  httpEquiv: 'http-equiv',
 }
 
 /**
@@ -74,7 +74,7 @@ export const isKnownHtmlAttr = /*#__PURE__*/ makeMap(
     `referrerpolicy,rel,required,reversed,rows,rowspan,sandbox,scope,scoped,` +
     `selected,shape,size,sizes,slot,span,spellcheck,src,srcdoc,srclang,srcset,` +
     `start,step,style,summary,tabindex,target,title,translate,type,usemap,` +
-    `value,width,wrap`
+    `value,width,wrap`,
 )
 
 /**
@@ -118,6 +118,6 @@ export const isKnownSvgAttr = /*#__PURE__*/ makeMap(
     `v-mathematical,values,vector-effect,version,vert-adv-y,vert-origin-x,` +
     `vert-origin-y,viewBox,viewTarget,visibility,width,widths,word-spacing,` +
     `writing-mode,x,x-height,x1,x2,xChannelSelector,xlink:actuate,xlink:arcrole,` +
-    `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xml:base,xml:lang,` +
-    `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`
+    `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,` +
+    `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`,
 )

@@ -12,7 +12,7 @@ export {
   pipeToWebWritable,
   type SimpleReadable,
   // deprecated
-  renderToStream
+  renderToStream,
 } from './renderToStream'
 
 // internal runtime helpers

@@ -1,27 +1,27 @@
 import {
-  DirectiveTransform,
-  ElementTypes,
-  transformModel,
-  findProp,
-  NodeTypes,
-  createDOMCompilerError,
   DOMErrorCodes,
+  type DirectiveTransform,
+  ElementTypes,
+  type ExpressionNode,
+  NodeTypes,
+  type PlainElementNode,
+  createCallExpression,
+  createConditionalExpression,
+  createDOMCompilerError,
+  createInterpolation,
   createObjectProperty,
   createSimpleExpression,
-  createCallExpression,
-  PlainElementNode,
-  ExpressionNode,
-  createConditionalExpression,
-  createInterpolation,
-  hasDynamicKeyVBind
+  findProp,
+  hasDynamicKeyVBind,
+  transformModel,
 } from '@vue/compiler-dom'
 import {
-  SSR_LOOSE_EQUAL,
+  SSR_INCLUDE_BOOLEAN_ATTR,
   SSR_LOOSE_CONTAIN,
+  SSR_LOOSE_EQUAL,
   SSR_RENDER_DYNAMIC_MODEL,
-  SSR_INCLUDE_BOOLEAN_ATTR
 } from '../runtimeHelpers'
-import { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
+import type { DirectiveTransformResult } from 'packages/compiler-core/src/transform'
 
 export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
   const model = dir.exp!
@@ -32,8 +32,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE,
-          value.loc
-        )
+          value.loc,
+        ),
       )
     }
   }
@@ -49,23 +49,23 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                 createCallExpression(`Array.isArray`, [model]),
                 createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
                   model,
-                  value
+                  value,
                 ]),
                 createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                   model,
-                  value
-                ])
-              )
+                  value,
+                ]),
+              ),
             ]),
             createSimpleExpression(' selected', true),
             createSimpleExpression('', true),
-            false /* no newline */
-          )
+            false /* no newline */,
+          ),
         )
       }
     } else if (plainNode.tag === 'optgroup') {
       plainNode.children.forEach(option =>
-        processOption(option as PlainElementNode)
+        processOption(option as PlainElementNode),
       )
     }
   }
@@ -74,7 +74,7 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
     const res: DirectiveTransformResult = { props: [] }
     const defaultProps = [
       // default value binding for text type inputs
-      createObjectProperty(`value`, model)
+      createObjectProperty(`value`, model),
     ]
     if (node.tag === 'input') {
       const type = findProp(node, 'type')
@@ -86,8 +86,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
             createCallExpression(context.helper(SSR_RENDER_DYNAMIC_MODEL), [
               type.exp!,
               model,
-              value
-            ])
+              value,
+            ]),
           ]
         } else if (type.value) {
           // static type
@@ -98,9 +98,9 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                   `checked`,
                   createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                     model,
-                    value
-                  ])
-                )
+                    value,
+                  ]),
+                ),
               ]
               break
             case 'checkbox':
@@ -115,9 +115,9 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                     `checked`,
                     createCallExpression(context.helper(SSR_LOOSE_EQUAL), [
                       model,
-                      trueValue
-                    ])
-                  )
+                      trueValue,
+                    ]),
+                  ),
                 ]
               } else {
                 res.props = [
@@ -127,11 +127,11 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
                       createCallExpression(`Array.isArray`, [model]),
                       createCallExpression(context.helper(SSR_LOOSE_CONTAIN), [
                         model,
-                        value
+                        value,
                       ]),
-                      model
-                    )
-                  )
+                      model,
+                    ),
+                  ),
                 ]
               }
               break
@@ -139,8 +139,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
               context.onError(
                 createDOMCompilerError(
                   DOMErrorCodes.X_V_MODEL_ON_FILE_INPUT_ELEMENT,
-                  dir.loc
-                )
+                  dir.loc,
+                ),
               )
               break
             default:
@@ -171,8 +171,8 @@ export const ssrTransformModel: DirectiveTransform = (dir, node, context) => {
       context.onError(
         createDOMCompilerError(
           DOMErrorCodes.X_V_MODEL_ON_INVALID_ELEMENT,
-          dir.loc
-        )
+          dir.loc,
+        ),
       )
     }
 

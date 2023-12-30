@@ -1,6 +1,7 @@
-import { Node } from '@babel/types'
-import { ScriptCompileContext } from './context'
-import { isCallOf, unwrapTSNode } from './utils'
+import type { Node } from '@babel/types'
+import { unwrapTSNode } from '@vue/compiler-dom'
+import type { ScriptCompileContext } from './context'
+import { isCallOf } from './utils'
 import { DEFINE_PROPS } from './defineProps'
 import { DEFINE_EMITS } from './defineEmits'
 import { DEFINE_EXPOSE } from './defineExpose'
@@ -10,7 +11,7 @@ export const DEFINE_OPTIONS = 'defineOptions'
 
 export function processDefineOptions(
   ctx: ScriptCompileContext,
-  node: Node
+  node: Node,
 ): boolean {
   if (!isCallOf(node, DEFINE_OPTIONS)) {
     return false
@@ -47,25 +48,25 @@ export function processDefineOptions(
   if (propsOption) {
     ctx.error(
       `${DEFINE_OPTIONS}() cannot be used to declare props. Use ${DEFINE_PROPS}() instead.`,
-      propsOption
+      propsOption,
     )
   }
   if (emitsOption) {
     ctx.error(
       `${DEFINE_OPTIONS}() cannot be used to declare emits. Use ${DEFINE_EMITS}() instead.`,
-      emitsOption
+      emitsOption,
     )
   }
   if (exposeOption) {
     ctx.error(
       `${DEFINE_OPTIONS}() cannot be used to declare expose. Use ${DEFINE_EXPOSE}() instead.`,
-      exposeOption
+      exposeOption,
     )
   }
   if (slotsOption) {
     ctx.error(
       `${DEFINE_OPTIONS}() cannot be used to declare slots. Use ${DEFINE_SLOTS}() instead.`,
-      slotsOption
+      slotsOption,
     )
   }
 

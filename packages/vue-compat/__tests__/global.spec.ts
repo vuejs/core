@@ -4,7 +4,7 @@ import { h, nextTick } from '@vue/runtime-core'
 import {
   DeprecationTypes,
   deprecationData,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import { singletonApp } from '../../runtime-core/src/compat/global'
 import { createApp } from '../src/esm-index'
@@ -30,12 +30,12 @@ describe('GLOBAL_MOUNT', () => {
       compatConfig: { GLOBAL_MOUNT: true },
       data() {
         return {
-          msg: 'hello'
+          msg: 'hello',
         }
-      }
+      },
     })
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message
+      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message,
     ).toHaveBeenWarned()
     expect(el.innerHTML).toBe('hello')
   })
@@ -46,9 +46,9 @@ describe('GLOBAL_MOUNT', () => {
     new Vue({
       data() {
         return {
-          msg: 'hello'
+          msg: 'hello',
         }
-      }
+      },
     }).$mount(el)
     expect(el.innerHTML).toBe('hello')
   })
@@ -64,10 +64,10 @@ describe('GLOBAL_MOUNT_CONTAINER', () => {
     new Vue().$mount(el)
     // warning only
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message
+      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message,
     ).toHaveBeenWarned()
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_MOUNT_CONTAINER].message
+      deprecationData[DeprecationTypes.GLOBAL_MOUNT_CONTAINER].message,
     ).toHaveBeenWarned()
   })
 })
@@ -80,46 +80,46 @@ describe('GLOBAL_EXTEND', () => {
     const Test = Vue.extend({
       name: 'test',
       a: 1,
-      b: 2
+      b: 2,
     })
     expect(Test.options.a).toBe(1)
     expect(Test.options.b).toBe(2)
     expect(Test.super).toBe(Vue)
     const t = new Test({
-      a: 2
+      a: 2,
     })
     expect(t.$options.a).toBe(2)
     expect(t.$options.b).toBe(2)
     // inheritance
     const Test2 = Test.extend({
-      a: 2
+      a: 2,
     })
     expect(Test2.options.a).toBe(2)
     expect(Test2.options.b).toBe(2)
     const t2 = new Test2({
-      a: 3
+      a: 3,
     })
     expect(t2.$options.a).toBe(3)
     expect(t2.$options.b).toBe(2)
 
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message
+      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message,
     ).toHaveBeenWarned()
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_EXTEND].message
+      deprecationData[DeprecationTypes.GLOBAL_EXTEND].message,
     ).toHaveBeenWarned()
   })
 
   it('should work when used as components', () => {
     const foo = Vue.extend({
-      template: '<span>foo</span>'
+      template: '<span>foo</span>',
     })
     const bar = Vue.extend({
-      template: '<span>bar</span>'
+      template: '<span>bar</span>',
     })
     const vm = new Vue({
       template: '<div><foo></foo><bar></bar></div>',
-      components: { foo, bar }
+      components: { foo, bar },
     }).$mount()
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.innerHTML).toBe('<span>foo</span><span>bar</span>')
@@ -130,17 +130,17 @@ describe('GLOBAL_EXTEND', () => {
     const A = Vue.extend({
       created() {
         calls.push(1)
-      }
+      },
     })
     const B = A.extend({
       created() {
         calls.push(2)
-      }
+      },
     })
     new B({
       created() {
         calls.push(3)
-      }
+      },
     })
     expect(calls).toEqual([1, 2, 3])
   })
@@ -151,22 +151,22 @@ describe('GLOBAL_EXTEND', () => {
     const c = vi.fn()
     const d = vi.fn()
     const A = Vue.extend({
-      created: a
+      created: a,
     })
     const B = Vue.extend({
       mixins: [A],
-      created: b
+      created: b,
     })
     const C = Vue.extend({
       extends: B,
-      created: c
+      created: c,
     })
     const D = Vue.extend({
       mixins: [C],
       created: d,
       render() {
         return null
-      }
+      },
     })
     new D().$mount()
     expect(a.mock.calls.length).toStrictEqual(1)
@@ -180,23 +180,23 @@ describe('GLOBAL_EXTEND', () => {
       methods: {
         a() {
           return this.n
-        }
-      }
+        },
+      },
     })
     const B = A.extend({
       methods: {
         b() {
           return this.n + 1
-        }
-      }
+        },
+      },
     })
     const b = new B({
       data: () => ({ n: 0 }),
       methods: {
         c() {
           return this.n + 2
-        }
-      }
+        },
+      },
     }) as any
     expect(b.a()).toBe(0)
     expect(b.b()).toBe(1)
@@ -207,19 +207,19 @@ describe('GLOBAL_EXTEND', () => {
     const A = Vue.extend({
       components: {
         aa: {
-          template: '<div>A</div>'
-        }
-      }
+          template: '<div>A</div>',
+        },
+      },
     })
     const B = A.extend({
       components: {
         bb: {
-          template: '<div>B</div>'
-        }
-      }
+          template: '<div>B</div>',
+        },
+      },
     })
     const b = new B({
-      template: '<div><aa></aa><bb></bb></div>'
+      template: '<div><aa></aa><bb></bb></div>',
     }).$mount()
     expect(b.$el).toBeInstanceOf(HTMLDivElement)
     expect(b.$el.innerHTML).toBe('<div>A</div><div>B</div>')
@@ -227,7 +227,7 @@ describe('GLOBAL_EXTEND', () => {
 
   it('caching', () => {
     const options = {
-      template: '<div></div>'
+      template: '<div></div>',
     }
     const A = Vue.extend(options)
     const B = Vue.extend(options)
@@ -251,10 +251,10 @@ describe('GLOBAL_PROTOTYPE', () => {
     expect(vm.$test).toBe(1)
     delete Vue.prototype.$test
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message
+      deprecationData[DeprecationTypes.GLOBAL_MOUNT].message,
     ).toHaveBeenWarned()
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_PROTOTYPE].message
+      deprecationData[DeprecationTypes.GLOBAL_PROTOTYPE].message,
     ).toHaveBeenWarned()
   })
 
@@ -265,7 +265,7 @@ describe('GLOBAL_PROTOTYPE', () => {
     const vm = new Vue({
       data() {
         return { msg: 'method' }
-      }
+      },
     }) as any
     expect(vm.$test()).toBe('method')
     delete Vue.prototype.$test
@@ -276,12 +276,12 @@ describe('GLOBAL_PROTOTYPE', () => {
       configurable: true,
       get() {
         return this.msg
-      }
+      },
     })
     const vm = new Vue({
       data() {
         return { msg: 'getter' }
-      }
+      },
     }) as any
     expect(vm.$test).toBe('getter')
     delete Vue.prototype.$test
@@ -299,9 +299,9 @@ describe('GLOBAL_PROTOTYPE', () => {
     const vm = new Vue({
       data() {
         return {
-          msg: 'test'
+          msg: 'test',
         }
-      }
+      },
     }) as any
     expect(typeof vm.$test).toBe('function')
     expect(typeof vm.$test.additionalFn).toBe('function')
@@ -321,7 +321,7 @@ describe('GLOBAL_PROTOTYPE', () => {
   test('should affect apps created via createApp()', () => {
     Vue.prototype.$test = 1
     const vm = createApp({
-      template: 'foo'
+      template: 'foo',
     }).mount(document.createElement('div')) as any
     expect(vm.$test).toBe(1)
     delete Vue.prototype.$test
@@ -335,7 +335,7 @@ describe('GLOBAL_SET/DELETE', () => {
     Vue.set(obj, 'foo', 1)
     expect(obj.foo).toBe(1)
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_SET].message
+      deprecationData[DeprecationTypes.GLOBAL_SET].message,
     ).toHaveBeenWarned()
   })
 
@@ -345,7 +345,7 @@ describe('GLOBAL_SET/DELETE', () => {
     Vue.delete(obj, 'foo')
     expect('foo' in obj).toBe(false)
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_DELETE].message
+      deprecationData[DeprecationTypes.GLOBAL_DELETE].message,
     ).toHaveBeenWarned()
   })
 })
@@ -356,7 +356,7 @@ describe('GLOBAL_OBSERVABLE', () => {
     const obj = Vue.observable({})
     expect(isReactive(obj)).toBe(true)
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_OBSERVABLE].message
+      deprecationData[DeprecationTypes.GLOBAL_OBSERVABLE].message,
     ).toHaveBeenWarned()
   })
 })
@@ -365,7 +365,6 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
   test('defineReactive', () => {
     toggleDeprecationWarning(true)
     const obj: any = {}
-    // @ts-ignore
     Vue.util.defineReactive(obj, 'test', 1)
 
     let n
@@ -377,17 +376,16 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
     expect(n).toBe(2)
 
     expect(
-      deprecationData[DeprecationTypes.GLOBAL_PRIVATE_UTIL].message
+      deprecationData[DeprecationTypes.GLOBAL_PRIVATE_UTIL].message,
     ).toHaveBeenWarned()
   })
 
   test('defineReactive on instance', async () => {
     const vm = new Vue({
       beforeCreate() {
-        // @ts-ignore
         Vue.util.defineReactive(this, 'foo', 1)
       },
-      template: `<div>{{ foo }}</div>`
+      template: `<div>{{ foo }}</div>`,
     }).$mount() as any
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.textContent).toBe('1')
@@ -399,10 +397,9 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
   test('defineReactive on instance with key that starts with $', async () => {
     const vm = new Vue({
       beforeCreate() {
-        // @ts-ignore
         Vue.util.defineReactive(this, '$foo', 1)
       },
-      template: `<div>{{ $foo }}</div>`
+      template: `<div>{{ $foo }}</div>`,
     }).$mount() as any
     expect(vm.$el.textContent).toBe('1')
     vm.$foo = 2
@@ -413,7 +410,6 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
   test('defineReactive with object value', () => {
     const obj: any = {}
     const val = { a: 1 }
-    // @ts-ignore
     Vue.util.defineReactive(obj, 'foo', val)
 
     let n
@@ -429,7 +425,6 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
   test('defineReactive with array value', () => {
     const obj: any = {}
     const val = [1]
-    // @ts-ignore
     Vue.util.defineReactive(obj, 'foo', val)
 
     let n
@@ -446,7 +441,7 @@ describe('GLOBAL_PRIVATE_UTIL', () => {
 test('global asset registration should affect apps created via createApp', () => {
   Vue.component('foo', { template: 'foo' })
   const vm = createApp({
-    template: '<foo/>'
+    template: '<foo/>',
   }).mount(document.createElement('div')) as any
   expect(vm.$el.textContent).toBe('foo')
   delete singletonApp._context.components.foo
@@ -454,7 +449,7 @@ test('global asset registration should affect apps created via createApp', () =>
 
 test('post-facto global asset registration should affect apps created via createApp', () => {
   const app = createApp({
-    template: '<foo/>'
+    template: '<foo/>',
   })
   Vue.component('foo', { template: 'foo' })
   const vm = app.mount(document.createElement('div'))
@@ -470,7 +465,7 @@ test('local asset registration should not affect other local apps', () => {
   app2.component('foo', {})
 
   expect(
-    `Component "foo" has already been registered in target app`
+    `Component "foo" has already been registered in target app`,
   ).not.toHaveBeenWarned()
 })
 
@@ -495,9 +490,9 @@ test('local app config should not affect other local apps in v3 mode', () => {
     render: () => h('div'),
     provide() {
       return {
-        test: 123
+        test: 123,
       }
-    }
+    },
   })
   app1.config.globalProperties.test = () => {}
   app1.mount(document.createElement('div'))

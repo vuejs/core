@@ -8,7 +8,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createElementBlock(\\"span\\"))
+      return (_openBlock(), _createElementBlock("span"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -23,8 +23,8 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createElementBlock(_Fragment, { key: item }, [
-        \\"hello\\",
-        _createElementVNode(\\"span\\")
+        "hello",
+        _createElementVNode("span")
       ], 64 /* STABLE_FRAGMENT */))
     }), 128 /* KEYED_FRAGMENT */))
   }
@@ -39,7 +39,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createElementBlock(\\"span\\", { key: item }))
+      return (_openBlock(), _createElementBlock("span", { key: item }))
     }), 128 /* KEYED_FRAGMENT */))
   }
 }"
@@ -53,7 +53,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item, __, index) => {
-      return (_openBlock(), _createElementBlock(\\"span\\"))
+      return (_openBlock(), _createElementBlock("span"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -67,7 +67,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (_, __, index) => {
-      return (_openBlock(), _createElementBlock(\\"span\\"))
+      return (_openBlock(), _createElementBlock("span"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -81,7 +81,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (_, key, index) => {
-      return (_openBlock(), _createElementBlock(\\"span\\"))
+      return (_openBlock(), _createElementBlock("span"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -96,8 +96,8 @@ return function render(_ctx, _cache) {
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
       return (_openBlock(), _createElementBlock(_Fragment, null, [
-        \\"hello\\",
-        _createElementVNode(\\"span\\")
+        "hello",
+        _createElementVNode("span")
       ], 64 /* STABLE_FRAGMENT */))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
@@ -112,10 +112,10 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
-      return (_openBlock(), _createElementBlock(\\"span\\", {
+      return (_openBlock(), _createElementBlock("span", {
         key: item.id,
         id: item.id
-      }, null, 8 /* PROPS */, [\\"id\\"]))
+      }, null, 8 /* PROPS */, ["id"]))
     }), 128 /* KEYED_FRAGMENT */))
   }
 }"
@@ -129,7 +129,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, renderSlot: _renderSlot } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
-      return _renderSlot($slots, \\"default\\")
+      return _renderSlot($slots, "default")
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -143,7 +143,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, renderSlot: _renderSlot } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item) => {
-      return _renderSlot($slots, \\"default\\")
+      return _renderSlot($slots, "default")
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"
@@ -156,10 +156,10 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, resolveDirective: _resolveDirective, withDirectives: _withDirectives } = _Vue
 
-    const _directive_foo = _resolveDirective(\\"foo\\")
+    const _directive_foo = _resolveDirective("foo")
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(list, (i) => {
-      return _withDirectives((_openBlock(), _createElementBlock(\\"div\\", null, null, 512 /* NEED_PATCH */)), [
+      return _withDirectives((_openBlock(), _createElementBlock("div", null, null, 512 /* NEED_PATCH */)), [
         [_directive_foo]
       ])
     }), 256 /* UNKEYED_FRAGMENT */))
@@ -175,7 +175,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock, toDisplayString: _toDisplayString, createElementVNode: _createElementVNode } = _Vue
 
     return (_openBlock(), _createElementBlock(_Fragment, null, _renderList(10, (item) => {
-      return _createElementVNode(\\"p\\", null, _toDisplayString(item), 1 /* TEXT */)
+      return _createElementVNode("p", null, _toDisplayString(item), 1 /* TEXT */)
     }), 64 /* STABLE_FRAGMENT */))
   }
 }"
@@ -190,9 +190,9 @@ return function render(_ctx, _cache) {
 
     return ok
       ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
-          return (_openBlock(), _createElementBlock(\\"div\\"))
+          return (_openBlock(), _createElementBlock("div"))
         }), 256 /* UNKEYED_FRAGMENT */))
-      : _createCommentVNode(\\"v-if\\", true)
+      : _createCommentVNode("v-if", true)
   }
 }"
 `;
@@ -208,7 +208,7 @@ return function render(_ctx, _cache) {
       ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(list, (i) => {
           return (_openBlock(), _createElementBlock(_Fragment, null, [], 64 /* STABLE_FRAGMENT */))
         }), 256 /* UNKEYED_FRAGMENT */))
-      : _createCommentVNode(\\"v-if\\", true)
+      : _createCommentVNode("v-if", true)
   }
 }"
 `;
@@ -221,7 +221,7 @@ return function render(_ctx, _cache) {
     const { renderList: _renderList, Fragment: _Fragment, openBlock: _openBlock, createElementBlock: _createElementBlock } = _Vue
 
     return (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(items, (item, key, index) => {
-      return (_openBlock(), _createElementBlock(\\"span\\"))
+      return (_openBlock(), _createElementBlock("span"))
     }), 256 /* UNKEYED_FRAGMENT */))
   }
 }"

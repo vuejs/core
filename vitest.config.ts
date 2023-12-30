@@ -1,5 +1,6 @@
-import { configDefaults, defineConfig, UserConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import { entries } from './scripts/aliases.js'
+import codspeedPlugin from '@codspeed/vitest-plugin'
 
 export default defineConfig({
   define: {
@@ -15,21 +16,21 @@ export default defineConfig({
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
-    __COMPAT__: true
+    __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+    __COMPAT__: true,
   },
   resolve: {
-    alias: entries
+    alias: entries,
   },
+  plugins: [codspeedPlugin()],
   test: {
     globals: true,
-    // disable threads on GH actions to speed it up
-    threads: !process.env.GITHUB_ACTIONS,
-    setupFiles: 'scripts/setupVitest.ts',
+    setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
+      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
     ],
     sequence: {
-      hooks: 'list'
+      hooks: 'list',
     },
     coverage: {
       provider: 'istanbul',
@@ -39,8 +40,8 @@ export default defineConfig({
         // DOM transitions are tested via e2e so no coverage is collected
         'packages/runtime-dom/src/components/Transition*',
         // mostly entries
-        'packages/vue-compat/**'
-      ]
-    }
-  }
-}) as UserConfig
+        'packages/vue-compat/**',
+      ],
+    },
+  },
+})

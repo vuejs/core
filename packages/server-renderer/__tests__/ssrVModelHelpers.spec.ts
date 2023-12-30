@@ -1,6 +1,6 @@
 import {
+  ssrGetDynamicModelProps,
   ssrRenderDynamicModel,
-  ssrGetDynamicModelProps
   // ssrGetDynamicModelProps
 } from '../src/helpers/ssrVModelHelpers'
 
@@ -26,90 +26,90 @@ describe('ssr: v-model helpers', () => {
     expect(
       ssrGetDynamicModelProps(
         {
-          type: 'text'
+          type: 'text',
         },
-        'foo'
-      )
+        'foo',
+      ),
     ).toMatchObject({ value: 'foo' })
     expect(
       ssrGetDynamicModelProps(
         {
-          type: 'email'
+          type: 'email',
         },
-        'foo'
-      )
+        'foo',
+      ),
     ).toMatchObject({ value: 'foo' })
 
     expect(
       ssrGetDynamicModelProps(
         {
-          type: 'checkbox'
+          type: 'checkbox',
         },
-        true
-      )
+        true,
+      ),
     ).toMatchObject({ checked: true })
     expect(
       ssrGetDynamicModelProps(
         {
-          type: 'checkbox'
+          type: 'checkbox',
         },
-        false
-      )
+        false,
+      ),
     ).toBe(null)
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'checkbox',
-          value: '1'
+          value: '1',
         },
-        [1]
-      )
+        [1],
+      ),
     ).toMatchObject({ checked: true })
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'checkbox',
-          value: 1
+          value: 1,
         },
-        [1]
-      )
+        [1],
+      ),
     ).toMatchObject({ checked: true })
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'checkbox',
-          value: 0
+          value: 0,
         },
-        [1]
-      )
+        [1],
+      ),
     ).toBe(null)
 
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'radio',
-          value: 'foo'
+          value: 'foo',
         },
-        'foo'
-      )
+        'foo',
+      ),
     ).toMatchObject({ checked: true })
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'radio',
-          value: '1'
+          value: '1',
         },
-        1
-      )
+        1,
+      ),
     ).toMatchObject({ checked: true })
     expect(
       ssrGetDynamicModelProps(
         {
           type: 'radio',
-          value: 0
+          value: 0,
         },
-        1
-      )
+        1,
+      ),
     ).toBe(null)
   })
 })

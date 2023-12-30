@@ -39,7 +39,7 @@ export const ssrHelpers = {
   [SSR_GET_DYNAMIC_MODEL_PROPS]: `ssrGetDynamicModelProps`,
   [SSR_RENDER_TELEPORT]: `ssrRenderTeleport`,
   [SSR_RENDER_SUSPENSE]: `ssrRenderSuspense`,
-  [SSR_GET_DIRECTIVE_PROPS]: `ssrGetDirectiveProps`
+  [SSR_GET_DIRECTIVE_PROPS]: `ssrGetDirectiveProps`,
 }
 
 // Note: these are helpers imported from @vue/server-renderer

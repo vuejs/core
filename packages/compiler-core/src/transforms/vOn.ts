@@ -1,16 +1,16 @@
-import { DirectiveTransform, DirectiveTransformResult } from '../transform'
+import type { DirectiveTransform, DirectiveTransformResult } from '../transform'
 import {
+  type DirectiveNode,
+  ElementTypes,
+  type ExpressionNode,
+  NodeTypes,
+  type SimpleExpressionNode,
   createCompoundExpression,
   createObjectProperty,
   createSimpleExpression,
-  DirectiveNode,
-  ElementTypes,
-  ExpressionNode,
-  NodeTypes,
-  SimpleExpressionNode
 } from '../ast'
 import { camelize, toHandlerKey } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { hasScopeRef, isMemberExpression } from '../utils'
@@ -33,7 +33,7 @@ export const transformOn: DirectiveTransform = (
   dir,
   node,
   context,
-  augmentor
+  augmentor,
 ) => {
   const { loc, modifiers, arg } = dir as VOnDirectiveNode
   if (!dir.exp && !modifiers.length) {
@@ -44,9 +44,7 @@ export const transformOn: DirectiveTransform = (
     if (arg.isStatic) {
       let rawName = arg.content
       if (__DEV__ && rawName.startsWith('vnode')) {
-        context.onWarn(
-          createCompilerError(ErrorCodes.DEPRECATION_VNODE_HOOKS, arg.loc)
-        )
+        context.onError(createCompilerError(ErrorCodes.X_VNODE_HOOKS, arg.loc))
       }
       if (rawName.startsWith('vue:')) {
         rawName = `vnode-${rawName.slice(4)}`
@@ -67,7 +65,7 @@ export const transformOn: DirectiveTransform = (
       eventName = createCompoundExpression([
         `${context.helperString(TO_HANDLER_KEY)}(`,
         arg,
-        `)`
+        `)`,
       ])
     }
   } else {
@@ -97,7 +95,7 @@ export const transformOn: DirectiveTransform = (
         exp,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
       isInlineStatement && context.removeIdentifiers(`$event`)
       // with scope analysis, the function is hoistable if it has no reference
@@ -136,7 +134,7 @@ export const transformOn: DirectiveTransform = (
         exp as SimpleExpressionNode,
         context,
         false,
-        hasMultipleStatements
+        hasMultipleStatements,
       )
     }
 
@@ -153,7 +151,7 @@ export const transformOn: DirectiveTransform = (
               }(...args)`
         } => ${hasMultipleStatements ? `{` : `(`}`,
         exp,
-        hasMultipleStatements ? `}` : `)`
+        hasMultipleStatements ? `}` : `)`,
       ])
     }
   }
@@ -162,9 +160,9 @@ export const transformOn: DirectiveTransform = (
     props: [
       createObjectProperty(
         eventName,
-        exp || createSimpleExpression(`() => {}`, false, loc)
-      )
-    ]
+        exp || createSimpleExpression(`() => {}`, false, loc),
+      ),
+    ],
   }
 
   // apply extended compiler augmentor

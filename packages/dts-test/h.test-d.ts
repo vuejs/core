@@ -1,15 +1,15 @@
 import {
-  h,
-  defineComponent,
-  DefineComponent,
-  ref,
+  type Component,
+  type DefineComponent,
   Fragment,
-  Teleport,
   Suspense,
-  Component,
-  resolveComponent
+  Teleport,
+  defineComponent,
+  h,
+  ref,
+  resolveComponent,
 } from 'vue'
-import { describe, expectAssignable } from './utils'
+import { describe, expectAssignable, expectType } from './utils'
 
 describe('h inference w/ element', () => {
   // key
@@ -32,6 +32,17 @@ describe('h inference w/ element', () => {
   // slots
   const slots = { default: () => {} } // RawSlots
   h('div', {}, slots)
+  // events
+  h('div', {
+    onClick: e => {
+      expectType<MouseEvent>(e)
+    },
+  })
+  h('input', {
+    onFocus(e) {
+      expectType<FocusEvent>(e)
+    },
+  })
 })
 
 describe('h inference w/ Fragment', () => {
@@ -60,7 +71,7 @@ describe('h inference w/ Suspense', () => {
   h(Suspense, 'foo')
   h(Suspense, () => 'foo')
   h(Suspense, null, {
-    default: () => 'foo'
+    default: () => 'foo',
   })
   //  @ts-expect-error
   h(Suspense, { onResolve: 1 })
@@ -81,8 +92,8 @@ describe('h inference w/ functional component', () => {
 describe('h support w/ plain object component', () => {
   const Foo = {
     props: {
-      foo: String
-    }
+      foo: String,
+    },
   }
   h(Foo, { foo: 'ok' })
   h(Foo, { foo: 'ok', class: 'extra' })
@@ -95,9 +106,9 @@ describe('h inference w/ defineComponent', () => {
       foo: String,
       bar: {
         type: Number,
-        required: true
-      }
-    }
+        required: true,
+      },
+    },
   })
 
   h(Foo, { bar: 1 })
@@ -158,7 +169,7 @@ describe('h support for generic component type', () => {
 describe('describeComponent extends Component', () => {
   // functional
   expectAssignable<Component>(
-    defineComponent((_props: { foo?: string; bar: number }) => () => {})
+    defineComponent((_props: { foo?: string; bar: number }) => () => {}),
   )
 
   // typed props
@@ -167,8 +178,8 @@ describe('describeComponent extends Component', () => {
   // prop arrays
   expectAssignable<Component>(
     defineComponent({
-      props: ['a', 'b']
-    })
+      props: ['a', 'b'],
+    }),
   )
 
   // prop object
@@ -178,10 +189,10 @@ describe('describeComponent extends Component', () => {
         foo: String,
         bar: {
           type: Number,
-          required: true
-        }
-      }
-    })
+          required: true,
+        },
+      },
+    }),
   )
 })
 
@@ -191,9 +202,9 @@ describe('component w/ props w/ default value', () => {
     props: {
       message: {
         type: String,
-        default: 'hello'
-      }
-    }
+        default: 'hello',
+      },
+    },
   })
 
   h(MyComponent, {})
@@ -203,8 +214,8 @@ describe('component w/ props w/ default value', () => {
 describe('Boolean prop implicit false', () => {
   const MyComponent = defineComponent({
     props: {
-      visible: Boolean
-    }
+      visible: Boolean,
+    },
   })
 
   h(MyComponent, {})
@@ -213,13 +224,13 @@ describe('Boolean prop implicit false', () => {
     props: {
       visible: {
         type: Boolean,
-        required: true
-      }
-    }
+        required: true,
+      },
+    },
   })
 
   h(RequiredComponent, {
-    visible: true
+    visible: true,
   })
   // @ts-expect-error
   h(RequiredComponent, {})
@@ -229,7 +240,7 @@ describe('Boolean prop implicit false', () => {
 describe('resolveComponent should work', () => {
   h(resolveComponent('test'))
   h(resolveComponent('test'), {
-    message: '1'
+    message: '1',
   })
 })
 
@@ -238,7 +249,7 @@ describe('h should work with multiple types', () => {
   const serializers = {
     Paragraph: 'p',
     Component: {} as Component,
-    DefineComponent: {} as DefineComponent
+    DefineComponent: {} as DefineComponent,
   }
 
   const sampleComponent = serializers['' as keyof typeof serializers]

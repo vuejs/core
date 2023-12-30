@@ -2,7 +2,7 @@ import { defineComponent } from 'vue'
 
 const _CustomPropsNotErased = defineComponent({
   props: {},
-  setup() {}
+  setup() {},
 })
 
 // #8376

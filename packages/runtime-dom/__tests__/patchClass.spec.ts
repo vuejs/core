@@ -1,5 +1,8 @@
 import { patchProp } from '../src/patchProp'
-import { ElementWithTransition, vtcKey } from '../src/components/Transition'
+import {
+  type ElementWithTransition,
+  vtcKey,
+} from '../src/components/Transition'
 import { svgNS } from '../src/nodeOps'
 
 describe('runtime-dom: class patching', () => {
@@ -25,7 +28,7 @@ describe('runtime-dom: class patching', () => {
 
   test('svg', () => {
     const el = document.createElementNS(svgNS, 'svg')
-    patchProp(el, 'class', null, 'foo', true)
+    patchProp(el, 'class', null, 'foo', 'svg')
     expect(el.getAttribute('class')).toBe('foo')
   })
 })

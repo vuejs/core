@@ -1,4 +1,4 @@
-import { SourceLocation } from './ast'
+import type { SourceLocation } from './ast'
 
 export interface CompilerError extends SyntaxError {
   code: number | string
@@ -25,19 +25,19 @@ export function createCompilerError<T extends number>(
   code: T,
   loc?: SourceLocation,
   messages?: { [code: number]: string },
-  additionalMessage?: string
+  additionalMessage?: string,
 ): InferCompilerError<T> {
   const msg =
     __DEV__ || !__BROWSER__
       ? (messages || errorMessages)[code] + (additionalMessage || ``)
-      : code
+      : `https://vuejs.org/errors/#compiler-${code}`
   const error = new SyntaxError(String(msg)) as InferCompilerError<T>
   error.code = code
   error.loc = loc
   return error
 }
 
-export const enum ErrorCodes {
+export enum ErrorCodes {
   // parse errors
   ABRUPT_CLOSING_OF_EMPTY_COMMENT,
   CDATA_IN_HTML_CONTENT,
@@ -96,15 +96,12 @@ export const enum ErrorCodes {
   X_MODULE_MODE_NOT_SUPPORTED,
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
-
-  // deprecations
-  DEPRECATION_VNODE_HOOKS,
-  DEPRECATION_V_IS,
+  X_VNODE_HOOKS,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
   // item.
-  __EXTEND_POINT__
+  __EXTEND_POINT__,
 }
 
 export const errorMessages: Record<ErrorCodes, string> = {
@@ -176,6 +173,7 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_V_MODEL_ON_PROPS]: `v-model cannot be used on a prop, because local prop bindings are not writable.\nUse a v-bind binding combined with a v-on listener that emits update:x event instead.`,
   [ErrorCodes.X_INVALID_EXPRESSION]: `Error parsing JavaScript expression: `,
   [ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN]: `<KeepAlive> expects exactly one child component.`,
+  [ErrorCodes.X_VNODE_HOOKS]: `@vnode-* hooks in templates are no longer supported. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support has been removed in 3.4.`,
 
   // generic errors
   [ErrorCodes.X_PREFIX_ID_NOT_SUPPORTED]: `"prefixIdentifiers" option is not supported in this build of compiler.`,
@@ -183,10 +181,6 @@ export const errorMessages: Record<ErrorCodes, string> = {
   [ErrorCodes.X_CACHE_HANDLER_NOT_SUPPORTED]: `"cacheHandlers" option is only supported when the "prefixIdentifiers" option is enabled.`,
   [ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED]: `"scopeId" option is only supported in module mode.`,
 
-  // deprecations
-  [ErrorCodes.DEPRECATION_VNODE_HOOKS]: `@vnode-* hooks in templates are deprecated. Use the vue: prefix instead. For example, @vnode-mounted should be changed to @vue:mounted. @vnode-* hooks support will be removed in 3.4.`,
-  [ErrorCodes.DEPRECATION_V_IS]: `v-is="component-name" has been deprecated. Use is="vue:component-name" instead. v-is support will be removed in 3.4.`,
-
   // just to fulfill types
-  [ErrorCodes.__EXTEND_POINT__]: ``
+  [ErrorCodes.__EXTEND_POINT__]: ``,
 }
