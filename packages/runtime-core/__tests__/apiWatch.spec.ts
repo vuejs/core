@@ -211,6 +211,24 @@ describe('api: watch', () => {
     expect(cb).toBeCalledTimes(1)
   })
 
+  it('should still respect deep: true on shallowReactive source', async () => {
+    const obj = reactive({ a: 1 })
+    const arr = shallowReactive([obj])
+
+    let dummy
+    watch(
+      arr,
+      () => {
+        dummy = arr[0].a
+      },
+      { deep: true },
+    )
+
+    obj.a++
+    await nextTick()
+    expect(dummy).toBe(2)
+  })
+
   it('watching multiple sources', async () => {
     const state = reactive({ count: 1 })
     const count = ref(1)
