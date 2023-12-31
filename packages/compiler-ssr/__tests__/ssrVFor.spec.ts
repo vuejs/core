@@ -35,8 +35,8 @@ describe('ssr: v-for', () => {
       compile(
         `<div v-for="row, i in list">` +
           `<div v-for="j in row">{{ i }},{{ j }}</div>` +
-          `</div>`
-      ).code
+          `</div>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -76,7 +76,7 @@ describe('ssr: v-for', () => {
   test('template v-for (single element)', () => {
     expect(
       compile(`<template v-for="i in list"><span>{{ i }}</span></template>`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -93,8 +93,8 @@ describe('ssr: v-for', () => {
   test('template v-for (multi element)', () => {
     expect(
       compile(
-        `<template v-for="i in list"><span>{{ i }}</span><span>{{ i + 1 }}</span></template>`
-      ).code
+        `<template v-for="i in list"><span>{{ i }}</span><span>{{ i + 1 }}</span></template>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrInterpolate: _ssrInterpolate, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -114,7 +114,7 @@ describe('ssr: v-for', () => {
 
   test('render loop args should not be prefixed', () => {
     const { code } = compile(
-      `<div v-for="{ foo }, index in list">{{ foo + bar + index }}</div>`
+      `<div v-for="{ foo }, index in list">{{ foo + bar + index }}</div>`,
     )
     expect(code).toMatch(`_ctx.bar`)
     expect(code).not.toMatch(`_ctx.foo`)

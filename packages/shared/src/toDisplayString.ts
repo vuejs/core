@@ -1,13 +1,13 @@
 import {
   isArray,
+  isFunction,
   isMap,
   isObject,
-  isFunction,
   isPlainObject,
   isSet,
-  objectToString,
   isString,
-  isSymbol
+  isSymbol,
+  objectToString,
 } from './general'
 
 /**
@@ -37,12 +37,12 @@ const replacer = (_key: string, val: any): any => {
           entries[stringifySymbol(key, i) + ' =>'] = val
           return entries
         },
-        {} as Record<string, any>
-      )
+        {} as Record<string, any>,
+      ),
     }
   } else if (isSet(val)) {
     return {
-      [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v))
+      [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v)),
     }
   } else if (isSymbol(val)) {
     return stringifySymbol(val)
