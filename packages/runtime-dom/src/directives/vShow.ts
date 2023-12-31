@@ -1,4 +1,4 @@
-import { ObjectDirective } from '@vue/runtime-core'
+import type { ObjectDirective } from '@vue/runtime-core'
 
 export const vShowOldKey = Symbol('_vod')
 
@@ -39,7 +39,7 @@ export const vShow: ObjectDirective<VShowElement> = {
   },
   beforeUnmount(el, { value }) {
     setDisplay(el, value)
-  }
+  },
 }
 
 function setDisplay(el: VShowElement, value: unknown): void {

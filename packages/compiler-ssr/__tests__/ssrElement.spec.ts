@@ -4,16 +4,16 @@ import { compile } from '../src'
 describe('ssr: element', () => {
   test('basic elements', () => {
     expect(getCompiledString(`<div></div>`)).toMatchInlineSnapshot(
-      `"\`<div></div>\`"`
+      `"\`<div></div>\`"`,
     )
     expect(getCompiledString(`<div/>`)).toMatchInlineSnapshot(
-      `"\`<div></div>\`"`
+      `"\`<div></div>\`"`,
     )
   })
 
   test('nested elements', () => {
     expect(
-      getCompiledString(`<div><span></span><span></span></div>`)
+      getCompiledString(`<div><span></span><span></span></div>`),
     ).toMatchInlineSnapshot(`"\`<div><span></span><span></span></div>\`"`)
   })
 
@@ -49,7 +49,7 @@ describe('ssr: element', () => {
 
     test('<textarea> with static value', () => {
       expect(
-        getCompiledString(`<textarea value="fo&gt;o"/>`)
+        getCompiledString(`<textarea value="fo&gt;o"/>`),
       ).toMatchInlineSnapshot(`"\`<textarea>fo&gt;o</textarea>\`"`)
     })
 
@@ -73,7 +73,7 @@ describe('ssr: element', () => {
 
     test('multiple _ssrInterpolate at parent and child import dependency once', () => {
       expect(
-        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code
+        compile(`<div>{{ hello }}<textarea v-bind="a"></textarea></div>`).code,
       ).toMatchInlineSnapshot(`
         "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
@@ -96,8 +96,8 @@ describe('ssr: element', () => {
     test('should pass tag to custom elements w/ dynamic v-bind', () => {
       expect(
         compile(`<my-foo v-bind="obj"></my-foo>`, {
-          isCustomElement: () => true
-        }).code
+          isCustomElement: () => true,
+        }).code,
       ).toMatchInlineSnapshot(`
         "const { mergeProps: _mergeProps } = require("vue")
         const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
@@ -112,19 +112,19 @@ describe('ssr: element', () => {
   describe('attrs', () => {
     test('static attrs', () => {
       expect(
-        getCompiledString(`<div id="foo" class="bar"></div>`)
+        getCompiledString(`<div id="foo" class="bar"></div>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo" class="bar"></div>\`"`)
     })
 
     test('ignore static key/ref', () => {
       expect(
-        getCompiledString(`<div key="1" ref="el"></div>`)
+        getCompiledString(`<div key="1" ref="el"></div>`),
       ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
     })
 
     test('ignore v-bind key/ref', () => {
       expect(
-        getCompiledString(`<div :key="1" :ref="el"></div>`)
+        getCompiledString(`<div :key="1" :ref="el"></div>`),
       ).toMatchInlineSnapshot(`"\`<div></div>\`"`)
     })
 
@@ -263,8 +263,8 @@ describe('ssr: element', () => {
       // should merge style and :style
       expect(
         getCompiledString(
-          `<div style="color:red;" :style="b" v-bind="obj"></div>`
-        )
+          `<div style="color:red;" :style="b" v-bind="obj"></div>`,
+        ),
       ).toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps({
@@ -276,10 +276,10 @@ describe('ssr: element', () => {
 
     test('should ignore v-on', () => {
       expect(
-        getCompiledString(`<div id="foo" @click="bar"/>`)
+        getCompiledString(`<div id="foo" @click="bar"/>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(
-        getCompiledString(`<div id="foo" v-on="bar"/>`)
+        getCompiledString(`<div id="foo" v-on="bar"/>`),
       ).toMatchInlineSnapshot(`"\`<div id="foo"></div>\`"`)
       expect(getCompiledString(`<div v-bind="foo" v-on="bar"/>`))
         .toMatchInlineSnapshot(`
@@ -329,7 +329,7 @@ describe('ssr: element', () => {
 
     test('custom dir with object v-bind + normal bindings', () => {
       expect(
-        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`)
+        getCompiledString(`<div v-bind="x" class="foo" v-xxx title="bar" />`),
       ).toMatchInlineSnapshot(`
         "\`<div\${
             _ssrRenderAttrs(_mergeProps(_ctx.x, {
