@@ -1441,7 +1441,7 @@ describe('api: watch', () => {
 
     const cb = vi.fn()
 
-    watch(state, cb, { deep: true, depth: 2 })
+    watch(state, cb, { deep: 2 })
 
     state.a.b = { c: { d: { e: 2 } } }
     await nextTick()
@@ -1467,7 +1467,7 @@ describe('api: watch', () => {
 
     const cb = vi.fn()
 
-    watch(state, cb, { deep: true, depth: 1 })
+    watch(state, cb, { deep: 1 })
 
     state.value.a.b = 3
     await nextTick()
@@ -1492,7 +1492,7 @@ describe('api: watch', () => {
       },
     ])
     const cb = vi.fn()
-    watch(arr, cb, { deep: true, depth: 2 })
+    watch(arr, cb, { deep: 2 })
 
     arr.value[0].a.b = 3
     await nextTick()
