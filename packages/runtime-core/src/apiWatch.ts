@@ -190,6 +190,15 @@ function doWatch(
     }
   }
 
+  // TODO remove in 3.5
+  if (__DEV__ && deep !== void 0 && typeof deep !== 'boolean') {
+    warn(
+      `watch() "deep" option now only accepts boolean values. Please update your code accordingly.` +
+        `\n Expected: watch(source, callback, { deep: ${!!deep} }) ` +
+        `\n Received: watch(source, callback, { deep: ${deep} })`,
+    )
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
