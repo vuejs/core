@@ -231,10 +231,12 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    getter =
-      isShallow(source) || deep === false
-        ? () => traverse(source, 1)
-        : () => traverse(source)
+    if (isShallow(source) || deep === false) {
+      getter = () => traverse(source, 1)
+    } else {
+      getter = () => source
+      deep = true
+    }
     forceTrigger = true
   } else if (isArray(source)) {
     isMultiSource = true
