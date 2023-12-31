@@ -318,7 +318,7 @@ describe('Component Emits', () => {
       ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
     >({} as ComponentEmits<typeof CompProps>)
     // @ts-expect-error checking if is not any
-    expectType<{ bar: string }>({} as ComponentEmits<typeof CompProps>)
+    expectType<() => void>({} as ComponentEmits<typeof CompProps>)
 
     // component array props
     const CompPropsArray = defineComponent(arrayOptions)
@@ -326,7 +326,7 @@ describe('Component Emits', () => {
       ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
     >({} as ComponentEmits<typeof CompPropsArray>)
     // @ts-expect-error checking if is not any
-    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof CompPropsArray>)
+    expectType<() => void>({} as ComponentEmits<typeof CompPropsArray>)
 
     // component no props
     const CompNoProps = defineComponent(noPropsOptions)
@@ -334,7 +334,24 @@ describe('Component Emits', () => {
       ((event: 'a', arg: string) => void) & ((event: 'b', arg: number) => void)
     >({} as ComponentEmits<typeof CompNoProps>)
     // @ts-expect-error checking if is not any
-    expectType<{ bar: 'foo' }>({} as ComponentEmits<typeof CompNoProps>)
+    expectType<() => void>({} as ComponentEmits<typeof CompNoProps>)
+
+    // with SlotsTyped
+    const CompSlotsTyped = defineComponent({
+      slots: {} as SlotsType<{
+        default: (arg: { msg: string }) => any
+      }>,
+
+      emits: {
+        foo: (arg: string) => true,
+      },
+    })
+
+    expectType<(event: 'foo', arg: string) => void>(
+      {} as ComponentEmits<typeof CompSlotsTyped>,
+    )
+    // @ts-expect-error checking if is not any or emtpy
+    expectType<() => void>({} as ComponentEmits<typeof CompSlotsTyped>)
   })
 
   describe('async component', () => {

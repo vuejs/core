@@ -6,7 +6,12 @@ import type {
   ResolveProps,
   defineComponent,
 } from './apiDefineComponent'
-import type { EmitFn, EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitFn,
+  EmitsOptions,
+  EmitsToProps,
+  ObjectEmitsOptions,
+} from './componentEmits'
 import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
@@ -116,7 +121,7 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
   ? E
   : T extends FunctionalComponent<any, infer Emits>
     ? Emits
-    : T extends { emits: infer E extends EmitsOptions }
+    : T extends { emits: infer E extends ObjectEmitsOptions }
       ? E
       : T extends {
             emits: infer E extends Readonly<Array<string>>
