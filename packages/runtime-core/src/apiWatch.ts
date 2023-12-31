@@ -231,7 +231,12 @@ function doWatch(
 
   const instance =
     getCurrentScope() === currentInstance?.scope ? currentInstance : null
-  // const instance = currentInstance
+  const reactiveGetter = (source: object) =>
+    deep === true
+      ? source // traverse will happen in wrapped getter below
+      : // for shallow or deep: false, only traverse root-level properties
+        traverse(source, isShallow(source) || deep === false ? 1 : undefined)
+
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -240,10 +245,7 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    getter =
-      isShallow(source) || deep === false
-        ? () => traverse(source, 1)
-        : () => traverse(source)
+    getter = () => reactiveGetter(source)
     forceTrigger = true
   } else if (isArray(source)) {
     isMultiSource = true
@@ -253,7 +255,7 @@ function doWatch(
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
-          return traverse(s, isShallow(s) || deep === false ? 1 : undefined)
+          return reactiveGetter(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
