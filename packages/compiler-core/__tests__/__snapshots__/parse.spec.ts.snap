@@ -3925,6 +3925,7 @@ exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj"
           },
           "modifiers": [],
           "name": "bind",
+          "rawName": ":v-foo",
           "type": 7,
         },
       ],
@@ -3952,6 +3953,7 @@ exports[`compiler: parse > Errors > X_COLON_BEFORE_DIRECTIVE > <div :v-foo="obj"
       "offset": 0,
     },
   },
+  "source": "<div :v-foo="obj" />",
   "temps": 0,
   "type": 0,
 }
