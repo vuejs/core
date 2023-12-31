@@ -2063,6 +2063,9 @@ describe('compiler: parse', () => {
         exp: undefined,
         arg: undefined,
       })
+      expect(
+        `the directive shorthand '#' cannot be used without an argument`,
+      ).toHaveBeenWarned()
     })
 
     // edge case found in vue-macros where the input is TS or JSX
