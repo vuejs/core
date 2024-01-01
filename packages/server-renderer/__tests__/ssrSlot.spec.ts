@@ -137,4 +137,20 @@ describe('ssr: slot', () => {
       ),
     ).toBe(`<div>foo</div>`)
   })
+
+  // #9933
+  test('transition-group slot', async () => {
+    expect(
+      await renderToString(
+        createApp({
+          components: {
+            one: {
+              template: `<transition><slot/></transition>`,
+            },
+          },
+          template: `<one><p v-for="i in 2">{{i}}</p></one>`,
+        }),
+      ),
+    ).toBe(`<p>1</p><p>2</p>`)
+  })
 })
