@@ -1,2 +1,17 @@
 packages:
-  - 'packages/*'
+  - packages/compiler-core
+  - packages/compiler-dom
+  - packages/compiler-sfc
+  - packages/compiler-ssr
+  - packages/dts-built-test
+  - packages/dts-test
+  - packages/reactivity
+  - packages/runtime-core
+  - packages/runtime-dom
+  - packages/runtime-test
+  - packages/server-renderer
+  - packages/sfc-playground
+  - packages/shared
+  - packages/template-explorer
+  - packages/vue
+  - packages/vue-compat
