@@ -145,12 +145,12 @@ describe('ssr: slot', () => {
         createApp({
           components: {
             one: {
-              template: `<transition><slot/></transition>`,
+              template: `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
             },
           },
           template: `<one><p v-for="i in 2">{{i}}</p></one>`,
         }),
       ),
-    ).toBe(`<p>1</p><p>2</p>`)
+    ).toBe(`<div><p>1</p><p>2</p></div>`)
   })
 })
