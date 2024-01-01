@@ -83,6 +83,17 @@ export function ssrRenderSlotInner(
         }
       } else {
         for (let i = 0; i < slotBuffer.length; i++) {
+          // #9933
+          // Although we handle Transition/TransitionGroup in the transform stage
+          // without rendering them as fragments, the content passed into the slot
+          // may still be a fragment.
+          // Therefore, here we need to avoid rendering it as a fragment again.
+          if (
+            transition &&
+            (slotBuffer[i] === '<!--[-->' || slotBuffer[i] === '<!--]-->')
+          ) {
+            continue
+          }
           push(slotBuffer[i])
         }
       }
