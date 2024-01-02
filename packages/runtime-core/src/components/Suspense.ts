@@ -253,7 +253,7 @@ function patchSuspense(
     } else {
       // toggled before pending tree is resolved
       // increment pending ID. this is used to invalidate async callbacks
-      suspense.pendingId = ++suspenseId
+      suspense.pendingId = suspenseId++
       if (isHydrating) {
         // if toggled before hydration is finished, the current DOM tree is
         // no longer valid. set it as the active branch so it will be unmounted
@@ -356,7 +356,7 @@ function patchSuspense(
       if (newBranch.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
         suspense.pendingId = newBranch.component!.suspenseId!
       } else {
-        suspense.pendingId = ++suspenseId
+        suspense.pendingId = suspenseId++
       }
       patch(
         null,
@@ -476,7 +476,7 @@ function createSuspenseBoundary(
     hiddenContainer,
     anchor,
     deps: 0,
-    pendingId: 0,
+    pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,
