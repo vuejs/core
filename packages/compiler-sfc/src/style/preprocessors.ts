@@ -40,7 +40,7 @@ const scss: StylePreprocessor = (source, map, options, load = require) => {
         code: result.css.toString(),
         map: merge(
           map,
-          result.map.toJSON
+          !(result.map instanceof Buffer) && result.map.toJSON
             ? result.map.toJSON()
             : JSON.parse(result.map.toString()),
         ),
