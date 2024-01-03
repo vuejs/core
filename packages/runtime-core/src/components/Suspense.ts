@@ -1,5 +1,6 @@
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeProps,
   closeBlock,
@@ -9,7 +10,6 @@ import {
   isSameVNodeType,
   normalizeVNode,
   openBlock,
-  Fragment,
 } from '../vnode'
 import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
 import { type ComponentInternalInstance, handleSetupResult } from '../component'

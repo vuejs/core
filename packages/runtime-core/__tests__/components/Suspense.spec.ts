@@ -4,6 +4,7 @@
 
 import {
   type ComponentOptions,
+  type ComponentPublicInstance,
   Fragment,
   KeepAlive,
   Suspense,
@@ -16,9 +17,8 @@ import {
   onUnmounted,
   ref,
   render,
-  resolveDynamicComponent,
   renderSlot,
-  ComponentPublicInstance,
+  resolveDynamicComponent,
   serializeInner,
   shallowRef,
   watch,
@@ -1738,7 +1738,7 @@ describe('Suspense', () => {
     const Async = defineAsyncComponent({
       render() {
         return h('div', `async`)
-      }
+      },
     })
     const onPending = vi.fn()
     const wrapper = {
@@ -1749,19 +1749,19 @@ describe('Suspense', () => {
             { onPending },
             {
               default: () => [renderSlot(ctx.$slots!, 'default')],
-              fallback: () => h('div', 'fallback')
-            }
+              fallback: () => h('div', 'fallback'),
+            },
           )
-      }
+      },
     }
 
     const Parent = {
       setup() {
         return () =>
           h(wrapper, null, {
-            default: () => h(Async, { id: id.value })
+            default: () => h(Async, { id: id.value }),
           })
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
