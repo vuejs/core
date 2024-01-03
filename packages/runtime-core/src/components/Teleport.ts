@@ -503,7 +503,6 @@ function updateCssVars(vnode: VNode) {
   }
 }
 
-// @ts-expect-error
 function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
   if (!children) return
   const ctx = vnode.ctx
