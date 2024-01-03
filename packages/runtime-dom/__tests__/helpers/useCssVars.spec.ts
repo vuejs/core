@@ -134,16 +134,16 @@ describe('useCssVars', () => {
           }
         })
         return asyncPromise
-      }
+      },
     }
 
     const App = {
       setup() {
         return () =>
           h(Suspense, null, {
-            default: h('div', {}, show.value ? h(AsyncComp) : h('p'))
+            default: h('div', {}, show.value ? h(AsyncComp) : h('p')),
           })
-      }
+      },
     }
 
     render(h(App), root)
@@ -159,8 +159,8 @@ describe('useCssVars', () => {
     for (const c of [].slice.call(root.children as any)) {
       expect(
         ((c as any).children[0] as HTMLElement).style.getPropertyValue(
-          `--color`
-        )
+          `--color`,
+        ),
       ).toBe(`red`)
     }
 
@@ -169,8 +169,8 @@ describe('useCssVars', () => {
     for (const c of [].slice.call(root.children as any)) {
       expect(
         ((c as any).children[0] as HTMLElement).style.getPropertyValue(
-          `--color`
-        )
+          `--color`,
+        ),
       ).toBe('green')
     }
   })
