@@ -2,16 +2,16 @@ import { renderToString } from '../src/renderToString'
 import {
   createApp,
   h,
+  mergeProps,
+  ref,
   resolveDirective,
+  unref,
   vModelCheckbox,
   vModelDynamic,
   vModelRadio,
   vModelText,
   vShow,
   withDirectives,
-  mergeProps,
-  ref,
-  unref
 } from 'vue'
 import { ssrGetDirectiveProps, ssrRenderAttrs } from '../src'
 
@@ -556,8 +556,8 @@ describe('ssr: directives', () => {
             exposeVars = instance.x
           }
           return { id: exposeVars }
-        }
-      }
+        },
+      },
     })
     const { vTest } = useTestDirective()
 
@@ -569,18 +569,18 @@ describe('ssr: directives', () => {
           const __returned__ = { useTestDirective, vTest, ref, x }
           Object.defineProperty(__returned__, '__isScriptSetup', {
             enumerable: false,
-            value: true
+            value: true,
           })
           return __returned__
         },
         ssrRender(_ctx, _push, _parent, _attrs) {
           _push(
             `<div${ssrRenderAttrs(
-              mergeProps(_attrs!, ssrGetDirectiveProps(_ctx, unref(vTest)))
-            )}></div>`
+              mergeProps(_attrs!, ssrGetDirectiveProps(_ctx, unref(vTest))),
+            )}></div>`,
           )
-        }
-      })
+        },
+      }),
     )
     expect(renderString).toBe(`<div id="foo"></div>`)
     expect(exposeVars).toBe('foo')
