@@ -1,5 +1,6 @@
 import {
   type VNode,
+  createStaticVNode,
   defineComponent,
   h,
   nextTick,
@@ -7,7 +8,6 @@ import {
   render,
   vModelDynamic,
   withDirectives,
-  createStaticVNode
 } from '@vue/runtime-dom'
 
 const triggerEvent = (type: string, el: Element) => {
@@ -1233,7 +1233,7 @@ describe('vModel', () => {
       v-model can get the correct type`, async () => {
     const hoist = createStaticVNode(
       "<option value=\"string\" v-stringify-type='string'>string</option><option value=\"false\" v-stringify-type='boolean'>bool</option><option value=\"1\" v-stringify-type='number'>number</option><option value=\"2\" v-stringify-type='number'>number</option><option v-stringify-type='null'>null</option>",
-      5
+      5,
     )
     const component = defineComponent({
       data() {
@@ -1246,14 +1246,14 @@ describe('vModel', () => {
               'select',
               {
                 value: null,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [hoist]
+              [hoist],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
