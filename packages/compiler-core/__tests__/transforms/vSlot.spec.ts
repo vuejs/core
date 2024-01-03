@@ -376,7 +376,7 @@ describe('compiler: transform component slots', () => {
       `<Comp>
         <template v-for="name in list" #[name]><p ref="slotItems">{{name}}</p></template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
 
     const spy = {
@@ -385,21 +385,21 @@ describe('compiler: transform component slots', () => {
         constType: 3,
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: 'ref_for',
-        isStatic: true
+        isStatic: true,
       },
       value: {
         constType: 0,
         type: NodeTypes.SIMPLE_EXPRESSION,
         content: 'true',
-        isStatic: false
-      }
+        isStatic: false,
+      },
     }
 
     const properties = (slots as any).arguments[1].elements[0].arguments[1]
       .returns.properties[1].value.returns[0].codegenNode.props.properties[0]
     expect(properties).toMatchObject(spy)
     expect((root as any).children[0].codegenNode.patchFlag).toMatch(
-      PatchFlags.DYNAMIC_SLOTS + ''
+      PatchFlags.DYNAMIC_SLOTS + '',
     )
     expect(generate(root).code).toMatchSnapshot()
   })

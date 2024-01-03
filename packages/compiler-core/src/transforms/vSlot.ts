@@ -9,6 +9,8 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
+  type RenderSlotCall,
+  SimpleExpressionNode,
   type SlotsExpression,
   type SourceLocation,
   type TemplateChildNode,
@@ -19,22 +21,20 @@ import {
   createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
-  SimpleExpressionNode,
-  RenderSlotCall
 } from '../ast'
 import type { NodeTransform, TransformContext } from '../transform'
 import { ErrorCodes, createCompilerError } from '../errors'
 import {
   assert,
   findDir,
+  findProp,
   hasScopeRef,
+  hasScopeRef,
+  injectProp,
+  isStaticExp,
   isStaticExp,
   isTemplateNode,
   isVSlot,
-  hasScopeRef,
-  isStaticExp,
-  findProp,
-  injectProp
 } from '../utils'
 import { CREATE_SLOTS, RENDER_LIST, WITH_CTX } from '../runtimeHelpers'
 import { createForLoopParams, finalizeForParseResult } from './vFor'
@@ -434,14 +434,14 @@ function isNonWhitespaceContent(node: TemplateChildNode): boolean {
 
 function injectRefFor(
   children: TemplateChildNode[],
-  context: TransformContext
+  context: TransformContext,
 ) {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]
     if (child.type === NodeTypes.ELEMENT && findProp(child, 'ref')) {
       const Property = createObjectProperty(
         createSimpleExpression('ref_for', true),
-        createSimpleExpression('true')
+        createSimpleExpression('true'),
       )
       injectProp(child.codegenNode as RenderSlotCall, Property, context)
     }
