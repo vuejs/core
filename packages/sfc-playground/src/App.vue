@@ -140,8 +140,8 @@ onMounted(() => {
     :preview-options="{
       customCode: {
         importCode: `import { initCustomFormatter } from 'vue'`,
-        useCode: `initCustomFormatter()`
-      }
+        useCode: `initCustomFormatter()`,
+      },
     }"
   />
 </template>
