@@ -1,18 +1,18 @@
 import {
   type Ref,
   type VueElement,
+  createCommentVNode,
+  createElementBlock,
+  createTextVNode,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
   h,
   inject,
   nextTick,
+  openBlock,
   ref,
   renderSlot,
-  openBlock,
-  createElementBlock,
-  createTextVNode,
-  createCommentVNode,
 } from '../src'
 
 describe('defineCustomElement', () => {
@@ -710,13 +710,13 @@ describe('defineCustomElement', () => {
                     'default',
                     { key: 0 },
                     () => [createTextVNode('Fallback Content')],
-                    true
+                    true,
                   )
                 : createCommentVNode('v-if', true),
-              createTextVNode('Button')
+              createTextVNode('Button'),
             ])
           )
-        }
+        },
       })
       customElements.define('my-el-v-if-slots', E)
       container.innerHTML = `<my-el-v-if-slots><span>hi</span></my-el-v-if-slots>`
@@ -728,7 +728,7 @@ describe('defineCustomElement', () => {
       show.value = true
       await nextTick()
       expect(e.shadowRoot!.innerHTML).toBe(
-        `<button><slot>Fallback Content</slot>Button</button>`
+        `<button><slot>Fallback Content</slot>Button</button>`,
       )
     })
   })
