@@ -4,7 +4,7 @@ const UNESCAPE_HTML = {
   '&gt;': '>',
   '&amp;': '&',
   '&quot;': '"',
-  '&#39;': "'"
+  '&#39;': "'",
 }
 export function unescapeHtml(s: string | null) {
   if (!s) return s
