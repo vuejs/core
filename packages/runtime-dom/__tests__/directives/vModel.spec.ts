@@ -1,12 +1,12 @@
 import {
-  h,
-  render,
-  nextTick,
+  type VNode,
   defineComponent,
+  h,
+  nextTick,
+  ref,
+  render,
   vModelDynamic,
   withDirectives,
-  VNode,
-  ref,
   createStaticVNode
 } from '@vue/runtime-dom'
 
@@ -42,12 +42,12 @@ describe('vModel', () => {
               'onUpdate:modelValue': setValue.bind(this),
               onInput: () => {
                 manualListener(data.value)
-              }
+              },
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -81,12 +81,12 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'number',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -102,6 +102,61 @@ describe('vModel', () => {
     expect(data.value).toEqual(1)
   })
 
+  // #7003
+  it('should work with number input and be able to update rendering correctly', async () => {
+    const setValue1 = function (this: any, value: any) {
+      this.value1 = value
+    }
+    const setValue2 = function (this: any, value: any) {
+      this.value2 = value
+    }
+    const component = defineComponent({
+      data() {
+        return { value1: 1.002, value2: 1.002 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              id: 'input_num1',
+              type: 'number',
+              'onUpdate:modelValue': setValue1.bind(this),
+            }),
+            this.value1,
+          ),
+          withVModel(
+            h('input', {
+              id: 'input_num2',
+              type: 'number',
+              'onUpdate:modelValue': setValue2.bind(this),
+            }),
+            this.value2,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+    const data = root._vnode.component.data
+
+    const inputNum1 = root.querySelector('#input_num1')!
+    expect(inputNum1.value).toBe('1.002')
+
+    const inputNum2 = root.querySelector('#input_num2')!
+    expect(inputNum2.value).toBe('1.002')
+
+    inputNum1.value = '1.00'
+    triggerEvent('input', inputNum1)
+    await nextTick()
+    expect(data.value1).toBe(1)
+
+    inputNum2.value = '1.00'
+    triggerEvent('input', inputNum2)
+    await nextTick()
+    expect(data.value2).toBe(1)
+
+    expect(inputNum1.value).toBe('1.00')
+  })
+
   it('should work with multiple listeners', async () => {
     const spy = vi.fn()
     const component = defineComponent({
@@ -112,12 +167,12 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              'onUpdate:modelValue': [setValue.bind(this), spy]
+              'onUpdate:modelValue': [setValue.bind(this), spy],
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -141,12 +196,12 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              'onUpdate:modelValue': toggle.value ? spy1 : spy2
+              'onUpdate:modelValue': toggle.value ? spy1 : spy2,
             }),
-            'foo'
-          )
+            'foo',
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -177,12 +232,12 @@ describe('vModel', () => {
         return [
           withVModel(
             h('textarea', {
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -211,52 +266,52 @@ describe('vModel', () => {
               class: 'number',
               'onUpdate:modelValue': (val: any) => {
                 this.number = val
-              }
+              },
             }),
             this.number,
             {
-              number: true
-            }
+              number: true,
+            },
           ),
           withVModel(
             h('input', {
               class: 'trim',
               'onUpdate:modelValue': (val: any) => {
                 this.trim = val
-              }
+              },
             }),
             this.trim,
             {
-              trim: true
-            }
+              trim: true,
+            },
           ),
           withVModel(
             h('input', {
               class: 'trim-number',
               'onUpdate:modelValue': (val: any) => {
                 this.trimNumber = val
-              }
+              },
             }),
             this.trimNumber,
             {
               trim: true,
-              number: true
-            }
+              number: true,
+            },
           ),
           withVModel(
             h('input', {
               class: 'lazy',
               'onUpdate:modelValue': (val: any) => {
                 this.lazy = val
-              }
+              },
             }),
             this.lazy,
             {
-              lazy: true
-            }
-          )
+              lazy: true,
+            },
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -305,12 +360,12 @@ describe('vModel', () => {
               min: 1,
               max: 100,
               class: 'foo',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
             this.value,
             {
-              number: true
-            }
+              number: true,
+            },
           ),
           withVModel(
             h('input', {
@@ -318,15 +373,15 @@ describe('vModel', () => {
               min: 1,
               max: 100,
               class: 'bar',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
             this.value,
             {
-              lazy: true
-            }
-          )
+              lazy: true,
+            },
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -390,12 +445,12 @@ describe('vModel', () => {
           withVModel(
             h('input', {
               type: 'checkbox',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -433,12 +488,12 @@ describe('vModel', () => {
               type: 'checkbox',
               'true-value': 'yes',
               'false-value': 'no',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -479,12 +534,12 @@ describe('vModel', () => {
               type: 'checkbox',
               'true-value': { yes: 'yes' },
               'false-value': { no: 'no' },
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -522,21 +577,21 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'foo',
               value: 'foo',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
+            this.value,
           ),
           withVModel(
             h('input', {
               type: 'checkbox',
               class: 'bar',
               value: 'bar',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -592,21 +647,21 @@ describe('vModel', () => {
               type: 'checkbox',
               class: 'foo',
               value: 'foo',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
+            this.value,
           ),
           withVModel(
             h('input', {
               type: 'checkbox',
               class: 'bar',
               value: 'bar',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -662,21 +717,21 @@ describe('vModel', () => {
               type: 'radio',
               class: 'foo',
               value: 'foo',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
+            this.value,
           ),
           withVModel(
             h('input', {
               type: 'radio',
               class: 'bar',
               value: 'bar',
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -722,14 +777,14 @@ describe('vModel', () => {
               'select',
               {
                 value: null,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -779,14 +834,14 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -840,17 +895,17 @@ describe('vModel', () => {
               'select',
               {
                 value: null,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [h('option', { value: '1' }), h('option', { value: '2' })]
+              [h('option', { value: '1' }), h('option', { value: '2' })],
             ),
             this.value,
             {
-              number: true
-            }
-          )
+              number: true,
+            },
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -878,17 +933,17 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [h('option', { value: '1' }), h('option', { value: '2' })]
+              [h('option', { value: '1' }), h('option', { value: '2' })],
             ),
             this.value,
             {
-              number: true
-            }
-          )
+              number: true,
+            },
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -946,17 +1001,17 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
               [
                 h('option', { value: fooValue }),
-                h('option', { value: barValue })
-              ]
+                h('option', { value: barValue }),
+              ],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -1012,14 +1067,14 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
-              [h('option', { value: 'foo' }), h('option', { value: 'bar' })]
+              [h('option', { value: 'foo' }), h('option', { value: 'bar' })],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -1080,17 +1135,17 @@ describe('vModel', () => {
               {
                 value: null,
                 multiple: true,
-                'onUpdate:modelValue': setValue.bind(this)
+                'onUpdate:modelValue': setValue.bind(this),
               },
               [
                 h('option', { value: fooValue }),
-                h('option', { value: barValue })
-              ]
+                h('option', { value: barValue }),
+              ],
             ),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 
@@ -1142,12 +1197,12 @@ describe('vModel', () => {
         return [
           withVModel(
             h('input', {
-              'onUpdate:modelValue': setValue.bind(this)
+              'onUpdate:modelValue': setValue.bind(this),
             }),
-            this.value
-          )
+            this.value,
+          ),
         ]
-      }
+      },
     })
     render(h(component), root)
 

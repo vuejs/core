@@ -12,8 +12,11 @@ export const NOOP = () => {}
  */
 export const NO = () => false
 
-const onRE = /^on[^a-z]/
-export const isOn = (key: string) => onRE.test(key)
+export const isOn = (key: string) =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // uppercase letter
+  (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
@@ -29,7 +32,7 @@ export const remove = <T>(arr: T[], el: T) => {
 const hasOwnProperty = Object.prototype.hasOwnProperty
 export const hasOwn = (
   val: object,
-  key: string | symbol
+  key: string | symbol,
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
 export const isArray = Array.isArray
@@ -50,7 +53,11 @@ export const isObject = (val: unknown): val is Record<any, any> =>
   val !== null && typeof val === 'object'
 
 export const isPromise = <T = any>(val: unknown): val is Promise<T> => {
-  return isObject(val) && isFunction(val.then) && isFunction(val.catch)
+  return (
+    (isObject(val) || isFunction(val)) &&
+    isFunction((val as any).then) &&
+    isFunction((val as any).catch)
+  )
 }
 
 export const objectToString = Object.prototype.toString
@@ -76,11 +83,11 @@ export const isReservedProp = /*#__PURE__*/ makeMap(
   ',key,ref,ref_for,ref_key,' +
     'onVnodeBeforeMount,onVnodeMounted,' +
     'onVnodeBeforeUpdate,onVnodeUpdated,' +
-    'onVnodeBeforeUnmount,onVnodeUnmounted'
+    'onVnodeBeforeUnmount,onVnodeUnmounted',
 )
 
 export const isBuiltInDirective = /*#__PURE__*/ makeMap(
-  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo'
+  'bind,cloak,else-if,else,for,html,if,model,on,once,pre,show,slot,text,memo',
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
@@ -104,22 +111,23 @@ const hyphenateRE = /\B([A-Z])/g
  * @private
  */
 export const hyphenate = cacheStringFunction((str: string) =>
-  str.replace(hyphenateRE, '-$1').toLowerCase()
+  str.replace(hyphenateRE, '-$1').toLowerCase(),
 )
 
 /**
  * @private
  */
-export const capitalize = cacheStringFunction(
-  (str: string) => str.charAt(0).toUpperCase() + str.slice(1)
-)
+export const capitalize = cacheStringFunction(<T extends string>(str: T) => {
+  return (str.charAt(0).toUpperCase() + str.slice(1)) as Capitalize<T>
+})
 
 /**
  * @private
  */
-export const toHandlerKey = cacheStringFunction((str: string) =>
-  str ? `on${capitalize(str)}` : ``
-)
+export const toHandlerKey = cacheStringFunction(<T extends string>(str: T) => {
+  const s = str ? `on${capitalize(str)}` : ``
+  return s as T extends '' ? '' : `on${Capitalize<T>}`
+})
 
 // compare whether a value has changed, accounting for NaN.
 export const hasChanged = (value: any, oldValue: any): boolean =>
@@ -135,7 +143,7 @@ export const def = (obj: object, key: string | symbol, value: any) => {
   Object.defineProperty(obj, key, {
     configurable: true,
     enumerable: false,
-    value
+    value,
   })
 }
 
@@ -149,7 +157,7 @@ export const looseToNumber = (val: any): any => {
 }
 
 /**
- * Only conerces number-like strings
+ * Only concerns number-like strings
  * "123-foo" will be returned as-is
  */
 export const toNumber = (val: any): any => {
@@ -165,12 +173,12 @@ export const getGlobalThis = (): any => {
       typeof globalThis !== 'undefined'
         ? globalThis
         : typeof self !== 'undefined'
-        ? self
-        : typeof window !== 'undefined'
-        ? window
-        : typeof global !== 'undefined'
-        ? global
-        : {})
+          ? self
+          : typeof window !== 'undefined'
+            ? window
+            : typeof global !== 'undefined'
+              ? global
+              : {})
   )
 }
 
