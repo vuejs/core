@@ -194,7 +194,7 @@ function doWatch(
   if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
     warn(
       `watch() "deep" option with number value will be used as watch depth in future versions. ` +
-      `Please use a boolean instead to avoid potential breakage.",
+        `Please use a boolean instead to avoid potential breakage.`,
     )
   }
 
