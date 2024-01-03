@@ -1,14 +1,17 @@
 import {
-  h,
-  render,
-  getCurrentInstance,
-  nodeOps,
   createApp,
-  shallowReadonly,
   defineComponent,
+  getCurrentInstance,
+  h,
+  nodeOps,
+  render,
+  shallowReadonly,
   TestElement
 } from '@vue/runtime-test'
-import { ComponentInternalInstance, ComponentOptions } from '../src/component'
+import type {
+  ComponentInternalInstance,
+  ComponentOptions,
+} from '../src/component'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -17,7 +20,7 @@ describe('component: proxy', () => {
     const Comp = {
       data() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       mounted() {
@@ -26,7 +29,7 @@ describe('component: proxy', () => {
       },
       render() {
         return null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
@@ -40,7 +43,7 @@ describe('component: proxy', () => {
     const Comp = {
       setup() {
         return {
-          foo: 1
+          foo: 1,
         }
       },
       mounted() {
@@ -49,7 +52,7 @@ describe('component: proxy', () => {
       },
       render() {
         return null
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.foo).toBe(1)
@@ -65,7 +68,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp, { count: 1 }), nodeOps.createElement('div'))
     expect('count' in instanceProxy).toBe(false)
@@ -81,7 +84,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(instanceProxy.$data).toBe(instance!.data)
@@ -90,7 +93,7 @@ describe('component: proxy', () => {
     expect(instanceProxy.$slots).toBe(shallowReadonly(instance!.slots))
     expect(instanceProxy.$refs).toBe(shallowReadonly(instance!.refs))
     expect(instanceProxy.$parent).toBe(
-      instance!.parent && instance!.parent.proxy
+      instance!.parent && instance!.parent.proxy,
     )
     expect(instanceProxy.$root).toBe(instance!.root.proxy)
     expect(instanceProxy.$emit).toBe(instance!.emit)
@@ -115,7 +118,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     instanceProxy.foo = 1
@@ -234,7 +237,7 @@ describe('component: proxy', () => {
       mounted() {
         instance = getCurrentInstance()!
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -256,21 +259,21 @@ describe('component: proxy', () => {
     const Comp = {
       render() {},
       props: {
-        msg: String
+        msg: String,
       },
       data() {
         return {
-          foo: 0
+          foo: 0,
         }
       },
       setup() {
         return {
-          bar: 1
+          bar: 1,
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp, { msg: 'hello' })
@@ -308,7 +311,7 @@ describe('component: proxy', () => {
       'msg',
       'bar',
       'foo',
-      'baz'
+      'baz',
     ])
   })
 
@@ -318,12 +321,12 @@ describe('component: proxy', () => {
       render() {},
       setup() {
         return {
-          isDisplayed: true
+          isDisplayed: true,
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -341,7 +344,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'isDisplayed', {
       get() {
         return false
-      }
+      },
     })
 
     expect(instanceProxy.isDisplayed).toBe(false)
@@ -349,7 +352,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'isDisplayed', {
       get() {
         return true
-      }
+      },
     })
 
     expect(instanceProxy.isDisplayed).toBe(true)
@@ -364,12 +367,12 @@ describe('component: proxy', () => {
         return {
           toggle() {
             return 'a'
-          }
+          },
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -386,7 +389,7 @@ describe('component: proxy', () => {
       get() {
         getCalledTimes++
         return () => 'b'
-      }
+      },
     })
 
     // getter should not be evaluated on initial definition
@@ -420,12 +423,12 @@ describe('component: proxy', () => {
       render() {},
       setup() {
         return {
-          toggle: 'a'
+          toggle: 'a',
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -436,14 +439,14 @@ describe('component: proxy', () => {
     expect(v1).toEqual('a')
 
     Object.defineProperty(instanceProxy, 'toggle', {
-      value: 'b'
+      value: 'b',
     })
     const v2 = instanceProxy.toggle
     expect(v2).toEqual('b')
 
     // expect null to be a settable value
     Object.defineProperty(instanceProxy, 'toggle', {
-      value: null
+      value: null,
     })
     const v3 = instanceProxy.toggle
     expect(v3).toBeNull()
@@ -460,21 +463,21 @@ describe('component: proxy', () => {
       computed: {
         greet() {
           return 'Hi ' + (this as any).name
-        }
+        },
       },
       render() {},
       setup() {
         return {
-          fromSetup: true
+          fromSetup: true,
         }
       },
       mounted() {
         instanceProxy = this
-      }
+      },
     }
 
     const app = createApp(Comp, {
-      fromProp: true
+      fromProp: true,
     })
 
     app.mount(nodeOps.createElement('div'))
@@ -484,7 +487,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'name', {
       get() {
         return 'getter.name'
-      }
+      },
     })
 
     // computed is same still cached
@@ -500,7 +503,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'greet', {
       get() {
         return 'Hi greet.getter.computed'
-      }
+      },
     })
     expect(instanceProxy.greet).toEqual('Hi greet.getter.computed')
 
@@ -509,7 +512,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'fromSetup', {
       get() {
         return false
-      }
+      },
     })
     expect(instanceProxy.fromSetup).toBe(false)
 
@@ -518,7 +521,7 @@ describe('component: proxy', () => {
     Object.defineProperty(instanceProxy, 'fromProp', {
       get() {
         return false
-      }
+      },
     })
     expect(instanceProxy.fromProp).toBe(false)
   })
@@ -529,11 +532,11 @@ describe('component: proxy', () => {
       props: ['test'],
       render(this: any) {
         return this.test
-      }
+      },
     }
     render(h(Comp), nodeOps.createElement('div'))
     expect(
-      `was accessed during render but is not defined`
+      `was accessed during render but is not defined`,
     ).not.toHaveBeenWarned()
   })
 
@@ -544,7 +547,7 @@ describe('component: proxy', () => {
           return '1'
         }
         return '2'
-      }
+      },
     }
 
     const app = createApp(Comp)
@@ -552,8 +555,8 @@ describe('component: proxy', () => {
 
     expect(
       `Property ${JSON.stringify(
-        Symbol.unscopables
-      )} was accessed during render ` + `but is not defined on instance.`
+        Symbol.unscopables,
+      )} was accessed during render ` + `but is not defined on instance.`,
     ).toHaveBeenWarned()
   })
 
@@ -563,7 +566,7 @@ describe('component: proxy', () => {
       setup() {
         return {
           __isScriptSetup: true,
-          foo: 1
+          foo: 1,
         }
       },
       mounted() {
@@ -571,7 +574,7 @@ describe('component: proxy', () => {
         try {
           this.foo = 123
         } catch (e) {}
-      }
+      },
     })
     render(h(Comp), nodeOps.createElement('div'))
     expect(`Cannot mutate <script setup> binding "foo"`).toHaveBeenWarned()
