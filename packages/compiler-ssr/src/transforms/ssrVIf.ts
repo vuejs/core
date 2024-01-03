@@ -1,23 +1,23 @@
 import {
-  createStructuralDirectiveTransform,
-  processIf,
-  IfNode,
-  createIfStatement,
+  type BlockStatement,
+  type IfBranchNode,
+  type IfNode,
+  NodeTypes,
   createBlockStatement,
   createCallExpression,
-  IfBranchNode,
-  BlockStatement,
-  NodeTypes
+  createIfStatement,
+  createStructuralDirectiveTransform,
+  processIf,
 } from '@vue/compiler-dom'
 import {
-  SSRTransformContext,
-  processChildrenAsStatement
+  type SSRTransformContext,
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
 // Plugin for the first transform pass, which simply constructs the AST node
 export const ssrTransformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
-  processIf
+  processIf,
 )
 
 // This is called during the 2nd transform pass to construct the SSR-specific
@@ -25,12 +25,12 @@ export const ssrTransformIf = createStructuralDirectiveTransform(
 export function ssrProcessIf(
   node: IfNode,
   context: SSRTransformContext,
-  disableNestedFragments = false
+  disableNestedFragments = false,
 ) {
   const [rootBranch] = node.branches
   const ifStatement = createIfStatement(
     rootBranch.condition!,
-    processIfBranch(rootBranch, context, disableNestedFragments)
+    processIfBranch(rootBranch, context, disableNestedFragments),
   )
   context.pushStatement(ifStatement)
 
@@ -40,13 +40,13 @@ export function ssrProcessIf(
     const branchBlockStatement = processIfBranch(
       branch,
       context,
-      disableNestedFragments
+      disableNestedFragments,
     )
     if (branch.condition) {
       // else-if
       currentIf = currentIf.alternate = createIfStatement(
         branch.condition,
-        branchBlockStatement
+        branchBlockStatement,
       )
     } else {
       // else
@@ -56,7 +56,7 @@ export function ssrProcessIf(
 
   if (!currentIf.alternate) {
     currentIf.alternate = createBlockStatement([
-      createCallExpression(`_push`, ['`<!---->`'])
+      createCallExpression(`_push`, ['`<!---->`']),
     ])
   }
 }
@@ -64,7 +64,7 @@ export function ssrProcessIf(
 function processIfBranch(
   branch: IfBranchNode,
   context: SSRTransformContext,
-  disableNestedFragments = false
+  disableNestedFragments = false,
 ): BlockStatement {
   const { children } = branch
   const needFragmentWrapper =

@@ -1,5 +1,5 @@
 import { CustomPropsNotErased } from '@vue/dts-built-test'
-import { expectType, describe } from './utils'
+import { describe, expectType } from './utils'
 
 declare module 'vue' {
   interface ComponentCustomProps {

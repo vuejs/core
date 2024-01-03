@@ -1,5 +1,5 @@
-import { ref, isRef } from '../src/ref'
-import { reactive, isReactive, toRaw, markRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
+import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
 
@@ -35,9 +35,9 @@ describe('reactivity/reactive', () => {
   test('nested reactives', () => {
     const original = {
       nested: {
-        foo: 1
+        foo: 1,
       },
-      array: [{ bar: 2 }]
+      array: [{ bar: 2 }],
     }
     const observed = reactive(original)
     expect(isReactive(observed.nested)).toBe(true)
@@ -158,6 +158,21 @@ describe('reactivity/reactive', () => {
     expect(original.bar).toBe(original2)
   })
 
+  // #1246
+  test('mutation on objects using reactive as prototype should not trigger', () => {
+    const observed = reactive({ foo: 1 })
+    const original = Object.create(observed)
+    let dummy
+    effect(() => (dummy = original.foo))
+    expect(dummy).toBe(1)
+    observed.foo = 2
+    expect(dummy).toBe(2)
+    original.foo = 3
+    expect(dummy).toBe(2)
+    original.foo = 4
+    expect(dummy).toBe(2)
+  })
+
   test('toRaw', () => {
     const original = { foo: 1 }
     const observed = reactive(original)
@@ -166,11 +181,18 @@ describe('reactivity/reactive', () => {
   })
 
   test('toRaw on object using reactive as prototype', () => {
-    const original = reactive({})
-    const obj = Object.create(original)
+    const original = { foo: 1 }
+    const observed = reactive(original)
+    const inherted = Object.create(observed)
+    expect(toRaw(inherted)).toBe(inherted)
+  })
+
+  test('toRaw on user Proxy wrapping reactive', () => {
+    const original = {}
+    const re = reactive(original)
+    const obj = new Proxy(re, {})
     const raw = toRaw(obj)
-    expect(raw).toBe(obj)
-    expect(raw).not.toBe(toRaw(original))
+    expect(raw).toBe(original)
   })
 
   test('should not unwrap Ref<T>', () => {
@@ -187,7 +209,7 @@ describe('reactivity/reactive', () => {
     // writable
     const b = computed({
       get: () => 1,
-      set: () => {}
+      set: () => {},
     })
     const obj = reactive({ a, b })
     // check type
@@ -216,7 +238,7 @@ describe('reactivity/reactive', () => {
     const assertValue = (value: any) => {
       reactive(value)
       expect(
-        `value cannot be made reactive: ${String(value)}`
+        `value cannot be made reactive: ${String(value)}`,
       ).toHaveBeenWarnedLast()
     }
 
@@ -249,7 +271,7 @@ describe('reactivity/reactive', () => {
   test('markRaw', () => {
     const obj = reactive({
       foo: { a: 1 },
-      bar: markRaw({ b: 2 })
+      bar: markRaw({ b: 2 }),
     })
     expect(isReactive(obj.foo)).toBe(true)
     expect(isReactive(obj.bar)).toBe(false)
@@ -260,7 +282,7 @@ describe('reactivity/reactive', () => {
       foo: Object.preventExtensions({ a: 1 }),
       // sealed or frozen objects are considered non-extensible as well
       bar: Object.freeze({ a: 1 }),
-      baz: Object.seal({ a: 1 })
+      baz: Object.seal({ a: 1 }),
     })
     expect(isReactive(obj.foo)).toBe(false)
     expect(isReactive(obj.bar)).toBe(false)
@@ -270,7 +292,7 @@ describe('reactivity/reactive', () => {
   test('should not observe objects with __v_skip', () => {
     const original = {
       foo: 1,
-      __v_skip: true
+      __v_skip: true,
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
