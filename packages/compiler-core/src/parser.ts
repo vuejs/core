@@ -229,6 +229,13 @@ const tokenizer = new Tokenizer(stack, {
         loc: getLoc(start),
       }
       if (name === 'pre') {
+        currentProp = {
+          type: NodeTypes.ATTRIBUTE,
+          name: raw,
+          nameLoc: getLoc(start, end),
+          value: undefined,
+          loc: getLoc(start),
+        }
         inVPre = tokenizer.inVPre = true
         currentVPreBoundary = currentOpenTag
         // convert dirs before this one to attributes
@@ -1060,9 +1067,6 @@ export function baseParse(input: string, options?: ParserOptions): RootNode {
   if (delimiters) {
     tokenizer.delimiterOpen = toCharCodes(delimiters[0])
     tokenizer.delimiterClose = toCharCodes(delimiters[1])
-  }
-  if(currentInput.includes('v-pre')){
-    debugger
   }
   const root = (currentRoot = createRoot([], input))
   tokenizer.parse(currentInput)
