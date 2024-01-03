@@ -33,8 +33,8 @@ import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
 import {
   findDir,
   findProp,
-  injectProp,
   getMemoedOrOnceVNodeCall,
+  injectProp,
 } from '../utils'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
 

@@ -1,5 +1,6 @@
 import {
   type BlockCodegenNode,
+  type CacheExpression,
   type CallExpression,
   type DirectiveNode,
   type ElementNode,
@@ -23,7 +24,6 @@ import {
   type VNodeCall,
   createCallExpression,
   createObjectExpression,
-  CacheExpression,
 } from './ast'
 import type { TransformContext } from './transform'
 import {
@@ -493,7 +493,7 @@ export function hasScopeRef(
 }
 
 export function getMemoedOrOnceVNodeCall(
-  node: BlockCodegenNode | MemoExpression | CacheExpression
+  node: BlockCodegenNode | MemoExpression | CacheExpression,
 ) {
   if (node.type === NodeTypes.JS_CALL_EXPRESSION && node.callee === WITH_MEMO) {
     return node.arguments[1].returns as VNodeCall

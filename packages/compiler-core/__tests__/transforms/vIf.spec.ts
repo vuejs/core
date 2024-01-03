@@ -428,13 +428,13 @@ describe('compiler: v-if', () => {
     test('template v-if w/ v-once', () => {
       const {
         root,
-        node: { codegenNode }
+        node: { codegenNode },
       } = parseWithIfTransform(
-        `<template v-if="true"><p v-once>foo</p></template>`
+        `<template v-if="true"><p v-once>foo</p></template>`,
       )
       expect(codegenNode.consequent).toMatchObject({
         type: NodeTypes.VNODE_CALL,
-        tag: `"p"`
+        tag: `"p"`,
       })
       expect(generate(root).code).toMatchSnapshot()
     })
