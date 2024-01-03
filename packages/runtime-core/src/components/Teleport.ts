@@ -1,21 +1,17 @@
-import { ComponentInternalInstance } from '../component'
-import { SuspenseBoundary } from './Suspense'
+import type { ComponentInternalInstance } from '../component'
+import type { SuspenseBoundary } from './Suspense'
 import {
-  RendererInternals,
+  type ElementNamespace,
   MoveType,
-  RendererElement,
-  RendererNode,
-  RendererOptions,
+  type RendererElement,
+  type RendererInternals,
+  type RendererNode,
+  type RendererOptions,
   traverseStaticChildren,
-  queuePostRenderEffect
+  queuePostRenderEffect,
 } from '../renderer'
-import {
-  VNode,
-  VNodeArrayChildren,
-  VNodeNormalizedChildren,
-  VNodeProps
-} from '../vnode'
-import { isArray, isString, ShapeFlags } from '@vue/shared'
+import type { VNode, VNodeArrayChildren, VNodeProps, VNodeNormalizedChildren } from '../vnode'
+import { isArray, ShapeFlags, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -32,7 +28,6 @@ export const teleportUTMap: Record<
 
 export const isTeleport = (type: any): boolean => type.__isTeleport
 /**
- * TODO: comment
  * @private
  */
 export const setTeleportOwnerAttrToEl = (
@@ -95,9 +90,12 @@ const isTeleportDisabled = (props: VNode['props']): boolean =>
 const isTargetSVG = (target: RendererElement): boolean =>
   typeof SVGElement !== 'undefined' && target instanceof SVGElement
 
+const isTargetMathML = (target: RendererElement): boolean =>
+  typeof MathMLElement === 'function' && target instanceof MathMLElement
+
 const resolveTarget = <T = RendererElement>(
   props: TeleportProps | null,
-  select: RendererOptions['querySelector']
+  select: RendererOptions['querySelector'],
 ): T | null => {
   const targetSelector = props && props.to
   if (isString(targetSelector)) {
@@ -105,7 +103,7 @@ const resolveTarget = <T = RendererElement>(
       __DEV__ &&
         warn(
           `Current renderer does not support string target for Teleports. ` +
-            `(missing querySelector renderer option)`
+            `(missing querySelector renderer option)`,
         )
       return null
     } else {
@@ -116,7 +114,7 @@ const resolveTarget = <T = RendererElement>(
             `Failed to locate Teleport target with selector "${targetSelector}". ` +
               `Note the target element must exist before the component is mounted - ` +
               `i.e. the target cannot be rendered by the component itself, and ` +
-              `ideally should be outside of the entire Vue component tree.`
+              `ideally should be outside of the entire Vue component tree.`,
           )
       }
       return target as T
@@ -139,16 +137,16 @@ export const TeleportImpl = {
     anchor: RendererNode | null,
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
-    isSVG: boolean,
+    namespace: ElementNamespace,
     slotScopeIds: string[] | null,
     optimized: boolean,
-    internals: RendererInternals
+    internals: RendererInternals,
   ) {
     const {
       mc: mountChildren,
       pc: patchChildren,
       pbc: patchBlockChildren,
-      o: { insert, querySelector, createText, createComment }
+      o: { insert, querySelector, createText, createComment },
     } = internals
 
     const disabled = isTeleportDisabled(n2.props)
@@ -179,7 +177,11 @@ export const TeleportImpl = {
       if (target) {
         insert(targetAnchor, target)
         // #2652 we could be teleporting from a non-SVG tree into an SVG tree
-        isSVG = isSVG || isTargetSVG(target)
+        if (namespace === 'svg' || isTargetSVG(target)) {
+          namespace = 'svg'
+        } else if (namespace === 'mathml' || isTargetMathML(target)) {
+          namespace = 'mathml'
+        }
       } else if (__DEV__ && !disabled) {
         warn('Invalid Teleport target on mount:', target, `(${typeof target})`)
       }
@@ -194,9 +196,9 @@ export const TeleportImpl = {
             anchor,
             parentComponent,
             parentSuspense,
-            isSVG,
+            namespace,
             slotScopeIds,
-            optimized
+            optimized,
           )
         }
       }
@@ -215,7 +217,12 @@ export const TeleportImpl = {
       const wasDisabled = isTeleportDisabled(n1.props)
       const currentContainer = wasDisabled ? container : target
       const currentAnchor = wasDisabled ? mainAnchor : targetAnchor
-      isSVG = isSVG || isTargetSVG(target)
+
+      if (namespace === 'svg' || isTargetSVG(target)) {
+        namespace = 'svg'
+      } else if (namespace === 'mathml' || isTargetMathML(target)) {
+        namespace = 'mathml'
+      }
 
       if (dynamicChildren) {
         // fast path when the teleport happens to be a block root
@@ -225,8 +232,8 @@ export const TeleportImpl = {
           currentContainer,
           parentComponent,
           parentSuspense,
-          isSVG,
-          slotScopeIds
+          namespace,
+          slotScopeIds,
         )
         // even in block tree mode we need to make sure all root-level nodes
         // in the teleport inherit previous DOM references so that they can
@@ -240,9 +247,9 @@ export const TeleportImpl = {
           currentAnchor,
           parentComponent,
           parentSuspense,
-          isSVG,
+          namespace,
           slotScopeIds,
-          false
+          false,
         )
       }
 
@@ -255,7 +262,7 @@ export const TeleportImpl = {
             container,
             mainAnchor,
             internals,
-            TeleportMoveTypes.TOGGLE
+            TeleportMoveTypes.TOGGLE,
           )
         } else {
           // #7835
@@ -270,7 +277,7 @@ export const TeleportImpl = {
         if ((n2.props && n2.props.to) !== (n1.props && n1.props.to)) {
           const nextTarget = (n2.target = resolveTarget(
             n2.props,
-            querySelector
+            querySelector,
           ))
           if (nextTarget) {
             moveTeleport(
@@ -278,13 +285,13 @@ export const TeleportImpl = {
               nextTarget,
               null,
               internals,
-              TeleportMoveTypes.TARGET_CHANGE
+              TeleportMoveTypes.TARGET_CHANGE,
             )
           } else if (__DEV__) {
             warn(
               'Invalid Teleport target on update:',
               target,
-              `(${typeof target})`
+              `(${typeof target})`,
             )
           }
         } else if (wasDisabled) {
@@ -295,7 +302,7 @@ export const TeleportImpl = {
             target,
             targetAnchor,
             internals,
-            TeleportMoveTypes.TOGGLE
+            TeleportMoveTypes.TOGGLE,
           )
         }
       }
@@ -310,7 +317,7 @@ export const TeleportImpl = {
     parentSuspense: SuspenseBoundary | null,
     optimized: boolean,
     { um: unmount, o: { remove: hostRemove } }: RendererInternals,
-    doRemove: boolean
+    doRemove: boolean,
   ) {
     const { shapeFlag, children, anchor, targetAnchor, target, props } = vnode
 
@@ -329,20 +336,20 @@ export const TeleportImpl = {
           parentComponent,
           parentSuspense,
           shouldRemove,
-          !!child.dynamicChildren
+          !!child.dynamicChildren,
         )
       }
     }
   },
 
   move: moveTeleport,
-  hydrate: hydrateTeleport
+  hydrate: hydrateTeleport,
 }
 
-export const enum TeleportMoveTypes {
+export enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
-  REORDER // moved in the main view
+  REORDER, // moved in the main view
 }
 
 function moveTeleport(
@@ -350,7 +357,7 @@ function moveTeleport(
   container: RendererElement,
   parentAnchor: RendererNode | null,
   { o: { insert }, m: move }: RendererInternals,
-  moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER
+  moveType: TeleportMoveTypes = TeleportMoveTypes.REORDER,
 ) {
   // move target anchor if this is a target change.
   if (moveType === TeleportMoveTypes.TARGET_CHANGE) {
@@ -373,7 +380,7 @@ function moveTeleport(
           (children as VNode[])[i],
           container,
           parentAnchor,
-          MoveType.REORDER
+          MoveType.REORDER,
         )
       }
     }
@@ -397,7 +404,7 @@ function hydrateTeleport(
   slotScopeIds: string[] | null,
   optimized: boolean,
   {
-    o: { nextSibling, parentNode, querySelector }
+    o: { nextSibling, parentNode, querySelector },
   }: RendererInternals<Node, Element>,
   hydrateChildren: (
     node: Node | null,
@@ -406,12 +413,12 @@ function hydrateTeleport(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
-    optimized: boolean
-  ) => Node | null
+    optimized: boolean,
+  ) => Node | null,
 ): Node | null {
   const target = (vnode.target = resolveTarget<Element>(
     vnode.props,
-    querySelector
+    querySelector,
   ))
   if (target) {
     // if multiple teleports rendered to the same target element, we need to
@@ -427,7 +434,7 @@ function hydrateTeleport(
           parentComponent,
           parentSuspense,
           slotScopeIds,
-          optimized
+          optimized,
         )
         vnode.targetAnchor = targetNode
       } else {
@@ -457,7 +464,7 @@ function hydrateTeleport(
           parentComponent,
           parentSuspense,
           slotScopeIds,
-          optimized
+          optimized,
         )
       }
     }
