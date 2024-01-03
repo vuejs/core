@@ -943,7 +943,7 @@ function testRender(type: string, render: typeof renderToString) {
                 _push,
                 createVNode(resolveDynamicComponent('B'), null, null),
                 _parent,
-                null
+                null,
               )
             },
           }),

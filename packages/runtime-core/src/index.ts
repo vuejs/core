@@ -106,7 +106,7 @@ export {
   Suspense,
   createSSRSuspenseBoundary,
   type ssrSuspenseBoundary,
-  type SuspenseProps
+  type SuspenseProps,
 } from './components/Suspense'
 export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'
 export {

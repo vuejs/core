@@ -12,7 +12,7 @@ describe('SSR Suspense', () => {
   const ResolvingSync = {
     setup() {
       return () => h('div', 'sync')
-    }
+    },
   }
 
   const RejectingAsync = {
@@ -92,17 +92,17 @@ describe('SSR Suspense', () => {
         return h(
           Suspense,
           {
-            onResolve
+            onResolve,
           },
           {
             default: h('div', [h(ResolvingAsync), h(ResolvingAsync)]),
-            fallback: h('div', 'fallback')
-          }
+            fallback: h('div', 'fallback'),
+          },
         )
-      }
+      },
     }
     expect(await renderToString(createApp(Comp))).toBe(
-      `<div><div>async</div><div>async</div></div>`
+      `<div><div>async</div><div>async</div></div>`,
     )
     expect(onResolve).toHaveBeenCalledTimes(1)
   })
@@ -112,24 +112,24 @@ describe('SSR Suspense', () => {
     const child = {
       async setup() {
         return () => h(ResolvingAsync)
-      }
+      },
     }
     const Comp = {
       render() {
         return h(
           Suspense,
           {
-            onResolve
+            onResolve,
           },
           {
             default: h('div', [h(child)]),
-            fallback: h('div', 'fallback')
-          }
+            fallback: h('div', 'fallback'),
+          },
         )
-      }
+      },
     }
     expect(await renderToString(createApp(Comp))).toBe(
-      `<div><div>async</div></div>`
+      `<div><div>async</div></div>`,
     )
     expect(onResolve).toHaveBeenCalledTimes(1)
   })
@@ -141,17 +141,17 @@ describe('SSR Suspense', () => {
         return h(
           Suspense,
           {
-            onResolve
+            onResolve,
           },
           {
             default: h('div', [h(ResolvingSync), h(ResolvingSync)]),
-            fallback: h('div', 'fallback')
-          }
+            fallback: h('div', 'fallback'),
+          },
         )
-      }
+      },
     }
     expect(await renderToString(createApp(Comp))).toBe(
-      `<div><div>sync</div><div>sync</div></div>`
+      `<div><div>sync</div><div>sync</div></div>`,
     )
     expect(onResolve).toHaveBeenCalledTimes(1)
   })
@@ -164,21 +164,21 @@ describe('SSR Suspense', () => {
         return h(
           Suspense,
           {
-            onResolve
+            onResolve,
           },
           {
             default: h(
               Suspense,
               {
-                onResolve: onNestedResolve
+                onResolve: onNestedResolve,
               },
               {
-                default: h(ResolvingAsync)
-              }
-            )
-          }
+                default: h(ResolvingAsync),
+              },
+            ),
+          },
         )
-      }
+      },
     }
     expect(await renderToString(createApp(Comp))).toBe(`<div>async</div>`)
     expect(onResolve).toHaveBeenCalledTimes(1)

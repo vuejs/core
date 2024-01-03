@@ -877,6 +877,6 @@ export function createSSRSuspenseBoundary(vnode: VNode) {
       triggerEvent(vnode, 'onResolve')
     },
     vnode: vnode,
-    parentSuspense: null
+    parentSuspense: null,
   }
 }

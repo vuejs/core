@@ -10,11 +10,11 @@ import {
   type VNode,
   type VNodeArrayChildren,
   type VNodeProps,
+  createSSRSuspenseBoundary,
   mergeProps,
+  type ssrSuspenseBoundary,
   ssrUtils,
   warn,
-  createSSRSuspenseBoundary,
-  ssrSuspenseBoundary
 } from 'vue'
 import {
   NOOP,
@@ -161,7 +161,7 @@ function renderComponentSubTree(
       (instance.subTree = root),
       instance,
       parentSuspense,
-      slotScopeId
+      slotScopeId,
     )
   } else {
     if (
@@ -292,7 +292,7 @@ export function renderVNode(
           vnode,
           parentComponent,
           parentSuspense,
-          slotScopeId
+          slotScopeId,
         )
       } else if (shapeFlag & ShapeFlags.COMPONENT) {
         push(
@@ -300,8 +300,8 @@ export function renderVNode(
             vnode,
             parentComponent,
             parentSuspense,
-            slotScopeId
-          )
+            slotScopeId,
+          ),
         )
       } else if (shapeFlag & ShapeFlags.TELEPORT) {
         renderTeleportVNode(
@@ -309,12 +309,12 @@ export function renderVNode(
           vnode,
           parentComponent,
           parentSuspense,
-          slotScopeId
+          slotScopeId,
         )
       } else if (shapeFlag & ShapeFlags.SUSPENSE) {
         if (!vnode.suspense) {
           vnode.suspense = createSSRSuspenseBoundary(
-            vnode
+            vnode,
           ) as ssrSuspenseBoundary
         }
 
@@ -329,7 +329,7 @@ export function renderVNode(
           vnode.ssContent!,
           parentComponent,
           vnode.suspense as ssrSuspenseBoundary,
-          slotScopeId
+          slotScopeId,
         )
 
         // sync
@@ -359,7 +359,7 @@ export function renderVNodeChildren(
       normalizeVNode(children[i]),
       parentComponent,
       parentSuspense,
-      slotScopeId
+      slotScopeId,
     )
   }
 }
@@ -369,7 +369,7 @@ function renderElementVNode(
   vnode: VNode,
   parentComponent: ComponentInternalInstance,
   parentSuspense: ssrSuspenseBoundary | null,
-  slotScopeId: string | undefined
+  slotScopeId: string | undefined,
 ) {
   const tag = vnode.type as string
   let { props, children, shapeFlag, scopeId, dirs } = vnode
