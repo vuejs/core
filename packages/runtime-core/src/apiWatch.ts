@@ -5,6 +5,7 @@ import {
   ReactiveEffect,
   ReactiveFlags,
   type Ref,
+  getCurrentScope,
   isReactive,
   isRef,
   isShallow,
@@ -394,10 +395,11 @@ function doWatch(
 
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
 
+  const scope = getCurrentScope()
   const unwatch = () => {
     effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
+    if (scope) {
+      remove(scope.effects, effect)
     }
   }
 
