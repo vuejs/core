@@ -70,8 +70,8 @@ const sfcOptions: SFCOptions = {
   template: {
     isProd: useProdMode.value,
     compilerOptions: {
-      isCustomElement: (tag: string) => tag === 'mjx-container'
-    }
+      isCustomElement: (tag: string) => tag === 'mjx-container',
+    },
   },
 }
 
