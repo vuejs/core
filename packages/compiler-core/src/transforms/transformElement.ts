@@ -13,6 +13,7 @@ import {
   NodeTypes,
   type ObjectExpression,
   type Property,
+  type SimpleExpressionNode,
   type TemplateTextChildNode,
   type VNodeCall,
   createArrayExpression,
@@ -21,7 +22,6 @@ import {
   createObjectProperty,
   createSimpleExpression,
   createVNodeCall,
-  SimpleExpressionNode
 } from '../ast'
 import {
   PatchFlagNames,
