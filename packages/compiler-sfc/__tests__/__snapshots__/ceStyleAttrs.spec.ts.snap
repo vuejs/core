@@ -1,41 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`CE style attrs injection > codegen > <script> w/ default export 1`] = `"export default { setup() {} }"`;
-
-exports[`CE style attrs injection > codegen > <script> w/ default export in strings/comments 1`] = `
-"
-          // export default {}
-          export default {}
-        "
-`;
-
-exports[`CE style attrs injection > codegen > <script> w/ no default export 1`] = `
-"const msg = 1
-const __default__ = {}
-import { useCEStyleAttrs as _useCEStyleAttrs } from 'vue'
-const __injectCSSVars__ = () => {
-
-_useCEStyleAttrs(_ctx => ([
-  {
-   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   "src": _ctx.msg,
-   [_ctx.msg]: _ctx.msg,
-   "xlink:special": _ctx.msg,
- },
-]))}
-const __setup__ = __default__.setup
-__default__.setup = __setup__
-  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
-  : __injectCSSVars__
-
-export default __default__"
-`;
-
 exports[`CE style attrs injection > codegen > w/ <script setup> 1`] = `
-"const msg = 'red'
+"import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'
+const msg = 'red'
 export default {
   setup(__props, { expose: __expose }) {
   __expose();
+
+_useCEStyleAttrs(_ctx => ([
+  {
+   "id": { id: _ctx.msg3, 'other-attr': msg },
+   "src": msg,
+   [msg]: msg,
+   "xlink:special": msg,
+ },
+]))
 
 return { msg }
 }
@@ -62,85 +41,4 @@ return { msg }
 }
 
 }"
-`;
-
-exports[`CE style attrs injection > generating correct code for nested paths 1`] = `
-"const a = 1
-const __default__ = {}
-import { useCEStyleAttrs as _useCEStyleAttrs } from 'vue'
-const __injectCSSVars__ = () => {
-
-_useCEStyleAttrs(_ctx => ([
-  {
-   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   "src": _ctx.msg,
-   [_ctx.msg]: _ctx.msg,
-   "xlink:special": _ctx.msg,
- },
-]))}
-const __setup__ = __default__.setup
-__default__.setup = __setup__
-  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
-  : __injectCSSVars__
-
-export default __default__"
-`;
-
-exports[`CE style attrs injection > w/ <script setup> binding analysis 1`] = `
-"import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'
-import { ref } from 'vue'
-        const msg = 'red'
-        
-export default {
-  props: {
-          msg3: String
-        },
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-_useCEStyleAttrs(_ctx => ([
-  {
-   "id": { id: __props.msg3, 'other-attr': msg },
-   "src": msg2.value,
-   [msg]: msg,
-   "xlink:special": __props.msg3,
- },
-]))
-
-        const msg2 = ref('10px')
-        
-        
-return { msg, msg2, ref }
-}
-
-}"
-`;
-
-exports[`CE style attrs injection > w/ normal <script> binding analysis 1`] = `
-"
-      const __default__ = {
-        setup() {
-          return {
-            msg: ref('100px')
-          }
-        }
-      }
-      
-import { useCEStyleAttrs as _useCEStyleAttrs } from 'vue'
-const __injectCSSVars__ = () => {
-
-_useCEStyleAttrs(_ctx => ([
-  {
-   "id": { id: _ctx.msg3, 'other-attr': _ctx.msg },
-   "src": _ctx.msg,
-   [_ctx.msg]: _ctx.msg,
-   "xlink:special": _ctx.msg,
- },
-]))}
-const __setup__ = __default__.setup
-__default__.setup = __setup__
-  ? (props, ctx) => { __injectCSSVars__();return __setup__(props, ctx) }
-  : __injectCSSVars__
-
-export default __default__"
 `;

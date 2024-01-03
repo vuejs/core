@@ -130,7 +130,7 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`,
+:xlink:special="msg">div{ color: red }</style>`,
         ).content,
       )
     })
@@ -148,12 +148,12 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`,
+:xlink:special="msg">div{ color: red }</style>`,
         ).content,
       )
     })
 
-    test('w/ <script setup>', () => {
+    test(`w/ <script setup>`, () => {
       assertCode(
         compileSFCScript(
           `<script setup>const msg = 'red'</script>\n` +
@@ -163,12 +163,12 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`,
+:xlink:special="msg">p { color: red }</style>`,
         ).content,
       )
     })
 
-    test('w/ <script setup> using the same var multiple times', () => {
+    test(`w/ <script setup> using the same var multiple times`, () => {
       const { content } = compileSFCScript(
         `<script setup>
         const msg = 'red'

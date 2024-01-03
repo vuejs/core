@@ -9,7 +9,6 @@ import {
   type RootNode,
   type SimpleExpressionNode,
   type SourceLocation,
-  TextModes,
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
