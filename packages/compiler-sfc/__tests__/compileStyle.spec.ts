@@ -72,7 +72,7 @@ describe('SFC scoped CSS', () => {
       message: ':not pseudo class',
       source: `input:not(.error) { color: red; }`,
       expected: `input:not(.error)[data-v-test] { color: red;`,
-    }
+    },
   ])('$message', ({ source, expected }) => {
     expect(compileScoped(source)).toMatch(expected)
   })
