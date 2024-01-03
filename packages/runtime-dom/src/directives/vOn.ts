@@ -1,9 +1,9 @@
 import {
-  getCurrentInstance,
+  type ComponentInternalInstance,
   DeprecationTypes,
-  LegacyConfig,
+  type LegacyConfig,
   compatUtils,
-  ComponentInternalInstance
+  getCurrentInstance,
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
@@ -26,17 +26,17 @@ const modifierGuards: Record<
   middle: e => 'button' in e && (e as MouseEvent).button !== 1,
   right: e => 'button' in e && (e as MouseEvent).button !== 2,
   exact: (e, modifiers) =>
-    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m)),
 }
 
 /**
  * @private
  */
 export const withModifiers = <
-  T extends (event: Event, ...args: unknown[]) => any
+  T extends (event: Event, ...args: unknown[]) => any,
 >(
   fn: T & { _withMods?: { [key: string]: T } },
-  modifiers: string[]
+  modifiers: string[],
 ) => {
   const cache = fn._withMods || (fn._withMods = {})
   const cacheKey = modifiers.join('.')
@@ -61,7 +61,7 @@ const keyNames: Record<string, string | string[]> = {
   left: 'arrow-left',
   right: 'arrow-right',
   down: 'arrow-down',
-  delete: 'backspace'
+  delete: 'backspace',
 }
 
 /**
@@ -69,7 +69,7 @@ const keyNames: Record<string, string | string[]> = {
  */
 export const withKeys = <T extends (event: KeyboardEvent) => any>(
   fn: T & { _withKeys?: { [k: string]: T } },
-  modifiers: string[]
+  modifiers: string[],
 ) => {
   let globalKeyCodes: LegacyConfig['keyCodes']
   let instance: ComponentInternalInstance | null = null
@@ -85,7 +85,7 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
       compatUtils.warnDeprecation(
         DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-        instance
+        instance,
       )
     }
   }
@@ -110,7 +110,7 @@ export const withKeys = <T extends (event: KeyboardEvent) => any>(
         if (
           compatUtils.isCompatEnabled(
             DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-            instance
+            instance,
           ) &&
           modifiers.some(mod => mod == keyCode)
         ) {

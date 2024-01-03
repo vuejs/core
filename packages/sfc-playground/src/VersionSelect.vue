@@ -19,7 +19,7 @@ async function toggle() {
 
 async function fetchVersions(): Promise<string[]> {
   const res = await fetch(
-    `https://data.jsdelivr.com/v1/package/npm/${props.pkg}`
+    `https://data.jsdelivr.com/v1/package/npm/${props.pkg}`,
   )
   const { versions } = (await res.json()) as { versions: string[] }
 

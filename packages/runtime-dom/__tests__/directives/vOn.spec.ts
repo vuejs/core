@@ -1,14 +1,14 @@
 import { patchEvent } from '../../src/modules/events'
-import { withModifiers, withKeys } from '@vue/runtime-dom'
+import { withKeys, withModifiers } from '@vue/runtime-dom'
 
 function triggerEvent(
   target: Element,
   event: string,
-  process?: (e: any) => any
+  process?: (e: any) => any,
 ) {
   const e = new Event(event, {
     bubbles: true,
-    cancelable: true
+    cancelable: true,
   })
   if (event === 'click') {
     ;(e as any).button = 0
@@ -51,7 +51,7 @@ describe('runtime-dom: v-on directive', () => {
       // <div @keyup[keyName].esc="test"/>
       const nextValue = withKeys(withModifiers(fn, [keyName]), [
         'esc',
-        'arrow-left'
+        'arrow-left',
       ])
       patchEvent(el, 'onKeyup', null, nextValue, null)
 

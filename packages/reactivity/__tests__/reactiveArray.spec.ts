@@ -1,5 +1,5 @@
-import { reactive, isReactive, toRaw } from '../src/reactive'
-import { ref, isRef } from '../src/ref'
+import { isReactive, reactive, toRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
 
 describe('reactivity/reactive/Array', () => {
@@ -97,6 +97,39 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     delete arr[1]
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  test('shift on Array should trigger dependency once', () => {
+    const arr = reactive([1, 2, 3])
+    const fn = vi.fn()
+    effect(() => {
+      for (let i = 0; i < arr.length; i++) {
+        arr[i]
+      }
+      fn()
+    })
+    expect(fn).toHaveBeenCalledTimes(1)
+    arr.shift()
+    expect(fn).toHaveBeenCalledTimes(2)
+  })
+
+  //#6018
+  test('edge case: avoid trigger effect in deleteProperty when array length-decrease mutation methods called', () => {
+    const arr = ref([1])
+    const fn1 = vi.fn()
+    const fn2 = vi.fn()
+    effect(() => {
+      fn1()
+      if (arr.value.length > 0) {
+        arr.value.slice()
+        fn2()
+      }
+    })
+    expect(fn1).toHaveBeenCalledTimes(1)
+    expect(fn2).toHaveBeenCalledTimes(1)
+    arr.value.splice(0)
+    expect(fn1).toHaveBeenCalledTimes(2)
+    expect(fn2).toHaveBeenCalledTimes(1)
   })
 
   test('add existing index on Array should not trigger length dependency', () => {
