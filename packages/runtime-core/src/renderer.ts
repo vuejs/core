@@ -105,7 +105,7 @@ export interface RendererOptions<
     parentComponent?: ComponentInternalInstance | null,
     parentSuspense?: SuspenseBoundary | null,
     unmountChildren?: UnmountChildrenFn,
-    isVPre?: boolean
+    isVPre?: boolean,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -676,7 +676,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             unmountChildren,
-            isVPre
+            isVPre,
           )
         }
       }

@@ -1758,13 +1758,13 @@ describe('compiler: parse', () => {
             source: `v-pre`,
             start: {
               line: 1,
-              column: 6
+              column: 6,
             },
             end: {
               line: 1,
-              column: 11
-            }
-          }
+              column: 11,
+            },
+          },
         },
         {
           type: NodeTypes.ATTRIBUTE,
@@ -1910,7 +1910,7 @@ describe('compiler: parse', () => {
     // #8417
     test('v-pre & attribute should not be processed', () => {
       const ast = baseParse(
-        `<div v-pre on-test test @click />\n<div :id="foo"><Comp/>{{ bar }}</div>`
+        `<div v-pre on-test test @click />\n<div :id="foo"><Comp/>{{ bar }}</div>`,
       )
       const divWithPre = ast.children[0] as ElementNode
       expect(divWithPre.props).toMatchObject([
@@ -1922,13 +1922,13 @@ describe('compiler: parse', () => {
             source: `v-pre`,
             start: {
               line: 1,
-              column: 6
+              column: 6,
             },
             end: {
               line: 1,
-              column: 11
-            }
-          }
+              column: 11,
+            },
+          },
         },
         {
           type: NodeTypes.ATTRIBUTE,
@@ -1938,13 +1938,13 @@ describe('compiler: parse', () => {
             source: `on-test`,
             start: {
               line: 1,
-              column: 12
+              column: 12,
             },
             end: {
               line: 1,
-              column: 19
-            }
-          }
+              column: 19,
+            },
+          },
         },
         {
           type: NodeTypes.ATTRIBUTE,
@@ -1954,13 +1954,13 @@ describe('compiler: parse', () => {
             source: `test`,
             start: {
               line: 1,
-              column: 20
+              column: 20,
             },
             end: {
               line: 1,
-              column: 24
-            }
-          }
+              column: 24,
+            },
+          },
         },
         {
           type: NodeTypes.ATTRIBUTE,
@@ -1970,14 +1970,14 @@ describe('compiler: parse', () => {
             source: `@click`,
             start: {
               line: 1,
-              column: 25
+              column: 25,
             },
             end: {
               line: 1,
-              column: 31
-            }
-          }
-        }
+              column: 31,
+            },
+          },
+        },
       ])
 
       // should not affect siblings after it
@@ -1989,38 +1989,38 @@ describe('compiler: parse', () => {
           arg: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: true,
-            content: `id`
+            content: `id`,
           },
           exp: {
             type: NodeTypes.SIMPLE_EXPRESSION,
             isStatic: false,
-            content: `foo`
+            content: `foo`,
           },
           loc: {
             source: `:id="foo"`,
             start: {
               line: 2,
-              column: 6
+              column: 6,
             },
             end: {
               line: 2,
-              column: 15
-            }
-          }
-        }
+              column: 15,
+            },
+          },
+        },
       ])
       expect(divWithoutPre.children[0]).toMatchObject({
         type: NodeTypes.ELEMENT,
         tagType: ElementTypes.COMPONENT,
-        tag: `Comp`
+        tag: `Comp`,
       })
       expect(divWithoutPre.children[1]).toMatchObject({
         type: NodeTypes.INTERPOLATION,
         content: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `bar`,
-          isStatic: false
-        }
+          isStatic: false,
+        },
       })
     })
 
