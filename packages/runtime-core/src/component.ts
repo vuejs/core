@@ -617,7 +617,7 @@ export function createComponentInstance(
     ec: null,
     sp: null,
     sp: null,
-    mm: null
+    mm: null,
   }
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)

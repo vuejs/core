@@ -16,18 +16,18 @@ import {
   defineComponent,
   h,
   nextTick,
+  onMismatched,
   onMounted,
   ref,
   renderSlot,
   vModelCheckbox,
   vShow,
   withDirectives,
-  onMismatched,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags, ShapeFlags } from '@vue/shared'
 import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
-import { MismatchedHookParams } from '../src/apiLifecycle'
+import type { MismatchedHookParams } from '../src/apiLifecycle'
 let moclMisParams = [] as MismatchedHookParams[]
 let mockMismatchedFn = vi.fn()
 function mountWithHydration(html: string, render: () => any) {
@@ -1314,7 +1314,8 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.type.toString()).toBe('Symbol(v-txt)')
       expect(moclMisParams[0].vnode!.children).toBe('bar')
       expect(
-        moclMisParams[0].parentComponent!.vnode.shapeFlag & ShapeFlags.COMPONENT
+        moclMisParams[0].parentComponent!.vnode.shapeFlag &
+          ShapeFlags.COMPONENT,
       ).toBeTruthy()
     })
 
@@ -1329,7 +1330,8 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.type).toBe('div')
       expect(moclMisParams[0].vnode!.children).toBe('bar')
       expect(
-        moclMisParams[0].parentComponent!.vnode.shapeFlag & ShapeFlags.COMPONENT
+        moclMisParams[0].parentComponent!.vnode.shapeFlag &
+          ShapeFlags.COMPONENT,
       ).toBeTruthy()
     })
 
@@ -1347,7 +1349,7 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.children).toBe('foo')
       expect(
         moclMisParams[0].parentComponent!.subTree.shapeFlag &
-        ShapeFlags.ARRAY_CHILDREN
+          ShapeFlags.ARRAY_CHILDREN,
       ).toBeTruthy()
     })
 
@@ -1362,12 +1364,12 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].node).toBe(null)
       expect(moclMisParams[0].vnode!.type).toBe('div')
       expect((moclMisParams[0].vnode!.children as VNode[])[0].children).toBe(
-        'foo'
+        'foo',
       )
       expect((moclMisParams[0].vnode!.children as VNode[])[0].type).toBe('span')
       expect(
         moclMisParams[0].parentComponent!.subTree.shapeFlag &
-        ShapeFlags.ARRAY_CHILDREN
+          ShapeFlags.ARRAY_CHILDREN,
       ).toBeTruthy()
     })
 
@@ -1395,7 +1397,7 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.children).toBe('replaced')
       expect(
         moclMisParams[0].parentComponent!.subTree.shapeFlag &
-          ShapeFlags.ARRAY_CHILDREN
+          ShapeFlags.ARRAY_CHILDREN,
       ).toBeTruthy()
     })
 
@@ -1414,7 +1416,7 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.children).toBe('bar')
       expect(
         moclMisParams[0].parentComponent!.subTree.shapeFlag &
-          ShapeFlags.ARRAY_CHILDREN
+          ShapeFlags.ARRAY_CHILDREN,
       ).toBeTruthy()
     })
 
@@ -1440,10 +1442,10 @@ describe('SSR hydration', () => {
       expect(moclMisParams[1].node).toBe(null)
       expect(moclMisParams[1].vnode!.type).toBe('div')
       expect(
-        (moclMisParams[1].vnode!.children as VNode[])[0].type.toString()
+        (moclMisParams[1].vnode!.children as VNode[])[0].type.toString(),
       ).toBe('Symbol(v-fgt)')
       expect((moclMisParams[1].vnode!.children as VNode[])[1].children).toBe(
-        'baz'
+        'baz',
       )
     })
 
@@ -1463,7 +1465,7 @@ describe('SSR hydration', () => {
       expect(moclMisParams[0].vnode!.children).toBe('value')
       expect(
         moclMisParams[0].parentComponent!.subTree.shapeFlag &
-          ShapeFlags.TELEPORT
+          ShapeFlags.TELEPORT,
       ).toBeTruthy()
     })
 

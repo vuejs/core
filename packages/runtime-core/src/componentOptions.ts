@@ -36,13 +36,13 @@ import {
   onBeforeUpdate,
   onDeactivated,
   onErrorCaptured,
+  onMismatched,
   onMounted,
   onRenderTracked,
   onRenderTriggered,
   onServerPrefetch,
   onUnmounted,
   onUpdated,
-  onMismatched
 } from './apiLifecycle'
 import {
   type ComputedGetter,

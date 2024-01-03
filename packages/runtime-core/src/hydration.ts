@@ -18,6 +18,7 @@ import {
   PatchFlags,
   ShapeFlags,
   includeBooleanAttr,
+  invokeArrayFns,
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
@@ -27,7 +28,6 @@ import {
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
-  invokeArrayFns,
 } from '@vue/shared'
 import { type RendererInternals, needTransition } from './renderer'
 import { setRef } from './rendererTemplateRef'
@@ -716,14 +716,14 @@ export function createHydrationFunctions(
   const handleMismatchHook = (
     vnode: VNode,
     parentComponent: ComponentInternalInstance | null,
-    node: Node | null
+    node: Node | null,
   ) => {
     const mm = parentComponent ? parentComponent.mm : null
     if (__DEV__ && mm) {
       invokeArrayFns(mm, {
         parentComponent,
         vnode,
-        node
+        node,
       })
     }
     if (

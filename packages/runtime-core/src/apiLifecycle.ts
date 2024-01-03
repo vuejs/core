@@ -15,7 +15,7 @@ import {
   resetTracking,
 } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
-import { VNode } from './vnode'
+import type { VNode } from './vnode'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -90,7 +90,7 @@ export type MismatchedHookParams = {
 }
 export type MismatchedHook = (e: MismatchedHookParams) => void
 export const onMismatched = createHook<MismatchedHook>(
-  LifecycleHooks.MIS_MATCHED
+  LifecycleHooks.MIS_MATCHED,
 )
 
 export type DebuggerHook = (e: DebuggerEvent) => void
