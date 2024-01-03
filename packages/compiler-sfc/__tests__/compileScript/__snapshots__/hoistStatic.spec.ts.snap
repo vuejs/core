@@ -3,13 +3,13 @@
 exports[`sfc hoist static > should enable when only script setup 1`] = `
 "
     const foo = 'bar'
-
+    
 export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
     const foo = 'bar'
-
+    
 return () => {}
 }
 
@@ -21,12 +21,12 @@ exports[`sfc hoist static > should hoist expressions 1`] = `
     const binary = 1 + 2
     const conditional = 1 ? 2 : 3
     const sequence = (1, true, 'foo', 1)
-
+    
 export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-
+    
 return () => {}
 }
 
@@ -40,12 +40,12 @@ exports[`sfc hoist static > should hoist literal value 1`] = `
     const nil = null
     const bigint = 100n
     const template = \`str\`
-
+    
 export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-
+    
 return () => {}
 }
 
@@ -54,7 +54,7 @@ return () => {}
 
 exports[`sfc hoist static > should hoist w/ defineProps/Emits 1`] = `
 "const defaultValue = 'default value'
-
+    
 export default {
   props: {
       foo: {
@@ -64,8 +64,8 @@ export default {
   setup(__props, { expose: __expose }) {
   __expose();
 
-
-
+    
+    
 return () => {}
 }
 
@@ -89,7 +89,7 @@ export default /*#__PURE__*/_defineComponent({
       BAR = getCurrentInstance(),
     }
     const KEY6 = \`template\${i}\`
-
+    
 return () => {}
 }
 
@@ -105,7 +105,7 @@ export default {
     const fn = () => {}
     function fn2() {}
     class Foo {}
-
+    
 return () => {}
 }
 
@@ -120,7 +120,7 @@ export default {
 
     const obj = { foo: 'bar' }
     const arr = [1, 2, 3]
-
+    
 return () => {}
 }
 
@@ -137,7 +137,7 @@ export default {
     var KEY2 = 123
     const regex = /.*/g
     const undef = undefined
-
+    
 return () => {}
 }
 
@@ -151,7 +151,7 @@ export default {
   __expose();
 
     const foo = 'bar'
-
+    
 return () => {}
 }
 
