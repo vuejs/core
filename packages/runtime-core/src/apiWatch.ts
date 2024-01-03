@@ -193,7 +193,8 @@ function doWatch(
   // TODO remove in 3.5
   if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
     warn(
-      `watch() "deep" option passing "number" type will be considered as watch depth in future versions.`,
+      `watch() "deep" option with number value will be used as watch depth in future versions.` +
+      `Please use a boolean instead to avoid potential breakage.",
     )
   }
 
