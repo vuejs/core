@@ -414,16 +414,16 @@ describe('defineCustomElement', () => {
       props: {
         modelValue: {
           type: String,
-          default: ''
+          default: '',
         },
         fooProp: {
           type: String,
-          default: ''
+          default: '',
         },
         barProp: {
           type: String,
-          default: ''
-        }
+          default: '',
+        },
       },
       setup(props, { emit }) {
         const testValue = computed({
@@ -432,7 +432,7 @@ describe('defineCustomElement', () => {
           },
           set(value) {
             emit('update:modelValue', value)
-          }
+          },
         })
         const testValueFoo = computed({
           get() {
@@ -440,7 +440,7 @@ describe('defineCustomElement', () => {
           },
           set(value) {
             emit('update:fooProp', value)
-          }
+          },
         })
         const testValueBar = computed({
           get() {
@@ -448,7 +448,7 @@ describe('defineCustomElement', () => {
           },
           set(value) {
             emit('update:barProp', value)
-          }
+          },
         })
         const handleClick = () => {
           testValue.value = 'emit trigger'
@@ -460,15 +460,15 @@ describe('defineCustomElement', () => {
             'div',
             {
               id: 'test_dom',
-              onClick: handleClick
+              onClick: handleClick,
             },
             [
               h('span', {}, [testValue.value]),
               h('span', {}, [testValueFoo.value]),
-              h('span', {}, [testValueBar.value])
-            ]
+              h('span', {}, [testValueBar.value]),
+            ],
           )
-      }
+      },
     })
     const E = defineCustomElement(CompDef)
     customElements.define('my-el-v-model', E)
@@ -478,16 +478,16 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model': CompDef
+            'my-el-v-model': CompDef,
           },
           setup() {
             return () =>
               h('my-el-v-model', {
                 modelValue: foo.value,
-                'onUpdate:modelValue': ($event: string) => (foo.value = $event)
+                'onUpdate:modelValue': ($event: string) => (foo.value = $event),
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 
@@ -512,7 +512,7 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model': CompDef
+            'my-el-v-model': CompDef,
           },
           setup() {
             return () =>
@@ -520,10 +520,10 @@ describe('defineCustomElement', () => {
                 fooProp: foo.value,
                 'onUpdate:fooProp': ($event: string) => (foo.value = $event),
                 barProp: bar.value,
-                'onUpdate:barProp': ($event: string) => (bar.value = $event)
+                'onUpdate:barProp': ($event: string) => (bar.value = $event),
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 
@@ -562,7 +562,7 @@ describe('defineCustomElement', () => {
           emit('update:modelValue', '1')
           emit('update:barProp', '2')
           return () => h('div')
-        }
+        },
       })
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-number', E)
@@ -572,7 +572,7 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model-number': Comp
+            'my-el-v-model-number': Comp,
           },
           setup() {
             return () =>
@@ -583,10 +583,10 @@ describe('defineCustomElement', () => {
 
                 barProp: null,
                 barPropModifiers: { number: true },
-                'onUpdate:barProp': fn2
+                'onUpdate:barProp': fn2,
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 
@@ -606,7 +606,7 @@ describe('defineCustomElement', () => {
           emit('update:modelValue', '   one  ')
           emit('update:barProp', '   two  ')
           return () => h('div')
-        }
+        },
       })
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim', E)
@@ -616,7 +616,7 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model-trim': Comp
+            'my-el-v-model-trim': Comp,
           },
           setup() {
             return () =>
@@ -627,10 +627,10 @@ describe('defineCustomElement', () => {
 
                 barProp: null,
                 barPropModifiers: { trim: true },
-                'onUpdate:barProp': fn2
+                'onUpdate:barProp': fn2,
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 
@@ -650,7 +650,7 @@ describe('defineCustomElement', () => {
           emit('update:modelValue', '    +01.2    ')
           emit('update:barProp', '    1    ')
           return () => h('div')
-        }
+        },
       })
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim-num', E)
@@ -660,7 +660,7 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model-trim-num': Comp
+            'my-el-v-model-trim-num': Comp,
           },
           setup() {
             return () =>
@@ -671,10 +671,10 @@ describe('defineCustomElement', () => {
 
                 barProp: null,
                 barPropModifiers: { trim: true, number: true },
-                'onUpdate:barProp': fn2
+                'onUpdate:barProp': fn2,
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 
@@ -693,7 +693,7 @@ describe('defineCustomElement', () => {
         setup(props, { emit }) {
           emit('update:modelValue', ' foo ', { bar: ' bar ' })
           return () => h('div')
-        }
+        },
       })
       const E = defineCustomElement(Comp)
       customElements.define('my-el-v-model-trim-only', E)
@@ -702,17 +702,17 @@ describe('defineCustomElement', () => {
       const app = createApp(
         defineComponent({
           components: {
-            'my-el-v-model-trim-only': Comp
+            'my-el-v-model-trim-only': Comp,
           },
           setup() {
             return () =>
               h('my-el-v-model-trim-only', {
                 modelValue: null,
                 'onUpdate:modelValue': fn,
-                modelModifiers: { trim: true }
+                modelModifiers: { trim: true },
               })
-          }
-        })
+          },
+        }),
       )
       app.mount(container)
 

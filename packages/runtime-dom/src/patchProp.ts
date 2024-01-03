@@ -3,7 +3,13 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isOn, isString, isFunction, isModelListener, isCEModifiers } from '@vue/shared'
+import {
+  isCEModifiers,
+  isFunction,
+  isModelListener,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
 import type { VueElement } from './apiCustomElement'
 const isNativeOn = (key: string) =>

@@ -21,8 +21,8 @@ import {
   createVNode,
   defineComponent,
   nextTick,
-  warn,
   toHandlerKey,
+  warn,
 } from '@vue/runtime-core'
 import {
   camelize,
@@ -30,7 +30,7 @@ import {
   hyphenate,
   isArray,
   isModelListener,
-  toNumber
+  toNumber,
 } from '@vue/shared'
 import { hydrate, render } from '.'
 import { emit } from '../../runtime-core/src/componentEmits'
@@ -372,7 +372,7 @@ export class VueElement extends BaseClass {
   private _createVNode(): VNode<any, any> {
     const vnode = createVNode(
       this._def,
-      extend({}, this._props, this._VModelEmits)
+      extend({}, this._props, this._VModelEmits),
     )
     if (!this._instance) {
       vnode.ce = instance => {
