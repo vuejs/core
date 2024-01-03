@@ -25,7 +25,6 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentComponent,
   parentSuspense,
   unmountChildren,
-  unmountChildren,
   isVPre: boolean,
 ) => {
   const isSVG = namespace === 'svg'
