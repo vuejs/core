@@ -9,6 +9,19 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/compiler-core.d.ts",
+      "node": {
+        "production": "./dist/compiler-core.cjs.prod.js",
+        "development": "./dist/compiler-core.cjs.js",
+        "default": "./index.js"
+      },
+      "import": "./dist/compiler-core.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "VueCompilerCore",
     "compat": true,
