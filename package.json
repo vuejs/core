@@ -74,7 +74,7 @@
     "@types/semver": "^7.5.6",
     "@typescript-eslint/eslint-plugin": "^6.16.0",
     "@typescript-eslint/parser": "^6.15.0",
-    "@vitest/coverage-istanbul": "^1.1.0",
+    "@vitest/coverage-istanbul": "^1.1.1",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
@@ -113,6 +113,6 @@
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.5",
-    "vitest": "^1.1.0"
+    "vitest": "^1.1.1"
   }
 }
