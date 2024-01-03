@@ -148,7 +148,7 @@ const TransitionGroupImpl: ComponentOptions = {
           ;(child.el as Element).getBoundingClientRect
             ? positionMap.set(
                 child,
-                (child.el as Element).getBoundingClientRect()
+                (child.el as Element).getBoundingClientRect(),
               )
             : positionMap.set(child, new DOMRect())
         }

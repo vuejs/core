@@ -539,9 +539,9 @@ describe('e2e: TransitionGroup', () => {
                   resolve({
                     render() {
                       return `foo${index}`
-                    }
+                    },
                   })
-                }, millis)
+                }, millis),
               )
             }
 
@@ -557,13 +557,13 @@ describe('e2e: TransitionGroup', () => {
             })
 
             return { components }
-          }
+          },
         }).mount('#app')
       })
 
       await transitionFinish(1000)
       expect(await html('#container')).toBe('foo1foo2')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })
