@@ -2,13 +2,13 @@ import { renderToString } from '../src/renderToString'
 import {
   createApp,
   h,
-  withDirectives,
-  vShow,
-  vModelText,
-  vModelRadio,
+  resolveDirective,
   vModelCheckbox,
   vModelDynamic,
-  resolveDirective,
+  vModelRadio,
+  vModelText,
+  vShow,
+  withDirectives,
   mergeProps,
   ref,
   unref
@@ -21,17 +21,17 @@ describe('ssr: directives', () => {
       expect(
         await renderToString(
           createApp({
-            template: `<div v-show="true"/>`
-          })
-        )
+            template: `<div v-show="true"/>`,
+          }),
+        ),
       ).toBe(`<div style=""></div>`)
 
       expect(
         await renderToString(
           createApp({
-            template: `<div v-show="false"/>`
-          })
-        )
+            template: `<div v-show="false"/>`,
+          }),
+        ),
       ).toBe(`<div style="display:none;"></div>`)
     })
 
@@ -39,9 +39,9 @@ describe('ssr: directives', () => {
       expect(
         await renderToString(
           createApp({
-            template: `<div style="color:red" v-show="false"/>`
-          })
-        )
+            template: `<div style="color:red" v-show="false"/>`,
+          }),
+        ),
       ).toBe(`<div style="color:red;display:none;"></div>`)
     })
 
@@ -50,9 +50,9 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ style: { color: 'red' } }),
-            template: `<div :style="style" v-show="false"/>`
-          })
-        )
+            template: `<div :style="style" v-show="false"/>`,
+          }),
+        ),
       ).toBe(`<div style="color:red;display:none;"></div>`)
     })
 
@@ -61,9 +61,9 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ style: { color: 'red' } }),
-            template: `<div :style="style" style="font-size:12;" v-show="false"/>`
-          })
-        )
+            template: `<div :style="style" style="font-size:12;" v-show="false"/>`,
+          }),
+        ),
       ).toBe(`<div style="color:red;font-size:12;display:none;"></div>`)
     })
   })
@@ -74,9 +74,9 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ text: 'hello' }),
-            template: `<input v-model="text">`
-          })
-        )
+            template: `<input v-model="text">`,
+          }),
+        ),
       ).toBe(`<input value="hello">`)
     })
 
@@ -85,18 +85,18 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ selected: 'foo' }),
-            template: `<input type="radio" value="foo" v-model="selected">`
-          })
-        )
+            template: `<input type="radio" value="foo" v-model="selected">`,
+          }),
+        ),
       ).toBe(`<input type="radio" value="foo" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ selected: 'foo' }),
-            template: `<input type="radio" value="bar" v-model="selected">`
-          })
-        )
+            template: `<input type="radio" value="bar" v-model="selected">`,
+          }),
+        ),
       ).toBe(`<input type="radio" value="bar">`)
 
       // non-string values
@@ -104,10 +104,34 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ selected: 'foo' }),
-            template: `<input type="radio" :value="{}" v-model="selected">`
-          })
-        )
+            template: `<input type="radio" :value="{}" v-model="selected">`,
+          }),
+        ),
       ).toBe(`<input type="radio">`)
+    })
+
+    test('select', async () => {
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: 1 }),
+            template: `<select v-model="model"><option value="0"></option><option value="1"></option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select><option value="0"></option><option value="1" selected></option></select>`,
+      )
+
+      expect(
+        await renderToString(
+          createApp({
+            data: () => ({ model: [0, 1] }),
+            template: `<select multiple v-model="model"><option value="0"></option><option value="1"></option></select>`,
+          }),
+        ),
+      ).toBe(
+        `<select multiple><option value="0" selected></option><option value="1" selected></option></select>`,
+      )
     })
 
     test('checkbox', async () => {
@@ -115,36 +139,36 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ checked: true }),
-            template: `<input type="checkbox" v-model="checked">`
-          })
-        )
+            template: `<input type="checkbox" v-model="checked">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ checked: false }),
-            template: `<input type="checkbox" v-model="checked">`
-          })
-        )
+            template: `<input type="checkbox" v-model="checked">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox">`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ checked: ['foo'] }),
-            template: `<input type="checkbox" value="foo" v-model="checked">`
-          })
-        )
+            template: `<input type="checkbox" value="foo" v-model="checked">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ checked: [] }),
-            template: `<input type="checkbox" value="foo" v-model="checked">`
-          })
-        )
+            template: `<input type="checkbox" value="foo" v-model="checked">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo">`)
     })
 
@@ -153,9 +177,9 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ foo: 'hello' }),
-            template: `<textarea v-model="foo"/>`
-          })
-        )
+            template: `<textarea v-model="foo"/>`,
+          }),
+        ),
       ).toBe(`<textarea>hello</textarea>`)
     })
 
@@ -164,63 +188,63 @@ describe('ssr: directives', () => {
         await renderToString(
           createApp({
             data: () => ({ type: 'text', model: 'hello' }),
-            template: `<input :type="type" v-model="model">`
-          })
-        )
+            template: `<input :type="type" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="text" value="hello">`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'checkbox', model: true }),
-            template: `<input :type="type" v-model="model">`
-          })
-        )
+            template: `<input :type="type" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'checkbox', model: false }),
-            template: `<input :type="type" v-model="model">`
-          })
-        )
+            template: `<input :type="type" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox">`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'checkbox', model: ['hello'] }),
-            template: `<input :type="type" value="hello" v-model="model">`
-          })
-        )
+            template: `<input :type="type" value="hello" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="hello" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'checkbox', model: [] }),
-            template: `<input :type="type" value="hello" v-model="model">`
-          })
-        )
+            template: `<input :type="type" value="hello" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="hello">`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'radio', model: 'hello' }),
-            template: `<input :type="type" value="hello" v-model="model">`
-          })
-        )
+            template: `<input :type="type" value="hello" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello" checked>`)
 
       expect(
         await renderToString(
           createApp({
             data: () => ({ type: 'radio', model: 'hello' }),
-            template: `<input :type="type" value="bar" v-model="model">`
-          })
-        )
+            template: `<input :type="type" value="bar" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="radio" value="bar">`)
     })
 
@@ -230,11 +254,11 @@ describe('ssr: directives', () => {
           createApp({
             data: () => ({
               obj: { type: 'radio', value: 'hello' },
-              model: 'hello'
+              model: 'hello',
             }),
-            template: `<input v-bind="obj" v-model="model">`
-          })
-        )
+            template: `<input v-bind="obj" v-model="model">`,
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello" checked>`)
     })
   })
@@ -246,9 +270,9 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('div'), [[vShow, true]])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<div></div>`)
 
       expect(
@@ -256,9 +280,9 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('div'), [[vShow, false]])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<div style="display:none;"></div>`)
     })
 
@@ -270,14 +294,14 @@ describe('ssr: directives', () => {
               return withDirectives(
                 h('div', {
                   style: {
-                    color: 'red'
-                  }
+                    color: 'red',
+                  },
                 }),
-                [[vShow, false]]
+                [[vShow, false]],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<div style="color:red;display:none;"></div>`)
     })
   })
@@ -289,9 +313,9 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input'), [[vModelText, 'hello']])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input value="hello">`)
     })
 
@@ -302,11 +326,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'radio', value: 'hello' }),
-                [[vModelRadio, 'hello']]
+                [[vModelRadio, 'hello']],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello" checked>`)
 
       expect(
@@ -315,11 +339,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'radio', value: 'hello' }),
-                [[vModelRadio, 'foo']]
+                [[vModelRadio, 'foo']],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello">`)
     })
 
@@ -329,11 +353,11 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input', { type: 'checkbox' }), [
-                [vModelCheckbox, true]
+                [vModelCheckbox, true],
               ])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" checked>`)
 
       expect(
@@ -341,11 +365,11 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input', { type: 'checkbox' }), [
-                [vModelCheckbox, false]
+                [vModelCheckbox, false],
               ])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox">`)
 
       expect(
@@ -354,11 +378,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'checkbox', value: 'foo' }),
-                [[vModelCheckbox, ['foo']]]
+                [[vModelCheckbox, ['foo']]],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo" checked>`)
 
       expect(
@@ -367,11 +391,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'checkbox', value: 'foo' }),
-                [[vModelCheckbox, []]]
+                [[vModelCheckbox, []]],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo">`)
     })
   })
@@ -383,9 +407,9 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input'), [[vModelDynamic, 'hello']])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input value="hello">`)
     })
 
@@ -396,11 +420,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'radio', value: 'hello' }),
-                [[vModelDynamic, 'hello']]
+                [[vModelDynamic, 'hello']],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello" checked>`)
 
       expect(
@@ -409,11 +433,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'radio', value: 'hello' }),
-                [[vModelDynamic, 'foo']]
+                [[vModelDynamic, 'foo']],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="radio" value="hello">`)
     })
 
@@ -423,11 +447,11 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input', { type: 'checkbox' }), [
-                [vModelDynamic, true]
+                [vModelDynamic, true],
               ])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" checked>`)
 
       expect(
@@ -435,11 +459,11 @@ describe('ssr: directives', () => {
           createApp({
             render() {
               return withDirectives(h('input', { type: 'checkbox' }), [
-                [vModelDynamic, false]
+                [vModelDynamic, false],
               ])
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox">`)
 
       expect(
@@ -448,11 +472,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'checkbox', value: 'foo' }),
-                [[vModelDynamic, ['foo']]]
+                [[vModelDynamic, ['foo']]],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo" checked>`)
 
       expect(
@@ -461,11 +485,11 @@ describe('ssr: directives', () => {
             render() {
               return withDirectives(
                 h('input', { type: 'checkbox', value: 'foo' }),
-                [[vModelDynamic, []]]
+                [[vModelDynamic, []]],
               )
-            }
-          })
-        )
+            },
+          }),
+        ),
       ).toBe(`<input type="checkbox" value="foo">`)
     })
   })
@@ -480,14 +504,14 @@ describe('ssr: directives', () => {
                 {
                   getSSRProps({ value }) {
                     return { id: value }
-                  }
+                  },
                 },
-                'foo'
-              ]
+                'foo',
+              ],
             ])
-          }
-        })
-      )
+          },
+        }),
+      ),
     ).toBe(`<div id="foo"></div>`)
   })
 
@@ -497,28 +521,28 @@ describe('ssr: directives', () => {
         createApp({
           data() {
             return {
-              x: 'foo'
+              x: 'foo',
             }
           },
           directives: {
             xxx: {
               getSSRProps({ value, arg, modifiers }) {
                 return { id: [value, arg, modifiers.ok].join('-') }
-              }
-            }
+              },
+            },
           },
           ssrRender(_ctx, _push, _parent, _attrs) {
             const _directive_xxx = resolveDirective('xxx')!
             _push(
               `<div${ssrRenderAttrs(
                 ssrGetDirectiveProps(_ctx, _directive_xxx, _ctx.x, 'arg', {
-                  ok: true
-                })
-              )}></div>`
+                  ok: true,
+                }),
+              )}></div>`,
             )
-          }
-        })
-      )
+          },
+        }),
+      ),
     ).toBe(`<div id="foo-arg-true"></div>`)
   })
 

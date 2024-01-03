@@ -17,16 +17,17 @@ nr build core --formats cjs
 */
 
 import fs from 'node:fs/promises'
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
-import { gzipSync, brotliCompressSync } from 'node:zlib'
-import chalk from 'chalk'
-import execa from 'execa'
+import { brotliCompressSync, gzipSync } from 'node:zlib'
+import pico from 'picocolors'
+import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './inline-enums.js'
+import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))
@@ -37,19 +38,24 @@ const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
+/** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a
-const commit = execa.sync('git', ['rev-parse', 'HEAD']).stdout.slice(0, 7)
+const writeSize = args.size
+const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
+
+const sizeDir = path.resolve('temp/size')
 
 run()
 
 async function run() {
+  if (writeSize) await fs.mkdir(sizeDir, { recursive: true })
   const removeCache = scanEnums()
   try {
     const resolvedTargets = targets.length
       ? fuzzyMatchTarget(targets, buildAllMatching)
       : allTargets
     await buildAll(resolvedTargets)
-    checkAllSizes(resolvedTargets)
+    await checkAllSizes(resolvedTargets)
     if (buildTypes) {
       await execa(
         'pnpm',
@@ -58,11 +64,11 @@ async function run() {
           'build-dts',
           ...(targets.length
             ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
-            : [])
+            : []),
         ],
         {
-          stdio: 'inherit'
-        }
+          stdio: 'inherit',
+        },
       )
     }
   } finally {
@@ -70,19 +76,36 @@ async function run() {
   }
 }
 
+/**
+ * Builds all the targets in parallel.
+ * @param {Array<string>} targets - An array of targets to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function buildAll(targets) {
   await runParallel(cpus().length, targets, build)
 }
 
+/**
+ * Runs iterator function in parallel.
+ * @template T - The type of items in the data source
+ * @param {number} maxConcurrency - The maximum concurrency.
+ * @param {Array<T>} source - The data source
+ * @param {(item: T) => Promise<void>} iteratorFn - The iteratorFn
+ * @returns {Promise<void[]>} - A Promise array containing all iteration results.
+ */
 async function runParallel(maxConcurrency, source, iteratorFn) {
+  /**@type {Promise<void>[]} */
   const ret = []
+  /**@type {Promise<void>[]} */
   const executing = []
   for (const item of source) {
-    const p = Promise.resolve().then(() => iteratorFn(item, source))
+    const p = Promise.resolve().then(() => iteratorFn(item))
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
       executing.push(e)
       if (executing.length >= maxConcurrency) {
         await Promise.race(executing)
@@ -91,7 +114,11 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
   }
   return Promise.all(ret)
 }
-
+/**
+ * Builds the target.
+ * @param {string} target - The target to build.
+ * @returns {Promise<void>} - A promise representing the build process.
+ */
 async function build(target) {
   const pkgDir = path.resolve(`packages/${target}`)
   const pkg = require(`${pkgDir}/package.json`)
@@ -120,48 +147,76 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``
+        sourceMap ? `SOURCE_MAP:true` : ``,
       ]
         .filter(Boolean)
-        .join(',')
+        .join(','),
     ],
-    { stdio: 'inherit' }
+    { stdio: 'inherit' },
   )
 }
 
-function checkAllSizes(targets) {
+/**
+ * Checks the sizes of all targets.
+ * @param {string[]} targets - The targets to check sizes for.
+ * @returns {Promise<void>}
+ */
+async function checkAllSizes(targets) {
   if (devOnly || (formats && !formats.includes('global'))) {
     return
   }
   console.log()
   for (const target of targets) {
-    checkSize(target)
+    await checkSize(target)
   }
   console.log()
 }
 
-function checkSize(target) {
+/**
+ * Checks the size of a target.
+ * @param {string} target - The target to check the size for.
+ * @returns {Promise<void>}
+ */
+async function checkSize(target) {
   const pkgDir = path.resolve(`packages/${target}`)
-  checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
+  await checkFileSize(`${pkgDir}/dist/${target}.global.prod.js`)
   if (!formats || formats.includes('global-runtime')) {
-    checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
+    await checkFileSize(`${pkgDir}/dist/${target}.runtime.global.prod.js`)
   }
 }
 
-function checkFileSize(filePath) {
+/**
+ * Checks the file size.
+ * @param {string} filePath - The path of the file to check the size for.
+ * @returns {Promise<void>}
+ */
+async function checkFileSize(filePath) {
   if (!existsSync(filePath)) {
     return
   }
-  const file = readFileSync(filePath)
-  const minSize = (file.length / 1024).toFixed(2) + 'kb'
+  const file = await fs.readFile(filePath)
+  const fileName = path.basename(filePath)
+
   const gzipped = gzipSync(file)
-  const gzippedSize = (gzipped.length / 1024).toFixed(2) + 'kb'
-  const compressed = brotliCompressSync(file)
-  // @ts-ignore
-  const compressedSize = (compressed.length / 1024).toFixed(2) + 'kb'
+  const brotli = brotliCompressSync(file)
+
   console.log(
-    `${chalk.gray(
-      chalk.bold(path.basename(filePath))
-    )} min:${minSize} / gzip:${gzippedSize} / brotli:${compressedSize}`
+    `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
+      file.length,
+    )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
+      brotli.length,
+    )}`,
   )
+
+  if (writeSize)
+    await fs.writeFile(
+      path.resolve(sizeDir, `${fileName}.json`),
+      JSON.stringify({
+        file: fileName,
+        size: file.length,
+        gzip: gzipped.length,
+        brotli: brotli.length,
+      }),
+      'utf-8',
+    )
 }

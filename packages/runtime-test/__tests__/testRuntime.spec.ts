@@ -1,18 +1,18 @@
 import {
-  h,
-  render,
-  nodeOps,
-  TestNodeTypes,
-  TestElement,
-  TestText,
-  ref,
-  reactive,
-  dumpOps,
-  resetOps,
   NodeOpTypes,
+  type TestElement,
+  TestNodeTypes,
+  type TestText,
+  dumpOps,
+  h,
   nextTick,
+  nodeOps,
+  reactive,
+  ref,
+  render,
+  resetOps,
   serialize,
-  triggerEvent
+  triggerEvent,
 } from '../src'
 
 describe('test renderer', () => {
@@ -22,11 +22,11 @@ describe('test renderer', () => {
       h(
         'div',
         {
-          id: 'test'
+          id: 'test',
         },
-        'hello'
+        'hello',
       ),
-      root
+      root,
     )
 
     expect(root.children.length).toBe(1)
@@ -44,7 +44,7 @@ describe('test renderer', () => {
   it('should record ops', async () => {
     const state = reactive({
       id: 'test',
-      text: 'hello'
+      text: 'hello',
     })
 
     const App = {
@@ -52,11 +52,11 @@ describe('test renderer', () => {
         return h(
           'div',
           {
-            id: state.id
+            id: state.id,
           },
-          state.text
+          state.text,
         )
-      }
+      },
     }
     const root = nodeOps.createElement('div')
 
@@ -70,13 +70,13 @@ describe('test renderer', () => {
       type: NodeOpTypes.CREATE,
       nodeType: TestNodeTypes.ELEMENT,
       tag: 'div',
-      targetNode: root.children[0]
+      targetNode: root.children[0],
     })
 
     expect(ops[1]).toEqual({
       type: NodeOpTypes.SET_ELEMENT_TEXT,
       text: 'hello',
-      targetNode: root.children[0]
+      targetNode: root.children[0],
     })
 
     expect(ops[2]).toEqual({
@@ -84,14 +84,14 @@ describe('test renderer', () => {
       targetNode: root.children[0],
       propKey: 'id',
       propPrevValue: null,
-      propNextValue: 'test'
+      propNextValue: 'test',
     })
 
     expect(ops[3]).toEqual({
       type: NodeOpTypes.INSERT,
       targetNode: root.children[0],
       parentNode: root,
-      refNode: null
+      refNode: null,
     })
 
     // test update ops
@@ -105,7 +105,7 @@ describe('test renderer', () => {
     expect(updateOps[0]).toEqual({
       type: NodeOpTypes.SET_ELEMENT_TEXT,
       targetNode: root.children[0],
-      text: 'bar'
+      text: 'bar',
     })
 
     expect(updateOps[1]).toEqual({
@@ -113,7 +113,7 @@ describe('test renderer', () => {
       targetNode: root.children[0],
       propKey: 'id',
       propPrevValue: 'test',
-      propNextValue: 'foo'
+      propNextValue: 'foo',
     })
   })
 
@@ -124,16 +124,16 @@ describe('test renderer', () => {
           'div',
           {
             id: 'test',
-            boolean: ''
+            boolean: '',
           },
-          [h('span', 'foo'), 'hello']
+          [h('span', 'foo'), 'hello'],
         )
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serialize(root)).toEqual(
-      `<div><div id="test" boolean><span>foo</span>hello</div></div>`
+      `<div><div id="test" boolean><span>foo</span>hello</div></div>`,
     )
     // indented output
     expect(serialize(root, 2)).toEqual(
@@ -144,7 +144,7 @@ describe('test renderer', () => {
     </span>
     hello
   </div>
-</div>`
+</div>`,
     )
   })
 
@@ -157,9 +157,9 @@ describe('test renderer', () => {
         {
           onClick: () => {
             count.value++
-          }
+          },
         },
-        count.value
+        count.value,
       )
     }
 
@@ -185,10 +185,10 @@ describe('test renderer', () => {
             },
             () => {
               count2.value++
-            }
-          ]
+            },
+          ],
         },
-        `${count.value}, ${count2.value}`
+        `${count.value}, ${count2.value}`,
       )
     }
 

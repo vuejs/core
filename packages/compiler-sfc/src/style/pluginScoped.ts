@@ -1,4 +1,4 @@
-import { PluginCreator, Rule, AtRule } from 'postcss'
+import type { AtRule, PluginCreator, Rule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
@@ -55,7 +55,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
           }
         })
       }
-    }
+    },
   }
 }
 
@@ -82,7 +82,7 @@ function rewriteSelector(
   id: string,
   selector: selectorParser.Selector,
   selectorRoot: selectorParser.Root,
-  slotted = false
+  slotted = false,
 ) {
   let node: selectorParser.Node | null = null
   let shouldInject = true
@@ -97,7 +97,7 @@ function rewriteSelector(
       n.spaces.before = n.spaces.after = ''
       warn(
         `the >>> and /deep/ combinators have been deprecated. ` +
-          `Use :deep() instead.`
+          `Use :deep() instead.`,
       )
       return false
     }
@@ -121,8 +121,8 @@ function rewriteSelector(
             selector.insertAfter(
               n,
               selectorParser.combinator({
-                value: ' '
-              })
+                value: ' ',
+              }),
             )
           }
           selector.removeChild(n)
@@ -130,9 +130,10 @@ function rewriteSelector(
           // DEPRECATED usage
           // .foo ::v-deep .bar -> .foo[xxxxxxx] .bar
           warn(
-            `::v-deep usage as a combinator has ` +
-              `been deprecated. Use :deep(<inner-selector>) instead.`
+            `${value} usage as a combinator has been deprecated. ` +
+              `Use :deep(<inner-selector>) instead of ${value} <inner-selector>.`,
           )
+
           const prev = selector.at(selector.index(n) - 1)
           if (prev && isSpaceCombinator(prev)) {
             selector.removeChild(prev)
@@ -169,10 +170,23 @@ function rewriteSelector(
       }
     }
 
-    if (n.type !== 'pseudo' && n.type !== 'combinator') {
+    if (
+      (n.type !== 'pseudo' && n.type !== 'combinator') ||
+      (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
+    ) {
       node = n
     }
   })
+
+  if (node) {
+    const { type, value } = node as selectorParser.Node
+    if (type === 'pseudo' && (value === ':is' || value === ':where')) {
+      ;(node as selectorParser.Pseudo).nodes.forEach(value =>
+        rewriteSelector(id, value, selectorRoot, slotted),
+      )
+      shouldInject = false
+    }
+  }
 
   if (node) {
     ;(node as selectorParser.Node).spaces.after = ''
@@ -193,8 +207,8 @@ function rewriteSelector(
         attribute: idToAdd,
         value: idToAdd,
         raws: {},
-        quoteMark: `"`
-      })
+        quoteMark: `"`,
+      }),
     )
   }
 }
