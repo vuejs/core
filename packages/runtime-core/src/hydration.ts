@@ -364,7 +364,7 @@ export function createHydrationFunctions(
       patchFlag,
       shapeFlag,
       dirs,
-      transition
+      transition,
     } = vnode
     // #4006 for form elements with non-string v-model value bindings
     // e.g. <option :value="obj">, <input type="checkbox" :true-value="1">
@@ -466,7 +466,7 @@ export function createHydrationFunctions(
                 (key.endsWith('value') || key === 'indeterminate')) ||
               (isOn(key) && !isReservedProp(key)) ||
               // force hydrate v-bind with .prop modifiers
-              key[0] === '.'||
+              key[0] === '.' ||
               (dynamicProps && dynamicProps.includes(key))
             ) {
               patchProp(

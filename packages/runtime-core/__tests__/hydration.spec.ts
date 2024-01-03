@@ -8,6 +8,8 @@ import {
   Transition,
   type VNode,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createSSRApp,
   createStaticVNode,
   createTextVNode,
@@ -17,14 +19,12 @@ import {
   h,
   nextTick,
   onMounted,
+  openBlock,
   ref,
   renderSlot,
   vModelCheckbox,
   vShow,
   withDirectives,
-  createElementVNode,
-  openBlock,
-  createElementBlock
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
@@ -1479,11 +1479,11 @@ describe('SSR hydration', () => {
                 { innerHTML: timestampCur },
                 null,
                 8 /* PROPS */,
-                ['innerHTML']
-              )
+                ['innerHTML'],
+              ),
             ])
           )
-        }
+        },
       )
       expect(container.innerHTML).toBe(`<div><div>${timestampCur}</div></div>`)
     })
