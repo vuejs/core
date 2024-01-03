@@ -82,17 +82,22 @@ export function ssrRenderSlotInner(
           fallbackRenderFn()
         }
       } else {
+        // #9933
+        // Although we handle Transition/TransitionGroup in the transform stage
+        // without rendering it as a fragment, the content passed into the slot
+        // may still be a fragment.
+        // Therefore, here we need to avoid rendering it as a fragment again.
+        if (
+          transition &&
+          slotBuffer[0] === '<!--[-->' &&
+          slotBuffer[slotBuffer.length - 1] === '<!--]-->'
+        ) {
+          slotBuffer.shift()
+          slotBuffer.pop()
+        }
+
         for (let i = 0; i < slotBuffer.length; i++) {
-          const buffer = slotBuffer[i]
-          // #9933
-          // Although we handle Transition/TransitionGroup in the transform stage
-          // without rendering it as a fragment, the content passed into the slot
-          // may still be a fragment.
-          // Therefore, here we need to avoid rendering it as a fragment again.
-          if (transition && (buffer === '<!--[-->' || buffer === '<!--]-->')) {
-            continue
-          }
-          push(buffer)
+          push(slotBuffer[i])
         }
       }
     }
