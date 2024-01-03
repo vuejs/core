@@ -1,15 +1,15 @@
 import {
-  computed,
-  reactive,
-  effect,
-  ref,
-  WritableComputedRef,
-  isReadonly,
-  DebuggerEvent,
-  toRaw,
-  TrackOpTypes,
+  type DebuggerEvent,
   ITERATE_KEY,
-  TriggerOpTypes
+  TrackOpTypes,
+  TriggerOpTypes,
+  type WritableComputedRef,
+  computed,
+  effect,
+  isReadonly,
+  reactive,
+  ref,
+  toRaw,
 } from '../src'
 
 describe('reactivity/computed', () => {
@@ -140,7 +140,7 @@ describe('reactivity/computed', () => {
       get: () => n.value + 1,
       set: val => {
         n.value = val - 1
-      }
+      },
     })
 
     expect(plusOne.value).toBe(2)
@@ -157,7 +157,7 @@ describe('reactivity/computed', () => {
       get: () => n.value + 1,
       set: val => {
         n.value = val - 1
-      }
+      },
     })
 
     let dummy
@@ -184,7 +184,7 @@ describe('reactivity/computed', () => {
     // mutate n
     n.value++
     // on the 2nd run, plusOne.value should have already updated.
-    expect(plusOneValues).toMatchObject([1, 2, 2])
+    expect(plusOneValues).toMatchObject([1, 2])
   })
 
   it('should warn if trying to set a readonly computed', () => {
@@ -193,7 +193,7 @@ describe('reactivity/computed', () => {
     ;(plusOne as WritableComputedRef<number>).value++ // Type cast to prevent TS from preventing the error
 
     expect(
-      'Write operation failed: computed value is readonly'
+      'Write operation failed: computed value is readonly',
     ).toHaveBeenWarnedLast()
   })
 
@@ -209,7 +209,7 @@ describe('reactivity/computed', () => {
       },
       set(v) {
         a = v
-      }
+      },
     })
     expect(isReadonly(z)).toBe(false)
     expect(isReadonly(z.value.a)).toBe(false)
@@ -228,7 +228,7 @@ describe('reactivity/computed', () => {
     })
     const obj = reactive({ foo: 1, bar: 2 })
     const c = computed(() => (obj.foo, 'bar' in obj, Object.keys(obj)), {
-      onTrack
+      onTrack,
     })
     expect(c.value).toEqual(['foo', 'bar'])
     expect(onTrack).toHaveBeenCalledTimes(3)
@@ -237,20 +237,20 @@ describe('reactivity/computed', () => {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
-        key: 'foo'
+        key: 'foo',
       },
       {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
-        key: 'bar'
+        key: 'bar',
       },
       {
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
-        key: ITERATE_KEY
-      }
+        key: ITERATE_KEY,
+      },
     ])
   })
 
@@ -259,13 +259,13 @@ describe('reactivity/computed', () => {
     const onTrigger = vi.fn((e: DebuggerEvent) => {
       events.push(e)
     })
-    const obj = reactive({ foo: 1 })
+    const obj = reactive<{ foo?: number }>({ foo: 1 })
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed
     c.value
 
-    obj.foo++
+    obj.foo!++
     expect(c.value).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
@@ -274,10 +274,9 @@ describe('reactivity/computed', () => {
       type: TriggerOpTypes.SET,
       key: 'foo',
       oldValue: 1,
-      newValue: 2
+      newValue: 2,
     })
 
-    // @ts-ignore
     delete obj.foo
     expect(c.value).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
@@ -286,7 +285,170 @@ describe('reactivity/computed', () => {
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',
-      oldValue: 2
+      oldValue: 2,
     })
+  })
+
+  // https://github.com/vuejs/core/pull/5912#issuecomment-1497596875
+  it('should query deps dirty sequentially', () => {
+    const cSpy = vi.fn()
+
+    const a = ref<null | { v: number }>({
+      v: 1,
+    })
+    const b = computed(() => {
+      return a.value
+    })
+    const c = computed(() => {
+      cSpy()
+      return b.value?.v
+    })
+    const d = computed(() => {
+      if (b.value) {
+        return c.value
+      }
+      return 0
+    })
+
+    d.value
+    a.value!.v = 2
+    a.value = null
+    d.value
+    expect(cSpy).toHaveBeenCalledTimes(1)
+  })
+
+  // https://github.com/vuejs/core/pull/5912#issuecomment-1738257692
+  it('chained computed dirty reallocation after querying dirty', () => {
+    let _msg: string | undefined
+
+    const items = ref<number[]>()
+    const isLoaded = computed(() => {
+      return !!items.value
+    })
+    const msg = computed(() => {
+      if (isLoaded.value) {
+        return 'The items are loaded'
+      } else {
+        return 'The items are not loaded'
+      }
+    })
+
+    effect(() => {
+      _msg = msg.value
+    })
+
+    items.value = [1, 2, 3]
+    items.value = [1, 2, 3]
+    items.value = undefined
+
+    expect(_msg).toBe('The items are not loaded')
+  })
+
+  it('chained computed dirty reallocation after trigger computed getter', () => {
+    let _msg: string | undefined
+
+    const items = ref<number[]>()
+    const isLoaded = computed(() => {
+      return !!items.value
+    })
+    const msg = computed(() => {
+      if (isLoaded.value) {
+        return 'The items are loaded'
+      } else {
+        return 'The items are not loaded'
+      }
+    })
+
+    _msg = msg.value
+    items.value = [1, 2, 3]
+    isLoaded.value // <- trigger computed getter
+    _msg = msg.value
+    items.value = undefined
+    _msg = msg.value
+
+    expect(_msg).toBe('The items are not loaded')
+  })
+
+  // https://github.com/vuejs/core/pull/5912#issuecomment-1739159832
+  it('deps order should be consistent with the last time get value', () => {
+    const cSpy = vi.fn()
+
+    const a = ref(0)
+    const b = computed(() => {
+      return a.value % 3 !== 0
+    })
+    const c = computed(() => {
+      cSpy()
+      if (a.value % 3 === 2) {
+        return 'expensive'
+      }
+      return 'cheap'
+    })
+    const d = computed(() => {
+      return a.value % 3 === 2
+    })
+    const e = computed(() => {
+      if (b.value) {
+        if (d.value) {
+          return 'Avoiding expensive calculation'
+        }
+      }
+      return c.value
+    })
+
+    e.value
+    a.value++
+    e.value
+
+    expect(e.effect.deps.length).toBe(3)
+    expect(e.effect.deps.indexOf((b as any).dep)).toBe(0)
+    expect(e.effect.deps.indexOf((d as any).dep)).toBe(1)
+    expect(e.effect.deps.indexOf((c as any).dep)).toBe(2)
+    expect(cSpy).toHaveBeenCalledTimes(2)
+
+    a.value++
+    e.value
+
+    expect(cSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('should trigger by the second computed that maybe dirty', () => {
+    const cSpy = vi.fn()
+
+    const src1 = ref(0)
+    const src2 = ref(0)
+    const c1 = computed(() => src1.value)
+    const c2 = computed(() => (src1.value % 2) + src2.value)
+    const c3 = computed(() => {
+      cSpy()
+      c1.value
+      c2.value
+    })
+
+    c3.value
+    src1.value = 2
+    c3.value
+    expect(cSpy).toHaveBeenCalledTimes(2)
+    src2.value = 1
+    c3.value
+    expect(cSpy).toHaveBeenCalledTimes(3)
+  })
+
+  it('should trigger the second effect', () => {
+    const fnSpy = vi.fn()
+    const v = ref(1)
+    const c = computed(() => v.value)
+
+    effect(() => {
+      c.value
+    })
+    effect(() => {
+      c.value
+      fnSpy()
+    })
+
+    expect(fnSpy).toBeCalledTimes(1)
+    v.value = 2
+    expect(fnSpy).toBeCalledTimes(2)
   })
 })
