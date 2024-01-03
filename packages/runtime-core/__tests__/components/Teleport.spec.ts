@@ -560,12 +560,12 @@ describe('renderer: teleport', () => {
     const App = {
       setup() {
         return () => h(Teleport, { to: null }, h('div', 'teleported'))
-      }
+      },
     }
     render(h(App), root)
     await nextTick()
     expect(serializeInner(root)).toMatchInlineSnapshot(
-      `"<!--teleport start--><div>teleported</div><!--teleport end-->"`
+      `"<!--teleport start--><div>teleported</div><!--teleport end-->"`,
     )
     expect(`Invalid Teleport target: null`).toHaveBeenWarnedTimes(1)
     expect(`Invalid Teleport target on mount`).toHaveBeenWarnedTimes(1)
