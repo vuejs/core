@@ -1300,14 +1300,14 @@ describe('api: watch', () => {
           (val, oldVal, onCleanup) => {
             const stop = watch(
               () => 2,
-              () => {}
+              () => {},
             )
             onCleanup(stop)
           },
-          { immediate: true }
+          { immediate: true },
         )
         return () => ''
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     createApp(Comp).mount(root)
