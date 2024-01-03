@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode } from '../utils'
+import { assertCode, compileSFCScript as compile } from '../utils'
 
 describe('defineProps', () => {
   test('basic usage', () => {
@@ -17,7 +17,7 @@ const bar = 1
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
       bar: BindingTypes.LITERAL_CONST,
-      props: BindingTypes.SETUP_REACTIVE_CONST
+      props: BindingTypes.SETUP_REACTIVE_CONST,
     })
 
     // should remove defineOptions import and call
@@ -146,11 +146,11 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`symbol: { type: Symbol, required: true }`)
     expect(content).toMatch(`error: { type: Error, required: true }`)
     expect(content).toMatch(
-      `objectOrFn: { type: [Function, Object], required: true },`
+      `objectOrFn: { type: [Function, Object], required: true },`,
     )
     expect(content).toMatch(`extract: { type: Number, required: true }`)
     expect(content).toMatch(
-      `exclude: { type: [Number, Boolean], required: true }`
+      `exclude: { type: [Number, Boolean], required: true }`,
     )
     expect(content).toMatch(`uppercase: { type: String, required: true }`)
     expect(content).toMatch(`params: { type: Array, required: true }`)
@@ -158,10 +158,10 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`union: { type: [String, Number], required: true }`)
     expect(content).toMatch(`literalUnion: { type: String, required: true }`)
     expect(content).toMatch(
-      `literalUnionNumber: { type: Number, required: true }`
+      `literalUnionNumber: { type: Number, required: true }`,
     )
     expect(content).toMatch(
-      `literalUnionMixed: { type: [String, Number, Boolean], required: true }`
+      `literalUnionMixed: { type: [String, Number, Boolean], required: true }`,
     )
     expect(content).toMatch(`intersection: { type: Object, required: true }`)
     expect(content).toMatch(`intersection2: { type: String, required: true }`)
@@ -171,13 +171,13 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`unknownUnion: { type: null, required: true }`)
     // intersection containing unknown type: narrow to the known types
     expect(content).toMatch(
-      `unknownIntersection: { type: Object, required: true },`
+      `unknownIntersection: { type: Object, required: true },`,
     )
     expect(content).toMatch(
-      `unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },`
+      `unknownUnionWithBoolean: { type: Boolean, required: true, skipCheck: true },`,
     )
     expect(content).toMatch(
-      `unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }`
+      `unknownUnionWithFunction: { type: Function, required: true, skipCheck: true }`,
     )
     expect(bindings).toStrictEqual({
       string: BindingTypes.PROPS,
@@ -218,7 +218,7 @@ const props = defineProps({ foo: String })
       unknownUnion: BindingTypes.PROPS,
       unknownIntersection: BindingTypes.PROPS,
       unknownUnionWithBoolean: BindingTypes.PROPS,
-      unknownUnionWithFunction: BindingTypes.PROPS
+      unknownUnionWithFunction: BindingTypes.PROPS,
     })
   })
 
@@ -232,7 +232,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
+      x: BindingTypes.PROPS,
     })
   })
 
@@ -257,7 +257,7 @@ const props = defineProps({ foo: String })
     expect(bindings).toStrictEqual({
       x: BindingTypes.PROPS,
       y: BindingTypes.PROPS,
-      z: BindingTypes.PROPS
+      z: BindingTypes.PROPS,
     })
   })
 
@@ -271,7 +271,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
+      x: BindingTypes.PROPS,
     })
   })
 
@@ -287,7 +287,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
+      x: BindingTypes.PROPS,
     })
   })
 
@@ -301,7 +301,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
+      x: BindingTypes.PROPS,
     })
   })
 
@@ -315,7 +315,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`x: { type: Number, required: false }`)
     expect(bindings).toStrictEqual({
-      x: BindingTypes.PROPS
+      x: BindingTypes.PROPS,
     })
   })
 
@@ -328,7 +328,7 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`props: ['foo']`)
     assertCode(content)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.PROPS
+      foo: BindingTypes.PROPS,
     })
   })
 
@@ -354,21 +354,21 @@ const props = defineProps({ foo: String })
     `)
     assertCode(content)
     expect(content).toMatch(
-      `foo: { type: String, required: false, default: 'hi' }`
+      `foo: { type: String, required: false, default: 'hi' }`,
     )
     expect(content).toMatch(`bar: { type: Number, required: false }`)
     expect(content).toMatch(`baz: { type: Boolean, required: true }`)
     expect(content).toMatch(
-      `qux: { type: Function, required: false, default() { return 1 } }`
+      `qux: { type: Function, required: false, default() { return 1 } }`,
     )
     expect(content).toMatch(
-      `quux: { type: Function, required: false, default() { } }`
+      `quux: { type: Function, required: false, default() { } }`,
     )
     expect(content).toMatch(
-      `quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } }`
+      `quuxx: { type: Promise, required: false, async default() { return await Promise.resolve('hi') } }`,
     )
     expect(content).toMatch(
-      `fred: { type: String, required: false, get default() { return 'fred' } }`
+      `fred: { type: String, required: false, get default() { return 'fred' } }`,
     )
     expect(content).toMatch(`const props = __props`)
     expect(bindings).toStrictEqual({
@@ -379,7 +379,7 @@ const props = defineProps({ foo: String })
       quux: BindingTypes.PROPS,
       quuxx: BindingTypes.PROPS,
       fred: BindingTypes.PROPS,
-      props: BindingTypes.SETUP_CONST
+      props: BindingTypes.SETUP_CONST,
     })
   })
 
@@ -415,7 +415,7 @@ const props = defineProps({ foo: String })
     })
     </script>
     `,
-      { isProd: true }
+      { isProd: true },
     )
     assertCode(content)
     expect(content).toMatch(`const props = __props`)
@@ -446,7 +446,7 @@ const props = defineProps({ foo: String })
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
-  }, { ...defaults })`.trim()
+  }, { ...defaults })`.trim(),
     )
   })
 
@@ -469,7 +469,7 @@ const props = defineProps({ foo: String })
     foo: { type: String, required: false },
     bar: { type: Number, required: false },
     baz: { type: Boolean, required: true }
-  }, defaults)`.trim()
+  }, defaults)`.trim(),
     )
   })
 
@@ -487,7 +487,7 @@ const props = defineProps({ foo: String })
     }>(), { ...defaults })
     </script>
     `,
-      { isProd: true }
+      { isProd: true },
     )
     assertCode(content)
     expect(content).toMatch(`import { mergeDefaults as _mergeDefaults`)
@@ -498,7 +498,7 @@ const props = defineProps({ foo: String })
     bar: { type: Boolean },
     baz: { type: [Boolean, Function] },
     qux: {}
-  }, { ...defaults })`.trim()
+  }, { ...defaults })`.trim(),
     )
   })
 
@@ -520,7 +520,7 @@ const props = defineProps({ foo: String })
     foo: { type: Function, required: false }
   }, {
       ['fo' + 'o']() { return 'foo' }
-    })`.trim()
+    })`.trim(),
     )
   })
 
@@ -533,8 +533,8 @@ const props = defineProps({ foo: String })
         foo: Foo
       }>()
       </script>`,
-        { hoistStatic: true }
-      ).content
+        { hoistStatic: true },
+      ).content,
     ).toMatch(`foo: { type: Number`)
 
     expect(
@@ -545,8 +545,8 @@ const props = defineProps({ foo: String })
         foo: Foo
       }>()
       </script>`,
-        { hoistStatic: true }
-      ).content
+        { hoistStatic: true },
+      ).content,
     ).toMatch(`foo: { type: String`)
 
     expect(
@@ -557,8 +557,8 @@ const props = defineProps({ foo: String })
         foo: Foo
       }>()
       </script>`,
-        { hoistStatic: true }
-      ).content
+        { hoistStatic: true },
+      ).content,
     ).toMatch(`foo: { type: [String, Number]`)
 
     expect(
@@ -569,8 +569,8 @@ const props = defineProps({ foo: String })
         foo: Foo
       }>()
       </script>`,
-        { hoistStatic: true }
-      ).content
+        { hoistStatic: true },
+      ).content,
     ).toMatch(`foo: { type: Number`)
   })
 
@@ -585,7 +585,7 @@ const props = defineProps({ foo: String })
   `)
     expect(bindings).toStrictEqual({
       bar: BindingTypes.SETUP_REF,
-      computed: BindingTypes.SETUP_CONST
+      computed: BindingTypes.SETUP_CONST,
     })
   })
 
@@ -596,7 +596,7 @@ const props = defineProps({ foo: String })
       const { foo } = defineProps<{
         foo: Foo
       }>()
-      </script>`
+      </script>`,
     )
     expect(content).toMatch(`const { foo } = __props`)
     assertCode(content)
@@ -649,7 +649,7 @@ const props = defineProps({ foo: String })
     assertCode(content)
     expect(content).toMatch(`"spa ce": { type: null, required: true }`)
     expect(content).toMatch(
-      `"exclamation!mark": { type: null, required: true }`
+      `"exclamation!mark": { type: null, required: true }`,
     )
     expect(content).toMatch(`"double\\"quote": { type: null, required: true }`)
     expect(content).toMatch(`"hash#tag": { type: null, required: true }`)
@@ -670,7 +670,7 @@ const props = defineProps({ foo: String })
     expect(content).toMatch(`"question?mark": { type: null, required: true }`)
     expect(content).toMatch(`"at@sign": { type: null, required: true }`)
     expect(content).toMatch(
-      `"square[brack]ets": { type: null, required: true }`
+      `"square[brack]ets": { type: null, required: true }`,
     )
     expect(content).toMatch(`"back\\\\slash": { type: null, required: true }`)
     expect(content).toMatch(`"ca^ret": { type: null, required: true }`)
@@ -707,7 +707,7 @@ const props = defineProps({ foo: String })
       'curly{bra}ces': BindingTypes.PROPS,
       'pi|pe': BindingTypes.PROPS,
       'til~de': BindingTypes.PROPS,
-      'da-sh': BindingTypes.PROPS
+      'da-sh': BindingTypes.PROPS,
     })
   })
 
@@ -718,7 +718,7 @@ const props = defineProps({ foo: String })
       const props = defineProps<{ foo: number}>()
       </script>`,
       { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
-      { filename: 'app.ce.vue' }
+      { filename: 'app.ce.vue' },
     )
 
     expect(content).toMatch(`foo: {type: Number}`)
@@ -736,7 +736,7 @@ const props = defineProps({ foo: String })
       });
       </script>`,
       { isProd: true, customElement: filename => /\.ce\.vue$/.test(filename) },
-      { filename: 'app.ce.vue' }
+      { filename: 'app.ce.vue' },
     )
     expect(content).toMatch(`foo: { default: 5.5, type: Number }`)
     assertCode(content)

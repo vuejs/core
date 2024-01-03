@@ -53,7 +53,7 @@ describe('ssr: v-show', () => {
 
   test('with dynamic style', () => {
     expect(
-      compileWithWrapper(`<div :style="{ color: 'red' }" v-show="foo"/>`).code
+      compileWithWrapper(`<div :style="{ color: 'red' }" v-show="foo"/>`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -73,8 +73,8 @@ describe('ssr: v-show', () => {
   test('with static + dynamic style', () => {
     expect(
       compileWithWrapper(
-        `<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
-      ).code
+        `<div style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderStyle: _ssrRenderStyle, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 
@@ -95,8 +95,8 @@ describe('ssr: v-show', () => {
   test('with v-bind', () => {
     expect(
       compileWithWrapper(
-        `<div v-bind="baz" style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`
-      ).code
+        `<div v-bind="baz" style="color:red" :style="{ fontSize: 14 }" v-show="foo"/>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")

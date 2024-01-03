@@ -35,7 +35,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       () => {
         r[0]++
         c.value
-      }
+      },
     )
   }
 
