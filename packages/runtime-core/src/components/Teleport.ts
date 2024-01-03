@@ -7,11 +7,16 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
-  traverseStaticChildren,
   queuePostRenderEffect,
+  traverseStaticChildren,
 } from '../renderer'
-import type { VNode, VNodeArrayChildren, VNodeProps, VNodeNormalizedChildren } from '../vnode'
-import { isArray, ShapeFlags, isString } from '@vue/shared'
+import type {
+  VNode,
+  VNodeArrayChildren,
+  VNodeNormalizedChildren,
+  VNodeProps,
+} from '../vnode'
+import { ShapeFlags, isArray, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -32,7 +37,7 @@ export const isTeleport = (type: any): boolean => type.__isTeleport
  */
 export const setTeleportOwnerAttrToEl = (
   props: (VNodeProps & { [key: string]: any }) | null,
-  vnode: VNode
+  vnode: VNode,
 ) => {
   const teleportIds = vnode.teleportIds
   if (teleportIds !== null && teleportIds !== undefined) {
@@ -58,7 +63,7 @@ export const setTeleportOwnerAttrToEl = (
  */
 export const updateTeleportsCssVarsFast = (
   vnode: VNode,
-  parentSuspense: SuspenseBoundary | null
+  parentSuspense: SuspenseBoundary | null,
 ) => {
   queuePostRenderEffect(() => {
     const teleportIds = vnode.teleportIds
@@ -73,7 +78,7 @@ export const updateTeleportsCssVarsFast = (
 }
 export const setTeleportIdTOVNode = (
   vnode: VNode,
-  parentComponent: ComponentInternalInstance | null
+  parentComponent: ComponentInternalInstance | null,
 ) => {
   if (parentComponent) {
     if (
@@ -498,7 +503,7 @@ function updateCssVars(vnode: VNode) {
   }
 }
 
-// @ts-ignore
+// @ts-expect-error
 function initTeleportIds(children: VNodeNormalizedChildren, vnode: VNode) {
   if (!children) return
   const ctx = vnode.ctx

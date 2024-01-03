@@ -104,7 +104,7 @@ export { Fragment, Text, Comment, Static, type VNodeRef } from './vnode'
 export {
   Teleport,
   type TeleportProps,
-  teleportUTMap
+  teleportUTMap,
 } from './components/Teleport'
 export { Suspense, type SuspenseProps } from './components/Suspense'
 export { KeepAlive, type KeepAliveProps } from './components/KeepAlive'

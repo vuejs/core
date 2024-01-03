@@ -58,9 +58,9 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import {
+  setTeleportIdTOVNode,
   setTeleportOwnerAttrToEl,
   updateTeleportsCssVarsFast,
-  setTeleportIdTOVNode,
 } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'

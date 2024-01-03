@@ -8,12 +8,14 @@ import {
   KeepAlive,
   Suspense,
   type SuspenseProps,
+  Teleport,
   h,
   nextTick,
   nodeOps,
   onErrorCaptured,
   onMounted,
   onUnmounted,
+  reactive,
   ref,
   render,
   resolveDynamicComponent,
@@ -21,9 +23,7 @@ import {
   shallowRef,
   watch,
   watchEffect,
-  reactive,
-  Teleport,
-  withCtx
+  withCtx,
 } from '@vue/runtime-test'
 import { createApp, defineComponent, useCssVars } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
@@ -1741,7 +1741,7 @@ describe('Suspense', () => {
     const Async = defineAsyncComponent({
       render() {
         return h('div', 'async')
-      }
+      },
     })
 
     const Comp = {
@@ -1751,10 +1751,10 @@ describe('Suspense', () => {
           h(Teleport, { to: target }, [
             h(Suspense, null, {
               default: withCtx(() => h(Async)),
-              fallback: withCtx(() => h('div', 'fallback'))
-            })
+              fallback: withCtx(() => h('div', 'fallback')),
+            }),
           ])
-      }
+      },
     }
 
     runtimeRender(h(Comp), root)

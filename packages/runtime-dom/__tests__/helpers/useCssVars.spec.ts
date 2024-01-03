@@ -3,21 +3,21 @@ import {
   type FunctionalComponent,
   Suspense,
   Teleport,
+  Transition,
+  createBlock,
+  createCommentVNode,
+  createElementBlock,
   createStaticVNode,
+  createVNode,
   h,
   nextTick,
+  openBlock,
   reactive,
   ref,
   render,
-  useCssVars,
   renderSlot,
+  useCssVars,
   withCtx,
-  openBlock,
-  createElementBlock,
-  createCommentVNode,
-  createVNode,
-  Transition,
-  createBlock
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -342,7 +342,7 @@ describe('useCssVars', () => {
     const comp = {
       render(ctx: any) {
         return renderSlot(ctx.$slots, 'default')
-      }
+      },
     }
     const App = {
       setup() {
@@ -359,18 +359,18 @@ describe('useCssVars', () => {
                       createElementBlock(
                         'div',
                         {
-                          key: 0
+                          key: 0,
                         },
-                        ' test '
+                        ' test ',
                       ))
-                    : createCommentVNode('v-if', true)
+                    : createCommentVNode('v-if', true),
                 ]),
-                _: 1
-              }
-            )
-          ])
+                _: 1,
+              },
+            ),
+          ]),
         ]
-      }
+      },
     }
 
     render(h(App), root)
@@ -413,17 +413,17 @@ describe('useCssVars', () => {
                     createElementBlock(
                       'div',
                       {
-                        key: 0
+                        key: 0,
                       },
-                      'test'
+                      'test',
                     ))
-                  : createCommentVNode('v-if', true)
+                  : createCommentVNode('v-if', true),
               ]),
-              _: 1 /* STABLE */
-            })
-          ]))
+              _: 1 /* STABLE */,
+            }),
+          ])),
         ]
-      }
+      },
     }
 
     render(h(App), root)
