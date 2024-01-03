@@ -1,4 +1,4 @@
-import { ReactiveEffect } from './effect'
+import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined
@@ -39,7 +39,7 @@ export class EffectScope {
     if (!detached && activeEffectScope) {
       this.index =
         (activeEffectScope.scopes || (activeEffectScope.scopes = [])).push(
-          this
+          this,
         ) - 1
     }
   }
@@ -126,7 +126,7 @@ export function effectScope(detached?: boolean) {
 
 export function recordEffectScope(
   effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope
+  scope: EffectScope | undefined = activeEffectScope,
 ) {
   if (scope && scope.active) {
     scope.effects.push(effect)
@@ -155,7 +155,7 @@ export function onScopeDispose(fn: () => void) {
   } else if (__DEV__) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
-        ` to be associated with.`
+        ` to be associated with.`,
     )
   }
 }

@@ -1,8 +1,12 @@
-import { ComponentInternalInstance, ComponentOptions, warn } from 'vue'
+import {
+  type ComponentInternalInstance,
+  type ComponentOptions,
+  warn,
+} from 'vue'
 import { compile } from '@vue/compiler-ssr'
-import { extend, generateCodeFrame, isFunction, NO } from '@vue/shared'
-import { CompilerError, CompilerOptions } from '@vue/compiler-core'
-import { PushFn } from '../render'
+import { NO, extend, generateCodeFrame, isFunction } from '@vue/shared'
+import type { CompilerError, CompilerOptions } from '@vue/compiler-core'
+import type { PushFn } from '../render'
 
 import * as Vue from 'vue'
 import * as helpers from '../internal'
@@ -10,21 +14,21 @@ import * as helpers from '../internal'
 type SSRRenderFunction = (
   context: any,
   push: PushFn,
-  parentInstance: ComponentInternalInstance
+  parentInstance: ComponentInternalInstance,
 ) => void
 
 const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
 
 export function ssrCompile(
   template: string,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): SSRRenderFunction {
   // TODO: this branch should now work in ESM builds, enable it in a minor
   if (!__NODE_JS__) {
     throw new Error(
       `On-the-fly template compilation is not supported in the ESM build of ` +
         `@vue/server-renderer. All templates must be pre-compiled into ` +
-        `render functions.`
+        `render functions.`,
     )
   }
 
@@ -37,11 +41,11 @@ export function ssrCompile(
     extend(
       {
         isCustomElement,
-        delimiters
+        delimiters,
       },
-      compilerOptions
+      compilerOptions,
     ),
-    componentCompilerOptions
+    componentCompilerOptions,
   )
 
   finalCompilerOptions.isCustomElement =
@@ -51,11 +55,11 @@ export function ssrCompile(
   const cacheKey = JSON.stringify(
     {
       template,
-      compilerOptions: finalCompilerOptions
+      compilerOptions: finalCompilerOptions,
     },
     (key, value) => {
       return isFunction(value) ? value.toString() : value
-    }
+    },
   )
 
   const cached = compileCache[cacheKey]
@@ -71,7 +75,7 @@ export function ssrCompile(
         generateCodeFrame(
           template as string,
           err.loc.start.offset,
-          err.loc.end.offset
+          err.loc.end.offset,
         )
       warn(codeFrame ? `${message}\n${codeFrame}` : message)
     } else {
@@ -82,7 +86,7 @@ export function ssrCompile(
   const { code } = compile(template, finalCompilerOptions)
   const requireMap = {
     vue: Vue,
-    'vue/server-renderer': helpers
+    'vue/server-renderer': helpers,
   }
   const fakeRequire = (id: 'vue' | 'vue/server-renderer') => requireMap[id]
   return (compileCache[cacheKey] = Function('require', code)(fakeRequire))
