@@ -11,17 +11,20 @@ return withDirectives(h(comp), [
 ])
 */
 
-import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
+import type { VNode } from './vnode'
+import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance, Data, getExposeProxy } from './component'
+import {
+  type ComponentInternalInstance,
+  type Data,
+  getExposeProxy,
+} from './component'
 import { currentRenderingInstance } from './componentRenderContext'
-import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { traverse } from './apiWatch'
-import { RendererElement } from './renderer'
 
 export interface DirectiveBinding<V = any> {
   instance: ComponentPublicInstance | null
@@ -32,23 +35,19 @@ export interface DirectiveBinding<V = any> {
   dir: ObjectDirective<any, V>
 }
 
-export type DirectiveHook<
-  T extends RendererElement = any,
-  Prev = VNode<any, T> | null,
-  V = any
-> = (
+export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   el: T,
   binding: DirectiveBinding<V>,
   vnode: VNode<any, T>,
-  prevVNode: Prev
+  prevVNode: Prev,
 ) => void
 
 export type SSRDirectiveHook = (
   binding: DirectiveBinding,
-  vnode: VNode
+  vnode: VNode,
 ) => Data | undefined
 
-export interface ObjectDirective<T extends RendererElement = any, V = any> {
+export interface ObjectDirective<T = any, V = any> {
   created?: DirectiveHook<T, null, V>
   beforeMount?: DirectiveHook<T, null, V>
   mounted?: DirectiveHook<T, null, V>
@@ -60,12 +59,9 @@ export interface ObjectDirective<T extends RendererElement = any, V = any> {
   deep?: boolean
 }
 
-export type FunctionDirective<
-  T extends RendererElement = any,
-  V = any
-> = DirectiveHook<T, any, V>
+export type FunctionDirective<T = any, V = any> = DirectiveHook<T, any, V>
 
-export type Directive<T extends RendererElement = any, V = any> =
+export type Directive<T = any, V = any> =
   | ObjectDirective<T, V>
   | FunctionDirective<T, V>
 
@@ -90,7 +86,7 @@ export type DirectiveArguments = Array<
  */
 export function withDirectives<T extends VNode>(
   vnode: T,
-  directives: DirectiveArguments
+  directives: DirectiveArguments,
 ): T {
   const internalInstance = currentRenderingInstance
   if (internalInstance === null) {
@@ -107,7 +103,7 @@ export function withDirectives<T extends VNode>(
       if (isFunction(dir)) {
         dir = {
           mounted: dir,
-          updated: dir
+          updated: dir,
         } as ObjectDirective
       }
       if (dir.deep) {
@@ -119,7 +115,7 @@ export function withDirectives<T extends VNode>(
         value,
         oldValue: void 0,
         arg,
-        modifiers
+        modifiers,
       })
     }
   }
@@ -130,7 +126,7 @@ export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
-  name: keyof ObjectDirective
+  name: keyof ObjectDirective,
 ) {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
@@ -151,7 +147,7 @@ export function invokeDirectiveHook(
         vnode.el,
         binding,
         vnode,
-        prevVNode
+        prevVNode,
       ])
       resetTracking()
     }
