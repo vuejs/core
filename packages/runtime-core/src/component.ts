@@ -616,7 +616,6 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
     sp: null,
-    sp: null,
     mm: null,
   }
   if (__DEV__) {
