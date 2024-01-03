@@ -291,6 +291,16 @@ describe('vnode', () => {
     const cloned8 = cloneVNode(original4)
     expect(cloned8.ref).toMatchObject({ i: mockInstance2, r, k: 'foo' })
 
+    // @ts-expect-error #8230
+    const original5 = createVNode('div', { ref: 111, ref_key: 'foo' })
+    expect(original5.ref).toMatchObject({
+      i: mockInstance2,
+      r: '111',
+      k: 'foo',
+    })
+    const cloned9 = cloneVNode(original5)
+    expect(cloned9.ref).toMatchObject({ i: mockInstance2, r: '111', k: 'foo' })
+
     setCurrentRenderingInstance(null)
   })
 
