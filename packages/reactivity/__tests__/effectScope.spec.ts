@@ -1,14 +1,13 @@
-import { vi } from 'vitest'
 import { nextTick, watch, watchEffect } from '@vue/runtime-core'
 import {
-  reactive,
-  effect,
+  type ComputedRef,
   EffectScope,
-  onScopeDispose,
   computed,
+  effect,
+  getCurrentScope,
+  onScopeDispose,
+  reactive,
   ref,
-  ComputedRef,
-  getCurrentScope
 } from '../src'
 
 describe('reactivity/effect/scope', () => {
@@ -214,7 +213,7 @@ describe('reactivity/effect/scope', () => {
     onScopeDispose(spy)
 
     expect(
-      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.'
+      '[Vue warn] onScopeDispose() is called when there is no active effect scope to be associated with.',
     ).toHaveBeenWarned()
 
     scope.stop()

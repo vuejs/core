@@ -1,5 +1,4 @@
-import { vi } from 'vitest'
-import { reactive, effect, toRaw, isReactive } from '../../src'
+import { effect, isReactive, reactive, toRaw } from '../../src'
 
 describe('reactivity/collections', () => {
   describe('WeakMap', () => {
