@@ -1,4 +1,11 @@
-import { computed, defineComponent, ref, shallowRef, watch } from 'vue'
+import {
+  computed,
+  defineComponent,
+  defineModel,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 import { expectType } from './utils'
 
 const source = ref('foo')
@@ -104,5 +111,33 @@ defineComponent({
   })
   watch(shallowUnionAsCast, value => {
     expectType<Steps>(value)
+  })
+}
+
+{
+  // defineModel
+  const bool = defineModel({ default: false })
+  watch(bool, value => {
+    expectType<boolean>(value)
+  })
+
+  const bool1 = defineModel<boolean>()
+  watch(bool1, value => {
+    expectType<boolean | undefined>(value)
+  })
+
+  const msg = defineModel<string>({ required: true })
+  watch(msg, value => {
+    expectType<string>(value)
+  })
+
+  const arr = defineModel<string[]>({ required: true })
+  watch(arr, value => {
+    expectType<string[]>(value)
+  })
+
+  const obj = defineModel<{ foo: string }>({ required: true })
+  watch(obj, value => {
+    expectType<{ foo: string }>(value)
   })
 }

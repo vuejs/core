@@ -71,6 +71,7 @@ const sfcOptions: SFCOptions = {
     isProd: useProdMode.value,
     compilerOptions: {
       comments: !useProdMode.value,
+      isCustomElement: (tag: string) => tag === 'mjx-container',
     },
   },
 }
@@ -139,6 +140,12 @@ onMounted(() => {
     :autoResize="true"
     :sfcOptions="sfcOptions"
     :clearConsole="false"
+    :preview-options="{
+      customCode: {
+        importCode: `import { initCustomFormatter } from 'vue'`,
+        useCode: `initCustomFormatter()`,
+      },
+    }"
   />
 </template>
 

@@ -279,6 +279,119 @@ describe('SFC <script setup> helpers', () => {
       expect(serializeInner(root)).toBe('bar')
     })
 
+    test('without parent listener (local mutation)', async () => {
+      let foo: any
+      const update = () => {
+        foo.value = 'bar'
+      }
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['foo'],
+        emits: ['update:foo'],
+        setup(props) {
+          foo = useModel(props, 'foo')
+          return () => {
+            compRender()
+            return foo.value
+          }
+        },
+      })
+
+      const root = nodeOps.createElement('div')
+      // provide initial value
+      render(h(Comp, { foo: 'initial' }), root)
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('initial')
+
+      expect(foo.value).toBe('initial')
+      update()
+      // when parent didn't provide value, local mutation is enabled
+      expect(foo.value).toBe('bar')
+
+      await nextTick()
+      expect(compRender).toBeCalledTimes(2)
+      expect(serializeInner(root)).toBe('bar')
+    })
+
+    test('kebab-case v-model (should not be local)', async () => {
+      let foo: any
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['fooBar'],
+        emits: ['update:fooBar'],
+        setup(props) {
+          foo = useModel(props, 'fooBar')
+          return () => {
+            compRender()
+            return foo.value
+          }
+        },
+      })
+
+      const updateFooBar = vi.fn()
+      const root = nodeOps.createElement('div')
+      // v-model:foo-bar compiles to foo-bar and onUpdate:fooBar
+      render(
+        h(Comp, { 'foo-bar': 'initial', 'onUpdate:fooBar': updateFooBar }),
+        root,
+      )
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('initial')
+
+      expect(foo.value).toBe('initial')
+      foo.value = 'bar'
+      // should not be using local mode, so nothing should actually change
+      expect(foo.value).toBe('initial')
+
+      await nextTick()
+      expect(compRender).toBeCalledTimes(1)
+      expect(updateFooBar).toBeCalledTimes(1)
+      expect(updateFooBar).toHaveBeenCalledWith('bar')
+      expect(foo.value).toBe('initial')
+      expect(serializeInner(root)).toBe('initial')
+    })
+
+    test('kebab-case update listener (should not be local)', async () => {
+      let foo: any
+
+      const compRender = vi.fn()
+      const Comp = defineComponent({
+        props: ['fooBar'],
+        emits: ['update:fooBar'],
+        setup(props) {
+          foo = useModel(props, 'fooBar')
+          return () => {
+            compRender()
+            return foo.value
+          }
+        },
+      })
+
+      const updateFooBar = vi.fn()
+      const root = nodeOps.createElement('div')
+      // The template compiler won't create hyphenated listeners, but it could have been passed manually
+      render(
+        h(Comp, { 'foo-bar': 'initial', 'onUpdate:foo-bar': updateFooBar }),
+        root,
+      )
+      expect(compRender).toBeCalledTimes(1)
+      expect(serializeInner(root)).toBe('initial')
+
+      expect(foo.value).toBe('initial')
+      foo.value = 'bar'
+      // should not be using local mode, so nothing should actually change
+      expect(foo.value).toBe('initial')
+
+      await nextTick()
+      expect(compRender).toBeCalledTimes(1)
+      expect(updateFooBar).toBeCalledTimes(1)
+      expect(updateFooBar).toHaveBeenCalledWith('bar')
+      expect(foo.value).toBe('initial')
+      expect(serializeInner(root)).toBe('initial')
+    })
+
     test('default value', async () => {
       let count: any
       const inc = () => {

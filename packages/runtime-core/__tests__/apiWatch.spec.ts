@@ -25,9 +25,11 @@ import {
   type DebuggerEvent,
   ITERATE_KEY,
   type Ref,
+  type ShallowRef,
   TrackOpTypes,
   TriggerOpTypes,
   effectScope,
+  shallowReactive,
   shallowRef,
   toRef,
   triggerRef,
@@ -154,6 +156,77 @@ describe('api: watch', () => {
     src.count++
     await nextTick()
     expect(dummy).toBe(1)
+  })
+
+  it('directly watching reactive object with explicit deep: false', async () => {
+    const src = reactive({
+      state: {
+        count: 0,
+      },
+    })
+    let dummy
+    watch(
+      src,
+      ({ state }) => {
+        dummy = state?.count
+      },
+      {
+        deep: false,
+      },
+    )
+
+    // nested should not trigger
+    src.state.count++
+    await nextTick()
+    expect(dummy).toBe(undefined)
+
+    // root level should trigger
+    src.state = { count: 1 }
+    await nextTick()
+    expect(dummy).toBe(1)
+  })
+
+  // #9916
+  it('watching shallow reactive array with deep: false', async () => {
+    class foo {
+      prop1: ShallowRef<string> = shallowRef('')
+      prop2: string = ''
+    }
+
+    const obj1 = new foo()
+    const obj2 = new foo()
+
+    const collection = shallowReactive([obj1, obj2])
+    const cb = vi.fn()
+    watch(collection, cb, { deep: false })
+
+    collection[0].prop1.value = 'foo'
+    await nextTick()
+    // should not trigger
+    expect(cb).toBeCalledTimes(0)
+
+    collection.push(new foo())
+    await nextTick()
+    // should trigger on array self mutation
+    expect(cb).toBeCalledTimes(1)
+  })
+
+  it('should still respect deep: true on shallowReactive source', async () => {
+    const obj = reactive({ a: 1 })
+    const arr = shallowReactive([obj])
+
+    let dummy
+    watch(
+      arr,
+      () => {
+        dummy = arr[0].a
+      },
+      { deep: true },
+    )
+
+    obj.a++
+    await nextTick()
+    expect(dummy).toBe(2)
   })
 
   it('watching multiple sources', async () => {
