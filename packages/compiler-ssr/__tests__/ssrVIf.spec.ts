@@ -111,7 +111,8 @@ describe('ssr: v-if', () => {
 
   test('<template v-if> (multiple element)', () => {
     expect(
-      compile(`<template v-if="foo"><div>hi</div><div>ho</div></template>`).code
+      compile(`<template v-if="foo"><div>hi</div><div>ho</div></template>`)
+        .code,
     ).toMatchInlineSnapshot(`
       "
       return function ssrRender(_ctx, _push, _parent, _attrs) {
@@ -126,7 +127,7 @@ describe('ssr: v-if', () => {
 
   test('<template v-if> (with v-for inside)', () => {
     expect(
-      compile(`<template v-if="foo"><div v-for="i in list"/></template>`).code
+      compile(`<template v-if="foo"><div v-for="i in list"/></template>`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -147,8 +148,8 @@ describe('ssr: v-if', () => {
   test('<template v-if> + normal v-else', () => {
     expect(
       compile(
-        `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`
-      ).code
+        `<template v-if="foo"><div>hi</div><div>ho</div></template><div v-else/>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
 

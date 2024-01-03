@@ -1,5 +1,5 @@
 import { compile } from '../src'
-import { ssrHelpers, SSR_RENDER_SLOT_INNER } from '../src/runtimeHelpers'
+import { SSR_RENDER_SLOT_INNER, ssrHelpers } from '../src/runtimeHelpers'
 
 describe('ssr: <slot>', () => {
   test('basic', () => {
@@ -62,8 +62,8 @@ describe('ssr: <slot>', () => {
   test('with scopeId', async () => {
     expect(
       compile(`<slot/>`, {
-        scopeId: 'hello'
-      }).code
+        scopeId: 'hello',
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require("vue/server-renderer")
 
@@ -77,8 +77,8 @@ describe('ssr: <slot>', () => {
     expect(
       compile(`<slot/>`, {
         scopeId: 'hello',
-        slotted: false
-      }).code
+        slotted: false,
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderSlot: _ssrRenderSlot } = require("vue/server-renderer")
 
@@ -91,8 +91,8 @@ describe('ssr: <slot>', () => {
   test('with forwarded scopeId', async () => {
     expect(
       compile(`<Comp><slot/></Comp>`, {
-        scopeId: 'hello'
-      }).code
+        scopeId: 'hello',
+      }).code,
     ).toMatchInlineSnapshot(`
       "const { resolveComponent: _resolveComponent, withCtx: _withCtx, renderSlot: _renderSlot } = require("vue")
       const { ssrRenderSlot: _ssrRenderSlot, ssrRenderComponent: _ssrRenderComponent } = require("vue/server-renderer")
@@ -124,6 +124,22 @@ describe('ssr: <slot>', () => {
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
+      }"
+    `)
+  })
+
+  test('inside transition-group', () => {
+    const { code } = compile(
+      `<TransitionGroup tag="div"><slot/></TransitionGroup>`,
+    )
+    expect(code).toMatch(ssrHelpers[SSR_RENDER_SLOT_INNER])
+    expect(code).toMatchInlineSnapshot(`
+      "const { ssrRenderSlotInner: _ssrRenderSlotInner, ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")
+
+      return function ssrRender(_ctx, _push, _parent, _attrs) {
+        _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
+        _ssrRenderSlotInner(_ctx.$slots, "default", {}, null, _push, _parent, null, true)
+        _push(\`</div>\`)
       }"
     `)
   })
