@@ -137,6 +137,12 @@ onMounted(() => {
     :autoResize="true"
     :sfcOptions="sfcOptions"
     :clearConsole="false"
+    :preview-options="{
+      customCode: {
+        importCode: `import { initCustomFormatter } from 'vue'`,
+        useCode: `initCustomFormatter()`
+      }
+    }"
   />
 </template>
 
