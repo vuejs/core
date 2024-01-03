@@ -16,7 +16,13 @@ export const targets = fs.readdirSync('packages').filter(f => {
   return true
 })
 
+/**
+ *
+ * @param {ReadonlyArray<string>} partialTargets
+ * @param {boolean | undefined} includeAllMatching
+ */
 export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
+  /** @type {Array<string>} */
   const matched = []
   partialTargets.forEach(partialTarget => {
     for (const target of targets) {
@@ -34,8 +40,8 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
     console.log()
     console.error(
       `  ${pico.white(pico.bgRed(' ERROR '))} ${pico.red(
-        `Target ${pico.underline(partialTargets)} not found!`
-      )}`
+        `Target ${pico.underline(partialTargets.toString())} not found!`,
+      )}`,
     )
     console.log()
 

@@ -1,13 +1,13 @@
-import { VNode } from './vnode'
+import type { VNode } from './vnode'
 import {
-  Data,
-  ComponentInternalInstance,
-  ConcreteComponent,
-  formatComponentName
+  type ComponentInternalInstance,
+  type ConcreteComponent,
+  type Data,
+  formatComponentName,
 } from './component'
-import { isString, isFunction } from '@vue/shared'
-import { toRaw, isRef, pauseTracking, resetTracking } from '@vue/reactivity'
-import { callWithErrorHandling, ErrorCodes } from './errorHandling'
+import { isFunction, isString } from '@vue/shared'
+import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
 type ComponentVNode = VNode & {
   type: ConcreteComponent
@@ -31,8 +31,6 @@ export function popWarningContext() {
 }
 
 export function warn(msg: string, ...args: any[]) {
-  if (!__DEV__) return
-
   // avoid props formatting or warn handler tracking deps that might be mutated
   // during patch, leading to infinite recursion.
   pauseTracking()
@@ -51,11 +49,11 @@ export function warn(msg: string, ...args: any[]) {
         instance && instance.proxy,
         trace
           .map(
-            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`
+            ({ vnode }) => `at <${formatComponentName(instance, vnode.type)}>`,
           )
           .join('\n'),
-        trace
-      ]
+        trace,
+      ],
     )
   } else {
     const warnArgs = [`[Vue warn]: ${msg}`, ...args]
@@ -91,7 +89,7 @@ export function getComponentTrace(): ComponentTraceStack {
     } else {
       normalizedStack.push({
         vnode: currentVNode as ComponentVNode,
-        recurseCount: 0
+        recurseCount: 0,
       })
     }
     const parentInstance: ComponentInternalInstance | null =
@@ -118,7 +116,7 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
   const open = ` at <${formatComponentName(
     vnode.component,
     vnode.type,
-    isRoot
+    isRoot,
   )}`
   const close = `>` + postfix
   return vnode.props

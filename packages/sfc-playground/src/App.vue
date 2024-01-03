@@ -10,13 +10,15 @@ const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
 
 if (import.meta.env.DEV) {
   import('@vue/repl/codemirror-editor').then(
-    mod => (EditorComponent.value = mod.default)
+    mod => (EditorComponent.value = mod.default),
   )
 } else {
   import('@vue/repl/monaco-editor').then(
-    mod => (EditorComponent.value = mod.default)
+    mod => (EditorComponent.value = mod.default),
   )
 }
+
+const replRef = ref<InstanceType<typeof Repl>>()
 
 const setVH = () => {
   document.documentElement.style.setProperty('--vh', window.innerHeight + `px`)
@@ -24,13 +26,17 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const useDevMode = ref(false)
+const useProdMode = ref(false)
 const useSSRMode = ref(false)
 
 let hash = location.hash.slice(1)
 if (hash.startsWith('__DEV__')) {
   hash = hash.slice(7)
-  useDevMode.value = true
+  useProdMode.value = false
+}
+if (hash.startsWith('__PROD__')) {
+  hash = hash.slice(8)
+  useProdMode.value = true
 }
 if (hash.startsWith('__SSR__')) {
   hash = hash.slice(7)
@@ -39,7 +45,7 @@ if (hash.startsWith('__SSR__')) {
 
 const store = new ReplStore({
   serializedState: hash,
-  productionMode: !useDevMode.value,
+  productionMode: useProdMode.value,
   defaultVueRuntimeURL: import.meta.env.PROD
     ? `${location.origin}/vue.runtime.esm-browser.js`
     : `${location.origin}/src/vue-dev-proxy`,
@@ -48,23 +54,25 @@ const store = new ReplStore({
     : `${location.origin}/src/vue-dev-proxy-prod`,
   defaultVueServerRendererURL: import.meta.env.PROD
     ? `${location.origin}/server-renderer.esm-browser.js`
-    : `${location.origin}/src/vue-server-renderer-dev-proxy`
+    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
 })
 
 // enable experimental features
 const sfcOptions: SFCOptions = {
   script: {
-    inlineTemplate: !useDevMode.value,
-    isProd: !useDevMode.value,
-    reactivityTransform: true,
-    defineModel: true
+    inlineTemplate: useProdMode.value,
+    isProd: useProdMode.value,
+    propsDestructure: true,
   },
   style: {
-    isProd: !useDevMode.value
+    isProd: useProdMode.value,
   },
   template: {
-    isProd: !useDevMode.value
-  }
+    isProd: useProdMode.value,
+    compilerOptions: {
+      isCustomElement: (tag: string) => tag === 'mjx-container',
+    },
+  },
 }
 
 // persist state
@@ -72,23 +80,28 @@ watchEffect(() => {
   const newHash = store
     .serialize()
     .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
-    .replace(/^#/, useDevMode.value ? `#__DEV__` : `#`)
+    .replace(/^#/, useProdMode.value ? `#__PROD__` : `#`)
   history.replaceState({}, '', newHash)
 })
 
-function toggleDevMode() {
-  const dev = (useDevMode.value = !useDevMode.value)
+function toggleProdMode() {
+  const isProd = (useProdMode.value = !useProdMode.value)
   sfcOptions.script!.inlineTemplate =
     sfcOptions.script!.isProd =
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
-      !dev
+      isProd
   store.toggleProduction()
+  store.setFiles(store.getFiles())
 }
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
   store.setFiles(store.getFiles())
+}
+
+function reloadPage() {
+  replRef.value?.reload()
 }
 
 const theme = ref<'dark' | 'light'>('dark')
@@ -104,14 +117,16 @@ onMounted(() => {
 <template>
   <Header
     :store="store"
-    :dev="useDevMode"
+    :prod="useProdMode"
     :ssr="useSSRMode"
     @toggle-theme="toggleTheme"
-    @toggle-dev="toggleDevMode"
+    @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
+    @reload-page="reloadPage"
   />
   <Repl
     v-if="EditorComponent"
+    ref="replRef"
     :theme="theme"
     :editor="EditorComponent"
     @keydown.ctrl.s.prevent

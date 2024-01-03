@@ -27,7 +27,7 @@ describe('ssr compile: teleport', () => {
       `)
 
     expect(
-      compile(`<teleport :to="target" :disabled="foo"><div/></teleport>`).code
+      compile(`<teleport :to="target" :disabled="foo"><div/></teleport>`).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderTeleport: _ssrRenderTeleport } = require("vue/server-renderer")
 
