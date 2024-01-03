@@ -167,7 +167,7 @@ describe('scopeId runtime support', () => {
       __scopeId: 'child',
       render(this: any) {
         return h('div', renderSlot(this.$slots, 'default'))
-      }
+      },
     }
 
     const App = {
@@ -179,13 +179,13 @@ describe('scopeId runtime support', () => {
             return [
               h(TransitionGroup, null, {
                 default: withCtx(() => [
-                  h('div', { key: 'foo' }, ' I have a TransitionGroup ')
-                ])
-              })
+                  h('div', { key: 'foo' }, ' I have a TransitionGroup '),
+                ]),
+              }),
             ]
-          })
+          }),
         )
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -193,7 +193,7 @@ describe('scopeId runtime support', () => {
     // - scopeId from parent
     // - slotted scopeId (with `-s` postfix) from child (the tree owner)
     expect(serializeInner(root)).toBe(
-      `<div child parent><div parent child-s> I have a TransitionGroup </div></div>`
+      `<div child parent><div parent child-s> I have a TransitionGroup </div></div>`,
     )
   })
 
