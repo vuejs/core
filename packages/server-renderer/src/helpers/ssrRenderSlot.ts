@@ -87,16 +87,18 @@ export function ssrRenderSlotInner(
         // without rendering it as a fragment, the content passed into the slot
         // may still be a fragment.
         // Therefore, here we need to avoid rendering it as a fragment again.
+        let start = 0
+        let end = slotBuffer.length
         if (
           transition &&
           slotBuffer[0] === '<!--[-->' &&
-          slotBuffer[slotBuffer.length - 1] === '<!--]-->'
+          slotBuffer[end - 1] === '<!--]-->'
         ) {
-          slotBuffer.shift()
-          slotBuffer.pop()
+          start++
+          end--
         }
 
-        for (let i = 0; i < slotBuffer.length; i++) {
+        for (let i = start; i < end; i++) {
           push(slotBuffer[i])
         }
       }
