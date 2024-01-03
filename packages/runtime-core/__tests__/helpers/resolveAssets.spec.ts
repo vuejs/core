@@ -1,16 +1,16 @@
 import {
+  Comment,
+  type Component,
+  type Directive,
+  type VNode,
   createApp,
+  createVNode,
+  h,
   nodeOps,
   resolveComponent,
   resolveDirective,
-  Component,
-  Directive,
   resolveDynamicComponent,
-  h,
   serializeInner,
-  createVNode,
-  Comment,
-  VNode
 } from '@vue/runtime-test'
 
 describe('resolveAssets', () => {
@@ -29,10 +29,10 @@ describe('resolveAssets', () => {
 
     const Root = {
       components: {
-        FooBar: FooBar
+        FooBar: FooBar,
       },
       directives: {
-        BarBaz: BarBaz
+        BarBaz: BarBaz,
       },
       setup() {
         return () => {
@@ -48,7 +48,7 @@ describe('resolveAssets', () => {
           component4 = resolveComponent('foo-bar')!
           directive4 = resolveDirective('bar-baz')!
         }
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -76,7 +76,7 @@ describe('resolveAssets', () => {
       name: 'Root',
       components: {
         Foo,
-        Root: Foo
+        Root: Foo,
       },
       setup() {
         return () => {
@@ -84,7 +84,7 @@ describe('resolveAssets', () => {
           component2 = resolveComponent('Foo', true)
           component3 = resolveComponent('Bar', true)
         }
-      }
+      },
     }
 
     const app = createApp(Root)
@@ -100,12 +100,12 @@ describe('resolveAssets', () => {
     test('used outside render() or setup()', () => {
       resolveComponent('foo')
       expect(
-        'resolveComponent can only be used in render() or setup().'
+        'resolveComponent can only be used in render() or setup().',
       ).toHaveBeenWarned()
 
       resolveDirective('foo')
       expect(
-        'resolveDirective can only be used in render() or setup().'
+        'resolveDirective can only be used in render() or setup().',
       ).toHaveBeenWarned()
     })
 
@@ -115,7 +115,7 @@ describe('resolveAssets', () => {
           resolveComponent('foo')
           resolveDirective('bar')
           return () => null
-        }
+        },
       }
 
       const app = createApp(Root)
@@ -129,7 +129,7 @@ describe('resolveAssets', () => {
       const dynamicComponents = {
         foo: () => 'foo',
         bar: () => 'bar',
-        baz: { render: () => 'baz' }
+        baz: { render: () => 'baz' },
       }
       let foo, bar, baz // dynamic components
       let dynamicVNode: VNode
@@ -137,7 +137,7 @@ describe('resolveAssets', () => {
       const Child = {
         render(this: any) {
           return this.$slots.default()
-        }
+        },
       }
 
       const Root = {
@@ -152,7 +152,7 @@ describe('resolveAssets', () => {
               baz = resolveDynamicComponent(dynamicComponents.baz) // <component :is="baz"/>, object
             })
           }
-        }
+        },
       }
 
       const app = createApp(Root)
@@ -170,10 +170,10 @@ describe('resolveAssets', () => {
         setup() {
           return () => {
             return createVNode(resolveDynamicComponent('div') as string, null, {
-              default: () => 'hello'
+              default: () => 'hello',
             })
           }
-        }
+        },
       }
 
       const app = createApp(Root)
@@ -198,13 +198,13 @@ describe('resolveAssets', () => {
 
     const Base = {
       components: {
-        FooBar: FooBar
-      }
+        FooBar: FooBar,
+      },
     }
     const Mixin = {
       directives: {
-        BarBaz: BarBaz
-      }
+        BarBaz: BarBaz,
+      },
     }
 
     const Root = {
@@ -224,7 +224,7 @@ describe('resolveAssets', () => {
           component4 = resolveComponent('foo-bar')!
           directive4 = resolveDirective('bar-baz')!
         }
-      }
+      },
     }
 
     const app = createApp(Root)

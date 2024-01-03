@@ -1,5 +1,5 @@
-import { createSSRApp, defineComponent, h, watch, ref } from 'vue'
-import { SSRContext, renderToString } from '../src'
+import { createSSRApp, defineComponent, h, ref, watch } from 'vue'
+import { type SSRContext, renderToString } from '../src'
 
 describe('ssr: watch', () => {
   // #6013
@@ -12,7 +12,7 @@ describe('ssr: watch', () => {
         () => {
           msg = 'hello world'
         },
-        { flush: 'sync' }
+        { flush: 'sync' },
       )
       count.value = 1
       expect(msg).toBe('hello world')
