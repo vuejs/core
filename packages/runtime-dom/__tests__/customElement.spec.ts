@@ -1,5 +1,6 @@
 import {
   type Ref,
+  type Ref,
   type VueElement,
   defineAsyncComponent,
   defineComponent,
@@ -8,7 +9,6 @@ import {
   inject,
   nextTick,
   provide,
-  Ref,
   ref,
   renderSlot,
 } from '../src'
@@ -451,7 +451,7 @@ describe('defineCustomElement', () => {
         },
         render(this: any) {
           return h('my-el-async-c')
-        }
+        },
       }
       const P = defineCustomElement(
         defineAsyncComponent(() => {
@@ -460,7 +460,7 @@ describe('defineCustomElement', () => {
               resolve(comp)
             }, 200)
           })
-        })
+        }),
       )
 
       const compChild = {
@@ -470,7 +470,7 @@ describe('defineCustomElement', () => {
         },
         render(this: { message: string }) {
           return h('div', this.message)
-        }
+        },
       }
 
       const C = defineCustomElement(
@@ -480,7 +480,7 @@ describe('defineCustomElement', () => {
               resolve(compChild)
             }, 200)
           })
-        })
+        }),
       )
       customElements.define('my-el-async-c', C)
       customElements.define('my-el-async-p', P)
@@ -500,7 +500,7 @@ describe('defineCustomElement', () => {
         .innerHTML
       expect(cInner).toBe(`<div>hello</div>`)
       expect((container.childNodes[0].childNodes[0] as Text).data).toBe(
-        `anchor`
+        `anchor`,
       )
     })
 
