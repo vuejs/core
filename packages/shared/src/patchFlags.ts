@@ -16,7 +16,7 @@
  * Check the `patchElement` function in '../../runtime-core/src/renderer.ts' to see how the
  * flags are handled during diff.
  */
-export const enum PatchFlags {
+export enum PatchFlags {
   /**
    * Indicates an element with dynamic textContent (children fast path)
    */
@@ -120,7 +120,7 @@ export const enum PatchFlags {
    * render functions, which should always be fully diffed)
    * OR manually cloneVNodes
    */
-  BAIL = -2
+  BAIL = -2,
 }
 
 /**
@@ -140,5 +140,5 @@ export const PatchFlagNames: Record<PatchFlags, string> = {
   [PatchFlags.DYNAMIC_SLOTS]: `DYNAMIC_SLOTS`,
   [PatchFlags.DEV_ROOT_FRAGMENT]: `DEV_ROOT_FRAGMENT`,
   [PatchFlags.HOISTED]: `HOISTED`,
-  [PatchFlags.BAIL]: `BAIL`
+  [PatchFlags.BAIL]: `BAIL`,
 }
