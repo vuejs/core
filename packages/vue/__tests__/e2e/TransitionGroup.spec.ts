@@ -1,5 +1,5 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
-import path from 'path'
+import path from 'node:path'
 import { createApp, ref } from 'vue'
 
 describe('e2e: TransitionGroup', () => {
@@ -42,13 +42,13 @@ describe('e2e: TransitionGroup', () => {
             const items = ref(['a', 'b', 'c'])
             const click = () => items.value.push('d', 'e')
             return { click, items }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
@@ -56,7 +56,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-from test-enter-active">d</div>` +
-          `<div class="test test-enter-from test-enter-active">e</div>`
+          `<div class="test test-enter-from test-enter-active">e</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
@@ -64,7 +64,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-active test-enter-to">d</div>` +
-          `<div class="test test-enter-active test-enter-to">e</div>`
+          `<div class="test test-enter-active test-enter-to">e</div>`,
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
@@ -72,10 +72,10 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test">d</div>` +
-          `<div class="test">e</div>`
+          `<div class="test">e</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -96,30 +96,30 @@ describe('e2e: TransitionGroup', () => {
             const items = ref(['a', 'b', 'c'])
             const click = () => (items.value = ['b'])
             return { click, items }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
         `<div class="test test-leave-from test-leave-active">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test test-leave-from test-leave-active">c</div>`
+          `<div class="test test-leave-from test-leave-active">c</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test test-leave-active test-leave-to">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test test-leave-active test-leave-to">c</div>`
+          `<div class="test test-leave-active test-leave-to">c</div>`,
       )
       await transitionFinish()
       expect(await html('#container')).toBe(`<div class="test">b</div>`)
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -140,36 +140,36 @@ describe('e2e: TransitionGroup', () => {
             const items = ref(['a', 'b', 'c'])
             const click = () => (items.value = ['b', 'c', 'd'])
             return { click, items }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
         `<div class="test test-leave-from test-leave-active">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-from test-enter-active">d</div>`
+          `<div class="test test-enter-from test-enter-active">d</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test test-leave-active test-leave-to">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>`
+          `<div class="test test-enter-active test-enter-to">d</div>`,
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
         `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test">d</div>`
+          `<div class="test">d</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -194,7 +194,7 @@ describe('e2e: TransitionGroup', () => {
             const items = ref(['a', 'b', 'c'])
             const click = () => items.value.push('d', 'e')
             return { click, items }
-          }
+          },
         }).mount('#app')
         return Promise.resolve().then(() => {
           return document.querySelector('#container')!.innerHTML
@@ -204,19 +204,19 @@ describe('e2e: TransitionGroup', () => {
       expect(appearHtml).toBe(
         `<div class="test test-appear-from test-appear-active">a</div>` +
           `<div class="test test-appear-from test-appear-active">b</div>` +
-          `<div class="test test-appear-from test-appear-active">c</div>`
+          `<div class="test test-appear-from test-appear-active">c</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test test-appear-active test-appear-to">a</div>` +
           `<div class="test test-appear-active test-appear-to">b</div>` +
-          `<div class="test test-appear-active test-appear-to">c</div>`
+          `<div class="test test-appear-active test-appear-to">c</div>`,
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       // enter
@@ -225,7 +225,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-from test-enter-active">d</div>` +
-          `<div class="test test-enter-from test-enter-active">e</div>`
+          `<div class="test test-enter-from test-enter-active">e</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
@@ -233,7 +233,7 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test test-enter-active test-enter-to">d</div>` +
-          `<div class="test test-enter-active test-enter-to">e</div>`
+          `<div class="test test-enter-active test-enter-to">e</div>`,
       )
       await transitionFinish()
       expect(await html('#container')).toBe(
@@ -241,10 +241,10 @@ describe('e2e: TransitionGroup', () => {
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
           `<div class="test">d</div>` +
-          `<div class="test">e</div>`
+          `<div class="test">e</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -265,36 +265,36 @@ describe('e2e: TransitionGroup', () => {
             const items = ref(['a', 'b', 'c'])
             const click = () => (items.value = ['d', 'b', 'a'])
             return { click, items }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       expect(await htmlWhenTransitionStart()).toBe(
         `<div class="test group-enter-from group-enter-active">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`
+          `<div class="test group-leave-from group-leave-active group-move" style="">c</div>`,
       )
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test group-enter-active group-enter-to">d</div>` +
           `<div class="test">b</div>` +
           `<div class="test group-move" style="">a</div>` +
-          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`
+          `<div class="test group-leave-active group-move group-leave-to" style="">c</div>`,
       )
       await transitionFinish(duration * 2)
       expect(await html('#container')).toBe(
         `<div class="test">d</div>` +
           `<div class="test">b</div>` +
-          `<div class="test" style="">a</div>`
+          `<div class="test" style="">a</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -321,16 +321,16 @@ describe('e2e: TransitionGroup', () => {
               items.value = ['a', 'b', 'c']
             }
             return { click, items, name, changeName }
-          }
+          },
         }).mount('#app')
       })
       expect(await html('#container')).toBe(
-        `<div>a</div>` + `<div>b</div>` + `<div>c</div>`
+        `<div>a</div>` + `<div>b</div>` + `<div>c</div>`,
       )
 
       // invalid name
       expect(await htmlWhenTransitionStart()).toBe(
-        `<div>b</div>` + `<div>c</div>` + `<div>a</div>`
+        `<div>b</div>` + `<div>c</div>` + `<div>a</div>`,
       )
       // change name
       const moveHtml = await page().evaluate(() => {
@@ -342,7 +342,7 @@ describe('e2e: TransitionGroup', () => {
       expect(moveHtml).toBe(
         `<div class="group-move" style="">a</div>` +
           `<div class="group-move" style="">b</div>` +
-          `<div class="group-move" style="">c</div>`
+          `<div class="group-move" style="">c</div>`,
       )
       // not sure why but we just have to wait really long for this to
       // pass consistently :/
@@ -350,10 +350,10 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="" style="">a</div>` +
           `<div class="" style="">b</div>` +
-          `<div class="" style="">c</div>`
+          `<div class="" style="">c</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -389,7 +389,7 @@ describe('e2e: TransitionGroup', () => {
           afterEnterSpy,
           beforeLeaveSpy,
           onLeaveSpy,
-          afterLeaveSpy
+          afterLeaveSpy,
         } = window as any
         const { createApp, ref } = (window as any).Vue
         createApp({
@@ -428,9 +428,9 @@ describe('e2e: TransitionGroup', () => {
               afterEnterSpy,
               beforeLeaveSpy,
               onLeaveSpy,
-              afterLeaveSpy
+              afterLeaveSpy,
             }
-          }
+          },
         }).mount('#app')
         return Promise.resolve().then(() => {
           return document.querySelector('#container')!.innerHTML
@@ -442,21 +442,21 @@ describe('e2e: TransitionGroup', () => {
       expect(appearHtml).toBe(
         `<div class="test test-appear-from test-appear-active">a</div>` +
           `<div class="test test-appear-from test-appear-active">b</div>` +
-          `<div class="test test-appear-from test-appear-active">c</div>`
+          `<div class="test test-appear-from test-appear-active">c</div>`,
       )
       await nextFrame()
       expect(afterAppearSpy).not.toBeCalled()
       expect(await html('#container')).toBe(
         `<div class="test test-appear-active test-appear-to">a</div>` +
           `<div class="test test-appear-active test-appear-to">b</div>` +
-          `<div class="test test-appear-active test-appear-to">c</div>`
+          `<div class="test test-appear-active test-appear-to">c</div>`,
       )
       await transitionFinish()
       expect(afterAppearSpy).toBeCalled()
       expect(await html('#container')).toBe(
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
-          `<div class="test">c</div>`
+          `<div class="test">c</div>`,
       )
 
       // enter + leave
@@ -464,7 +464,7 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test test-leave-from test-leave-active">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-from test-enter-active">d</div>`
+          `<div class="test test-enter-from test-enter-active">d</div>`,
       )
       expect(beforeLeaveSpy).toBeCalled()
       expect(onLeaveSpy).toBeCalled()
@@ -477,7 +477,7 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test test-leave-active test-leave-to">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">d</div>`
+          `<div class="test test-enter-active test-enter-to">d</div>`,
       )
       expect(afterLeaveSpy).not.toBeCalled()
       expect(afterEnterSpy).not.toBeCalled()
@@ -485,12 +485,12 @@ describe('e2e: TransitionGroup', () => {
       expect(await html('#container')).toBe(
         `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test">d</div>`
+          `<div class="test">d</div>`,
       )
       expect(afterLeaveSpy).toBeCalled()
       expect(afterEnterSpy).toBeCalled()
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test('warn unkeyed children', () => {
@@ -503,7 +503,7 @@ describe('e2e: TransitionGroup', () => {
       setup: () => {
         const items = ref(['a', 'b', 'c'])
         return { items }
-      }
+      },
     }).mount(document.createElement('div'))
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
