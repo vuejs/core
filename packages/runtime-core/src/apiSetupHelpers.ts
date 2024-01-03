@@ -6,6 +6,7 @@ import {
   camelize,
   extend,
   hasChanged,
+  hyphenate,
   isArray,
   isFunction,
   isPromise,
@@ -382,6 +383,7 @@ export function useModel(
   }
 
   const camelizedName = camelize(name)
+  const hyphenatedName = hyphenate(name)
 
   const res = customRef((track, trigger) => {
     let localValue: any
@@ -403,9 +405,12 @@ export function useModel(
           !(
             rawProps &&
             // check if parent has passed v-model
-            (name in rawProps || camelizedName in rawProps) &&
+            (name in rawProps ||
+              camelizedName in rawProps ||
+              hyphenatedName in rawProps) &&
             (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps)
+              `onUpdate:${camelizedName}` in rawProps ||
+              `onUpdate:${hyphenatedName}` in rawProps)
           ) &&
           hasChanged(value, localValue)
         ) {
