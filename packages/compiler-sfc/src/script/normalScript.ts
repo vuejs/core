@@ -1,8 +1,6 @@
-import { shouldTransform, transformAST } from '@vue/reactivity-transform'
 import { analyzeScriptBindings } from './analyzeScriptBindings'
-import { ScriptCompileContext } from './context'
+import type { ScriptCompileContext } from './context'
 import MagicString from 'magic-string'
-import { RawSourceMap } from 'source-map-js'
 import { rewriteDefaultAST } from '../rewriteDefault'
 import { CSS_VARS_HELPER, genCssVarsCode } from '../style/cssVars'
 import { CE_STYLE_ATTRS_HELPER, genCEStyleAttrs } from '../style/ceStyleAttrs'
@@ -11,7 +9,7 @@ export const normalScriptDefaultVar = `__default__`
 
 export function processNormalScript(
   ctx: ScriptCompileContext,
-  scopeId: string
+  scopeId: string,
 ) {
   const script = ctx.descriptor.script!
   if (script.lang && !ctx.isJS && !ctx.isTS) {
@@ -23,33 +21,8 @@ export function processNormalScript(
     let map = script.map
     const scriptAst = ctx.scriptAst!
     const bindings = analyzeScriptBindings(scriptAst.body)
-    const { source, filename, cssVars, ceStyleAttrs } = ctx.descriptor
-    const { sourceMap, genDefaultAs, isProd } = ctx.options
-
-    // TODO remove in 3.4
-    if (ctx.options.reactivityTransform && shouldTransform(content)) {
-      const s = new MagicString(source)
-      const startOffset = script.loc.start.offset
-      const endOffset = script.loc.end.offset
-      const { importedHelpers } = transformAST(scriptAst, s, startOffset)
-      if (importedHelpers.length) {
-        s.prepend(
-          `import { ${importedHelpers
-            .map(h => `${h} as _${h}`)
-            .join(', ')} } from 'vue'\n`
-        )
-      }
-      s.remove(0, startOffset)
-      s.remove(endOffset, source.length)
-      content = s.toString()
-      if (sourceMap !== false) {
-        map = s.generateMap({
-          source: filename,
-          hires: true,
-          includeContent: true
-        }) as unknown as RawSourceMap
-      }
-    }
+    const { cssVars, ceStyleAttrs } = ctx.descriptor
+    const { genDefaultAs, isProd } = ctx.options
 
     if (cssVars.length || ceStyleAttrs.length || genDefaultAs) {
       const defaultVar = genDefaultAs || normalScriptDefaultVar
@@ -81,7 +54,7 @@ export function processNormalScript(
       content,
       map,
       bindings,
-      scriptAst: scriptAst.body
+      scriptAst: scriptAst.body,
     }
   } catch (e: any) {
     // silently fallback if parse fails since user may be using custom
