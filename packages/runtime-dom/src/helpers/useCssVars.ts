@@ -1,4 +1,5 @@
 import {
+  type ComponentInternalInstance,
   Fragment,
   Static,
   type VNode,
@@ -7,7 +8,6 @@ import {
   onUnmounted,
   warn,
   watchPostEffect,
-  ComponentInternalInstance
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -51,7 +51,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 function setVarsOnVNode(
   vnode: VNode,
   vars: Record<string, string>,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ) {
   if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
     const suspense = vnode.suspense!
@@ -85,7 +85,7 @@ function setVarsOnVNode(
 function setVarsOnNode(
   el: Node,
   vars: Record<string, string>,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ) {
   if (el.nodeType === 1) {
     if (instance && instance.isCE) {

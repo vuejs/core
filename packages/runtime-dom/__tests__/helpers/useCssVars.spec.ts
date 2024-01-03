@@ -4,13 +4,13 @@ import {
   Suspense,
   Teleport,
   createStaticVNode,
+  defineCustomElement,
   h,
   nextTick,
   reactive,
   ref,
   render,
   useCssVars,
-  defineCustomElement
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -337,14 +337,14 @@ describe('useCssVars', () => {
         return () => {
           return h('div', 'hello')
         }
-      }
+      },
     })
     customElements.define('css-vars-ce', App)
     container.innerHTML = `<css-vars-ce></css-vars-ce>`
     document.body.appendChild(container)
     await nextTick()
     expect(container.innerHTML).toBe(
-      `<css-vars-ce style="--color: red;"></css-vars-ce>`
+      `<css-vars-ce style="--color: red;"></css-vars-ce>`,
     )
   })
 })
