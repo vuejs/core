@@ -1,4 +1,5 @@
 import {
+  type TestElement,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -6,7 +7,6 @@ import {
   nodeOps,
   render,
   shallowReadonly,
-  TestElement
 } from '@vue/runtime-test'
 import type {
   ComponentInternalInstance,
@@ -139,7 +139,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instance = getCurrentInstance()!
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -158,7 +158,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instance = getCurrentInstance()!
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -178,7 +178,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instance = getCurrentInstance()!
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -198,7 +198,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instance = getCurrentInstance()!
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -217,7 +217,7 @@ describe('component: proxy', () => {
       },
       mounted() {
         instance = getCurrentInstance()!
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
