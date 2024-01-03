@@ -1,7 +1,7 @@
 import { getCurrentInstance, warn, watchPostEffect } from '@vue/runtime-core'
 
 export function useCEStyleAttrs(
-  getter: (ctx: any) => Array<Record<string, string | number>>
+  getter: (ctx: any) => Array<Record<string, string | number>>,
 ) {
   if (!__BROWSER__ && !__TEST__) return
 
@@ -10,7 +10,7 @@ export function useCEStyleAttrs(
   if (!instance) {
     __DEV__ &&
       warn(
-        `useCEStyleAttrs is called without current active component instance.`
+        `useCEStyleAttrs is called without current active component instance.`,
       )
     return
   }

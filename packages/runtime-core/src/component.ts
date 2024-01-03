@@ -363,7 +363,7 @@ export interface ComponentInternalInstance {
     setStyleAttrs: (
       uid: number | 'root',
       nAttrs: Array<Record<string, string | number>>,
-      oAttrs?: Array<Record<string, string | number>>
+      oAttrs?: Array<Record<string, string | number>>,
     ) => void
   } | null
   /**
@@ -382,7 +382,7 @@ export interface ComponentInternalInstance {
    */
   ceReload?: (
     newStyles?: string[],
-    attrs?: Array<Record<string, string | number>>
+    attrs?: Array<Record<string, string | number>>,
   ) => void
 
   // the rest are only for stateful components ---------------------------------

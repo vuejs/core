@@ -16,8 +16,8 @@ import {
 import {
   type ComponentInternalInstance,
   type ComponentOptions,
+  type ConcreteComponent,
   type Data,
-  ConcreteComponent,
   createComponentInstance,
   setupComponent,
 } from './component'
@@ -1393,7 +1393,7 @@ function baseCreateRenderer(
                 instance.ceContext.addCEChildStyle(
                   styles,
                   instance.uid,
-                  instance.hasStyleAttrs
+                  instance.hasStyleAttrs,
                 )
               }
             }

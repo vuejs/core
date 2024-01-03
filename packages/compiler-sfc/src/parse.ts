@@ -1,16 +1,16 @@
 import {
+  type AttributeNode,
   type BindingMetadata,
   type CompilerError,
+  type DirectiveNode,
   type ElementNode,
   NodeTypes,
   type ParserOptions,
   type RootNode,
+  type SimpleExpressionNode,
   type SourceLocation,
-  createRoot,
   TextModes,
-  AttributeNode,
-  DirectiveNode,
-  SimpleExpressionNode
+  createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
 import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
@@ -476,7 +476,7 @@ export function hmrShouldReload(
 }
 function setPropsNodeForStyleAttrs(
   descriptor: SFCDescriptor,
-  props: Array<AttributeNode | DirectiveNode>
+  props: Array<AttributeNode | DirectiveNode>,
 ) {
   const propsArr = props.filter(prop => {
     // skip scoped and lang

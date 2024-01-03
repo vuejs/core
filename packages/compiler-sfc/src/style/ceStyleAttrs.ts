@@ -1,20 +1,20 @@
 import {
-  AttributeNode,
-  BindingMetadata,
+  type AttributeNode,
+  type BindingMetadata,
+  type DirectiveNode,
+  NodeTypes,
+  type SimpleExpressionNode,
   createRoot,
   createSimpleExpression,
   createTransformContext,
-  DirectiveNode,
-  NodeTypes,
   processExpression,
-  SimpleExpressionNode
 } from '@vue/compiler-core'
 
 export const CE_STYLE_ATTRS_HELPER = `useCEStyleAttrs`
 
 export function genCEStyleAttrs(
   ceStyleAttrs: Array<AttributeNode | DirectiveNode>[],
-  bindings: BindingMetadata
+  bindings: BindingMetadata,
 ) {
   let code = ''
   for (let i = 0; i < ceStyleAttrs.length; i++) {
@@ -26,14 +26,14 @@ export function genCEStyleAttrs(
 
 function doGenStyleAttrsCode(
   attrs: Array<AttributeNode | DirectiveNode>,
-  bindings: BindingMetadata
+  bindings: BindingMetadata,
 ) {
   const attrsExp = genAttrsFromList(attrs)
   const exp = createSimpleExpression(attrsExp, false)
   const context = createTransformContext(createRoot([]), {
     prefixIdentifiers: true,
     inline: true,
-    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings
+    bindingMetadata: bindings.__isScriptSetup === false ? undefined : bindings,
   })
   const transformed = processExpression(exp, context)
 

@@ -68,7 +68,7 @@ export function processNormalScript(
 function genInjectCode(
   content: string,
   defaultVar: string,
-  importer: string[]
+  importer: string[],
 ) {
   const importerContent = importer.map(v => ` ${v} as _${v} `).join(',')
   return (

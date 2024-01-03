@@ -371,7 +371,7 @@ export class VueElement extends BaseClass {
         instance.ceContext = {
           addCEChildStyle: this._addChildStyles.bind(this),
           removeCEChildStyles: this._removeChildStyles.bind(this),
-          setStyleAttrs: this._setStyleAttrs.bind(this)
+          setStyleAttrs: this._setStyleAttrs.bind(this),
         }
         // HMR
         if (__DEV__) {
@@ -444,7 +444,7 @@ export class VueElement extends BaseClass {
   protected _addChildStyles(
     styles: string[] | undefined,
     uid: number,
-    hasAttr: boolean
+    hasAttr: boolean,
   ) {
     if (styles) {
       // record style
@@ -477,7 +477,7 @@ export class VueElement extends BaseClass {
   protected _setStyleAttrs(
     uid: number | 'root',
     nAttrs: Array<Record<string, string | number>>,
-    oAttrs?: Array<Record<string, string | number>>
+    oAttrs?: Array<Record<string, string | number>>,
   ) {
     const styleEls = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
     styleEls.forEach((s, index) => {

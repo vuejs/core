@@ -740,7 +740,6 @@ export function compileScript(
     )
   }
 
-
   if (
     ctx.descriptor.ceStyleAttrs.length &&
     // no need to do this when targeting SSR
@@ -750,7 +749,10 @@ export function compileScript(
     ctx.helperImports.add('unref')
     ctx.s.prependLeft(
       startOffset,
-      `\n${genCEStyleAttrs(ctx.descriptor.ceStyleAttrs, ctx.bindingMetadata)}\n`
+      `\n${genCEStyleAttrs(
+        ctx.descriptor.ceStyleAttrs,
+        ctx.bindingMetadata,
+      )}\n`,
     )
   }
 

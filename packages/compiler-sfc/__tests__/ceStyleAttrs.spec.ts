@@ -1,5 +1,5 @@
 import { parse } from '../src'
-import { compileSFCScript, assertCode } from './utils'
+import { assertCode, compileSFCScript } from './utils'
 
 describe('CE style attrs injection', () => {
   test('generating correct code for nested paths', () => {
@@ -13,7 +13,7 @@ v-bind:[msg]="msg"
 :[msg]="msg"
 :xlink:special="msg">div{
           color: red;
-        }</style>`
+        }</style>`,
     )
 
     expect(content).toMatch(`_useCEStyleAttrs(_ctx => ([
@@ -48,7 +48,7 @@ v-bind:[msg]="msg"
           div {
             color: red;
           }
-        </style>`
+        </style>`,
     )
     expect(content).toMatch(`_useCEStyleAttrs(_ctx => ([
   {
@@ -59,7 +59,7 @@ v-bind:[msg]="msg"
  },
 ]))}`)
     expect(content).toMatch(
-      `import { useCEStyleAttrs as _useCEStyleAttrs } from 'vue'`
+      `import { useCEStyleAttrs as _useCEStyleAttrs } from 'vue'`,
     )
     assertCode(content)
   })
@@ -84,7 +84,7 @@ v-bind:[msg]="msg"
           div {
             color: red;
           }
-        </style>`
+        </style>`,
     )
     // should handle:
     // 1. local const bindings
@@ -99,7 +99,7 @@ v-bind:[msg]="msg"
  },
 ]))`)
     expect(content).toMatch(
-      `import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'`
+      `import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'`,
     )
     assertCode(content)
   })
@@ -115,8 +115,8 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg">div{ color: red; }</style>`
-        ).content
+:xlink:special="msg">div{ color: red; }</style>`,
+        ).content,
       )
     })
 
@@ -130,8 +130,8 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`
-        ).content
+:xlink:special="msg>div{ color: red }</style>`,
+        ).content,
       )
     })
 
@@ -148,8 +148,8 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`
-        ).content
+:xlink:special="msg>div{ color: red }</style>`,
+        ).content,
       )
     })
 
@@ -163,8 +163,8 @@ id="{ id: msg2, 'other-attr': msg }"
 v-bind:src="msg"
 v-bind:[msg]="msg"
 :[msg]="msg"
-:xlink:special="msg>div{ color: red }</style>`
-        ).content
+:xlink:special="msg>div{ color: red }</style>`,
+        ).content,
       )
     })
 
@@ -180,7 +180,7 @@ id="{ id: msg2, 'other-attr': msg }"
           p {
             color: red;
           }
-        </style>`
+        </style>`,
       )
 
       // id should only be injected once, even if it is twice in style
@@ -194,14 +194,14 @@ id="{ id: msg2, 'other-attr': msg }"
 
     test('should be able to parse incomplete expressions', () => {
       const {
-        descriptor: { ceStyleAttrs }
+        descriptor: { ceStyleAttrs },
       } = parse(
         `<script setup>let xxx = 1</script>
         <style scoped lang :id="xxx" :data-name="count.toString(">
         label {
          color:red
         }
-        </style>`
+        </style>`,
       )
       expect(ceStyleAttrs[0].length).toBe(2)
       expect(ceStyleAttrs[0]).toMatchObject([
@@ -210,27 +210,27 @@ id="{ id: msg2, 'other-attr': msg }"
           exp: {
             content: 'xxx',
             isStatic: false,
-            constType: 0
+            constType: 0,
           },
           arg: {
             content: 'id',
             isStatic: true,
-            constType: 3
-          }
+            constType: 3,
+          },
         },
         {
           name: 'bind',
           exp: {
             content: 'count.toString(',
             isStatic: false,
-            constType: 0
+            constType: 0,
           },
           arg: {
             content: 'data-name',
             isStatic: true,
-            constType: 3
-          }
-        }
+            constType: 3,
+          },
+        },
       ])
     })
 
@@ -241,10 +241,10 @@ id="{ id: msg2, 'other-attr': msg }"
              </script>
              <style :id="background">
              h1 {color: red}
-             </style>`
+             </style>`,
       )
       expect(content).toMatch(
-        `import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n]))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`
+        `import { useCEStyleAttrs as _useCEStyleAttrs, unref as _unref } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n]))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`,
       )
     })
 
@@ -257,10 +257,10 @@ id="{ id: msg2, 'other-attr': msg }"
              label {
                background: v-bind(background);
              }
-             </style>`
+             </style>`,
       )
       expect(content).toMatch(
-        `import { useCssVars as _useCssVars, unref as _unref, useCEStyleAttrs as _useCEStyleAttrs } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n]))\n\n_useCssVars(_ctx => ({\n  \"xxxxxxxx-background\": (_unref(background))\n}))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`
+        `import { useCssVars as _useCssVars, unref as _unref, useCEStyleAttrs as _useCEStyleAttrs } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n]))\n\n_useCssVars(_ctx => ({\n  \"xxxxxxxx-background\": (_unref(background))\n}))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`,
       )
     })
 
@@ -278,10 +278,10 @@ id="{ id: msg2, 'other-attr': msg }"
              h1 {
                background: v-bind(background);
              }
-             </style>`
+             </style>`,
       )
       expect(content).toMatch(
-        `import { useCssVars as _useCssVars, unref as _unref, useCEStyleAttrs as _useCEStyleAttrs } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n  {\n   \"id\": _unref(background),\n },\n]))\n\n_useCssVars(_ctx => ({\n  \"xxxxxxxx-background\": (_unref(background))\n}))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`
+        `import { useCssVars as _useCssVars, unref as _unref, useCEStyleAttrs as _useCEStyleAttrs } from 'vue'\nimport { ref as _ref } from 'vue';\n                \nexport default {\n  setup(__props, { expose: __expose }) {\n  __expose();\n\n_useCEStyleAttrs(_ctx => ([\n  {\n   \"id\": _unref(background),\n },\n  {\n   \"id\": _unref(background),\n },\n]))\n\n_useCssVars(_ctx => ({\n  \"xxxxxxxx-background\": (_unref(background))\n}))\nlet background = _ref('red')\n             \nreturn { get background() { return background }, set background(v) { background = v }, _ref }\n}\n\n}`,
       )
     })
 
@@ -299,9 +299,9 @@ id="{ id: msg2, 'other-attr': msg }"
           {
             inlineTemplate: true,
             templateOptions: {
-              ssr: true
-            }
-          }
+              ssr: true,
+            },
+          },
         )
         expect(content).not.toMatch(`_useCssVars`)
       })
@@ -320,9 +320,9 @@ id="{ id: msg2, 'other-attr': msg }"
           {
             inlineTemplate: false,
             templateOptions: {
-              ssr: true
-            }
-          }
+              ssr: true,
+            },
+          },
         )
         expect(content).not.toMatch(`_useCssVars`)
       })
@@ -345,9 +345,9 @@ id="{ id: msg2, 'other-attr': msg }"
             </style>\``,
           {
             templateOptions: {
-              ssr: true
-            }
-          }
+              ssr: true,
+            },
+          },
         )
         expect(content).not.toMatch(`_useCssVars`)
       })

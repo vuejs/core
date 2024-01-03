@@ -1,7 +1,7 @@
 import {
+  type ComponentOptions,
   type Ref,
   type VueElement,
-  ComponentOptions,
   defineAsyncComponent,
   defineComponent,
   defineCustomElement,
@@ -555,14 +555,14 @@ describe('defineCustomElement', () => {
         styles: [`.Child { color: blue; }`],
         render() {
           return h('div', { class: 'Child' }, 'hello')
-        }
+        },
       }
       const Foo = defineCustomElement({
         components: { Child },
         styles: [`div { color: red; }`],
         render() {
           return h('div', {}, ['hello', h(Child)])
-        }
+        },
       })
       customElements.define('my-el-with-child-styles', Foo)
       container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
@@ -606,10 +606,10 @@ describe('defineCustomElement', () => {
 
       // should inject styles
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style data-v-ce-root="">div { color: red }</style><div>hello</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>hello</div>`,
       )
       expect(e2.shadowRoot!.innerHTML).toBe(
-        `<style data-v-ce-root="">div { color: red }</style><div>world</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>world</div>`,
       )
 
       // attr
@@ -617,7 +617,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style data-v-ce-root="">div { color: red }</style><div>attr</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>attr</div>`,
       )
 
       // props
@@ -625,7 +625,7 @@ describe('defineCustomElement', () => {
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style data-v-ce-root="">div { color: red }</style><div>prop</div>`
+        `<style data-v-ce-root="">div { color: red }</style><div>prop</div>`,
       )
     })
 
@@ -634,7 +634,7 @@ describe('defineCustomElement', () => {
         styles: [`.Child { color: blue; }`],
         render() {
           return h('div', { class: 'Child' }, 'hello')
-        }
+        },
       }
       const Foo = defineCustomElement(
         defineAsyncComponent(() => {
@@ -643,9 +643,9 @@ describe('defineCustomElement', () => {
             styles: [`div { color: red; }`],
             render() {
               return h('div', {}, ['hello', h(Child)])
-            }
+            },
           })
-        })
+        }),
       )
 
       customElements.define('my-el-with-child-styles-async', Foo)
@@ -665,7 +665,7 @@ describe('defineCustomElement', () => {
           styles: [`.Child2 { color: pink; }`],
           render() {
             return h('div', { class: 'Child2' }, 'pink')
-          }
+          },
         } as ComponentOptions)
       })
 
@@ -675,7 +675,7 @@ describe('defineCustomElement', () => {
           styles: [`.Child { color: blue; }`],
           render() {
             return h('div', { class: 'Child' }, ['hello', h(Child2)])
-          }
+          },
         } as ComponentOptions)
       })
       const Parent = {
@@ -683,7 +683,7 @@ describe('defineCustomElement', () => {
         styles: [`div { color: red; }`],
         render() {
           return h('div', {}, ['hello', h(Child)])
-        }
+        },
       }
       const Foo = defineCustomElement(Parent)
 
@@ -798,7 +798,7 @@ describe('defineCustomElement', () => {
         styles: [`.my-green { color: green; }`],
         render() {
           return h('p', { class: 'my-green' }, 'This should be green')
-        }
+        },
       }
 
       const Foo = defineCustomElement({
@@ -809,9 +809,9 @@ describe('defineCustomElement', () => {
             h('p', { class: 'my-red' }, 'This should be red'),
             h(Child),
             h(Child),
-            h(Child)
+            h(Child),
           ]
-        }
+        },
       })
       customElements.define('my-el-with-multiple-child', Foo)
       container.innerHTML = `<my-el-with-multiple-child></my-el-with-multiple-child><my-el-with-multiple-child></my-el-with-multiple-child>`
@@ -838,14 +838,14 @@ describe('defineCustomElement', () => {
           useCEStyleAttrs(() => {
             return [
               {
-                id: id
-              }
+                id: id,
+              },
             ] as Record<string, string | number>[]
           })
         },
         render() {
           return h('p', { class: 'my-green' }, 'This should be green')
-        }
+        },
       }
 
       const Foo = defineCustomElement({
@@ -856,9 +856,9 @@ describe('defineCustomElement', () => {
             h('p', { class: 'my-red' }, 'This should be red'),
             h(Child),
             h(Child),
-            h(Child)
+            h(Child),
           ]
-        }
+        },
       })
       customElements.define('my-el-with-multiple-attr', Foo)
       container.innerHTML = `<my-el-with-multiple-attr></my-el-with-multiple-attr><my-el-with-multiple-attr></my-el-with-multiple-attr>`
@@ -886,7 +886,7 @@ describe('defineCustomElement', () => {
         styles: [`.my-green { color: green; }`],
         render() {
           return h('p', { class: 'my-green' }, 'This should be green')
-        }
+        },
       }
       const Child = {
         components: { GrandChild },
@@ -894,16 +894,16 @@ describe('defineCustomElement', () => {
         render() {
           return h('div', {}, [
             h('p', { class: 'my-blue' }, 'This should be blue'),
-            h('div', {}, h(GrandChild))
+            h('div', {}, h(GrandChild)),
           ])
-        }
+        },
       }
       const Foo = defineCustomElement({
         components: { Child },
         styles: [`.my-red { color: red; }`],
         render() {
           return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
-        }
+        },
       })
       customElements.define('my-el-with-grandchild-styles', Foo)
       container.innerHTML = `<my-el-with-grandchild-styles></my-el-with-grandchild-styles>`
@@ -922,7 +922,7 @@ describe('defineCustomElement', () => {
         styles: [`.my-grey { color: grey; }`],
         render() {
           return h('p', { class: 'my-grey' }, 'This should be grey')
-        }
+        },
       }
       const GrandChild = {
         components: { GreatGrandChild },
@@ -930,9 +930,9 @@ describe('defineCustomElement', () => {
         render() {
           return [
             h('p', { class: 'my-green' }, 'This should be green'),
-            h('span', {}, h(GreatGrandChild))
+            h('span', {}, h(GreatGrandChild)),
           ]
-        }
+        },
       }
       const Child = {
         components: { GrandChild },
@@ -940,16 +940,16 @@ describe('defineCustomElement', () => {
         render() {
           return h('div', {}, [
             h('p', { class: 'my-blue' }, 'This should be blue'),
-            h('div', {}, h(GrandChild))
+            h('div', {}, h(GrandChild)),
           ])
-        }
+        },
       }
       const Foo = defineCustomElement({
         components: { Child },
         styles: [`.my-red { color: red; }`],
         render() {
           return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
-        }
+        },
       })
       customElements.define('my-el-with-greatgrandchild-styles', Foo)
       container.innerHTML = `<my-el-with-greatgrandchild-styles></my-el-with-greatgrandchild-styles>`
