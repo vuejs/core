@@ -1,71 +1,69 @@
-import { NodeTransform, TransformContext } from '../transform'
+import type { NodeTransform, TransformContext } from '../transform'
 import {
-  NodeTypes,
+  type ArrayExpression,
+  type CallExpression,
+  type ComponentNode,
+  ConstantTypes,
+  type DirectiveArguments,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  CallExpression,
-  ObjectExpression,
-  ElementNode,
-  DirectiveNode,
-  ExpressionNode,
-  ArrayExpression,
-  createCallExpression,
+  type ExpressionNode,
+  type JSChildNode,
+  NodeTypes,
+  type ObjectExpression,
+  type Property,
+  type TemplateTextChildNode,
+  type VNodeCall,
   createArrayExpression,
+  createCallExpression,
+  createObjectExpression,
   createObjectProperty,
   createSimpleExpression,
-  createObjectExpression,
-  Property,
-  ComponentNode,
-  VNodeCall,
-  TemplateTextChildNode,
-  DirectiveArguments,
   createVNodeCall,
-  ConstantTypes,
-  JSChildNode,
   SimpleExpressionNode
 } from '../ast'
 import {
-  PatchFlags,
   PatchFlagNames,
-  isSymbol,
-  isOn,
-  isObject,
-  isReservedProp,
-  capitalize,
+  PatchFlags,
   camelize,
-  isBuiltInDirective
+  capitalize,
+  isBuiltInDirective,
+  isObject,
+  isOn,
+  isReservedProp,
+  isSymbol,
 } from '@vue/shared'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import {
-  RESOLVE_DIRECTIVE,
-  RESOLVE_COMPONENT,
-  RESOLVE_DYNAMIC_COMPONENT,
+  GUARD_REACTIVE_PROPS,
+  KEEP_ALIVE,
   MERGE_PROPS,
   NORMALIZE_CLASS,
-  NORMALIZE_STYLE,
   NORMALIZE_PROPS,
-  TO_HANDLERS,
-  TELEPORT,
-  KEEP_ALIVE,
+  NORMALIZE_STYLE,
+  RESOLVE_COMPONENT,
+  RESOLVE_DIRECTIVE,
+  RESOLVE_DYNAMIC_COMPONENT,
   SUSPENSE,
+  TELEPORT,
+  TO_HANDLERS,
   UNREF,
-  GUARD_REACTIVE_PROPS
 } from '../runtimeHelpers'
 import {
-  getInnerRange,
-  toValidAssetId,
   findProp,
   isCoreComponent,
   isStaticArgOf,
-  findDir,
-  isStaticExp
+  isStaticExp,
+  toValidAssetId,
 } from '../utils'
 import { buildSlots } from './vSlot'
 import { getConstantType } from './hoistStatic'
 import { BindingTypes } from '../options'
 import {
-  checkCompatEnabled,
   CompilerDeprecationTypes,
-  isCompatEnabled
+  checkCompatEnabled,
+  isCompatEnabled,
 } from '../compat/compatConfig'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
@@ -128,7 +126,7 @@ export const transformElement: NodeTransform = (node, context) => {
         context,
         undefined,
         isComponent,
-        isDynamicComponent
+        isDynamicComponent,
       )
       vnodeProps = propsBuildResult.props
       patchFlag = propsBuildResult.patchFlag
@@ -137,7 +135,7 @@ export const transformElement: NodeTransform = (node, context) => {
       vnodeDirectives =
         directives && directives.length
           ? (createArrayExpression(
-              directives.map(dir => buildDirectiveArgs(dir, context))
+              directives.map(dir => buildDirectiveArgs(dir, context)),
             ) as DirectiveArguments)
           : undefined
 
@@ -163,8 +161,8 @@ export const transformElement: NodeTransform = (node, context) => {
             createCompilerError(ErrorCodes.X_KEEP_ALIVE_INVALID_CHILDREN, {
               start: node.children[0].loc.start,
               end: node.children[node.children.length - 1].loc.end,
-              source: ''
-            })
+              source: '',
+            }),
           )
         }
       }
@@ -242,7 +240,7 @@ export const transformElement: NodeTransform = (node, context) => {
       !!shouldUseBlock,
       false /* disableTracking */,
       isComponent,
-      node.loc
+      node.loc,
     )
   }
 }
@@ -250,7 +248,7 @@ export const transformElement: NodeTransform = (node, context) => {
 export function resolveComponentType(
   node: ComponentNode,
   context: TransformContext,
-  ssr = false
+  ssr = false,
 ) {
   let { tag } = node
 
@@ -263,7 +261,7 @@ export function resolveComponentType(
       (__COMPAT__ &&
         isCompatEnabled(
           CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-          context
+          context,
         ))
     ) {
       const exp =
@@ -272,7 +270,7 @@ export function resolveComponentType(
           : isProp.exp
       if (exp) {
         return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-          exp
+          exp,
         ])
       }
     } else if (
@@ -285,19 +283,6 @@ export function resolveComponentType(
       // compat mode where all is values are considered components
       tag = isProp.value!.content.slice(4)
     }
-  }
-
-  // 1.5 v-is (TODO: remove in 3.4)
-  const isDir = !isExplicitDynamic && findDir(node, 'is')
-  if (isDir && isDir.exp) {
-    if (__DEV__) {
-      context.onWarn(
-        createCompilerError(ErrorCodes.DEPRECATION_V_IS, isDir.loc)
-      )
-    }
-    return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
-      isDir.exp
-    ])
   }
 
   // 2. built-in components (Teleport, Transition, KeepAlive, Suspense...)
@@ -404,7 +389,7 @@ export function buildProps(
   props: ElementNode['props'] = node.props,
   isComponent: boolean,
   isDynamicComponent: boolean,
-  ssr = false
+  ssr = false,
 ): {
   props: PropsExpression | undefined
   directives: DirectiveNode[]
@@ -432,7 +417,7 @@ export function buildProps(
   const pushMergeArg = (arg?: PropsExpression) => {
     if (properties.length) {
       mergeArgs.push(
-        createObjectExpression(dedupeProperties(properties), elementLoc)
+        createObjectExpression(dedupeProperties(properties), elementLoc),
       )
       properties = []
     }
@@ -504,7 +489,7 @@ export function buildProps(
     // static attribute
     const prop = props[i]
     if (prop.type === NodeTypes.ATTRIBUTE) {
-      const { loc, name, value } = prop
+      const { loc, name, nameLoc, value } = prop
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
@@ -512,8 +497,8 @@ export function buildProps(
           properties.push(
             createObjectProperty(
               createSimpleExpression('ref_for', true),
-              createSimpleExpression('true')
-            )
+              createSimpleExpression('true'),
+            ),
           )
         }
         // in inline mode there is no setupState object, so we can't use string
@@ -530,8 +515,8 @@ export function buildProps(
             properties.push(
               createObjectProperty(
                 createSimpleExpression('ref_key', true),
-                createSimpleExpression(value.content, true, value.loc)
-              )
+                createSimpleExpression(value.content, true, value.loc),
+              ),
             )
           }
         }
@@ -544,24 +529,20 @@ export function buildProps(
           (__COMPAT__ &&
             isCompatEnabled(
               CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-              context
+              context,
             )))
       ) {
         continue
       }
       properties.push(
         createObjectProperty(
-          createSimpleExpression(
-            name,
-            true,
-            getInnerRange(loc, 0, name.length)
-          ),
+          createSimpleExpression(name, true, nameLoc),
           createSimpleExpression(
             value ? value.content : '',
             isStatic,
-            value ? value.loc : loc
-          )
-        )
+            value ? value.loc : loc,
+          ),
+        ),
       )
     } else {
       // directives
@@ -573,7 +554,7 @@ export function buildProps(
       if (name === 'slot') {
         if (!isComponent) {
           context.onError(
-            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc)
+            createCompilerError(ErrorCodes.X_V_SLOT_MISPLACED, loc),
           )
         }
         continue
@@ -591,7 +572,7 @@ export function buildProps(
             (__COMPAT__ &&
               isCompatEnabled(
                 CompilerDeprecationTypes.COMPILER_IS_ON_ELEMENT,
-                context
+                context,
               ))))
       ) {
         continue
@@ -615,8 +596,8 @@ export function buildProps(
         properties.push(
           createObjectProperty(
             createSimpleExpression('ref_for', true),
-            createSimpleExpression('true')
-          )
+            createSimpleExpression('true'),
+          ),
         )
       }
 
@@ -654,7 +635,7 @@ export function buildProps(
                   checkCompatEnabled(
                     CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
                     context,
-                    loc
+                    loc,
                   )
                 }
               }
@@ -662,7 +643,7 @@ export function buildProps(
               if (
                 isCompatEnabled(
                   CompilerDeprecationTypes.COMPILER_V_BIND_OBJECT_ORDER,
-                  context
+                  context,
                 )
               ) {
                 mergeArgs.unshift(exp)
@@ -677,7 +658,7 @@ export function buildProps(
               type: NodeTypes.JS_CALL_EXPRESSION,
               loc,
               callee: context.helper(TO_HANDLERS),
-              arguments: isComponent ? [exp] : [exp, `true`]
+              arguments: isComponent ? [exp] : [exp, `true`],
             })
           }
         } else {
@@ -686,8 +667,8 @@ export function buildProps(
               isVBind
                 ? ErrorCodes.X_V_BIND_NO_EXPRESSION
                 : ErrorCodes.X_V_ON_NO_EXPRESSION,
-              loc
-            )
+              loc,
+            ),
           )
         }
         continue
@@ -740,7 +721,7 @@ export function buildProps(
       propsExpression = createCallExpression(
         context.helper(MERGE_PROPS),
         mergeArgs,
-        elementLoc
+        elementLoc,
       )
     } else {
       // single v-bind with nothing else - no need for a mergeProps call
@@ -749,7 +730,7 @@ export function buildProps(
   } else if (properties.length) {
     propsExpression = createObjectExpression(
       dedupeProperties(properties),
-      elementLoc
+      elementLoc,
     )
   }
 
@@ -809,7 +790,7 @@ export function buildProps(
           if (classProp && !isStaticExp(classProp.value)) {
             classProp.value = createCallExpression(
               context.helper(NORMALIZE_CLASS),
-              [classProp.value]
+              [classProp.value],
             )
           }
           if (
@@ -825,14 +806,14 @@ export function buildProps(
           ) {
             styleProp.value = createCallExpression(
               context.helper(NORMALIZE_STYLE),
-              [styleProp.value]
+              [styleProp.value],
             )
           }
         } else {
           // dynamic key binding, wrap with `normalizeProps`
           propsExpression = createCallExpression(
             context.helper(NORMALIZE_PROPS),
-            [propsExpression]
+            [propsExpression],
           )
         }
         break
@@ -845,9 +826,9 @@ export function buildProps(
           context.helper(NORMALIZE_PROPS),
           [
             createCallExpression(context.helper(GUARD_REACTIVE_PROPS), [
-              propsExpression
-            ])
-          ]
+              propsExpression,
+            ]),
+          ],
         )
         break
     }
@@ -858,7 +839,7 @@ export function buildProps(
     directives: runtimeDirectives,
     patchFlag,
     dynamicPropNames,
-    shouldUseBlock
+    shouldUseBlock,
   }
 }
 
@@ -899,14 +880,14 @@ function mergeAsArray(existing: Property, incoming: Property) {
   } else {
     existing.value = createArrayExpression(
       [existing.value, incoming.value],
-      existing.loc
+      existing.loc,
     )
   }
 }
 
 export function buildDirectiveArgs(
   dir: DirectiveNode,
-  context: TransformContext
+  context: TransformContext,
 ): ArrayExpression {
   const dirArgs: ArrayExpression['elements'] = []
   const runtime = directiveImportMap.get(dir)
@@ -946,10 +927,10 @@ export function buildDirectiveArgs(
     dirArgs.push(
       createObjectExpression(
         dir.modifiers.map(modifier =>
-          createObjectProperty(modifier, trueExpression)
+          createObjectProperty(modifier, trueExpression),
         ),
-        loc
-      )
+        loc,
+      ),
     )
   }
   return createArrayExpression(dirArgs, dir.loc)
