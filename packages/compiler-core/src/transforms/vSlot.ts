@@ -392,7 +392,7 @@ function buildDynamicSlot(
 
 function hasForwardedSlots(
   children: TemplateChildNode[],
-  hasBranches = false
+  hasBranches = false,
 ): boolean {
   for (let i = 0; i < children.length; i++) {
     const child = children[i]

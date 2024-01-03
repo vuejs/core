@@ -8,6 +8,7 @@ import {
   createApp,
   createBlock,
   createCommentVNode,
+  createElementBlock,
   createTextVNode,
   createVNode,
   defineComponent,
@@ -24,7 +25,6 @@ import {
   renderSlot,
   serialize,
   withCtx,
-  createElementBlock,
 } from '@vue/runtime-test'
 import { PatchFlags, SlotFlags } from '@vue/shared'
 import { SuspenseImpl } from '../src/components/Suspense'
@@ -946,10 +946,10 @@ describe('renderer: optimized mode', () => {
             !show.value
               ? (openBlock(),
                 createElementBlock('div', { key: 0 }, 'Fallback Content'))
-              : createCommentVNode('v-if', true)
+              : createCommentVNode('v-if', true),
           ])
         }
-      }
+      },
     }
 
     const Parent = {
@@ -962,13 +962,13 @@ describe('renderer: optimized mode', () => {
                 show.value
                   ? (openBlock(),
                     createElementBlock('div', { key: 0 }, 'Provided Content'))
-                  : createCommentVNode('v-if', true)
+                  : createCommentVNode('v-if', true),
               ]),
-              _: 3 /* FORWARDED */
+              _: 3 /* FORWARDED */,
             })
           )
         }
-      }
+      },
     }
 
     const app = createApp({
@@ -976,7 +976,7 @@ describe('renderer: optimized mode', () => {
         return () => {
           return h(Parent)
         }
-      }
+      },
     })
     app.mount(root)
     await nextTick()
