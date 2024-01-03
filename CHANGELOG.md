@@ -1,3 +1,23 @@
+## [3.4.4](https://github.com/vuejs/core/compare/v3.4.3...v3.4.4) (2024-01-03)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix scss source map regression ([71d3121](https://github.com/vuejs/core/commit/71d3121b72c449351e718ee1539bdfa35b68bb32)), closes [#9970](https://github.com/vuejs/core/issues/9970) [#9969](https://github.com/vuejs/core/issues/9969)
+* **compiler-sfc:** use compilerOptions when re-parsing consumed AST ([d94d8d4](https://github.com/vuejs/core/commit/d94d8d4bffd1daf171a655b292745ffc3e63052d))
+* **defineModel:** support kebab-case/camelCase mismatches ([#9950](https://github.com/vuejs/core/issues/9950)) ([10ccb9b](https://github.com/vuejs/core/commit/10ccb9bfa0f5f3016207fc32b9611bab98e6f090))
+* **runtime-core:** correctly assign suspenseId to avoid conflicts with the default id ([#9966](https://github.com/vuejs/core/issues/9966)) ([0648804](https://github.com/vuejs/core/commit/06488047c184dae3070d0008379716690edceb46)), closes [#9944](https://github.com/vuejs/core/issues/9944)
+* **ssr:** avoid rendering transition-group slot content as a fragment ([#9961](https://github.com/vuejs/core/issues/9961)) ([0160264](https://github.com/vuejs/core/commit/0160264d677478ee928e8e851f39a9e94f97e337)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+* **watch:** remove instance unmounted short circuit in getter of `watchEffect` ([#9948](https://github.com/vuejs/core/issues/9948)) ([f300a40](https://github.com/vuejs/core/commit/f300a4001ec40cadef2520267eb5841ab48cf005))
+* **watch:** revert watch behavior when watching shallow reactive objects ([a9f781a](https://github.com/vuejs/core/commit/a9f781a92cbc7de7b25c9e3d5b1295ca99eb6d86)), closes [#9965](https://github.com/vuejs/core/issues/9965)
+
+
+### Performance Improvements
+
+* **watch:** avoid double traverse for reactive source ([24d77c2](https://github.com/vuejs/core/commit/24d77c25ce5d5356adb5367beef1d23e6e340b35))
+
+
+
 ## [3.4.3](https://github.com/vuejs/core/compare/v3.4.2...v3.4.3) (2023-12-30)
 
 
