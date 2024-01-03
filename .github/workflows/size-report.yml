@@ -11,6 +11,9 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+
 jobs:
   size-report:
     runs-on: ubuntu-latest
@@ -18,19 +21,19 @@ jobs:
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.conclusion == 'success'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to LTS
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: '.node-version'
           cache: pnpm
 
       - name: Install dependencies
-        run: PUPPETEER_SKIP_DOWNLOAD=1 pnpm install
+        run: pnpm install
 
       - name: Download PR number
         uses: dawidd6/action-download-artifact@v2
