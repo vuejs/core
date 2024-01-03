@@ -1,8 +1,8 @@
 import {
-  SourceLocation,
-  CompilerError,
+  type CompilerError,
+  ErrorCodes,
+  type SourceLocation,
   createCompilerError,
-  ErrorCodes
 } from '@vue/compiler-core'
 
 export interface DOMCompilerError extends CompilerError {
@@ -11,16 +11,16 @@ export interface DOMCompilerError extends CompilerError {
 
 export function createDOMCompilerError(
   code: DOMErrorCodes,
-  loc?: SourceLocation
+  loc?: SourceLocation,
 ) {
   return createCompilerError(
     code,
     loc,
-    __DEV__ || !__BROWSER__ ? DOMErrorMessages : undefined
+    __DEV__ || !__BROWSER__ ? DOMErrorMessages : undefined,
   ) as DOMCompilerError
 }
 
-export const enum DOMErrorCodes {
+export enum DOMErrorCodes {
   X_V_HTML_NO_EXPRESSION = 53 /* ErrorCodes.__EXTEND_POINT__ */,
   X_V_HTML_WITH_CHILDREN,
   X_V_TEXT_NO_EXPRESSION,
@@ -32,18 +32,18 @@ export const enum DOMErrorCodes {
   X_V_SHOW_NO_EXPRESSION,
   X_TRANSITION_INVALID_CHILDREN,
   X_IGNORED_SIDE_EFFECT_TAG,
-  __EXTEND_POINT__
+  __EXTEND_POINT__,
 }
 
 if (__TEST__) {
-  // esbuild cannot infer const enum increments if first value is from another
+  // esbuild cannot infer enum increments if first value is from another
   // file, so we have to manually keep them in sync. this check ensures it
   // errors out if there are collisions.
   if (DOMErrorCodes.X_V_HTML_NO_EXPRESSION < ErrorCodes.__EXTEND_POINT__) {
     throw new Error(
       `DOMErrorCodes need to be updated to ${
         ErrorCodes.__EXTEND_POINT__ + 1
-      } to match extension point from core ErrorCodes.`
+      } to match extension point from core ErrorCodes.`,
     )
   }
 }
@@ -59,5 +59,5 @@ export const DOMErrorMessages: { [code: number]: string } = {
   [DOMErrorCodes.X_V_MODEL_UNNECESSARY_VALUE]: `Unnecessary value binding used alongside v-model. It will interfere with v-model's behavior.`,
   [DOMErrorCodes.X_V_SHOW_NO_EXPRESSION]: `v-show is missing expression.`,
   [DOMErrorCodes.X_TRANSITION_INVALID_CHILDREN]: `<Transition> expects exactly one child element or component.`,
-  [DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`
+  [DOMErrorCodes.X_IGNORED_SIDE_EFFECT_TAG]: `Tags with side effect (<script> and <style>) are ignored in client component templates.`,
 }

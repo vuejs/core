@@ -5,7 +5,7 @@ import main from './template/main.js?raw'
 import pkg from './template/package.json?raw'
 import config from './template/vite.config.js?raw'
 import readme from './template/README.md?raw'
-import { ReplStore } from '@vue/repl'
+import type { ReplStore } from '@vue/repl'
 
 export async function downloadProject(store: ReplStore) {
   if (!confirm('Download project files?')) {
@@ -27,7 +27,11 @@ export async function downloadProject(store: ReplStore) {
 
   const files = store.getFiles()
   for (const file in files) {
-    src.file(file, files[file])
+    if (file !== 'import-map.json') {
+      src.file(file, files[file])
+    } else {
+      zip.file(file, files[file])
+    }
   }
 
   const blob = await zip.generateAsync({ type: 'blob' })

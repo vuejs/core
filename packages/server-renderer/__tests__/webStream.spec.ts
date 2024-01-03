@@ -1,25 +1,25 @@
-import { createApp, h, defineAsyncComponent } from 'vue'
-import { ReadableStream, TransformStream } from 'stream/web'
+import { createApp, defineAsyncComponent, h } from 'vue'
+import { ReadableStream, TransformStream } from 'node:stream/web'
 import { pipeToWebWritable, renderToWebStream } from '../src'
 
 beforeEach(() => {
-  // @ts-ignore
+  // @ts-expect-error
   global.ReadableStream = ReadableStream
 })
 
 afterEach(() => {
-  // @ts-ignore
+  // @ts-expect-error
   delete global.ReadableStream
 })
 
 test('renderToWebStream', async () => {
   const Async = defineAsyncComponent(() =>
     Promise.resolve({
-      render: () => h('div', 'async')
-    })
+      render: () => h('div', 'async'),
+    }),
   )
   const App = {
-    render: () => [h('div', 'parent'), h(Async)]
+    render: () => [h('div', 'parent'), h(Async)],
   }
 
   const stream = renderToWebStream(createApp(App))
@@ -41,11 +41,11 @@ test('renderToWebStream', async () => {
 test('pipeToWebWritable', async () => {
   const Async = defineAsyncComponent(() =>
     Promise.resolve({
-      render: () => h('div', 'async')
-    })
+      render: () => h('div', 'async'),
+    }),
   )
   const App = {
-    render: () => [h('div', 'parent'), h(Async)]
+    render: () => [h('div', 'parent'), h(Async)],
   }
 
   const { readable, writable } = new TransformStream()
