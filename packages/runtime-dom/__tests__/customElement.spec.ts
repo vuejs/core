@@ -1,5 +1,6 @@
 import {
   type Ref,
+  type Ref,
   type VueElement,
   defineAsyncComponent,
   defineComponent,
@@ -8,7 +9,6 @@ import {
   inject,
   nextTick,
   provide,
-  Ref,
   ref,
   renderSlot,
 } from '../src'
@@ -705,9 +705,9 @@ describe('defineCustomElement', () => {
             },
             render(this: any) {
               return h('div', null, [renderSlot(this.$slots, 'default')])
-            }
+            },
           })
-        })
+        }),
       )
 
       const EChild = defineCustomElement({
@@ -716,7 +716,7 @@ describe('defineCustomElement', () => {
         },
         render(this: any) {
           return h('div', null, 'child')
-        }
+        },
       })
       customElements.define('my-el-async-nested-ce', E)
       customElements.define('slotted-child', EChild)
@@ -738,9 +738,9 @@ describe('defineCustomElement', () => {
             },
             render(this: any) {
               return h('div', null, [renderSlot(this.$slots, 'default')])
-            }
+            },
           })
-        })
+        }),
       )
 
       const EChild = defineCustomElement({
@@ -749,7 +749,7 @@ describe('defineCustomElement', () => {
         },
         render(this: any) {
           return h('div', null, [renderSlot(this.$slots, 'default')])
-        }
+        },
       })
 
       const EChild2 = defineCustomElement({
@@ -759,7 +759,7 @@ describe('defineCustomElement', () => {
         },
         render(this: any) {
           return h('div', null, 'child')
-        }
+        },
       })
       customElements.define('my-el-async-nested-m-ce', E)
       customElements.define('slotted-child-m', EChild)
