@@ -68,6 +68,16 @@ PR are welcome!
 - [ ] Performance & Optimization
   - [ ] remove unnecessary close tag `</div>`
 
+## Codes Copied From `runtime-core`
+
+The code provided here is a duplicate from `runtime-core` as Vapor cannot import it directly. For the time being, we copy any necessary logic from runtime-core into runtime-vapor and document it accordingly. Once the experimental development phase concludes, we will consolidate these elements into a separate software package.
+
+- packages/runtime-vapor/src/apiWatch.ts
+- packages/runtime-vapor/src/errorHandling.ts
+- packages/runtime-vapor/src/scheduler.ts
+
+If there are more, please feel free to add.
+
 ## Sponsors
 
 Vue.js is an MIT-licensed open source project with its ongoing development made possible entirely by the support of these awesome [backers](https://github.com/vuejs/core/blob/main/BACKERS.md). If you'd like to join them, please consider [ sponsoring Vue's development](https://vuejs.org/sponsor/).
