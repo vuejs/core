@@ -55,7 +55,7 @@ import {
   ssrProcessTransitionGroup,
   ssrTransformTransitionGroup,
 } from './ssrTransformTransitionGroup'
-import { extend, isArray, isObject, isSymbol } from '@vue/shared'
+import { extend, isArray, isObject, isPlainObject, isSymbol } from '@vue/shared'
 import { buildSSRProps } from './ssrTransformElement'
 import {
   ssrProcessTransition,
@@ -120,6 +120,8 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   // The branch is retrieved when processing slots again in ssr mode.
   const vnodeBranches: ReturnStatement[] = []
   const clonedNode = clone(node)
+
+  console.log(clonedNode)
 
   return function ssrPostTransformComponent() {
     // Using the cloned node, build the normal VNode-based branches (for
@@ -371,10 +373,10 @@ function subTransform(
 function clone(v: any): any {
   if (isArray(v)) {
     return v.map(clone)
-  } else if (isObject(v)) {
+  } else if (isPlainObject(v)) {
     const res: any = {}
     for (const key in v) {
-      res[key] = clone(v[key])
+      res[key] = clone(v[key as keyof typeof v])
     }
     return res
   } else {
