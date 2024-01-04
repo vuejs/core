@@ -372,11 +372,25 @@ function clone(v: any): any {
   if (isArray(v)) {
     return v.map(clone)
   } else if (isObject(v)) {
-    const res: any = {}
-    for (const key in v) {
-      res[key] = clone(v[key])
+    if (v instanceof Map) {
+      const res = new Map()
+      v.forEach((value: any, key: any) => {
+        res.set(clone(key), clone(value))
+      })
+      return res
+    } else if (v instanceof Set) {
+      const res = new Set()
+      v.forEach((value: any) => {
+        res.add(clone(value))
+      })
+      return res
+    } else {
+      const res: any = {}
+      for (const key in v) {
+        res[key] = clone(v[key])
+      }
+      return res
     }
-    return res
   } else {
     return v
   }
