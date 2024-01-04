@@ -427,6 +427,30 @@ test('prefixing edge case for reused AST', () => {
   expect(code).not.toMatch(`_ctx.t`)
 })
 
+test('prefixing edge case for reused AST ssr mode', () => {
+  const src = `
+  <script setup lang="ts">
+    import { Foo } from './foo'
+  </script>
+  <template>
+    <Bar>
+      <template #option="{ foo }"></template>
+    </Bar>
+  </template>
+  `
+  const { descriptor } = parse(src)
+  // compileScript triggers importUsageCheck
+  compileScript(descriptor, { id: 'xxx' })
+  const { code } = compileTemplate({
+    id: 'xxx',
+    filename: 'test.vue',
+    ast: descriptor.template!.ast,
+    source: descriptor.template!.content,
+    ssr: true,
+  })
+  expect(code).not.toMatch(`_ctx.t`)
+})
+
 interface Pos {
   line: number
   column: number
