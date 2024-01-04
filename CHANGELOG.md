@@ -1,3 +1,15 @@
+## [3.4.5](https://github.com/vuejs/core/compare/v3.4.4...v3.4.5) (2024-01-04)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix co-usage of defineModel transform options and props destructure ([b20350d](https://github.com/vuejs/core/commit/b20350ded562d27e5901f308d0bc13344f840c4a)), closes [#9972](https://github.com/vuejs/core/issues/9972)
+* **compiler-sfc:** fix sfc template unref rewrite for class instantiation ([ae60a91](https://github.com/vuejs/core/commit/ae60a91cc23424493071ad9088782763eb1e8ff7)), closes [#6483](https://github.com/vuejs/core/issues/6483) [#6491](https://github.com/vuejs/core/issues/6491)
+* **compiler-ssr:** fix node clone edge case caused by AST reuse ([#9983](https://github.com/vuejs/core/issues/9983)) ([7dbdb3e](https://github.com/vuejs/core/commit/7dbdb3edf0ab648965331ca42f069387c97a1c8a)), closes [#9981](https://github.com/vuejs/core/issues/9981)
+* **watch:** cleanup watcher effect from scope when manually stopped ([#9978](https://github.com/vuejs/core/issues/9978)) ([d2d8955](https://github.com/vuejs/core/commit/d2d89551bb06dc05cb7ae0496b8f345ae0de78ed))
+
+
+
 ## [3.4.4](https://github.com/vuejs/core/compare/v3.4.3...v3.4.4) (2024-01-03)
 
 
