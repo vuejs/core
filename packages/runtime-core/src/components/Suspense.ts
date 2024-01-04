@@ -524,14 +524,10 @@ function createSuspenseBoundary(
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
         if (delayEnter) {
+          const anchor = next(activeBranch!)
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              move(
-                pendingBranch!,
-                container,
-                next(activeBranch!),
-                MoveType.ENTER,
-              )
+              move(pendingBranch!, container, anchor, MoveType.ENTER)
               queuePostFlushCb(effects)
             }
           }
