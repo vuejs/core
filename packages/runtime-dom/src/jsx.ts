@@ -739,7 +739,7 @@ export interface TextareaHTMLAttributes extends HTMLAttributes {
   readonly?: Booleanish
   required?: Booleanish
   rows?: Numberish
-  value?: string | ReadonlyArray<string> | number
+  value?: string | ReadonlyArray<string> | number | null
   wrap?: string
 }
 
