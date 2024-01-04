@@ -9,6 +9,19 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/server-renderer.d.ts",
+      "node": {
+        "production": "./dist/server-renderer.cjs.prod.js",
+        "development": "./dist/server-renderer.cjs.js",
+        "default": "./index.js"
+      },
+      "import": "./dist/server-renderer.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "VueServerRenderer",
     "formats": [
