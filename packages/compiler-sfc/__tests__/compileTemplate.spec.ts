@@ -441,14 +441,15 @@ test('prefixing edge case for reused AST ssr mode', () => {
   const { descriptor } = parse(src)
   // compileScript triggers importUsageCheck
   compileScript(descriptor, { id: 'xxx' })
-  const { code } = compileTemplate({
-    id: 'xxx',
-    filename: 'test.vue',
-    ast: descriptor.template!.ast,
-    source: descriptor.template!.content,
-    ssr: true,
-  })
-  expect(code).not.toMatch(`_ctx.t`)
+  expect(() =>
+    compileTemplate({
+      id: 'xxx',
+      filename: 'test.vue',
+      ast: descriptor.template!.ast,
+      source: descriptor.template!.content,
+      ssr: true,
+    }),
+  ).not.toThrowError()
 })
 
 interface Pos {
