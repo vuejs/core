@@ -90,7 +90,11 @@ module.exports = {
     },
     // Private package, browser only + no syntax restrictions
     {
-      files: ['packages/template-explorer/**', 'packages/sfc-playground/**'],
+      files: [
+        'packages/template-explorer/**',
+        'packages/sfc-playground/**',
+        'playground/**',
+      ],
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': ['error', banConstEnum],
