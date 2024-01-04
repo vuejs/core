@@ -1,10 +1,11 @@
-import type {
-  Component,
-  ComponentInternalInstance,
-  ComponentInternalOptions,
-  ConcreteComponent,
-  InternalRenderFunction,
-  SetupContext,
+import {
+  type Component,
+  type ComponentInternalInstance,
+  type ComponentInternalOptions,
+  type ConcreteComponent,
+  type InternalRenderFunction,
+  type SetupContext,
+  currentInstance,
 } from './component'
 import {
   type Data,
@@ -18,7 +19,7 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, isRef } from '@vue/reactivity'
+import { type Ref, getCurrentScope, isRef, traverse } from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   type WatchCallback,
@@ -67,7 +68,7 @@ import { warn } from './warning'
 import type { VNodeChild } from './vnode'
 import { callWithAsyncErrorHandling } from './errorHandling'
 import { deepMergeData } from './compat/data'
-import { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes, checkCompatEnabled } from './compat/compatConfig'
 import {
   type CompatConfig,
   isCompatEnabled,
@@ -937,18 +938,45 @@ export function createWatcher(
   publicThis: ComponentPublicInstance,
   key: string,
 ) {
-  const getter = key.includes('.')
+  let getter = key.includes('.')
     ? createPathGetter(publicThis, key)
     : () => (publicThis as any)[key]
+
+  const options: WatchOptions = {}
+  if (__COMPAT__) {
+    const instance =
+      getCurrentScope() === currentInstance?.scope ? currentInstance : null
+
+    const newValue = getter()
+    if (
+      isArray(newValue) &&
+      isCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+    ) {
+      options.deep = true
+    }
+
+    const baseGetter = getter
+    getter = () => {
+      const val = baseGetter()
+      if (
+        isArray(val) &&
+        checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
+      ) {
+        traverse(val)
+      }
+      return val
+    }
+  }
+
   if (isString(raw)) {
     const handler = ctx[raw]
     if (isFunction(handler)) {
-      watch(getter, handler as WatchCallback)
+      watch(getter, handler as WatchCallback, options)
     } else if (__DEV__) {
       warn(`Invalid watch handler specified by key "${raw}"`, handler)
     }
   } else if (isFunction(raw)) {
-    watch(getter, raw.bind(publicThis))
+    watch(getter, raw.bind(publicThis), options)
   } else if (isObject(raw)) {
     if (isArray(raw)) {
       raw.forEach(r => createWatcher(r, ctx, publicThis, key))
@@ -957,7 +985,7 @@ export function createWatcher(
         ? raw.handler.bind(publicThis)
         : (ctx[raw.handler] as WatchCallback)
       if (isFunction(handler)) {
-        watch(getter, handler, raw)
+        watch(getter, handler, extend(raw, options))
       } else if (__DEV__) {
         warn(`Invalid watch handler specified by key "${raw.handler}"`, handler)
       }
