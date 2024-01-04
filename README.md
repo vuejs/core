@@ -73,8 +73,12 @@ PR are welcome!
 The code provided here is a duplicate from `runtime-core` as Vapor cannot import it directly. For the time being, we copy any necessary logic from runtime-core into runtime-vapor and document it accordingly. Once the experimental development phase concludes, we will consolidate these elements into a separate software package.
 
 - packages/runtime-vapor/src/apiWatch.ts
+- packages/runtime-vapor/src/component.ts
+- packages/runtime-vapor/src/componentProps.ts
+- packages/runtime-vapor/src/enums.ts
 - packages/runtime-vapor/src/errorHandling.ts
 - packages/runtime-vapor/src/scheduler.ts
+- packages/runtime-vapor/src/warning.ts
 
 If there are more, please feel free to add.
 
