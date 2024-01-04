@@ -121,8 +121,6 @@ export const ssrTransformComponent: NodeTransform = (node, context) => {
   const vnodeBranches: ReturnStatement[] = []
   const clonedNode = clone(node)
 
-  console.log(clonedNode)
-
   return function ssrPostTransformComponent() {
     // Using the cloned node, build the normal VNode-based branches (for
     // fallback in case the child is render-fn based). Store them in an array
