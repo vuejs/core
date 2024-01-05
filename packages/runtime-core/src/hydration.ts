@@ -737,7 +737,11 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    actual = el.hasAttribute(key) && el.getAttribute(key)
+    actual = el.hasAttribute(key)
+      ? el.getAttribute(key)
+      : el[key as keyof typeof el]
+        ? el[key as keyof typeof el]
+        : false
     expected = isBooleanAttr(key)
       ? includeBooleanAttr(clientValue)
         ? ''
