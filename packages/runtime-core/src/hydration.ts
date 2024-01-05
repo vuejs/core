@@ -448,7 +448,15 @@ export function createHydrationFunctions(
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key])) {
+            if (
+              __DEV__ &&
+              propHasMismatch(
+                el,
+                key,
+                props[key],
+                props.vShow ?? props['v-show'],
+              )
+            ) {
               hasMismatch = true
             }
             if (
@@ -712,7 +720,12 @@ export function createHydrationFunctions(
 /**
  * Dev only
  */
-function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
+function propHasMismatch(
+  el: Element,
+  key: string,
+  clientValue: any,
+  vShow: boolean,
+): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
   let actual: any
@@ -726,11 +739,16 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
-    actual = el.getAttribute('style')
-    expected = isString(clientValue)
-      ? clientValue
-      : stringifyStyle(normalizeStyle(clientValue))
-    if (actual !== expected) {
+    actual = toStyleMap(el.getAttribute('style') || '')
+    expected = toStyleMap(
+      isString(clientValue)
+        ? clientValue
+        : stringifyStyle(normalizeStyle(clientValue)),
+    )
+    if (vShow === false) {
+      expected.set('display', 'false')
+    }
+    if (!isMapEqual(actual, expected)) {
       mismatchType = mismatchKey = 'style'
     }
   } else if (
@@ -778,6 +796,31 @@ function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   }
   for (const s of a) {
     if (!b.has(s)) {
+      return false
+    }
+  }
+  return true
+}
+
+function toStyleMap(str: string): Map<string, string> {
+  const styleMap: Map<string, string> = new Map()
+  const styles = str.split(';').map(item => item.split(':'))
+  styles.forEach(([key, value]: string[]) => {
+    key = key?.trim()
+    value = value?.trim()
+    if (key && value) {
+      styleMap.set(key, value)
+    }
+  })
+  return styleMap
+}
+
+function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+  if (a.size !== b.size) {
+    return false
+  }
+  for (const [key, value] of a) {
+    if (value !== b.get(key)) {
       return false
     }
   }
