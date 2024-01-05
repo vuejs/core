@@ -401,7 +401,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
-  prevSuspenseAnchor: RendererNode | null | string
+  __anchor?: RendererNode | null
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -490,7 +490,6 @@ function createSuspenseBoundary(
     isInFallback: !isHydrating,
     isHydrating,
     isUnmounted: false,
-    prevSuspenseAnchor: null,
     effects: [],
 
     resolve(resume = false, sync = false) {
@@ -526,28 +525,10 @@ function createSuspenseBoundary(
           pendingBranch!.transition &&
           pendingBranch!.transition.mode === 'out-in'
         if (delayEnter) {
-          const anchor = next(activeBranch!)
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              const { prevSuspenseAnchor } = suspense
-              const resolveAnchor =
-                prevSuspenseAnchor === 'needNext'
-                  ? next(activeBranch!)
-                  : (prevSuspenseAnchor as typeof anchor) || anchor
-              move(pendingBranch!, container, resolveAnchor, MoveType.ENTER)
+              move(pendingBranch!, container, anchor, MoveType.ENTER)
               queuePostFlushCb(effects)
-              suspense.prevSuspenseAnchor = null
-            } else {
-              // In the use case of #8105, for continuous switching,
-              // we need to record the anchor point of the first switch for use in the second switch.
-              // If the anchor point is null when switching for the first time,
-              // call `next(activeBranch!)` to get the anchor point when switching for the second time.
-              if (
-                suspense.activeBranch &&
-                suspense.activeBranch !== activeBranch
-              ) {
-                suspense.prevSuspenseAnchor = anchor || 'needNext'
-              }
             }
           }
         }
@@ -557,7 +538,10 @@ function createSuspenseBoundary(
         if (activeBranch) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
-          anchor = next(activeBranch)
+          anchor =
+            suspense.__anchor !== undefined
+              ? suspense.__anchor
+              : (suspense.__anchor = next(activeBranch))
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {
