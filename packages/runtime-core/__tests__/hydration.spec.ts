@@ -1454,6 +1454,9 @@ describe('SSR hydration', () => {
       mountWithHydration(`<textarea>foo</textarea>`, () =>
         h('textarea', { value: 'foo' }),
       )
+      mountWithHydration(`<textarea></textarea>`, () =>
+        h('textarea', { value: '' }),
+      )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
       mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))

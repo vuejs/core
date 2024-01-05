@@ -739,15 +739,15 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
   ) {
     actual = el.hasAttribute(key)
       ? el.getAttribute(key)
-      : el[key as keyof typeof el]
+      : key in el
         ? el[key as keyof typeof el]
-        : false
+        : ''
     expected = isBooleanAttr(key)
       ? includeBooleanAttr(clientValue)
         ? ''
         : false
       : clientValue == null
-        ? false
+        ? ''
         : String(clientValue)
     if (actual !== expected) {
       mismatchType = `attribute`
