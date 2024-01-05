@@ -50,6 +50,11 @@ export const isSuspense = (type: any): boolean => type.__isSuspense
 // incrementing unique id for every pending branch
 let suspenseId = 0
 
+/**
+ * For testing only
+ */
+export const resetSuspenseId = () => (suspenseId = 0)
+
 // Suspense exposes a component-like API, and is treated like a component
 // in the compiler, but internally it's a special built-in type that hooks
 // directly into the renderer.
@@ -439,6 +444,7 @@ function createSuspenseBoundary(
   if (__DEV__ && !__TEST__ && !hasWarned) {
     hasWarned = true
     // @ts-expect-error `console.info` cannot be null error
+    // eslint-disable-next-line no-console
     console[console.info ? 'info' : 'log'](
       `<Suspense> is an experimental feature and its API will likely change.`,
     )
@@ -476,7 +482,7 @@ function createSuspenseBoundary(
     hiddenContainer,
     anchor,
     deps: 0,
-    pendingId: 0,
+    pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
     activeBranch: null,
     pendingBranch: null,

@@ -1,3 +1,72 @@
+## [3.4.5](https://github.com/vuejs/core/compare/v3.4.4...v3.4.5) (2024-01-04)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix co-usage of defineModel transform options and props destructure ([b20350d](https://github.com/vuejs/core/commit/b20350ded562d27e5901f308d0bc13344f840c4a)), closes [#9972](https://github.com/vuejs/core/issues/9972)
+* **compiler-sfc:** fix sfc template unref rewrite for class instantiation ([ae60a91](https://github.com/vuejs/core/commit/ae60a91cc23424493071ad9088782763eb1e8ff7)), closes [#6483](https://github.com/vuejs/core/issues/6483) [#6491](https://github.com/vuejs/core/issues/6491)
+* **compiler-ssr:** fix node clone edge case caused by AST reuse ([#9983](https://github.com/vuejs/core/issues/9983)) ([7dbdb3e](https://github.com/vuejs/core/commit/7dbdb3edf0ab648965331ca42f069387c97a1c8a)), closes [#9981](https://github.com/vuejs/core/issues/9981)
+* **watch:** cleanup watcher effect from scope when manually stopped ([#9978](https://github.com/vuejs/core/issues/9978)) ([d2d8955](https://github.com/vuejs/core/commit/d2d89551bb06dc05cb7ae0496b8f345ae0de78ed))
+
+
+
+## [3.4.4](https://github.com/vuejs/core/compare/v3.4.3...v3.4.4) (2024-01-03)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix scss source map regression ([71d3121](https://github.com/vuejs/core/commit/71d3121b72c449351e718ee1539bdfa35b68bb32)), closes [#9970](https://github.com/vuejs/core/issues/9970) [#9969](https://github.com/vuejs/core/issues/9969)
+* **compiler-sfc:** use compilerOptions when re-parsing consumed AST ([d94d8d4](https://github.com/vuejs/core/commit/d94d8d4bffd1daf171a655b292745ffc3e63052d))
+* **defineModel:** support kebab-case/camelCase mismatches ([#9950](https://github.com/vuejs/core/issues/9950)) ([10ccb9b](https://github.com/vuejs/core/commit/10ccb9bfa0f5f3016207fc32b9611bab98e6f090))
+* **runtime-core:** correctly assign suspenseId to avoid conflicts with the default id ([#9966](https://github.com/vuejs/core/issues/9966)) ([0648804](https://github.com/vuejs/core/commit/06488047c184dae3070d0008379716690edceb46)), closes [#9944](https://github.com/vuejs/core/issues/9944)
+* **ssr:** avoid rendering transition-group slot content as a fragment ([#9961](https://github.com/vuejs/core/issues/9961)) ([0160264](https://github.com/vuejs/core/commit/0160264d677478ee928e8e851f39a9e94f97e337)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+* **watch:** remove instance unmounted short circuit in getter of `watchEffect` ([#9948](https://github.com/vuejs/core/issues/9948)) ([f300a40](https://github.com/vuejs/core/commit/f300a4001ec40cadef2520267eb5841ab48cf005))
+* **watch:** revert watch behavior when watching shallow reactive objects ([a9f781a](https://github.com/vuejs/core/commit/a9f781a92cbc7de7b25c9e3d5b1295ca99eb6d86)), closes [#9965](https://github.com/vuejs/core/issues/9965)
+
+
+### Performance Improvements
+
+* **watch:** avoid double traverse for reactive source ([24d77c2](https://github.com/vuejs/core/commit/24d77c25ce5d5356adb5367beef1d23e6e340b35))
+
+
+
+## [3.4.3](https://github.com/vuejs/core/compare/v3.4.2...v3.4.3) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** respect sfc parse options in cache key ([b8d58ec](https://github.com/vuejs/core/commit/b8d58ec4f42cbeb9443bf06138add46158db9af0))
+
+
+
+## [3.4.2](https://github.com/vuejs/core/compare/v3.4.1...v3.4.2) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix dev regression for dot / namespace component usage ([dce99c1](https://github.com/vuejs/core/commit/dce99c12df981ca45a4d848c37ba8b16496025f0)), closes [#9947](https://github.com/vuejs/core/issues/9947)
+* **runtime-core:** support deep: false when watch reactive ([#9928](https://github.com/vuejs/core/issues/9928)) ([4f703d1](https://github.com/vuejs/core/commit/4f703d120d76d711084346f73ea295c73e6ef6b6)), closes [#9916](https://github.com/vuejs/core/issues/9916)
+* **ssr:** fix hydration error for slot outlet inside transition-group ([#9937](https://github.com/vuejs/core/issues/9937)) ([6cb00ed](https://github.com/vuejs/core/commit/6cb00ed0f9b64428ec18fada0f68467d6a813fde)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+
+
+
+## [3.4.1](https://github.com/vuejs/core/compare/v3.4.0...v3.4.1) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compat:** correct enum value for COMPILER_FILTERS feature ([#9875](https://github.com/vuejs/core/issues/9875)) ([77d33e2](https://github.com/vuejs/core/commit/77d33e263cf19983caf4e5c53a0eb0bee374843c))
+* **defineModel:** always default modifiers to empty object ([9bc3c7e](https://github.com/vuejs/core/commit/9bc3c7e29cf15f5ca96703542d10cfd786a3fc55)), closes [#9945](https://github.com/vuejs/core/issues/9945)
+* **defineModel:** support local mutation when only prop but no listener is passed ([97ce041](https://github.com/vuejs/core/commit/97ce041910b6ca4bef10f939493d6b5a06ea5b07))
+* **types:** fix defineModel watch type error ([#9942](https://github.com/vuejs/core/issues/9942)) ([4af8583](https://github.com/vuejs/core/commit/4af85835f7e593a7dffa7dc7e99f14877eb70fd1)), closes [#9939](https://github.com/vuejs/core/issues/9939)
+
+
+### Features
+
+* **compiler-sfc:** support passing template parsing options when parsing sfc ([6fab855](https://github.com/vuejs/core/commit/6fab8551e4aeef4610987640de8b435b1ae321bb)) (necessary to fix https://github.com/vitejs/vite-plugin-vue/issues/322)
+
+
+
 # [3.4.0 Slam Dunk](https://github.com/vuejs/core/compare/v3.4.0-rc.3...v3.4.0) (2023-12-29)
 
 > Read [this blog post](https://blog.vuejs.org/posts/vue-3-4) for an overview of the release highlights.

@@ -33,7 +33,8 @@ export function processDefineModel(
   let modelName: string
   let options: Node | undefined
   const arg0 = node.arguments[0] && unwrapTSNode(node.arguments[0])
-  if (arg0 && arg0.type === 'StringLiteral') {
+  const hasName = arg0 && arg0.type === 'StringLiteral'
+  if (hasName) {
     modelName = arg0.value
     options = node.arguments[1]
   } else {
@@ -46,39 +47,42 @@ export function processDefineModel(
   }
 
   let optionsString = options && ctx.getString(options)
-  let runtimeOptions = ''
-  let transformOptions = ''
+  let optionsRemoved = !options
 
-  if (options) {
-    if (options.type === 'ObjectExpression') {
-      for (let i = options.properties.length - 1; i >= 0; i--) {
-        const p = options.properties[i]
-        if (p.type === 'SpreadElement' || p.computed) {
-          runtimeOptions = optionsString!
-          break
-        }
-        if (
-          (p.type === 'ObjectProperty' || p.type === 'ObjectMethod') &&
-          ((p.key.type === 'Identifier' &&
-            (p.key.name === 'get' || p.key.name === 'set')) ||
-            (p.key.type === 'StringLiteral' &&
-              (p.key.value === 'get' || p.key.value === 'set')))
-        ) {
-          transformOptions = ctx.getString(p) + ', ' + transformOptions
-
-          // remove transform option from prop options to avoid duplicates
-          const offset = p.start! - options.start!
-          const next = options.properties[i + 1]
-          const end = (next ? next.start! : options.end! - 1) - options.start!
-          optionsString =
-            optionsString.slice(0, offset) + optionsString.slice(end)
-        }
+  if (
+    options &&
+    options.type === 'ObjectExpression' &&
+    !options.properties.some(p => p.type === 'SpreadElement' || p.computed)
+  ) {
+    let removed = 0
+    for (let i = options.properties.length - 1; i >= 0; i--) {
+      const p = options.properties[i]
+      const next = options.properties[i + 1]
+      const start = p.start!
+      const end = next ? next.start! : options.end! - 1
+      if (
+        (p.type === 'ObjectProperty' || p.type === 'ObjectMethod') &&
+        ((p.key.type === 'Identifier' &&
+          (p.key.name === 'get' || p.key.name === 'set')) ||
+          (p.key.type === 'StringLiteral' &&
+            (p.key.value === 'get' || p.key.value === 'set')))
+      ) {
+        // remove runtime-only options from prop options to avoid duplicates
+        optionsString =
+          optionsString.slice(0, start - options.start!) +
+          optionsString.slice(end - options.start!)
+      } else {
+        // remove prop options from runtime options
+        removed++
+        ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
       }
-      if (!runtimeOptions && transformOptions) {
-        runtimeOptions = `{ ${transformOptions} }`
-      }
-    } else {
-      runtimeOptions = optionsString!
+    }
+    if (removed === options.properties.length) {
+      optionsRemoved = true
+      ctx.s.remove(
+        ctx.startOffset! + (hasName ? arg0.end! : options.start!),
+        ctx.startOffset! + options.end!,
+      )
     }
   }
 
@@ -91,12 +95,20 @@ export function processDefineModel(
   // register binding type
   ctx.bindingMetadata[modelName] = BindingTypes.PROPS
 
+  // defineModel -> useModel
   ctx.s.overwrite(
-    ctx.startOffset! + node.start!,
-    ctx.startOffset! + node.end!,
-    `${ctx.helper('useModel')}(__props, ${JSON.stringify(modelName)}${
-      runtimeOptions ? `, ${runtimeOptions}` : ``
-    })`,
+    ctx.startOffset! + node.callee.start!,
+    ctx.startOffset! + node.callee.end!,
+    ctx.helper('useModel'),
+  )
+  // inject arguments
+  ctx.s.appendLeft(
+    ctx.startOffset! +
+      (node.arguments.length ? node.arguments[0].start! : node.end! - 1),
+    `__props, ` +
+      (hasName
+        ? ``
+        : `${JSON.stringify(modelName)}${optionsRemoved ? `` : `, `}`),
   )
 
   return true

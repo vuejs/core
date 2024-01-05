@@ -42,7 +42,7 @@ import { warn } from './warning'
 import { DeprecationTypes } from './compat/compatConfig'
 import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
-import { useSSRContext } from '@vue/runtime-core'
+import { useSSRContext } from './helpers/useSsrContext'
 
 export type WatchEffect = (onCleanup: OnCleanup) => void
 
@@ -115,6 +115,13 @@ const INITIAL_WATCHER_VALUE = {}
 
 export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
+// overload: single source + cb
+export function watch<T, Immediate extends Readonly<boolean> = false>(
+  source: WatchSource<T>,
+  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
+  options?: WatchOptions<Immediate>,
+): WatchStopHandle
+
 // overload: array of multiple sources + cb
 export function watch<
   T extends MultiWatchSources,
@@ -134,13 +141,6 @@ export function watch<
 >(
   source: T,
   cb: WatchCallback<MapSources<T, false>, MapSources<T, Immediate>>,
-  options?: WatchOptions<Immediate>,
-): WatchStopHandle
-
-// overload: single source + cb
-export function watch<T, Immediate extends Readonly<boolean> = false>(
-  source: WatchSource<T>,
-  cb: WatchCallback<T, Immediate extends true ? T | undefined : T>,
   options?: WatchOptions<Immediate>,
 ): WatchStopHandle
 
@@ -190,6 +190,14 @@ function doWatch(
     }
   }
 
+  // TODO remove in 3.5
+  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
+    warn(
+      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
+        `Please use a boolean instead to avoid potential breakage.`,
+    )
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -220,9 +228,13 @@ function doWatch(
     )
   }
 
-  const instance =
-    getCurrentScope() === currentInstance?.scope ? currentInstance : null
-  // const instance = currentInstance
+  const instance = currentInstance
+  const reactiveGetter = (source: object) =>
+    deep === true
+      ? source // traverse will happen in wrapped getter below
+      : // for deep: false, only traverse root-level properties
+        traverse(source, deep === false ? 1 : undefined)
+
   let getter: () => any
   let forceTrigger = false
   let isMultiSource = false
@@ -231,8 +243,8 @@ function doWatch(
     getter = () => source.value
     forceTrigger = isShallow(source)
   } else if (isReactive(source)) {
-    getter = () => source
-    deep = true
+    getter = () => reactiveGetter(source)
+    forceTrigger = true
   } else if (isArray(source)) {
     isMultiSource = true
     forceTrigger = source.some(s => isReactive(s) || isShallow(s))
@@ -241,7 +253,7 @@ function doWatch(
         if (isRef(s)) {
           return s.value
         } else if (isReactive(s)) {
-          return traverse(s)
+          return reactiveGetter(s)
         } else if (isFunction(s)) {
           return callWithErrorHandling(s, instance, ErrorCodes.WATCH_GETTER)
         } else {
@@ -256,9 +268,6 @@ function doWatch(
     } else {
       // no cb -> simple effect
       getter = () => {
-        if (instance && instance.isUnmounted) {
-          return
-        }
         if (cleanup) {
           cleanup()
         }
@@ -386,10 +395,11 @@ function doWatch(
 
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
 
+  const scope = getCurrentScope()
   const unwatch = () => {
     effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
+    if (scope) {
+      remove(scope.effects, effect)
     }
   }
 
@@ -460,28 +470,41 @@ export function createPathGetter(ctx: any, path: string) {
   }
 }
 
-export function traverse(value: unknown, seen?: Set<unknown>) {
+export function traverse(
+  value: unknown,
+  depth?: number,
+  currentDepth = 0,
+  seen?: Set<unknown>,
+) {
   if (!isObject(value) || (value as any)[ReactiveFlags.SKIP]) {
     return value
   }
+
+  if (depth && depth > 0) {
+    if (currentDepth >= depth) {
+      return value
+    }
+    currentDepth++
+  }
+
   seen = seen || new Set()
   if (seen.has(value)) {
     return value
   }
   seen.add(value)
   if (isRef(value)) {
-    traverse(value.value, seen)
+    traverse(value.value, depth, currentDepth, seen)
   } else if (isArray(value)) {
     for (let i = 0; i < value.length; i++) {
-      traverse(value[i], seen)
+      traverse(value[i], depth, currentDepth, seen)
     }
   } else if (isSet(value) || isMap(value)) {
     value.forEach((v: any) => {
-      traverse(v, seen)
+      traverse(v, depth, currentDepth, seen)
     })
   } else if (isPlainObject(value)) {
     for (const key in value) {
-      traverse(value[key], seen)
+      traverse(value[key], depth, currentDepth, seen)
     }
   }
   return value
