@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-sfc",
-  "version": "3.4.2",
+  "version": "3.4.5",
   "description": "@vue/compiler-sfc",
   "main": "dist/compiler-sfc.cjs.js",
   "module": "dist/compiler-sfc.esm-browser.js",
@@ -8,6 +8,15 @@
   "files": [
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/compiler-sfc.d.ts",
+      "node": "./dist/compiler-sfc.cjs.js",
+      "import": "./dist/compiler-sfc.esm-browser.js",
+      "require": "./dist/compiler-sfc.cjs.js"
+    },
+    "./*": "./*"
+  },
   "buildOptions": {
     "name": "VueCompilerSFC",
     "formats": [
@@ -50,8 +59,8 @@
     "merge-source-map": "^1.1.0",
     "minimatch": "^9.0.3",
     "postcss-modules": "^6.0.0",
-    "postcss-selector-parser": "^6.0.13",
+    "postcss-selector-parser": "^6.0.15",
     "pug": "^3.0.2",
-    "sass": "^1.69.5"
+    "sass": "^1.69.7"
   }
 }

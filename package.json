@@ -1,7 +1,7 @@
 {
   "private": true,
-  "version": "3.4.2",
-  "packageManager": "pnpm@8.12.1",
+  "version": "3.4.5",
+  "packageManager": "pnpm@8.14.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -70,11 +70,11 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
     "@types/minimist": "^1.2.5",
-    "@types/node": "^20.10.5",
-    "@types/semver": "^7.5.5",
-    "@typescript-eslint/eslint-plugin": "^6.16.0",
-    "@typescript-eslint/parser": "^6.15.0",
-    "@vitest/coverage-istanbul": "^1.1.0",
+    "@types/node": "^20.10.6",
+    "@types/semver": "^7.5.6",
+    "@typescript-eslint/eslint-plugin": "^6.17.0",
+    "@typescript-eslint/parser": "^6.17.0",
+    "@vitest/coverage-istanbul": "^1.1.1",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
@@ -83,7 +83,7 @@
     "eslint": "^8.56.0",
     "eslint-define-config": "^1.24.1",
     "eslint-plugin-import": "npm:eslint-plugin-i@^2.29.1",
-    "eslint-plugin-jest": "^27.6.0",
+    "eslint-plugin-jest": "^27.6.1",
     "estree-walker": "^2.0.2",
     "execa": "^8.0.1",
     "jsdom": "^23.0.1",
@@ -91,7 +91,7 @@
     "lodash": "^4.17.21",
     "magic-string": "^0.30.5",
     "markdown-table": "^3.0.3",
-    "marked": "^11.1.0",
+    "marked": "^11.1.1",
     "minimist": "^1.2.8",
     "npm-run-all": "^4.1.5",
     "picocolors": "^1.0.0",
@@ -113,6 +113,6 @@
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.5",
-    "vitest": "^1.1.0"
+    "vitest": "^1.1.1"
   }
 }
