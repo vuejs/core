@@ -401,6 +401,7 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
+  prevSuspenseAnchor: RendererNode | null | string
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -489,6 +490,7 @@ function createSuspenseBoundary(
     isInFallback: !isHydrating,
     isHydrating,
     isUnmounted: false,
+    prevSuspenseAnchor: null,
     effects: [],
 
     resolve(resume = false, sync = false) {
@@ -527,8 +529,15 @@ function createSuspenseBoundary(
           const anchor = next(activeBranch!)
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              move(pendingBranch!, container, anchor, MoveType.ENTER)
+              const { prevSuspenseAnchor } = suspense
+              const resolveAnchor = prevSuspenseAnchor === 'needNext' ? next(activeBranch!): ((prevSuspenseAnchor as typeof anchor) || anchor)
+              move(pendingBranch!, container,  resolveAnchor, MoveType.ENTER)
               queuePostFlushCb(effects)
+              suspense.prevSuspenseAnchor = null
+            } else {
+              if(suspense.activeBranch && suspense.activeBranch !== activeBranch){
+                suspense.prevSuspenseAnchor = anchor || 'needNext'
+              }
             }
           }
         }
@@ -647,6 +656,7 @@ function createSuspenseBoundary(
     },
 
     next() {
+      debugger
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
