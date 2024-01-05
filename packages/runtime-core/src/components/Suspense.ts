@@ -530,12 +530,22 @@ function createSuspenseBoundary(
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
               const { prevSuspenseAnchor } = suspense
-              const resolveAnchor = prevSuspenseAnchor === 'needNext' ? next(activeBranch!): ((prevSuspenseAnchor as typeof anchor) || anchor)
-              move(pendingBranch!, container,  resolveAnchor, MoveType.ENTER)
+              const resolveAnchor =
+                prevSuspenseAnchor === 'needNext'
+                  ? next(activeBranch!)
+                  : (prevSuspenseAnchor as typeof anchor) || anchor
+              move(pendingBranch!, container, resolveAnchor, MoveType.ENTER)
               queuePostFlushCb(effects)
               suspense.prevSuspenseAnchor = null
             } else {
-              if(suspense.activeBranch && suspense.activeBranch !== activeBranch){
+              // In the use case of #8105, for continuous switching,
+              // we need to record the anchor point of the first switch for use in the second switch.
+              // If the anchor point is null when switching for the first time,
+              // call `next(activeBranch!)` to get the anchor point when switching for the second time.
+              if (
+                suspense.activeBranch &&
+                suspense.activeBranch !== activeBranch
+              ) {
                 suspense.prevSuspenseAnchor = anchor || 'needNext'
               }
             }
@@ -656,7 +666,6 @@ function createSuspenseBoundary(
     },
 
     next() {
-      debugger
       return suspense.activeBranch && next(suspense.activeBranch)
     },
 
