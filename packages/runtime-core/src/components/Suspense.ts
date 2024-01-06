@@ -401,7 +401,6 @@ export interface SuspenseBoundary {
   container: RendererElement
   hiddenContainer: RendererElement
   anchor: RendererNode | null
-  __anchor?: RendererNode | null
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -527,7 +526,12 @@ function createSuspenseBoundary(
         if (delayEnter) {
           activeBranch!.transition!.afterLeave = () => {
             if (pendingId === suspense.pendingId) {
-              move(pendingBranch!, container, anchor, MoveType.ENTER)
+              move(
+                pendingBranch!,
+                container,
+                anchor === suspense.anchor ? next(activeBranch!) : anchor,
+                MoveType.ENTER,
+              )
               queuePostFlushCb(effects)
             }
           }
@@ -538,10 +542,15 @@ function createSuspenseBoundary(
         if (activeBranch) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
-          anchor =
-            suspense.__anchor !== undefined
-              ? suspense.__anchor
-              : (suspense.__anchor = next(activeBranch))
+          // #8105 if `delayEnter` is true, it means that the mounting of `activeBranch` will be delayed.
+          // if the branch switches before transition completes, both `activeBranch` and `pendingBranch` may coexist
+          // in the `hiddenContainer`. This could result in `next(activeBranch!)` obtaining
+          // an incorrect anchor (got `pendingBranch.el`).
+          // Therefore, after the mounting of activeBranch is completed,
+          // it is necessary to get the latest anchor.
+          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+            anchor = next(activeBranch)
+          }
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {
