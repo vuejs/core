@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance } from './component'
+import type { ComponentInternalInstance, Data } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -448,15 +448,7 @@ export function createHydrationFunctions(
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (
-              __DEV__ &&
-              propHasMismatch(
-                el,
-                key,
-                props[key],
-                props.vShow ?? props['v-show'],
-              )
-            ) {
+            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
               hasMismatch = true
             }
             if (
@@ -724,7 +716,7 @@ function propHasMismatch(
   el: Element,
   key: string,
   clientValue: any,
-  vShow: boolean,
+  vnode: VNode,
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
@@ -745,9 +737,17 @@ function propHasMismatch(
         ? clientValue
         : stringifyStyle(normalizeStyle(clientValue)),
     )
-    if (vShow === false) {
-      expected.set('display', 'false')
-    }
+    // When there is a `vShow:false` directive, should add `display: 'none'` to expected
+    ;(vnode.dirs || []).forEach(_dir => {
+      if (_dir.dir.getSSRProps && _dir.dir.getSSRProps(_dir, vnode)) {
+        const { style = {} } = _dir.dir.getSSRProps(_dir, vnode) as Data
+        if (style) {
+          for (let key in style) {
+            expected.set(key, style[key as keyof typeof style])
+          }
+        }
+      }
+    })
     if (!isMapEqual(actual, expected)) {
       mismatchType = mismatchKey = 'style'
     }

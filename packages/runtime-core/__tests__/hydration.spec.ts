@@ -1435,7 +1435,7 @@ describe('SSR hydration', () => {
         `<div style="color:red; font-size: 12px;"></div>`,
         () => h('div', { style: `font-size: 12px; color:red;` }),
       )
-      mountWithHydration(`<div style="color:red;"></div>`, () =>
+      mountWithHydration(`<div style="color:red;display:none;"></div>`, () =>
         withDirectives(createVNode('div', { style: 'color: red' }, ''), [
           [vShow, false],
         ]),
@@ -1445,6 +1445,12 @@ describe('SSR hydration', () => {
         h('div', { style: { color: 'green' } }),
       )
       expect(`Hydration style mismatch`).toHaveBeenWarned()
+      mountWithHydration(`<div style="color:red;"></div>`, () =>
+        withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+          [vShow, false],
+        ]),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(2)
     })
 
     test('attr mismatch', () => {
