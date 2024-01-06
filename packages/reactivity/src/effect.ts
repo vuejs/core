@@ -281,7 +281,7 @@ export function trackEffect(
   }
 }
 
-const queueEffectSchedulers: (() => void)[] = []
+const queueEffectSchedulers: EffectScheduler[] = []
 
 export function triggerEffects(
   dep: Dep,
