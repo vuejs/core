@@ -7,16 +7,20 @@ import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
 import { VaporLifecycleHooks } from './enums'
+import { BaseWatchErrorCodes } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
 export enum VaporErrorCodes {
   SETUP_FUNCTION,
   RENDER_FUNCTION,
-  WATCH_GETTER,
-  WATCH_CALLBACK,
-  WATCH_CLEANUP,
-  NATIVE_EVENT_HANDLER,
+  // The error codes for the watch have been transferred to the reactivity
+  // package along with baseWatch to maintain code compatibility. Hence,
+  // it is essential to keep these values unchanged.
+  // WATCH_GETTER,
+  // WATCH_CALLBACK,
+  // WATCH_CLEANUP,
+  NATIVE_EVENT_HANDLER = 5,
   COMPONENT_EVENT_HANDLER,
   VNODE_HOOK,
   DIRECTIVE_HOOK,
@@ -28,10 +32,12 @@ export enum VaporErrorCodes {
   SCHEDULER,
 }
 
-export const ErrorTypeStrings: Record<
-  VaporLifecycleHooks | VaporErrorCodes,
-  string
-> = {
+export type ErrorTypes =
+  | VaporLifecycleHooks
+  | VaporErrorCodes
+  | BaseWatchErrorCodes
+
+export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   // [VaporLifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
   [VaporLifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
   [VaporLifecycleHooks.CREATED]: 'created hook',
@@ -48,9 +54,9 @@ export const ErrorTypeStrings: Record<
   [VaporLifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
   [VaporErrorCodes.SETUP_FUNCTION]: 'setup function',
   [VaporErrorCodes.RENDER_FUNCTION]: 'render function',
-  [VaporErrorCodes.WATCH_GETTER]: 'watcher getter',
-  [VaporErrorCodes.WATCH_CALLBACK]: 'watcher callback',
-  [VaporErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
+  [BaseWatchErrorCodes.WATCH_GETTER]: 'watcher getter',
+  [BaseWatchErrorCodes.WATCH_CALLBACK]: 'watcher callback',
+  [BaseWatchErrorCodes.WATCH_CLEANUP]: 'watcher cleanup function',
   [VaporErrorCodes.NATIVE_EVENT_HANDLER]: 'native event handler',
   [VaporErrorCodes.COMPONENT_EVENT_HANDLER]: 'component event handler',
   [VaporErrorCodes.VNODE_HOOK]: 'vnode hook',
@@ -64,8 +70,6 @@ export const ErrorTypeStrings: Record<
     'scheduler flush. This is likely a Vue internals bug. ' +
     'Please open an issue at https://new-issue.vuejs.org/?repo=vuejs/core',
 }
-
-export type ErrorTypes = VaporLifecycleHooks | VaporErrorCodes
 
 export function callWithErrorHandling(
   fn: Function,

@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, insert as _insert, watchEffect as _watchEffect, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div>count is <!>.</div>")
@@ -9,7 +9,7 @@ export function render(_ctx) {
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode(_ctx.count)
   _insert(n1, n3, n2)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, _ctx.count)
   })
   return n0
@@ -121,7 +121,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > self-closing v-pre 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, watchEffect as _watchEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div><div><Comp></Comp></div>")
@@ -129,10 +129,10 @@ export function render(_ctx) {
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode(_ctx.bar)
   _append(n2, n1)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, _ctx.bar)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setAttr(n2, "id", undefined, _ctx.foo)
   })
   return n0
@@ -140,7 +140,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, watchEffect as _watchEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>")
@@ -148,10 +148,10 @@ export function render(_ctx) {
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode(_ctx.bar)
   _append(n2, n1)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, _ctx.bar)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setAttr(n2, "id", undefined, _ctx.foo)
   })
   return n0
@@ -159,7 +159,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { fragment as _fragment, createTextNode as _createTextNode, append as _append, watchEffect as _watchEffect, setText as _setText } from 'vue/vapor';
+"import { fragment as _fragment, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _fragment()
@@ -168,10 +168,10 @@ export function render(_ctx) {
   const n1 = _createTextNode(1)
   const n2 = _createTextNode(2)
   _append(n0, n1, n2)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, 1)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n2, undefined, 2)
   })
   return n0
@@ -179,7 +179,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, watchEffect as _watchEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<button>foo<!>foo</button>")
@@ -192,7 +192,7 @@ export function render(_ctx) {
   _insert(n2, n4, n5)
   _append(n4, n3)
   _on(n4, "click", (...args) => (_ctx.handleClick && _ctx.handleClick(...args)))
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, _ctx.count)
     _setText(n2, undefined, _ctx.count)
     _setText(n3, undefined, _ctx.count)
@@ -207,7 +207,7 @@ exports[`compile > expression parsing > interpolation 1`] = `
   const t0 = _fragment()
 
   const n0 = t0()
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n0, undefined, a + b.value)
   })
   return n0
@@ -219,7 +219,7 @@ exports[`compile > expression parsing > v-bind 1`] = `
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setAttr(n1, key.value+1, undefined, _unref(foo)[key.value+1]())
   })
   return n0
@@ -237,7 +237,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, watchEffect as _watchEffect, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("3<!>6<!>9")
@@ -255,28 +255,28 @@ export function render(_ctx) {
   _insert([n3, n4], n0, n9)
   _insert([n5, n6], n0, n10)
   _append(n0, n7, n8)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n1, undefined, 1)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n2, undefined, 2)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n3, undefined, 4)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n4, undefined, 5)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n5, undefined, 7)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n6, undefined, 8)
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n7, undefined, 'A')
   })
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setText(n8, undefined, 'B')
   })
   return n0

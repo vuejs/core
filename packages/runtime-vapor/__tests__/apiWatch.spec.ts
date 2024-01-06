@@ -1,28 +1,12 @@
-import { EffectScope, type Ref, ref } from '@vue/reactivity'
+import type { Ref } from '@vue/reactivity'
 import {
+  EffectScope,
+  nextTick,
   onEffectCleanup,
+  ref,
   watchEffect,
-  watchPostEffect,
   watchSyncEffect,
-} from '../src/apiWatch'
-import { nextTick } from '../src/scheduler'
-import { defineComponent } from 'vue'
-import { render } from '../src/render'
-import { template } from '../src/template'
-
-let host: HTMLElement
-
-const initHost = () => {
-  host = document.createElement('div')
-  host.setAttribute('id', 'host')
-  document.body.appendChild(host)
-}
-beforeEach(() => {
-  initHost()
-})
-afterEach(() => {
-  host.remove()
-})
+} from '../src'
 
 describe('watchEffect and onEffectCleanup', () => {
   test('basic', async () => {
@@ -92,72 +76,5 @@ describe('watchEffect and onEffectCleanup', () => {
     scope.stop()
     await nextTick()
     expect(dummy).toBe(15)
-  })
-
-  test('scheduling order', async () => {
-    const calls: string[] = []
-
-    const demo = defineComponent({
-      setup() {
-        const source = ref(0)
-        const change = () => source.value++
-
-        watchPostEffect(() => {
-          const current = source.value
-          calls.push(`post ${current}`)
-          onEffectCleanup(() => calls.push(`post cleanup ${current}`))
-        })
-        watchEffect(() => {
-          const current = source.value
-          calls.push(`pre ${current}`)
-          onEffectCleanup(() => calls.push(`pre cleanup ${current}`))
-        })
-        watchSyncEffect(() => {
-          const current = source.value
-          calls.push(`sync ${current}`)
-          onEffectCleanup(() => calls.push(`sync cleanup ${current}`))
-        })
-        const __returned__ = { source, change }
-        Object.defineProperty(__returned__, '__isScriptSetup', {
-          enumerable: false,
-          value: true,
-        })
-        return __returned__
-      },
-    })
-
-    demo.render = (_ctx: any) => {
-      const t0 = template('<div></div>')
-      watchEffect(() => {
-        const current = _ctx.source
-        calls.push(`render ${current}`)
-        onEffectCleanup(() => calls.push(`render cleanup ${current}`))
-      })
-      return t0()
-    }
-
-    const instance = render(demo as any, {}, '#host')
-    const { change } = instance.setupState as any
-
-    expect(calls).toEqual(['pre 0', 'sync 0', 'render 0'])
-    calls.length = 0
-
-    await nextTick()
-    expect(calls).toEqual(['post 0'])
-    calls.length = 0
-
-    change()
-    expect(calls).toEqual(['sync cleanup 0', 'sync 1'])
-    calls.length = 0
-
-    await nextTick()
-    expect(calls).toEqual([
-      'pre cleanup 0',
-      'pre 1',
-      'render cleanup 0',
-      'render 1',
-      'post cleanup 0',
-      'post 1',
-    ])
   })
 })

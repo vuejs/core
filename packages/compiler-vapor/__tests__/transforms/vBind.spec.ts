@@ -210,7 +210,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('watchEffect')
+    expect(code).contains('renderEffect')
     expect(code).contains('_setAttr(n1, "fooBar", undefined, _ctx.fooBar)')
   })
 
@@ -230,7 +230,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('watchEffect')
+    expect(code).contains('renderEffect')
     expect(code).contains(
       `_setAttr(n1, _camelize(_ctx.foo), undefined, _ctx.id)`,
     )

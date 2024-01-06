@@ -102,7 +102,7 @@ describe('v-on', () => {
     const { code, ir } = compileWithVOn(`<div v-on:[event]="handler"/>`)
 
     expect(ir.vaporHelpers).contains('on')
-    expect(ir.vaporHelpers).contains('watchEffect')
+    expect(ir.vaporHelpers).contains('renderEffect')
     expect(ir.helpers.size).toBe(0)
     expect(ir.operation).toEqual([])
 

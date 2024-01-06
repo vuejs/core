@@ -1,6 +1,5 @@
-import type { ReactiveEffect } from '@vue/reactivity'
+import type { Scheduler } from '@vue/reactivity'
 import type { ComponentInternalInstance } from './component'
-import { getIsRendering } from '.'
 
 export interface SchedulerJob extends Function {
   id?: number
@@ -37,13 +36,6 @@ export type QueueEffect = (
   cb: SchedulerJobs,
   suspense: ComponentInternalInstance | null,
 ) => void
-
-export type Scheduler = (context: {
-  effect: ReactiveEffect
-  job: SchedulerJob
-  instance: ComponentInternalInstance | null
-  isInit: boolean
-}) => void
 
 let isFlushing = false
 let isFlushPending = false
@@ -205,64 +197,46 @@ const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   return diff
 }
 
-export function getVaporSchedulerByFlushMode(
-  flush?: 'pre' | 'post' | 'sync',
-): Scheduler {
-  if (flush === 'post') {
-    return vaporPostScheduler
-  }
-  if (flush === 'sync') {
-    return vaporSyncScheduler
-  }
-  if (getIsRendering()) {
-    return vaporRenderingScheduler
-  }
-  // default: 'pre'
-  return vaporPreScheduler
-}
+export type SchedulerFactory = (
+  instance: ComponentInternalInstance | null,
+) => Scheduler
 
-export const vaporSyncScheduler: Scheduler = ({ isInit, effect, job }) => {
-  if (isInit) {
-    effect.run()
-  } else {
-    job()
+export const createVaporSyncScheduler: SchedulerFactory =
+  (instance) => (job, effect, isInit) => {
+    if (isInit) {
+      effect.run()
+    } else {
+      job()
+    }
   }
-}
 
-export const vaporPreScheduler: Scheduler = ({
-  isInit,
-  effect,
-  instance,
-  job,
-}) => {
-  if (isInit) {
-    effect.run()
-  } else {
-    job.pre = true
-    if (instance) job.id = instance.uid
-    queueJob(job)
+export const createVaporPreScheduler: SchedulerFactory =
+  (instance) => (job, effect, isInit) => {
+    if (isInit) {
+      effect.run()
+    } else {
+      job.pre = true
+      if (instance) job.id = instance.uid
+      queueJob(job)
+    }
   }
-}
 
-export const vaporRenderingScheduler: Scheduler = ({
-  isInit,
-  effect,
-  instance,
-  job,
-}) => {
-  if (isInit) {
-    effect.run()
-  } else {
-    job.pre = false
-    if (instance) job.id = instance.uid
-    queueJob(job)
+export const createVaporRenderingScheduler: SchedulerFactory =
+  (instance) => (job, effect, isInit) => {
+    if (isInit) {
+      effect.run()
+    } else {
+      job.pre = false
+      if (instance) job.id = instance.uid
+      queueJob(job)
+    }
   }
-}
 
-export const vaporPostScheduler: Scheduler = ({ isInit, effect, job }) => {
-  if (isInit) {
-    queuePostRenderEffect(effect.run.bind(effect))
-  } else {
-    queuePostRenderEffect(job)
+export const createVaporPostScheduler: SchedulerFactory =
+  (instance) => (job, effect, isInit) => {
+    if (isInit) {
+      queuePostRenderEffect(effect.run.bind(effect))
+    } else {
+      queuePostRenderEffect(job)
+    }
   }
-}

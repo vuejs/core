@@ -1,13 +1,13 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`v-html > should convert v-html to innerHTML 1`] = `
-"import { template as _template, children as _children, watchEffect as _watchEffect, setHtml as _setHtml } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setHtml as _setHtml } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setHtml(n1, undefined, _ctx.code)
   })
   return n0
@@ -15,13 +15,13 @@ export function render(_ctx) {
 `;
 
 exports[`v-html > should raise error and ignore children when v-html is present 1`] = `
-"import { template as _template, children as _children, watchEffect as _watchEffect, setHtml as _setHtml } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setHtml as _setHtml } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _watchEffect(() => {
+  _renderEffect(() => {
     _setHtml(n1, undefined, _ctx.test)
   })
   return n0
