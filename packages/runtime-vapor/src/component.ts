@@ -47,6 +47,7 @@ export interface ComponentInternalInstance {
   // lifecycle
   get isMounted(): boolean
   get isUnmounted(): boolean
+  isUpdating: boolean
   isUnmountedRef: Ref<boolean>
   isMountedRef: Ref<boolean>
   // TODO: registory of provides, lifecycles, ...
@@ -155,6 +156,7 @@ export const createComponentInstance = (
     get isUnmounted() {
       return isUnmountedRef.value
     },
+    isUpdating: false,
     isMountedRef,
     isUnmountedRef,
     // TODO: registory of provides, appContext, lifecycles, ...

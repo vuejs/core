@@ -1,5 +1,6 @@
 import type { Scheduler } from '@vue/reactivity'
 import type { ComponentInternalInstance } from './component'
+import { isArray } from '@vue/shared'
 
 export interface SchedulerJob extends Function {
   id?: number
@@ -73,15 +74,22 @@ function queueJob(job: SchedulerJob) {
   }
 }
 
-export function queuePostRenderEffect(cb: SchedulerJob) {
-  if (
-    !activePostFlushCbs ||
-    !activePostFlushCbs.includes(
-      cb,
-      cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
-    )
-  ) {
-    pendingPostFlushCbs.push(cb)
+export function queuePostRenderEffect(cb: SchedulerJobs) {
+  if (!isArray(cb)) {
+    if (
+      !activePostFlushCbs ||
+      !activePostFlushCbs.includes(
+        cb,
+        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
+      )
+    ) {
+      pendingPostFlushCbs.push(cb)
+    }
+  } else {
+    // if cb is an array, it is a component lifecycle hook which can only be
+    // triggered by a job, which is already deduped in the main queue, so
+    // we can skip duplicate check here to improve perf
+    pendingPostFlushCbs.push(...cb)
   }
   queueFlush()
 }

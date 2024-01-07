@@ -5,6 +5,8 @@ import {
   onMounted,
   onBeforeMount,
   getCurrentInstance,
+  onBeforeUpdate,
+  onUpdated,
 } from 'vue/vapor'
 
 const instance = getCurrentInstance()!
@@ -26,12 +28,24 @@ onMounted(() => {
     count.value++
   }, 1000)
 })
+
+onBeforeUpdate(() => {
+  console.log('before updated')
+})
+onUpdated(() => {
+  console.log('updated')
+})
+
+const log = (arg: any) => {
+  console.log('callback in render effect')
+  return arg
+}
 </script>
 
 <template>
   <div>
     <h1 class="red">Counter</h1>
-    <div>The number is {{ count }}.</div>
+    <div>The number is {{ log(count) }}.</div>
     <div>{{ count }} * 2 = {{ double }}</div>
     <div style="display: flex; gap: 8px">
       <button @click="inc">inc</button>
