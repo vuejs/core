@@ -565,6 +565,27 @@ describe('scheduler', () => {
     expect(count).toBe(1)
   })
 
+  // #10003
+  test('flushPostFlushCbs: sort pendingPostFlushCbs ', async () => {
+    const calls: string[] = []
+    const cb1 = () => calls.push('cb1')
+    // cb1 has no id
+    const cb2 = () => calls.push('cb2')
+    cb2.id = -1
+    const queueAndFlush = (hook: Function) => {
+      queuePostFlushCb(hook)
+      flushPostFlushCbs()
+    }
+
+    queueAndFlush(() => {
+      queuePostFlushCb([cb1, cb2])
+      flushPostFlushCbs()
+    })
+
+    await nextTick()
+    expect(calls).toEqual(['cb2', 'cb1'])
+  })
+
   // #910
   test('should not run stopped reactive effects', async () => {
     const spy = vi.fn()

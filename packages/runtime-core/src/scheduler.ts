@@ -169,6 +169,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
+      deduped.sort((a, b) => getId(a) - getId(b))
       activePostFlushCbs.push(...deduped)
       return
     }
