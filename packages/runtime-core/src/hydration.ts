@@ -731,13 +731,14 @@ function propHasMismatch(
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
+    // style might be in different order, but that doesn't affect cascade
     actual = toStyleMap(el.getAttribute('style') || '')
     expected = toStyleMap(
       isString(clientValue)
         ? clientValue
         : stringifyStyle(normalizeStyle(clientValue)),
     )
-    // When there is a `vShow:false` directive, should add `display: 'none'` to expected
+    // If `v-show=false`, `display: 'none'` should be added to expected
     ;(vnode.dirs || []).forEach(_dir => {
       if (_dir.dir.getSSRProps && _dir.dir.getSSRProps(_dir, vnode)) {
         const { style = {} } = _dir.dir.getSSRProps(_dir, vnode) as Data
@@ -755,6 +756,7 @@ function propHasMismatch(
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
+    // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
     actual = el.hasAttribute(key)
       ? el.getAttribute(key)
       : key in el
