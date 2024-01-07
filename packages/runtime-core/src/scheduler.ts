@@ -169,8 +169,14 @@ export function flushPostFlushCbs(seen?: CountMap) {
 
     // #1947 already has active queue, nested flushPostFlushCbs call
     if (activePostFlushCbs) {
-      deduped.sort((a, b) => getId(a) - getId(b))
       activePostFlushCbs.push(...deduped)
+      // #10003 sort the rest calls ensure correct order
+      const pendingCbs = activePostFlushCbs.slice(postFlushIndex + 1)
+      pendingCbs.sort((a, b) => getId(a) - getId(b))
+      let startIndex = postFlushIndex
+      while (pendingCbs.length) {
+        activePostFlushCbs[++startIndex] = pendingCbs.shift()!
+      }
       return
     }
 

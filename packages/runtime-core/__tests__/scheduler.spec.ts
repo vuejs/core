@@ -566,7 +566,7 @@ describe('scheduler', () => {
   })
 
   // #10003
-  test('flushPostFlushCbs: sort pendingPostFlushCbs ', async () => {
+  test('nested flushPostFlushCbs', async () => {
     const calls: string[] = []
     const cb1 = () => calls.push('cb1')
     // cb1 has no id
