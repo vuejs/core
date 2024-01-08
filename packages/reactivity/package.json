@@ -11,6 +11,20 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/reactivity.d.ts",
+      "node": {
+        "production": "./dist/reactivity.cjs.prod.js",
+        "development": "./dist/reactivity.cjs.js",
+        "default": "./index.js"
+      },
+      "module": "./dist/reactivity.esm-bundler.js",
+      "import": "./dist/reactivity.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "sideEffects": false,
   "repository": {
     "type": "git",

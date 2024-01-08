@@ -25,6 +25,11 @@
       },
       "require": {
         "types": "./dist/vue.d.ts",
+        "node": {
+          "production": "./dist/vue.cjs.prod.js",
+          "development": "./dist/vue.cjs.js",
+          "default": "./index.js"
+        },
         "default": "./index.js"
       }
     },
