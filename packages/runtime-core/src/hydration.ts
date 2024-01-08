@@ -808,14 +808,14 @@ function isSetEqual(a: Set<string>, b: Set<string>): boolean {
 
 function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
-  const styles = str.split(';').map(item => item.split(':'))
-  styles.forEach(([key, value]: string[]) => {
+  for (const item of str.split(';')) {
+    let [key, value] = item.split(':')
     key = key?.trim()
     value = value?.trim()
     if (key && value) {
       styleMap.set(key, value)
     }
-  })
+  }
   return styleMap
 }
 
