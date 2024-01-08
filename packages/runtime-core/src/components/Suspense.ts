@@ -863,6 +863,7 @@ export function queueEffectWithSuspense(
 
 function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   suspense.activeBranch = branch
+  if (!branch.el) return
   const { vnode, parentComponent } = suspense
   const el = (vnode.el = branch.el)
   // in case suspense is the root node of a component,

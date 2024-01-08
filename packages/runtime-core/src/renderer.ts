@@ -1245,7 +1245,6 @@ function baseCreateRenderer(
       if (!initialVNode.el) {
         const placeholder = (instance.subTree = createVNode(Comment))
         processCommentNode(null, placeholder, container!, anchor)
-        initialVNode.el = placeholder.el
       }
     } else {
       setupRenderEffect(
