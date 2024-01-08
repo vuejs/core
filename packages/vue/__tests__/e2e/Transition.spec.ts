@@ -1652,6 +1652,77 @@ describe('e2e: Transition', () => {
       },
       E2E_TIMEOUT,
     )
+
+    // #9996
+    test(
+      'trigger again when transition is not finished & correctly anchor',
+      async () => {
+        await page().evaluate(duration => {
+          const { createApp, shallowRef, h } = (window as any).Vue
+          const One = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'one')
+            },
+          }
+          const Two = {
+            async setup() {
+              return () => h('div', { class: 'test' }, 'two')
+            },
+          }
+          createApp({
+            template: `
+            <div id="container">
+              <div>Top</div>
+              <transition name="test" mode="out-in" :duration="${duration}">
+                <Suspense>
+                  <component :is="view"/>
+                </Suspense>
+              </transition>
+              <div>Bottom</div>
+            </div>
+            <button id="toggleBtn" @click="click">button</button>
+          `,
+            setup: () => {
+              const view = shallowRef(One)
+              const click = () => {
+                view.value = view.value === One ? Two : One
+              }
+              return { view, click }
+            },
+          }).mount('#app')
+        }, duration)
+
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-enter-active test-enter-to">one</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test">one</div><div>Bottom</div>',
+        )
+
+        // trigger twice
+        classWhenTransitionStart()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-leave-active test-leave-to">one</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test test-enter-active test-enter-to">two</div><div>Bottom</div>',
+        )
+
+        await transitionFinish()
+        await nextFrame()
+        expect(await html('#container')).toBe(
+          '<div>Top</div><div class="test">two</div><div>Bottom</div>',
+        )
+      },
+      E2E_TIMEOUT,
+    )
   })
 
   describe('transition with v-show', () => {
