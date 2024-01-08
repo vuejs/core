@@ -85,7 +85,6 @@ import {
 } from './compat/compatConfig'
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
-import { isInComputedGetter } from './apiComputed'
 
 export type Data = Record<string, unknown>
 
@@ -632,18 +631,8 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInternalInstance | null = null
 
-export const getCurrentInstance: () => ComponentInternalInstance | null =
-  () => {
-    if (__DEV__ && isInComputedGetter) {
-      warn(
-        `getCurrentInstance() called inside a computed getter. ` +
-          `This is incorrect usage as computed getters are not guaranteed ` +
-          `to be executed with an active component instance. If you are using ` +
-          `a composable inside a computed getter, move it ouside to the setup scope.`,
-      )
-    }
-    return currentInstance || currentRenderingInstance
-  }
+export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
+  currentInstance || currentRenderingInstance
 
 let internalSetCurrentInstance: (
   instance: ComponentInternalInstance | null,

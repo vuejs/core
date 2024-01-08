@@ -3,24 +3,24 @@ import {
   type WritableComputedOptions,
   computed as _computed,
 } from '@vue/reactivity'
-import { isInSSRComponentSetup } from './component'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  isInSSRComponentSetup,
+  setCurrentInstance,
+} from './component'
 import { isFunction } from '@vue/shared'
-
-/**
- * For dev warning only.
- * Context: https://github.com/vuejs/core/discussions/9974
- */
-export let isInComputedGetter = false
 
 function wrapComputedGetter(
   getter: ComputedGetter<unknown>,
+  instance: ComponentInternalInstance,
 ): ComputedGetter<unknown> {
   return () => {
-    isInComputedGetter = true
+    const reset = setCurrentInstance(instance)
     try {
       return getter()
     } finally {
-      isInComputedGetter = false
+      reset()
     }
   }
 }
@@ -29,11 +29,15 @@ export const computed: typeof _computed = (
   getterOrOptions: ComputedGetter<unknown> | WritableComputedOptions<unknown>,
   debugOptions?: any,
 ) => {
-  if (__DEV__) {
+  if (currentInstance) {
     if (isFunction(getterOrOptions)) {
-      getterOrOptions = wrapComputedGetter(getterOrOptions)
+      getterOrOptions = wrapComputedGetter(getterOrOptions, currentInstance)
     } else {
-      getterOrOptions.get = wrapComputedGetter(getterOrOptions.get)
+      const { get, set } = getterOrOptions
+      getterOrOptions = {
+        get: wrapComputedGetter(get, currentInstance),
+        set,
+      }
     }
   }
 
