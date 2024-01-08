@@ -8,6 +8,7 @@ import {
   advancePositionWithClone,
   advancePositionWithMutation,
   createSimpleExpression,
+  isMemberExpression,
   isSimpleIdentifier,
   locStub,
   walkIdentifiers,
@@ -32,6 +33,10 @@ import {
 import { SourceMapGenerator } from 'source-map-js'
 import { camelize, isGloballyAllowed, isString, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
+
+// TODO: share this with compiler-core
+const fnExpRE =
+  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 // remove when stable
 // @ts-expect-error
@@ -508,15 +513,7 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 
       ;(keys.length ? pushWithKeys : pushNoop)(() =>
         (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
-          if (oper.value && oper.value.content.trim()) {
-            push('(...args) => (')
-            genExpression(oper.value, context)
-            push(' && ')
-            genExpression(oper.value, context)
-            push('(...args))')
-          } else {
-            push('() => {}')
-          }
+          genEventHandler()
         }),
       )
     },
@@ -524,6 +521,37 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
     !!options.length &&
       (() => push(`{ ${options.map((v) => `${v}: true`).join(', ')} }`)),
   )
+
+  function genEventHandler() {
+    const exp = oper.value
+    if (exp && exp.content.trim()) {
+      const isMemberExp = isMemberExpression(exp.content, {
+        // TODO: expression plugins
+        expressionPlugins: [],
+      })
+      const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+      const hasMultipleStatements = exp.content.includes(`;`)
+
+      if (isInlineStatement) {
+        push('$event => ')
+        push(hasMultipleStatements ? '{' : '(')
+        const knownIds = Object.create(null)
+        knownIds['$event'] = 1
+        genExpression(exp, context, knownIds)
+        push(hasMultipleStatements ? '}' : ')')
+      } else if (isMemberExp) {
+        push('(...args) => (')
+        genExpression(exp, context)
+        push(' && ')
+        genExpression(exp, context)
+        push('(...args))')
+      } else {
+        genExpression(exp, context)
+      }
+    } else {
+      push('() => {}')
+    }
+  }
 }
 
 function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
@@ -588,7 +616,11 @@ function genArrayExpression(elements: string[]) {
 
 const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
-function genExpression(node: IRExpression, context: CodegenContext): void {
+function genExpression(
+  node: IRExpression,
+  context: CodegenContext,
+  knownIds: Record<string, number> = Object.create(null),
+): void {
   const { push } = context
   if (isString(node)) return push(node)
 
@@ -616,10 +648,13 @@ function genExpression(node: IRExpression, context: CodegenContext): void {
   const ids: Identifier[] = []
   walkIdentifiers(
     ast!,
-    (id) => {
+    (id, parent, parentStack, isReference, isLocal) => {
+      if (isLocal) return
       ids.push(id)
     },
     true,
+    [],
+    knownIds,
   )
   if (ids.length) {
     ids.sort((a, b) => a.start! - b.start!)

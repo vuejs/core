@@ -12,7 +12,47 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > complex member expression w/ prefixIdentifiers: true 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", (...args) => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](...args)))
+  return n0
+}"
+`;
+
 exports[`v-on > dynamic arg 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args)))
+  })
+  return n0
+}"
+`;
+
+exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _on(n1, _ctx.event(_ctx.foo), (...args) => (_ctx.handler && _ctx.handler(...args)))
+  })
+  return n0
+}"
+`;
+
+exports[`v-on > dynamic arg with prefixing 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -55,6 +95,133 @@ export function render(_ctx) {
   _on(n20, "keyup", _withModifiers((...args) => (_ctx.submit && _ctx.submit(...args)), ["middle"]))
   _on(n21, "keyup", _withModifiers((...args) => (_ctx.submit && _ctx.submit(...args)), ["middle", "self"]))
   _on(n22, "keyup", _withKeys(_withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["self"]), ["enter"]))
+  return n0
+}"
+`;
+
+exports[`v-on > function expression w/ prefixIdentifiers: true 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", e => _ctx.foo(e))
+  return n0
+}"
+`;
+
+exports[`v-on > inline statement w/ prefixIdentifiers: true 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => (_ctx.foo($event)))
+  return n0
+}"
+`;
+
+exports[`v-on > multiple inline statements w/ prefixIdentifiers: true 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => {_ctx.foo($event);_ctx.bar()})
+  return n0
+}"
+`;
+
+exports[`v-on > should NOT add a prefix to $event if the expression is a function expression 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => {_ctx.i++;_ctx.foo($event)})
+  return n0
+}"
+`;
+
+exports[`v-on > should NOT wrap as function if expression is already function expression (with Typescript) 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", (e: any): any => _ctx.foo(e))
+  return n0
+}"
+`;
+
+exports[`v-on > should NOT wrap as function if expression is already function expression (with newlines) 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", 
+      $event => {
+        _ctx.foo($event)
+      }
+    )
+  return n0
+}"
+`;
+
+exports[`v-on > should NOT wrap as function if expression is already function expression 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => _ctx.foo($event))
+  return n0
+}"
+`;
+
+exports[`v-on > should NOT wrap as function if expression is complex member expression 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", (...args) => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](...args)))
+  return n0
+}"
+`;
+
+exports[`v-on > should handle multi-line statement 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => {
+_ctx.foo();
+_ctx.bar()
+})
+  return n0
+}"
+`;
+
+exports[`v-on > should handle multiple inline statement 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => {_ctx.foo();_ctx.bar()})
   return n0
 }"
 `;
@@ -143,6 +310,32 @@ export function render(_ctx) {
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
     _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["right"]), ["right"]))
+  })
+  return n0
+}"
+`;
+
+exports[`v-on > should wrap as function if expression is inline statement 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", $event => (_ctx.i++))
+  return n0
+}"
+`;
+
+exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on, withKeys as _withKeys, withModifiers as _withModifiers } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _on(n1, _ctx.e, _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["left"]), ["left"]))
   })
   return n0
 }"

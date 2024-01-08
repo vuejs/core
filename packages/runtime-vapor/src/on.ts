@@ -1,3 +1,5 @@
+import { getCurrentEffect, onEffectCleanup } from '@vue/reactivity'
+
 export function on(
   el: HTMLElement,
   event: string,
@@ -5,4 +7,7 @@ export function on(
   options?: AddEventListenerOptions,
 ) {
   el.addEventListener(event, handler, options)
+  if (getCurrentEffect()) {
+    onEffectCleanup(() => el.removeEventListener(event, handler, options))
+  }
 }
