@@ -10,19 +10,6 @@
     "index.js",
     "dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/vue.d.ts",
-      "node": {
-        "production": "./dist/vue.cjs.prod.js",
-        "development": "./dist/vue.cjs.js",
-        "default": "./index.js"
-      },
-      "import": "./dist/vue.esm-bundler.js",
-      "require": "./index.js"
-    },
-    "./*": "./*"
-  },
   "buildOptions": {
     "name": "Vue",
     "filename": "vue",

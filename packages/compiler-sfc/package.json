@@ -8,15 +8,6 @@
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/compiler-sfc.d.ts",
-      "node": "./dist/compiler-sfc.cjs.js",
-      "import": "./dist/compiler-sfc.esm-browser.js",
-      "require": "./dist/compiler-sfc.cjs.js"
-    },
-    "./*": "./*"
-  },
   "buildOptions": {
     "name": "VueCompilerSFC",
     "formats": [
