@@ -2348,6 +2348,7 @@ function baseCreateRenderer(
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
+  let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
       if (container._vnode) {
@@ -2364,8 +2365,12 @@ function baseCreateRenderer(
         namespace,
       )
     }
-    flushPreFlushCbs()
-    flushPostFlushCbs()
+    if (!isFlushing) {
+      isFlushing = true
+      flushPreFlushCbs()
+      flushPostFlushCbs()
+      isFlushing = false
+    }
     container._vnode = vnode
   }
 
