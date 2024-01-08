@@ -7,8 +7,8 @@ describe('ssr: scopeId', () => {
     expect(
       compile(`<div><span>hello</span></div>`, {
         scopeId,
-        mode: 'module'
-      }).code
+        mode: 'module',
+      }).code,
     ).toMatchInlineSnapshot(`
       "import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
 
@@ -23,8 +23,8 @@ describe('ssr: scopeId', () => {
     expect(
       compile(`<foo>foo</foo>`, {
         scopeId,
-        mode: 'module'
-      }).code
+        mode: 'module',
+      }).code,
     ).toMatchInlineSnapshot(`
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createTextVNode as _createTextVNode } from "vue"
       import { ssrRenderComponent as _ssrRenderComponent } from "vue/server-renderer"
@@ -52,8 +52,8 @@ describe('ssr: scopeId', () => {
     expect(
       compile(`<foo><span>hello</span></foo>`, {
         scopeId,
-        mode: 'module'
-      }).code
+        mode: 'module',
+      }).code,
     ).toMatchInlineSnapshot(`
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from "vue"
       import { ssrRenderComponent as _ssrRenderComponent } from "vue/server-renderer"
@@ -81,8 +81,8 @@ describe('ssr: scopeId', () => {
     expect(
       compile(`<foo><span>hello</span><bar><span/></bar></foo>`, {
         scopeId,
-        mode: 'module'
-      }).code
+        mode: 'module',
+      }).code,
     ).toMatchInlineSnapshot(`
       "import { resolveComponent as _resolveComponent, withCtx as _withCtx, createVNode as _createVNode } from "vue"
       import { ssrRenderComponent as _ssrRenderComponent } from "vue/server-renderer"
@@ -132,9 +132,9 @@ describe('ssr: scopeId', () => {
         `<transition-group tag="div" class="red"><span>hello</span></transition-group>`,
         {
           scopeId,
-          mode: 'module'
-        }
-      ).code
+          mode: 'module',
+        },
+      ).code,
     ).toMatchInlineSnapshot(`
       "import { mergeProps as _mergeProps } from "vue"
       import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"
@@ -150,9 +150,9 @@ describe('ssr: scopeId', () => {
         `<transition-group :tag="someTag" class="red"><span>hello</span></transition-group>`,
         {
           scopeId,
-          mode: 'module'
-        }
-      ).code
+          mode: 'module',
+        },
+      ).code,
     ).toMatchInlineSnapshot(`
       "import { mergeProps as _mergeProps } from "vue"
       import { ssrRenderAttrs as _ssrRenderAttrs } from "vue/server-renderer"

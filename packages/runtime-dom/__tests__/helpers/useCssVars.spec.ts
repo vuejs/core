@@ -1,15 +1,15 @@
 import {
+  type ComponentOptions,
+  type FunctionalComponent,
+  Suspense,
+  Teleport,
+  createStaticVNode,
+  h,
+  nextTick,
+  reactive,
   ref,
   render,
   useCssVars,
-  createStaticVNode,
-  h,
-  reactive,
-  nextTick,
-  ComponentOptions,
-  Suspense,
-  Teleport,
-  FunctionalComponent
 } from '@vue/runtime-dom'
 
 describe('useCssVars', () => {
@@ -36,13 +36,13 @@ describe('useCssVars', () => {
       setup() {
         // test receiving render context
         useCssVars((ctx: any) => ({
-          color: ctx.color
+          color: ctx.color,
         }))
         return state
       },
       render() {
         return h('div')
-      }
+      },
     }))
   })
 
@@ -51,7 +51,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => [h('div'), h('div')]
-      }
+      },
     }))
   })
 
@@ -62,7 +62,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => h(Child)
-      }
+      },
     }))
   })
 
@@ -81,7 +81,7 @@ describe('useCssVars', () => {
           }
         })
         return asyncPromise
-      }
+      },
     }
 
     const App = {
@@ -90,9 +90,9 @@ describe('useCssVars', () => {
         return () =>
           h(Suspense, null, {
             default: h(AsyncComp),
-            fallback: h('div', 'fallback')
+            fallback: h('div', 'fallback'),
           })
-      }
+      },
     }
 
     render(h(App), root)
@@ -127,7 +127,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => (value.value ? [h('div')] : [h('div'), h('div')])
-      }
+      },
     }
 
     render(h(App), root)
@@ -157,9 +157,9 @@ describe('useCssVars', () => {
         useCssVars(() => state)
         return () =>
           h(Child, null, () =>
-            value.value ? [h('div')] : [h('div'), h('div')]
+            value.value ? [h('div')] : [h('div'), h('div')],
           )
-      }
+      },
     }
 
     render(h(App), root)
@@ -186,9 +186,9 @@ describe('useCssVars', () => {
         return () => [
           h('div'),
           createStaticVNode('<div>1</div><div><span>2</span></div>', 2),
-          h('div')
+          h('div'),
         ]
-      }
+      },
     }
 
     render(h(App), root)
@@ -208,7 +208,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => [h(Teleport, { to: target }, [h('div')])]
-      }
+      },
     }
 
     render(h(App), root)
@@ -232,7 +232,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => h(Child, () => [h(Teleport, { to: target }, [h('div')])])
-      }
+      },
     }
 
     render(h(App), root)
@@ -255,10 +255,10 @@ describe('useCssVars', () => {
         return () => [
           h(Teleport, { to: target }, [
             h('div'),
-            toggle.value ? h('div') : null
-          ])
+            toggle.value ? h('div') : null,
+          ]),
         ]
-      }
+      },
     }
 
     render(h(App), root)
@@ -286,7 +286,7 @@ describe('useCssVars', () => {
       setup() {
         useCssVars(() => state)
         return () => [h(Teleport, { to: target, disabled: true }, [h('div')])]
-      }
+      },
     }
 
     expect(() => render(h(App), root)).not.toThrow(TypeError)
@@ -307,10 +307,10 @@ describe('useCssVars', () => {
           h(
             'div',
             { style: disabled.value ? 'pointer-events: none' : undefined },
-            'foo'
-          )
+            'foo',
+          ),
         ]
-      }
+      },
     }
     render(h(App), root)
     await nextTick()

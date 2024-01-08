@@ -6,7 +6,7 @@ describe('transition-group', () => {
   test('basic', () => {
     expect(
       compile(`<transition-group><div v-for="i in list"/></transition-group>`)
-        .code
+        .code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -23,8 +23,8 @@ describe('transition-group', () => {
   test('with static tag', () => {
     expect(
       compile(
-        `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`
-      ).code
+        `<transition-group tag="ul"><div v-for="i in list"/></transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -41,8 +41,8 @@ describe('transition-group', () => {
   test('with dynamic tag', () => {
     expect(
       compile(
-        `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`
-      ).code
+        `<transition-group :tag="someTag"><div v-for="i in list"/></transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -67,8 +67,8 @@ describe('transition-group', () => {
               <div v-for="i in 10"/>
               <div v-for="i in 10"/>
               <template v-if="ok"><div>ok</div></template>
-            </transition-group>`
-      ).code
+            </transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderList: _ssrRenderList } = require("vue/server-renderer")
 
@@ -94,8 +94,8 @@ describe('transition-group', () => {
     expect(
       compile(
         `<transition-group tag="ul" class="red" id="ok">
-        </transition-group>`
-      ).code
+        </transition-group>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { mergeProps: _mergeProps } = require("vue")
       const { ssrRenderAttrs: _ssrRenderAttrs } = require("vue/server-renderer")

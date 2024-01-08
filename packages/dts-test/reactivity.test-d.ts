@@ -1,4 +1,11 @@
-import { ref, readonly, shallowReadonly, Ref, reactive, markRaw } from 'vue'
+import {
+  type Ref,
+  markRaw,
+  reactive,
+  readonly,
+  ref,
+  shallowReadonly,
+} from 'vue'
 import { describe, expectType } from './utils'
 
 describe('should support DeepReadonly', () => {
@@ -21,18 +28,18 @@ describe('should support markRaw', () => {
   }
   const test = new Test<number>()
   const plain = {
-    ref: ref(1)
+    ref: ref(1),
   }
 
   const r = reactive({
     class: {
       raw: markRaw(test),
-      reactive: test
+      reactive: test,
     },
     plain: {
       raw: markRaw(plain),
-      reactive: plain
-    }
+      reactive: plain,
+    },
   })
 
   expectType<Test<number>>(r.class.raw)

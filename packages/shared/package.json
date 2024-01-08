@@ -1,6 +1,6 @@
 {
   "name": "@vue/shared",
-  "version": "3.3.13",
+  "version": "3.4.5",
   "description": "internal utils shared across @vue packages",
   "main": "index.js",
   "module": "dist/shared.esm-bundler.js",
@@ -9,6 +9,19 @@
     "index.js",
     "dist"
   ],
+  "exports": {
+    ".": {
+      "types": "./dist/shared.d.ts",
+      "node": {
+        "production": "./dist/shared.cjs.prod.js",
+        "development": "./dist/shared.cjs.js",
+        "default": "./index.js"
+      },
+      "import": "./dist/shared.esm-bundler.js",
+      "require": "./index.js"
+    },
+    "./*": "./*"
+  },
   "sideEffects": false,
   "buildOptions": {
     "formats": [

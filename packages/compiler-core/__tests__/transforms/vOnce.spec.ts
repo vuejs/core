@@ -1,10 +1,10 @@
 import {
-  baseParse as parse,
-  transform,
+  type CompilerOptions,
   NodeTypes,
   generate,
-  CompilerOptions,
-  getBaseTransformPreset
+  getBaseTransformPreset,
+  baseParse as parse,
+  transform,
 } from '../../src'
 import { RENDER_SLOT, SET_BLOCK_TRACKING } from '../../src/runtimeHelpers'
 
@@ -14,7 +14,7 @@ function transformWithOnce(template: string, options: CompilerOptions = {}) {
   transform(ast, {
     nodeTransforms,
     directiveTransforms,
-    ...options
+    ...options,
   })
   return ast
 }
@@ -29,8 +29,8 @@ describe('compiler: v-once transform', () => {
       index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
-        tag: `"div"`
-      }
+        tag: `"div"`,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -44,8 +44,8 @@ describe('compiler: v-once transform', () => {
       index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
-        tag: `"div"`
-      }
+        tag: `"div"`,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -59,8 +59,8 @@ describe('compiler: v-once transform', () => {
       index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
-        tag: `_component_Comp`
-      }
+        tag: `_component_Comp`,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -74,8 +74,8 @@ describe('compiler: v-once transform', () => {
       index: 0,
       value: {
         type: NodeTypes.JS_CALL_EXPRESSION,
-        callee: RENDER_SLOT
-      }
+        callee: RENDER_SLOT,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -90,7 +90,7 @@ describe('compiler: v-once transform', () => {
   // cached nodes should be ignored by hoistStatic transform
   test('with hoistStatic: true', () => {
     const root = transformWithOnce(`<div><div v-once /></div>`, {
-      hoistStatic: true
+      hoistStatic: true,
     })
     expect(root.cached).toBe(1)
     expect(root.helpers).toContain(SET_BLOCK_TRACKING)
@@ -100,8 +100,8 @@ describe('compiler: v-once transform', () => {
       index: 0,
       value: {
         type: NodeTypes.VNODE_CALL,
-        tag: `"div"`
-      }
+        tag: `"div"`,
+      },
     })
     expect(generate(root).code).toMatchSnapshot()
   })
@@ -119,14 +119,14 @@ describe('compiler: v-once transform', () => {
           type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
           consequent: {
             type: NodeTypes.VNODE_CALL,
-            tag: `"div"`
+            tag: `"div"`,
           },
           alternate: {
             type: NodeTypes.VNODE_CALL,
-            tag: `"p"`
-          }
-        }
-      }
+            tag: `"p"`,
+          },
+        },
+      },
     })
   })
 
@@ -138,8 +138,8 @@ describe('compiler: v-once transform', () => {
       type: NodeTypes.FOR,
       // should cache the entire v-for expression, not just a single branch
       codegenNode: {
-        type: NodeTypes.JS_CACHE_EXPRESSION
-      }
+        type: NodeTypes.JS_CACHE_EXPRESSION,
+      },
     })
   })
 })
