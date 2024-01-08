@@ -1431,11 +1431,35 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         h('div', { style: `color:red;` }),
       )
+      mountWithHydration(
+        `<div style="color:red; font-size: 12px;"></div>`,
+        () => h('div', { style: `font-size: 12px; color:red;` }),
+      )
+      mountWithHydration(`<div style="color:red;display:none;"></div>`, () =>
+        withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+          [vShow, false],
+        ]),
+      )
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         h('div', { style: { color: 'green' } }),
       )
-      expect(`Hydration style mismatch`).toHaveBeenWarned()
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
+    test('style mismatch w/ v-show', () => {
+      mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
+        withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+          [vShow, false],
+        ]),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+      mountWithHydration(`<div style="color:red;"></div>`, () =>
+        withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+          [vShow, false],
+        ]),
+      )
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
     test('attr mismatch', () => {
@@ -1450,6 +1474,12 @@ describe('SSR hydration', () => {
       )
       mountWithHydration(`<select multiple></div>`, () =>
         h('select', { multiple: 'multiple' }),
+      )
+      mountWithHydration(`<textarea>foo</textarea>`, () =>
+        h('textarea', { value: 'foo' }),
+      )
+      mountWithHydration(`<textarea></textarea>`, () =>
+        h('textarea', { value: '' }),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 

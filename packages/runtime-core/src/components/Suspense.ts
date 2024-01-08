@@ -400,7 +400,6 @@ export interface SuspenseBoundary {
   namespace: ElementNamespace
   container: RendererElement
   hiddenContainer: RendererElement
-  anchor: RendererNode | null
   activeBranch: VNode | null
   pendingBranch: VNode | null
   deps: number
@@ -473,6 +472,7 @@ function createSuspenseBoundary(
     assertNumber(timeout, `Suspense timeout`)
   }
 
+  const initialAnchor = anchor
   const suspense: SuspenseBoundary = {
     vnode,
     parent: parentSuspense,
@@ -480,7 +480,6 @@ function createSuspenseBoundary(
     namespace,
     container,
     hiddenContainer,
-    anchor,
     deps: 0,
     pendingId: suspenseId++,
     timeout: typeof timeout === 'number' ? timeout : -1,
@@ -529,20 +528,28 @@ function createSuspenseBoundary(
               move(
                 pendingBranch!,
                 container,
-                next(activeBranch!),
+                anchor === initialAnchor ? next(activeBranch!) : anchor,
                 MoveType.ENTER,
               )
               queuePostFlushCb(effects)
             }
           }
         }
-        // this is initial anchor on mount
-        let { anchor } = suspense
         // unmount current active tree
         if (activeBranch) {
           // if the fallback tree was mounted, it may have been moved
           // as part of a parent suspense. get the latest anchor for insertion
-          anchor = next(activeBranch)
+          // #8105 if `delayEnter` is true, it means that the mounting of
+          // `activeBranch` will be delayed. if the branch switches before
+          // transition completes, both `activeBranch` and `pendingBranch` may
+          // coexist in the `hiddenContainer`. This could result in
+          // `next(activeBranch!)` obtaining an incorrect anchor
+          // (got `pendingBranch.el`).
+          // Therefore, after the mounting of activeBranch is completed,
+          // it is necessary to get the latest anchor.
+          if (parentNode(activeBranch.el!) !== suspense.hiddenContainer) {
+            anchor = next(activeBranch)
+          }
           unmount(activeBranch, parentComponent, suspense, true)
         }
         if (!delayEnter) {
