@@ -11,7 +11,7 @@ import {
   normalizeVNode,
 } from './vnode'
 import { flushPostFlushCbs } from './scheduler'
-import type { ComponentInternalInstance, Data } from './component'
+import type { ComponentInternalInstance } from './component'
 import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
@@ -739,16 +739,14 @@ function propHasMismatch(
         : stringifyStyle(normalizeStyle(clientValue)),
     )
     // If `v-show=false`, `display: 'none'` should be added to expected
-    ;(vnode.dirs || []).forEach(_dir => {
-      if (_dir.dir.getSSRProps && _dir.dir.getSSRProps(_dir, vnode)) {
-        const { style = {} } = _dir.dir.getSSRProps(_dir, vnode) as Data
-        if (style) {
-          for (let key in style) {
-            expected.set(key, style[key as keyof typeof style])
-          }
+    if (vnode.dirs) {
+      for (const { dir, value } of vnode.dirs) {
+        // @ts-expect-error only vShow has this internal name
+        if (dir.name === 'show' && !value) {
+          expected.set('display', 'none')
         }
       }
-    })
+    }
     if (!isMapEqual(actual, expected)) {
       mismatchType = mismatchKey = 'style'
     }

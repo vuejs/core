@@ -1444,13 +1444,22 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         h('div', { style: { color: 'green' } }),
       )
-      expect(`Hydration style mismatch`).toHaveBeenWarned()
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
+    })
+
+    test('style mismatch w/ v-show', () => {
+      mountWithHydration(`<div style="color:red;display:none"></div>`, () =>
+        withDirectives(createVNode('div', { style: 'color: red' }, ''), [
+          [vShow, false],
+        ]),
+      )
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
       mountWithHydration(`<div style="color:red;"></div>`, () =>
         withDirectives(createVNode('div', { style: 'color: red' }, ''), [
           [vShow, false],
         ]),
       )
-      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(2)
+      expect(`Hydration style mismatch`).toHaveBeenWarnedTimes(1)
     })
 
     test('attr mismatch', () => {
