@@ -1,6 +1,7 @@
 import { isFunction } from '@vue/shared'
 import { currentInstance } from './component'
 import { currentRenderingInstance } from './componentRenderContext'
+import { isInComputedGetter } from './apiComputed'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
@@ -47,6 +48,15 @@ export function inject(
   defaultValue?: unknown,
   treatDefaultAsFactory = false,
 ) {
+  if (__DEV__ && isInComputedGetter && !currentApp) {
+    warn(
+      `inject() called inside a computed getter. ` +
+        `This is incorrect usage as computed getters are not guaranteed ` +
+        `to be executed with an active component instance. If you are using ` +
+        `a composable inside a computed getter, move it outside to the setup scope.`,
+    )
+  }
+
   // fallback to `currentRenderingInstance` so that this can be called in
   // a functional component
   const instance = currentInstance || currentRenderingInstance

@@ -639,7 +639,7 @@ export const getCurrentInstance: () => ComponentInternalInstance | null =
         `getCurrentInstance() called inside a computed getter. ` +
           `This is incorrect usage as computed getters are not guaranteed ` +
           `to be executed with an active component instance. If you are using ` +
-          `a composable inside a computed getter, move it ouside to the setup scope.`,
+          `a composable inside a computed getter, move it outside to the setup scope.`,
       )
     }
     return currentInstance || currentRenderingInstance

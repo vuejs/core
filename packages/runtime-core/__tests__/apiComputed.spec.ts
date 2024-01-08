@@ -1,8 +1,11 @@
 import {
   computed,
+  createApp,
   getCurrentInstance,
   h,
+  inject,
   nodeOps,
+  onMounted,
   render,
 } from '@vue/runtime-test'
 
@@ -40,5 +43,53 @@ describe('api: computed', () => {
     expect(
       'getCurrentInstance() called inside a computed getter',
     ).toHaveBeenWarned()
+  })
+
+  test('should warn if inject is called inside computed getter', () => {
+    const Comp = {
+      setup() {
+        const c = computed(() => {
+          inject('foo', 'bar')
+          return 1
+        })
+        c.value
+        return () => ''
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect('inject() called inside a computed getter').toHaveBeenWarned()
+  })
+
+  test('should not warn if inject is called inside computed getter with appContext', () => {
+    const el = nodeOps.createElement('div')
+    const app = createApp({
+      setup() {
+        const c = computed(() => {
+          let ret = null
+          app.runWithContext(() => {
+            ret = inject('foo')
+          })
+          return ret
+        })
+        return () => c.value
+      },
+    })
+    app.provide('foo', 'bar').mount(el)
+    expect((el.children[0] as any)?.text).toBe('bar')
+  })
+
+  test('should warn if a lifecycle hook is called inside computed getter', () => {
+    const Comp = {
+      setup() {
+        const c = computed(() => {
+          onMounted(() => {})
+          return 1
+        })
+        c.value
+        return () => ''
+      },
+    }
+    render(h(Comp), nodeOps.createElement('div'))
+    expect('onMounted() called inside a computed getter').toHaveBeenWarned()
   })
 })

@@ -15,6 +15,7 @@ import {
   resetTracking,
 } from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
+import { isInComputedGetter } from './apiComputed'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
@@ -24,6 +25,16 @@ export function injectHook(
   target: ComponentInternalInstance | null = currentInstance,
   prepend: boolean = false,
 ): Function | undefined {
+  if (__DEV__ && isInComputedGetter) {
+    const apiName = toHandlerKey(ErrorTypeStrings[type].replace(/ hook$/, ''))
+    warn(
+      `${apiName}() called inside a computed getter. ` +
+        `This is incorrect usage as computed getters are not guaranteed ` +
+        `to be executed with an active component instance. If you are using ` +
+        `a composable inside a computed getter, move it outside to the setup scope.`,
+    )
+  }
+
   if (target) {
     const hooks = target[type] || (target[type] = [])
     // cache the error handling wrapper for injected hooks so the same hook
