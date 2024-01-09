@@ -91,6 +91,10 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
+      if (isVNodeSuspensible(n2) && parentSuspense?.deps !== 0) {
+        n2.suspense = n1.suspense
+        return
+      }
       patchSuspense(
         n1,
         n2,
