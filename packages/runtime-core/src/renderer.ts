@@ -41,8 +41,8 @@ import {
   type SchedulerJob,
   flushPostFlushCbs,
   flushPreFlushCbs,
-  invalidatePostJob,
   invalidateJob,
+  invalidatePostJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'

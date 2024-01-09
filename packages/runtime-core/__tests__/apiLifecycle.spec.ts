@@ -415,13 +415,13 @@ describe('api: lifecycle hooks', () => {
         onMounted(fn)
         onMounted(fn)
         return () => h('div')
-      }
+      },
     }
 
     const Comp = {
       setup() {
         return () => (toggle.value ? [h(Child), (toggle.value = false)] : null)
-      }
+      },
     }
 
     render(h(Comp), nodeOps.createElement('div'))
