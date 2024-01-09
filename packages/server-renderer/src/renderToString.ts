@@ -1,13 +1,13 @@
 import {
-  App,
+  type App,
+  type VNode,
   createApp,
   createVNode,
   ssrContextKey,
   ssrUtils,
-  VNode
 } from 'vue'
 import { isPromise, isString } from '@vue/shared'
-import { SSRContext, renderComponentVNode, SSRBuffer } from './render'
+import { type SSRBuffer, type SSRContext, renderComponentVNode } from './render'
 
 const { isVNode } = ssrUtils
 
@@ -49,7 +49,7 @@ function unrollBufferSync(buffer: SSRBuffer): string {
 
 export async function renderToString(
   input: App | VNode,
-  context: SSRContext = {}
+  context: SSRContext = {},
 ): Promise<string> {
   if (isVNode(input)) {
     // raw vnode, wrap with app (for context)
