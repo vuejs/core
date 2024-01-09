@@ -24,12 +24,14 @@ import {
 } from '@vue/runtime-test'
 import { createApp, defineComponent } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
+import { resetSuspenseId } from '../../src/components/Suspense'
 
 describe('Suspense', () => {
   const deps: Promise<any>[] = []
 
   beforeEach(() => {
     deps.length = 0
+    resetSuspenseId()
   })
 
   // a simple async factory for testing purposes only.

@@ -692,6 +692,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     }
 
     if (
+      !tokenizer.inSFCRoot &&
       isCompatEnabled(
         CompilerDeprecationTypes.COMPILER_NATIVE_TEMPLATE,
         currentOptions,

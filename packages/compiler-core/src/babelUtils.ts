@@ -146,6 +146,19 @@ export function isInDestructureAssignment(
   return false
 }
 
+export function isInNewExpression(parentStack: Node[]): boolean {
+  let i = parentStack.length
+  while (i--) {
+    const p = parentStack[i]
+    if (p.type === 'NewExpression') {
+      return true
+    } else if (p.type !== 'MemberExpression') {
+      break
+    }
+  }
+  return false
+}
+
 export function walkFunctionParams(
   node: Function,
   onIdent: (id: Identifier) => void,

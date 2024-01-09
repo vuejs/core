@@ -351,4 +351,16 @@ describe('renderer: fragment', () => {
     render(renderFn(['two', 'one']), root)
     expect(serializeInner(root)).toBe(`text<div>two</div>text<div>one</div>`)
   })
+
+  // #10007
+  test('empty fragment', () => {
+    const root = nodeOps.createElement('div')
+
+    const renderFn = () => {
+      return openBlock(true), createBlock(Fragment, null)
+    }
+
+    render(renderFn(), root)
+    expect(serializeInner(root)).toBe('')
+  })
 })

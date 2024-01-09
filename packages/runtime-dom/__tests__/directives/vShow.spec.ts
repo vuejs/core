@@ -30,7 +30,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
 
     expect($div.style.display).toEqual('')
   })
@@ -46,7 +46,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
 
     expect($div.style.display).toEqual('none')
   })
@@ -62,7 +62,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
     const data = root._vnode.component.data
 
     expect($div.style.display).toEqual('')
@@ -113,7 +113,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
     const data = root._vnode.component.data
 
     expect($div.style.display).toEqual('block')
@@ -138,7 +138,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
 
     expect($div.style.display).toEqual('none')
 
@@ -173,7 +173,7 @@ describe('runtime-dom: v-show directive', () => {
     })
     render(h(component), root)
 
-    const $div = root.querySelector('div')
+    const $div = root.children[0]
 
     expect($div.style.display).toEqual('none')
 
