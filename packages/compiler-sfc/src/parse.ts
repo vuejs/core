@@ -327,7 +327,7 @@ function createBlock(
   pad: SFCParseOptions['pad'],
 ): SFCBlock {
   const type = node.tag
-  const loc = node.innerLoc!
+  const loc = node.innerLoc || node.loc
   const attrs: Record<string, string | true> = {}
   const block: SFCBlock = {
     type,
