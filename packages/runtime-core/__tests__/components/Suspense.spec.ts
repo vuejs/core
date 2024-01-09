@@ -1524,7 +1524,7 @@ describe('Suspense', () => {
   })
 
   //#8678
-  test('avoid patch nested suspense with suspensible', async () => {
+  test('avoid patch nested suspense with suspensible if parent suspense is not resolved', async () => {
     const calls: string[] = []
     let expected = ''
 
