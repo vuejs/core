@@ -2523,7 +2523,8 @@ function getSequence(arr: number[]): number[] {
 function locateNonHydratedAsyncRoot(
   instance: ComponentInternalInstance,
 ): ComponentInternalInstance | undefined {
-  const subComponent = instance.subTree.component
+  const subComponent =
+    instance.subTree.component || instance.subTree.ssContent?.component
   if (subComponent) {
     if (subComponent.asyncDep && !subComponent.asyncResolved) {
       return subComponent
