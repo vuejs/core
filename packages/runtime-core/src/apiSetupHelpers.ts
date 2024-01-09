@@ -3,8 +3,10 @@ import {
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
+  camelize,
   extend,
   hasChanged,
+  hyphenate,
   isArray,
   isFunction,
   isPromise,
@@ -380,6 +382,9 @@ export function useModel(
     return ref() as any
   }
 
+  const camelizedName = camelize(name)
+  const hyphenatedName = hyphenate(name)
+
   const res = customRef((track, trigger) => {
     let localValue: any
     watchSyncEffect(() => {
@@ -396,7 +401,19 @@ export function useModel(
       },
       set(value) {
         const rawProps = i.vnode!.props
-        if (!(rawProps && name in rawProps) && hasChanged(value, localValue)) {
+        if (
+          !(
+            rawProps &&
+            // check if parent has passed v-model
+            (name in rawProps ||
+              camelizedName in rawProps ||
+              hyphenatedName in rawProps) &&
+            (`onUpdate:${name}` in rawProps ||
+              `onUpdate:${camelizedName}` in rawProps ||
+              `onUpdate:${hyphenatedName}` in rawProps)
+          ) &&
+          hasChanged(value, localValue)
+        ) {
           localValue = value
           trigger()
         }
@@ -414,7 +431,7 @@ export function useModel(
     return {
       next() {
         if (i < 2) {
-          return { value: i++ ? props[modifierKey] : res, done: false }
+          return { value: i++ ? props[modifierKey] || {} : res, done: false }
         } else {
           return { done: true }
         }
