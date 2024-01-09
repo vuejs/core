@@ -1,4 +1,4 @@
-import { createApp, defineAsyncComponent, h, Teleport } from 'vue'
+import { Teleport, createApp, defineAsyncComponent, h } from 'vue'
 import { renderToString } from '../src/renderToString'
 import { renderToSimpleStream } from '../src/renderToStream'
 import type { SSRContext } from '../src/render'
@@ -178,15 +178,15 @@ describe('ssrRenderTeleport', () => {
 
     const AsyncComp = defineAsyncComponent(() =>
       Promise.resolve({
-        render: () => h('div', 'content')
-      })
+        render: () => h('div', 'content'),
+      }),
     )
 
     const Comp = {
       template:
         '<teleport to="#target"><Suspense><AsyncComp></AsyncComp></Suspense></teleport>',
       components: { AsyncComp },
-      setup() {}
+      setup() {},
     }
     let html = ''
     let resolve: any
@@ -194,7 +194,7 @@ describe('ssrRenderTeleport', () => {
     renderToSimpleStream(
       h({
         template: '<Comp />',
-        components: { Comp }
+        components: { Comp },
       }),
       ctx,
       {
@@ -207,13 +207,13 @@ describe('ssrRenderTeleport', () => {
         },
         destroy(err) {
           throw err
-        }
-      }
+        },
+      },
     )
     await p
     expect(html).toBe('<!--teleport start--><!--teleport end-->')
     expect(ctx.teleports!['#target']).toBe(
-      `<div>content</div><!--teleport anchor-->`
+      `<div>content</div><!--teleport anchor-->`,
     )
   })
 })
