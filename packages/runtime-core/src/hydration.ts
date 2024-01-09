@@ -448,7 +448,7 @@ export function createHydrationFunctions(
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key])) {
+            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
               hasMismatch = true
             }
             if (
@@ -712,7 +712,12 @@ export function createHydrationFunctions(
 /**
  * Dev only
  */
-function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
+function propHasMismatch(
+  el: Element,
+  key: string,
+  clientValue: any,
+  vnode: VNode,
+): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
   let actual: any
@@ -726,24 +731,41 @@ function propHasMismatch(el: Element, key: string, clientValue: any): boolean {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
-    actual = el.getAttribute('style')
-    expected = isString(clientValue)
-      ? clientValue
-      : stringifyStyle(normalizeStyle(clientValue))
-    if (actual !== expected) {
+    // style might be in different order, but that doesn't affect cascade
+    actual = toStyleMap(el.getAttribute('style') || '')
+    expected = toStyleMap(
+      isString(clientValue)
+        ? clientValue
+        : stringifyStyle(normalizeStyle(clientValue)),
+    )
+    // If `v-show=false`, `display: 'none'` should be added to expected
+    if (vnode.dirs) {
+      for (const { dir, value } of vnode.dirs) {
+        // @ts-expect-error only vShow has this internal name
+        if (dir.name === 'show' && !value) {
+          expected.set('display', 'none')
+        }
+      }
+    }
+    if (!isMapEqual(actual, expected)) {
       mismatchType = mismatchKey = 'style'
     }
   } else if (
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    actual = el.hasAttribute(key) && el.getAttribute(key)
+    // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
+    actual = el.hasAttribute(key)
+      ? el.getAttribute(key)
+      : key in el
+        ? el[key as keyof typeof el]
+        : ''
     expected = isBooleanAttr(key)
       ? includeBooleanAttr(clientValue)
         ? ''
         : false
       : clientValue == null
-        ? false
+        ? ''
         : String(clientValue)
     if (actual !== expected) {
       mismatchType = `attribute`
@@ -778,6 +800,31 @@ function isSetEqual(a: Set<string>, b: Set<string>): boolean {
   }
   for (const s of a) {
     if (!b.has(s)) {
+      return false
+    }
+  }
+  return true
+}
+
+function toStyleMap(str: string): Map<string, string> {
+  const styleMap: Map<string, string> = new Map()
+  for (const item of str.split(';')) {
+    let [key, value] = item.split(':')
+    key = key?.trim()
+    value = value?.trim()
+    if (key && value) {
+      styleMap.set(key, value)
+    }
+  }
+  return styleMap
+}
+
+function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
+  if (a.size !== b.size) {
+    return false
+  }
+  for (const [key, value] of a) {
+    if (value !== b.get(key)) {
       return false
     }
   }

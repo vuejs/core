@@ -30,7 +30,6 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import {
   ErrorCodes,
@@ -190,6 +189,14 @@ function doWatch(
     }
   }
 
+  // TODO remove in 3.5
+  if (__DEV__ && deep !== void 0 && typeof deep === 'number') {
+    warn(
+      `watch() "deep" option with number value will be used as watch depth in future versions. ` +
+        `Please use a boolean instead to avoid potential breakage.`,
+    )
+  }
+
   if (__DEV__ && !cb) {
     if (immediate !== undefined) {
       warn(
@@ -220,13 +227,12 @@ function doWatch(
     )
   }
 
-  const instance =
-    getCurrentScope() === currentInstance?.scope ? currentInstance : null
+  const instance = currentInstance
   const reactiveGetter = (source: object) =>
     deep === true
       ? source // traverse will happen in wrapped getter below
-      : // for shallow or deep: false, only traverse root-level properties
-        traverse(source, isShallow(source) || deep === false ? 1 : undefined)
+      : // for deep: false, only traverse root-level properties
+        traverse(source, deep === false ? 1 : undefined)
 
   let getter: () => any
   let forceTrigger = false
@@ -261,9 +267,6 @@ function doWatch(
     } else {
       // no cb -> simple effect
       getter = () => {
-        if (instance && instance.isUnmounted) {
-          return
-        }
         if (cleanup) {
           cleanup()
         }
@@ -391,10 +394,11 @@ function doWatch(
 
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
 
+  const scope = getCurrentScope()
   const unwatch = () => {
     effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
+    if (scope) {
+      remove(scope.effects, effect)
     }
   }
 
@@ -443,14 +447,9 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
-  const cur = currentInstance
-  setCurrentInstance(this)
+  const reset = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  if (cur) {
-    setCurrentInstance(cur)
-  } else {
-    unsetCurrentInstance()
-  }
+  reset()
   return res
 }
 

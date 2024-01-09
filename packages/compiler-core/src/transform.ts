@@ -256,7 +256,7 @@ export function createTransformContext(
       }
       context.parent!.children.splice(removalIndex, 1)
     },
-    onNodeRemoved: () => {},
+    onNodeRemoved: NOOP,
     addIdentifiers(exp) {
       // identifier tracking only happens in non-browser builds.
       if (!__BROWSER__) {

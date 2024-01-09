@@ -5,12 +5,15 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
+  onMounted,
   provide,
   ref,
   resolveComponent,
   resolveDirective,
   serializeInner,
+  watch,
   withDirectives,
 } from '@vue/runtime-test'
 
@@ -549,6 +552,35 @@ describe('api: createApp', () => {
     expect(
       `TypeError: Cannot read property '__isScriptSetup' of undefined`,
     ).not.toHaveBeenWarned()
+  })
+
+  // #10005
+  test('flush order edge case on nested createApp', async () => {
+    const order: string[] = []
+    const App = defineComponent({
+      setup(props) {
+        const message = ref('m1')
+        watch(
+          message,
+          () => {
+            order.push('post watcher')
+          },
+          { flush: 'post' },
+        )
+        onMounted(() => {
+          message.value = 'm2'
+          createApp(() => '').mount(nodeOps.createElement('div'))
+        })
+        return () => {
+          order.push('render')
+          return h('div', [message.value])
+        }
+      },
+    })
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    await nextTick()
+    expect(order).toMatchObject(['render', 'render', 'post watcher'])
   })
 
   // config.compilerOptions is tested in packages/vue since it is only

@@ -206,6 +206,7 @@ export function pipeToWebWritable(
     },
     destroy(err) {
       // TODO better error handling?
+      // eslint-disable-next-line no-console
       console.log(err)
       writer.close()
     },
