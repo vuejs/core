@@ -1,3 +1,18 @@
+## [3.4.7](https://github.com/vuejs/core/compare/v3.4.6...v3.4.7) (2024-01-09)
+
+
+### Bug Fixes
+
+* **parser:** skip compat mode check for SFC root `<template>` tags ([#10034](https://github.com/vuejs/core/issues/10034)) ([923d560](https://github.com/vuejs/core/commit/923d560d0b6713144671809b6dfeb1e2da503b1f))
+* **types:** fix functional component for `h` ([#9991](https://github.com/vuejs/core/issues/9991)) ([438a74a](https://github.com/vuejs/core/commit/438a74aad840183286fbdb488178510f37218a73))
+
+
+### Reverts
+
+* "dx(computed): warn incorrect use of getCurrentInstance inside computed" ([2fd3905](https://github.com/vuejs/core/commit/2fd39057386644c8bfee426c60a51f2b07a79b09))
+
+
+
 ## [3.4.6](https://github.com/vuejs/core/compare/v3.4.5...v3.4.6) (2024-01-08)
 
 
