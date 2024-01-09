@@ -720,6 +720,9 @@ function createSuspenseBoundary(
     },
 
     unmount(parentSuspense, doRemove) {
+      if (isVNodeSuspensible(suspense.vnode) && parentSuspense?.deps !== 0) {
+        return
+      }
       suspense.isUnmounted = true
       if (suspense.activeBranch) {
         unmount(
