@@ -1,3 +1,33 @@
+## [3.4.7](https://github.com/vuejs/core/compare/v3.4.6...v3.4.7) (2024-01-09)
+
+
+### Bug Fixes
+
+* **parser:** skip compat mode check for SFC root `<template>` tags ([#10034](https://github.com/vuejs/core/issues/10034)) ([923d560](https://github.com/vuejs/core/commit/923d560d0b6713144671809b6dfeb1e2da503b1f))
+* **types:** fix functional component for `h` ([#9991](https://github.com/vuejs/core/issues/9991)) ([438a74a](https://github.com/vuejs/core/commit/438a74aad840183286fbdb488178510f37218a73))
+
+
+### Reverts
+
+* "dx(computed): warn incorrect use of getCurrentInstance inside computed" ([2fd3905](https://github.com/vuejs/core/commit/2fd39057386644c8bfee426c60a51f2b07a79b09))
+
+
+
+## [3.4.6](https://github.com/vuejs/core/compare/v3.4.5...v3.4.6) (2024-01-08)
+
+
+### Bug Fixes
+
+* **build:** revert "build: add production/development export conditions ([#9977](https://github.com/vuejs/core/issues/9977))" ([7bd4e90](https://github.com/vuejs/core/commit/7bd4e90506547c42234165776b01793abd37b148)), closes [#10012](https://github.com/vuejs/core/issues/10012) [#10020](https://github.com/vuejs/core/issues/10020)
+* fix post watcher fire timing on nested app mounts ([3c3561e](https://github.com/vuejs/core/commit/3c3561e7203091f49d57f1da6d822c91e462bc46)), closes [#10005](https://github.com/vuejs/core/issues/10005)
+* **hydration:** avoid hydration mismatch warning for styles with different order ([#10011](https://github.com/vuejs/core/issues/10011)) ([2701355](https://github.com/vuejs/core/commit/2701355e8eb07ab664e398d9fc05d6c4e2e9b20e)), closes [#10000](https://github.com/vuejs/core/issues/10000) [#10006](https://github.com/vuejs/core/issues/10006)
+* **runtime-core:** handle fragment with null children ([#10010](https://github.com/vuejs/core/issues/10010)) ([3bf34b7](https://github.com/vuejs/core/commit/3bf34b767e4dd3cf6a974301ecf0363ae4dda4ec)), closes [#10007](https://github.com/vuejs/core/issues/10007)
+* **scheduler:** sort nested postFlushCbs ([d9162df](https://github.com/vuejs/core/commit/d9162dfc2ee0c3a369fb9bf32ff413e74761bee6)), closes [#10003](https://github.com/vuejs/core/issues/10003)
+* **suspense:** fix anchor for suspense with transition out-in ([#9999](https://github.com/vuejs/core/issues/9999)) ([a3fbf21](https://github.com/vuejs/core/commit/a3fbf2132b0cd3655e969e290548c8fabc08fd33)), closes [#9996](https://github.com/vuejs/core/issues/9996)
+* **types:** allow `null` type for textarea value ([#9997](https://github.com/vuejs/core/issues/9997)) ([c379bc2](https://github.com/vuejs/core/commit/c379bc29efc70d6ac5840de10c357ee3dad998c0)), closes [#9904](https://github.com/vuejs/core/issues/9904)
+
+
+
 ## [3.4.5](https://github.com/vuejs/core/compare/v3.4.4...v3.4.5) (2024-01-04)
 
 

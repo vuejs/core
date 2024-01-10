@@ -131,6 +131,12 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
+  output.banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
+
   output.exports = isCompatPackage ? 'auto' : 'named'
   if (isNodeBuild) {
     output.esModule = true

@@ -685,8 +685,13 @@ if (__SSR__) {
 }
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()
+  return () => {
+    instance.scope.off()
+    internalSetCurrentInstance(prev)
+  }
 }
 
 export const unsetCurrentInstance = () => {
@@ -774,7 +779,7 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -786,7 +791,7 @@ function setupStatefulComponent(
       ],
     )
     resetTracking()
-    unsetCurrentInstance()
+    reset()
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
@@ -961,13 +966,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     try {
       applyOptions(instance)
     } finally {
       resetTracking()
-      unsetCurrentInstance()
+      reset()
     }
   }
 
