@@ -1523,149 +1523,6 @@ describe('Suspense', () => {
     expect(calls).toContain('innerB mounted')
   })
 
-  //#8678
-  test('avoid patch nested suspense with suspensible if parent suspense is not resolved', async () => {
-    const calls: string[] = []
-    let expected = ''
-
-    const InnerA = defineAsyncComponent(
-      {
-        setup: () => {
-          calls.push('innerA created')
-          onMounted(() => {
-            calls.push('innerA mounted')
-          })
-          return () => h('div', 'innerA')
-        },
-      },
-      10,
-    )
-
-    const InnerB = defineAsyncComponent(
-      {
-        setup: () => {
-          calls.push('innerB created')
-          onMounted(() => {
-            calls.push('innerB mounted')
-          })
-          return () => h('div', 'innerB')
-        },
-      },
-      10,
-    )
-
-    const OuterA = defineAsyncComponent(
-      {
-        setup: (_, { slots }: any) => {
-          calls.push('outerA created')
-          onMounted(() => {
-            calls.push('outerA mounted')
-          })
-          return () =>
-            h(Fragment, null, [h('div', 'outerA'), slots.default?.()])
-        },
-      },
-      5,
-    )
-
-    const OuterB = defineAsyncComponent(
-      {
-        setup: (_, { slots }: any) => {
-          calls.push('outerB created')
-          onMounted(() => {
-            calls.push('outerB mounted')
-          })
-          return () =>
-            h(Fragment, null, [h('div', 'outerB'), slots.default?.()])
-        },
-      },
-      5,
-    )
-
-    const outerToggle = ref(false)
-    const innerToggle = ref(false)
-
-    /**
-     *  <Suspense>
-     *    <component :is="outerToggle ? outerB : outerA">
-     *      <Suspense suspensible>
-     *        <component :is="innerToggle ? innerB : innerA" />
-     *      </Suspense>
-     *    </component>
-     *  </Suspense>
-     */
-    const Comp = {
-      setup() {
-        return () =>
-          h(Suspense, null, {
-            default: [
-              h(outerToggle.value ? OuterB : OuterA, null, {
-                default: () =>
-                  h(
-                    Suspense,
-                    { suspensible: true },
-                    {
-                      default: h(innerToggle.value ? InnerB : InnerA),
-                    },
-                  ),
-              }),
-            ],
-            fallback: h('div', 'fallback outer'),
-          })
-      },
-    }
-
-    expected = `<div>fallback outer</div>`
-    const root = nodeOps.createElement('div')
-    render(h(Comp), root)
-    expect(serializeInner(root)).toBe(expected)
-
-    // mount outer component
-    await Promise.all(deps)
-    await nextTick()
-
-    expect(serializeInner(root)).toBe(expected)
-    expect(calls).toEqual([`outerA created`])
-
-    // mount inner component
-    await Promise.all(deps)
-    await nextTick()
-    expected = `<div>outerA</div><div>innerA</div>`
-    expect(serializeInner(root)).toBe(expected)
-
-    expect(calls).toEqual([
-      'outerA created',
-      'innerA created',
-      'outerA mounted',
-      'innerA mounted',
-    ])
-
-    calls.length = 0
-    deps.length = 0
-
-    // toggle both outer and inner component
-    outerToggle.value = true
-    innerToggle.value = true
-    await nextTick()
-
-    await Promise.all(deps)
-    await nextTick()
-    expect(serializeInner(root)).toBe(expected) // expect not change
-
-    await Promise.all(deps)
-    await nextTick()
-    expected = `<div>outerB</div><div>innerB</div>`
-    expect(serializeInner(root)).toBe(expected)
-
-    // innerB only mount once
-    expect(calls).toEqual([
-      'outerB created',
-      'innerB created',
-      'outerB mounted',
-      'innerB mounted',
-    ])
-  })
-
   // #8206
   test('nested suspense with suspensible & no async deps', async () => {
     const calls: string[] = []
@@ -1782,6 +1639,141 @@ describe('Suspense', () => {
     await nextTick()
     expected = `<div>outerB</div><div>innerB</div>`
     expect(serializeInner(root)).toBe(expected)
+  })
+
+  //#8678
+  test('nested suspense (child suspense update before parent suspense resolve)', async () => {
+    const calls: string[] = []
+
+    const InnerA = defineAsyncComponent(
+      {
+        setup: () => {
+          calls.push('innerA created')
+          onMounted(() => {
+            calls.push('innerA mounted')
+          })
+          return () => h('div', 'innerA')
+        },
+      },
+      10,
+    )
+
+    const InnerB = defineAsyncComponent(
+      {
+        setup: () => {
+          calls.push('innerB created')
+          onMounted(() => {
+            calls.push('innerB mounted')
+          })
+          return () => h('div', 'innerB')
+        },
+      },
+      10,
+    )
+
+    const OuterA = defineAsyncComponent(
+      {
+        setup: (_, { slots }: any) => {
+          calls.push('outerA created')
+          onMounted(() => {
+            calls.push('outerA mounted')
+          })
+          return () =>
+            h(Fragment, null, [h('div', 'outerA'), slots.default?.()])
+        },
+      },
+      5,
+    )
+
+    const OuterB = defineAsyncComponent(
+      {
+        setup: (_, { slots }: any) => {
+          calls.push('outerB created')
+          onMounted(() => {
+            calls.push('outerB mounted')
+          })
+          return () =>
+            h(Fragment, null, [h('div', 'outerB'), slots.default?.()])
+        },
+      },
+      5,
+    )
+
+    const outerToggle = ref(false)
+    const innerToggle = ref(false)
+
+    /**
+     *  <Suspense>
+     *    <component :is="outerToggle ? outerB : outerA">
+     *      <Suspense>
+     *        <component :is="innerToggle ? innerB : innerA" />
+     *      </Suspense>
+     *    </component>
+     *  </Suspense>
+     */
+    const Comp = {
+      setup() {
+        return () =>
+          h(Suspense, null, {
+            default: [
+              h(outerToggle.value ? OuterB : OuterA, null, {
+                default: () =>
+                  h(Suspense, null, {
+                    default: h(innerToggle.value ? InnerB : InnerA),
+                  }),
+              }),
+            ],
+            fallback: h('div', 'fallback outer'),
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    expect(serializeInner(root)).toBe(`<div>fallback outer</div>`)
+
+    // mount outer component
+    await Promise.all(deps)
+    await nextTick()
+
+    expect(serializeInner(root)).toBe(`<div>outerA</div><!---->`)
+    expect(calls).toEqual([`outerA created`, `outerA mounted`])
+
+    // mount inner component
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>outerA</div><div>innerA</div>`)
+
+    expect(calls).toEqual([
+      'outerA created',
+      'outerA mounted',
+      'innerA created',
+      'innerA mounted',
+    ])
+
+    calls.length = 0
+    deps.length = 0
+
+    // toggle both outer and inner components
+    outerToggle.value = true
+    innerToggle.value = true
+    await nextTick()
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>outerB</div><!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>outerB</div><div>innerB</div>`)
+
+    // innerB only mount once
+    expect(calls).toEqual([
+      'outerB created',
+      'outerB mounted',
+      'innerB created',
+      'innerB mounted',
+    ])
   })
 
   // #6416
