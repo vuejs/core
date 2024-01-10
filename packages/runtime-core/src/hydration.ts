@@ -754,19 +754,18 @@ function propHasMismatch(
     (el instanceof SVGElement && isKnownSvgAttr(key)) ||
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
-    // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
-    actual = el.hasAttribute(key)
-      ? el.getAttribute(key)
-      : key in el
-        ? el[key as keyof typeof el]
-        : ''
-    expected = isBooleanAttr(key)
-      ? includeBooleanAttr(clientValue)
-        ? ''
-        : false
-      : clientValue == null
-        ? ''
-        : String(clientValue)
+    if (isBooleanAttr(key)) {
+      actual = el.hasAttribute(key)
+      expected = includeBooleanAttr(clientValue)
+    } else {
+      // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
+      actual = el.hasAttribute(key)
+        ? el.getAttribute(key)
+        : key in el
+          ? el[key as keyof typeof el]
+          : ''
+      expected = clientValue == null ? '' : String(clientValue)
+    }
     if (actual !== expected) {
       mismatchType = `attribute`
       mismatchKey = key
