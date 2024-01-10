@@ -735,6 +735,9 @@ function createSuspenseBoundary(
     },
 
     unmount(parentSuspense, doRemove) {
+      if (parentSuspense && parentSuspense.deps > 0) {
+        return
+      }
       suspense.isUnmounted = true
       if (suspense.activeBranch) {
         unmount(
