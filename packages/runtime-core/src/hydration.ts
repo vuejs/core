@@ -725,29 +725,29 @@ function propHasMismatch(
   if (key === 'class') {
     // classes might be in different order, but that doesn't affect cascade
     // so we just need to check if the class lists contain the same classes.
-    actual = toClassSet(el.getAttribute('class') || '')
-    expected = toClassSet(normalizeClass(clientValue))
-    if (!isSetEqual(actual, expected)) {
+    actual = el.getAttribute('class')
+    expected = normalizeClass(clientValue)
+    if (!isSetEqual(toClassSet(actual || ''), toClassSet(expected))) {
       mismatchType = mismatchKey = `class`
     }
   } else if (key === 'style') {
     // style might be in different order, but that doesn't affect cascade
-    actual = toStyleMap(el.getAttribute('style') || '')
-    expected = toStyleMap(
-      isString(clientValue)
-        ? clientValue
-        : stringifyStyle(normalizeStyle(clientValue)),
-    )
+    actual = el.getAttribute('style')
+    expected = isString(clientValue)
+      ? clientValue
+      : stringifyStyle(normalizeStyle(clientValue))
+    const actualMap = toStyleMap(actual)
+    const expectedMap = toStyleMap(expected)
     // If `v-show=false`, `display: 'none'` should be added to expected
     if (vnode.dirs) {
       for (const { dir, value } of vnode.dirs) {
         // @ts-expect-error only vShow has this internal name
         if (dir.name === 'show' && !value) {
-          expected.set('display', 'none')
+          expectedMap.set('display', 'none')
         }
       }
     }
-    if (!isMapEqual(actual, expected)) {
+    if (!isMapEqual(actualMap, expectedMap)) {
       mismatchType = mismatchKey = 'style'
     }
   } else if (
