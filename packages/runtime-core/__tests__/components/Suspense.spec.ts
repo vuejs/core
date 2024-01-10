@@ -1692,7 +1692,7 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<div>sync</div>`)
   })
 
-  // #6416 follow up
+  // #6416 follow up / #10017
   test('Suspense patched during HOC async component re-mount', async () => {
     const key = ref('k')
     const data = ref('data')
@@ -1713,7 +1713,7 @@ describe('Suspense', () => {
     const App = {
       render() {
         return h(Suspense, null, {
-          default: h(Comp, { data: data.value }),
+          default: h(Comp, { k: key.value, data: data.value }),
         })
       },
     }
