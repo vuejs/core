@@ -420,6 +420,7 @@ export interface SuspenseBoundary {
   isInFallback: boolean
   isHydrating: boolean
   isUnmounted: boolean
+  preEffects: Function[]
   effects: Function[]
   resolve(force?: boolean, sync?: boolean): void
   fallback(fallbackVNode: VNode): void
@@ -500,6 +501,7 @@ function createSuspenseBoundary(
     isInFallback: !isHydrating,
     isHydrating,
     isUnmounted: false,
+    preEffects: [],
     effects: [],
 
     resolve(resume = false, sync = false) {
@@ -520,6 +522,7 @@ function createSuspenseBoundary(
         activeBranch,
         pendingBranch,
         pendingId,
+        preEffects,
         effects,
         parentComponent,
         container,
@@ -530,6 +533,10 @@ function createSuspenseBoundary(
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
+        if (preEffects) {
+          preEffects.forEach(e => e())
+          preEffects.length = 0
+        }
         delayEnter =
           activeBranch &&
           pendingBranch!.transition &&
@@ -735,25 +742,29 @@ function createSuspenseBoundary(
     },
 
     unmount(parentSuspense, doRemove) {
+      const performUnmount = () => {
+        suspense.isUnmounted = true
+        if (suspense.activeBranch) {
+          unmount(
+            suspense.activeBranch,
+            parentComponent,
+            parentSuspense,
+            doRemove,
+          )
+        }
+        if (suspense.pendingBranch) {
+          unmount(
+            suspense.pendingBranch,
+            parentComponent,
+            parentSuspense,
+            doRemove,
+          )
+        }
+      }
       if (parentSuspense && parentSuspense.deps > 0) {
-        return
-      }
-      suspense.isUnmounted = true
-      if (suspense.activeBranch) {
-        unmount(
-          suspense.activeBranch,
-          parentComponent,
-          parentSuspense,
-          doRemove,
-        )
-      }
-      if (suspense.pendingBranch) {
-        unmount(
-          suspense.pendingBranch,
-          parentComponent,
-          parentSuspense,
-          doRemove,
-        )
+        parentSuspense.preEffects.push(performUnmount)
+      } else {
+        performUnmount()
       }
     },
   }
