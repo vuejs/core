@@ -1,3 +1,14 @@
+## [3.4.8](https://github.com/vuejs/core/compare/v3.4.7...v3.4.8) (2024-01-10)
+
+
+### Bug Fixes
+
+* **hydration:** fix class and style hydration mismatch message ([5af3987](https://github.com/vuejs/core/commit/5af398729168481c3bee741b4f36fa4f375e0f4a)), closes [#10067](https://github.com/vuejs/core/issues/10067)
+* **hydration:** improve attr hydration mismatch check for boolean attrs ([972face](https://github.com/vuejs/core/commit/972facee0d892a1b6d9d4ad1da5da9306ed45c3f)), closes [#10057](https://github.com/vuejs/core/issues/10057) [#10060](https://github.com/vuejs/core/issues/10060)
+* **suspense:** fix more suspense patch before resolve edge cases ([70ad4ca](https://github.com/vuejs/core/commit/70ad4caad7d19938f8ccf1ede3228a81254dd4bf)), closes [#10017](https://github.com/vuejs/core/issues/10017)
+
+
+
 ## [3.4.7](https://github.com/vuejs/core/compare/v3.4.6...v3.4.7) (2024-01-09)
 
 
