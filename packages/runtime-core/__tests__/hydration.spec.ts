@@ -1489,5 +1489,10 @@ describe('SSR hydration', () => {
       mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
       expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
     })
+
+    test('attr need to be processed mismatch', () => {
+      mountWithHydration(`<input />`, () => h('input', { readonly: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
   })
 })

@@ -755,10 +755,11 @@ function propHasMismatch(
     (el instanceof HTMLElement && (isBooleanAttr(key) || isKnownHtmlAttr(key)))
   ) {
     // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
+    const processedKey = getProcessedKey(key)
     actual = el.hasAttribute(key)
       ? el.getAttribute(key)
-      : key in el
-        ? el[key as keyof typeof el]
+      : processedKey in el
+        ? el[processedKey as keyof typeof el]
         : ''
     expected = isBooleanAttr(key)
       ? includeBooleanAttr(clientValue)
@@ -829,4 +830,13 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+// Some keys need to be processed before they can be obtained by el[key]
+// #10057 such as: readonly => readOnly
+function getProcessedKey(key: string) {
+  if (key === 'readonly') {
+    return 'readOnly'
+  }
+  return key
 }
