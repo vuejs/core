@@ -161,13 +161,13 @@ import {
 } from './devtools'
 
 export const devtools = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _devtools : undefined
+  __DEV__ || __ESM_BUNDLER__ ? _devtools : undefined
 ) as DevtoolsHook
 export const setDevtoolsHook = (
-  __DEV__ || __FEATURE_PROD_DEVTOOLS__ ? _setDevtoolsHook : NOOP
+  __DEV__ || __ESM_BUNDLER__ ? _setDevtoolsHook : NOOP
 ) as typeof _setDevtoolsHook
 
-// Types -------------------------------------------------------------------------
+// Types -----------------------------------------------------------------------
 
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
