@@ -91,6 +91,18 @@ export const SuspenseImpl = {
         rendererInternals,
       )
     } else {
+      // #8678 if the current suspense needs to be patched and parentSuspense has
+      // not been resolved. this means that both the current suspense and parentSuspense
+      // need to be patched. because parentSuspense's pendingBranch includes the
+      // current suspense, it will be processed twice:
+      //  1. current patch
+      //  2. mounting along with the pendingBranch of parentSuspense
+      // it is necessary to skip the current patch to avoid multiple mounts
+      // of inner components.
+      if (parentSuspense && parentSuspense.deps > 0) {
+        n2.suspense = n1.suspense
+        return
+      }
       patchSuspense(
         n1,
         n2,
