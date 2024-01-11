@@ -303,7 +303,7 @@ export function trackEffect(
   }
 }
 
-const queueEffectSchedulers: (() => void)[] = []
+const queueEffectSchedulers: EffectScheduler[] = []
 const pausedQueueEffects = new WeakSet<ReactiveEffect>()
 
 export function triggerEffects(

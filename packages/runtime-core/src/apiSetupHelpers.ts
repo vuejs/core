@@ -1,11 +1,8 @@
 import {
-  EMPTY_OBJ,
   type LooseRequired,
   type Prettify,
   type UnionToIntersection,
-  camelize,
   extend,
-  hasChanged,
   isArray,
   isFunction,
   isPromise,
@@ -28,13 +25,11 @@ import type {
   ComponentObjectPropsOptions,
   ComponentPropsOptions,
   ExtractPropTypes,
-  NormalizedProps,
   PropOptions,
 } from './componentProps'
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
-import { type Ref, customRef, ref } from '@vue/reactivity'
-import { watchSyncEffect } from '.'
+import type { Ref } from '@vue/reactivity'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -223,6 +218,11 @@ export function defineSlots<
 export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
   [ModelRef<T, M>, Record<M, true | undefined>]
 
+export type DefineModelOptions<T = any> = {
+  get?: (v: T) => any
+  set?: (v: T) => any
+}
+
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -257,25 +257,25 @@ export type ModelRef<T, M extends string | number | symbol = string> = Ref<T> &
  * ```
  */
 export function defineModel<T, M extends string | number | symbol = string>(
-  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+  options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
 export function defineModel<T, M extends string | number | symbol = string>(
-  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+  options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
 export function defineModel<T, M extends string | number | symbol = string>(
-  options?: PropOptions<T> & UseModelOptions<T>,
+  options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
 export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { required: true } & PropOptions<T> & UseModelOptions<T>,
+  options: { required: true } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
 export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options: { default: any } & PropOptions<T> & UseModelOptions<T>,
+  options: { default: any } & PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T, M>
 export function defineModel<T, M extends string | number | symbol = string>(
   name: string,
-  options?: PropOptions<T> & UseModelOptions<T>,
+  options?: PropOptions<T> & DefineModelOptions<T>,
 ): ModelRef<T | undefined, M>
 export function defineModel(): any {
   if (__DEV__) {
@@ -353,88 +353,6 @@ export function useSlots(): SetupContext['slots'] {
 
 export function useAttrs(): SetupContext['attrs'] {
   return getContext().attrs
-}
-
-type UseModelOptions<T = any> = {
-  get?: (v: T) => any
-  set?: (v: T) => any
-}
-
-export function useModel<
-  M extends string | number | symbol,
-  T extends Record<string, any>,
-  K extends keyof T,
->(props: T, name: K, options?: UseModelOptions<T[K]>): ModelRef<T[K], M>
-export function useModel(
-  props: Record<string, any>,
-  name: string,
-  options: UseModelOptions = EMPTY_OBJ,
-): Ref {
-  const i = getCurrentInstance()!
-  if (__DEV__ && !i) {
-    warn(`useModel() called without active instance.`)
-    return ref() as any
-  }
-
-  if (__DEV__ && !(i.propsOptions[0] as NormalizedProps)[name]) {
-    warn(`useModel() called with prop "${name}" which is not declared.`)
-    return ref() as any
-  }
-
-  const camelizedName = camelize(name)
-
-  const res = customRef((track, trigger) => {
-    let localValue: any
-    watchSyncEffect(() => {
-      const propValue = props[name]
-      if (hasChanged(localValue, propValue)) {
-        localValue = propValue
-        trigger()
-      }
-    })
-    return {
-      get() {
-        track()
-        return options.get ? options.get(localValue) : localValue
-      },
-      set(value) {
-        const rawProps = i.vnode!.props
-        if (
-          !(
-            rawProps &&
-            // check if parent has passed v-model
-            (name in rawProps || camelizedName in rawProps) &&
-            (`onUpdate:${name}` in rawProps ||
-              `onUpdate:${camelizedName}` in rawProps)
-          ) &&
-          hasChanged(value, localValue)
-        ) {
-          localValue = value
-          trigger()
-        }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
-      },
-    }
-  })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
-
-  // @ts-expect-error
-  res[Symbol.iterator] = () => {
-    let i = 0
-    return {
-      next() {
-        if (i < 2) {
-          return { value: i++ ? props[modifierKey] || {} : res, done: false }
-        } else {
-          return { done: true }
-        }
-      },
-    }
-  }
-
-  return res
 }
 
 function getContext(): SetupContext {

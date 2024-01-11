@@ -908,7 +908,7 @@ function importSourceToScope(
       resolved = resolveExt(filename, fs)
     } else {
       // module or aliased import - use full TS resolution, only supported in Node
-      if (!__NODE_JS__) {
+      if (!__CJS__) {
         return ctx.error(
           `Type import from non-relative sources is not supported in the browser build.`,
           node,
@@ -975,7 +975,7 @@ function resolveWithTS(
   ts: typeof TS,
   fs: FS,
 ): string | undefined {
-  if (!__NODE_JS__) return
+  if (!__CJS__) return
 
   // 1. resolve tsconfig.json
   const configPath = ts.findConfigFile(containingFile, fs.fileExists)
