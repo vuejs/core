@@ -1,3 +1,12 @@
+## [3.4.10](https://github.com/vuejs/core/compare/v3.4.9...v3.4.10) (2024-01-11)
+
+
+### Bug Fixes
+
+* **hydration:** should not warn on falsy bindings of non-property keys ([3907c87](https://github.com/vuejs/core/commit/3907c87ce23cc6ef4a739b5a66ddb553e8723114))
+
+
+
 ## [3.4.9](https://github.com/vuejs/core/compare/v3.4.8...v3.4.9) (2024-01-11)
 
 
