@@ -759,18 +759,18 @@ function propHasMismatch(
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
     } else {
-      // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
       if (el.hasAttribute(key)) {
         actual = el.getAttribute(key)
-      } else if (key in el) {
+      } else {
+        // #10000 some attrs such as textarea.value can't be retrieved by `hasAttribute`
         const serverValue = el[key as keyof typeof el]
-        if (!isObject(serverValue)) {
-          actual = serverValue == null ? '' : String(serverValue)
-        }
+        actual =
+          isObject(serverValue) || serverValue == null
+            ? ''
+            : String(serverValue)
       }
-      if (!isObject(clientValue)) {
-        expected = clientValue == null ? '' : String(clientValue)
-      }
+      expected =
+        isObject(clientValue) || clientValue == null ? '' : String(clientValue)
     }
     if (actual !== expected) {
       mismatchType = `attribute`

@@ -1516,5 +1516,10 @@ describe('SSR hydration', () => {
       mountWithHydration(`<input />`, () => h('input', { from: {} }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    test('should not warn on falsy bindings of non-property keys', () => {
+      mountWithHydration(`<button />`, () => h('button', { href: undefined }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
   })
 })
