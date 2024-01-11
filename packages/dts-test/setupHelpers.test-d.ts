@@ -2,18 +2,18 @@ import {
   type Ref,
   type Slots,
   type VNode,
+  defineComponent,
   defineEmits,
   defineModel,
   defineProps,
   defineSlots,
   toRefs,
   useAttrs,
+  useModel,
   useSlots,
   withDefaults,
 } from 'vue'
 import { describe, expectType } from './utils'
-import { defineComponent } from 'vue'
-import { useModel } from 'vue'
 
 describe('defineProps w/ type declaration', () => {
   // type declaration

@@ -61,6 +61,7 @@ export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
 export { defineAsyncComponent } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
+export { useModel } from './helpers/useModel'
 
 // <script setup> API ----------------------------------------------------------
 
@@ -73,7 +74,6 @@ export {
   defineSlots,
   defineModel,
   withDefaults,
-  useModel,
   type DefineProps,
   type ModelRef,
 } from './apiSetupHelpers'
