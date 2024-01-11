@@ -21,6 +21,7 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
+  isObject,
   isOn,
   isReservedProp,
   isString,
@@ -759,12 +760,17 @@ function propHasMismatch(
       expected = includeBooleanAttr(clientValue)
     } else {
       // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
-      actual = el.hasAttribute(key)
-        ? el.getAttribute(key)
-        : key in el
-          ? el[key as keyof typeof el]
-          : ''
-      expected = clientValue == null ? '' : String(clientValue)
+      if (el.hasAttribute(key)) {
+        actual = el.getAttribute(key)
+      } else if (key in el) {
+        const serverValue = el[key as keyof typeof el]
+        if (!isObject(serverValue)) {
+          actual = serverValue == null ? '' : String(serverValue)
+        }
+      }
+      if (!isObject(clientValue)) {
+        expected = clientValue == null ? '' : String(clientValue)
+      }
     }
     if (actual !== expected) {
       mismatchType = `attribute`
@@ -775,15 +781,20 @@ function propHasMismatch(
   if (mismatchType) {
     const format = (v: any) =>
       v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
-    warn(
-      `Hydration ${mismatchType} mismatch on`,
-      el,
+    const preSegment = `Hydration ${mismatchType} mismatch on`
+    const postSegment =
       `\n  - rendered on server: ${format(actual)}` +
-        `\n  - expected on client: ${format(expected)}` +
-        `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
-        `in production due to performance overhead.` +
-        `\n  You should fix the source of the mismatch.`,
-    )
+      `\n  - expected on client: ${format(expected)}` +
+      `\n  Note: this mismatch is check-only. The DOM will not be rectified ` +
+      `in production due to performance overhead.` +
+      `\n  You should fix the source of the mismatch.`
+    if (__TEST__) {
+      // during tests, log the full message in one single string for easier
+      // debugging.
+      warn(`${preSegment} ${el.tagName}${postSegment}`)
+    } else {
+      warn(preSegment, el, postSegment)
+    }
     return true
   }
   return false

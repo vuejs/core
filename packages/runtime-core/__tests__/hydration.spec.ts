@@ -1080,13 +1080,11 @@ describe('SSR hydration', () => {
   })
 
   test('force hydrate prop with `.prop` modifier', () => {
-    const { container } = mountWithHydration(
-      '<input type="checkbox" :indeterminate.prop="true">',
-      () =>
-        h('input', {
-          type: 'checkbox',
-          '.indeterminate': true,
-        }),
+    const { container } = mountWithHydration('<input type="checkbox">', () =>
+      h('input', {
+        type: 'checkbox',
+        '.indeterminate': true,
+      }),
     )
     expect((container.firstChild! as any).indeterminate).toBe(true)
   })
@@ -1475,6 +1473,16 @@ describe('SSR hydration', () => {
       mountWithHydration(`<select multiple></div>`, () =>
         h('select', { multiple: 'multiple' }),
       )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+
+      mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
+    test('attr special case: textarea value', () => {
       mountWithHydration(`<textarea>foo</textarea>`, () =>
         h('textarea', { value: 'foo' }),
       )
@@ -1483,11 +1491,10 @@ describe('SSR hydration', () => {
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
-      mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
+      mountWithHydration(`<textarea>foo</textarea>`, () =>
+        h('textarea', { value: 'bar' }),
+      )
       expect(`Hydration attribute mismatch`).toHaveBeenWarned()
-
-      mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
-      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
     })
 
     test('boolean attr handling', () => {
@@ -1502,6 +1509,11 @@ describe('SSR hydration', () => {
       mountWithHydration(`<input readonly="readonly" />`, () =>
         h('input', { readonly: true }),
       )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn against object values', () => {
+      mountWithHydration(`<input />`, () => h('input', { from: {} }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
   })
