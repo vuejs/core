@@ -1,44 +1,47 @@
 <script setup lang="ts">
 import { downloadProject } from './download/download'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import Sun from './icons/Sun.vue'
 import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
+import Reload from './icons/Reload.vue'
 import type { ReplStore } from '@vue/repl'
+import VersionSelect from './VersionSelect.vue'
 
 const props = defineProps<{
   store: ReplStore
-  dev: boolean
+  prod: boolean
   ssr: boolean
 }>()
+const emit = defineEmits([
+  'toggle-theme',
+  'toggle-ssr',
+  'toggle-prod',
+  'reload-page',
+])
 
 const { store } = props
 
 const currentCommit = __COMMIT__
-const activeVersion = ref(`@${currentCommit}`)
-const publishedVersions = ref<string[]>()
-const expanded = ref(false)
+const vueVersion = ref(`@${currentCommit}`)
 
-async function toggle() {
-  expanded.value = !expanded.value
-  if (!publishedVersions.value) {
-    publishedVersions.value = await fetchVersions()
-  }
+const vueURL = store.getImportMap().imports.vue
+if (vueURL && !vueURL.startsWith(location.origin)) {
+  const versionMatch = vueURL.match(/runtime-dom@([^/]+)/)
+  if (versionMatch) vueVersion.value = versionMatch[1]
 }
 
 async function setVueVersion(v: string) {
-  activeVersion.value = `loading...`
+  vueVersion.value = `loading...`
   await store.setVueVersion(v)
-  activeVersion.value = `v${v}`
-  expanded.value = false
+  vueVersion.value = v
 }
 
 function resetVueVersion() {
   store.resetVueVersion()
-  activeVersion.value = `@${currentCommit}`
-  expanded.value = false
+  vueVersion.value = `@${currentCommit}`
 }
 
 async function copyLink(e: MouseEvent) {
@@ -56,47 +59,9 @@ function toggleDark() {
   cls.toggle('dark')
   localStorage.setItem(
     'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+    String(cls.contains('dark')),
   )
-}
-
-onMounted(async () => {
-  window.addEventListener('click', () => {
-    expanded.value = false
-  })
-  window.addEventListener('blur', () => {
-    if (document.activeElement?.tagName === 'IFRAME') {
-      expanded.value = false
-    }
-  })
-})
-
-async function fetchVersions(): Promise<string[]> {
-  const res = await fetch(
-    `https://api.github.com/repos/vuejs/core/releases?per_page=100`
-  )
-  const releases: any[] = await res.json()
-  const versions = releases.map(r =>
-    /^v/.test(r.tag_name) ? r.tag_name.slice(1) : r.tag_name
-  )
-  // if the latest version is a pre-release, list all current pre-releases
-  // otherwise filter out pre-releases
-  let isInPreRelease = versions[0].includes('-')
-  const filteredVersions: string[] = []
-  for (const v of versions) {
-    if (v.includes('-')) {
-      if (isInPreRelease) {
-        filteredVersions.push(v)
-      }
-    } else {
-      filteredVersions.push(v)
-      isInPreRelease = false
-    }
-    if (filteredVersions.length >= 30 || v === '3.0.10') {
-      break
-    }
-  }
-  return filteredVersions
+  emit('toggle-theme', cls.contains('dark'))
 }
 </script>
 
@@ -107,35 +72,35 @@ async function fetchVersions(): Promise<string[]> {
       <span>Vue SFC Playground</span>
     </h1>
     <div class="links">
-      <div class="version" @click.stop>
-        <span class="active-version" @click="toggle">
-          Version
-          <span class="number">{{ activeVersion }}</span>
-        </span>
-        <ul class="versions" :class="{ expanded }">
-          <li v-if="!publishedVersions"><a>loading versions...</a></li>
-          <li v-for="version of publishedVersions">
-            <a @click="setVueVersion(version)">v{{ version }}</a>
-          </li>
-          <li>
-            <a @click="resetVueVersion">This Commit ({{ currentCommit }})</a>
-          </li>
-          <li>
-            <a
-              href="https://app.netlify.com/sites/vue-sfc-playground/deploys"
-              target="_blank"
-              >Commits History</a
-            >
-          </li>
-        </ul>
-      </div>
+      <VersionSelect
+        v-model="store.state.typescriptVersion"
+        pkg="typescript"
+        label="TypeScript Version"
+      />
+      <VersionSelect
+        :model-value="vueVersion"
+        @update:model-value="setVueVersion"
+        pkg="vue"
+        label="Vue Version"
+      >
+        <li>
+          <a @click="resetVueVersion">This Commit ({{ currentCommit }})</a>
+        </li>
+        <li>
+          <a
+            href="https://app.netlify.com/sites/vue-sfc-playground/deploys"
+            target="_blank"
+            >Commits History</a
+          >
+        </li>
+      </VersionSelect>
       <button
         title="Toggle development production mode"
-        class="toggle-dev"
-        :class="{ dev }"
-        @click="$emit('toggle-dev')"
+        class="toggle-prod"
+        :class="{ prod }"
+        @click="$emit('toggle-prod')"
       >
-        <span>{{ dev ? 'DEV' : 'PROD' }}</span>
+        <span>{{ prod ? 'PROD' : 'DEV' }}</span>
       </button>
       <button
         title="Toggle server rendering mode"
@@ -152,6 +117,9 @@ async function fetchVersions(): Promise<string[]> {
       <button title="Copy sharable URL" class="share" @click="copyLink">
         <Share />
       </button>
+      <button title="Reload page" class="reload" @click="$emit('reload-page')">
+        <Reload />
+      </button>
       <button
         title="Download project files"
         class="download"
@@ -159,14 +127,14 @@ async function fetchVersions(): Promise<string[]> {
       >
         <Download />
       </button>
-      <button title="View on GitHub" class="github">
-        <a
-          href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
-          target="_blank"
-        >
-          <GitHub />
-        </a>
-      </button>
+      <a
+        href="https://github.com/vuejs/core/tree/main/packages/sfc-playground"
+        target="_blank"
+        title="View on GitHub"
+        class="github"
+      >
+        <GitHub />
+      </a>
     </div>
   </nav>
 </template>
@@ -233,47 +201,20 @@ h1 img {
   display: flex;
 }
 
-.version {
-  margin-right: 12px;
-  position: relative;
-}
-
-.active-version {
-  cursor: pointer;
-  position: relative;
-  display: inline-flex;
-  place-items: center;
-}
-
-.active-version .number {
-  color: var(--green);
-  margin-left: 4px;
-}
-
-.active-version::after {
-  content: '';
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 6px solid #aaa;
-  margin-left: 8px;
-}
-
-.toggle-dev span,
+.toggle-prod span,
 .toggle-ssr span {
   font-size: 12px;
   border-radius: 4px;
   padding: 4px 6px;
 }
 
-.toggle-dev span {
-  background: var(--purple);
+.toggle-prod span {
+  background: var(--green);
   color: #fff;
 }
 
-.toggle-dev.dev span {
-  background: var(--green);
+.toggle-prod.prod span {
+  background: var(--purple);
 }
 
 .toggle-ssr span {
@@ -300,12 +241,13 @@ h1 img {
 }
 
 .links button,
-.links button a {
+.links .github {
+  padding: 1px 6px;
   color: var(--btn);
 }
 
 .links button:hover,
-.links button:hover a {
+.links .github:hover {
   color: var(--highlight);
 }
 
