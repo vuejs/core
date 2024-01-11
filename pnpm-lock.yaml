@@ -462,11 +462,8 @@ importers:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@20.10.6)(terser@5.22.0)
       vite-hyper-config:
-        specifier: ^0.1.1
-        version: 0.1.1(@types/node@20.10.6)(terser@5.22.0)(vite@5.0.2)
-      vite-node:
-        specifier: ^0.34.6
-        version: 0.34.6(@types/node@20.10.6)(terser@5.22.0)
+        specifier: ^0.2.1
+        version: 0.2.1(@types/node@20.10.6)(terser@5.22.0)(vite@5.0.2)
       vite-plugin-inspect:
         specifier: ^0.7.42
         version: 0.7.42(rollup@4.4.1)(vite@5.0.2)
@@ -6022,8 +6019,8 @@ packages:
     engines: {node: '>= 0.8'}
     dev: true
 
-  /vite-hyper-config@0.1.1(@types/node@20.10.6)(terser@5.22.0)(vite@5.0.2):
-    resolution: {integrity: sha512-Sc9WuuLImezPUG6JUnBU/L0KHZDHRyvLKEU1fEPCR6gBsC9QTnmnX78doRQpKt6P/rRcawlytbA2xt9Qb/kaVQ==}
+  /vite-hyper-config@0.2.1(@types/node@20.10.6)(terser@5.22.0)(vite@5.0.2):
+    resolution: {integrity: sha512-ItRIpzWp0XMh/Sn1H0GCWnQIUcBjnSaZy/EbOpJcRr9H/KTBHUSTCEOigE9K0KTN01Z0GDi/8WgVT9+RPL932A==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       vite: ^4.0.0 || ^5.0.0
@@ -6031,29 +6028,7 @@ packages:
       cac: 6.7.14
       picocolors: 1.0.0
       vite: 5.0.2(@types/node@20.10.6)(terser@5.22.0)
-      vite-node: 0.34.6(@types/node@20.10.6)(terser@5.22.0)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-    dev: true
-
-  /vite-node@0.34.6(@types/node@20.10.6)(terser@5.22.0):
-    resolution: {integrity: sha512-nlBMJ9x6n7/Amaz6F3zJ97EBwR2FkzhBRxF5e+jE6LA3yi6Wtc2lyTij1OnDMIr34v5g/tVQtsVAzhT0jc5ygA==}
-    engines: {node: '>=v14.18.0'}
-    hasBin: true
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.4
-      mlly: 1.4.2
-      pathe: 1.1.1
-      picocolors: 1.0.0
-      vite: 5.0.10(@types/node@20.10.6)(terser@5.22.0)
+      vite-node: 1.1.1(@types/node@20.10.6)(terser@5.22.0)
     transitivePeerDependencies:
       - '@types/node'
       - less
