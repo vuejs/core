@@ -652,7 +652,7 @@ function genExpression(
       if (isLocal) return
       ids.push(id)
     },
-    true,
+    false,
     [],
     knownIds,
   )

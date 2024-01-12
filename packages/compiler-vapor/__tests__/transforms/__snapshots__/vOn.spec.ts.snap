@@ -226,6 +226,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should not prefix member expression 1`] = `
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", (...args) => (_ctx.foo.bar && _ctx.foo.bar(...args)))
+  return n0
+}"
+`;
+
 exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
 "import { template as _template, children as _children, on as _on, withModifiers as _withModifiers } from 'vue/vapor';
 

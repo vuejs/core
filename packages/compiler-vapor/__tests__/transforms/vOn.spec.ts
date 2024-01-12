@@ -707,4 +707,15 @@ describe('v-on', () => {
       '(_ctx.event) === "click" ? "mouseup" : (_ctx.event)',
     )
   })
+
+  test('should not prefix member expression', () => {
+    const { code } = compileWithVOn(`<div @click="foo.bar"/>`, {
+      prefixIdentifiers: true,
+    })
+
+    expect(code).matchSnapshot()
+    expect(code).contains(
+      `_on(n1, "click", (...args) => (_ctx.foo.bar && _ctx.foo.bar(...args)))`,
+    )
+  })
 })
