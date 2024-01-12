@@ -3,16 +3,20 @@ import {
   type ReactiveEffectRunner,
   TrackOpTypes,
   TriggerOpTypes,
+  computed,
   effect,
   markRaw,
   reactive,
   readonly,
+  ref,
   shallowReactive,
   stop,
   toRaw,
 } from '../src/index'
 import { pauseScheduling, resetScheduling } from '../src/effect'
 import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
+import { Fragment, defineComponent, h, nextTick } from 'vue'
+import { nodeOps, render, serialize } from '@vue/runtime-test'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -940,6 +944,46 @@ describe('reactivity/effect', () => {
     arr1.length = 2
     arr2.length = '2' as any
     expect(ret1).toBe(ret2)
+  })
+
+  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
+    const Child = defineComponent({
+      props: ['getComputed', 'addComputedDep'],
+      created() {
+        this.addComputedDep()
+      },
+      render: (props: {
+        getComputed: () => boolean
+        addComputedDep: () => void
+      }) => {
+        return h('div', props.getComputed())
+      },
+    })
+
+    const Parent = defineComponent(() => {
+      const count = ref(0)
+      const moreThanOne = computed(() => {
+        return count.value > 1
+      })
+      const getComputed = () => moreThanOne.value
+      const addComputedDep = () => {
+        count.value++
+      }
+      return () =>
+        h(Fragment, [
+          getComputed() ? h('span', 'moreThanOne') : null,
+          h(Child, { getComputed, addComputedDep }),
+          h(Child, { getComputed, addComputedDep }),
+          h(Child, { getComputed, addComputedDep }),
+        ])
+    })
+
+    const root = nodeOps.createElement('div')
+    render(h(Parent), root)
+    await nextTick()
+    expect(serialize(root)).toBe(
+      '<div><span>moreThanOne</span><div>true</div><div>true</div><div>true</div></div>',
+    )
   })
 
   describe('readonly + reactive for Map', () => {
