@@ -6,6 +6,7 @@ import {
 } from './component'
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeArrayChildren,
   blockStack,
@@ -266,9 +267,12 @@ export function renderComponentRoot(
 const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren
-  const childRoot = filterSingleRoot(rawChildren)
+  let childRoot = filterSingleRoot(rawChildren, true)
   if (!childRoot) {
     return [vnode, undefined]
+  }
+  if (childRoot.type === Fragment) {
+    return getChildRoot(childRoot)
   }
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
@@ -287,6 +291,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 
 export function filterSingleRoot(
   children: VNodeArrayChildren,
+  needSetRoot = false,
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -298,7 +303,13 @@ export function filterSingleRoot(
           // has more than 1 non-comment child, return now
           return
         } else {
-          singleRoot = child
+          if (!needSetRoot && child.type === Fragment) {
+            singleRoot = filterSingleRoot(
+              (child.children as VNodeArrayChildren) ?? [],
+            )
+          } else {
+            singleRoot = child
+          }
         }
       }
     } else {
