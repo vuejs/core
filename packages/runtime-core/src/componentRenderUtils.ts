@@ -270,6 +270,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   if (!childRoot) {
     return [vnode, undefined]
   } else if (
+    __DEV__ &&
     childRoot.patchFlag > 0 &&
     childRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
   ) {
@@ -293,7 +294,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 
 export function filterSingleRoot(
   children: VNodeArrayChildren,
-  recursion: boolean = true,
+  recurse = true,
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -307,7 +308,8 @@ export function filterSingleRoot(
         } else {
           singleRoot = child
           if (
-            recursion &&
+            __DEV__ &&
+            recurse &&
             singleRoot.patchFlag > 0 &&
             singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
           ) {

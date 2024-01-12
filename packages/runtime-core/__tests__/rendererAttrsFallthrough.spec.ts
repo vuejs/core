@@ -5,7 +5,6 @@
 
 import {
   Fragment,
-  Fragment,
   type FunctionalComponent,
   createBlock,
   createCommentVNode,
@@ -676,7 +675,7 @@ describe('attribute fallthrough', () => {
     expect(click).toHaveBeenCalled()
   })
 
-  it('should support fallthrough for nested fragments', async () => {
+  it('should support fallthrough for nested dev root fragments', async () => {
     const toggle = ref(false)
 
     const Child = {
