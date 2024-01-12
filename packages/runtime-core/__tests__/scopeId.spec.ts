@@ -1,12 +1,12 @@
 import {
   h,
-  render,
   nodeOps,
-  serializeInner,
-  renderSlot,
-  withScopeId,
-  pushScopeId,
   popScopeId,
+  pushScopeId,
+  render,
+  renderSlot,
+  serializeInner,
+  withScopeId,
   ref,
   defineComponent,
   openBlock,
@@ -23,7 +23,7 @@ describe('scopeId runtime support', () => {
   test('should attach scopeId', () => {
     const App = {
       __scopeId: 'parent',
-      render: () => h('div', [h('div')])
+      render: () => h('div', [h('div')]),
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -33,17 +33,17 @@ describe('scopeId runtime support', () => {
   test('should attach scopeId to components in parent component', () => {
     const Child = {
       __scopeId: 'child',
-      render: () => h('div')
+      render: () => h('div'),
     }
     const App = {
       __scopeId: 'parent',
-      render: () => h('div', [h(Child)])
+      render: () => h('div', [h(Child)]),
     }
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serializeInner(root)).toBe(
-      `<div parent><div child parent></div></div>`
+      `<div parent><div child parent></div></div>`,
     )
   })
 
@@ -53,11 +53,11 @@ describe('scopeId runtime support', () => {
       __scopeId: 'child',
       render(this: any) {
         return h('div', renderSlot(this.$slots, 'default'))
-      }
+      },
     }
     const Child2 = {
       __scopeId: 'child2',
-      render: () => h('span')
+      render: () => h('span'),
     }
     const App = {
       __scopeId: 'parent',
@@ -66,9 +66,9 @@ describe('scopeId runtime support', () => {
           Child,
           withCtx(() => {
             return [h('div'), h(Child2)]
-          })
+          }),
         )
-      }
+      },
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -83,7 +83,7 @@ describe('scopeId runtime support', () => {
         // - slotted scopeId from slot owner
         // - its own scopeId
         `<span child2 parent child-s></span>` +
-        `</div>`
+        `</div>`,
     )
   })
 
@@ -99,10 +99,10 @@ describe('scopeId runtime support', () => {
             'default',
             {},
             undefined,
-            true /* noSlotted */
-          )
+            true /* noSlotted */,
+          ),
         ])
-      }
+      },
     }
 
     const Slotted = {
@@ -110,9 +110,9 @@ describe('scopeId runtime support', () => {
       render(this: any) {
         // <Wrapper><slot/></Wrapper>
         return h(Wrapper, null, {
-          default: withCtx(() => [renderSlot(this.$slots, 'default')])
+          default: withCtx(() => [renderSlot(this.$slots, 'default')]),
         })
-      }
+      },
     }
 
     // simulate hoisted node
@@ -127,9 +127,9 @@ describe('scopeId runtime support', () => {
         return h(Slotted, null, {
           default: withCtx(() => {
             return [hoisted, h('div', 'dynamic')]
-          })
+          }),
         })
-      }
+      },
     }
 
     const root = nodeOps.createElement('div')
@@ -138,7 +138,7 @@ describe('scopeId runtime support', () => {
       `<div wrapper slotted root class="wrapper">` +
         `<div root slotted-s>hoisted</div>` +
         `<div root slotted-s>dynamic</div>` +
-        `</div>`
+        `</div>`,
     )
 
     const Root2 = {
@@ -152,11 +152,11 @@ describe('scopeId runtime support', () => {
         return h(Slotted, null, {
           default: withCtx(() => [
             h(Wrapper, null, {
-              default: withCtx(() => [hoisted, h('div', 'dynamic')])
-            })
-          ])
+              default: withCtx(() => [hoisted, h('div', 'dynamic')]),
+            }),
+          ]),
         })
-      }
+      },
     }
     const root2 = nodeOps.createElement('div')
     render(h(Root2), root2)
@@ -166,7 +166,7 @@ describe('scopeId runtime support', () => {
         `<div root>hoisted</div>` +
         `<div root>dynamic</div>` +
         `</div>` +
-        `</div>`
+        `</div>`,
     )
   })
 
@@ -176,7 +176,7 @@ describe('scopeId runtime support', () => {
       __scopeId: 'parent',
       render: () => {
         return h(Child)
-      }
+      },
     }
 
     function Child() {
@@ -253,7 +253,7 @@ describe('backwards compat with <=3.0.7', () => {
       __scopeId: 'parent',
       render: withParentId(() => {
         return h('div', [h('div')])
-      })
+      }),
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -265,19 +265,19 @@ describe('backwards compat with <=3.0.7', () => {
       __scopeId: 'child',
       render: withChildId(() => {
         return h('div')
-      })
+      }),
     }
     const App = {
       __scopeId: 'parent',
       render: withParentId(() => {
         return h('div', [h(Child)])
-      })
+      }),
     }
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
     expect(serializeInner(root)).toBe(
-      `<div parent><div child parent></div></div>`
+      `<div parent><div child parent></div></div>`,
     )
   })
 
@@ -286,12 +286,12 @@ describe('backwards compat with <=3.0.7', () => {
       __scopeId: 'child',
       render: withChildId(function (this: any) {
         return h('div', renderSlot(this.$slots, 'default'))
-      })
+      }),
     }
     const withChild2Id = withScopeId('child2')
     const Child2 = {
       __scopeId: 'child2',
-      render: withChild2Id(() => h('span'))
+      render: withChild2Id(() => h('span')),
     }
     const App = {
       __scopeId: 'parent',
@@ -300,9 +300,9 @@ describe('backwards compat with <=3.0.7', () => {
           Child,
           withParentId(() => {
             return [h('div'), h(Child2)]
-          })
+          }),
         )
-      })
+      }),
     }
     const root = nodeOps.createElement('div')
     render(h(App), root)
@@ -317,7 +317,7 @@ describe('backwards compat with <=3.0.7', () => {
         // - slotted scopeId from slot owner
         // - its own scopeId
         `<span child2 parent child-s></span>` +
-        `</div>`
+        `</div>`,
     )
   })
 
@@ -328,7 +328,7 @@ describe('backwards compat with <=3.0.7', () => {
       __scopeId: 'parent',
       render: withParentId(() => {
         return h(Child)
-      })
+      }),
     }
 
     function Child() {
@@ -353,14 +353,14 @@ describe('backwards compat with <=3.0.7', () => {
 
     const App = {
       __scopeId: 'foobar',
-      render: () => h('div', [hoisted])
+      render: () => h('div', [hoisted]),
     }
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
 
     expect(serializeInner(root)).toBe(
-      `<div foobar><div foobar>hello</div></div>`
+      `<div foobar><div foobar>hello</div></div>`,
     )
   })
 })
