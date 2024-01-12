@@ -72,6 +72,17 @@ describe('reactivity/computed', () => {
     expect(c1.value).toBe(1)
   })
 
+  it('should work when chained(ref+computed)', () => {
+    const value = ref(0)
+    const provider = computed(() => value.value + consumer.value)
+    const consumer = computed(() => {
+      value.value++
+      return 'foo'
+    })
+    provider.value
+    expect(provider.value).toBe('1foo')
+  })
+
   it('should trigger effect when chained', () => {
     const value = reactive({ foo: 0 })
     const getter1 = vi.fn(() => value.foo)

@@ -290,7 +290,7 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
-    if (!effect.allowRecurse && effect._runnings) {
+    if (!effect.allowRecurse && effect._runnings && effect === activeEffect) {
       continue
     }
     if (
