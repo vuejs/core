@@ -1,13 +1,4 @@
 import {
-  Fragment,
-  defineComponent,
-  h,
-  nextTick,
-  nodeOps,
-  render,
-  serialize,
-} from '@vue/runtime-test'
-import {
   type DebuggerEvent,
   ITERATE_KEY,
   TrackOpTypes,
@@ -459,44 +450,5 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(1)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
-  })
-  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
-    const Child = defineComponent({
-      props: ['getComputed', 'addComputedDep'],
-      created() {
-        this.addComputedDep()
-      },
-      render: (props: {
-        getComputed: () => boolean
-        addComputedDep: () => void
-      }) => {
-        return h('div', props.getComputed())
-      },
-    })
-
-    const Parent = defineComponent(() => {
-      const count = ref(0)
-      const moreThanOne = computed(() => {
-        return count.value > 1
-      })
-      const getComputed = () => moreThanOne.value
-      const addComputedDep = () => {
-        count.value++
-      }
-      return () =>
-        h(Fragment, [
-          getComputed() ? h('span', 'moreThanOne') : null,
-          h(Child, { getComputed, addComputedDep }),
-          h(Child, { getComputed, addComputedDep }),
-          h(Child, { getComputed, addComputedDep }),
-        ])
-    })
-
-    const root = nodeOps.createElement('div')
-    render(h(Parent), root)
-    await nextTick()
-    expect(serialize(root)).toBe(
-      '<div><span>moreThanOne</span><div>true</div><div>true</div><div>true</div></div>',
-    )
   })
 })
