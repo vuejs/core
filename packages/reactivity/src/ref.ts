@@ -5,7 +5,12 @@ import {
   trackEffect,
   triggerEffects,
 } from './effect'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
+import {
+  DirtyLevels,
+  ReactiveFlags,
+  TrackOpTypes,
+  TriggerOpTypes,
+} from './constants'
 import {
   type IfAny,
   hasChanged,
@@ -357,6 +362,13 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   } else {
     return new Proxy(object, {
       get(target, key: string) {
+        if (
+          key === ReactiveFlags.IS_READONLY ||
+          key === ReactiveFlags.RAW ||
+          key === ReactiveFlags.SKIP
+        ) {
+          return false
+        }
         return propertyToRef(target, key)
       },
     }) as ToRefs<T>

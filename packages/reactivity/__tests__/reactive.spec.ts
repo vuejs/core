@@ -1,4 +1,4 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref, toRefs } from '../src/ref'
 import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
@@ -296,5 +296,12 @@ describe('reactivity/reactive', () => {
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
+  })
+
+  it('reactive(toRefs())', () => {
+    const a = reactive({ a: 'a', b: 0 })
+    const b = toRefs(a)
+    const c = reactive(b)
+    expect(a).toEqual(c)
   })
 })
