@@ -76,5 +76,6 @@ export {
   traverse,
   BaseWatchErrorCodes,
   type BaseWatchOptions,
+  type BaseWatchMiddleware,
   type Scheduler,
 } from './baseWatch'

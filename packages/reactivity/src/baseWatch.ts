@@ -71,6 +71,7 @@ export interface BaseWatchOptions<Immediate = boolean> extends DebuggerOptions {
   deep?: boolean
   once?: boolean
   scheduler?: Scheduler
+  middleware?: BaseWatchMiddleware
   onError?: HandleError
   onWarn?: HandleWarn
 }
@@ -83,6 +84,7 @@ export type Scheduler = (
   effect: ReactiveEffect,
   isInit: boolean,
 ) => void
+export type BaseWatchMiddleware = (next: () => unknown) => any
 export type HandleError = (err: unknown, type: BaseWatchErrorCodes) => void
 export type HandleWarn = (msg: string, ...args: any[]) => void
 
@@ -132,6 +134,7 @@ export function baseWatch(
     scheduler = DEFAULT_SCHEDULER,
     onWarn = __DEV__ ? warn : NOOP,
     onError = DEFAULT_HANDLE_ERROR,
+    middleware,
     onTrack,
     onTrigger,
   }: BaseWatchOptions = EMPTY_OBJ,
@@ -211,6 +214,10 @@ export function baseWatch(
           activeEffect = currentEffect
         }
       }
+      if (middleware) {
+        const baseGetter = getter
+        getter = () => middleware(baseGetter)
+      }
     }
   } else {
     getter = NOOP
@@ -264,31 +271,38 @@ export function baseWatch(
           ? (newValue as any[]).some((v, i) => hasChanged(v, oldValue[i]))
           : hasChanged(newValue, oldValue))
       ) {
-        // cleanup before running cb again
-        if (cleanup) {
-          cleanup()
+        const next = () => {
+          // cleanup before running cb again
+          if (cleanup) {
+            cleanup()
+          }
+          const currentEffect = activeEffect
+          activeEffect = effect
+          try {
+            callWithAsyncErrorHandling(
+              cb!,
+              onError,
+              BaseWatchErrorCodes.WATCH_CALLBACK,
+              [
+                newValue,
+                // pass undefined as the old value when it's changed for the first time
+                oldValue === INITIAL_WATCHER_VALUE
+                  ? undefined
+                  : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+                    ? []
+                    : oldValue,
+                onEffectCleanup,
+              ],
+            )
+            oldValue = newValue
+          } finally {
+            activeEffect = currentEffect
+          }
         }
-        const currentEffect = activeEffect
-        activeEffect = effect
-        try {
-          callWithAsyncErrorHandling(
-            cb,
-            onError,
-            BaseWatchErrorCodes.WATCH_CALLBACK,
-            [
-              newValue,
-              // pass undefined as the old value when it's changed for the first time
-              oldValue === INITIAL_WATCHER_VALUE
-                ? undefined
-                : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-                  ? []
-                  : oldValue,
-              onEffectCleanup,
-            ],
-          )
-          oldValue = newValue
-        } finally {
-          activeEffect = currentEffect
+        if (middleware) {
+          middleware(next)
+        } else {
+          next()
         }
       }
     } else {

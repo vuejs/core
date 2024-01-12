@@ -1,14 +1,19 @@
 import {
   type BaseWatchErrorCodes,
+  type BaseWatchMiddleware,
   type BaseWatchOptions,
   baseWatch,
   getCurrentScope,
 } from '@vue/reactivity'
-import { NOOP, remove } from '@vue/shared'
-import { currentInstance } from './component'
-import { createVaporRenderingScheduler } from './scheduler'
+import { NOOP, invokeArrayFns, remove } from '@vue/shared'
+import { type ComponentInternalInstance, currentInstance } from './component'
+import {
+  createVaporRenderingScheduler,
+  queuePostRenderEffect,
+} from './scheduler'
 import { handleError as handleErrorWithInstance } from './errorHandling'
 import { warn } from './warning'
+import { invokeDirectiveHook } from './directive'
 
 type WatchStopHandle = () => void
 
@@ -28,8 +33,6 @@ function doWatch(source: any, cb?: any): WatchStopHandle {
 
   if (__DEV__) extendOptions.onWarn = warn
 
-  // TODO: Life Cycle Hooks
-
   // TODO: SSR
   // if (__SSR__) {}
 
@@ -39,6 +42,8 @@ function doWatch(source: any, cb?: any): WatchStopHandle {
   extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
     handleErrorWithInstance(err, instance, type)
   extendOptions.scheduler = createVaporRenderingScheduler(instance)
+
+  extendOptions.middleware = createMiddleware(instance)
 
   let effect = baseWatch(source, cb, extendOptions)
 
@@ -53,3 +58,44 @@ function doWatch(source: any, cb?: any): WatchStopHandle {
 
   return unwatch
 }
+
+const createMiddleware =
+  (instance: ComponentInternalInstance | null): BaseWatchMiddleware =>
+  (next) => {
+    let value: unknown
+    // with lifecycle
+    if (instance && instance.isMounted) {
+      const { bu, u, dirs } = instance
+      // beforeUpdate hook
+      const isFirstEffect = !instance.isUpdating
+      if (isFirstEffect) {
+        if (bu) {
+          invokeArrayFns(bu)
+        }
+        if (dirs) {
+          invokeDirectiveHook(instance, 'beforeUpdate')
+        }
+        instance.isUpdating = true
+      }
+
+      // run callback
+      value = next()
+
+      if (isFirstEffect) {
+        queuePostRenderEffect(() => {
+          instance.isUpdating = false
+          if (dirs) {
+            invokeDirectiveHook(instance, 'updated')
+          }
+          // updated hook
+          if (u) {
+            queuePostRenderEffect(u)
+          }
+        })
+      }
+    } else {
+      // is not mounted
+      value = next()
+    }
+    return value
+  }

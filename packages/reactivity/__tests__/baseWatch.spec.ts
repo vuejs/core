@@ -175,4 +175,82 @@ describe('baseWatch', () => {
     scope.stop()
     expect(calls).toEqual(['sync 2', 'post 2'])
   })
+  test('baseWatch with middleware', async () => {
+    let effectCalls: string[] = []
+    let watchCalls: string[] = []
+    const source = ref(0)
+
+    // effect
+    baseWatch(
+      () => {
+        source.value
+        effectCalls.push('effect')
+        onEffectCleanup(() => effectCalls.push('effect cleanup'))
+      },
+      null,
+      {
+        scheduler,
+        middleware: next => {
+          effectCalls.push('before effect running')
+          next()
+          effectCalls.push('effect ran')
+        },
+      },
+    )
+    // watch
+    baseWatch(
+      () => source.value,
+      () => {
+        watchCalls.push('watch')
+        onEffectCleanup(() => watchCalls.push('watch cleanup'))
+      },
+      {
+        scheduler,
+        middleware: next => {
+          watchCalls.push('before watch running')
+          next()
+          watchCalls.push('watch ran')
+        },
+      },
+    )
+
+    expect(effectCalls).toEqual([])
+    expect(watchCalls).toEqual([])
+    await nextTick()
+    expect(effectCalls).toEqual([
+      'before effect running',
+      'effect',
+      'effect ran',
+    ])
+    expect(watchCalls).toEqual([])
+    effectCalls.length = 0
+    watchCalls.length = 0
+
+    source.value++
+    await nextTick()
+    expect(effectCalls).toEqual([
+      'before effect running',
+      'effect cleanup',
+      'effect',
+      'effect ran',
+    ])
+    expect(watchCalls).toEqual(['before watch running', 'watch', 'watch ran'])
+    effectCalls.length = 0
+    watchCalls.length = 0
+
+    source.value++
+    await nextTick()
+    expect(effectCalls).toEqual([
+      'before effect running',
+      'effect cleanup',
+      'effect',
+      'effect ran',
+    ])
+    expect(watchCalls).toEqual([
+      'before watch running',
+      'watch cleanup',
+      'watch',
+      'watch ran',
+    ])
+  })
 })

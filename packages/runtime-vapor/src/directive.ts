@@ -1,6 +1,8 @@
-import { isFunction } from '@vue/shared'
+import { NOOP, isFunction } from '@vue/shared'
 import { type ComponentInternalInstance, currentInstance } from './component'
-import { watchEffect } from './apiWatch'
+import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import { renderWatch } from './renderWatch'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
@@ -27,7 +29,7 @@ export type DirectiveHookName =
   | 'created'
   | 'beforeMount'
   | 'mounted'
-  // | 'beforeUpdate'
+  | 'beforeUpdate'
   | 'updated'
   | 'beforeUnmount'
   | 'unmounted'
@@ -93,12 +95,12 @@ export function withDirectives<T extends Node>(
     }
     bindings.push(binding)
 
-    callDirectiveHook(node, binding, 'created')
+    callDirectiveHook(node, binding, instance, 'created')
 
-    watchEffect(() => {
-      if (!instance.isMountedRef.value) return
-      callDirectiveHook(node, binding, 'updated')
-    })
+    // register source
+    if (source) {
+      renderWatch(source, NOOP)
+    }
   }
 
   return node
@@ -114,7 +116,7 @@ export function invokeDirectiveHook(
   for (const node of nodes) {
     const directives = instance.dirs.get(node) || []
     for (const binding of directives) {
-      callDirectiveHook(node, binding, name)
+      callDirectiveHook(node, binding, instance, name)
     }
   }
 }
@@ -122,6 +124,7 @@ export function invokeDirectiveHook(
 function callDirectiveHook(
   node: Node,
   binding: DirectiveBinding,
+  instance: ComponentInternalInstance | null,
   name: DirectiveHookName,
 ) {
   const { dir } = binding
@@ -129,9 +132,14 @@ function callDirectiveHook(
   if (!hook) return
 
   const newValue = binding.source ? binding.source() : undefined
-  if (name === 'updated' && binding.value === newValue) return
-
-  binding.oldValue = binding.value
   binding.value = newValue
-  hook(node, binding)
+  // disable tracking inside all lifecycle hooks
+  // since they can potentially be called inside effects.
+  pauseTracking()
+  callWithAsyncErrorHandling(hook, instance, VaporErrorCodes.DIRECTIVE_HOOK, [
+    node,
+    binding,
+  ])
+  resetTracking()
+  if (name !== 'beforeUpdate') binding.oldValue = binding.value
 }

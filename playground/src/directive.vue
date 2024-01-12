@@ -2,6 +2,7 @@
 import { ObjectDirective, FunctionDirective, ref } from '@vue/vapor'
 
 const text = ref('created (overwrite by v-text), ')
+const counter = ref(0)
 const vDirective: ObjectDirective<HTMLDivElement, undefined> = {
   created(node) {
     if (!node.parentElement) {
@@ -17,9 +18,15 @@ const vDirective: ObjectDirective<HTMLDivElement, undefined> = {
   mounted(node) {
     if (node.parentElement) node.textContent += 'mounted, '
   },
+  beforeUpdate(node, binding) {
+    console.log('beforeUpdate', binding, node)
+  },
+  updated(node, binding) {
+    console.log('updated', binding, node)
+  },
 }
 const vDirectiveSimple: FunctionDirective<HTMLDivElement> = (node, binding) => {
-  console.log(node, binding)
+  console.log('v-directive-simple:', node, binding)
 }
 const handleClick = () => {
   text.value = 'change'
@@ -33,4 +40,15 @@ const handleClick = () => {
     v-directive-simple="text"
     @click="handleClick"
   />
+  <button @click="counter++">
+    {{ counter }} (Click to Update Other Element)
+  </button>
 </template>
+
+<style>
+html {
+  color-scheme: dark;
+  background-color: #000;
+  padding: 10px;
+}
+</style>
