@@ -110,7 +110,12 @@ export class ReactiveEffect<T = any> {
       activeEffect = this
       this._runnings++
       preCleanupEffect(this)
-      return this.fn()
+      const r = this.fn()
+      // @ts-expect-error this has become dirty in the run
+      if (this._dirtyLevel === DirtyLevels.Dirty) {
+        return this.fn()
+      }
+      return r
     } finally {
       postCleanupEffect(this)
       this._runnings--
@@ -289,9 +294,17 @@ export function triggerEffects(
   debuggerEventExtraInfo?: DebuggerEventExtraInfo,
 ) {
   pauseScheduling()
+  const hasDepsRunning = activeEffect ? dep.has(activeEffect) : false
   for (const effect of dep.keys()) {
     if (!effect.allowRecurse && effect._runnings) {
-      continue
+      if (hasDepsRunning && effect !== activeEffect) {
+        // maybe this effect is actually recursive
+        if (effect.allowRecurse === undefined) {
+          effect.allowRecurse = true
+        }
+      } else {
+        continue
+      }
     }
     if (
       effect._dirtyLevel < dirtyLevel &&
