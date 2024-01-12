@@ -295,7 +295,9 @@ export function triggerEffects(
     }
     if (
       effect._dirtyLevel < dirtyLevel &&
-      (!effect._runnings || dirtyLevel !== DirtyLevels.ComputedValueDirty)
+      (!effect._runnings ||
+        effect.allowRecurse ||
+        dirtyLevel !== DirtyLevels.ComputedValueDirty)
     ) {
       const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
