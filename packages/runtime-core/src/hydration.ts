@@ -758,6 +758,9 @@ function propHasMismatch(
     if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
+    } else if (clientValue == null) {
+      actual = el.hasAttribute(key)
+      expected = false
     } else {
       if (el.hasAttribute(key)) {
         actual = el.getAttribute(key)

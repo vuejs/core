@@ -1512,6 +1512,16 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('client value is null or undefined', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { draggable: undefined }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<input />`, () => h('input', { type: null }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
     test('should not warn against object values', () => {
       mountWithHydration(`<input />`, () => h('input', { from: {} }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
