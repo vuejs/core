@@ -5,18 +5,18 @@
 
 import {
   Fragment,
+  Fragment,
   type FunctionalComponent,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   defineComponent,
   h,
   mergeProps,
   nextTick,
   onUpdated,
   openBlock,
-  createElementBlock,
-  createElementVNode,
-  Fragment,
   ref,
   render,
   withModifiers,
@@ -696,21 +696,21 @@ describe('attribute fallthrough', () => {
                     { key: 1 },
                     [
                       createCommentVNode(' comment B '),
-                      createElementVNode('div', null, 'Bar')
+                      createElementVNode('div', null, 'Bar'),
                     ],
-                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
-                  ))
+                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+                  )),
             ],
-            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
           )
         )
-      }
+      },
     }
 
     const Root = {
       setup() {
         return () => (openBlock(), createBlock(Child, { class: 'red' }))
-      }
+      },
     }
 
     const root = document.createElement('div')
@@ -718,13 +718,13 @@ describe('attribute fallthrough', () => {
     render(h(Root), root)
 
     expect(root.innerHTML).toBe(
-      `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`
+      `<!-- comment A --><!-- comment B --><div class="red">Bar</div>`,
     )
 
     toggle.value = true
     await nextTick()
     expect(root.innerHTML).toBe(
-      `<!-- comment A --><span class=\"red\">Foo</span>`
+      `<!-- comment A --><span class=\"red\">Foo</span>`,
     )
   })
 

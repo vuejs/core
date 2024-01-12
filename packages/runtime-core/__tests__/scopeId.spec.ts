@@ -1,20 +1,20 @@
 import {
+  Fragment,
+  createBlock,
+  createCommentVNode,
+  createVNode,
+  defineComponent,
   h,
+  nextTick,
   nodeOps,
+  openBlock,
   popScopeId,
   pushScopeId,
+  ref,
   render,
   renderSlot,
   serializeInner,
   withScopeId,
-  ref,
-  defineComponent,
-  openBlock,
-  createBlock,
-  Fragment,
-  createCommentVNode,
-  createVNode,
-  nextTick
 } from '@vue/runtime-test'
 import { withCtx } from '../src/componentRenderContext'
 import { PatchFlags } from '@vue/shared'
@@ -199,7 +199,7 @@ describe('scopeId runtime support', () => {
       __scopeId: 'parent',
       render() {
         return h(Child, { class: 'foo' })
-      }
+      },
     }
 
     const ok = ref(true)
@@ -221,15 +221,15 @@ describe('scopeId runtime support', () => {
                     { key: 1 },
                     [
                       createCommentVNode('comment2'),
-                      createVNode('div', null, 'div2')
+                      createVNode('div', null, 'div2'),
                     ],
-                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
-                  ))
+                    PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
+                  )),
             ],
-            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT
+            PatchFlags.STABLE_FRAGMENT | PatchFlags.DEV_ROOT_FRAGMENT,
           )
         )
-      }
+      },
     })
 
     const root = nodeOps.createElement('div')
@@ -239,7 +239,7 @@ describe('scopeId runtime support', () => {
     ok.value = false
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<!--comment1--><!--comment2--><div parent>div2</div>`
+      `<!--comment1--><!--comment2--><div parent>div2</div>`,
     )
   })
 })
