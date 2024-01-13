@@ -256,7 +256,7 @@ export type ComponentEmitsAsProps<T> = T extends {
  * Returns runtime props definition for a component
  *
  *  @see Include emits {@linkcode ComponentEmitsAsProps}
- *  @see Get the render props {@linkcode Compo/`nentExpectedProps}
+ *  @see Get the render props {@linkcode ComponentExpectedProps}
  *
  * @example
  * ```ts
@@ -493,8 +493,11 @@ export type DeclareComponent<
  * Helper for <component :is="..."> type inference
  */
 export type DynamicComponent = {
-  new <T extends Component>(): {
-    $props: { is: T } & LooseOptional<ComponentExpectedProps<T>> &
-      ComponentEmitsAsProps<T>
+  new <T>(): {
+    $props: { is: T } & ResolveDynamicProps<T>
   }
 }
+
+type ResolveDynamicProps<T> = T extends Component
+  ? LooseOptional<ComponentExpectedProps<T>> & ComponentEmitsAsProps<T>
+  : Record<string, any>
