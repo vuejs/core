@@ -11,6 +11,7 @@ import {
   ref,
   toRaw,
 } from '../src'
+import { DirtyLevels } from '../src/constants'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -450,5 +451,26 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(1)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
+  })
+
+  it('...', () => {
+    const fnSpy = vi.fn()
+    const v = ref(1)
+    const c1 = computed(() => v.value)
+    const c2 = computed(() => {
+      fnSpy()
+      return c1.value
+    })
+
+    c1.effect.allowRecurse = true
+    c2.effect.allowRecurse = true
+    c2.value
+
+    expect(DirtyLevels[c1.effect._dirtyLevel]).toBe(
+      DirtyLevels[DirtyLevels.NotDirty],
+    )
+    expect(DirtyLevels[c2.effect._dirtyLevel]).toBe(
+      DirtyLevels[DirtyLevels.NotDirty],
+    )
   })
 })

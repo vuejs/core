@@ -293,12 +293,7 @@ export function triggerEffects(
     if (!effect.allowRecurse && effect._runnings) {
       continue
     }
-    if (
-      effect._dirtyLevel < dirtyLevel &&
-      (!effect._runnings ||
-        effect.allowRecurse ||
-        dirtyLevel !== DirtyLevels.ComputedValueDirty)
-    ) {
+    if (effect._dirtyLevel < dirtyLevel) {
       const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
       if (
