@@ -219,8 +219,9 @@ function doCompileTemplate({
     // We need to parse a fresh one. Can't just use `source` here since we need
     // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
-      ...compilerOptions,
+      prefixIdentifiers: true,
       parseMode: 'sfc',
+      ...compilerOptions,
       onError: e => errors.push(e),
     })
     const template = newAST.children.find(
