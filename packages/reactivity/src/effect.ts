@@ -78,7 +78,8 @@ export class ReactiveEffect<T = any> {
   public get dirty() {
     if (this._dirtyLevel === DirtyLevels.MaybeDirty) {
       pauseTracking()
-      for (const dep of this.deps) {
+      for (let i = 0; i < this._depsLength; i++) {
+        const dep = this.deps[i]
         if (dep.computed) {
           triggerComputed(dep.computed)
           if (this._dirtyLevel >= DirtyLevels.Dirty) {
@@ -290,6 +291,10 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
+    if (dep.get(effect) !== effect._trackId) {
+      // when recurse effect is running, dep map could have outdated items
+      continue
+    }
     if (effect._dirtyLevel < dirtyLevel) {
       const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
