@@ -34,27 +34,34 @@ export type ObjectEmitsOptions = Record<
   ((...args: any[]) => any) | Array<any> | null
 >
 
-export type EmitsOptions = ObjectEmitsOptions | string[]
+export type EmitsOptions = ObjectEmitsOptions | string[] | Function
 
-export type EmitsToProps<T extends EmitsOptions> = T extends string[]
+export type EmitsToProps<T extends EmitsOptions> = T extends (
+  event: infer E extends string,
+  ...args: infer Args
+) => any
   ? {
-      [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
+      [K in `on${Capitalize<E>}`]?: (...args: Args) => any
     }
-  : T extends ObjectEmitsOptions
+  : T extends string[]
     ? {
-        [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
-          ? (
-              ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
-                ? P
-                : T[Uncapitalize<C>] extends null
-                  ? any[]
-                  : T[Uncapitalize<C>] extends Array<any>
-                    ? T[Uncapitalize<C>]
-                    : never
-            ) => any
-          : never
+        [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
       }
-    : {}
+    : T extends ObjectEmitsOptions
+      ? {
+          [K in `on${Capitalize<string & keyof T>}`]?: K extends `on${infer C}`
+            ? (
+                ...args: T[Uncapitalize<C>] extends (...args: infer P) => any
+                  ? P
+                  : T[Uncapitalize<C>] extends null
+                    ? any[]
+                    : T[Uncapitalize<C>] extends Array<any>
+                      ? T[Uncapitalize<C>]
+                      : never
+              ) => any
+            : never
+        }
+      : {}
 
 export type ShortEmitsToObject<E> = E extends Record<string, any[]>
   ? {
@@ -65,22 +72,26 @@ export type ShortEmitsToObject<E> = E extends Record<string, any[]>
 export type EmitFn<
   Options = ObjectEmitsOptions,
   Event extends keyof Options = keyof Options,
-> = [Options] extends [Array<infer V>]
-  ? (event: V, ...args: any[]) => void
-  : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
-    ? (
-        event: any,
-        ...args: any[]
-      ) => any | ((event: string, ...args: any[]) => void) // (event:any, ...args:[])=> void is there, to allow $emit('myEvent') to work
-    : UnionToIntersection<
-        {
-          [key in Event]: Options[key] extends (...args: infer Args) => any
-            ? (event: key, ...args: Args) => void
-            : Options[key] extends any[]
-              ? (event: key, ...args: Options[key]) => void
-              : (event: key, ...args: any[]) => void
-        }[Event]
-      >
+> =
+  // if Options is a function, it means it is a type of emit function
+  [Options] extends [Function]
+    ? Options
+    : [Options] extends [Array<infer V>]
+      ? (event: V, ...args: any[]) => void
+      : {} extends Options // if the emit is empty object (usually the default value for emit) should be converted to function
+        ? (
+            event: any,
+            ...args: any[]
+          ) => any | ((event: string, ...args: any[]) => void) // (event:any, ...args:[])=> void is there, to allow $emit('myEvent') to work
+        : UnionToIntersection<
+            {
+              [key in Event]: Options[key] extends (...args: infer Args) => any
+                ? (event: key, ...args: Args) => void
+                : Options[key] extends any[]
+                  ? (event: key, ...args: Options[key]) => void
+                  : (event: key, ...args: any[]) => void
+            }[Event]
+          >
 
 export function emit(
   instance: ComponentInternalInstance,

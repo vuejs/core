@@ -15,7 +15,7 @@ import {
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+import type { EmitFn, EmitsOptions } from './componentEmits'
 import type {
   ComponentOptionsMixin,
   ComponentOptionsWithoutProps,
@@ -429,11 +429,11 @@ function getContext(): SetupContext {
  */
 export function normalizePropsOrEmits(
   props: ComponentPropsOptions | EmitsOptions,
-) {
+): Record<PropertyKey, any> {
   return isArray(props)
     ? props.reduce(
         (normalized, p) => ((normalized[p] = null), normalized),
-        {} as ComponentObjectPropsOptions | ObjectEmitsOptions,
+        {} as Record<PropertyKey, any>,
       )
     : props
 }
