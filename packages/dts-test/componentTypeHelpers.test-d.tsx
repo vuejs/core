@@ -1395,4 +1395,8 @@ const MyComp = defineComponent({
     test: String,
   },
 })
-;<Component is={MyComp} />
+;<Component is={MyComp} test={'1'} />
+// @ts-expect-error test should be string
+;<Component is={MyComp} test={1} />
+;<Component is="div" aria-colindex={'1'} />
+;<Component is={123} asdkasjd="asdasd" />
