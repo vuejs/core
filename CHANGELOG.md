@@ -1,3 +1,12 @@
+## [3.4.13](https://github.com/vuejs/core/compare/v3.4.12...v3.4.13) (2024-01-13)
+
+
+### Bug Fixes
+
+* **reactivity:** fix dirtyLevel checks for recursive effects ([#10101](https://github.com/vuejs/core/issues/10101)) ([e45a8d2](https://github.com/vuejs/core/commit/e45a8d24b46c174deb46ed952bdaf54c81ad5a85)), closes [#10082](https://github.com/vuejs/core/issues/10082)
+
+
+
 ## [3.4.12](https://github.com/vuejs/core/compare/v3.4.11...v3.4.12) (2024-01-13)
 
 
