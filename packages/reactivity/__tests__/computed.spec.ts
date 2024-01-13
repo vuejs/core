@@ -466,11 +466,19 @@ describe('reactivity/computed', () => {
     c2.effect.allowRecurse = true
     c2.value
 
-    expect(DirtyLevels[c1.effect._dirtyLevel]).toBe(
-      DirtyLevels[DirtyLevels.NotDirty],
-    )
-    expect(DirtyLevels[c2.effect._dirtyLevel]).toBe(
-      DirtyLevels[DirtyLevels.NotDirty],
-    )
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+  })
+
+  it('should work when chained(ref+computed)', () => {
+    const value = ref(0)
+    const consumer = computed(() => {
+      value.value++
+      return 'foo'
+    })
+    const provider = computed(() => value.value + consumer.value)
+    expect(provider.value).toBe('0foo')
+    expect(provider.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(provider.value).toBe('1foo')
   })
 })
