@@ -426,6 +426,106 @@ describe('Component Emits', () => {
     // @ts-expect-error not any
     expectType<boolean>(emits)
   })
+
+  describe('declare component', () => {
+    {
+      // string[]
+      const Component = defineComponent({
+        emits: ['foo'],
+      })
+
+      const DeclaredComp = {} as DeclareComponent<
+        {},
+        {},
+        ['foo'],
+        {},
+        typeof Component
+      >
+      expectType<(event: 'foo', ...args: any[]) => void>(
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      // @ts-expect-error not empty function
+      expectType<() => void>({} as ComponentEmits<typeof DeclaredComp>)
+    }
+
+    {
+      // Options
+      const Component = defineComponent({
+        emits: ['foo'],
+      })
+
+      const DeclaredComp = {} as DeclareComponent<
+        {},
+        {},
+        {
+          foo: (arg: string) => true
+        },
+        {},
+        typeof Component
+      >
+      expectType<(event: 'foo', arg: string) => void>(
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      expectType<(event: 'foo', arg: number) => void>(
+        // @ts-expect-error arguments are correct
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      // @ts-expect-error not empty function
+      expectType<() => void>({} as ComponentEmits<typeof DeclaredComp>)
+    }
+
+    {
+      // short Options
+      const Component = defineComponent({
+        emits: ['foo'],
+      })
+
+      const DeclaredComp = {} as DeclareComponent<
+        {},
+        {},
+        {
+          foo: [string]
+        },
+        {},
+        typeof Component
+      >
+      expectType<(event: 'foo', arg: string) => void>(
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      expectType<(event: 'foo', arg: number) => void>(
+        // @ts-expect-error arguments are correct
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      // @ts-expect-error not empty function
+      expectType<() => void>({} as ComponentEmits<typeof DeclaredComp>)
+    }
+
+    {
+      // bypass with function
+      const Component = defineComponent({
+        emits: ['foo'],
+      })
+
+      const DeclaredComp = {} as DeclareComponent<
+        {},
+        {},
+        {
+          (event: 'foo', arg: string): void
+        },
+        {},
+        typeof Component
+      >
+      expectType<(event: 'foo', arg: string) => void>(
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      expectType<(event: 'foo', arg: number) => void>(
+        // @ts-expect-error arguments are correct
+        {} as ComponentEmits<typeof DeclaredComp>,
+      )
+      // @ts-expect-error not empty function
+      expectType<() => void>({} as ComponentEmits<typeof DeclaredComp>)
+    }
+  })
 })
 
 declare function getOptionalProps<T>(o: T): ComponentExpectedProps<T>

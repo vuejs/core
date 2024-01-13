@@ -237,8 +237,11 @@ type ResolveMixinData<T> = FixMixinResolve<
 /**
  * Returns the emits as props
  */
-export type ComponentEmitsAsProps<T> =
-  ExtractComponentEmitOptions<T> extends infer E
+export type ComponentEmitsAsProps<T> = T extends {
+  new (): { $emit: infer E extends EmitsOptions }
+}
+  ? EmitsToProps<E>
+  : ExtractComponentEmitOptions<T> extends infer E
     ? E extends EmitsOptions
       ? EmitsToProps<E>
       : unknown
@@ -300,13 +303,15 @@ export type ComponentSlots<T> = ExtractComponentSlotOptions<T> extends infer S
 /**
  * Generates the emit function type from the emits options
  */
-export type ComponentEmits<T> = ExtractComponentEmitOptions<T> extends infer E
-  ? {} extends E
-    ? () => void
-    : E extends EmitFn
-      ? E
-      : EmitFn<E>
-  : () => void
+export type ComponentEmits<T> = T extends { new (): { $emit: infer E } }
+  ? E
+  : ExtractComponentEmitOptions<T> extends infer E
+    ? {} extends E
+      ? () => void
+      : E extends EmitFn
+        ? E
+        : EmitFn<E>
+    : () => void
 
 /**
  * Generates the emit function type from the emits options
