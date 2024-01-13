@@ -308,6 +308,16 @@ export type ComponentEmits<T> = ExtractComponentEmitOptions<T> extends infer E
       : EmitFn<E>
   : () => void
 
+/**
+ * Generates the emit function type from the emits options
+ */
+export type DeclareEmits<T> = {} extends T
+  ? // if empty object do not allow emits
+    { (event: never, ...args: any[]): void }
+  : T extends (...args: any[]) => any
+    ? T
+    : EmitFn<T>
+
 // Helper method to extract the data from a component
 type ComponentDataHelper<T> = {
   D: T extends { data: () => infer D }

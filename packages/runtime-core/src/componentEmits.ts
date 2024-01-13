@@ -48,7 +48,9 @@ export type EmitsToProps<T extends EmitsOptions> = T extends string[]
                 ? P
                 : T[Uncapitalize<C>] extends null
                   ? any[]
-                  : never
+                  : T[Uncapitalize<C>] extends Array<any>
+                    ? T[Uncapitalize<C>]
+                    : never
             ) => any
           : never
       }

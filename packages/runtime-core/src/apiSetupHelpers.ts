@@ -2,7 +2,6 @@ import {
   EMPTY_OBJ,
   type LooseRequired,
   type Prettify,
-  type UnionToIntersection,
   extend,
   hasChanged,
   isArray,
@@ -141,7 +140,7 @@ export function defineEmits<E extends EmitsOptions = EmitsOptions>(
 ): EmitFn<E>
 export function defineEmits<
   T extends ((...args: any[]) => any) | Record<string, any[]>,
->(): T extends (...args: any[]) => any ? T : ShortEmits<T>
+>(): T extends (...args: any[]) => any ? T : EmitFn<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -149,14 +148,6 @@ export function defineEmits() {
   }
   return null as any
 }
-
-type RecordToUnion<T extends Record<string, any>> = T[keyof T]
-
-type ShortEmits<T extends Record<string, any>> = UnionToIntersection<
-  RecordToUnion<{
-    [K in keyof T]: (evt: K, ...args: T[K]) => void
-  }>
->
 
 /**
  * Vue `<script setup>` compiler macro for declaring a component's exposed

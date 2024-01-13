@@ -9,6 +9,7 @@ import {
   type ComponentPublicInstance,
   type ComponentSlots,
   type DeclareComponent,
+  type DeclareEmits,
   type ExtractComponentOptions,
   type FunctionalComponent,
   type PropType,
@@ -1145,6 +1146,62 @@ describe('DeclareComponent', () => {
     // @ts-expect-error not right value
     ;<Comp multiple options={[{ label: 'foo', value: 1 }]} modelValue={['1']} />
   })
+})
+
+describe('DeclareEmits', () => {
+  {
+    // empty object
+    const emit = {} as DeclareEmits<{}>
+    expectType<{ (event: never, ...args: any[]): void }>(emit)
+
+    // @ts-expect-error not any
+    expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
+  {
+    // array
+    const emit = {} as DeclareEmits<['foo', 'bar']>
+    expectType<{ (event: 'foo' | 'bar', ...args: any[]): void }>(emit)
+    // @ts-expect-error not any
+    expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
+  {
+    // options
+    const emit = {} as DeclareEmits<{
+      foo: (arg: number) => true
+      bar: (arg: string, other: number) => true
+    }>
+    expectType<{
+      (event: 'foo', arg: number): void
+      (event: 'bar', arg: string, other: number): void
+    }>(emit)
+
+    // @ts-expect-error not any
+    expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
+  {
+    // short options
+    const emit = {} as DeclareEmits<{ foo: [number]; bar: [string, number] }>
+    expectType<{
+      (event: 'foo', args_0: number): void
+      (event: 'bar', args_0: string, args_1: number): void
+    }>(emit)
+
+    // @ts-expect-error not any
+    expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
+  {
+    // emit function
+    const emit = {} as DeclareEmits<{
+      (event: 'foo', arg: number): void
+      (event: 'bar', test: string): void
+    }>
+    expectType<{
+      (event: 'foo', arg: number): void
+      (event: 'bar', test: string): void
+    }>(emit)
+    // @ts-expect-error not any
+    expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
 })
 
 // Component Instance
