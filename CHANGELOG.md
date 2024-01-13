@@ -1,3 +1,12 @@
+## [3.4.12](https://github.com/vuejs/core/compare/v3.4.11...v3.4.12) (2024-01-13)
+
+
+### Reverts
+
+* fix(reactivity): correct dirty assign in render function ([#10091](https://github.com/vuejs/core/issues/10091)) ([8b18481](https://github.com/vuejs/core/commit/8b1848173b0bc8fd84ce1da1af8d373c044bf073)), closes [#10098](https://github.com/vuejs/core/issues/10098) [#10100](https://github.com/vuejs/core/issues/10100)
+
+
+
 ## [3.4.11](https://github.com/vuejs/core/compare/v3.4.10...v3.4.11) (2024-01-12)
 
 

@@ -3,19 +3,16 @@ import {
   type ReactiveEffectRunner,
   TrackOpTypes,
   TriggerOpTypes,
-  computed,
   effect,
   markRaw,
   reactive,
   readonly,
-  ref,
   shallowReactive,
   stop,
   toRaw,
 } from '../src/index'
 import { pauseScheduling, resetScheduling } from '../src/effect'
 import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
-import { h, nextTick, nodeOps, render, serialize } from '@vue/runtime-test'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -1012,35 +1009,6 @@ describe('reactivity/effect', () => {
     counter.num++
     resetScheduling()
     expect(counterSpy).toHaveBeenCalledTimes(1)
-  })
-
-  // #10082
-  it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
-    const s = ref(0)
-    const n = computed(() => s.value + 1)
-
-    const Child = {
-      setup() {
-        s.value++
-        return () => n.value
-      },
-    }
-
-    const renderSpy = vi.fn()
-    const Parent = {
-      setup() {
-        return () => {
-          renderSpy()
-          return [n.value, h(Child)]
-        }
-      },
-    }
-
-    const root = nodeOps.createElement('div')
-    render(h(Parent), root)
-    await nextTick()
-    expect(serialize(root)).toBe('<div>22</div>')
-    expect(renderSpy).toHaveBeenCalledTimes(2)
   })
 
   describe('empty dep cleanup', () => {
