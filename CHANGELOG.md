@@ -21,7 +21,7 @@
 
 ### Bug Fixes
 
-* **hydration:** improve mismatch when client valut is null or undefined ([#10086](https://github.com/vuejs/core/issues/10086)) ([08b60f5](https://github.com/vuejs/core/commit/08b60f5d0d5b57fcf3347ef66cbeab472c475a88))
+* **hydration:** improve mismatch when client value is null or undefined ([#10086](https://github.com/vuejs/core/issues/10086)) ([08b60f5](https://github.com/vuejs/core/commit/08b60f5d0d5b57fcf3347ef66cbeab472c475a88))
 * **reactivity:** correct dirty assign in render function ([#10091](https://github.com/vuejs/core/issues/10091)) ([8d04205](https://github.com/vuejs/core/commit/8d042050411fdf04d9d1d6c153287164b12e0255)), closes [#10082](https://github.com/vuejs/core/issues/10082)
 * **runtime-core:** filter single root for nested DEV_ROOT_FRAGMENT ([#8593](https://github.com/vuejs/core/issues/8593)) ([d35b877](https://github.com/vuejs/core/commit/d35b87725ab3e2bdc86fb5781ab34939f7ec1029)), closes [#5203](https://github.com/vuejs/core/issues/5203) [#8581](https://github.com/vuejs/core/issues/8581) [#10087](https://github.com/vuejs/core/issues/10087)
 
