@@ -16,6 +16,7 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
+  Prop,
   PropType,
 } from './componentProps'
 import type { Slots, SlotsType, UnwrapSlotsType } from './componentSlots'
@@ -186,14 +187,18 @@ type ResolveMixin<T> = [T] extends [
  * }
  * ```
  */
-export type ObjectToComponentProps<T> = T extends Record<string, any>
-  ? {
-      [K in keyof T]-?: {
-        type: PropType<Exclude<T[K], undefined>>
-        required: undefined extends T[K] ? false : true
+export type ObjectToComponentProps<T> = T extends Readonly<Array<string>>
+  ? T
+  : T extends Record<string, any>
+    ? {
+        [K in keyof T]-?: T[K] extends Prop<any>
+          ? T[K]
+          : {
+              type: PropType<Exclude<T[K], undefined>>
+              required: undefined extends T[K] ? false : true
+            }
       }
-    }
-  : {}
+    : {}
 
 /**
  * Extracts Original props from options
@@ -251,7 +256,7 @@ export type ComponentEmitsAsProps<T> = T extends {
  * Returns runtime props definition for a component
  *
  *  @see Include emits {@linkcode ComponentEmitsAsProps}
- *  @see Get the render props {@linkcode ComponentExpectedProps}
+ *  @see Get the render props {@linkcode Compo/`nentExpectedProps}
  *
  * @example
  * ```ts

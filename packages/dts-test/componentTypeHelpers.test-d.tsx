@@ -12,6 +12,7 @@ import {
   type DeclareEmits,
   type ExtractComponentOptions,
   type FunctionalComponent,
+  type ObjectToComponentProps,
   type PropType,
   type SetupContext,
   type SlotsType,
@@ -1301,6 +1302,62 @@ describe('DeclareEmits', () => {
     }>(emit)
     // @ts-expect-error not any
     expectType<{ (event: 'random', ...args: any[]): void }>(emit)
+  }
+})
+
+// ObjectToComponentProps
+describe('ObjectToComponentProps', () => {
+  {
+    // prop options
+    const props = {
+      foo: String,
+      bar: {
+        type: String,
+        default: 'bar',
+      },
+    }
+    const s = {} as ObjectToComponentProps<typeof props>
+
+    expectType<{
+      foo: StringConstructor
+      bar: {
+        type: StringConstructor
+        default: string
+      }
+    }>(s)
+
+    // @ts-expect-error not any
+    expectType<{ bar: string }>(s)
+  }
+  {
+    // array props
+    const props = ['foo', 'bar'] as const
+    const s = {} as ObjectToComponentProps<typeof props>
+
+    expectType<readonly ['foo', 'bar']>(s)
+    // @ts-expect-error not any
+    expectType<{ bar: string }>(s)
+  }
+
+  {
+    // types
+    const s = {} as ObjectToComponentProps<{
+      foo?: string
+      bar: string
+    }>
+
+    expectType<{
+      foo: {
+        type: PropType<string>
+        required: false
+      }
+      bar: {
+        type: PropType<string>
+        required: true
+      }
+    }>(s)
+    // @ts-expect-error not any
+    expectType<{ bar: string }>(s)
   }
 })
 
