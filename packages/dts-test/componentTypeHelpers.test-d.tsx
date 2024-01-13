@@ -1,6 +1,7 @@
 import { describe, expectType } from './utils'
 
 import {
+  Component,
   type ComponentData,
   type ComponentEmits,
   type ComponentExpectedProps,
@@ -10,6 +11,7 @@ import {
   type ComponentSlots,
   type DeclareComponent,
   type DeclareEmits,
+  type DynamicComponent,
   type ExtractComponentOptions,
   type FunctionalComponent,
   type ObjectToComponentProps,
@@ -504,11 +506,16 @@ describe('Component Emits', () => {
     {
       // bypass with function
       const Component = defineComponent({
+        props: {
+          foo: String,
+        },
         emits: ['foo'],
       })
 
       const DeclaredComp = {} as DeclareComponent<
-        {},
+        {
+          foo: string
+        },
         {},
         {
           (event: 'foo', arg: string): void
@@ -1380,3 +1387,12 @@ expectType<ComponentPublicInstance>(
     }),
   ),
 )
+
+declare const Component: DynamicComponent
+
+const MyComp = defineComponent({
+  props: {
+    test: String,
+  },
+})
+;<Component is={MyComp} />

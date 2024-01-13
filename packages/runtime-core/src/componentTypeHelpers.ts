@@ -28,7 +28,7 @@ import type {
   IntersectionMixin,
   UnwrapMixinsType,
 } from './componentPublicInstance'
-import type { ShallowUnwrapRef } from '.'
+import type { LooseOptional, ShallowUnwrapRef } from '.'
 
 /**
  * Extracts the component original options
@@ -488,3 +488,13 @@ export type DeclareComponent<
         Slots,
         Options
       >
+
+/**
+ * Helper for <component :is="..."> type inference
+ */
+export type DynamicComponent = {
+  new <T extends Component>(): {
+    $props: { is: T } & LooseOptional<ComponentExpectedProps<T>> &
+      ComponentEmitsAsProps<T>
+  }
+}
