@@ -1,6 +1,6 @@
 import {
+  type CodegenOptions as BaseCodegenOptions,
   BindingTypes,
-  type CodegenOptions,
   type CodegenResult,
   NewlineType,
   type Position,
@@ -33,6 +33,11 @@ import {
 import { SourceMapGenerator } from 'source-map-js'
 import { camelize, isGloballyAllowed, isString, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
+import type { ParserPlugin } from '@babel/parser'
+
+interface CodegenOptions extends BaseCodegenOptions {
+  expressionPlugins?: ParserPlugin[]
+}
 
 // TODO: share this with compiler-core
 const fnExpRE =
@@ -94,6 +99,7 @@ function createCodegenContext(
     inSSR = false,
     inline = false,
     bindingMetadata = {},
+    expressionPlugins = [],
   }: CodegenOptions,
 ) {
   const { helpers, vaporHelpers } = ir
@@ -111,6 +117,7 @@ function createCodegenContext(
     isTS,
     inSSR,
     bindingMetadata,
+    expressionPlugins,
     inline,
 
     source: ir.source,
@@ -513,7 +520,7 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 
       ;(keys.length ? pushWithKeys : pushNoop)(() =>
         (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
-          genEventHandler()
+          genEventHandler(context)
         }),
       )
     },
@@ -522,13 +529,10 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
       (() => push(`{ ${options.map((v) => `${v}: true`).join(', ')} }`)),
   )
 
-  function genEventHandler() {
+  function genEventHandler(context: CodegenContext) {
     const exp = oper.value
     if (exp && exp.content.trim()) {
-      const isMemberExp = isMemberExpression(exp.content, {
-        // TODO: expression plugins
-        expressionPlugins: [],
-      })
+      const isMemberExp = isMemberExpression(exp.content, context)
       const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
       const hasMultipleStatements = exp.content.includes(`;`)
 

@@ -61,13 +61,16 @@ export function compile(
   if (!__BROWSER__ && options.isTS) {
     const { expressionPlugins } = options
     if (!expressionPlugins || !expressionPlugins.includes('typescript')) {
-      options.expressionPlugins = [...(expressionPlugins || []), 'typescript']
+      resolvedOptions.expressionPlugins = [
+        ...(expressionPlugins || []),
+        'typescript',
+      ]
     }
   }
 
   const ir = transform(
     ast,
-    extend({}, options, {
+    extend({}, resolvedOptions, {
       nodeTransforms: [
         ...nodeTransforms,
         ...(options.nodeTransforms || []), // user transforms
