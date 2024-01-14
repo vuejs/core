@@ -219,6 +219,7 @@ function doCompileTemplate({
     // We need to parse a fresh one. Can't just use `source` here since we need
     // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
+      prefixIdentifiers: true,
       ...compilerOptions,
       parseMode: 'sfc',
       onError: e => errors.push(e),
