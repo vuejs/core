@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-core",
-  "version": "3.4.5",
+  "version": "3.4.13",
   "description": "@vue/compiler-core",
   "main": "index.js",
   "module": "dist/compiler-core.esm-bundler.js",
@@ -17,6 +17,7 @@
         "development": "./dist/compiler-core.cjs.js",
         "default": "./index.js"
       },
+      "module": "./dist/compiler-core.esm-bundler.js",
       "import": "./dist/compiler-core.esm-bundler.js",
       "require": "./index.js"
     },

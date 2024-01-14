@@ -32,7 +32,6 @@ import {
   type ComponentOptions,
   type ConcreteComponent,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -470,7 +469,7 @@ function resolvePropValue(
         if (key in propsDefaults) {
           value = propsDefaults[key]
         } else {
-          setCurrentInstance(instance)
+          const reset = setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -478,7 +477,7 @@ function resolvePropValue(
               : null,
             props,
           )
-          unsetCurrentInstance()
+          reset()
         }
       } else {
         value = defaultValue

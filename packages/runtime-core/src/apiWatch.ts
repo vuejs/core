@@ -25,7 +25,6 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { handleError as handleErrorWithInstance } from './errorHandling'
 import { createPostRenderScheduler } from './renderer'
@@ -262,14 +261,9 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
-  const cur = currentInstance
-  setCurrentInstance(this)
+  const reset = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  if (cur) {
-    setCurrentInstance(cur)
-  } else {
-    unsetCurrentInstance()
-  }
+  reset()
   return res
 }
 

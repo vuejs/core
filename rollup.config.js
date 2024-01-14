@@ -122,7 +122,7 @@ function createConfig(format, output, plugins = []) {
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isServerRenderer = name === 'server-renderer'
-  const isNodeBuild = format === 'cjs'
+  const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage =
     pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
@@ -131,8 +131,14 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
+  output.banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
+
   output.exports = isCompatPackage ? 'auto' : 'named'
-  if (isNodeBuild) {
+  if (isCJSBuild) {
     output.esModule = true
   }
   output.sourcemap = !!process.env.SOURCE_MAP
@@ -170,7 +176,7 @@ function createConfig(format, output, plugins = []) {
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
         sourceMap: output.sourcemap,
         minify: false,
-        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2015',
         define: resolveDefine(),
       }),
       ...resolveNodePlugins(),
@@ -200,9 +206,9 @@ function createConfig(format, output, plugins = []) {
       __ESM_BUNDLER__: String(isBundlerESMBuild),
       __ESM_BROWSER__: String(isBrowserESMBuild),
       // is targeting Node (SSR)?
-      __NODE_JS__: String(isNodeBuild),
+      __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isNodeBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
