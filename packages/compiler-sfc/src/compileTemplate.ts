@@ -220,8 +220,8 @@ function doCompileTemplate({
     // the AST location info to be relative to the entire SFC.
     const newAST = (ssr ? CompilerDOM : compiler).parse(inAST.source, {
       prefixIdentifiers: true,
-      parseMode: 'sfc',
       ...compilerOptions,
+      parseMode: 'sfc',
       onError: e => errors.push(e),
     })
     const template = newAST.children.find(
