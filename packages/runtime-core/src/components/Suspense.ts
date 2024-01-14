@@ -533,9 +533,9 @@ function createSuspenseBoundary(
       if (suspense.isHydrating) {
         suspense.isHydrating = false
       } else if (!resume) {
-        if (preEffects) {
+        if (preEffects.length > 0) {
           preEffects.forEach(e => e())
-          preEffects.length = 0
+          suspense.preEffects = []
         }
         delayEnter =
           activeBranch &&
