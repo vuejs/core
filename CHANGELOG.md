@@ -1,3 +1,14 @@
+## [3.4.14](https://github.com/vuejs/core/compare/v3.4.13...v3.4.14) (2024-01-15)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** enable prefixIdentifiers by default when reparsing on consumed AST ([#10105](https://github.com/vuejs/core/issues/10105)) ([48bf8e4](https://github.com/vuejs/core/commit/48bf8e4c708ec620e4852d71c8713394457108ee))
+* **deps:** update dependency postcss to ^8.4.33 ([#10110](https://github.com/vuejs/core/issues/10110)) ([a557006](https://github.com/vuejs/core/commit/a557006f8e7f110c6f322de38931dceaab8e9cbb))
+* **reactivity:** fix regression for computed with mutation ([#10119](https://github.com/vuejs/core/issues/10119)) ([20f62af](https://github.com/vuejs/core/commit/20f62afaafd422e42b99dde9c16f9a4ebfb9c5f7)), closes [#10114](https://github.com/vuejs/core/issues/10114)
+
+
+
 ## [3.4.13](https://github.com/vuejs/core/compare/v3.4.12...v3.4.13) (2024-01-13)
 
 
