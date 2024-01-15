@@ -151,14 +151,16 @@ function setChecked(
   { value, oldValue }: DirectiveBinding,
   vnode: VNode,
 ) {
-  // store the v-model value on the element so it can be accessed by the
-  // change listener.
+  // #8638
+  if (value === oldValue)
+    return // store the v-model value on the element so it can be accessed by the
+    // change listener.
   ;(el as any)._modelValue = value
   if (isArray(value)) {
     el.checked = looseIndexOf(value, vnode.props!.value) > -1
   } else if (isSet(value)) {
     el.checked = value.has(vnode.props!.value)
-  } else if (value !== oldValue) {
+  } else {
     el.checked = looseEqual(value, getCheckboxValue(el, true))
   }
 }
@@ -208,8 +210,11 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value }) {
-    setSelected(el, value)
+  updated(el, { value, oldValue }) {
+    // #8579
+    if (value !== oldValue) {
+      setSelected(el, value)
+    }
   },
 }
 
