@@ -44,6 +44,11 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(
       () => getter(this._value),
       () => triggerRefValue(this, DirtyLevels.MaybeDirty),
+      () => {
+        if (this.effect._dirtyLevel >= DirtyLevels.Dirty) {
+          triggerRefValue(this, DirtyLevels.MaybeDirty)
+        }
+      },
     )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
