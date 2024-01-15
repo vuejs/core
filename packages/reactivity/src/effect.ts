@@ -295,7 +295,10 @@ export function triggerEffects(
       // when recurse effect is running, dep map could have outdated items
       continue
     }
-    if (effect._dirtyLevel < dirtyLevel) {
+    if (
+      effect._dirtyLevel < dirtyLevel &&
+      !(effect._runnings && !effect.allowRecurse)
+    ) {
       const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
       if (lastDirtyLevel === DirtyLevels.NotDirty) {

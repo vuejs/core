@@ -1,3 +1,4 @@
+import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
@@ -470,15 +471,24 @@ describe('reactivity/computed', () => {
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
   })
 
-  it('should work when chained(ref+computed)', () => {
-    const value = ref(0)
+  it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
+    const state = reactive<any>({})
     const consumer = computed(() => {
-      value.value++
-      return 'foo'
+      if (!('a' in state)) state.a = 1
+      return state.a
     })
-    const provider = computed(() => value.value + consumer.value)
-    expect(provider.value).toBe('0foo')
-    expect(provider.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(provider.value).toBe('1foo')
+    const Comp = {
+      setup: () => {
+        nextTick().then(() => {
+          state.a = 2
+        })
+        return () => consumer.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await nextTick()
+    await nextTick()
+    expect(serializeInner(root)).toBe(`2`)
   })
 })
