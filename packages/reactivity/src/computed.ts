@@ -59,6 +59,9 @@ export class ComputedRefImpl<T> {
       }
     }
     trackRefValue(self)
+    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty) {
+      triggerRefValue(self, DirtyLevels.MaybeDirty)
+    }
     return self._value
   }
 

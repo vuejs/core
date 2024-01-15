@@ -454,14 +454,10 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
   })
 
-  it('...', () => {
-    const fnSpy = vi.fn()
+  it('should chained recurse effects clear dirty after trigger', () => {
     const v = ref(1)
     const c1 = computed(() => v.value)
-    const c2 = computed(() => {
-      fnSpy()
-      return c1.value
-    })
+    const c2 = computed(() => c1.value)
 
     c1.effect.allowRecurse = true
     c2.effect.allowRecurse = true
@@ -469,6 +465,40 @@ describe('reactivity/computed', () => {
 
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+  })
+
+  it('should chained computeds dirtyLevel update with first computed effect', () => {
+    const v = ref(0)
+    const c1 = computed(() => {
+      if (v.value === 0) {
+        v.value = 1
+      }
+      return v.value
+    })
+    const c2 = computed(() => c1.value)
+    const c3 = computed(() => c2.value)
+
+    c3.value
+
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    v.value = 2
+
+    expect(c2.value).toBe(2)
+  })
+
+  it('should work when chained(ref+computed)', () => {
+    const value = ref(0)
+    const consumer = computed(() => {
+      value.value++
+      return 'foo'
+    })
+    const provider = computed(() => value.value + consumer.value)
+    expect(provider.value).toBe('0foo')
+    expect(provider.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(provider.value).toBe('1foo')
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
