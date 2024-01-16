@@ -291,11 +291,10 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
-    if (dep.get(effect) !== effect._trackId) {
-      // when recurse effect is running, dep map could have outdated items
-      continue
-    }
-    if (effect._dirtyLevel < dirtyLevel) {
+    if (
+      effect._dirtyLevel < dirtyLevel &&
+      dep.get(effect) === effect._trackId
+    ) {
       const lastDirtyLevel = effect._dirtyLevel
       effect._dirtyLevel = dirtyLevel
       if (lastDirtyLevel === DirtyLevels.NotDirty) {
@@ -306,14 +305,21 @@ export function triggerEffects(
         effect.trigger()
       }
     }
+  }
+  scheduleEffects(dep)
+  resetScheduling()
+}
+
+export function scheduleEffects(dep: Dep) {
+  for (const effect of dep.keys()) {
     if (
       effect.scheduler &&
       effect._shouldSchedule &&
-      (!effect._runnings || effect.allowRecurse)
+      (!effect._runnings || effect.allowRecurse) &&
+      dep.get(effect) === effect._trackId
     ) {
       effect._shouldSchedule = false
       queueEffectSchedulers.push(effect.scheduler)
     }
   }
-  resetScheduling()
 }
