@@ -100,10 +100,15 @@ export type DefineComponent<
       II,
       S
     >,
-    'props'
-  > & { props: PropsOrPropOptions } & Omit<Options, 'props'> & {
+    'props' | 'emits' | 'slots'
+  > &
+  Omit<Options, 'emits' | 'mixins' | 'extends'> & {
+    emits: Options['emits']
+    // mixins: Options['mixins']
+    extends: Options['extends']
+  } & {
     [RawOptionsSymbol]: Options
-  } & PP
+  }
 
 type BuildComponentInstance<
   MakeDefaultsOptional extends boolean = false,

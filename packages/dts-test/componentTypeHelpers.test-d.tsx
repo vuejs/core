@@ -208,6 +208,7 @@ describe('Component Props', () => {
         props.bb
       },
     })
+
     expectType<{
       a1?: any
       a?: any
@@ -1188,12 +1189,20 @@ describe('ComponentSlots', () => {
 })
 
 describe('DeclareComponent', () => {
-  const CompProps = {} as DeclareComponent<{ test: string | undefined }>
+  const __options = defineComponent({
+    props: {
+      test: String,
+    },
+  })
+  const CompProps = {} as DeclareComponent<
+    { test: string | undefined },
+    {},
+    {},
+    {},
+    typeof __options
+  >
 
-  expectType<{
-    type: PropType<string>
-    required: false
-  }>(CompProps.props.test)
+  expectType<StringConstructor>(CompProps.props.test)
 
   // @ts-expect-error not any
   expectType<{ a: 1 }>(CompProps.$props.test)

@@ -789,8 +789,10 @@ describe('api: options', () => {
     const MixinB = {
       data() {},
     }
+    // @ts-expect-error edge case after #7963, unlikely to happen in practice
+    // since the user will want to type the mixins themselves.
     defineComponent({
-      mixins: [MixinA, MixinB],
+      mixins: [defineComponent(MixinA), defineComponent(MixinB)],
       data() {},
     })
   })
@@ -1010,6 +1012,7 @@ describe('api: options', () => {
     const Comp = defineComponent({
       extends: defineComponent(Extends),
       mixins: [defineComponent(Mixin)],
+
       render() {
         return `${this.$options.msg1},${this.$options.msg2}`
       },

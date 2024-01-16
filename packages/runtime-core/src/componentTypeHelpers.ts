@@ -147,27 +147,59 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
  * Helper to resolve mixins
  *
  */
-type ResolveMixin<T> = [T] extends [
-  Readonly<
-    ComponentOptionsBase<
-      any,
-      any,
-      any,
-      any,
-      any,
-      infer M,
-      infer E,
-      any,
-      any,
-      any,
-      any,
-      any,
-      any
-    >
-  >,
-]
-  ? IntersectionMixin<M> & IntersectionMixin<E>
-  : {}
+type ResolveMixin<T> =
+  /*[T] extends [{ [RawOptionsSymbol]: infer O }]
+  ? // ?  [O] extends [
+    //   Readonly<
+    //     ComponentOptionsBase<
+    //       any,
+    //       any,
+    //       any,
+    //       any,
+    //       any,
+    //       infer M,
+    //       infer E,
+    //       any,
+    //       any,
+    //       any,
+    //       any,
+    //       any,
+    //       any
+    //     >
+    //   >,
+    // ]
+    // ? IntersectionMixin<M> & IntersectionMixin<E>
+    O extends {
+      mixins?: infer M extends ComponentOptionsMixin
+      extends?: infer E extends ComponentOptionsMixin
+    }
+    ? IntersectionMixin<M> & IntersectionMixin<E>
+    : {}*/
+  /*[T] extends {
+    [RawOptionsSymbol]: { mixins?: infer M; extends?: infer E }
+  }
+    ? IntersectionMixin<M> & IntersectionMixin<E>
+    : */ [T] extends [
+    Readonly<
+      ComponentOptionsBase<
+        any,
+        any,
+        any,
+        any,
+        any,
+        infer M,
+        infer E,
+        any,
+        any,
+        any,
+        any,
+        any,
+        any
+      >
+    >,
+  ]
+    ? IntersectionMixin<M> & IntersectionMixin<E>
+    : {}
 
 /**
  * Converts an Record<string, any> into a props definition like object
