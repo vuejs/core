@@ -2,6 +2,7 @@ import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
+  ReactiveEffect,
   TrackOpTypes,
   TriggerOpTypes,
   type WritableComputedRef,
@@ -11,7 +12,6 @@ import {
   reactive,
   ref,
   toRaw,
-  ReactiveEffect,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
 
