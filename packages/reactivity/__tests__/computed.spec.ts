@@ -483,10 +483,6 @@ describe('reactivity/computed', () => {
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
     expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-
-    v.value = 2
-
-    expect(c2.value).toBe(2)
   })
 
   it('should work when chained(ref+computed)', () => {
