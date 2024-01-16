@@ -62,10 +62,12 @@ export const isAsyncWrapper = (i: ComponentInternalInstance | VNode): boolean =>
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineAsyncComponent<
   T extends Component = { new (): ComponentPublicInstance },
+>(source: () => Promise<T>): DefineAsyncComponent<T>
+export function defineAsyncComponent<
+  T extends Component = { new (): ComponentPublicInstance },
 >(
   source: AsyncComponentLoader<T> | AsyncComponentOptions<T>,
 ): DefineAsyncComponent<T>
-
 export function defineAsyncComponent<
   Props = undefined,
   RawBindings = {},

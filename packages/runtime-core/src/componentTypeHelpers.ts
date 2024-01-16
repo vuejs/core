@@ -28,7 +28,8 @@ import type {
   IntersectionMixin,
   UnwrapMixinsType,
 } from './componentPublicInstance'
-import type { LooseOptional, ShallowUnwrapRef } from '.'
+import type { ShallowUnwrapRef } from '@vue/reactivity'
+import type { LooseOptional } from '@vue/shared'
 
 /**
  * Extracts the component original options
