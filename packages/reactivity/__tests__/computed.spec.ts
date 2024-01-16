@@ -509,13 +509,15 @@ describe('reactivity/computed', () => {
       }
       return 'foo'
     })
-    const v2 = computed(() => v.value + c1.value)
+    const c2 = computed(() => v.value + c1.value)
 
     effect(() => {
       fnSpy()
-      v2.value
+      c2.value
     })
     expect(fnSpy).toBeCalledTimes(1)
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
   })
