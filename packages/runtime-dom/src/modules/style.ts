@@ -7,6 +7,7 @@ type Style = string | Record<string, string | string[]> | null
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
+  const currentDisplay = style.display
   const isCssString = isString(next)
   if (next && !isCssString) {
     if (prev && !isString(prev)) {
@@ -20,7 +21,6 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
       setStyle(style, key, next[key])
     }
   } else {
-    const currentDisplay = style.display
     if (isCssString) {
       if (prev !== next) {
         // #9821
@@ -33,12 +33,12 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     } else if (prev) {
       el.removeAttribute('style')
     }
-    // indicates that the `display` of the element is controlled by `v-show`,
-    // so we always keep the current `display` value regardless of the `style`
-    // value, thus handing over control to `v-show`.
-    if (vShowOldKey in el) {
-      style.display = currentDisplay
-    }
+  }
+  // indicates that the `display` of the element is controlled by `v-show`,
+  // so we always keep the current `display` value regardless of the `style`
+  // value, thus handing over control to `v-show`.
+  if (vShowOldKey in el) {
+    style.display = currentDisplay
   }
 }
 

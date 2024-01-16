@@ -10,7 +10,7 @@ import {
 } from './vnode'
 import type { Teleport, TeleportProps } from './components/Teleport'
 import type { Suspense, SuspenseProps } from './components/Suspense'
-import { isArray, isObject } from '@vue/shared'
+import { type IfAny, isArray, isObject } from '@vue/shared'
 import type { RawSlots } from './componentSlots'
 import type {
   Component,
@@ -140,11 +140,11 @@ export function h(
 export function h<
   P,
   E extends EmitsOptions = {},
-  S extends Record<string, any> = {},
+  S extends Record<string, any> = any,
 >(
-  type: FunctionalComponent<P, E, S>,
+  type: FunctionalComponent<P, any, S, any>,
   props?: (RawProps & P) | ({} extends P ? null : never),
-  children?: RawChildren | RawSlots,
+  children?: RawChildren | IfAny<S, RawSlots, S>,
 ): VNode
 
 // catch-all for generic component types

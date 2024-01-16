@@ -1,3 +1,108 @@
+## [3.4.9](https://github.com/vuejs/core/compare/v3.4.8...v3.4.9) (2024-01-11)
+
+
+### Bug Fixes
+
+* **build:** avoid accessing __FEATURE_PROD_DEVTOOLS__ flag in root scope ([dfd9654](https://github.com/vuejs/core/commit/dfd9654665890d1bc7129f6e3c2faaa5b1f28f72))
+* **hydration:** do not warn against bindings w/ object values ([dcc68ef](https://github.com/vuejs/core/commit/dcc68ef7d48973abd8dd3178b46e50e3b0785ea4))
+* **runtime-dom:** unify behavior for v-show + style display binding ([#10075](https://github.com/vuejs/core/issues/10075)) ([cd419ae](https://github.com/vuejs/core/commit/cd419aec3cb615eaea8b2324356f38f4c0ff1fcc)), closes [#10074](https://github.com/vuejs/core/issues/10074)
+* **suspense:** avoid double-patching nested suspense when parent suspense is not resolved ([#10055](https://github.com/vuejs/core/issues/10055)) ([bcda96b](https://github.com/vuejs/core/commit/bcda96b525801eb7a1d397300fb3f2f9b827ddfb)), closes [#8678](https://github.com/vuejs/core/issues/8678)
+
+
+
+## [3.4.8](https://github.com/vuejs/core/compare/v3.4.7...v3.4.8) (2024-01-10)
+
+
+### Bug Fixes
+
+* **hydration:** fix class and style hydration mismatch message ([5af3987](https://github.com/vuejs/core/commit/5af398729168481c3bee741b4f36fa4f375e0f4a)), closes [#10067](https://github.com/vuejs/core/issues/10067)
+* **hydration:** improve attr hydration mismatch check for boolean attrs ([972face](https://github.com/vuejs/core/commit/972facee0d892a1b6d9d4ad1da5da9306ed45c3f)), closes [#10057](https://github.com/vuejs/core/issues/10057) [#10060](https://github.com/vuejs/core/issues/10060)
+* **suspense:** fix more suspense patch before resolve edge cases ([70ad4ca](https://github.com/vuejs/core/commit/70ad4caad7d19938f8ccf1ede3228a81254dd4bf)), closes [#10017](https://github.com/vuejs/core/issues/10017)
+
+
+
+## [3.4.7](https://github.com/vuejs/core/compare/v3.4.6...v3.4.7) (2024-01-09)
+
+
+### Bug Fixes
+
+* **parser:** skip compat mode check for SFC root `<template>` tags ([#10034](https://github.com/vuejs/core/issues/10034)) ([923d560](https://github.com/vuejs/core/commit/923d560d0b6713144671809b6dfeb1e2da503b1f))
+* **types:** fix functional component for `h` ([#9991](https://github.com/vuejs/core/issues/9991)) ([438a74a](https://github.com/vuejs/core/commit/438a74aad840183286fbdb488178510f37218a73))
+
+
+### Reverts
+
+* "dx(computed): warn incorrect use of getCurrentInstance inside computed" ([2fd3905](https://github.com/vuejs/core/commit/2fd39057386644c8bfee426c60a51f2b07a79b09))
+
+
+
+## [3.4.6](https://github.com/vuejs/core/compare/v3.4.5...v3.4.6) (2024-01-08)
+
+
+### Bug Fixes
+
+* **build:** revert "build: add production/development export conditions ([#9977](https://github.com/vuejs/core/issues/9977))" ([7bd4e90](https://github.com/vuejs/core/commit/7bd4e90506547c42234165776b01793abd37b148)), closes [#10012](https://github.com/vuejs/core/issues/10012) [#10020](https://github.com/vuejs/core/issues/10020)
+* fix post watcher fire timing on nested app mounts ([3c3561e](https://github.com/vuejs/core/commit/3c3561e7203091f49d57f1da6d822c91e462bc46)), closes [#10005](https://github.com/vuejs/core/issues/10005)
+* **hydration:** avoid hydration mismatch warning for styles with different order ([#10011](https://github.com/vuejs/core/issues/10011)) ([2701355](https://github.com/vuejs/core/commit/2701355e8eb07ab664e398d9fc05d6c4e2e9b20e)), closes [#10000](https://github.com/vuejs/core/issues/10000) [#10006](https://github.com/vuejs/core/issues/10006)
+* **runtime-core:** handle fragment with null children ([#10010](https://github.com/vuejs/core/issues/10010)) ([3bf34b7](https://github.com/vuejs/core/commit/3bf34b767e4dd3cf6a974301ecf0363ae4dda4ec)), closes [#10007](https://github.com/vuejs/core/issues/10007)
+* **scheduler:** sort nested postFlushCbs ([d9162df](https://github.com/vuejs/core/commit/d9162dfc2ee0c3a369fb9bf32ff413e74761bee6)), closes [#10003](https://github.com/vuejs/core/issues/10003)
+* **suspense:** fix anchor for suspense with transition out-in ([#9999](https://github.com/vuejs/core/issues/9999)) ([a3fbf21](https://github.com/vuejs/core/commit/a3fbf2132b0cd3655e969e290548c8fabc08fd33)), closes [#9996](https://github.com/vuejs/core/issues/9996)
+* **types:** allow `null` type for textarea value ([#9997](https://github.com/vuejs/core/issues/9997)) ([c379bc2](https://github.com/vuejs/core/commit/c379bc29efc70d6ac5840de10c357ee3dad998c0)), closes [#9904](https://github.com/vuejs/core/issues/9904)
+
+
+
+## [3.4.5](https://github.com/vuejs/core/compare/v3.4.4...v3.4.5) (2024-01-04)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix co-usage of defineModel transform options and props destructure ([b20350d](https://github.com/vuejs/core/commit/b20350ded562d27e5901f308d0bc13344f840c4a)), closes [#9972](https://github.com/vuejs/core/issues/9972)
+* **compiler-sfc:** fix sfc template unref rewrite for class instantiation ([ae60a91](https://github.com/vuejs/core/commit/ae60a91cc23424493071ad9088782763eb1e8ff7)), closes [#6483](https://github.com/vuejs/core/issues/6483) [#6491](https://github.com/vuejs/core/issues/6491)
+* **compiler-ssr:** fix node clone edge case caused by AST reuse ([#9983](https://github.com/vuejs/core/issues/9983)) ([7dbdb3e](https://github.com/vuejs/core/commit/7dbdb3edf0ab648965331ca42f069387c97a1c8a)), closes [#9981](https://github.com/vuejs/core/issues/9981)
+* **watch:** cleanup watcher effect from scope when manually stopped ([#9978](https://github.com/vuejs/core/issues/9978)) ([d2d8955](https://github.com/vuejs/core/commit/d2d89551bb06dc05cb7ae0496b8f345ae0de78ed))
+
+
+
+## [3.4.4](https://github.com/vuejs/core/compare/v3.4.3...v3.4.4) (2024-01-03)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix scss source map regression ([71d3121](https://github.com/vuejs/core/commit/71d3121b72c449351e718ee1539bdfa35b68bb32)), closes [#9970](https://github.com/vuejs/core/issues/9970) [#9969](https://github.com/vuejs/core/issues/9969)
+* **compiler-sfc:** use compilerOptions when re-parsing consumed AST ([d94d8d4](https://github.com/vuejs/core/commit/d94d8d4bffd1daf171a655b292745ffc3e63052d))
+* **defineModel:** support kebab-case/camelCase mismatches ([#9950](https://github.com/vuejs/core/issues/9950)) ([10ccb9b](https://github.com/vuejs/core/commit/10ccb9bfa0f5f3016207fc32b9611bab98e6f090))
+* **runtime-core:** correctly assign suspenseId to avoid conflicts with the default id ([#9966](https://github.com/vuejs/core/issues/9966)) ([0648804](https://github.com/vuejs/core/commit/06488047c184dae3070d0008379716690edceb46)), closes [#9944](https://github.com/vuejs/core/issues/9944)
+* **ssr:** avoid rendering transition-group slot content as a fragment ([#9961](https://github.com/vuejs/core/issues/9961)) ([0160264](https://github.com/vuejs/core/commit/0160264d677478ee928e8e851f39a9e94f97e337)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+* **watch:** remove instance unmounted short circuit in getter of `watchEffect` ([#9948](https://github.com/vuejs/core/issues/9948)) ([f300a40](https://github.com/vuejs/core/commit/f300a4001ec40cadef2520267eb5841ab48cf005))
+* **watch:** revert watch behavior when watching shallow reactive objects ([a9f781a](https://github.com/vuejs/core/commit/a9f781a92cbc7de7b25c9e3d5b1295ca99eb6d86)), closes [#9965](https://github.com/vuejs/core/issues/9965)
+
+
+### Performance Improvements
+
+* **watch:** avoid double traverse for reactive source ([24d77c2](https://github.com/vuejs/core/commit/24d77c25ce5d5356adb5367beef1d23e6e340b35))
+
+
+
+## [3.4.3](https://github.com/vuejs/core/compare/v3.4.2...v3.4.3) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** respect sfc parse options in cache key ([b8d58ec](https://github.com/vuejs/core/commit/b8d58ec4f42cbeb9443bf06138add46158db9af0))
+
+
+
+## [3.4.2](https://github.com/vuejs/core/compare/v3.4.1...v3.4.2) (2023-12-30)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix dev regression for dot / namespace component usage ([dce99c1](https://github.com/vuejs/core/commit/dce99c12df981ca45a4d848c37ba8b16496025f0)), closes [#9947](https://github.com/vuejs/core/issues/9947)
+* **runtime-core:** support deep: false when watch reactive ([#9928](https://github.com/vuejs/core/issues/9928)) ([4f703d1](https://github.com/vuejs/core/commit/4f703d120d76d711084346f73ea295c73e6ef6b6)), closes [#9916](https://github.com/vuejs/core/issues/9916)
+* **ssr:** fix hydration error for slot outlet inside transition-group ([#9937](https://github.com/vuejs/core/issues/9937)) ([6cb00ed](https://github.com/vuejs/core/commit/6cb00ed0f9b64428ec18fada0f68467d6a813fde)), closes [#9933](https://github.com/vuejs/core/issues/9933)
+
+
+
 ## [3.4.1](https://github.com/vuejs/core/compare/v3.4.0...v3.4.1) (2023-12-30)
 
 

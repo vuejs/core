@@ -367,6 +367,18 @@ h1 { color: red }
       tag: 'hello',
       tagType: ElementTypes.ELEMENT,
     })
+
+    // test cache invalidation on different options
+    const { descriptor: d2 } = parse(`<template><hello/></template>`, {
+      templateParseOptions: {
+        isCustomElement: t => t !== 'hello',
+      },
+    })
+    expect(d2.template!.ast!.children[0]).toMatchObject({
+      type: NodeTypes.ELEMENT,
+      tag: 'hello',
+      tagType: ElementTypes.COMPONENT,
+    })
   })
 
   describe('warnings', () => {

@@ -103,9 +103,30 @@ export interface SFCParseResult {
 
 export const parseCache = createCache<SFCParseResult>()
 
+function genCacheKey(source: string, options: SFCParseOptions): string {
+  return (
+    source +
+    JSON.stringify(
+      {
+        ...options,
+        compiler: { parse: options.compiler?.parse },
+      },
+      (_, val) => (typeof val === 'function' ? val.toString() : val),
+    )
+  )
+}
+
 export function parse(
   source: string,
-  {
+  options: SFCParseOptions = {},
+): SFCParseResult {
+  const sourceKey = genCacheKey(source, options)
+  const cache = parseCache.get(sourceKey)
+  if (cache) {
+    return cache
+  }
+
+  const {
     sourceMap = true,
     filename = DEFAULT_FILENAME,
     sourceRoot = '',
@@ -114,14 +135,7 @@ export function parse(
     compiler = CompilerDOM,
     templateParseOptions = {},
     parseExpressions = true,
-  }: SFCParseOptions = {},
-): SFCParseResult {
-  const sourceKey =
-    source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = parseCache.get(sourceKey)
-  if (cache) {
-    return cache
-  }
+  } = options
 
   const descriptor: SFCDescriptor = {
     filename,

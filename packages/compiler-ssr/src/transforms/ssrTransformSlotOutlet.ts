@@ -4,6 +4,7 @@ import {
   NodeTypes,
   type SlotOutletNode,
   TRANSITION,
+  TRANSITION_GROUP,
   createCallExpression,
   createFunctionExpression,
   isSlotOutlet,
@@ -37,16 +38,19 @@ export const ssrTransformSlotOutlet: NodeTransform = (node, context) => {
 
     let method = SSR_RENDER_SLOT
 
-    // #3989
+    // #3989, #9933
     // check if this is a single slot inside a transition wrapper - since
-    // transition will unwrap the slot fragment into a single vnode at runtime,
+    // transition/transition-group will unwrap the slot fragment into vnode(s) at runtime,
     // we need to avoid rendering the slot as a fragment.
     const parent = context.parent
+    let componentType
     if (
       parent &&
       parent.type === NodeTypes.ELEMENT &&
       parent.tagType === ElementTypes.COMPONENT &&
-      resolveComponentType(parent, context, true) === TRANSITION &&
+      ((componentType = resolveComponentType(parent, context, true)) ===
+        TRANSITION ||
+        componentType === TRANSITION_GROUP) &&
       parent.children.filter(c => c.type === NodeTypes.ELEMENT).length === 1
     ) {
       method = SSR_RENDER_SLOT_INNER

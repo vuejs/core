@@ -650,6 +650,24 @@ describe('SFC compile <script setup>', () => {
         ),
       ).not.toThrowError()
     })
+
+    test('unref + new expression', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import Foo from './foo'
+        </script>
+        <template>
+          <div>{{ new Foo() }}</div>
+          <div>{{ new Foo.Bar() }}</div>
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch(`new (_unref(Foo))()`)
+      expect(content).toMatch(`new (_unref(Foo)).Bar()`)
+      assertCode(content)
+    })
   })
 
   describe('with TypeScript', () => {
