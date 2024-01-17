@@ -13,6 +13,7 @@ import {
   type DeclareEmits,
   type DynamicComponent,
   type ExtractComponentOptions,
+  type ExtractComponentPropOptions,
   type FunctionalComponent,
   type ObjectToComponentProps,
   type PropType,
@@ -292,6 +293,46 @@ describe('Component Props', () => {
     expectType<{ a: string }>(props)
     // @ts-expect-error not any
     expectType<boolean>(props)
+  })
+
+  describe('declare component', () => {
+    {
+      const __options = defineComponent({
+        props: {
+          foo: String,
+          getFn: Function,
+        },
+      })
+
+      const DeclaredComp = {} as DeclareComponent<
+        {
+          foo: string
+          getFn: (a: string) => void
+        },
+        {},
+        {},
+        {},
+        typeof __options
+      >
+
+      const propsOptions = {} as ExtractComponentPropOptions<
+        typeof DeclaredComp
+      >
+
+      propsOptions.getFn
+
+      const props = {} as ComponentProps<typeof DeclaredComp>
+
+      expectType<{ foo: string | undefined; getFn: (a: string) => void }>(props)
+
+      expectType<((a: string) => void) | undefined>(props.getFn)
+
+      // @ts-expect-error not function
+      expectType<(() => void) | undefined>(props.getFn)
+
+      // @ts-expect-error not any
+      expect<{ random: string }>(props)
+    }
   })
 })
 
@@ -1235,13 +1276,28 @@ describe('DeclareComponent', () => {
         required: true,
       },
     },
-  }) as DeclareComponent<{
-    new <T extends string>(): {
-      $props: {
-        test: T
+  }) as DeclareComponent<
+    {
+      new <T extends string>(): {
+        $props: {
+          test: T
+        }
+      }
+    },
+    any,
+    any,
+    any,
+    // props need to be passed to generate the correct type
+    // otherwise the original type information might be lost
+    {
+      props: {
+        test: {
+          type: StringConstructor
+          required: true
+        }
       }
     }
-  }>
+  >
 
   expectType<{
     type: PropType<string>
@@ -1344,28 +1400,28 @@ describe('DeclareEmits', () => {
 
 // ObjectToComponentProps
 describe('ObjectToComponentProps', () => {
-  {
-    // prop options
-    const props = {
-      foo: String,
-      bar: {
-        type: String,
-        default: 'bar',
-      },
-    }
-    const s = {} as ObjectToComponentProps<typeof props>
+  // PASSING RAW PROPS is not supported and should be causing error!
+  // {
+  //   // prop options
+  //   const props = {
+  //     foo: String,
+  //     bar: {
+  //       type: String,
+  //       default: 'bar',
+  //     },
+  //   }
+  //   const s = {} as ObjectToComponentProps<typeof props>
 
-    expectType<{
-      foo: StringConstructor
-      bar: {
-        type: StringConstructor
-        default: string
-      }
-    }>(s)
-
-    // @ts-expect-error not any
-    expectType<{ bar: string }>(s)
-  }
+  //   expectType<{
+  //     foo: StringConstructor
+  //     bar: {
+  //       type: StringConstructor
+  //       default: string
+  //     }
+  //   }>(s)
+  //   // @ts-expect-error not any
+  //   expectType<{ bar: string }>(s)
+  // }
   {
     // array props
     const props = ['foo', 'bar'] as const

@@ -16,7 +16,6 @@ import type {
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
   ExtractPropTypes,
-  Prop,
   PropType,
 } from './componentProps'
 import type { Slots, SlotsType, UnwrapSlotsType } from './componentSlots'
@@ -30,6 +29,8 @@ import type {
 } from './componentPublicInstance'
 import type { ShallowUnwrapRef } from '@vue/reactivity'
 import type { LooseOptional } from '@vue/shared'
+
+export declare const RawPropsSymbol: '__rawProps'
 
 /**
  * Extracts the component original options
@@ -147,59 +148,27 @@ export type ExtractComponentEmitOptions<T> = T extends ComponentOptionsBase<
  * Helper to resolve mixins
  *
  */
-type ResolveMixin<T> =
-  /*[T] extends [{ [RawOptionsSymbol]: infer O }]
-  ? // ?  [O] extends [
-    //   Readonly<
-    //     ComponentOptionsBase<
-    //       any,
-    //       any,
-    //       any,
-    //       any,
-    //       any,
-    //       infer M,
-    //       infer E,
-    //       any,
-    //       any,
-    //       any,
-    //       any,
-    //       any,
-    //       any
-    //     >
-    //   >,
-    // ]
-    // ? IntersectionMixin<M> & IntersectionMixin<E>
-    O extends {
-      mixins?: infer M extends ComponentOptionsMixin
-      extends?: infer E extends ComponentOptionsMixin
-    }
-    ? IntersectionMixin<M> & IntersectionMixin<E>
-    : {}*/
-  /*[T] extends {
-    [RawOptionsSymbol]: { mixins?: infer M; extends?: infer E }
-  }
-    ? IntersectionMixin<M> & IntersectionMixin<E>
-    : */ [T] extends [
-    Readonly<
-      ComponentOptionsBase<
-        any,
-        any,
-        any,
-        any,
-        any,
-        infer M,
-        infer E,
-        any,
-        any,
-        any,
-        any,
-        any,
-        any
-      >
-    >,
-  ]
-    ? IntersectionMixin<M> & IntersectionMixin<E>
-    : {}
+type ResolveMixin<T> = [T] extends [
+  Readonly<
+    ComponentOptionsBase<
+      any,
+      any,
+      any,
+      any,
+      any,
+      infer M,
+      infer E,
+      any,
+      any,
+      any,
+      any,
+      any,
+      any
+    >
+  >,
+]
+  ? IntersectionMixin<M> & IntersectionMixin<E>
+  : {}
 
 /**
  * Converts an Record<string, any> into a props definition like object
@@ -220,12 +189,15 @@ type ResolveMixin<T> =
  * }
  * ```
  */
-export type ObjectToComponentProps<T> = T extends Readonly<Array<string>>
+export type ObjectToComponentProps<T> = [T] extends [Readonly<Array<string>>]
   ? T
-  : T extends Record<string, any>
+  : [T] extends [Record<string, any>]
     ? {
-        [K in keyof T]-?: T[K] extends Prop<any>
-          ? T[K]
+        [K in keyof T]-?: T[K] extends Function
+          ? {
+              type: PropType<T[K]>
+              required: undefined extends T[K] ? false : true
+            }
           : {
               type: PropType<Exclude<T[K], undefined>>
               required: undefined extends T[K] ? false : true
@@ -300,15 +272,20 @@ export type ComponentEmitsAsProps<T> = T extends {
  * }
  * ```
  */
-export type ComponentProps<T> = (ExtractComponentPropOptions<T> extends infer P
-  ? P extends Readonly<Array<infer V>>
-    ? [V] extends [string]
-      ? Readonly<{ [key in V]?: any }>
-      : {}
-    : P extends ComponentPropsOptions
-      ? ExtractPropTypes<P>
-      : P
-  : {}) & // props to be omitted since we don't need them here
+export type ComponentProps<T> = (T extends {
+  // We use the raw props to avoid losing the props type
+  [RawPropsSymbol]: infer P
+}
+  ? P
+  : ExtractComponentPropOptions<T> extends infer P
+    ? P extends Readonly<Array<infer V>>
+      ? [V] extends [string]
+        ? Readonly<{ [key in V]?: any }>
+        : {}
+      : P extends ComponentPropsOptions
+        ? ExtractPropTypes<P>
+        : P
+    : {}) & // props to be omitted since we don't need them here
   (T extends { props: any } ? ResolveMixinProps<T> : {})
 
 type RetrieveSlotArgument<T extends any[] = any[]> =
@@ -482,18 +459,20 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
  * ```
  */
 export type DeclareComponent<
-  Props extends Record<string, any> | { new (): ComponentPublicInstance } = {},
+  Props = {},
   Data extends Record<string, any> = {},
   Emits extends EmitsOptions = {},
   Slots extends SlotsType = {},
   Options extends Record<PropertyKey, any> = {},
 > =
   // short-circuit to allow Generics
-  Props extends {
-    new (): infer PublicInstance
-  }
-    ? Props &
-        DeclareComponent<{}, Data, Emits, Slots, Options> & {
+  [Props] extends [
+    infer Component extends {
+      new (): infer PublicInstance
+    },
+  ]
+    ? DeclareComponent<{}, Data, Emits, Slots, Options> &
+        Component & {
           // We need to NOT make any changes to Prop, we fake the
           // object props, because passing to the DeclareComponent
           // will break the generic inferrance.
@@ -520,8 +499,10 @@ export type DeclareComponent<
         string,
         Slots,
         Options
-      >
-
+      > & {
+        // Keep the Original Props, otherwise we lose the original type
+        [RawPropsSymbol]: Props
+      }
 /**
  * Helper for <component :is="..."> type inference
  */
