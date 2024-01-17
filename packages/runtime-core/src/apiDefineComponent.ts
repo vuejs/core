@@ -100,11 +100,14 @@ export type DefineComponent<
       II,
       S
     >,
-    'props' | 'emits' | 'slots'
+    'props' | 'emits'
   > &
   Omit<Options, 'emits' | 'mixins' | 'extends'> & {
+    // Emits needs to be ignored and then re-added, otherwise
+    // the EE (string) of the emits will be inferred along side of the Object based
+    // causing the returned type to be incorrect.
     emits: Options['emits']
-    // mixins: Options['mixins']
+    // There's a test failing when extends is not re-added
     extends: Options['extends']
   } & {
     [RawOptionsSymbol]: Options

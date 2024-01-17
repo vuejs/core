@@ -1186,6 +1186,27 @@ describe('ComponentSlots', () => {
     // @ts-expect-error checking if is not any
     expectType<{ random: number }>(fc)
   })
+
+  describe('declare component', () => {
+    const __options = defineComponent({})
+
+    const DeclaredComp = {} as DeclareComponent<
+      {},
+      {},
+      {},
+      SlotsType<{
+        default: (arg: { foo: string }) => any
+        test: (arg: { bar: string }) => any
+      }>,
+      typeof __options
+    >
+
+    const slots = getSlots(DeclaredComp)
+    expectType<{
+      default: (arg: { foo: string }) => any
+      test: (arg: { bar: string }) => any
+    }>(slots)
+  })
 })
 
 describe('DeclareComponent', () => {
