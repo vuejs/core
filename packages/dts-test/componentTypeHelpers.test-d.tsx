@@ -13,7 +13,6 @@ import {
   type DeclareEmits,
   type DynamicComponent,
   type ExtractComponentOptions,
-  type ExtractComponentPropOptions,
   type FunctionalComponent,
   type ObjectToComponentProps,
   type PropType,
@@ -21,6 +20,7 @@ import {
   type SlotsType,
   defineAsyncComponent,
   defineComponent,
+  defineProps,
 } from 'vue'
 
 const propsOptions = {
@@ -314,13 +314,6 @@ describe('Component Props', () => {
         {},
         typeof __options
       >
-
-      const propsOptions = {} as ExtractComponentPropOptions<
-        typeof DeclaredComp
-      >
-
-      propsOptions.getFn
-
       const props = {} as ComponentProps<typeof DeclaredComp>
 
       expectType<{ foo: string | undefined; getFn: (a: string) => void }>(props)
@@ -332,6 +325,72 @@ describe('Component Props', () => {
 
       // @ts-expect-error not any
       expect<{ random: string }>(props)
+    }
+
+    {
+      // usage with defineProps
+      const props = defineProps(['foo', 'bar'])
+
+      const __options = defineComponent({
+        props: ['foo', 'bar'],
+        setup() {
+          return () => {}
+        },
+      })
+
+      const Comp = {} as DeclareComponent<
+        typeof props,
+        {},
+        {},
+        {},
+        typeof __options
+      >
+
+      const p = {} as ComponentProps<typeof Comp>
+
+      expectType<{
+        foo?: any
+        bar?: any
+      }>(p)
+
+      // @ts-expect-error not any
+      expectType<{ random: any }>(p)
+
+      expectType<Array<'foo' | 'bar'>>(Comp.props)
+    }
+    {
+      // generic
+      const __options = defineComponent({
+        props: {
+          item: null,
+          getFn: Function,
+        },
+      })
+
+      const Comp = {} as DeclareComponent<
+        {
+          new <T>(): {
+            $props: {
+              item: T
+              getFn: (a: T) => void
+            }
+          }
+        },
+        {},
+        {},
+        {},
+        typeof __options
+      >
+
+      const props = {} as ComponentProps<typeof Comp>
+
+      expectType<{
+        item: unknown
+        getFn: (a: unknown) => void
+      }>(props)
+
+      // @ts-expect-error not any
+      expectType<unknown>(props.test)
     }
   })
 })

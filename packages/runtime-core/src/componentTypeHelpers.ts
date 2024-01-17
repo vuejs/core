@@ -276,7 +276,9 @@ export type ComponentProps<T> = (T extends {
   // We use the raw props to avoid losing the props type
   [RawPropsSymbol]: infer P
 }
-  ? P
+  ? P extends { new (): { $props?: infer PP } }
+    ? PP
+    : P
   : ExtractComponentPropOptions<T> extends infer P
     ? P extends Readonly<Array<infer V>>
       ? [V] extends [string]
@@ -481,6 +483,8 @@ export type DeclareComponent<
           }
             ? ObjectToComponentProps<TProps>
             : {}
+        } & {
+          [RawPropsSymbol]: Props
         }
     : DefineComponent<
         ObjectToComponentProps<Props>,
