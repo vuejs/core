@@ -21,8 +21,8 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
-  isObject,
   isOn,
+  isPlainObject,
   isReservedProp,
   isString,
   normalizeClass,
@@ -768,12 +768,14 @@ function propHasMismatch(
         // #10000 some attrs such as textarea.value can't be retrieved by `hasAttribute`
         const serverValue = el[key as keyof typeof el]
         actual =
-          isObject(serverValue) || serverValue == null
+          isPlainObject(serverValue) || serverValue == null
             ? ''
             : String(serverValue)
       }
       expected =
-        isObject(clientValue) || clientValue == null ? '' : String(clientValue)
+        isPlainObject(clientValue) || clientValue == null
+          ? ''
+          : String(clientValue)
     }
     if (actual !== expected) {
       mismatchType = `attribute`

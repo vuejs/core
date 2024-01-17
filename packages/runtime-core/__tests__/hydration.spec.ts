@@ -1531,5 +1531,12 @@ describe('SSR hydration', () => {
       mountWithHydration(`<button />`, () => h('button', { href: undefined }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    test('should not warn against array values', () => {
+      mountWithHydration(`<options value="array" />`, () =>
+        h('options', { value: ['array'] }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
   })
 })
