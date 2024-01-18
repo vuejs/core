@@ -21,8 +21,8 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
-  isObject,
   isOn,
+  isRenderableAttrValue,
   isReservedProp,
   isString,
   normalizeClass,
@@ -770,10 +770,9 @@ function propHasMismatch(
       } else {
         actual = false
       }
-      expected =
-        isObject(clientValue) || clientValue == null
-          ? false
-          : String(clientValue)
+      expected = isRenderableAttrValue(clientValue)
+        ? String(clientValue)
+        : false
     }
     if (actual !== expected) {
       mismatchType = `attribute`
