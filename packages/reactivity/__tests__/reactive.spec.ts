@@ -1,5 +1,6 @@
 import { isRef, ref } from '../src/ref'
 import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
+import { ReactiveFlags } from '../src/constants'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
 
@@ -289,10 +290,10 @@ describe('reactivity/reactive', () => {
     expect(isReactive(obj.baz)).toBe(false)
   })
 
-  test('should not observe objects with __v_skip', () => {
+  test(`should not observe objects with ${ReactiveFlags.SKIP}}`, () => {
     const original = {
       foo: 1,
-      __v_skip: true,
+      [ReactiveFlags.SKIP]: true,
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
