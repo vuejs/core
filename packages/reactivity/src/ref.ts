@@ -5,7 +5,12 @@ import {
   trackEffect,
   triggerEffects,
 } from './effect'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
+import {
+  DirtyLevels,
+  ReactiveFlags,
+  TrackOpTypes,
+  TriggerOpTypes,
+} from './constants'
 import {
   type IfAny,
   hasChanged,
@@ -158,13 +163,12 @@ class RefImpl<T> {
 
   public dep?: Dep = undefined
   public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_SHALLOW]: boolean
 
-  constructor(
-    value: T,
-    public readonly __v_isShallow: boolean,
-  ) {
-    this._rawValue = __v_isShallow ? value : toRaw(value)
-    this._value = __v_isShallow ? value : toReactive(value)
+  constructor(value: T, isShallow: boolean) {
+    this[ReactiveFlags.IS_SHALLOW] = isShallow
+    this._rawValue = isShallow ? value : toRaw(value)
+    this._value = isShallow ? value : toReactive(value)
   }
 
   get value() {
@@ -174,7 +178,7 @@ class RefImpl<T> {
 
   set value(newVal) {
     const useDirectValue =
-      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
+      this[ReactiveFlags.IS_SHALLOW] || isShallow(newVal) || isReadonly(newVal)
     newVal = useDirectValue ? newVal : toRaw(newVal)
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
@@ -380,7 +384,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 
 class GetterRefImpl<T> {
   public readonly __v_isRef = true
-  public readonly __v_isReadonly = true
+  public readonly [ReactiveFlags.IS_READONLY] = true
   constructor(private readonly _getter: () => T) {}
   get value() {
     return this._getter()
@@ -501,12 +505,11 @@ export type ShallowUnwrapRef<T> = {
 
 type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
 
-export type UnwrapRef<T> =
-  T extends ShallowRef<infer V>
-    ? V
-    : T extends Ref<infer V>
-      ? UnwrapRefSimple<V>
-      : UnwrapRefSimple<T>
+export type UnwrapRef<T> = T extends ShallowRef<infer V>
+  ? V
+  : T extends Ref<infer V>
+    ? UnwrapRefSimple<V>
+    : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
