@@ -1037,15 +1037,25 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toMatchObject([fooValue, barValue])
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [fooValue, barValue]
     await nextTick()
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(true)
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [{ foo: 1 }, { bar: 1 }]
     await nextTick()
     // looseEqual
