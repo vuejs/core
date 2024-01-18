@@ -2,7 +2,6 @@ import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
-  ReactiveEffect,
   TrackOpTypes,
   TriggerOpTypes,
   type WritableComputedRef,
