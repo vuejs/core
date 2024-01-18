@@ -112,7 +112,7 @@ export function handleError(
     // in production the hook receives only the error code
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
-      : `https://vuejs.org/errors/#runtime-${type}`
+      : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
       const errorCapturedHooks = cur.ec
       if (errorCapturedHooks) {
