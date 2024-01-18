@@ -1531,5 +1531,12 @@ describe('SSR hydration', () => {
       mountWithHydration(`<button />`, () => h('button', { href: undefined }))
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
+
+    test('should not warn on non-renderable option values', () => {
+      mountWithHydration(`<select><option>hello</option></select>`, () =>
+        h('select', [h('option', { value: ['foo'] }, 'hello')]),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
   })
 })
