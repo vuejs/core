@@ -53,7 +53,7 @@ const DemoGrid = {
         })
       }
       if (sortKey) {
-        data = data.slice().sort((a, b) => {
+        data = data.toSorted((a, b) => {
           a = a[sortKey]
           b = b[sortKey]
           return (a === b ? 0 : a > b ? 1 : -1) * order
