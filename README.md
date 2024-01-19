@@ -16,7 +16,7 @@ PR are welcome!
   - [x] simple bindings
   - [x] simple events
 - [ ] TODO-MVC App
-- [ ] Repl
+- [x] Repl
 - [x] transform
   - [x] NodeTransform
   - [x] DirectiveTransform
@@ -30,15 +30,14 @@ PR are welcome!
     - [x] simple expression
     - [x] compound expression
     - [ ] modifiers
-      - [ ] .camel
+      - [x] .camel
       - [ ] .prop
       - [ ] .attr
-  - [ ] `v-on`
+  - [x] `v-on`
     - [x] simple expression
-    - [ ] compound expression
+    - [x] compound expression
     - [x] modifiers
-  - [ ] runtime directives
-    - #19
+  - [x] runtime directives
   - [ ] `v-memo`
     - #18
   - [ ] `v-model`
@@ -48,9 +47,7 @@ PR are welcome!
     - #9
   - [ ] `v-for`
     - #21
-  - [ ] `v-show`
-    - #16
-    - needs #19 first
+  - [x] `v-show`
 - [x] Fragment
 - [ ] Codegen
   - [x] CodegenContext
