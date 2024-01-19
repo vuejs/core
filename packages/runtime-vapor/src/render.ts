@@ -1,5 +1,5 @@
 import { proxyRefs } from '@vue/reactivity'
-import { type Data, invokeArrayFns } from '@vue/shared'
+import { type Data, invokeArrayFns, isArray, isObject } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -46,16 +46,26 @@ export function mountComponent(
 
     const setupFn =
       typeof component === 'function' ? component : component.setup
-    const state = setupFn && setupFn(props, ctx)
-    let block: Block | null = null
-    if (state && '__isScriptSetup' in state) {
-      instance.setupState = proxyRefs(state)
-      block = component.render(instance.setupState)
-    } else {
-      block = state as Block
+    const stateOrNode = setupFn && setupFn(props, ctx)
+
+    let block: Block | undefined
+    let setupState: Data | undefined
+
+    if (stateOrNode instanceof Node) {
+      block = stateOrNode
+    } else if (isObject(stateOrNode) && !isArray(stateOrNode)) {
+      setupState = proxyRefs(stateOrNode)
     }
+    if (!block && component.render) {
+      block = component.render(setupState)
+    }
+
     if (block instanceof DocumentFragment) {
       block = Array.from(block.childNodes)
+    }
+    if (!block) {
+      // TODO: warn no template
+      block = []
     }
     return (instance.block = block)
   })!
