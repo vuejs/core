@@ -1,30 +1,30 @@
 import {
-  TransitionProps,
-  addTransitionClass,
-  removeTransitionClass,
-  ElementWithTransition,
-  getTransitionInfo,
-  resolveTransitionProps,
+  type ElementWithTransition,
+  type TransitionProps,
   TransitionPropsValidators,
+  addTransitionClass,
   forceReflow,
-  vtcKey
+  getTransitionInfo,
+  removeTransitionClass,
+  resolveTransitionProps,
+  vtcKey,
 } from './Transition'
 import {
-  Fragment,
-  VNode,
-  warn,
-  resolveTransitionHooks,
-  useTransitionState,
-  getTransitionRawChildren,
-  getCurrentInstance,
-  setTransitionHooks,
-  createVNode,
-  onUpdated,
-  SetupContext,
-  toRaw,
-  compatUtils,
+  type ComponentOptions,
   DeprecationTypes,
-  ComponentOptions
+  Fragment,
+  type SetupContext,
+  type VNode,
+  compatUtils,
+  createVNode,
+  getCurrentInstance,
+  getTransitionRawChildren,
+  onUpdated,
+  resolveTransitionHooks,
+  setTransitionHooks,
+  toRaw,
+  useTransitionState,
+  warn,
 } from '@vue/runtime-core'
 import { extend } from '@vue/shared'
 
@@ -42,7 +42,7 @@ const TransitionGroupImpl: ComponentOptions = {
 
   props: /*#__PURE__*/ extend({}, TransitionPropsValidators, {
     tag: String,
-    moveClass: String
+    moveClass: String,
   }),
 
   setup(props: TransitionGroupProps, { slots }: SetupContext) {
@@ -62,7 +62,7 @@ const TransitionGroupImpl: ComponentOptions = {
         !hasCSSTransform(
           prevChildren[0].el as ElementWithTransition,
           instance.vnode.el as Node,
-          moveClass
+          moveClass,
         )
       ) {
         return
@@ -106,7 +106,7 @@ const TransitionGroupImpl: ComponentOptions = {
         !rawProps.tag &&
         compatUtils.checkCompatEnabled(
           DeprecationTypes.TRANSITION_GROUP_ROOT,
-          instance.parent
+          instance.parent,
         )
       ) {
         tag = 'span'
@@ -120,7 +120,7 @@ const TransitionGroupImpl: ComponentOptions = {
         if (child.key != null) {
           setTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
+            resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
         } else if (__DEV__) {
           warn(`<TransitionGroup> children must be keyed.`)
@@ -132,7 +132,7 @@ const TransitionGroupImpl: ComponentOptions = {
           const child = prevChildren[i]
           setTransitionHooks(
             child,
-            resolveTransitionHooks(child, cssTransitionProps, state, instance)
+            resolveTransitionHooks(child, cssTransitionProps, state, instance),
           )
           positionMap.set(child, (child.el as Element).getBoundingClientRect())
         }
@@ -140,7 +140,7 @@ const TransitionGroupImpl: ComponentOptions = {
 
       return createVNode(tag, null, children)
     }
-  }
+  },
 }
 
 if (__COMPAT__) {
@@ -192,7 +192,7 @@ function applyTranslation(c: VNode): VNode | undefined {
 function hasCSSTransform(
   el: ElementWithTransition,
   root: Node,
-  moveClass: string
+  moveClass: string,
 ): boolean {
   // Detect whether an element with the move class applied has
   // CSS transitions. Since the element may be inside an entering
