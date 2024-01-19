@@ -177,6 +177,25 @@ describe('runtime-dom: v-show directive', () => {
     expect($div.style.display).toEqual('block')
   })
 
+  test('the value of `display` set by v-show should not be overwritten display', async () => {
+    const style = ref()
+    const display = ref(true)
+    const component = defineComponent({
+      render() {
+        return withVShow(h('div', { style: style.value }), display.value)
+      },
+    })
+    render(h(component), root)
+
+    const $div = root.children[0]
+
+    expect($div.style.display).toEqual('')
+
+    style.value = { display: 'inline-block' }
+    await nextTick()
+    expect($div.style.display).toEqual('inline-block')
+  })
+
   // #2583, #2757
   test('the value of `display` set by v-show should not be overwritten by the style attribute when updated (with Transition)', async () => {
     const style = ref('width: 100px')

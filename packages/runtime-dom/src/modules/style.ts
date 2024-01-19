@@ -38,7 +38,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   // so we always keep the current `display` value regardless of the `style`
   // value, thus handing over control to `v-show`.
   if (vShowOldKey in el) {
-    style.display = currentDisplay
+    style.display = currentDisplay || style.display
   }
 }
 
