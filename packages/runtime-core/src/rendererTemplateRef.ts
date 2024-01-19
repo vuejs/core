@@ -81,9 +81,10 @@ export function setRef(
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
+    const isVFor = rawRef.f
     if (_isString || _isRef) {
       const doSet = () => {
-        if (rawRef.f) {
+        if (isVFor) {
           const existing = _isString
             ? hasOwn(setupState, ref)
               ? setupState[ref]
@@ -118,14 +119,15 @@ export function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      if (value) {
-        // #1789: for non-null values, set them after render
-        // null values means this is unmount and it should not overwrite another
-        // ref with the same key
+      // #9908 ref on v-for mutates the same array for both mount and unmount
+      // and should be done together
+      if (isUnmount || isVFor) {
+        doSet()
+      } else {
+        // #1789: set new refs in a post job so that they don't get overwritten
+        // by unmounting ones.
         ;(doSet as SchedulerJob).id = -1
         queuePostRenderEffect(doSet, parentSuspense)
-      } else {
-        doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
