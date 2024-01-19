@@ -99,6 +99,7 @@ export function withDirectives<T extends Node>(
 
     // register source
     if (source) {
+      // callback will be overridden by middleware
       renderWatch(source, NOOP)
     }
   }
