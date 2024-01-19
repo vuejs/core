@@ -28,7 +28,7 @@ describe('reactivity/reactive/Array', () => {
   })
 
   test('observed value should proxy mutations to original (Array)', () => {
-    const original: any[] = [{ foo: 1 }, { bar: 2 }]
+    const original: Record<string, number>[] = [{ foo: 1 }, { bar: 2 }]
     const observed = reactive(original)
     // set
     const value = { baz: 3 }
@@ -145,7 +145,7 @@ describe('reactivity/reactive/Array', () => {
   })
 
   test('add non-integer prop on Array should not trigger length dependency', () => {
-    const array: any[] & { x?: string } = new Array(3)
+    const array: string[] & { x?: string } = new Array(3)
     const observed = reactive(array)
     const fn = vi.fn()
     effect(() => {
