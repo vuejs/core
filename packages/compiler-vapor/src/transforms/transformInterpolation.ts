@@ -9,8 +9,9 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
   const parentChildren = ctx.parent ? ctx.parent.node.children : []
   const isFirst = ctx.index === 0
   const isLast = ctx.index === parentChildren.length - 1
+  const isRoot = ctx.parent === ctx.root
 
-  if (isFirst && isLast) {
+  if (isFirst && isLast && !isRoot) {
     const parent = ctx.parent!
     const parentId = parent.reference()
     ctx.registerEffect(
