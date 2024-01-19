@@ -70,7 +70,7 @@ describe('vnode', () => {
       type: 'div',
       patchFlag: PatchFlags.BAIL,
       children: 'text',
-      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN
+      shapeFlag: ShapeFlags.ELEMENT | ShapeFlags.TEXT_CHILDREN,
     })
   })
 
