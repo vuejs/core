@@ -2,7 +2,6 @@ import {
   type ComponentInternalInstance,
   currentInstance,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { warn } from './warning'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
@@ -25,9 +24,9 @@ export const injectHook = (
           return
         }
         pauseTracking()
-        setCurrentInstance(target)
+        const reset = setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        unsetCurrentInstance()
+        reset()
         resetTracking()
         return res
       })

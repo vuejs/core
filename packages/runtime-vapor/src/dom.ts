@@ -6,11 +6,7 @@ import {
 } from '@vue/shared'
 import type { Block, ParentBlock } from './render'
 
-export function insert(
-  block: Block,
-  parent: ParentNode,
-  anchor: Node | null = null,
-) {
+export function insert(block: Block, parent: Node, anchor: Node | null = null) {
   // if (!isHydrating) {
   if (block instanceof Node) {
     parent.insertBefore(block, anchor)

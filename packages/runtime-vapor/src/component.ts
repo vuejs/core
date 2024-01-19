@@ -122,10 +122,17 @@ export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  const prev = currentInstance
   currentInstance = instance
+  instance.scope.on()
+  return () => {
+    instance.scope.off()
+    currentInstance = prev
+  }
 }
 
 export const unsetCurrentInstance = () => {
+  currentInstance?.scope.off()
   currentInstance = null
 }
 

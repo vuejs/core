@@ -10,7 +10,7 @@ export const template = (str: string): (() => DocumentFragment) => {
       // first render: insert the node directly.
       // this removes it from the template fragment to avoid keeping two copies
       // of the inserted tree in memory, even if the template is used only once.
-      return (node = t.content)
+      return (node = t.content).cloneNode(true) as DocumentFragment
     } else {
       // repeated renders: clone from cache. This is more performant and
       // efficient when dealing with big lists where the template is repeated

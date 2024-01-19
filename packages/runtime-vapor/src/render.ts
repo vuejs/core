@@ -14,7 +14,7 @@ import { insert, remove } from './dom'
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
 export type Fragment = { nodes: Block; anchor: Node }
-export type BlockFn = (props: any, ctx: any) => Block
+export type BlockFn = (props?: any) => Block
 
 let isRenderingActivity = false
 export function getIsRendering() {
@@ -44,7 +44,7 @@ export function mountComponent(
 ) {
   instance.container = container
 
-  setCurrentInstance(instance)
+  const reset = setCurrentInstance(instance)
   const block = instance.scope.run(() => {
     const { component, props } = instance
     const ctx = { expose: () => {} }
@@ -82,7 +82,7 @@ export function mountComponent(
   // hook: mounted
   invokeDirectiveHook(instance, 'mounted')
   m && invokeArrayFns(m)
-  unsetCurrentInstance()
+  reset()
 
   return instance
 }
