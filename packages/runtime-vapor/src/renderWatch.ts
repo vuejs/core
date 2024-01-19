@@ -52,13 +52,12 @@ function doWatch(
   // if (__SSR__) {}
 
   const instance = getCurrentInstance()
-
-  extendOptions.onError = (err: unknown, type: BaseWatchErrorCodes) =>
-    handleErrorWithInstance(err, instance, type)
-  extendOptions.scheduler = createVaporRenderingScheduler(instance)
-
-  extendOptions.middleware = createMiddleware(instance)
-
+  extend(extendOptions, {
+    onError: (err: unknown, type: BaseWatchErrorCodes) =>
+      handleErrorWithInstance(err, instance, type),
+    scheduler: createVaporRenderingScheduler(instance),
+    middleware: createMiddleware(instance),
+  })
   let effect = baseWatch(source, cb, extendOptions)
 
   const unwatch = !effect

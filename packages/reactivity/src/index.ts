@@ -78,4 +78,5 @@ export {
   type BaseWatchOptions,
   type BaseWatchMiddleware,
   type Scheduler,
+  type SchedulerJob,
 } from './baseWatch'
