@@ -1,4 +1,4 @@
-import { compileSFCScript as compile, assertCode } from '../utils'
+import { assertCode, compileSFCScript as compile } from '../utils'
 
 describe('defineRender()', () => {
   test('JSX Element', () => {
@@ -8,7 +8,7 @@ describe('defineRender()', () => {
       defineRender(<div />)
       </script>
     `,
-      { defineRender: true }
+      { defineRender: true },
     )
     assertCode(content)
     expect(content).toMatch(`return () => <div />`)
@@ -22,7 +22,7 @@ describe('defineRender()', () => {
       defineRender(() => <div />)
       </script>
     `,
-      { defineRender: true }
+      { defineRender: true },
     )
     assertCode(content)
     expect(content).toMatch(`return () => <div />`)
@@ -37,7 +37,7 @@ describe('defineRender()', () => {
       defineRender(renderFn)
       </script>
     `,
-      { defineRender: true }
+      { defineRender: true },
     )
     assertCode(content)
     expect(content).toMatch(`return renderFn`)
@@ -52,7 +52,7 @@ describe('defineRender()', () => {
       defineRender()
       </script>
     `,
-      { defineRender: true }
+      { defineRender: true },
     )
     assertCode(content)
     expect(content).toMatch(`return { foo }`)
@@ -71,8 +71,8 @@ describe('defineRender()', () => {
         <span>hello</span>
       </template>
     `,
-          { defineRender: true }
-        )
+          { defineRender: true },
+        ),
       ).toThrow(`defineRender() cannot be used with <template>.`)
     })
   })

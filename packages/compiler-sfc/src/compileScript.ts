@@ -810,7 +810,7 @@ export function compileScript(
     if (sfc.template) {
       ctx.error(
         `${DEFINE_RENDER}() cannot be used with <template>.`,
-        ctx.renderFunction
+        ctx.renderFunction,
       )
     }
     if (ctx.renderFunction.type === 'JSXElement') {
@@ -818,7 +818,7 @@ export function compileScript(
     }
     returned += scriptSetup.content.slice(
       ctx.renderFunction.start!,
-      ctx.renderFunction.end!
+      ctx.renderFunction.end!,
     )
   } else if (
     !options.inlineTemplate ||
@@ -868,7 +868,7 @@ export function compileScript(
     // inline it right here
     const { code, ast, preamble, tips, errors } = compileTemplate({
       filename,
-        ast: sfc.template.ast,
+      ast: sfc.template.ast,
       source: sfc.template.content,
       inMap: sfc.template.map,
       ...options.templateOptions,
@@ -895,7 +895,7 @@ export function compileScript(
           `\n\n` +
           sfc.filename +
           '\n' +
-          generateCodeFrame(source, err.loc.start.offset, err.loc.end.offset,) +
+          generateCodeFrame(source, err.loc.start.offset, err.loc.end.offset) +
           `\n`
       }
       throw err

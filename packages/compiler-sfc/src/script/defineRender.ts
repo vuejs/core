@@ -1,13 +1,13 @@
-import { Node } from '@babel/types'
+import type { Node } from '@babel/types'
 import { isCallOf } from './utils'
-import { ScriptCompileContext } from './context'
+import type { ScriptCompileContext } from './context'
 import { warnOnce } from '../warn'
 
 export const DEFINE_RENDER = 'defineRender'
 
 export function processDefineRender(
   ctx: ScriptCompileContext,
-  node: Node
+  node: Node,
 ): boolean {
   if (!isCallOf(node, DEFINE_RENDER)) {
     return false
@@ -16,7 +16,7 @@ export function processDefineRender(
   if (!ctx.options.defineRender) {
     warnOnce(
       `${DEFINE_RENDER}() is an experimental feature and disabled by default.\n` +
-        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/585.`
+        `To enable it, follow the RFC at https://github.com/vuejs/rfcs/discussions/585.`,
     )
     return false
   }
