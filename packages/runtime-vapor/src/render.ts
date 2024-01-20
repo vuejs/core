@@ -75,7 +75,7 @@ export function mountComponent(
   invokeDirectiveHook(instance, 'beforeMount')
 
   insert(block, instance.container)
-  instance.isMountedRef.value = true
+  instance.isMounted = true
 
   // hook: mounted
   invokeDirectiveHook(instance, 'mounted')
@@ -94,8 +94,8 @@ export function unmountComponent(instance: ComponentInternalInstance) {
 
   scope.stop()
   block && remove(block, container)
-  instance.isMountedRef.value = false
-  instance.isUnmountedRef.value = true
+  instance.isMounted = false
+  instance.isUnmounted = true
 
   // hook: unmounted
   invokeDirectiveHook(instance, 'unmounted')
