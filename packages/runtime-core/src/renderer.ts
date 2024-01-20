@@ -70,8 +70,7 @@ import {
 } from './devtools'
 import { initFeatureFlags } from './featureFlags'
 import { isAsyncWrapper } from './apiAsyncComponent'
-import { isCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/compatConfig'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import type { TransitionHooks } from './components/BaseTransition'
 
 export interface Renderer<HostElement = RendererElement> {

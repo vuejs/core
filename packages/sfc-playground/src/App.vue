@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
+import { Repl, type SFCOptions, useStore, useVueImportMap } from '@vue/repl'
 import Monaco from '@vue/repl/monaco-editor'
-import { ref, watchEffect, onMounted, computed } from 'vue'
+import { computed, onMounted, ref, watchEffect } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 

@@ -35,8 +35,11 @@ import {
 import { isEmitListener } from './componentEmits'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/compatConfig'
+import {
+  DeprecationTypes,
+  isCompatEnabled,
+  softAssertCompatEnabled,
+} from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 import { createInternalObject } from './internalObject'
 

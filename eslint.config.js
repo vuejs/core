@@ -2,6 +2,7 @@ import importX from 'eslint-plugin-import-x'
 import tseslint from 'typescript-eslint'
 import vitest from 'eslint-plugin-vitest'
 import { builtinModules } from 'node:module'
+import vueParser from 'vue-eslint-parser'
 
 const DOMGlobals = ['window', 'document']
 const NodeGlobals = ['module', 'require']
@@ -14,7 +15,7 @@ const banConstEnum = {
 
 export default tseslint.config(
   {
-    files: ['**/*.js', '**/*.ts', '**/*.tsx'],
+    files: ['**/*.js', '**/*.ts', '**/*.tsx', '**/*.vue'],
     extends: [tseslint.configs.base],
     plugins: {
       'import-x': importX,
@@ -54,6 +55,7 @@ export default tseslint.config(
       ],
       'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
+      'import-x/no-duplicates': 'error',
       'import-x/no-nodejs-modules': [
         'error',
         { allow: builtinModules.map(mod => `node:${mod}`) },
@@ -71,6 +73,16 @@ export default tseslint.config(
       ],
       // Enforce the use of top-level import type qualifier when an import only has specifiers with inline type qualifiers
       '@typescript-eslint/no-import-type-side-effects': 'error',
+    },
+  },
+
+  {
+    files: ['**/*.vue'],
+    languageOptions: {
+      parser: vueParser,
+      parserOptions: {
+        parser: '@typescript-eslint/parser',
+      },
     },
   },
 
