@@ -1,10 +1,7 @@
-import {
-  isArray,
-  normalizeClass,
-  normalizeStyle,
-  toDisplayString,
-} from '@vue/shared'
+import { isArray, toDisplayString } from '@vue/shared'
 import type { Block, ParentBlock } from './render'
+
+export * from './dom/patchProp'
 
 export function insert(block: Block, parent: Node, anchor: Node | null = null) {
   // if (!isHydrating) {
@@ -59,63 +56,6 @@ export function setText(el: Node, oldVal: any, newVal: any) {
 export function setHtml(el: Element, oldVal: any, newVal: any) {
   if (newVal !== oldVal) {
     el.innerHTML = newVal
-  }
-}
-
-export function setClass(el: Element, oldVal: any, newVal: any) {
-  if ((newVal = normalizeClass(newVal)) !== oldVal && (newVal || oldVal)) {
-    el.className = newVal
-  }
-}
-
-export function setStyle(el: HTMLElement, oldVal: any, newVal: any) {
-  if ((newVal = normalizeStyle(newVal)) !== oldVal && (newVal || oldVal)) {
-    if (typeof newVal === 'string') {
-      el.style.cssText = newVal
-    } else {
-      // TODO
-    }
-  }
-}
-
-export function setAttr(el: Element, key: string, oldVal: any, newVal: any) {
-  if (newVal !== oldVal) {
-    if (newVal != null) {
-      el.setAttribute(key, newVal)
-    } else {
-      el.removeAttribute(key)
-    }
-  }
-}
-
-export function setDOMProp(el: any, key: string, oldVal: any, newVal: any) {
-  // TODO special checks
-  if (newVal !== oldVal) {
-    el[key] = newVal
-  }
-}
-
-export function setDynamicProp(
-  el: Element,
-  key: string,
-  oldVal: any,
-  newVal: any,
-) {
-  if (key === 'class') {
-    setClass(el, oldVal, newVal)
-  } else if (key === 'style') {
-    setStyle(el as HTMLElement, oldVal, newVal)
-  } else if (
-    key[0] === '.'
-      ? ((key = key.slice(1)), true)
-      : key[0] === '^'
-        ? ((key = key.slice(1)), false)
-        : key in el
-  ) {
-    setDOMProp(el, key, oldVal, newVal)
-  } else {
-    // TODO special checks
-    setAttr(el, key, oldVal, newVal)
   }
 }
 
