@@ -49,15 +49,14 @@ export function mountComponent(
     const stateOrNode = setupFn && setupFn(props, ctx)
 
     let block: Block | undefined
-    let setupState: Data | undefined
 
     if (stateOrNode instanceof Node) {
       block = stateOrNode
     } else if (isObject(stateOrNode) && !isArray(stateOrNode)) {
-      setupState = proxyRefs(stateOrNode)
+      instance.setupState = proxyRefs(stateOrNode)
     }
     if (!block && component.render) {
-      block = component.render(setupState)
+      block = component.render(instance.setupState)
     }
 
     if (block instanceof DocumentFragment) {
