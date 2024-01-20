@@ -4,7 +4,7 @@ import {
   ElementTypes,
   NodeTypes,
 } from '@vue/compiler-dom'
-import { isBuiltInDirective, isVoidTag } from '@vue/shared'
+import { isBuiltInDirective, isReservedProp, isVoidTag } from '@vue/shared'
 import type { NodeTransform, TransformContext } from '../transform'
 import { IRNodeTypes, type VaporDirectiveNode } from '../ir'
 
@@ -60,6 +60,8 @@ function transformProp(
   context: TransformContext<ElementNode>,
 ): void {
   const { name, loc } = prop
+  if (isReservedProp(name)) return
+
   if (prop.type === NodeTypes.ATTRIBUTE) {
     context.template += ` ${name}`
     if (prop.value) context.template += `="${prop.value.content}"`

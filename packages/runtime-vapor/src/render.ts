@@ -10,6 +10,7 @@ import {
 import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directive'
 import { insert, remove } from './dom'
+import { queuePostRenderEffect } from './scheduler'
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
@@ -78,8 +79,10 @@ export function mountComponent(
   instance.isMounted = true
 
   // hook: mounted
-  invokeDirectiveHook(instance, 'mounted')
-  m && invokeArrayFns(m)
+  queuePostRenderEffect(() => {
+    invokeDirectiveHook(instance, 'mounted')
+    m && invokeArrayFns(m)
+  })
   reset()
 
   return instance

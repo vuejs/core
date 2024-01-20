@@ -2,6 +2,7 @@ import { isArray, toDisplayString } from '@vue/shared'
 import type { Block, ParentBlock } from './render'
 
 export * from './dom/patchProp'
+export * from './dom/templateRef'
 
 export function insert(block: Block, parent: Node, anchor: Node | null = null) {
   // if (!isHydrating) {

@@ -17,6 +17,7 @@ export enum IRNodeTypes {
   SET_TEXT,
   SET_EVENT,
   SET_HTML,
+  SET_REF,
 
   INSERT_NODE,
   PREPEND_NODE,
@@ -93,6 +94,12 @@ export interface SetHtmlIRNode extends BaseIRNode {
   value: IRExpression
 }
 
+export interface SetRefIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_REF
+  element: number
+  value: IRExpression
+}
+
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
@@ -134,6 +141,7 @@ export type OperationNode =
   | SetTextIRNode
   | SetEventIRNode
   | SetHtmlIRNode
+  | SetRefIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode

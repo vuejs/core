@@ -4,9 +4,19 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-core'
-import { camelize } from '@vue/shared'
+import { camelize, isReservedProp } from '@vue/shared'
 import { IRNodeTypes } from '../ir'
 import type { DirectiveTransform } from '../transform'
+
+export function normalizeBindShorthand(
+  arg: SimpleExpressionNode,
+): SimpleExpressionNode {
+  // shorthand syntax https://github.com/vuejs/core/pull/9451
+  const propName = camelize(arg.content)
+  const exp = createSimpleExpression(propName, false, arg.loc)
+  exp.ast = null
+  return exp
+}
 
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
@@ -15,12 +25,9 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     // TODO support v-bind="{}"
     return
   }
-  if (!exp) {
-    // shorthand syntax https://github.com/vuejs/core/pull/9451
-    const propName = camelize(arg.content)
-    exp = createSimpleExpression(propName, false, arg.loc)
-    exp.ast = null
-  }
+  if (arg.isStatic && isReservedProp(arg.content)) return
+
+  if (!exp) exp = normalizeBindShorthand(arg)
 
   let camel = false
   if (modifiers.includes('camel')) {
