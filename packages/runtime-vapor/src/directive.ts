@@ -7,7 +7,7 @@ import { renderWatch } from './renderWatch'
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
 export interface DirectiveBinding<V = any, M extends string = string> {
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance
   source?: () => V
   value: V
   oldValue: V | null

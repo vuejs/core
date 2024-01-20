@@ -4,15 +4,18 @@ import {
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
+import { currentInstance } from '../component'
 
 export function setClass(el: Element, oldVal: any, newVal: any) {
   if ((newVal = normalizeClass(newVal)) !== oldVal && (newVal || oldVal)) {
+    recordPropMetadata(el, 'class', newVal)
     el.className = newVal
   }
 }
 
 export function setStyle(el: HTMLElement, oldVal: any, newVal: any) {
   if ((newVal = normalizeStyle(newVal)) !== oldVal && (newVal || oldVal)) {
+    recordPropMetadata(el, 'style', newVal)
     if (typeof newVal === 'string') {
       el.style.cssText = newVal
     } else {
@@ -23,6 +26,7 @@ export function setStyle(el: HTMLElement, oldVal: any, newVal: any) {
 
 export function setAttr(el: Element, key: string, oldVal: any, newVal: any) {
   if (newVal !== oldVal) {
+    recordPropMetadata(el, key, newVal)
     if (newVal != null) {
       el.setAttribute(key, newVal)
     } else {
@@ -34,6 +38,7 @@ export function setAttr(el: Element, key: string, oldVal: any, newVal: any) {
 export function setDOMProp(el: any, key: string, oldVal: any, newVal: any) {
   // TODO special checks
   if (newVal !== oldVal) {
+    recordPropMetadata(el, key, newVal)
     el[key] = newVal
   }
 }
@@ -61,6 +66,16 @@ export function setDynamicProp(
   } else {
     // TODO special case for <input v-model type="checkbox">
     setAttr(el, key, oldVal, newVal)
+  }
+}
+
+export function recordPropMetadata(el: Node, key: string, value: any) {
+  if (currentInstance) {
+    let metadata = currentInstance.metadata.get(el)
+    if (!metadata) {
+      currentInstance.metadata.set(el, (metadata = { props: {} }))
+    }
+    metadata.props[key] = value
   }
 }
 

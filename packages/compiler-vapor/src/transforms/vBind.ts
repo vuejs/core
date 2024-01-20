@@ -3,7 +3,7 @@ import {
   type SimpleExpressionNode,
   createCompilerError,
   createSimpleExpression,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import { camelize, isReservedProp } from '@vue/shared'
 import { IRNodeTypes } from '../ir'
 import type { DirectiveTransform } from '../transform'

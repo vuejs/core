@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue/vapor'
+import { ref } from 'vue/vapor'
 
 interface Task {
   title: string
@@ -7,7 +7,6 @@ interface Task {
 }
 const tasks = ref<Task[]>([])
 const value = ref('hello')
-const inputRef = ref<HTMLInputElement>()
 
 function handleAdd() {
   tasks.value.push({
@@ -17,11 +16,6 @@ function handleAdd() {
   // TODO: clear input
   value.value = ''
 }
-
-onMounted(() => {
-  console.log('onMounted')
-  console.log(inputRef.value)
-})
 </script>
 
 <template>
@@ -45,12 +39,7 @@ onMounted(() => {
       {{ tasks[3]?.title }}
     </li>
     <li>
-      <input
-        type="text"
-        :ref="el => (inputRef = el)"
-        :value="value"
-        @input="evt => (value = evt.target.value)"
-      />
+      <input type="text" v-model="value" />
       <button @click="handleAdd">Add</button>
     </li>
   </ul>

@@ -25,6 +25,7 @@ import {
   type RootIRNode,
   type SetEventIRNode,
   type SetHtmlIRNode,
+  type SetModelValueIRNode,
   type SetPropIRNode,
   type SetRefIRNode,
   type SetTextIRNode,
@@ -389,6 +390,8 @@ function genOperation(oper: OperationNode, context: CodegenContext) {
       return genSetHtml(oper, context)
     case IRNodeTypes.SET_REF:
       return genSetRef(oper, context)
+    case IRNodeTypes.SET_MODEL_VALUE:
+      return genSetModelValue(oper, context)
     case IRNodeTypes.CREATE_TEXT_NODE:
       return genCreateTextNode(oper, context)
     case IRNodeTypes.INSERT_NODE:
@@ -450,6 +453,34 @@ function genSetRef(oper: SetRefIRNode, context: CodegenContext) {
   newline()
   pushFnCall(vaporHelper('setRef'), `n${oper.element}`, () =>
     genExpression(oper.value, context),
+  )
+}
+
+function genSetModelValue(oper: SetModelValueIRNode, context: CodegenContext) {
+  const { vaporHelper, push, newline, pushFnCall } = context
+
+  newline()
+  pushFnCall(
+    vaporHelper('on'),
+    // 1st arg: event name
+    () => push(`n${oper.element}`),
+    // 2nd arg: event name
+    () => {
+      if (isString(oper.key)) {
+        push(JSON.stringify(`update:${camelize(oper.key)}`))
+      } else {
+        push('`update:${')
+        genExpression(oper.key, context)
+        push('}`')
+      }
+    },
+    // 3rd arg: event handler
+    () => {
+      push((context.isTS ? `($event: any)` : `$event`) + ' => ((')
+      // TODO handle not a ref
+      genExpression(oper.value, context)
+      push(') = $event)')
+    },
   )
 }
 
@@ -576,7 +607,7 @@ function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
   const { push, newline, pushFnCall, pushMulti, vaporHelper, bindingMetadata } =
     context
-  const { dir } = oper
+  const { dir, builtin } = oper
 
   // TODO merge directive for the same node
   newline()
@@ -591,6 +622,8 @@ function genWithDirective(oper: WithDirectiveIRNode, context: CodegenContext) {
       pushMulti(['[', ']', ', '], () => {
         if (dir.name === 'show') {
           push(vaporHelper('vShow'))
+        } else if (builtin) {
+          push(vaporHelper(builtin))
         } else {
           const directiveReference = camelize(`v-${dir.name}`)
           // TODO resolve directive

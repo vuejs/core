@@ -3,6 +3,7 @@ import type { Block, ParentBlock } from './render'
 
 export * from './dom/patchProp'
 export * from './dom/templateRef'
+export * from './dom/on'
 
 export function insert(block: Block, parent: Node, anchor: Node | null = null) {
   // if (!isHydrating) {

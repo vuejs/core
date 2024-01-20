@@ -27,6 +27,10 @@ export interface ObjectComponent {
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
+export interface ElementMetadata {
+  props: Data
+}
+
 export interface ComponentInternalInstance {
   uid: number
   container: ParentNode
@@ -43,6 +47,7 @@ export interface ComponentInternalInstance {
 
   /** directives */
   dirs: Map<Node, DirectiveBinding[]>
+  metadata: WeakMap<Node, ElementMetadata>
 
   // lifecycle
   isMounted: boolean
@@ -151,6 +156,7 @@ export const createComponentInstance = (
     setupState: EMPTY_OBJ,
 
     dirs: new Map(),
+    metadata: new WeakMap(),
 
     // lifecycle
     isMounted: false,

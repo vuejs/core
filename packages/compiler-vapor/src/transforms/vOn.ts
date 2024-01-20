@@ -2,7 +2,7 @@ import {
   ElementTypes,
   ErrorCodes,
   createCompilerError,
-} from '@vue/compiler-core'
+} from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { resolveModifiers } from '@vue/compiler-dom'

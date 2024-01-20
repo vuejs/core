@@ -18,6 +18,7 @@ export enum IRNodeTypes {
   SET_EVENT,
   SET_HTML,
   SET_REF,
+  SET_MODEL_VALUE,
 
   INSERT_NODE,
   PREPEND_NODE,
@@ -100,6 +101,14 @@ export interface SetRefIRNode extends BaseIRNode {
   value: IRExpression
 }
 
+export interface SetModelValueIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_MODEL_VALUE
+  element: number
+  key: IRExpression
+  value: IRExpression
+  isComponent: boolean
+}
+
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
@@ -129,6 +138,7 @@ export interface WithDirectiveIRNode extends BaseIRNode {
   type: IRNodeTypes.WITH_DIRECTIVE
   element: number
   dir: VaporDirectiveNode
+  builtin?: string
 }
 
 export type IRNode =
@@ -142,6 +152,7 @@ export type OperationNode =
   | SetEventIRNode
   | SetHtmlIRNode
   | SetRefIRNode
+  | SetModelValueIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
