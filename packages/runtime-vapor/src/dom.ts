@@ -88,16 +88,34 @@ export function setAttr(el: Element, key: string, oldVal: any, newVal: any) {
   }
 }
 
-export function setDynamicProp(el: Element, key: string, val: any) {
+export function setDOMProp(el: any, key: string, oldVal: any, newVal: any) {
+  // TODO special checks
+  if (newVal !== oldVal) {
+    el[key] = newVal
+  }
+}
+
+export function setDynamicProp(
+  el: Element,
+  key: string,
+  oldVal: any,
+  newVal: any,
+) {
   if (key === 'class') {
-    setClass(el, void 0, val)
+    setClass(el, oldVal, newVal)
   } else if (key === 'style') {
-    setStyle(el as HTMLElement, void 0, val)
-  } else if (key in el) {
-    ;(el as any)[key] = val
+    setStyle(el as HTMLElement, oldVal, newVal)
+  } else if (
+    key[0] === '.'
+      ? ((key = key.slice(1)), true)
+      : key[0] === '^'
+        ? ((key = key.slice(1)), false)
+        : key in el
+  ) {
+    setDOMProp(el, key, oldVal, newVal)
   } else {
     // TODO special checks
-    setAttr(el, key, void 0, val)
+    setAttr(el, key, oldVal, newVal)
   }
 }
 

@@ -1,5 +1,6 @@
 import {
   ErrorCodes,
+  type SimpleExpressionNode,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-core'
@@ -30,6 +31,14 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     }
   }
 
+  let prefix: string | undefined
+  if (modifiers.includes('prop')) {
+    prefix = injectPrefix(arg, '.')
+  }
+  if (modifiers.includes('attr')) {
+    prefix = injectPrefix(arg, '^')
+  }
+
   if (!exp.content.trim()) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
@@ -48,7 +57,15 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
         key: arg,
         value: exp,
         runtimeCamelize: camel,
+        runtimePrefix: prefix,
       },
     ],
   )
+}
+
+const injectPrefix = (arg: SimpleExpressionNode, prefix: string) => {
+  if (!arg.isStatic) {
+    return prefix
+  }
+  arg.content = prefix + arg.content
 }

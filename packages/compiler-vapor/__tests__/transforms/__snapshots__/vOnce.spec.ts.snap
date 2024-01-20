@@ -1,19 +1,19 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-once > as root node 1`] = `
-"import { template as _template, children as _children, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _setAttr(n1, "id", undefined, _ctx.foo)
+  _setDynamicProp(n1, "id", undefined, _ctx.foo)
   return n0
 }"
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setAttr as _setAttr, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setDynamicProp as _setDynamicProp, prepend as _prepend } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div> <span></span></div>")
@@ -21,7 +21,7 @@ export function render(_ctx) {
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode(_ctx.msg)
   _setText(n1, undefined, _ctx.msg)
-  _setAttr(n2, "class", undefined, _ctx.clz)
+  _setDynamicProp(n2, "class", undefined, _ctx.clz)
   _prepend(n3, n1)
   return n0
 }"
@@ -38,13 +38,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { template as _template, children as _children, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div><div></div></div>")
   const n0 = t0()
   const { 0: [, { 0: [n1],}],} = _children(n0)
-  _setAttr(n1, "id", undefined, _ctx.foo)
+  _setDynamicProp(n1, "id", undefined, _ctx.foo)
   return n0
 }"
 `;

@@ -121,7 +121,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > self-closing v-pre 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div><div><Comp></Comp></div>")
@@ -133,14 +133,14 @@ export function render(_ctx) {
     _setText(n1, undefined, _ctx.bar)
   })
   _renderEffect(() => {
-    _setAttr(n2, "id", undefined, _ctx.foo)
+    _setDynamicProp(n2, "id", undefined, _ctx.foo)
   })
   return n0
 }"
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>")
@@ -152,7 +152,7 @@ export function render(_ctx) {
     _setText(n1, undefined, _ctx.bar)
   })
   _renderEffect(() => {
-    _setAttr(n2, "id", undefined, _ctx.foo)
+    _setDynamicProp(n2, "id", undefined, _ctx.foo)
   })
   return n0
 }"
@@ -179,7 +179,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, renderEffect as _renderEffect, setText as _setText, setAttr as _setAttr } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<button>foo<!>foo</button>")
@@ -196,7 +196,7 @@ export function render(_ctx) {
     _setText(n1, undefined, _ctx.count)
     _setText(n2, undefined, _ctx.count)
     _setText(n3, undefined, _ctx.count)
-    _setAttr(n4, "id", undefined, _ctx.count)
+    _setDynamicProp(n4, "id", undefined, _ctx.count)
   })
   return n0
 }"
@@ -222,7 +222,7 @@ exports[`compile > expression parsing > v-bind 1`] = `
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setAttr(n1, key.value+1, undefined, _unref(foo)[key.value+1]())
+    _setDynamicProp(n1, key.value+1, undefined, _unref(foo)[key.value+1]())
   })
   return n0
 })()"
