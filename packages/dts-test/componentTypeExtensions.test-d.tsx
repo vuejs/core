@@ -1,4 +1,4 @@
-import { DefineComponent, Directive, defineComponent } from 'vue'
+import { type DefineComponent, type Directive, defineComponent } from 'vue'
 import { expectType } from './utils'
 
 declare module 'vue' {
@@ -28,8 +28,8 @@ export const Custom = defineComponent({
     bar: String,
     baz: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
 
   data: () => ({ counter: 0 }),
@@ -50,8 +50,8 @@ export const Custom = defineComponent({
       this.state = 'not valid'
       // @ts-expect-error
       this.$.appContext.config.globalProperties.state = 'not valid'
-    }
-  }
+    },
+  },
 })
 
 expectType<Directive>(Custom.directives!.test)

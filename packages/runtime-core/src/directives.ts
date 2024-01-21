@@ -11,13 +11,17 @@ return withDirectives(h(comp), [
 ])
 */
 
-import { VNode } from './vnode'
-import { isFunction, EMPTY_OBJ, isBuiltInDirective } from '@vue/shared'
+import type { VNode } from './vnode'
+import { EMPTY_OBJ, isBuiltInDirective, isFunction } from '@vue/shared'
 import { warn } from './warning'
-import { ComponentInternalInstance, Data, getExposeProxy } from './component'
+import {
+  type ComponentInternalInstance,
+  type Data,
+  getExposeProxy,
+} from './component'
 import { currentRenderingInstance } from './componentRenderContext'
-import { callWithAsyncErrorHandling, ErrorCodes } from './errorHandling'
-import { ComponentPublicInstance } from './componentPublicInstance'
+import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
+import type { ComponentPublicInstance } from './componentPublicInstance'
 import { mapCompatDirectiveHook } from './compat/customDirective'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { traverse } from './apiWatch'
@@ -25,7 +29,7 @@ import { traverse } from './apiWatch'
 export interface DirectiveBinding<
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string
+  Arg extends string = string,
 > {
   instance: ComponentPublicInstance | null
   value: Value
@@ -40,24 +44,24 @@ export type DirectiveHook<
   Prev = VNode<any, HostElement> | null,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string
+  Arg extends string = string,
 > = (
   el: HostElement,
   binding: DirectiveBinding<Value, Modifiers, Arg>,
   vnode: VNode<any, HostElement>,
-  prevVNode: Prev
+  prevVNode: Prev,
 ) => void
 
 export type SSRDirectiveHook = (
   binding: DirectiveBinding,
-  vnode: VNode
+  vnode: VNode,
 ) => Data | undefined
 
 export interface ObjectDirective<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string
+  Arg extends string = string,
 > {
   created?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
   beforeMount?: DirectiveHook<HostElement, null, Value, Modifiers, Arg>
@@ -86,14 +90,14 @@ export type FunctionDirective<
   HostElement = any,
   V = any,
   Modifiers extends string = string,
-  Arg extends string = string
+  Arg extends string = string,
 > = DirectiveHook<HostElement, any, V, Modifiers, Arg>
 
 export type Directive<
   HostElement = any,
   Value = any,
   Modifiers extends string = string,
-  Arg extends string = string
+  Arg extends string = string,
 > =
   | ObjectDirective<HostElement, Value, Modifiers, Arg>
   | FunctionDirective<HostElement, Value, Modifiers, Arg>
@@ -119,16 +123,15 @@ export type DirectiveArguments = Array<
  */
 export function withDirectives<T extends VNode>(
   vnode: T,
-  directives: DirectiveArguments
+  directives: DirectiveArguments,
 ): T {
-  const internalInstance = currentRenderingInstance
-  if (internalInstance === null) {
+  if (currentRenderingInstance === null) {
     __DEV__ && warn(`withDirectives can only be used inside render functions.`)
     return vnode
   }
   const instance =
-    (getExposeProxy(internalInstance) as ComponentPublicInstance) ||
-    internalInstance.proxy
+    (getExposeProxy(currentRenderingInstance) as ComponentPublicInstance) ||
+    currentRenderingInstance.proxy
   const bindings: DirectiveBinding[] = vnode.dirs || (vnode.dirs = [])
   for (let i = 0; i < directives.length; i++) {
     let [dir, value, arg, modifiers = EMPTY_OBJ] = directives[i]
@@ -136,7 +139,7 @@ export function withDirectives<T extends VNode>(
       if (isFunction(dir)) {
         dir = {
           mounted: dir,
-          updated: dir
+          updated: dir,
         } as ObjectDirective
       }
       if (dir.deep) {
@@ -148,7 +151,7 @@ export function withDirectives<T extends VNode>(
         value,
         oldValue: void 0,
         arg,
-        modifiers
+        modifiers,
       })
     }
   }
@@ -159,7 +162,7 @@ export function invokeDirectiveHook(
   vnode: VNode,
   prevVNode: VNode | null,
   instance: ComponentInternalInstance | null,
-  name: keyof ObjectDirective
+  name: keyof ObjectDirective,
 ) {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
@@ -180,7 +183,7 @@ export function invokeDirectiveHook(
         vnode.el,
         binding,
         vnode,
-        prevVNode
+        prevVNode,
       ])
       resetTracking()
     }

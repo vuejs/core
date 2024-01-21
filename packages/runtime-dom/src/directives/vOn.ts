@@ -1,21 +1,19 @@
 import {
-  getCurrentInstance,
+  type ComponentInternalInstance,
   DeprecationTypes,
-  LegacyConfig,
+  type Directive,
+  type LegacyConfig,
   compatUtils,
-  ComponentInternalInstance,
-  Directive
+  getCurrentInstance,
 } from '@vue/runtime-core'
 import { hyphenate, isArray } from '@vue/shared'
 
-type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
-
-type SystemModifiers = 'ctrl' | 'shift' | 'alt' | 'meta'
+const systemModifiers = ['ctrl', 'shift', 'alt', 'meta'] as const
+type SystemModifiers = (typeof systemModifiers)[number]
 type CompatModifiers = keyof typeof keyNames
 
 export type VOnModifiers = SystemModifiers | ModifierGuards | CompatModifiers
-
-const systemModifiers: Array<SystemModifiers> = ['ctrl', 'shift', 'alt', 'meta']
+type KeyedEvent = KeyboardEvent | MouseEvent | TouchEvent
 
 const modifierGuards = {
   stop: (e: Event) => e.stopPropagation(),
@@ -28,26 +26,37 @@ const modifierGuards = {
   left: (e: Event) => 'button' in e && (e as MouseEvent).button !== 0,
   middle: (e: Event) => 'button' in e && (e as MouseEvent).button !== 1,
   right: (e: Event) => 'button' in e && (e as MouseEvent).button !== 2,
-  exact: (e: Event, modifiers: string[]) =>
-    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m))
-}
+  exact: (e, modifiers) =>
+    systemModifiers.some(m => (e as any)[`${m}Key`] && !modifiers.includes(m)),
+} satisfies Record<
+  string,
+  | ((e: Event) => void | boolean)
+  | ((e: Event, modifiers: string[]) => void | boolean)
+>
 
 type ModifierGuards = keyof typeof modifierGuards
 
 /**
  * @private
  */
-export const withModifiers = (
-  fn: Function,
-  modifiers: Array<ModifierGuards | SystemModifiers>
+export const withModifiers = <
+  T extends (event: Event, ...args: unknown[]) => any,
+>(
+  fn: T & { _withMods?: { [key: string]: T } },
+  modifiers: VOnModifiers[],
 ) => {
-  return (event: Event, ...args: unknown[]) => {
-    for (let i = 0; i < modifiers.length; i++) {
-      const guard = modifierGuards[modifiers[i]]
-      if (guard && guard(event, modifiers)) return
-    }
-    return fn(event, ...args)
-  }
+  const cache = fn._withMods || (fn._withMods = {})
+  const cacheKey = modifiers.join('.')
+  return (
+    cache[cacheKey] ||
+    (cache[cacheKey] = ((event, ...args) => {
+      for (let i = 0; i < modifiers.length; i++) {
+        const guard = modifierGuards[modifiers[i] as ModifierGuards]
+        if (guard && guard(event, modifiers)) return
+      }
+      return fn(event, ...args)
+    }) as T)
+  )
 }
 
 // Kept for 2.x compat.
@@ -59,13 +68,16 @@ const keyNames = {
   left: 'arrow-left',
   right: 'arrow-right',
   down: 'arrow-down',
-  delete: 'backspace'
-}
+  delete: 'backspace',
+} satisfies Record<string, string | string[]>
 
 /**
  * @private
  */
-export const withKeys = (fn: Function, modifiers: string[]) => {
+export const withKeys = <T extends (event: KeyboardEvent) => any>(
+  fn: T & { _withKeys?: { [k: string]: T } },
+  modifiers: string[],
+) => {
   let globalKeyCodes: LegacyConfig['keyCodes']
   let instance: ComponentInternalInstance | null = null
   if (__COMPAT__) {
@@ -80,51 +92,59 @@ export const withKeys = (fn: Function, modifiers: string[]) => {
     if (__DEV__ && modifiers.some(m => /^\d+$/.test(m))) {
       compatUtils.warnDeprecation(
         DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-        instance
+        instance,
       )
     }
   }
 
-  return (event: KeyboardEvent) => {
-    if (!('key' in event)) {
-      return
-    }
+  const cache: { [k: string]: T } = fn._withKeys || (fn._withKeys = {})
+  const cacheKey = modifiers.join('.')
 
-    const eventKey = hyphenate(event.key)
-    if (
-      modifiers.some(
-        k => k === eventKey || keyNames[k as CompatModifiers] === eventKey
-      )
-    ) {
-      return fn(event)
-    }
+  return (
+    cache[cacheKey] ||
+    (cache[cacheKey] = (event => {
+      if (!('key' in event)) {
+        return
+      }
 
-    if (__COMPAT__) {
-      const keyCode = String(event.keyCode)
+      const eventKey = hyphenate(event.key)
       if (
-        compatUtils.isCompatEnabled(
-          DeprecationTypes.V_ON_KEYCODE_MODIFIER,
-          instance
-        ) &&
-        modifiers.some(mod => mod == keyCode)
+        modifiers.some(
+          k =>
+            k === eventKey ||
+            keyNames[k as unknown as CompatModifiers] === eventKey,
+        )
       ) {
         return fn(event)
       }
-      if (globalKeyCodes) {
-        for (const mod of modifiers) {
-          const codes = globalKeyCodes[mod]
-          if (codes) {
-            const matches = isArray(codes)
-              ? codes.some(code => String(code) === keyCode)
-              : String(codes) === keyCode
-            if (matches) {
-              return fn(event)
+
+      if (__COMPAT__) {
+        const keyCode = String(event.keyCode)
+        if (
+          compatUtils.isCompatEnabled(
+            DeprecationTypes.V_ON_KEYCODE_MODIFIER,
+            instance,
+          ) &&
+          modifiers.some(mod => mod == keyCode)
+        ) {
+          return fn(event)
+        }
+        if (globalKeyCodes) {
+          for (const mod of modifiers) {
+            const codes = globalKeyCodes[mod]
+            if (codes) {
+              const matches = isArray(codes)
+                ? codes.some(code => String(code) === keyCode)
+                : String(codes) === keyCode
+              if (matches) {
+                return fn(event)
+              }
             }
           }
         }
       }
-    }
-  }
+    }) as T)
+  )
 }
 
 export type VOnDirective = Directive<any, any, VOnModifiers>

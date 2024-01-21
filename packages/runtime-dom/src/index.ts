@@ -1,35 +1,37 @@
 import {
-  createRenderer,
-  createHydrationRenderer,
-  warn,
-  RootRenderFunction,
-  CreateAppFunction,
-  Renderer,
-  HydrationRenderer,
-  App,
-  RootHydrateFunction,
-  isRuntimeOnly,
-  DefineComponent,
-  Directive,
+  type App,
+  type CreateAppFunction,
+  type DefineComponent,
   DeprecationTypes,
-  compatUtils
+  type Directive,
+  type ElementNamespace,
+  type HydrationRenderer,
+  type Renderer,
+  type RootHydrateFunction,
+  type RootRenderFunction,
+  compatUtils,
+  createHydrationRenderer,
+  createRenderer,
+  isRuntimeOnly,
+  warn,
 } from '@vue/runtime-core'
 import { nodeOps } from './nodeOps'
 import { patchProp } from './patchProp'
 // Importing from the compiler, will be tree-shaken in prod
 import {
-  isFunction,
-  isString,
-  isHTMLTag,
-  isSVGTag,
+  NOOP,
   extend,
-  NOOP
+  isFunction,
+  isHTMLTag,
+  isMathMLTag,
+  isSVGTag,
+  isString,
 } from '@vue/shared'
-import { TransitionProps } from './components/Transition'
-import { TransitionGroupProps } from './components/TransitionGroup'
-import { vShow } from './directives/vShow'
-import { VOnDirective } from './directives/vOn'
-import { VModelDirective } from './directives/vModel'
+import type { TransitionProps } from './components/Transition'
+import type { TransitionGroupProps } from './components/TransitionGroup'
+import type { vShow } from './directives/vShow'
+import type { VOnDirective } from './directives/vOn'
+import type { VModelDirective } from './directives/vModel'
 
 declare module '@vue/reactivity' {
   export interface RefUnwrapBailTypes {
@@ -112,7 +114,7 @@ export const createApp = ((...args) => {
           if (attr.name !== 'v-cloak' && /^(v-|:|@)/.test(attr.name)) {
             compatUtils.warnDeprecation(
               DeprecationTypes.GLOBAL_MOUNT_CONTAINER,
-              null
+              null,
             )
             break
           }
@@ -122,7 +124,7 @@ export const createApp = ((...args) => {
 
     // clear content before mounting
     container.innerHTML = ''
-    const proxy = mount(container, false, container instanceof SVGElement)
+    const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
       container.setAttribute('data-v-app', '')
@@ -145,19 +147,31 @@ export const createSSRApp = ((...args) => {
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (container) {
-      return mount(container, true, container instanceof SVGElement)
+      return mount(container, true, resolveRootNamespace(container))
     }
   }
 
   return app
 }) as CreateAppFunction<Element>
 
+function resolveRootNamespace(container: Element): ElementNamespace {
+  if (container instanceof SVGElement) {
+    return 'svg'
+  }
+  if (
+    typeof MathMLElement === 'function' &&
+    container instanceof MathMLElement
+  ) {
+    return 'mathml'
+  }
+}
+
 function injectNativeTagCheck(app: App) {
   // Inject `isNativeTag`
   // this is used for component name validation (dev only)
   Object.defineProperty(app.config, 'isNativeTag', {
-    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag),
-    writable: false
+    value: (tag: string) => isHTMLTag(tag) || isSVGTag(tag) || isMathMLTag(tag),
+    writable: false,
   })
 }
 
@@ -172,9 +186,9 @@ function injectCompilerOptionsCheck(app: App) {
       set() {
         warn(
           `The \`isCustomElement\` config option is deprecated. Use ` +
-            `\`compilerOptions.isCustomElement\` instead.`
+            `\`compilerOptions.isCustomElement\` instead.`,
         )
-      }
+      },
     })
 
     const compilerOptions = app.config.compilerOptions
@@ -194,19 +208,19 @@ function injectCompilerOptionsCheck(app: App) {
       },
       set() {
         warn(msg)
-      }
+      },
     })
   }
 }
 
 function normalizeContainer(
-  container: Element | ShadowRoot | string
+  container: Element | ShadowRoot | string,
 ): Element | null {
   if (isString(container)) {
     const res = document.querySelector(container)
     if (__DEV__ && !res) {
       warn(
-        `Failed to mount app: mount target selector "${container}" returned null.`
+        `Failed to mount app: mount target selector "${container}" returned null.`,
       )
     }
     return res
@@ -218,7 +232,7 @@ function normalizeContainer(
     container.mode === 'closed'
   ) {
     warn(
-      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`
+      `mounting on a ShadowRoot with \`{mode: "closed"}\` may lead to unpredictable bugs`,
     )
   }
   return container as any
@@ -229,7 +243,7 @@ export {
   defineCustomElement,
   defineSSRCustomElement,
   VueElement,
-  type VueElementConstructor
+  type VueElementConstructor,
 } from './apiCustomElement'
 
 // SFC CSS utilities
@@ -240,7 +254,7 @@ export { useCssVars } from './helpers/useCssVars'
 export { Transition, type TransitionProps } from './components/Transition'
 export {
   TransitionGroup,
-  type TransitionGroupProps
+  type TransitionGroupProps,
 } from './components/TransitionGroup'
 
 // **Internal** DOM-only runtime directive helpers
@@ -249,7 +263,7 @@ export {
   vModelCheckbox,
   vModelRadio,
   vModelSelect,
-  vModelDynamic
+  vModelDynamic,
 } from './directives/vModel'
 export { withModifiers, withKeys } from './directives/vOn'
 export { vShow } from './directives/vShow'

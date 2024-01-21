@@ -1,39 +1,39 @@
-import {
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsMixin,
-  RenderFunction,
-  ComponentOptionsBase,
+import type {
   ComponentInjectOptions,
   ComponentOptions,
-  ComponentProvideOptions
+  ComponentOptionsBase,
+  ComponentOptionsMixin,
+  ComponentOptionsWithArrayProps,
+  ComponentOptionsWithObjectProps,
+  ComponentOptionsWithoutProps,
+  ComponentProvideOptions,
+  ComputedOptions,
+  MethodOptions,
+  RenderFunction,
 } from './componentOptions'
-import {
-  SetupContext,
+import type {
   AllowedComponentProps,
-  ComponentCustomProps,
   Component,
+  ComponentCustomProps,
   GlobalComponents,
-  GlobalDirectives
+  GlobalDirectives,
+  SetupContext,
 } from './component'
-import {
-  ExtractPropTypes,
+import type {
+  ComponentObjectPropsOptions,
   ComponentPropsOptions,
   ExtractDefaultPropTypes,
-  ComponentObjectPropsOptions
+  ExtractPropTypes,
 } from './componentProps'
-import { EmitsOptions, EmitsToProps } from './componentEmits'
+import type { EmitsOptions, EmitsToProps } from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
-import { VNodeProps } from './vnode'
-import {
+import type { VNodeProps } from './vnode'
+import type {
+  ComponentPublicInstanceConstructor,
   CreateComponentPublicInstance,
-  ComponentPublicInstanceConstructor
 } from './componentPublicInstance'
-import { SlotsType } from './componentSlots'
-import { Directive } from './directives'
+import type { SlotsType } from './componentSlots'
+import type { Directive } from './directives'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -63,7 +63,7 @@ export type DefineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -116,33 +116,33 @@ export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
-  }
+  },
 ): (props: Props & EmitsToProps<E>) => any
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 >(
   setup: (
     props: Props,
-    ctx: SetupContext<E, S>
+    ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
   options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S
-  }
+  },
 ): (props: Props & EmitsToProps<E>) => any
 
 // overload 2: object format with no props
@@ -164,7 +164,7 @@ export function defineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -183,7 +183,7 @@ export function defineComponent<
     Directives,
     Exposed,
     Provide
-  >
+  >,
 ): DefineComponent<
   Props,
   RawBindings,
@@ -224,7 +224,7 @@ export function defineComponent<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Props = Readonly<{ [key in PropNames]?: any }>
+  Props = Readonly<{ [key in PropNames]?: any }>,
 >(
   options: ComponentOptionsWithArrayProps<
     PropNames,
@@ -243,7 +243,7 @@ export function defineComponent<
     Directives,
     Exposed,
     Provide
-  >
+  >,
 ): DefineComponent<
   Props,
   RawBindings,
@@ -284,7 +284,7 @@ export function defineComponent<
   LC extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -303,7 +303,7 @@ export function defineComponent<
     Directives,
     Exposed,
     Provide
-  >
+  >,
 ): DefineComponent<
   PropsOptions,
   RawBindings,
@@ -328,7 +328,7 @@ export function defineComponent<
 /*! #__NO_SIDE_EFFECTS__ */
 export function defineComponent(
   options: unknown,
-  extraOptions?: ComponentOptions
+  extraOptions?: ComponentOptions,
 ) {
   return isFunction(options)
     ? // #8326: extend call and options.name access are considered side-effects
