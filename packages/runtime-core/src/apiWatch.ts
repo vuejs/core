@@ -9,6 +9,8 @@ import {
   isReactive,
   isRef,
   isShallow,
+  pauseTracking,
+  resetTracking,
 } from '@vue/reactivity'
 import { type SchedulerJob, queueJob } from './scheduler'
 import {
@@ -169,6 +171,39 @@ export function watch<T = any, Immediate extends Readonly<boolean> = false>(
   return doWatch(source as any, cb, options)
 }
 
+const cleanupMap: WeakMap<ReactiveEffect, (() => void)[]> = new WeakMap()
+let activeEffect: ReactiveEffect | undefined = undefined
+
+/**
+ * Returns the current active effect if there is one.
+ */
+export function getCurrentEffect() {
+  return activeEffect
+}
+
+/**
+ * Registers a cleanup callback on the current active effect. This
+ * registered cleanup callback will be invoked right before the
+ * associated effect re-runs.
+ *
+ * @param cleanupFn - The callback function to attach to the effect's cleanup.
+ */
+export function onEffectCleanup(cleanupFn: () => void) {
+  // in SSR there is no need to call the invalidate callback
+  if (__SSR__ && isInSSRComponentSetup) return
+  if (activeEffect) {
+    const cleanups =
+      cleanupMap.get(activeEffect) ||
+      cleanupMap.set(activeEffect, []).get(activeEffect)!
+    cleanups.push(cleanupFn)
+  } else if (__DEV__) {
+    warn(
+      `onEffectCleanup() was called when there was no active effect` +
+        ` to associate with.`,
+    )
+  }
+}
+
 function doWatch(
   source: WatchSource | WatchSource[] | WatchEffect | object,
   cb: WatchCallback | null,
@@ -234,7 +269,9 @@ function doWatch(
       : // for deep: false, only traverse root-level properties
         traverse(source, deep === false ? 1 : undefined)
 
+  let effect: ReactiveEffect
   let getter: () => any
+  let cleanup: (() => void) | undefined
   let forceTrigger = false
   let isMultiSource = false
 
@@ -268,14 +305,25 @@ function doWatch(
       // no cb -> simple effect
       getter = () => {
         if (cleanup) {
-          cleanup()
+          pauseTracking()
+          try {
+            cleanup()
+          } finally {
+            resetTracking()
+          }
         }
-        return callWithAsyncErrorHandling(
-          source,
-          instance,
-          ErrorCodes.WATCH_CALLBACK,
-          [onCleanup],
-        )
+        const currentEffect = activeEffect
+        activeEffect = effect
+        try {
+          return callWithAsyncErrorHandling(
+            source,
+            instance,
+            ErrorCodes.WATCH_CALLBACK,
+            [onEffectCleanup],
+          )
+        } finally {
+          activeEffect = currentEffect
+        }
       }
     }
   } else {
@@ -303,27 +351,17 @@ function doWatch(
     getter = () => traverse(baseGetter())
   }
 
-  let cleanup: (() => void) | undefined
-  let onCleanup: OnCleanup = (fn: () => void) => {
-    cleanup = effect.onStop = () => {
-      callWithErrorHandling(fn, instance, ErrorCodes.WATCH_CLEANUP)
-      cleanup = effect.onStop = undefined
-    }
-  }
-
   // in SSR there is no need to setup an actual effect, and it should be noop
   // unless it's eager or sync flush
   let ssrCleanup: (() => void)[] | undefined
   if (__SSR__ && isInSSRComponentSetup) {
-    // we will also not call the invalidate callback (+ runner is not set up)
-    onCleanup = NOOP
     if (!cb) {
       getter()
     } else if (immediate) {
       callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
         getter(),
         isMultiSource ? [] : undefined,
-        onCleanup,
+        onEffectCleanup,
       ])
     }
     if (flush === 'sync') {
@@ -358,16 +396,22 @@ function doWatch(
         if (cleanup) {
           cleanup()
         }
-        callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
-          newValue,
-          // pass undefined as the old value when it's changed for the first time
-          oldValue === INITIAL_WATCHER_VALUE
-            ? undefined
-            : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
-              ? []
-              : oldValue,
-          onCleanup,
-        ])
+        const currentEffect = activeEffect
+        activeEffect = effect
+        try {
+          callWithAsyncErrorHandling(cb, instance, ErrorCodes.WATCH_CALLBACK, [
+            newValue,
+            // pass undefined as the old value when it's changed for the first time
+            oldValue === INITIAL_WATCHER_VALUE
+              ? undefined
+              : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE
+                ? []
+                : oldValue,
+            onEffectCleanup,
+          ])
+        } finally {
+          activeEffect = currentEffect
+        }
         oldValue = newValue
       }
     } else {
@@ -392,7 +436,17 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  effect = new ReactiveEffect(getter, NOOP, scheduler)
+
+  cleanup = effect.onStop = () => {
+    const cleanups = cleanupMap.get(effect)
+    if (cleanups) {
+      cleanups.forEach(cleanup =>
+        callWithErrorHandling(cleanup, instance, ErrorCodes.WATCH_CLEANUP),
+      )
+      cleanupMap.delete(effect)
+    }
+  }
 
   const scope = getCurrentScope()
   const unwatch = () => {

@@ -41,6 +41,7 @@ export {
   watchEffect,
   watchPostEffect,
   watchSyncEffect,
+  onEffectCleanup,
 } from './apiWatch'
 export {
   onBeforeMount,
