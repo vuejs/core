@@ -215,15 +215,23 @@ describe('runtime-dom: v-show directive', () => {
   // #10151
   test('should respect the display value when v-show value is true', async () => {
     const isVisible = ref(false)
+    const useDisplayStyle = ref(true)
     const compStyle = ref({
       display: 'none',
     })
+    const withoutDisplayStyle = {
+      margin: '10px',
+    }
 
     const Component = {
       setup() {
         return () => {
           return withVShow(
-            h('div', { style: compStyle.value }),
+            h('div', {
+              style: useDisplayStyle.value
+                ? compStyle.value
+                : withoutDisplayStyle,
+            }),
             isVisible.value,
           )
         }
@@ -246,6 +254,11 @@ describe('runtime-dom: v-show directive', () => {
     compStyle.value.display = 'inline-block'
     await nextTick()
     expect($div.style.display).toEqual('inline-block')
+
+    useDisplayStyle.value = false
+    await nextTick()
+    expect($div.style.display).toEqual('')
+    expect(getComputedStyle($div).display).toEqual('block')
 
     isVisible.value = false
     await nextTick()
