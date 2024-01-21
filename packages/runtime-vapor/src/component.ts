@@ -44,10 +44,11 @@ export interface ComponentInternalInstance {
   // state
   props: Data
   setupState: Data
+  refs: Data
+  metadata: WeakMap<Node, ElementMetadata>
 
   /** directives */
   dirs: Map<Node, DirectiveBinding[]>
-  metadata: WeakMap<Node, ElementMetadata>
 
   // lifecycle
   isMounted: boolean
@@ -154,9 +155,10 @@ export const createComponentInstance = (
     // state
     props: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
+    refs: EMPTY_OBJ,
+    metadata: new WeakMap(),
 
     dirs: new Map(),
-    metadata: new WeakMap(),
 
     // lifecycle
     isMounted: false,
