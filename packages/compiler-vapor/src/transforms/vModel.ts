@@ -27,7 +27,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   // we assume v-model directives are always parsed
   // (not artificially created by a transform)
   const rawExp = exp.loc.source
-  const expString = exp.content
 
   // in SFC <script setup> inline mode, the exp may have been transformed into
   // _unref(exp)
@@ -44,13 +43,13 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     return
   }
 
+  const expString = exp.content
   const maybeRef =
     !__BROWSER__ &&
     context.options.inline &&
     (bindingType === BindingTypes.SETUP_LET ||
       bindingType === BindingTypes.SETUP_REF ||
       bindingType === BindingTypes.SETUP_MAYBE_REF)
-
   if (
     !expString.trim() ||
     (!isMemberExpression(expString, context.options) && !maybeRef)

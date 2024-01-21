@@ -1,4 +1,5 @@
 import type {
+  BindingTypes,
   CompoundExpressionNode,
   DirectiveNode,
   RootNode,
@@ -106,6 +107,7 @@ export interface SetModelValueIRNode extends BaseIRNode {
   element: number
   key: IRExpression
   value: IRExpression
+  bindingType?: BindingTypes
   isComponent: boolean
 }
 
