@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore, SFCOptions } from '@vue/repl'
+import {
+  Repl,
+  type SFCOptions,
+  useStore,
+  useVueImportMap,
+  mergeImportMap,
+  File,
+  StoreState,
+} from '@vue/repl'
 import type Monaco from '@vue/repl/monaco-editor'
 import type CodeMirror from '@vue/repl/codemirror-editor'
-import { ref, watchEffect, onMounted } from 'vue'
-import { shallowRef } from 'vue'
+import { ref, watchEffect, onMounted, computed, shallowRef, watch } from 'vue'
 
 const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
 
@@ -26,78 +33,135 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const useProdMode = ref(false)
 const useSSRMode = ref(false)
+const useVaporMode = ref(false)
+
+const {
+  vueVersion,
+  productionMode,
+  importMap: vueImportMap,
+} = useVueImportMap({
+  runtimeDev: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.js`
+    : `${location.origin}/src/vue-dev-proxy`,
+  runtimeProd: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
+  serverRenderer: import.meta.env.PROD
+    ? `${location.origin}/server-renderer.esm-browser.js`
+    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
+})
+
+const importMap = computed(() =>
+  mergeImportMap(vueImportMap.value, {
+    imports: {
+      'vue/vapor': import.meta.env.PROD
+        ? `${location.origin}/vue-vapor.esm-browser.js`
+        : `${location.origin}/src/vue-vapor-dev-proxy`,
+    },
+  }),
+)
 
 let hash = location.hash.slice(1)
 if (hash.startsWith('__DEV__')) {
   hash = hash.slice(7)
-  useProdMode.value = false
+  productionMode.value = false
 }
 if (hash.startsWith('__PROD__')) {
   hash = hash.slice(8)
-  useProdMode.value = true
+  productionMode.value = true
 }
 if (hash.startsWith('__SSR__')) {
   hash = hash.slice(7)
   useSSRMode.value = true
 }
+if (hash.startsWith('__VAPOR__')) {
+  hash = hash.slice(9)
+  useVaporMode.value = true
+}
 
-const store = new ReplStore({
-  serializedState: hash,
-  productionMode: useProdMode.value,
-  defaultVueRuntimeURL: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`,
-  defaultVueRuntimeProdURL: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
-    : `${location.origin}/src/vue-dev-proxy-prod`,
-  defaultVueServerRendererURL: import.meta.env.PROD
-    ? `${location.origin}/server-renderer.esm-browser.js`
-    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
-})
+const files: StoreState['files'] = ref(Object.create(null))
+const mainFile = ref('src/App.vue')
 
 // enable experimental features
-const sfcOptions: SFCOptions = {
-  script: {
-    inlineTemplate: useProdMode.value,
-    isProd: useProdMode.value,
-    propsDestructure: true,
-  },
-  style: {
-    isProd: useProdMode.value,
-  },
-  template: {
-    isProd: useProdMode.value,
-    compilerOptions: {
-      isCustomElement: (tag: string) => tag === 'mjx-container',
+const sfcOptions = computed(
+  (): SFCOptions => ({
+    script: {
+      inlineTemplate: productionMode.value,
+      isProd: productionMode.value,
+      propsDestructure: true,
     },
+    style: {
+      isProd: productionMode.value,
+    },
+    template: {
+      vapor: useVaporMode.value,
+      isProd: productionMode.value,
+      compilerOptions: {
+        isCustomElement: (tag: string) => tag === 'mjx-container',
+      },
+    },
+  }),
+)
+
+const store = useStore(
+  {
+    files,
+    vueVersion,
+    builtinImportMap: importMap,
+    sfcOptions,
+    mainFile,
   },
-}
+  hash,
+)
+// @ts-expect-error
+globalThis.store = store
+
+watch(
+  useVaporMode,
+  () => {
+    if (useVaporMode.value) {
+      files.value['src/index.html'] = new File(
+        'src/index.html',
+        `<script type="module">
+        import { render } from 'vue/vapor'
+        import App from './App.vue'
+        render(App, {}, '#app')` +
+          '<' +
+          '/script>' +
+          `<div id="app"></div>`,
+        true,
+      )
+      mainFile.value = 'src/index.html'
+      store.activeFile = files.value['src/App.vue']
+    } else if (files.value['src/index.html']?.hidden) {
+      delete files.value['src/index.html']
+      mainFile.value = 'src/App.vue'
+    }
+  },
+  { immediate: true },
+)
 
 // persist state
 watchEffect(() => {
   const newHash = store
     .serialize()
+    .replace(/^#/, useVaporMode.value ? `#__VAPOR__` : `#`)
     .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
-    .replace(/^#/, useProdMode.value ? `#__PROD__` : `#`)
+    .replace(/^#/, productionMode.value ? `#__PROD__` : `#`)
   history.replaceState({}, '', newHash)
 })
 
 function toggleProdMode() {
-  const isProd = (useProdMode.value = !useProdMode.value)
-  sfcOptions.script!.inlineTemplate =
-    sfcOptions.script!.isProd =
-    sfcOptions.template!.isProd =
-    sfcOptions.style!.isProd =
-      isProd
-  store.toggleProduction()
-  store.setFiles(store.getFiles())
+  productionMode.value = !productionMode.value
 }
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
-  store.setFiles(store.getFiles())
+}
+
+function toggleVapor() {
+  useVaporMode.value = !useVaporMode.value
 }
 
 function reloadPage() {
@@ -117,11 +181,13 @@ onMounted(() => {
 <template>
   <Header
     :store="store"
-    :prod="useProdMode"
+    :prod="productionMode"
     :ssr="useSSRMode"
+    :vapor="useVaporMode"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
     @toggle-ssr="toggleSSR"
+    @toggle-vapor="toggleVapor"
     @reload-page="reloadPage"
   />
   <Repl
@@ -135,7 +201,6 @@ onMounted(() => {
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
-    :sfcOptions="sfcOptions"
     :clearConsole="false"
     :preview-options="{
       customCode: {

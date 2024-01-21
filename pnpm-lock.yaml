@@ -219,6 +219,9 @@ importers:
       '@vue/compiler-ssr':
         specifier: workspace:*
         version: link:../compiler-ssr
+      '@vue/compiler-vapor':
+        specifier: workspace:*
+        version: link:../compiler-vapor
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -368,8 +371,8 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^3.1.1
-        version: 3.3.0
+        specifier: 4.0.0-alpha.0
+        version: 4.0.0-alpha.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1634,8 +1637,8 @@ packages:
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@3.3.0:
-    resolution: {integrity: sha512-A9tdO7obt/kpFUHdgGoRnan6bZjfz/WAJ5+DpPkvgNEc960W+bJraURv8MUVtH2Id/byWotKbUve2jTakiccSw==}
+  /@vue/repl@4.0.0-alpha.0:
+    resolution: {integrity: sha512-kGgnon2yV1y0eKeWatys4by32XXCDSdq31Rwx0cd8xXAIK0GIL0AeSMCvVUrNE2ke8rFVYe6xMmpOd1iCcM0Zg==}
     dev: false
 
   /@zeit/schemas@2.29.0:

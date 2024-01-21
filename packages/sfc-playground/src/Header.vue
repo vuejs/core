@@ -14,11 +14,13 @@ const props = defineProps<{
   store: ReplStore
   prod: boolean
   ssr: boolean
+  vapor: boolean
 }>()
 const emit = defineEmits([
   'toggle-theme',
   'toggle-ssr',
   'toggle-prod',
+  'toggle-vapor',
   'reload-page',
 ])
 
@@ -27,7 +29,7 @@ const { store } = props
 const currentCommit = __COMMIT__
 const vueVersion = ref(`@${currentCommit}`)
 
-const vueURL = store.getImportMap().imports.vue
+const vueURL = store.getImportMap().imports?.vue
 if (vueURL && !vueURL.startsWith(location.origin)) {
   const versionMatch = vueURL.match(/runtime-dom@([^/]+)/)
   if (versionMatch) vueVersion.value = versionMatch[1]
@@ -35,12 +37,12 @@ if (vueURL && !vueURL.startsWith(location.origin)) {
 
 async function setVueVersion(v: string) {
   vueVersion.value = `loading...`
-  await store.setVueVersion(v)
+  store.vueVersion = v
   vueVersion.value = v
 }
 
 function resetVueVersion() {
-  store.resetVueVersion()
+  store.vueVersion = undefined
   vueVersion.value = `@${currentCommit}`
 }
 
@@ -73,7 +75,7 @@ function toggleDark() {
     </h1>
     <div class="links">
       <VersionSelect
-        v-model="store.state.typescriptVersion"
+        v-model="store.typescriptVersion"
         pkg="typescript"
         label="TypeScript Version"
       />
@@ -101,6 +103,14 @@ function toggleDark() {
         @click="$emit('toggle-prod')"
       >
         <span>{{ prod ? 'PROD' : 'DEV' }}</span>
+      </button>
+      <button
+        title="Toggle vapor mode"
+        class="toggle-vapor"
+        :class="{ enabled: vapor }"
+        @click="$emit('toggle-vapor')"
+      >
+        <span>{{ vapor ? 'VAPOR ON' : 'VAPOR OFF' }}</span>
       </button>
       <button
         title="Toggle server rendering mode"
@@ -202,6 +212,7 @@ h1 img {
 }
 
 .toggle-prod span,
+.toggle-vapor span,
 .toggle-ssr span {
   font-size: 12px;
   border-radius: 4px;
@@ -222,6 +233,15 @@ h1 img {
 }
 
 .toggle-ssr.enabled span {
+  color: #fff;
+  background-color: var(--green);
+}
+
+.toggle-vapor span {
+  background-color: var(--btn-bg);
+}
+
+.toggle-vapor.enabled span {
   color: #fff;
   background-color: var(--green);
 }
