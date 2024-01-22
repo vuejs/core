@@ -29,10 +29,10 @@ PR are welcome!
   - [x] `v-bind`
     - [x] simple expression
     - [x] compound expression
-    - [ ] modifiers
+    - [x] modifiers
       - [x] .camel
-      - [ ] .prop
-      - [ ] .attr
+      - [x] .prop
+      - [x] .attr
   - [x] `v-on`
     - [x] simple expression
     - [x] compound expression

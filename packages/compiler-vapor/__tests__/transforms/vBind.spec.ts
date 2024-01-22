@@ -189,6 +189,8 @@ describe('compiler v-bind', () => {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: undefined,
     })
 
     expect(code).matchSnapshot()
@@ -207,6 +209,8 @@ describe('compiler v-bind', () => {
         content: `fooBar`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: undefined,
     })
 
     expect(code).matchSnapshot()
@@ -220,7 +224,6 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:[foo].camel="id"/>`)
 
     expect(ir.effect[0].operations[0]).toMatchObject({
-      runtimeCamelize: true,
       key: {
         content: `foo`,
         isStatic: false,
@@ -229,6 +232,8 @@ describe('compiler v-bind', () => {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: true,
+      modifier: undefined,
     })
 
     expect(code).matchSnapshot()
@@ -245,18 +250,20 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `.fooBar`,
+        content: `fooBar`,
         isStatic: true,
       },
       value: {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '.',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDynamicProp(n1, ".fooBar", undefined, _ctx.id)')
+    expect(code).contains('_setDOMProp(n1, "fooBar", undefined, _ctx.id)')
   })
 
   test('.prop modifier w/ no expression', () => {
@@ -264,20 +271,20 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `.fooBar`,
+        content: `fooBar`,
         isStatic: true,
       },
       value: {
         content: `fooBar`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '.',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains(
-      '_setDynamicProp(n1, ".fooBar", undefined, _ctx.fooBar)',
-    )
+    expect(code).contains('_setDOMProp(n1, "fooBar", undefined, _ctx.fooBar)')
   })
 
   test('.prop modifier w/ dynamic arg', () => {
@@ -292,6 +299,8 @@ describe('compiler v-bind', () => {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '.',
     })
 
     expect(code).matchSnapshot()
@@ -308,18 +317,20 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `.fooBar`,
+        content: `fooBar`,
         isStatic: true,
       },
       value: {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '.',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDynamicProp(n1, ".fooBar", undefined, _ctx.id)')
+    expect(code).contains('_setDOMProp(n1, "fooBar", undefined, _ctx.id)')
   })
 
   test('.prop modifier (shortband) w/ no expression', () => {
@@ -327,20 +338,20 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `.fooBar`,
+        content: `fooBar`,
         isStatic: true,
       },
       value: {
         content: `fooBar`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '.',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains(
-      '_setDynamicProp(n1, ".fooBar", undefined, _ctx.fooBar)',
-    )
+    expect(code).contains('_setDOMProp(n1, "fooBar", undefined, _ctx.fooBar)')
   })
 
   test('.attr modifier', () => {
@@ -348,18 +359,20 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `^foo-bar`,
+        content: `foo-bar`,
         isStatic: true,
       },
       value: {
         content: `id`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '^',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDynamicProp(n1, "^foo-bar", undefined, _ctx.id)')
+    expect(code).contains('_setAttr(n1, "foo-bar", undefined, _ctx.id)')
   })
 
   test('.attr modifier w/ no expression', () => {
@@ -367,19 +380,19 @@ describe('compiler v-bind', () => {
 
     expect(ir.effect[0].operations[0]).toMatchObject({
       key: {
-        content: `^foo-bar`,
+        content: `foo-bar`,
         isStatic: true,
       },
       value: {
         content: `fooBar`,
         isStatic: false,
       },
+      runtimeCamelize: false,
+      modifier: '^',
     })
 
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
-    expect(code).contains(
-      '_setDynamicProp(n1, "^foo-bar", undefined, _ctx.fooBar)',
-    )
+    expect(code).contains('_setAttr(n1, "foo-bar", undefined, _ctx.fooBar)')
   })
 })

@@ -13,7 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setDynamicProp as _setDynamicProp, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div> <span></span></div>")
@@ -21,7 +21,7 @@ export function render(_ctx) {
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode(_ctx.msg)
   _setText(n1, undefined, _ctx.msg)
-  _setDynamicProp(n2, "class", undefined, _ctx.clz)
+  _setClass(n2, "class", undefined, _ctx.clz)
   _prepend(n3, n1)
   return n0
 }"
