@@ -100,24 +100,36 @@ export class ReactiveEffect<T = any> {
   }
 
   run() {
-    this._dirtyLevel = DirtyLevels.NotDirty
-    if (!this.active) {
-      return this.fn()
-    }
-    let lastShouldTrack = shouldTrack
-    let lastEffect = activeEffect
-    try {
-      shouldTrack = true
-      activeEffect = this
-      this._runnings++
-      preCleanupEffect(this)
-      return this.fn()
-    } finally {
-      postCleanupEffect(this)
-      this._runnings--
-      activeEffect = lastEffect
-      shouldTrack = lastShouldTrack
-    }
+    let result
+
+    let maxRecursion = 100
+    do {
+      this._dirtyLevel = DirtyLevels.NotDirty
+      if (!this.active) {
+        return this.fn()
+      }
+      let lastShouldTrack = shouldTrack
+      let lastEffect = activeEffect
+      try {
+        shouldTrack = true
+        activeEffect = this
+        this._runnings++
+        preCleanupEffect(this)
+        result = this.fn()
+      } finally {
+        postCleanupEffect(this)
+        this._runnings--
+        activeEffect = lastEffect
+        shouldTrack = lastShouldTrack
+      }
+      if (--maxRecursion == 0) {
+        if (__DEV__) {
+          console.warn('Effect is recursively triggering itself')
+        }
+        return result
+      }
+    } while (this._dirtyLevel >= DirtyLevels.MaybeDirty)
+    return result
   }
 
   stop() {

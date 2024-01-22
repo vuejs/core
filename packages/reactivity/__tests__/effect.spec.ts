@@ -376,11 +376,13 @@ describe('reactivity/effect', () => {
 
     const counterSpy = vi.fn(() => counter.num++)
     effect(counterSpy)
-    expect(counter.num).toBe(1)
-    expect(counterSpy).toHaveBeenCalledTimes(1)
+    expect(`Effect is recursively triggering itself`).toHaveBeenWarned()
+    expect(counter.num).toBe(100)
+    expect(counterSpy).toHaveBeenCalledTimes(100)
     counter.num = 4
-    expect(counter.num).toBe(5)
-    expect(counterSpy).toHaveBeenCalledTimes(2)
+    expect(`Effect is recursively triggering itself`).toHaveBeenWarned()
+    expect(counter.num).toBe(104)
+    expect(counterSpy).toHaveBeenCalledTimes(200)
   })
 
   it('should avoid infinite recursive loops when use Array.prototype.push/unshift/pop/shift', () => {
@@ -415,8 +417,9 @@ describe('reactivity/effect', () => {
       }
     })
     effect(numSpy)
-    expect(counter.num).toEqual(10)
-    expect(numSpy).toHaveBeenCalledTimes(10)
+    expect(counter.num).toEqual(109)
+    expect(numSpy).toHaveBeenCalledTimes(109)
+    expect(`Effect is recursively triggering itself`).toHaveBeenWarned()
   })
 
   it('should avoid infinite loops with other effects', () => {

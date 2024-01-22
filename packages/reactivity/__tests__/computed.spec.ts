@@ -1,4 +1,11 @@
-import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
+import {
+  h,
+  nextTick,
+  nodeOps,
+  render,
+  serializeInner,
+  shallowRef,
+} from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
@@ -480,9 +487,9 @@ describe('reactivity/computed', () => {
 
     c3.value
 
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -494,9 +501,8 @@ describe('reactivity/computed', () => {
       return 'foo'
     })
     const c2 = computed(() => v.value + c1.value)
-    expect(c2.value).toBe('0foo')
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.value).toBe('1foo')
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
   })
 
   it('should trigger effect even computed already dirty', () => {
@@ -515,10 +521,38 @@ describe('reactivity/computed', () => {
       c2.value
     })
     expect(fnSpy).toBeCalledTimes(1)
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
+  })
+
+  it('should update deps when triggering itself', () => {
+    class Item {
+      v = ref(0)
+    }
+
+    const someRef = shallowRef()
+    const inner = computed(() => {
+      let c = someRef.value
+      if (!c) {
+        c = new Item()
+        someRef.value = c
+      }
+      return c.v.value
+    })
+    const loaded = ref(false)
+    const outer = computed(() => {
+      if (!loaded.value) return 'no'
+      return inner.value ? 'yes' : 'not yet'
+    })
+    const result = computed(() => outer.value)
+    expect(result.value).toBe('no')
+    loaded.value = true
+    expect(result.value).toBe('not yet')
+    const item = someRef.value
+    item.v.value = 1
+    expect(result.value).toBe('yes')
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {

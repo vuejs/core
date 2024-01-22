@@ -135,8 +135,6 @@ describe('renderer: component', () => {
 
     const root = nodeOps.createElement('div')
     render(h(App), root)
-    expect(serializeInner(root)).toBe(`<div>0</div><div>1</div>`)
-    await nextTick()
     expect(serializeInner(root)).toBe(`<div>1</div><div>1</div>`)
   })
 
