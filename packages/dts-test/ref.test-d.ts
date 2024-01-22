@@ -262,6 +262,7 @@ expectType<{ name: string } | null>(p2.union)
     a: number
     b: Ref<number>
     c: number | string
+    d?: string
   } = {
     a: 1,
     b: ref(1),
@@ -273,6 +274,7 @@ expectType<{ name: string } | null>(p2.union)
   expectType<Ref<number>>(toRef(obj, 'b'))
   // Should not distribute Refs over union
   expectType<Ref<number | string>>(toRef(obj, 'c'))
+  expectType<Ref<string | undefined>>(toRef(obj, 'd'))
 
   expectType<Ref<number>>(toRef(() => 123))
   expectType<Ref<number | string>>(toRef(() => obj.c))
@@ -287,6 +289,7 @@ expectType<{ name: string } | null>(p2.union)
     b: Ref<number>
     // Should not distribute Refs over union
     c: Ref<number | string>
+    d: Ref<string | undefined>
   }>(toRefs(obj))
 
   // Both should not do any unwrapping

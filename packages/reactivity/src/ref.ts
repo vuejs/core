@@ -5,7 +5,12 @@ import {
   trackEffect,
   triggerEffects,
 } from './effect'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
+import {
+  DirtyLevels,
+  ReactiveFlags,
+  TrackOpTypes,
+  TriggerOpTypes,
+} from './constants'
 import {
   type IfAny,
   hasChanged,
@@ -333,7 +338,7 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
 }
 
 export type ToRefs<T = any> = {
-  [K in keyof T]: ToRef<T[K]>
+  [K in keyof T]-?: ToRef<T[K]>
 }
 
 /**
@@ -348,11 +353,26 @@ export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
-  const ret: any = isArray(object) ? new Array(object.length) : {}
-  for (const key in object) {
-    ret[key] = propertyToRef(object, key)
+  if (isArray(object)) {
+    const ret = new Array(object.length)
+    for (const key in object) {
+      ret[key] = propertyToRef(object, key)
+    }
+    return ret as any
+  } else {
+    return new Proxy(object, {
+      get(target, key: string) {
+        if (
+          key === ReactiveFlags.IS_READONLY ||
+          key === ReactiveFlags.RAW ||
+          key === ReactiveFlags.SKIP
+        ) {
+          return false
+        }
+        return propertyToRef(target, key)
+      },
+    }) as ToRefs<T>
   }
-  return ret
 }
 
 class ObjectRefImpl<T extends object, K extends keyof T> {
