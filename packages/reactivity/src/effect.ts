@@ -292,23 +292,28 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
-    if (dep.get(effect) !== effect._trackId) {
-      continue
-    }
-    if (effect._dirtyLevel < dirtyLevel) {
+    // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result
+    let tracking: boolean | undefined
+    if (
+      effect._dirtyLevel < dirtyLevel &&
+      (tracking ??= dep.get(effect) === effect._trackId)
+    ) {
       effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
       effect._dirtyLevel = dirtyLevel
     }
-    if (effect._shouldSchedule) {
+    if (
+      effect._shouldSchedule &&
+      (tracking ??= dep.get(effect) === effect._trackId)
+    ) {
       if (__DEV__) {
         effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
       }
       effect.trigger()
-    }
-    if (effect._shouldSchedule && (!effect._runnings || effect.allowRecurse)) {
-      effect._shouldSchedule = false
-      if (effect.scheduler) {
-        queueEffectSchedulers.push(effect.scheduler)
+      if (!effect._runnings || effect.allowRecurse) {
+        effect._shouldSchedule = false
+        if (effect.scheduler) {
+          queueEffectSchedulers.push(effect.scheduler)
+        }
       }
     }
   }
