@@ -10,8 +10,8 @@ import {
   isReadonly,
   reactive,
   ref,
-  toRaw,
   shallowRef,
+  toRaw,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
 
