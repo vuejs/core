@@ -76,8 +76,8 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    while (this._dirtyLevel === DirtyLevels.MaybeDirty) {
-      this._dirtyLevel = DirtyLevels.NotDirty
+    if (this._dirtyLevel === DirtyLevels.MaybeDirty) {
+      this._dirtyLevel = DirtyLevels.QueryingDirty
       pauseTracking()
       for (let i = 0; i < this._depsLength; i++) {
         const dep = this.deps[i]
@@ -87,6 +87,9 @@ export class ReactiveEffect<T = any> {
             break
           }
         }
+      }
+      if (this._dirtyLevel === DirtyLevels.QueryingDirty) {
+        this._dirtyLevel = DirtyLevels.NotDirty
       }
       resetTracking()
     }

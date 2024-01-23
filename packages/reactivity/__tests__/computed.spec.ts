@@ -11,6 +11,7 @@ import {
   reactive,
   ref,
   toRaw,
+  shallowRef,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
 
@@ -519,6 +520,36 @@ describe('reactivity/computed', () => {
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
+  })
+
+  // #10185
+  it('should not override queried MaybeDirty result', () => {
+    class Item {
+      v = ref(0)
+    }
+    const v1 = shallowRef()
+    const v2 = ref(false)
+    const c1 = computed(() => {
+      let c = v1.value
+      if (!v1.value) {
+        c = new Item()
+        v1.value = c
+      }
+      return c.v.value
+    })
+    const c2 = computed(() => {
+      if (!v2.value) return 'no'
+      return c1.value ? 'yes' : 'no'
+    })
+    const c3 = computed(() => c2.value)
+
+    c3.value
+    v2.value = true
+    c3.value
+    v1.value.v.value = 999
+
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.value).toBe('yes')
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
