@@ -76,7 +76,8 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (this._dirtyLevel === DirtyLevels.MaybeDirty) {
+    while (this._dirtyLevel === DirtyLevels.MaybeDirty) {
+      this._dirtyLevel = DirtyLevels.NotDirty
       pauseTracking()
       for (let i = 0; i < this._depsLength; i++) {
         const dep = this.deps[i]
@@ -86,9 +87,6 @@ export class ReactiveEffect<T = any> {
             break
           }
         }
-      }
-      if (this._dirtyLevel < DirtyLevels.Dirty) {
-        this._dirtyLevel = DirtyLevels.NotDirty
       }
       resetTracking()
     }
@@ -291,35 +289,25 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
-    if (
-      effect._dirtyLevel < dirtyLevel &&
-      dep.get(effect) === effect._trackId
-    ) {
-      const lastDirtyLevel = effect._dirtyLevel
+    if (dep.get(effect) !== effect._trackId) {
+      continue
+    }
+    if (effect._dirtyLevel < dirtyLevel) {
+      effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
       effect._dirtyLevel = dirtyLevel
-      if (lastDirtyLevel === DirtyLevels.NotDirty) {
-        effect._shouldSchedule = true
-        if (__DEV__) {
-          effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
-        }
-        effect.trigger()
+    }
+    if (effect._shouldSchedule) {
+      if (__DEV__) {
+        effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
+      }
+      effect.trigger()
+    }
+    if (effect._shouldSchedule && (!effect._runnings || effect.allowRecurse)) {
+      effect._shouldSchedule = false
+      if (effect.scheduler) {
+        queueEffectSchedulers.push(effect.scheduler)
       }
     }
   }
-  scheduleEffects(dep)
   resetScheduling()
-}
-
-export function scheduleEffects(dep: Dep) {
-  for (const effect of dep.keys()) {
-    if (
-      effect.scheduler &&
-      effect._shouldSchedule &&
-      (!effect._runnings || effect.allowRecurse) &&
-      dep.get(effect) === effect._trackId
-    ) {
-      effect._shouldSchedule = false
-      queueEffectSchedulers.push(effect.scheduler)
-    }
-  }
 }
