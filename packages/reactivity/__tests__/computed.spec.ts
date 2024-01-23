@@ -545,10 +545,19 @@ describe('reactivity/computed', () => {
 
     c3.value
     v2.value = true
-    c3.value
-    v1.value.v.value = 999
-
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    c3.value
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    v1.value.v.value = 999
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
     expect(c3.value).toBe('yes')
   })
 
