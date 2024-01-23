@@ -547,7 +547,7 @@ function _createVNode(
         currentBlock.push(cloned)
       }
     }
-    cloned.patchFlag |= PatchFlags.BAIL
+    cloned.patchFlag = PatchFlags.BAIL
     return cloned
   }
 
