@@ -989,5 +989,122 @@ describe('compiler: transform component slots', () => {
 
       expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
     })
+
+    test('named slot with v-if', () => {
+      const source = `
+      <Comp>
+        <template #one v-if="ok">hello</template>
+      </Comp>
+      `
+
+      const { root, slots } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(slots).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_SLOTS,
+        arguments: [
+          createObjectMatcher({
+            _: `[2 /* DYNAMIC */]`
+          }),
+          {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              {
+                type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+                test: { content: `ok` },
+                consequent: createObjectMatcher({
+                  name: `one`,
+                  fn: {
+                    type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                    returns: [{ type: NodeTypes.TEXT, content: `hello` }]
+                  },
+                  key: `0`
+                }),
+                alternate: {
+                  content: `undefined`,
+                  isStatic: false
+                }
+              }
+            ]
+          }
+        ]
+      })
+      expect((root as any).children[0].codegenNode.patchFlag).toMatch(
+        PatchFlags.DYNAMIC_SLOTS + ''
+      )
+
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
+    test('named slot with v-if + v-else-if + v-else', () => {
+      const source = `
+      <Comp>
+        <template #one v-if="ok">foo</template>
+        <template #two="props" v-else-if="orNot">bar</template>
+        <template #one v-else>baz</template>
+      </Comp>
+      `
+
+      const { root, slots } = parseWithSlots(source, {
+        whitespace: 'preserve'
+      })
+
+      expect(slots).toMatchObject({
+        type: NodeTypes.JS_CALL_EXPRESSION,
+        callee: CREATE_SLOTS,
+        arguments: [
+          createObjectMatcher({
+            _: `[2 /* DYNAMIC */]`
+          }),
+          {
+            type: NodeTypes.JS_ARRAY_EXPRESSION,
+            elements: [
+              {
+                type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+                test: { content: `ok` },
+                consequent: createObjectMatcher({
+                  name: `one`,
+                  fn: {
+                    type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                    params: undefined,
+                    returns: [{ type: NodeTypes.TEXT, content: `foo` }]
+                  },
+                  key: `0`
+                }),
+                alternate: {
+                  type: NodeTypes.JS_CONDITIONAL_EXPRESSION,
+                  test: { content: `orNot` },
+                  consequent: createObjectMatcher({
+                    name: `two`,
+                    fn: {
+                      type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                      params: { content: `props` },
+                      returns: [{ type: NodeTypes.TEXT, content: `bar` }]
+                    },
+                    key: `1`
+                  }),
+                  alternate: createObjectMatcher({
+                    name: `one`,
+                    fn: {
+                      type: NodeTypes.JS_FUNCTION_EXPRESSION,
+                      params: undefined,
+                      returns: [{ type: NodeTypes.TEXT, content: `baz` }]
+                    },
+                    key: `2`
+                  })
+                }
+              }
+            ]
+          }
+        ]
+      })
+      expect((root as any).children[0].codegenNode.patchFlag).toMatch(
+        PatchFlags.DYNAMIC_SLOTS + ''
+      )
+
+      expect(generate(root).code).toMatchSnapshot()
+    })
   })
 })

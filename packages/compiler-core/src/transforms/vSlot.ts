@@ -222,7 +222,13 @@ export function buildSlots(
       let prev
       while (j--) {
         prev = children[j]
-        if (prev.type !== NodeTypes.COMMENT) {
+        if (
+          prev.type !== NodeTypes.COMMENT &&
+          // #9173
+          // prev is nonwhitespace either
+          implicitDefaultChildren.length &&
+          isNonWhitespaceContent(prev)
+        ) {
           break
         }
       }
