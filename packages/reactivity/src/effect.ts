@@ -33,7 +33,7 @@ export class ReactiveEffect<T = any> {
    * Can be attached after creation
    * @internal
    */
-  computed?: ComputedRefImpl<T>
+  computed?: ComputedRefImpl<T, any>
   /**
    * @internal
    */
