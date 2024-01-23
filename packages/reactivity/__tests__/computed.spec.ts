@@ -527,32 +527,33 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
   })
 
-  it('should update deps when triggering itself', () => {
+  it('should not override queried MaybeDirty result', () => {
     class Item {
       v = ref(0)
     }
-
-    const someRef = shallowRef()
-    const inner = computed(() => {
-      let c = someRef.value
-      if (!c) {
+    const v1 = shallowRef()
+    const v2 = ref(false)
+    const c1 = computed(() => {
+      let c = v1.value
+      if (!v1.value) {
         c = new Item()
-        someRef.value = c
+        v1.value = c
       }
       return c.v.value
     })
-    const loaded = ref(false)
-    const outer = computed(() => {
-      if (!loaded.value) return 'no'
-      return inner.value ? 'yes' : 'not yet'
+    const c2 = computed(() => {
+      if (!v2.value) return 'no'
+      return c1.value ? 'yes' : 'no'
     })
-    const result = computed(() => outer.value)
-    expect(result.value).toBe('no')
-    loaded.value = true
-    expect(result.value).toBe('not yet')
-    const item = someRef.value
-    item.v.value = 1
-    expect(result.value).toBe('yes')
+    const c3 = computed(() => c2.value)
+
+    c3.value
+    v2.value = true
+    c3.value
+    v1.value.v.value = 999
+
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.value).toBe('yes')
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
