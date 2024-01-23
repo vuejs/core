@@ -125,6 +125,8 @@ export class ReactiveEffect<T = any> {
       if (--maxRecursion == 0) {
         if (__DEV__) {
           console.warn('Effect is recursively triggering itself')
+          // We regard the computed as being done to avoid reactivity issues as in #10185.
+          this._dirtyLevel = DirtyLevels.NotDirty
         }
         return result
       }
