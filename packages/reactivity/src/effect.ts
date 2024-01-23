@@ -141,7 +141,7 @@ function preCleanupEffect(effect: ReactiveEffect) {
 }
 
 function postCleanupEffect(effect: ReactiveEffect) {
-  if (effect.deps && effect.deps.length > effect._depsLength) {
+  if (effect.deps.length > effect._depsLength) {
     for (let i = effect._depsLength; i < effect.deps.length; i++) {
       cleanupDepEffect(effect.deps[i], effect)
     }
