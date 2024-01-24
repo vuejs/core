@@ -3,7 +3,6 @@ import {
   type DirectiveHook,
   type ObjectDirective,
   type VNode,
-  isReactive,
   nextTick,
   warn,
 } from '@vue/runtime-core'
