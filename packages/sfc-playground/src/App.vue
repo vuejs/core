@@ -8,10 +8,12 @@ import {
   mergeImportMap,
   File,
   StoreState,
+  ImportMap,
 } from '@vue/repl'
 import type Monaco from '@vue/repl/monaco-editor'
 import type CodeMirror from '@vue/repl/codemirror-editor'
 import { ref, watchEffect, onMounted, computed, shallowRef, watch } from 'vue'
+import welcomeSFC from './welcome.vue?raw'
 
 const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
 
@@ -52,15 +54,20 @@ const {
     : `${location.origin}/src/vue-server-renderer-dev-proxy`,
 })
 
-const importMap = computed(() =>
-  mergeImportMap(vueImportMap.value, {
+const importMap = computed(() => {
+  const vapor = import.meta.env.PROD
+    ? `${location.origin}/vue-vapor.esm-browser.js`
+    : `${location.origin}/src/vue-vapor-dev-proxy`
+
+  const vaporImportMap: ImportMap = {
     imports: {
-      'vue/vapor': import.meta.env.PROD
-        ? `${location.origin}/vue-vapor.esm-browser.js`
-        : `${location.origin}/src/vue-vapor-dev-proxy`,
+      'vue/vapor': vapor,
     },
-  }),
-)
+  }
+  if (useVaporMode.value) vaporImportMap.imports!.vue = vapor
+
+  return mergeImportMap(vueImportMap.value, vaporImportMap)
+})
 
 let hash = location.hash.slice(1)
 if (hash.startsWith('__DEV__')) {
@@ -81,7 +88,6 @@ if (hash.startsWith('__VAPOR__')) {
 }
 
 const files: StoreState['files'] = ref(Object.create(null))
-const mainFile = ref('src/App.vue')
 
 // enable experimental features
 const sfcOptions = computed(
@@ -110,7 +116,9 @@ const store = useStore(
     vueVersion,
     builtinImportMap: importMap,
     sfcOptions,
-    mainFile,
+    template: ref({
+      welcomeSFC: welcomeSFC,
+    }),
   },
   hash,
 )
@@ -132,11 +140,13 @@ watch(
           `<div id="app"></div>`,
         true,
       )
-      mainFile.value = 'src/index.html'
-      store.activeFile = files.value['src/App.vue']
+      store.mainFile = 'src/index.html'
     } else if (files.value['src/index.html']?.hidden) {
       delete files.value['src/index.html']
-      mainFile.value = 'src/App.vue'
+      store.mainFile = 'src/App.vue'
+      if (store.activeFile.filename === 'src/index.html') {
+        store.activeFile = files.value['src/App.vue']
+      }
     }
   },
   { immediate: true },
