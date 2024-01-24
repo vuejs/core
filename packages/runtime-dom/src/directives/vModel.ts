@@ -3,6 +3,7 @@ import {
   type DirectiveHook,
   type ObjectDirective,
   type VNode,
+  isReactive,
   nextTick,
   warn,
 } from '@vue/runtime-core'
@@ -236,11 +237,6 @@ function setSelected(
         `<select multiple v-model> expects an Array or Set value for its binding, ` +
           `but got ${Object.prototype.toString.call(value).slice(8, -1)}.`,
       )
-    return
-  }
-
-  // fast path for updates triggered by other changes
-  if (isArrayValue && looseEqual(value, oldValue)) {
     return
   }
 
