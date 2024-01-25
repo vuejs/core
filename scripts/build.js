@@ -20,13 +20,13 @@ import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import minimist from 'minimist'
-import { gzipSync, brotliCompressSync } from 'node:zlib'
+import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
 import { execa, execaSync } from 'execa'
 import { cpus } from 'node:os'
 import { createRequire } from 'node:module'
 import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './const-enum.js'
+import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
 
 const require = createRequire(import.meta.url)
@@ -38,6 +38,7 @@ const prodOnly = !devOnly && (args.prodOnly || args.p)
 const buildTypes = args.withTypes || args.t
 const sourceMap = args.sourcemap || args.s
 const isRelease = args.release
+/** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a
 const writeSize = args.size
 const commit = execaSync('git', ['rev-parse', '--short=7', 'HEAD']).stdout
@@ -63,11 +64,11 @@ async function run() {
           'build-dts',
           ...(targets.length
             ? ['--environment', `TARGETS:${resolvedTargets.join(',')}`]
-            : [])
+            : []),
         ],
         {
-          stdio: 'inherit'
-        }
+          stdio: 'inherit',
+        },
       )
     }
   } finally {
@@ -102,7 +103,9 @@ async function runParallel(maxConcurrency, source, iteratorFn) {
     ret.push(p)
 
     if (maxConcurrency <= source.length) {
-      const e = p.then(() => executing.splice(executing.indexOf(e), 1))
+      const e = p.then(() => {
+        executing.splice(executing.indexOf(e), 1)
+      })
       executing.push(e)
       if (executing.length >= maxConcurrency) {
         await Promise.race(executing)
@@ -144,12 +147,12 @@ async function build(target) {
         `TARGET:${target}`,
         formats ? `FORMATS:${formats}` : ``,
         prodOnly ? `PROD_ONLY:true` : ``,
-        sourceMap ? `SOURCE_MAP:true` : ``
+        sourceMap ? `SOURCE_MAP:true` : ``,
       ]
         .filter(Boolean)
-        .join(',')
+        .join(','),
     ],
-    { stdio: 'inherit' }
+    { stdio: 'inherit' },
   )
 }
 
@@ -199,10 +202,10 @@ async function checkFileSize(filePath) {
 
   console.log(
     `${pico.gray(pico.bold(fileName))} min:${prettyBytes(
-      file.length
+      file.length,
     )} / gzip:${prettyBytes(gzipped.length)} / brotli:${prettyBytes(
-      brotli.length
-    )}`
+      brotli.length,
+    )}`,
   )
 
   if (writeSize)
@@ -212,8 +215,8 @@ async function checkFileSize(filePath) {
         file: fileName,
         size: file.length,
         gzip: gzipped.length,
-        brotli: brotli.length
+        brotli: brotli.length,
       }),
-      'utf-8'
+      'utf-8',
     )
 }

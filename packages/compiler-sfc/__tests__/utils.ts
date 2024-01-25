@@ -1,8 +1,8 @@
 import {
-  parse,
-  SFCScriptCompileOptions,
+  type SFCParseOptions,
+  type SFCScriptCompileOptions,
   compileScript,
-  SFCParseOptions
+  parse,
 } from '../src'
 import { parse as babelParse } from '@babel/parser'
 
@@ -11,12 +11,15 @@ export const mockId = 'xxxxxxxx'
 export function compileSFCScript(
   src: string,
   options?: Partial<SFCScriptCompileOptions>,
-  parseOptions?: SFCParseOptions
+  parseOptions?: SFCParseOptions,
 ) {
-  const { descriptor } = parse(src, parseOptions)
+  const { descriptor, errors } = parse(src, parseOptions)
+  if (errors.length) {
+    console.warn(errors[0])
+  }
   return compileScript(descriptor, {
     ...options,
-    id: mockId
+    id: mockId,
   })
 }
 
@@ -25,7 +28,10 @@ export function assertCode(code: string) {
   try {
     babelParse(code, {
       sourceType: 'module',
-      plugins: ['typescript']
+      plugins: [
+        'typescript',
+        ['importAttributes', { deprecatedAssertSyntax: true }],
+      ],
     })
   } catch (e: any) {
     console.log(code)
