@@ -34,7 +34,7 @@ describe('component', () => {
           0: [n1],
         } = children(n0)
         watchEffect(() => {
-          setText(n1, void 0, count.value)
+          setText(n1, count.value)
         })
         return n0
       },

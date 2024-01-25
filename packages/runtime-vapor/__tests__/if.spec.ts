@@ -69,7 +69,7 @@ describe('createIf', () => {
                   0: [n3],
                 } = children(n2)
                 renderEffect(() => {
-                  setText(n3, void 0, counter.value)
+                  setText(n3, counter.value)
                 })
                 return n2
               })),

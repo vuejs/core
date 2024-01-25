@@ -8,7 +8,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setAttr(n1, "foo-bar", undefined, _ctx.id)
+    _setAttr(n1, "foo-bar", _ctx.id)
   })
   return n0
 }"
@@ -22,7 +22,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setAttr(n1, "foo-bar", undefined, _ctx.fooBar)
+    _setAttr(n1, "foo-bar", _ctx.fooBar)
   })
   return n0
 }"
@@ -36,7 +36,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, "fooBar", undefined, _ctx.id)
+    _setDynamicProp(n1, "fooBar", _ctx.id)
   })
   return n0
 }"
@@ -50,7 +50,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, _camelize(_ctx.foo), undefined, _ctx.id)
+    _setDynamicProp(n1, _camelize(_ctx.foo), _ctx.id)
   })
   return n0
 }"
@@ -64,7 +64,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, "fooBar", undefined, _ctx.fooBar)
+    _setDynamicProp(n1, "fooBar", _ctx.fooBar)
   })
   return n0
 }"
@@ -78,7 +78,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDOMProp(n1, "fooBar", undefined, _ctx.fooBar)
+    _setDOMProp(n1, "fooBar", _ctx.fooBar)
   })
   return n0
 }"
@@ -92,7 +92,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDOMProp(n1, "fooBar", undefined, _ctx.id)
+    _setDOMProp(n1, "fooBar", _ctx.id)
   })
   return n0
 }"
@@ -106,7 +106,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDOMProp(n1, "fooBar", undefined, _ctx.id)
+    _setDOMProp(n1, "fooBar", _ctx.id)
   })
   return n0
 }"
@@ -120,7 +120,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, \`.\${_ctx.fooBar}\`, undefined, _ctx.id)
+    _setDynamicProp(n1, \`.\${_ctx.fooBar}\`, _ctx.id)
   })
   return n0
 }"
@@ -134,7 +134,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDOMProp(n1, "fooBar", undefined, _ctx.fooBar)
+    _setDOMProp(n1, "fooBar", _ctx.fooBar)
   })
   return n0
 }"
@@ -148,7 +148,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, "id", undefined, _ctx.id)
+    _setDynamicProp(n1, "id", _ctx.id)
   })
   return n0
 }"
@@ -162,7 +162,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, _ctx.id, undefined, _ctx.id)
+    _setDynamicProp(n1, _ctx.id, _ctx.id)
   })
   return n0
 }"
@@ -176,7 +176,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, "camel-case", undefined, _ctx.camelCase)
+    _setDynamicProp(n1, "camel-case", _ctx.camelCase)
   })
   return n0
 }"
@@ -190,7 +190,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, "id", undefined, _ctx.id)
+    _setDynamicProp(n1, "id", _ctx.id)
   })
   return n0
 }"

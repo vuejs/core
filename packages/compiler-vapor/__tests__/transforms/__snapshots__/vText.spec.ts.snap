@@ -8,7 +8,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setText(n1, undefined, _ctx.str)
+    _setText(n1, _ctx.str)
   })
   return n0
 }"
@@ -22,7 +22,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setText(n1, undefined, _ctx.test)
+    _setText(n1, _ctx.test)
   })
   return n0
 }"
@@ -35,7 +35,7 @@ export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _setText(n1, undefined, "")
+  _setText(n1, "")
   return n0
 }"
 `;

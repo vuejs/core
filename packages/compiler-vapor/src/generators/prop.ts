@@ -40,7 +40,6 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
                 expr()
               }
             },
-        'undefined',
         () => genExpression(oper.value, context),
       )
       return
@@ -62,7 +61,6 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
         genExpression(oper.key, context)
       }
     },
-    'undefined',
     () => genExpression(oper.value, context),
   )
 }

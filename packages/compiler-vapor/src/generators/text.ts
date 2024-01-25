@@ -5,7 +5,7 @@ import { genExpression } from './expression'
 export function genSetText(oper: SetTextIRNode, context: CodegenContext) {
   const { pushFnCall, newline, vaporHelper } = context
   newline()
-  pushFnCall(vaporHelper('setText'), `n${oper.element}`, 'undefined', () =>
+  pushFnCall(vaporHelper('setText'), `n${oper.element}`, () =>
     genExpression(oper.value, context),
   )
 }

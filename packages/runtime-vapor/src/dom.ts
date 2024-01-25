@@ -49,18 +49,6 @@ export function remove(block: Block, parent: ParentNode) {
   }
 }
 
-export function setText(el: Node, oldVal: any, newVal: any) {
-  if ((newVal = toDisplayString(newVal)) !== oldVal) {
-    el.textContent = newVal
-  }
-}
-
-export function setHtml(el: Element, oldVal: any, newVal: any) {
-  if (newVal !== oldVal) {
-    el.innerHTML = newVal
-  }
-}
-
 type Children = Record<number, [ChildNode, Children]>
 export function children(n: Node): Children {
   const result: Children = {}

@@ -3,79 +3,95 @@ import {
   isString,
   normalizeClass,
   normalizeStyle,
+  toDisplayString,
 } from '@vue/shared'
 import { currentInstance } from '../component'
 
-export function setClass(el: Element, oldVal: any, newVal: any) {
-  if ((newVal = normalizeClass(newVal)) !== oldVal && (newVal || oldVal)) {
-    recordPropMetadata(el, 'class', newVal)
-    el.className = newVal
+export function setClass(el: Element, value: any) {
+  const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))
+  if (value !== prev && (value || prev)) {
+    el.className = value
   }
 }
 
-export function setStyle(el: HTMLElement, oldVal: any, newVal: any) {
-  if ((newVal = normalizeStyle(newVal)) !== oldVal && (newVal || oldVal)) {
-    recordPropMetadata(el, 'style', newVal)
-    if (typeof newVal === 'string') {
-      el.style.cssText = newVal
+export function setStyle(el: HTMLElement, value: any) {
+  const prev = recordPropMetadata(el, 'style', (value = normalizeStyle(value)))
+  if (value !== prev && (value || prev)) {
+    if (typeof value === 'string') {
+      el.style.cssText = value
     } else {
       // TODO
     }
   }
 }
 
-export function setAttr(el: Element, key: string, oldVal: any, newVal: any) {
-  if (newVal !== oldVal) {
-    recordPropMetadata(el, key, newVal)
-    if (newVal != null) {
-      el.setAttribute(key, newVal)
+export function setAttr(el: Element, key: string, value: any) {
+  const oldVal = recordPropMetadata(el, key, value)
+  if (value !== oldVal) {
+    if (value != null) {
+      el.setAttribute(key, value)
     } else {
       el.removeAttribute(key)
     }
   }
 }
 
-export function setDOMProp(el: any, key: string, oldVal: any, newVal: any) {
+export function setDOMProp(el: any, key: string, value: any) {
+  const oldVal = recordPropMetadata(el, key, value)
   // TODO special checks
-  if (newVal !== oldVal) {
-    recordPropMetadata(el, key, newVal)
-    el[key] = newVal
+  if (value !== oldVal) {
+    el[key] = value
   }
 }
 
-export function setDynamicProp(
-  el: Element,
-  key: string,
-  oldVal: any,
-  newVal: any,
-) {
+export function setDynamicProp(el: Element, key: string, value: any) {
   // TODO
   const isSVG = false
   if (key === 'class') {
-    setClass(el, oldVal, newVal)
+    setClass(el, value)
   } else if (key === 'style') {
-    setStyle(el as HTMLElement, oldVal, newVal)
+    setStyle(el as HTMLElement, value)
   } else if (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
       : key[0] === '^'
         ? ((key = key.slice(1)), false)
-        : shouldSetAsProp(el, key, newVal, isSVG)
+        : shouldSetAsProp(el, key, value, isSVG)
   ) {
-    setDOMProp(el, key, oldVal, newVal)
+    setDOMProp(el, key, value)
   } else {
     // TODO special case for <input v-model type="checkbox">
-    setAttr(el, key, oldVal, newVal)
+    setAttr(el, key, value)
   }
 }
 
-export function recordPropMetadata(el: Node, key: string, value: any) {
+export function recordPropMetadata(el: Node, key: string, value: any): any {
   if (currentInstance) {
     let metadata = currentInstance.metadata.get(el)
     if (!metadata) {
       currentInstance.metadata.set(el, (metadata = { props: {} }))
     }
+    const prev = metadata.props[key]
     metadata.props[key] = value
+    return prev
+  }
+}
+
+export function setText(el: Node, value: any) {
+  const oldVal = recordPropMetadata(
+    el,
+    'textContent',
+    (value = toDisplayString(value)),
+  )
+  if (value !== oldVal) {
+    el.textContent = value
+  }
+}
+
+export function setHtml(el: Element, value: any) {
+  const oldVal = recordPropMetadata(el, 'innerHTML', value)
+  if (value !== oldVal) {
+    el.innerHTML = value
   }
 }
 
