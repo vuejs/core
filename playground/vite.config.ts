@@ -6,6 +6,9 @@ import * as CompilerVapor from '@vue/compiler-vapor'
 import * as CompilerSFC from '@vue/compiler-sfc'
 
 export default defineConfig({
+  resolve: {
+    alias: [{ find: /^vue$/, replacement: 'vue/vapor' }],
+  },
   build: {
     target: 'esnext',
   },
@@ -20,4 +23,7 @@ export default defineConfig({
     DevPlugin(),
     Inspect(),
   ],
+  optimizeDeps: {
+    exclude: ['@vueuse/core'],
+  },
 })
