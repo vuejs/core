@@ -15,10 +15,13 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
     const keyName = isString(oper.key) ? oper.key : oper.key.content
 
     let helperName: string | undefined
+    let omitKey = false
     if (keyName === 'class') {
       helperName = 'setClass'
+      omitKey = true
     } else if (keyName === 'style') {
       helperName = 'setStyle'
+      omitKey = true
     } else if (oper.modifier) {
       helperName = oper.modifier === '.' ? 'setDOMProp' : 'setAttr'
     }
@@ -27,14 +30,16 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
       pushFnCall(
         vaporHelper(helperName),
         element,
-        () => {
-          const expr = () => genExpression(oper.key, context)
-          if (oper.runtimeCamelize) {
-            pushFnCall(helper('camelize'), expr)
-          } else {
-            expr()
-          }
-        },
+        omitKey
+          ? false
+          : () => {
+              const expr = () => genExpression(oper.key, context)
+              if (oper.runtimeCamelize) {
+                pushFnCall(helper('camelize'), expr)
+              } else {
+                expr()
+              }
+            },
         'undefined',
         () => genExpression(oper.value, context),
       )
