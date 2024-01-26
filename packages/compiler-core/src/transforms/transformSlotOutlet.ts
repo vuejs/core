@@ -77,20 +77,16 @@ export function processSlotOutlet(
         }
       }
     } else {
-      // :name is replaced by :name="name"
-      if (
-        p.name === 'bind' &&
-        !p.exp &&
-        p.arg &&
-        p.arg.type === NodeTypes.SIMPLE_EXPRESSION
-      ) {
-        const name = camelize(p.arg.content)
-        slotName = p.exp = createSimpleExpression(name, false, p.arg.loc)
-        if (!__BROWSER__) {
-          p.exp = processExpression(p.exp, context)
+      if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
+        if (p.exp) {
+          slotName = p.exp
+        } else if (p.arg && p.arg.type === NodeTypes.SIMPLE_EXPRESSION) {
+          const name = camelize(p.arg.content)
+          slotName = p.exp = createSimpleExpression(name, false, p.arg.loc)
+          if (!__BROWSER__) {
+            p.exp = processExpression(p.exp, context)
+          }
         }
-      } else if (p.name === 'bind' && isStaticArgOf(p.arg, 'name')) {
-        if (p.exp) slotName = p.exp
       } else {
         if (p.name === 'bind' && p.arg && isStaticExp(p.arg)) {
           p.arg.content = camelize(p.arg.content)
