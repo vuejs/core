@@ -84,7 +84,7 @@ export function processSlotOutlet(
           const name = camelize(p.arg.content)
           slotName = p.exp = createSimpleExpression(name, false, p.arg.loc)
           if (!__BROWSER__) {
-            p.exp = processExpression(p.exp, context)
+            slotName = p.exp = processExpression(p.exp, context)
           }
         }
       } else {
