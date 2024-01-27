@@ -1,35 +1,13 @@
 import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
-import {
-  type CompilerOptions,
-  IRNodeTypes,
-  type RootIRNode,
-  compile as _compile,
-  generate,
-  parse,
-  transform,
-  transformElement,
-  transformVBind,
-} from '../../src'
+import { IRNodeTypes, transformElement, transformVBind } from '../../src'
+import { makeCompile } from './_utils'
 
-function compileWithVBind(
-  template: string,
-  options: CompilerOptions = {},
-): {
-  ir: RootIRNode
-  code: string
-} {
-  const ast = parse(template, { prefixIdentifiers: true, ...options })
-  const ir = transform(ast, {
-    nodeTransforms: [transformElement],
-    directiveTransforms: {
-      bind: transformVBind,
-    },
-    prefixIdentifiers: true,
-    ...options,
-  })
-  const { code } = generate(ir, { prefixIdentifiers: true, ...options })
-  return { ir, code }
-}
+const compileWithVBind = makeCompile({
+  nodeTransforms: [transformElement],
+  directiveTransforms: {
+    bind: transformVBind,
+  },
+})
 
 describe('compiler v-bind', () => {
   test('basic', () => {

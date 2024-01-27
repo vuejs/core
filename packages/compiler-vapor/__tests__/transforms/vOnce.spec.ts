@@ -1,28 +1,13 @@
-import { BindingTypes, NodeTypes, parse } from '@vue/compiler-dom'
-import {
-  type CompilerOptions,
-  IRNodeTypes,
-  compile as _compile,
-  generate as generate,
-  transform,
-} from '../../src'
+import { BindingTypes, NodeTypes } from '@vue/compiler-dom'
+import { IRNodeTypes } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
+import { makeCompile } from './_utils'
 
-function compileWithOnce(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template, { prefixIdentifiers: true, ...options })
-  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
-  const ir = transform(ast, {
-    nodeTransforms,
-    directiveTransforms,
-    prefixIdentifiers: true,
-    ...options,
-  })
-  const { code, helpers, vaporHelpers } = generate(ir, {
-    prefixIdentifiers: true,
-    ...options,
-  })
-  return { ir, code, helpers, vaporHelpers }
-}
+const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
+const compileWithOnce = makeCompile({
+  nodeTransforms,
+  directiveTransforms,
+})
 
 describe('compiler: v-once', () => {
   test('basic', () => {
@@ -38,9 +23,10 @@ describe('compiler: v-once', () => {
         },
       },
     )
-    expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
 
+    expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.effect).lengthOf(0)
     expect(ir.operation).toMatchObject([
       {
         id: 1,
@@ -80,16 +66,14 @@ describe('compiler: v-once', () => {
         parent: 3,
       },
     ])
-
-    expect(code).toMatchSnapshot()
   })
 
   test('as root node', () => {
     const { ir, code, helpers } = compileWithOnce(`<div :id="foo" v-once />`)
 
-    expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
-
+    expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.effect).lengthOf(0)
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_PROP,
@@ -106,8 +90,6 @@ describe('compiler: v-once', () => {
         },
       },
     ])
-
-    expect(code).toMatchSnapshot()
     expect(code).not.contains('effect')
   })
 
@@ -115,9 +97,10 @@ describe('compiler: v-once', () => {
     const { ir, code, helpers } = compileWithOnce(
       `<div><div :id="foo" v-once /></div>`,
     )
-    expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
 
+    expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.effect).lengthOf(0)
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_PROP,
@@ -135,8 +118,6 @@ describe('compiler: v-once', () => {
         },
       },
     ])
-
-    expect(code).toMatchSnapshot()
   })
 
   test.todo('on component')
@@ -146,11 +127,11 @@ describe('compiler: v-once', () => {
     const { ir, code, helpers } = compileWithOnce(
       `<div v-once><div v-once/></div>`,
     )
-    expect(helpers.size).toBe(0)
-    expect(ir.effect).toMatchObject([])
-    expect(ir.operation).toMatchObject([])
 
     expect(code).toMatchSnapshot()
+    expect(helpers).lengthOf(0)
+    expect(ir.effect).lengthOf(0)
+    expect(ir.operation).lengthOf(0)
   })
 
   test.todo('with hoistStatic: true')

@@ -1,31 +1,13 @@
-import { BindingTypes, ErrorCodes, NodeTypes, parse } from '@vue/compiler-dom'
-import {
-  type CompilerOptions,
-  IRNodeTypes,
-  compile as _compile,
-  generate,
-  transform,
-} from '../../src'
+import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { IRNodeTypes, transformElement, transformVOn } from '../../src'
+import { makeCompile } from './_utils'
 
-import { transformVOn } from '../../src/transforms/vOn'
-import { transformElement } from '../../src/transforms/transformElement'
-
-function compileWithVOn(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template, { prefixIdentifiers: true, ...options })
-  const ir = transform(ast, {
-    nodeTransforms: [transformElement],
-    directiveTransforms: {
-      on: transformVOn,
-    },
-    prefixIdentifiers: true,
-    ...options,
-  })
-  const { code, helpers, vaporHelpers } = generate(ir, {
-    prefixIdentifiers: true,
-    ...options,
-  })
-  return { ir, code, helpers, vaporHelpers }
-}
+const compileWithVOn = makeCompile({
+  nodeTransforms: [transformElement],
+  directiveTransforms: {
+    on: transformVOn,
+  },
+})
 
 describe('v-on', () => {
   test('simple expression', () => {

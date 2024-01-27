@@ -1,33 +1,13 @@
-import {
-  BindingTypes,
-  DOMErrorCodes,
-  NodeTypes,
-  parse,
-} from '@vue/compiler-dom'
-import {
-  type CompilerOptions,
-  IRNodeTypes,
-  compile as _compile,
-  generate,
-  transform,
-} from '../../src'
-import { getBaseTransformPreset } from '../../src/compile'
+import { BindingTypes, DOMErrorCodes, NodeTypes } from '@vue/compiler-dom'
+import { IRNodeTypes, transformElement, transformVText } from '../../src'
+import { makeCompile } from './_utils'
 
-function compileWithVText(template: string, options: CompilerOptions = {}) {
-  const ast = parse(template, { prefixIdentifiers: true, ...options })
-  const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
-  const ir = transform(ast, {
-    nodeTransforms,
-    directiveTransforms,
-    prefixIdentifiers: true,
-    ...options,
-  })
-  const { code, helpers, vaporHelpers } = generate(ir, {
-    prefixIdentifiers: true,
-    ...options,
-  })
-  return { ir, code, helpers, vaporHelpers }
-}
+const compileWithVText = makeCompile({
+  nodeTransforms: [transformElement],
+  directiveTransforms: {
+    text: transformVText,
+  },
+})
 
 describe('v-text', () => {
   test('should convert v-text to textContent', () => {
