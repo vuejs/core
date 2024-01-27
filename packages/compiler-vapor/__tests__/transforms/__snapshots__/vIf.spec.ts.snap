@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-if > basic v-if 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, children as _children, renderEffect as _renderEffect, setText as _setText, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    const { 0: [n3],} = _children(n2)
+    _renderEffect(() => {
+      _setText(n3, _ctx.msg)
+    })
+    return n2
+  })
+  _append(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > dedupe same template 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div>hello</div>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  })
+  const n3 = _createIf(() => (_ctx.ok), () => {
+    const n4 = t0()
+    return n4
+  })
+  _append(n0, n1, n3)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > template v-if 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, children as _children, renderEffect as _renderEffect, setText as _setText, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>hello<p></p>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    const { 2: [n3],} = _children(n2)
+    _renderEffect(() => {
+      _setText(n3, _ctx.msg)
+    })
+    return n2
+  })
+  _append(n0, n1)
+  return n0
+}"
+`;

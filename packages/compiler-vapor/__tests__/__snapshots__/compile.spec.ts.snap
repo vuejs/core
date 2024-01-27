@@ -175,7 +175,6 @@ exports[`compile > dynamic root 1`] = `
 
 export function render(_ctx) {
   const t0 = _fragment()
-
   const n0 = t0()
   const n1 = _createTextNode(1)
   const n2 = _createTextNode(2)
@@ -217,7 +216,6 @@ export function render(_ctx) {
 exports[`compile > expression parsing > interpolation 1`] = `
 "(() => {
   const t0 = _fragment()
-
   const n0 = t0()
   const n1 = _createTextNode(a + b.value)
   _append(n0, n1)

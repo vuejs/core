@@ -44,6 +44,10 @@ PR are welcome!
     - #17
     - needs #19 first
   - [ ] `v-if` / `v-else` / `v-else-if`
+    - [x] `v-if`
+    - [ ] `v-else`
+    - [ ] `v-else-if`
+    - [ ] with `<template>`
     - #9
   - [ ] `v-for`
     - #21
