@@ -20,7 +20,7 @@ import {
 import { extend } from '@vue/shared'
 
 export const transformVIf = createStructuralDirectiveTransform(
-  /^(if|else|else-if)$/,
+  ['if', 'else', 'else-if'],
   processIf,
 )
 

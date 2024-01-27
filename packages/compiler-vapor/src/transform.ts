@@ -388,12 +388,11 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
 }
 
 export function createStructuralDirectiveTransform(
-  name: string | RegExp,
+  name: string | string[],
   fn: StructuralDirectiveTransform,
 ): NodeTransform {
-  const matches = isString(name)
-    ? (n: string) => n === name
-    : (n: string) => name.test(n)
+  const matches = (n: string) =>
+    isString(name) ? n === name : name.includes(n)
 
   return (node, context) => {
     if (node.type === NodeTypes.ELEMENT) {
