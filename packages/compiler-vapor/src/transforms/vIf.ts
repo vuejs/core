@@ -1,9 +1,12 @@
 import {
   ElementTypes,
+  ErrorCodes,
   NodeTypes,
   type RootNode,
   type TemplateChildNode,
   type TemplateNode,
+  createCompilerError,
+  createSimpleExpression,
 } from '@vue/compiler-dom'
 import {
   type TransformContext,
@@ -12,7 +15,6 @@ import {
 import {
   type BlockFunctionIRNode,
   IRNodeTypes,
-  type IfIRNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { extend } from '@vue/shared'
@@ -27,24 +29,29 @@ export function processIf(
   dir: VaporDirectiveNode,
   context: TransformContext<RootNode | TemplateChildNode>,
 ) {
-  // TODO refactor this
-  const parentContext = extend({}, context, {
-    currentScopeIR: context.block,
-  })
+  if (dir.name !== 'else' && (!dir.exp || !dir.exp.content.trim())) {
+    const loc = dir.exp ? dir.exp.loc : node.loc
+    context.options.onError(
+      createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc),
+    )
+    dir.exp = createSimpleExpression(`true`, false, loc)
+  }
 
   if (dir.name === 'if') {
     const id = context.reference()
     context.dynamic.ghost = true
     const [branch, onExit] = createIfBranch(node, dir, context)
-    const operation: IfIRNode = {
-      type: IRNodeTypes.IF,
-      id,
-      loc: dir.loc,
-      condition: dir.exp!,
-      positive: branch,
+
+    return () => {
+      onExit()
+      context.registerOperation({
+        type: IRNodeTypes.IF,
+        id,
+        loc: dir.loc,
+        condition: dir.exp!,
+        positive: branch,
+      })
     }
-    parentContext.registerOperation(operation)
-    return onExit
   }
 }
 
