@@ -404,14 +404,8 @@ export function createStructuralDirectiveTransform(
         return
       }
       const exitFns = []
-      for (let i = 0; i < props.length; i++) {
-        const prop = props[i]
+      for (const prop of props) {
         if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
-          // structural directives are removed to avoid infinite recursion
-          // also we remove them *before* applying so that it can further
-          // traverse itself in case it moves the node around
-          props.splice(i, 1)
-          i--
           const onExit = fn(node, prop as VaporDirectiveNode, context)
           if (onExit) exitFns.push(onExit)
         }

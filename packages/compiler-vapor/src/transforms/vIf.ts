@@ -65,16 +65,25 @@ export function createIfBranch(
     node.tagType !== ElementTypes.TEMPLATE
   ) {
     node = extend({}, node, {
+      type: NodeTypes.ELEMENT,
+      tag: 'template',
+      props: [],
       tagType: ElementTypes.TEMPLATE,
-      children: [node],
-    } as TemplateNode)
+      children: [
+        extend({}, node, {
+          props: node.props.filter(
+            (p) => p.type !== NodeTypes.DIRECTIVE && p.name !== 'if',
+          ),
+        } as TemplateChildNode),
+      ],
+    } as Partial<TemplateNode>)
     context.node = node
   }
 
   const branch: BlockFunctionIRNode = {
     type: IRNodeTypes.BLOCK_FUNCTION,
     loc: dir.loc,
-    node: node,
+    node,
     templateIndex: -1,
     dynamic: {
       id: null,
