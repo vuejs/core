@@ -3,7 +3,11 @@ import type { SFCDescriptor } from '../parse'
 import { generateCodeFrame, isArray } from '@vue/shared'
 import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { DEFINE_PROPS, type PropsDestructureBindings, WITH_DEFAULTS } from './defineProps'
+import {
+  DEFINE_PROPS,
+  type PropsDestructureBindings,
+  WITH_DEFAULTS,
+} from './defineProps'
 import { DEFINE_MODEL, type ModelDecl } from './defineModel'
 import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
