@@ -50,3 +50,7 @@ jobs:
         with:
           name: pr-number
           path: pr.txt
+
+      - name: Size report
+        if: ${{github.event_name == 'push'}}
+        run: pnpm tsx scripts/size-report.ts
