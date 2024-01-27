@@ -207,4 +207,11 @@ describe('compile', () => {
 
     // TODO: add more test for expression parsing (v-on, v-slot, v-for)
   })
+
+  describe('custom directive', () => {
+    test('basic', () => {
+      const code = compile(`<div v-test v-hello.world />`)
+      expect(code).matchSnapshot()
+    })
+  })
 })
