@@ -174,16 +174,17 @@ function createRootContext(
     registerTemplate() {
       let templateNode: TemplateFactoryIRNode | FragmentFactoryIRNode
 
-      if (this.template) {
-        const idx = root.template.findIndex(
-          (t) =>
-            t.type === IRNodeTypes.TEMPLATE_FACTORY &&
-            t.template === this.template,
-        )
-        if (idx !== -1) {
-          return (this.block.templateIndex = idx)
-        }
+      const existing = root.template.findIndex((t) =>
+        this.template
+          ? t.type === IRNodeTypes.TEMPLATE_FACTORY &&
+            t.template === this.template
+          : t.type === IRNodeTypes.FRAGMENT_FACTORY,
+      )
+      if (existing !== -1) {
+        return (this.block.templateIndex = existing)
+      }
 
+      if (this.template) {
         templateNode = {
           type: IRNodeTypes.TEMPLATE_FACTORY,
           template: this.template,
