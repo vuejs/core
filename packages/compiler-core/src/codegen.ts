@@ -62,11 +62,17 @@ const aliasHelper = (s: symbol) => `${helperNameMap[s]}: _${helperNameMap[s]}`
 
 type CodegenNode = TemplateChildNode | JSChildNode | SSRCodegenNode
 
-export interface CodegenResult {
+export interface BaseCodegenResult {
   code: string
   preamble: string
-  ast: RootNode
+  ast: unknown
   map?: RawSourceMap
+  helpers?: Set<string> | Set<symbol>
+}
+
+export interface CodegenResult extends BaseCodegenResult {
+  ast: RootNode
+  helpers: Set<symbol>
 }
 
 export enum NewlineType {
@@ -359,6 +365,7 @@ export function generate(
     code: context.code,
     preamble: isSetupInlined ? preambleContext.code : ``,
     map: context.map ? context.map.toJSON() : undefined,
+    helpers: ast.helpers,
   }
 }
 

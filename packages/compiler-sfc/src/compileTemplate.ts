@@ -1,5 +1,5 @@
 import {
-  type CodegenResult,
+  type BaseCodegenResult,
   type CompilerError,
   type CompilerOptions,
   type ElementNode,
@@ -34,18 +34,22 @@ import { warnOnce } from './warn'
 import { genCssVarsFromList } from './style/cssVars'
 
 export interface TemplateCompiler {
-  compile(source: string | RootNode, options: CompilerOptions): CodegenResult
+  compile(
+    source: string | RootNode,
+    options: CompilerOptions,
+  ): BaseCodegenResult
   parse(template: string, options: ParserOptions): RootNode
 }
 
 export interface SFCTemplateCompileResults {
   code: string
-  ast?: RootNode
+  ast?: unknown
   preamble?: string
   source: string
   tips: string[]
   errors: (string | CompilerError)[]
   map?: RawSourceMap
+  helpers?: Set<string | symbol>
 }
 
 export interface SFCTemplateCompileOptions {
@@ -238,25 +242,30 @@ function doCompileTemplate({
     inAST = createRoot(template.children, inAST.source)
   }
 
-  let { code, ast, preamble, map } = compiler.compile(inAST || source, {
-    mode: 'module',
-    prefixIdentifiers: true,
-    hoistStatic: true,
-    cacheHandlers: true,
-    ssrCssVars:
-      ssr && ssrCssVars && ssrCssVars.length
-        ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
-        : '',
-    scopeId: scoped ? longId : undefined,
-    slotted,
-    sourceMap: true,
-    ...compilerOptions,
-    hmr: !isProd,
-    nodeTransforms: nodeTransforms.concat(compilerOptions.nodeTransforms || []),
-    filename,
-    onError: e => errors.push(e),
-    onWarn: w => warnings.push(w),
-  })
+  let { code, ast, preamble, map, helpers } = compiler.compile(
+    inAST || source,
+    {
+      mode: 'module',
+      prefixIdentifiers: true,
+      hoistStatic: true,
+      cacheHandlers: true,
+      ssrCssVars:
+        ssr && ssrCssVars && ssrCssVars.length
+          ? genCssVarsFromList(ssrCssVars, shortId, isProd, true)
+          : '',
+      scopeId: scoped ? longId : undefined,
+      slotted,
+      sourceMap: true,
+      ...compilerOptions,
+      hmr: !isProd,
+      nodeTransforms: nodeTransforms.concat(
+        compilerOptions.nodeTransforms || [],
+      ),
+      filename,
+      onError: e => errors.push(e),
+      onWarn: w => warnings.push(w),
+    },
+  )
 
   // inMap should be the map produced by ./parse.ts which is a simple line-only
   // mapping. If it is present, we need to adjust the final map and errors to
@@ -282,7 +291,16 @@ function doCompileTemplate({
     return msg
   })
 
-  return { code, ast, preamble, source, errors, tips, map }
+  return {
+    code,
+    ast,
+    preamble,
+    source,
+    errors,
+    tips,
+    map,
+    helpers,
+  }
 }
 
 function mapLines(oldMap: RawSourceMap, newMap: RawSourceMap): RawSourceMap {

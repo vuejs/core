@@ -1,6 +1,6 @@
 import {
   type CodegenOptions as BaseCodegenOptions,
-  type CodegenResult,
+  type BaseCodegenResult,
   NewlineType,
   type Position,
   type SourceLocation,
@@ -90,7 +90,8 @@ function createCodegenContext(
     expressionPlugins = [],
   }: CodegenOptions,
 ) {
-  const { helpers, vaporHelpers } = ir
+  const helpers = new Set<string>([])
+  const vaporHelpers = new Set<string>([])
   const context: CodegenContext = {
     mode,
     prefixIdentifiers,
@@ -227,11 +228,17 @@ function createCodegenContext(
   return context
 }
 
+export interface VaporCodegenResult extends BaseCodegenResult {
+  ast: RootIRNode
+  helpers: Set<string>
+  vaporHelpers: Set<string>
+}
+
 // IR -> JS codegen
 export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
-): CodegenResult {
+): VaporCodegenResult {
   const ctx = createCodegenContext(ir, options)
   const {
     push,
@@ -333,9 +340,11 @@ export function generate(
 
   return {
     code: ctx.code,
-    ast: ir as any,
+    ast: ir,
     preamble,
     map: ctx.map ? ctx.map.toJSON() : undefined,
+    helpers,
+    vaporHelpers,
   }
 }
 

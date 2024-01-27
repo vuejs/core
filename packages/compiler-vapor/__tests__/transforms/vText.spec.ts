@@ -7,20 +7,13 @@ import {
 import {
   type CompilerOptions,
   IRNodeTypes,
-  type RootIRNode,
   compile as _compile,
   generate,
   transform,
 } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
 
-function compileWithVText(
-  template: string,
-  options: CompilerOptions = {},
-): {
-  ir: RootIRNode
-  code: string
-} {
+function compileWithVText(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, { prefixIdentifiers: true, ...options })
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
   const ir = transform(ast, {
@@ -29,20 +22,26 @@ function compileWithVText(
     prefixIdentifiers: true,
     ...options,
   })
-  const { code } = generate(ir, { prefixIdentifiers: true, ...options })
-  return { ir, code }
+  const { code, helpers, vaporHelpers } = generate(ir, {
+    prefixIdentifiers: true,
+    ...options,
+  })
+  return { ir, code, helpers, vaporHelpers }
 }
 
 describe('v-text', () => {
   test('should convert v-text to textContent', () => {
-    const { code, ir } = compileWithVText(`<div v-text="str"></div>`, {
-      bindingMetadata: {
-        str: BindingTypes.SETUP_REF,
+    const { code, ir, helpers, vaporHelpers } = compileWithVText(
+      `<div v-text="str"></div>`,
+      {
+        bindingMetadata: {
+          str: BindingTypes.SETUP_REF,
+        },
       },
-    })
+    )
 
-    expect(ir.vaporHelpers).contains('setText')
-    expect(ir.helpers.size).toBe(0)
+    expect(vaporHelpers).contains('setText')
+    expect(helpers.size).toBe(0)
 
     expect(ir.operation).toEqual([])
 

@@ -846,7 +846,7 @@ export function compileScript(
       }
       // inline render function mode - we are going to compile the template and
       // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
+      const { code, preamble, tips, errors, helpers } = compileTemplate({
         filename,
         ast: sfc.template.ast,
         source: sfc.template.content,
@@ -891,7 +891,7 @@ export function compileScript(
       // avoid duplicated unref import
       // as this may get injected by the render function preamble OR the
       // css vars codegen
-      if (ast && ast.helpers.has(UNREF)) {
+      if (helpers && helpers.has(UNREF)) {
         ctx.helperImports.delete('unref')
       }
       returned = code

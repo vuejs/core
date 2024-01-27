@@ -2,20 +2,13 @@ import { BindingTypes, NodeTypes, parse } from '@vue/compiler-dom'
 import {
   type CompilerOptions,
   IRNodeTypes,
-  type RootIRNode,
   compile as _compile,
   generate as generate,
   transform,
 } from '../../src'
 import { getBaseTransformPreset } from '../../src/compile'
 
-function compileWithOnce(
-  template: string,
-  options: CompilerOptions = {},
-): {
-  ir: RootIRNode
-  code: string
-} {
+function compileWithOnce(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, { prefixIdentifiers: true, ...options })
   const [nodeTransforms, directiveTransforms] = getBaseTransformPreset(true)
   const ir = transform(ast, {
@@ -24,13 +17,16 @@ function compileWithOnce(
     prefixIdentifiers: true,
     ...options,
   })
-  const { code } = generate(ir, { prefixIdentifiers: true, ...options })
-  return { ir, code }
+  const { code, helpers, vaporHelpers } = generate(ir, {
+    prefixIdentifiers: true,
+    ...options,
+  })
+  return { ir, code, helpers, vaporHelpers }
 }
 
 describe('compiler: v-once', () => {
   test('basic', () => {
-    const { ir, code } = compileWithOnce(
+    const { ir, code, helpers } = compileWithOnce(
       `<div v-once>
         {{ msg }}
         <span :class="clz" />
@@ -42,7 +38,7 @@ describe('compiler: v-once', () => {
         },
       },
     )
-    expect(ir.helpers.size).toBe(0)
+    expect(helpers.size).toBe(0)
     expect(ir.effect).toEqual([])
 
     expect(ir.operation).toMatchObject([
@@ -89,9 +85,9 @@ describe('compiler: v-once', () => {
   })
 
   test('as root node', () => {
-    const { ir, code } = compileWithOnce(`<div :id="foo" v-once />`)
+    const { ir, code, helpers } = compileWithOnce(`<div :id="foo" v-once />`)
 
-    expect(ir.helpers.size).toBe(0)
+    expect(helpers.size).toBe(0)
     expect(ir.effect).toEqual([])
 
     expect(ir.operation).toMatchObject([
@@ -116,8 +112,10 @@ describe('compiler: v-once', () => {
   })
 
   test('on nested plain element', () => {
-    const { ir, code } = compileWithOnce(`<div><div :id="foo" v-once /></div>`)
-    expect(ir.helpers.size).toBe(0)
+    const { ir, code, helpers } = compileWithOnce(
+      `<div><div :id="foo" v-once /></div>`,
+    )
+    expect(helpers.size).toBe(0)
     expect(ir.effect).toEqual([])
 
     expect(ir.operation).toMatchObject([
@@ -145,8 +143,10 @@ describe('compiler: v-once', () => {
   test.todo('on slot outlet')
 
   test('inside v-once', () => {
-    const { ir, code } = compileWithOnce(`<div v-once><div v-once/></div>`)
-    expect(ir.helpers.size).toBe(0)
+    const { ir, code, helpers } = compileWithOnce(
+      `<div v-once><div v-once/></div>`,
+    )
+    expect(helpers.size).toBe(0)
     expect(ir.effect).toMatchObject([])
     expect(ir.operation).toMatchObject([])
 

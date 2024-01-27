@@ -45,8 +45,6 @@ export interface RootIRNode extends BaseIRNode {
   dynamic: IRDynamicInfo
   effect: IREffect[]
   operation: OperationNode[]
-  helpers: Set<string>
-  vaporHelpers: Set<VaporHelper>
 }
 
 export interface TemplateFactoryIRNode extends BaseIRNode {

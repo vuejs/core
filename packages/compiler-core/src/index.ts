@@ -26,6 +26,7 @@ export {
   NewlineType,
   type CodegenContext,
   type CodegenResult,
+  type BaseCodegenResult,
 } from './codegen'
 export {
   ErrorCodes,

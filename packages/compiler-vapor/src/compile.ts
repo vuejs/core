@@ -1,6 +1,5 @@
 import {
   type CompilerOptions as BaseCompilerOptions,
-  type CodegenResult,
   ErrorCodes,
   type RootNode,
   createCompilerError,
@@ -13,7 +12,7 @@ import {
   type NodeTransform,
   transform,
 } from './transform'
-import { generate } from './generate'
+import { type VaporCodegenResult, generate } from './generate'
 import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
 import { transformVHtml } from './transforms/vHtml'
@@ -33,7 +32,7 @@ export type CompilerOptions = HackOptions<BaseCompilerOptions>
 export function compile(
   source: string | RootNode,
   options: CompilerOptions = {},
-): CodegenResult {
+): VaporCodegenResult {
   const onError = options.onError || defaultOnError
   const isModuleMode = options.mode === 'module'
   /* istanbul ignore if */
