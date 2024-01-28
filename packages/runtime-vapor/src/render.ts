@@ -9,12 +9,18 @@ import {
 } from './component'
 import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directive'
-import { insert, remove } from './dom'
+import { insert, querySelector, remove } from './dom'
 import { queuePostRenderEffect } from './scheduler'
+
+export const fragmentKey = Symbol('fragment')
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Node[]
-export type Fragment = { nodes: Block; anchor: Node }
+export type Fragment = {
+  nodes: Block
+  anchor?: Node
+  [fragmentKey]: true
+}
 export type BlockFn = (props?: any) => Block
 
 export function render(
@@ -29,8 +35,7 @@ export function render(
 
 export function normalizeContainer(container: string | ParentNode): ParentNode {
   return typeof container === 'string'
-    ? // eslint-disable-next-line no-restricted-globals
-      (document.querySelector(container) as ParentNode)
+    ? (querySelector(container) as ParentNode)
     : container
 }
 
@@ -51,9 +56,14 @@ export function mountComponent(
 
     let block: Block | undefined
 
-    if (stateOrNode instanceof Node) {
-      block = stateOrNode
-    } else if (isObject(stateOrNode) && !isArray(stateOrNode)) {
+    if (
+      stateOrNode &&
+      (stateOrNode instanceof Node ||
+        isArray(stateOrNode) ||
+        (stateOrNode as any)[fragmentKey])
+    ) {
+      block = stateOrNode as Block
+    } else if (isObject(stateOrNode)) {
       instance.setupState = proxyRefs(stateOrNode)
     }
     if (!block && component.render) {

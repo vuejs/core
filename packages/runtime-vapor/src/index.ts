@@ -49,6 +49,7 @@ export * from './directive'
 export * from './dom'
 export * from './apiLifecycle'
 export * from './if'
+export * from './for'
 
 export * from './directives/vShow'
 export * from './directives/vModel'

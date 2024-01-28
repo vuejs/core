@@ -1,7 +1,7 @@
 import { renderWatch } from './renderWatch'
-import type { BlockFn, Fragment } from './render'
+import { type BlockFn, type Fragment, fragmentKey } from './render'
 import { effectScope, onEffectCleanup } from '@vue/reactivity'
-import { insert, remove } from './dom'
+import { createComment, createTextNode, insert, remove } from './dom'
 
 export const createIf = (
   condition: () => any,
@@ -11,12 +11,8 @@ export const createIf = (
 ): Fragment => {
   let branch: BlockFn | undefined
   let parent: ParentNode | undefined | null
-  const anchor = __DEV__
-    ? // eslint-disable-next-line no-restricted-globals
-      document.createComment('if')
-    : // eslint-disable-next-line no-restricted-globals
-      document.createTextNode('')
-  const fragment: Fragment = { nodes: [], anchor }
+  const anchor = __DEV__ ? createComment('if') : createTextNode('')
+  const fragment: Fragment = { nodes: [], anchor, [fragmentKey]: true }
 
   // TODO: SSR
   // if (isHydrating) {

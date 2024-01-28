@@ -6,16 +6,14 @@ export * from './dom/templateRef'
 export * from './dom/on'
 
 export function insert(block: Block, parent: Node, anchor: Node | null = null) {
-  // if (!isHydrating) {
   if (block instanceof Node) {
     parent.insertBefore(block, anchor)
   } else if (isArray(block)) {
     for (const child of block) insert(child, parent, anchor)
   } else {
     insert(block.nodes, parent, anchor)
-    parent.insertBefore(block.anchor, anchor)
+    block.anchor && parent.insertBefore(block.anchor, anchor)
   }
-  // }
 }
 
 export function prepend(parent: ParentBlock, ...blocks: Block[]) {
@@ -93,4 +91,14 @@ export function children(n: Node): Children {
 export function createTextNode(val: unknown): Text {
   // eslint-disable-next-line no-restricted-globals
   return document.createTextNode(toDisplayString(val))
+}
+
+export function createComment(data: string): Comment {
+  // eslint-disable-next-line no-restricted-globals
+  return document.createComment(data)
+}
+
+export function querySelector(selectors: string): Element | null {
+  // eslint-disable-next-line no-restricted-globals
+  return document.querySelector(selectors)
 }
