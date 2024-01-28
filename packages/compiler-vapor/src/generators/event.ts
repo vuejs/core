@@ -50,7 +50,7 @@ export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
     },
     // 4th arg, gen options
     !!options.length &&
-      (() => push(`{ ${options.map((v) => `${v}: true`).join(', ')} }`)),
+      (() => push(`{ ${options.map(v => `${v}: true`).join(', ')} }`)),
   )
 
   function genEventHandler(context: CodegenContext) {
@@ -83,5 +83,5 @@ export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 }
 
 function genArrayExpression(elements: string[]) {
-  return `[${elements.map((it) => JSON.stringify(it)).join(', ')}]`
+  return `[${elements.map(it => JSON.stringify(it)).join(', ')}]`
 }

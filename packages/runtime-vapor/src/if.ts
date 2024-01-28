@@ -22,7 +22,7 @@ export const createIf = (
 
   renderWatch(
     () => !!condition(),
-    (value) => {
+    value => {
       parent ||= anchor.parentNode
       if ((branch = value ? b1 : b2)) {
         let scope = effectScope()

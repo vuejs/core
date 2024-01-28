@@ -16,7 +16,7 @@ describe('watchEffect and onEffectCleanup', () => {
 
     scope.run(() => {
       source = ref(0)
-      watchEffect((onCleanup) => {
+      watchEffect(onCleanup => {
         source.value
 
         onCleanup(() => (dummy += 2))

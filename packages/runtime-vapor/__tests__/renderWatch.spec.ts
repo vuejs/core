@@ -114,7 +114,7 @@ describe('renderWatch', () => {
         return { source, change, renderSource, changeRender }
       },
       // render
-      (_ctx) => {
+      _ctx => {
         // Render Watch API
         renderEffect(() => {
           const current = _ctx.renderSource
@@ -123,7 +123,7 @@ describe('renderWatch', () => {
         })
         renderWatch(
           () => _ctx.renderSource,
-          (value) => {
+          value => {
             calls.push(`renderWatch ${value}`)
             onEffectCleanup(() => calls.push(`renderWatch cleanup ${value}`))
           },
@@ -175,7 +175,7 @@ describe('renderWatch', () => {
         return { source, update }
       },
       // render
-      (ctx) => {
+      ctx => {
         renderEffect(() => {
           ctx.source
         })
@@ -206,7 +206,7 @@ describe('renderWatch', () => {
         return { source, update }
       },
       // render
-      (ctx) => {
+      ctx => {
         renderEffect(() => {
           ctx.source
         })

@@ -189,7 +189,7 @@ export const createVaporSyncScheduler: SchedulerFactory =
   }
 
 export const createVaporPreScheduler: SchedulerFactory =
-  (instance) => (job, effect, isInit) => {
+  instance => (job, effect, isInit) => {
     if (isInit) {
       effect.run()
     } else {
@@ -200,7 +200,7 @@ export const createVaporPreScheduler: SchedulerFactory =
   }
 
 export const createVaporRenderingScheduler: SchedulerFactory =
-  (instance) => (job, effect, isInit) => {
+  instance => (job, effect, isInit) => {
     if (isInit) {
       effect.run()
     } else {

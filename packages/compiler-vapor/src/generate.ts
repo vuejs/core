@@ -291,11 +291,11 @@ export function generate(
   if (vaporHelpers.size)
     // TODO: extract import codegen
     preamble = `import { ${[...vaporHelpers]
-      .map((h) => `${h} as _${h}`)
+      .map(h => `${h} as _${h}`)
       .join(', ')} } from 'vue/vapor';`
   if (helpers.size)
     preamble = `import { ${[...helpers]
-      .map((h) => `${h} as _${h}`)
+      .map(h => `${h} as _${h}`)
       .join(', ')} } from 'vue';`
 
   if (!isSetupInlined) {

@@ -145,7 +145,7 @@ function createRootContext(
       ) {
         return this.registerOperation(...operations)
       }
-      const existing = this.block.effect.find((e) =>
+      const existing = this.block.effect.find(e =>
         isSameExpression(e.expressions, expressions as IRExpression[]),
       )
       if (existing) {
@@ -174,7 +174,7 @@ function createRootContext(
     registerTemplate() {
       let templateNode: TemplateFactoryIRNode | FragmentFactoryIRNode
 
-      const existing = root.template.findIndex((t) =>
+      const existing = root.template.findIndex(t =>
         this.template
           ? t.type === IRNodeTypes.TEMPLATE_FACTORY &&
             t.template === this.template
@@ -356,7 +356,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
           ctx.registerOperation({
             type: IRNodeTypes.INSERT_NODE,
             loc: node.loc,
-            element: prevChildren.map((child) => child.id!),
+            element: prevChildren.map(child => child.id!),
             parent: ctx.reference(),
             anchor,
           })
@@ -364,7 +364,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
           ctx.registerOperation({
             type: IRNodeTypes.PREPEND_NODE,
             loc: node.loc,
-            elements: prevChildren.map((child) => child.id!),
+            elements: prevChildren.map(child => child.id!),
             parent: ctx.reference(),
           })
         }
@@ -380,7 +380,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
       ctx.registerOperation({
         type: IRNodeTypes.APPEND_NODE,
         loc: node.loc,
-        elements: prevChildren.map((child) => child.id!),
+        elements: prevChildren.map(child => child.id!),
         parent: ctx.reference(),
       })
     }

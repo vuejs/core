@@ -21,7 +21,7 @@ export function genWithDirective(
       // directive
       pushMulti(
         ['[', ']', ', '],
-        ...opers.map((oper) => () => {
+        ...opers.map(oper => () => {
           push('[')
 
           const { dir, builtin } = oper
@@ -73,7 +73,7 @@ export function genWithDirective(
 function genDirectiveModifiers(modifiers: string[]) {
   return modifiers
     .map(
-      (value) =>
+      value =>
         `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
     )
     .join(', ')

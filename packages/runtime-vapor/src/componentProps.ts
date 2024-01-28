@@ -259,7 +259,7 @@ function getTypeIndex(
   expectedTypes: PropType<any> | void | null | true,
 ): number {
   if (isArray(expectedTypes)) {
-    return expectedTypes.findIndex((t) => isSameType(t, type))
+    return expectedTypes.findIndex(t => isSameType(t, type))
   } else if (isFunction(expectedTypes)) {
     return isSameType(expectedTypes, type) ? 0 : -1
   }

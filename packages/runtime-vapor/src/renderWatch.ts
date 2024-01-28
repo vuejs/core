@@ -74,7 +74,7 @@ function doWatch(
 
 const createMiddleware =
   (instance: ComponentInternalInstance | null): BaseWatchMiddleware =>
-  (next) => {
+  next => {
     let value: unknown
     // with lifecycle
     if (instance && instance.isMounted) {
