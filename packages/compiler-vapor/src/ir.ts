@@ -62,7 +62,7 @@ export interface IfIRNode extends BaseIRNode {
   id: number
   condition: IRExpression
   positive: BlockFunctionIRNode
-  negative?: BlockFunctionIRNode
+  negative?: BlockFunctionIRNode | IfIRNode
 }
 
 export interface TemplateFactoryIRNode extends BaseIRNode {

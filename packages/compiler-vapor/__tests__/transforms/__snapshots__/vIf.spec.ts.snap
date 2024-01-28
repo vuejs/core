@@ -20,6 +20,30 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: v-if > comment between branches 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _template("<!--foo--><p></p>")
+  const t2 = _template("<!--bar-->fine")
+  const t3 = _fragment()
+  const n0 = t3()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n3 = t1()
+    return n3
+  }, () => {
+    const n4 = t2()
+    return n4
+  }))
+  _prepend(n0, n1)
+  return n0
+}"
+`;
+
 exports[`compiler: v-if > dedupe same template 1`] = `
 "import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
 
@@ -56,6 +80,70 @@ export function render(_ctx) {
     return n2
   })
   _append(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _template("<p></p>")
+  const t2 = _fragment()
+  const n0 = t2()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => {
+    const n3 = t1()
+    return n3
+  })
+  _prepend(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _template("<p></p>")
+  const t2 = _template("fine")
+  const t3 = _fragment()
+  const n0 = t3()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n3 = t1()
+    return n3
+  }, () => {
+    const n4 = t2()
+    return n4
+  }))
+  _prepend(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-if > v-if + v-else-if 1`] = `
+"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _template("<p></p>")
+  const t2 = _fragment()
+  const n0 = t2()
+  const n1 = _createIf(() => (_ctx.ok), () => {
+    const n2 = t0()
+    return n2
+  }, () => _createIf(() => (_ctx.orNot), () => {
+    const n3 = t1()
+    return n3
+  }))
+  _prepend(n0, n1)
   return n0
 }"
 `;

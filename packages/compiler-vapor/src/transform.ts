@@ -42,9 +42,9 @@ export type DirectiveTransform = (
 // A structural directive transform is technically also a NodeTransform;
 // Only v-if and v-for fall into this category.
 export type StructuralDirectiveTransform = (
-  node: RootNode | TemplateChildNode,
+  node: ElementNode,
   dir: VaporDirectiveNode,
-  context: TransformContext<RootNode | TemplateChildNode>,
+  context: TransformContext<ElementNode>,
 ) => void | (() => void)
 
 export type TransformOptions = HackOptions<BaseTransformOptions>
@@ -60,7 +60,7 @@ export interface TransformContext<T extends AllNode = AllNode> {
   >
 
   template: string
-  childrenTemplate: string[]
+  childrenTemplate: (string | null)[]
   dynamic: IRDynamicInfo
 
   inVOnce: boolean
@@ -311,15 +311,12 @@ function transformNode(
   }
 
   if (context.node.type === NodeTypes.ROOT)
-    context.template += context.childrenTemplate.join('')
+    context.template += context.childrenTemplate.filter(Boolean).join('')
 }
 
 function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
   const { children } = ctx.node
   let i = 0
-  // const nodeRemoved = () => {
-  //   i--
-  // }
   for (; i < children.length; i++) {
     const child = children[i]
     const childContext = createContext(child, ctx, i)
@@ -405,7 +402,11 @@ export function createStructuralDirectiveTransform(
       const exitFns = []
       for (const prop of props) {
         if (prop.type === NodeTypes.DIRECTIVE && matches(prop.name)) {
-          const onExit = fn(node, prop as VaporDirectiveNode, context)
+          const onExit = fn(
+            node,
+            prop as VaporDirectiveNode,
+            context as TransformContext<ElementNode>,
+          )
           if (onExit) exitFns.push(onExit)
         }
       }

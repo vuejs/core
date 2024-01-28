@@ -1,12 +1,30 @@
 import { type CodegenContext, genBlockFunctionContent } from '../generate'
-import type { BlockFunctionIRNode, IfIRNode } from '../ir'
+import { type BlockFunctionIRNode, IRNodeTypes, type IfIRNode } from '../ir'
 import { genExpression } from './expression'
 
-export function genIf(oper: IfIRNode, context: CodegenContext) {
-  const { pushFnCall, vaporHelper, pushNewline, push, withIndent } = context
+export function genIf(
+  oper: IfIRNode,
+  context: CodegenContext,
+  isNested = false,
+) {
+  const { pushFnCall, vaporHelper, pushNewline, push } = context
   const { condition, positive, negative } = oper
 
-  pushNewline(`const n${oper.id} = `)
+  let positiveArg = () => genBlockFunction(positive, context)
+  let negativeArg: false | (() => void) = false
+
+  if (negative) {
+    if (negative.type === IRNodeTypes.BLOCK_FUNCTION) {
+      negativeArg = () => genBlockFunction(negative, context)
+    } else {
+      negativeArg = () => {
+        push('() => ')
+        genIf(negative!, context, true)
+      }
+    }
+  }
+
+  if (!isNested) pushNewline(`const n${oper.id} = `)
   pushFnCall(
     vaporHelper('createIf'),
     () => {
@@ -14,15 +32,17 @@ export function genIf(oper: IfIRNode, context: CodegenContext) {
       genExpression(condition, context)
       push(')')
     },
-    () => genBlockFunction(positive),
-    !!negative && (() => genBlockFunction(negative!)),
+    positiveArg,
+    negativeArg,
   )
+}
 
-  function genBlockFunction(oper: BlockFunctionIRNode) {
-    push('() => {')
-    withIndent(() => {
-      genBlockFunctionContent(oper, context)
-    })
-    pushNewline('}')
-  }
+function genBlockFunction(oper: BlockFunctionIRNode, context: CodegenContext) {
+  const { pushNewline, push, withIndent } = context
+
+  push('() => {')
+  withIndent(() => {
+    genBlockFunctionContent(oper, context)
+  })
+  pushNewline('}')
 }
