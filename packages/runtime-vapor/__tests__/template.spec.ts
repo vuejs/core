@@ -4,12 +4,12 @@ describe('api: template', () => {
   test('create element', () => {
     const t = template('<div>')
     const root = t()
-    expect(root).toBeInstanceOf(DocumentFragment)
-    expect(root.childNodes[0]).toBeInstanceOf(HTMLDivElement)
+    expect(root).toBeInstanceOf(Array)
+    expect(root[0]).toBeInstanceOf(HTMLDivElement)
 
-    const div2 = t()
-    expect(div2).toBeInstanceOf(DocumentFragment)
-    expect(div2).not.toBe(root)
+    const root2 = t()
+    expect(root2).toBeInstanceOf(Array)
+    expect(root2).not.toBe(root)
   })
 
   test('create fragment', () => {

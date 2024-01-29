@@ -1,7 +1,9 @@
 import { renderWatch } from './renderWatch'
-import { type BlockFn, type Fragment, fragmentKey } from './render'
-import { effectScope, onEffectCleanup } from '@vue/reactivity'
+import { type Block, type Fragment, fragmentKey } from './render'
+import { type EffectScope, effectScope } from '@vue/reactivity'
 import { createComment, createTextNode, insert, remove } from './dom'
+
+type BlockFn = () => Block
 
 export const createIf = (
   condition: () => any,
@@ -11,8 +13,14 @@ export const createIf = (
 ): Fragment => {
   let branch: BlockFn | undefined
   let parent: ParentNode | undefined | null
+  let block: Block | undefined
+  let scope: EffectScope | undefined
   const anchor = __DEV__ ? createComment('if') : createTextNode('')
-  const fragment: Fragment = { nodes: [], anchor, [fragmentKey]: true }
+  const fragment: Fragment = {
+    nodes: [],
+    anchor,
+    [fragmentKey]: true,
+  }
 
   // TODO: SSR
   // if (isHydrating) {
@@ -24,23 +32,16 @@ export const createIf = (
     () => !!condition(),
     value => {
       parent ||= anchor.parentNode
+      if (block) {
+        scope!.stop()
+        remove(block, parent!)
+      }
       if ((branch = value ? b1 : b2)) {
-        let scope = effectScope()
-        let block = scope.run(branch)!
-
-        if (block instanceof DocumentFragment) {
-          block = Array.from(block.childNodes)
-        }
-        fragment.nodes = block
-
+        scope = effectScope()
+        fragment.nodes = block = scope.run(branch)!
         parent && insert(block, parent, anchor)
-
-        onEffectCleanup(() => {
-          parent ||= anchor.parentNode
-          scope.stop()
-          remove(block, parent!)
-        })
       } else {
+        scope = block = undefined
         fragment.nodes = []
       }
     },

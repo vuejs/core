@@ -1,7 +1,9 @@
 import { defineComponent } from 'vue'
 import {
+  append,
   children,
   createIf,
+  fragment,
   insert,
   nextTick,
   ref,
@@ -10,7 +12,6 @@ import {
   setText,
   template,
 } from '../src'
-import { NOOP } from '@vue/shared'
 import type { Mock } from 'vitest'
 
 let host: HTMLElement
@@ -102,5 +103,66 @@ describe('createIf', () => {
     expect(host.innerHTML).toBe('<div><p>zero</p><!--if--></div>')
     expect(spyIfFn!).toHaveBeenCalledTimes(1)
     expect(spyElseFn!).toHaveBeenCalledTimes(2)
+  })
+
+  test('should handle nested template', async () => {
+    // mock this template:
+    //  <template v-if="ok1">
+    //    Hello <template v-if="ok2">Vapor</template>
+    //  </template>
+
+    const ok1 = ref(true)
+    const ok2 = ref(true)
+
+    const t0 = template('Vapor')
+    const t1 = template('Hello ')
+    const t2 = fragment()
+    render(
+      defineComponent({
+        setup() {
+          // render
+          return (() => {
+            const n0 = t2()
+            append(
+              n0,
+              createIf(
+                () => ok1.value,
+                () => {
+                  const n2 = t1()
+                  append(
+                    n2,
+                    createIf(
+                      () => ok2.value,
+                      () => t0(),
+                    ),
+                  )
+                  return n2
+                },
+              ),
+            )
+            return n0
+          })()
+        },
+      }) as any,
+      {},
+      '#host',
+    )
+    expect(host.innerHTML).toBe('Hello Vapor<!--if--><!--if-->')
+
+    ok1.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
+
+    ok1.value = true
+    await nextTick()
+    expect(host.innerHTML).toBe('Hello Vapor<!--if--><!--if-->')
+
+    ok2.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('Hello <!--if--><!--if-->')
+
+    ok1.value = false
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--if-->')
   })
 })

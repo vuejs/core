@@ -1,4 +1,4 @@
-export const template = (str: string): (() => DocumentFragment) => {
+export function template(str: string): () => ChildNode[] {
   let cached = false
   let node: DocumentFragment
   return () => {
@@ -10,16 +10,20 @@ export const template = (str: string): (() => DocumentFragment) => {
       // first render: insert the node directly.
       // this removes it from the template fragment to avoid keeping two copies
       // of the inserted tree in memory, even if the template is used only once.
-      return (node = t.content).cloneNode(true) as DocumentFragment
+      return fragmentToNodes((node = t.content))
     } else {
       // repeated renders: clone from cache. This is more performant and
       // efficient when dealing with big lists where the template is repeated
       // many times.
-      return node.cloneNode(true) as DocumentFragment
+      return fragmentToNodes(node)
     }
   }
 }
 
-export function fragment(): () => Node[] {
+function fragmentToNodes(node: DocumentFragment): ChildNode[] {
+  return Array.from((node.cloneNode(true) as DocumentFragment).childNodes)
+}
+
+export function fragment(): () => ChildNode[] {
   return () => []
 }
