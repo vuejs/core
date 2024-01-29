@@ -169,7 +169,7 @@ export const defineSSRCustomElement = ((options: any) => {
  * of web component.
  */
 export const defineStandardCustomElement = ((options: any) => {
-  // @ts-ignore
+  // @ts-expect-error
   return defineCustomElement(options, hydrate, true)
 }) as typeof defineCustomElement
 
@@ -401,8 +401,8 @@ export class VueElement extends BaseClass {
           } else {
             this.dispatchEvent(
               new CustomEvent(event, {
-                detail: args
-              })
+                detail: args,
+              }),
             )
           }
         }

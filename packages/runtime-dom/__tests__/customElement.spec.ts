@@ -704,9 +704,9 @@ describe('defineCustomElement', () => {
             h('div', {
               onClick: () => {
                 emit('my-click', { detail: 1 })
-              }
+              },
             })
-        }
+        },
       })
       const E = defineStandardCustomElement(CompDef)
       customElements.define('my-standard-el-emits', E)
@@ -718,7 +718,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalledTimes(1)
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: 1
+        detail: 1,
       })
     })
 
@@ -730,9 +730,9 @@ describe('defineCustomElement', () => {
             h('div', {
               onClick: () => {
                 emit('my-click', { detail: 1 })
-              }
+              },
             })
-        }
+        },
       })
       const E = defineStandardCustomElement(CompDef)
       customElements.define('my-standard-el-no-bubbles', E)
@@ -754,9 +754,9 @@ describe('defineCustomElement', () => {
             h('div', {
               onClick: () => {
                 emit('my-click', { detail: 1, bubbles: true })
-              }
+              },
             })
-        }
+        },
       })
       const E = defineStandardCustomElement(CompDef)
       customElements.define('my-standard-el-bubbles', E)
@@ -769,7 +769,7 @@ describe('defineCustomElement', () => {
       e.shadowRoot!.childNodes[0].dispatchEvent(new CustomEvent('click'))
       expect(spy).toHaveBeenCalledTimes(1)
       expect(spy.mock.calls[0][0]).toMatchObject({
-        detail: 1
+        detail: 1,
       })
     })
   })
