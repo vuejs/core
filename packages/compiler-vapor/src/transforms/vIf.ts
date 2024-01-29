@@ -42,6 +42,7 @@ export function processIf(
     dir.exp = createSimpleExpression(`true`, false, loc)
   }
 
+  context.dynamic.dynamicFlags |= DynamicFlag.NON_TEMPLATE
   if (dir.name === 'if') {
     const id = context.reference()
     context.dynamic.dynamicFlags |= DynamicFlag.INSERT
@@ -58,8 +59,6 @@ export function processIf(
       })
     }
   } else {
-    context.dynamic.dynamicFlags |= DynamicFlag.NON_TEMPLATE
-
     // check the adjacent v-if
     const parent = context.parent!
     const siblings = parent.node.children

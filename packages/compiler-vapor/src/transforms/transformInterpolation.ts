@@ -27,7 +27,7 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
     )
   } else {
     const id = ctx.reference()
-    ctx.dynamic.dynamicFlags |= DynamicFlag.INSERT
+    ctx.dynamic.dynamicFlags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
     ctx.registerOperation({
       type: IRNodeTypes.CREATE_TEXT_NODE,
       loc: node.loc,

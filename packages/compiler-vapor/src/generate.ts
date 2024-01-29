@@ -318,12 +318,7 @@ function genChildren(children: IRDynamicChildren) {
   let offset = 0
   for (const [index, child] of Object.entries(children)) {
     const childrenLength = Object.keys(child.children).length
-    if (
-      child.dynamicFlags & DynamicFlag.NON_TEMPLATE ||
-      (child.dynamicFlags & DynamicFlag.INSERT &&
-        child.placeholder === null &&
-        childrenLength === 0)
-    ) {
+    if (child.dynamicFlags & DynamicFlag.NON_TEMPLATE) {
       offset--
       continue
     }
