@@ -103,7 +103,7 @@ export const genDefaultDynamic = (): IRDynamicInfo => ({
   id: null,
   dynamicFlags: 0,
   placeholder: null,
-  children: {},
+  children: [],
 })
 
 // TODO use class for better perf
@@ -313,9 +313,8 @@ function transformNode(
 
 function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
   const { children } = ctx.node
-  let i = 0
-  for (; i < children.length; i++) {
-    const child = children[i]
+
+  for (const [i, child] of children.entries()) {
     const childContext = createContext(child, ctx, i)
     transformNode(childContext)
     ctx.childrenTemplate.push(childContext.template)
@@ -331,9 +330,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
   let prevChildren: IRDynamicInfo[] = []
   let hasStatic = false
 
-  for (let index = 0; index < node.children.length; index++) {
-    const child = ctx.dynamic.children[index]
-
+  for (const [index, child] of ctx.dynamic.children.entries()) {
     if (!child || !(child.dynamicFlags & DynamicFlag.INSERT)) {
       if (prevChildren.length) {
         if (hasStatic) {
@@ -363,7 +360,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
 
     prevChildren.push(child)
 
-    if (index === node.children.length - 1) {
+    if (index === ctx.dynamic.children.length - 1) {
       ctx.registerOperation({
         type: IRNodeTypes.APPEND_NODE,
         loc: node.loc,
