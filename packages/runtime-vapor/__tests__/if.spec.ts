@@ -37,9 +37,7 @@ describe('createIf', () => {
 
     let spyIfFn: Mock<any, any>
     let spyElseFn: Mock<any, any>
-
-    let add = NOOP
-    let reset = NOOP
+    const count = ref(0)
 
     // templates can be reused through caching.
     const t0 = template('<div></div>')
@@ -48,10 +46,6 @@ describe('createIf', () => {
 
     const component = defineComponent({
       setup() {
-        const counter = ref(0)
-        add = () => counter.value++
-        reset = () => (counter.value = 0)
-
         // render
         return (() => {
           const n0 = t0()
@@ -61,7 +55,7 @@ describe('createIf', () => {
 
           insert(
             createIf(
-              () => counter.value,
+              () => count.value,
               // v-if
               (spyIfFn ||= vi.fn(() => {
                 const n2 = t1()
@@ -69,7 +63,7 @@ describe('createIf', () => {
                   0: [n3],
                 } = children(n2)
                 renderEffect(() => {
-                  setText(n3, counter.value)
+                  setText(n3, count.value)
                 })
                 return n2
               })),
@@ -91,19 +85,19 @@ describe('createIf', () => {
     expect(spyIfFn!).toHaveBeenCalledTimes(0)
     expect(spyElseFn!).toHaveBeenCalledTimes(1)
 
-    add()
+    count.value++
     await nextTick()
     expect(host.innerHTML).toBe('<div><p>1</p><!--if--></div>')
     expect(spyIfFn!).toHaveBeenCalledTimes(1)
     expect(spyElseFn!).toHaveBeenCalledTimes(1)
 
-    add()
+    count.value++
     await nextTick()
     expect(host.innerHTML).toBe('<div><p>2</p><!--if--></div>')
     expect(spyIfFn!).toHaveBeenCalledTimes(1)
     expect(spyElseFn!).toHaveBeenCalledTimes(1)
 
-    reset()
+    count.value = 0
     await nextTick()
     expect(host.innerHTML).toBe('<div><p>zero</p><!--if--></div>')
     expect(spyIfFn!).toHaveBeenCalledTimes(1)
