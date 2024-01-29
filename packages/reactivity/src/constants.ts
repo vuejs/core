@@ -25,6 +25,7 @@ export enum ReactiveFlags {
 export enum DirtyLevels {
   NotDirty = 0,
   QueryingDirty = 1,
-  MaybeDirty = 2,
-  Dirty = 3,
+  MaybeDirty_Recurse = 2,
+  MaybeDirty = 3,
+  Dirty = 4,
 }

@@ -482,8 +482,8 @@ describe('reactivity/computed', () => {
     c3.value
 
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_Recurse)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_Recurse)
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -550,8 +550,8 @@ describe('reactivity/computed', () => {
 
     c3.value
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_Recurse)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_Recurse)
 
     v1.value.v.value = 999
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
@@ -580,5 +580,27 @@ describe('reactivity/computed', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(`2`)
+  })
+
+  it('should not trigger effect scheduler by recurse computed effect', async () => {
+    const v = ref('Hello')
+    const c = computed(() => {
+      v.value += ' World'
+      return v.value
+    })
+    const Comp = {
+      setup: () => {
+        return () => c.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World')
+
+    v.value += ' World'
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World World World World')
   })
 })

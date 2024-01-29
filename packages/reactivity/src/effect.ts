@@ -76,7 +76,10 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (this._dirtyLevel === DirtyLevels.MaybeDirty) {
+    if (
+      this._dirtyLevel === DirtyLevels.MaybeDirty_Recurse ||
+      this._dirtyLevel === DirtyLevels.MaybeDirty
+    ) {
       this._dirtyLevel = DirtyLevels.QueryingDirty
       pauseTracking()
       for (let i = 0; i < this._depsLength; i++) {
@@ -309,7 +312,10 @@ export function triggerEffects(
         effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
       }
       effect.trigger()
-      if (!effect._runnings || effect.allowRecurse) {
+      if (
+        (!effect._runnings || effect.allowRecurse) &&
+        effect._dirtyLevel !== DirtyLevels.MaybeDirty_Recurse
+      ) {
         effect._shouldSchedule = false
         if (effect.scheduler) {
           queueEffectSchedulers.push(effect.scheduler)
