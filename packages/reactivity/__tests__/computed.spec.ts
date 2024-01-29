@@ -482,8 +482,12 @@ describe('reactivity/computed', () => {
     c3.value
 
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_ComputedSideEffect)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_ComputedSideEffect)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -550,8 +554,12 @@ describe('reactivity/computed', () => {
 
     c3.value
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_ComputedSideEffect)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty_ComputedSideEffect)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
 
     v1.value.v.value = 999
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
