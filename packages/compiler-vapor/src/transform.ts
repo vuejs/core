@@ -244,7 +244,7 @@ export function transform(
     template: [],
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
-      dynamicFlags: DynamicFlag.REFERENCED | DynamicFlag.INSERT,
+      dynamicFlags: DynamicFlag.REFERENCED,
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
