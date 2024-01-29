@@ -28,6 +28,7 @@ export function insert(
     if (index > -1) {
       parent.splice(index, 0, block)
     } else {
+      if (anchor) throw new Error('The child can not be found in the parent.')
       parent.push(block)
     }
   } else {
@@ -54,9 +55,9 @@ export function append(parent: ParentBlock, ...blocks: Block[]) {
 export function remove(block: Block, parent: ParentBlock) {
   if (isArray(parent)) {
     const index = parent.indexOf(block)
-    if (index > -1) {
-      parent.splice(index, 1)
-    }
+    if (index === -1)
+      throw Error('The node to be removed is not a child of this node.')
+    parent.splice(index, 1)
   } else {
     normalizeBlock(block).forEach(node => parent.removeChild(node))
   }
