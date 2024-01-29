@@ -1,6 +1,6 @@
 import { NodeTypes, type SimpleExpressionNode } from '@vue/compiler-dom'
 import type { NodeTransform } from '../transform'
-import { IRNodeTypes } from '../ir'
+import { DynamicFlag, IRNodeTypes } from '../ir'
 
 export const transformInterpolation: NodeTransform = (node, ctx) => {
   if (node.type !== NodeTypes.INTERPOLATION) return
@@ -27,7 +27,7 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
     )
   } else {
     const id = ctx.reference()
-    ctx.dynamic.ghost = true
+    ctx.dynamic.dynamicFlags |= DynamicFlag.INSERT
     ctx.registerOperation({
       type: IRNodeTypes.CREATE_TEXT_NODE,
       loc: node.loc,

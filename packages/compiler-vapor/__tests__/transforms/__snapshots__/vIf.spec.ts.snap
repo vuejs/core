@@ -21,14 +21,15 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > comment between branches 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, children as _children, createIf as _createIf, prepend as _prepend, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const t1 = _template("<!--foo--><p></p>")
   const t2 = _template("<!--bar-->fine")
-  const t3 = _fragment()
+  const t3 = _template("<input>")
   const n0 = t3()
+  const { 0: [n5],} = _children(n0)
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -40,6 +41,9 @@ export function render(_ctx) {
     return n4
   }))
   _prepend(n0, n1)
+  _renderEffect(() => {
+    _setText(n5, _ctx.text)
+  })
   return n0
 }"
 `;

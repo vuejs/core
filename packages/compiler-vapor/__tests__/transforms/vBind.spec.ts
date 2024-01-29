@@ -1,5 +1,10 @@
 import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
-import { IRNodeTypes, transformElement, transformVBind } from '../../src'
+import {
+  DynamicFlag,
+  IRNodeTypes,
+  transformElement,
+  transformVBind,
+} from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVBind = makeCompile({
@@ -15,7 +20,7 @@ describe('compiler v-bind', () => {
 
     expect(ir.dynamic.children[0]).toMatchObject({
       id: 1,
-      referenced: true,
+      dynamicFlags: DynamicFlag.REFERENCED,
     })
     expect(ir.template[0]).toMatchObject({
       type: IRNodeTypes.TEMPLATE_FACTORY,

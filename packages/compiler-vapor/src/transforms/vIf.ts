@@ -12,9 +12,12 @@ import {
 import {
   type TransformContext,
   createStructuralDirectiveTransform,
+  genDefaultDynamic,
 } from '../transform'
 import {
   type BlockFunctionIRNode,
+  DynamicFlag,
+  type IRDynamicInfo,
   IRNodeTypes,
   type OperationNode,
   type VaporDirectiveNode,
@@ -41,7 +44,7 @@ export function processIf(
 
   if (dir.name === 'if') {
     const id = context.reference()
-    context.dynamic.ghost = true
+    context.dynamic.dynamicFlags |= DynamicFlag.INSERT
     const [branch, onExit] = createIfBranch(node, context)
 
     return () => {
@@ -55,10 +58,13 @@ export function processIf(
       })
     }
   } else {
+    context.dynamic.dynamicFlags |= DynamicFlag.NON_TEMPLATE
+
     // check the adjacent v-if
     const parent = context.parent!
     const siblings = parent.node.children
     const templates = parent.childrenTemplate
+    const siblingsDynamic = parent.dynamic.children
 
     const comments = []
     let sibling: TemplateChildNode | undefined
@@ -66,20 +72,18 @@ export function processIf(
     while (i-- >= -1) {
       sibling = siblings[i]
 
-      if (sibling) {
-        if (sibling.type === NodeTypes.COMMENT) {
-          __DEV__ && comments.unshift(sibling)
-          templates[i] = null
-          continue
-        } else if (
-          sibling.type === NodeTypes.TEXT &&
-          !sibling.content.trim().length
-        ) {
-          templates[i] = null
-          continue
-        }
+      if (
+        sibling &&
+        (sibling.type === NodeTypes.COMMENT ||
+          (sibling.type === NodeTypes.TEXT && !sibling.content.trim().length))
+      ) {
+        if (__DEV__ && sibling.type === NodeTypes.COMMENT)
+          comments.unshift(sibling)
+        siblingsDynamic[i].dynamicFlags |= DynamicFlag.NON_TEMPLATE
+        templates[i] = null
+      } else {
+        break
       }
-      break
     }
 
     const { operation } = context.block
@@ -150,13 +154,9 @@ export function createIfBranch(
     loc: node.loc,
     node,
     templateIndex: -1,
-    dynamic: {
-      id: null,
-      referenced: true,
-      ghost: true,
-      placeholder: null,
-      children: {},
-    },
+    dynamic: extend(genDefaultDynamic(), {
+      dynamicFlags: DynamicFlag.REFERENCED | DynamicFlag.INSERT,
+    } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
   }
@@ -164,7 +164,7 @@ export function createIfBranch(
   const exitBlock = context.enterBlock(branch)
   context.reference()
   const onExit = () => {
-    context.template += context.childrenTemplate.join('')
+    context.template += context.childrenTemplate.filter(Boolean).join('')
     context.registerTemplate()
     exitBlock()
   }

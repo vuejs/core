@@ -9,6 +9,7 @@ import {
 } from '@vue/compiler-dom'
 import {
   type BlockFunctionIRNode,
+  DynamicFlag,
   type IRDynamicChildren,
   IRNodeTypes,
   type OperationNode,
@@ -317,20 +318,27 @@ function genChildren(children: IRDynamicChildren) {
   let offset = 0
   for (const [index, child] of Object.entries(children)) {
     const childrenLength = Object.keys(child.children).length
-    if (child.ghost && child.placeholder === null && childrenLength === 0) {
+    if (
+      child.dynamicFlags & DynamicFlag.NON_TEMPLATE ||
+      (child.dynamicFlags & DynamicFlag.INSERT &&
+        child.placeholder === null &&
+        childrenLength === 0)
+    ) {
       offset--
       continue
     }
 
-    code += ` ${Number(index) + offset}: [`
-
-    const id = child.ghost ? child.placeholder : child.id
-    if (id !== null) code += `n${id}`
-
+    const idx = Number(index) + offset
+    const id =
+      child.dynamicFlags & DynamicFlag.INSERT ? child.placeholder : child.id
     const childrenString = childrenLength && genChildren(child.children)
-    if (childrenString) code += `, ${childrenString}`
 
-    code += '],'
+    if (id !== null || childrenString) {
+      code += ` ${idx}: [`
+      if (id !== null) code += `n${id}`
+      if (childrenString) code += `, ${childrenString}`
+      code += '],'
+    }
   }
 
   if (!code) return ''

@@ -276,6 +276,7 @@ describe('compiler: v-if', () => {
       <p v-else-if="orNot"/>
       <!--bar-->
       <template v-else>fine</template>
+      <input v-text="text" />
     `)
     expect(code).matchSnapshot()
     expect(ir.template).lengthOf(4)
@@ -292,7 +293,10 @@ describe('compiler: v-if', () => {
         template: '<!--bar-->fine',
         type: IRNodeTypes.TEMPLATE_FACTORY,
       },
-      { type: IRNodeTypes.FRAGMENT_FACTORY },
+      {
+        type: IRNodeTypes.TEMPLATE_FACTORY,
+        template: '<input>',
+      },
     ])
   })
 

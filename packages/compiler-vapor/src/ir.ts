@@ -180,11 +180,25 @@ export type OperationNode =
 
 export type BlockIRNode = RootIRNode | BlockFunctionIRNode
 
+export enum DynamicFlag {
+  NONE = 0,
+  /**
+   * This node is referenced and needs to be saved as a variable.
+   */
+  REFERENCED = 1,
+  /**
+   * This node is not generated from template, but is generated dynamically.
+   */
+  NON_TEMPLATE = 1 << 1,
+  /**
+   * This node needs to be inserted back into the template.
+   */
+  INSERT = 1 << 2,
+}
+
 export interface IRDynamicInfo {
   id: number | null
-  referenced: boolean
-  /** created by DOM API */
-  ghost: boolean
+  dynamicFlags: DynamicFlag
   placeholder: number | null
   children: IRDynamicChildren
 }

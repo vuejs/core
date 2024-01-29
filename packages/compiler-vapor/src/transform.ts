@@ -14,18 +14,17 @@ import {
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
 import {
+  type BlockIRNode,
+  DynamicFlag,
+  type FragmentFactoryIRNode,
+  type HackOptions,
   type IRDynamicInfo,
   type IRExpression,
   IRNodeTypes,
   type OperationNode,
   type RootIRNode,
-} from './ir'
-import type {
-  BlockIRNode,
-  FragmentFactoryIRNode,
-  HackOptions,
-  TemplateFactoryIRNode,
-  VaporDirectiveNode,
+  type TemplateFactoryIRNode,
+  type VaporDirectiveNode,
 } from './ir'
 
 export type NodeTransform = (
@@ -100,6 +99,13 @@ const defaultOptions = {
   onWarn: defaultOnWarn,
 }
 
+export const genDefaultDynamic = (): IRDynamicInfo => ({
+  id: null,
+  dynamicFlags: 0,
+  placeholder: null,
+  children: {},
+})
+
 // TODO use class for better perf
 function createRootContext(
   root: RootIRNode,
@@ -135,7 +141,7 @@ function createRootContext(
     increaseId: () => globalId++,
     reference() {
       if (this.dynamic.id !== null) return this.dynamic.id
-      this.dynamic.referenced = true
+      this.dynamic.dynamicFlags |= DynamicFlag.REFERENCED
       return (this.dynamic.id = this.increaseId())
     },
     registerEffect(expressions, operations) {
@@ -220,14 +226,8 @@ function createContext<T extends TemplateChildNode>(
 
     template: '',
     childrenTemplate: [],
-    dynamic: {
-      id: null,
-      referenced: false,
-      ghost: false,
-      placeholder: null,
-      children: {},
-    },
-  })
+    dynamic: genDefaultDynamic(),
+  } satisfies Partial<TransformContext<T>>)
   return ctx
 }
 
@@ -243,13 +243,9 @@ export function transform(
     loc: root.loc,
     template: [],
     templateIndex: -1,
-    dynamic: {
-      id: null,
-      referenced: true,
-      ghost: true,
-      placeholder: null,
-      children: {},
-    },
+    dynamic: extend(genDefaultDynamic(), {
+      dynamicFlags: DynamicFlag.REFERENCED | DynamicFlag.INSERT,
+    } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
   }
@@ -287,6 +283,7 @@ function transformNode(
       node = context.node
     }
   }
+
   switch (node.type) {
     case NodeTypes.ROOT:
     case NodeTypes.ELEMENT: {
@@ -322,14 +319,7 @@ function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
     const childContext = createContext(child, ctx, i)
     transformNode(childContext)
     ctx.childrenTemplate.push(childContext.template)
-    if (
-      childContext.dynamic.ghost ||
-      childContext.dynamic.referenced ||
-      childContext.dynamic.placeholder ||
-      Object.keys(childContext.dynamic.children).length
-    ) {
-      ctx.dynamic.children[i] = childContext.dynamic
-    }
+    ctx.dynamic.children[i] = childContext.dynamic
   }
 
   processDynamicChildren(ctx)
@@ -344,7 +334,7 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
   for (let index = 0; index < node.children.length; index++) {
     const child = ctx.dynamic.children[index]
 
-    if (!child || !child.ghost) {
+    if (!child || !(child.dynamicFlags & DynamicFlag.INSERT)) {
       if (prevChildren.length) {
         if (hasStatic) {
           ctx.childrenTemplate[index - prevChildren.length] = `<!>`
