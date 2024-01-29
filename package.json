@@ -74,7 +74,7 @@
     "@types/semver": "^7.5.6",
     "@typescript-eslint/eslint-plugin": "^6.18.1",
     "@typescript-eslint/parser": "^6.18.1",
-    "@vitest/coverage-istanbul": "^1.2.1",
+    "@vitest/coverage-istanbul": "^1.2.2",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
@@ -98,7 +98,7 @@
     "prettier": "^3.2.2",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.2",
-    "puppeteer": "~21.7.0",
+    "puppeteer": "~21.9.0",
     "rimraf": "^5.0.5",
     "rollup": "^4.1.4",
     "rollup-plugin-dts": "^6.1.0",
@@ -113,6 +113,6 @@
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.12",
-    "vitest": "^1.2.1"
+    "vitest": "^1.2.2"
   }
 }
