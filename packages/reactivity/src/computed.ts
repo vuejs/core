@@ -46,9 +46,9 @@ export class ComputedRefImpl<T> {
       () => {
         if (
           this.effect._runnings ||
-          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_Recurse
+          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
         ) {
-          triggerRefValue(this, DirtyLevels.MaybeDirty_Recurse)
+          triggerRefValue(this, DirtyLevels.MaybeDirty_ComputedSideEffect)
         } else {
           triggerRefValue(this, DirtyLevels.MaybeDirty)
         }
@@ -69,8 +69,8 @@ export class ComputedRefImpl<T> {
       triggerRefValue(self, DirtyLevels.Dirty)
     }
     trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_Recurse) {
-      triggerRefValue(self, DirtyLevels.MaybeDirty_Recurse)
+    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
+      triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
   }

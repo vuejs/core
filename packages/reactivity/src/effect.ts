@@ -77,7 +77,7 @@ export class ReactiveEffect<T = any> {
 
   public get dirty() {
     if (
-      this._dirtyLevel === DirtyLevels.MaybeDirty_Recurse ||
+      this._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect ||
       this._dirtyLevel === DirtyLevels.MaybeDirty
     ) {
       this._dirtyLevel = DirtyLevels.QueryingDirty
@@ -314,7 +314,7 @@ export function triggerEffects(
       effect.trigger()
       if (
         (!effect._runnings || effect.allowRecurse) &&
-        effect._dirtyLevel !== DirtyLevels.MaybeDirty_Recurse
+        effect._dirtyLevel !== DirtyLevels.MaybeDirty_ComputedSideEffect
       ) {
         effect._shouldSchedule = false
         if (effect.scheduler) {
