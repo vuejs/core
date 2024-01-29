@@ -74,7 +74,7 @@ describe('createIf', () => {
                 return n4
               })),
             ),
-            n1,
+            n1 as any as ParentNode,
           )
           return n0
         })()

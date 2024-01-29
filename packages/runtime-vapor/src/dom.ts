@@ -5,7 +5,7 @@ export * from './dom/patchProp'
 export * from './dom/templateRef'
 export * from './dom/on'
 
-function normalizeBlock(block: Block): Node[] {
+export function normalizeBlock(block: Block): Node[] {
   const nodes: Node[] = []
   if (block instanceof Node) {
     nodes.push(block)
