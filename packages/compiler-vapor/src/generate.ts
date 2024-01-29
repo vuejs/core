@@ -10,7 +10,7 @@ import {
 import {
   type BlockFunctionIRNode,
   DynamicFlag,
-  type IRDynamicChildren,
+  type IRDynamicInfo,
   IRNodeTypes,
   type OperationNode,
   type RootIRNode,
@@ -313,20 +313,23 @@ export function generate(
   }
 }
 
-function genChildren(children: IRDynamicChildren) {
+function genChildren(children: IRDynamicInfo[]) {
   let code = ''
   let offset = 0
-  for (const [index, child] of Object.entries(children)) {
-    const childrenLength = Object.keys(child.children).length
+
+  for (const [index, child] of children.entries()) {
     if (child.dynamicFlags & DynamicFlag.NON_TEMPLATE) {
       offset--
-      continue
     }
 
     const idx = Number(index) + offset
     const id =
-      child.dynamicFlags & DynamicFlag.INSERT ? child.placeholder : child.id
-    const childrenString = childrenLength && genChildren(child.children)
+      child.dynamicFlags & DynamicFlag.REFERENCED
+        ? child.dynamicFlags & DynamicFlag.INSERT
+          ? child.anchor
+          : child.id
+        : null
+    const childrenString = genChildren(child.children)
 
     if (id !== null || childrenString) {
       code += ` ${idx}: [`

@@ -102,7 +102,7 @@ const defaultOptions = {
 export const genDefaultDynamic = (): IRDynamicInfo => ({
   id: null,
   dynamicFlags: 0,
-  placeholder: null,
+  anchor: null,
   children: [],
 })
 
@@ -335,7 +335,9 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
       if (prevChildren.length) {
         if (hasStatic) {
           ctx.childrenTemplate[index - prevChildren.length] = `<!>`
-          const anchor = (prevChildren[0].placeholder = ctx.increaseId())
+
+          prevChildren[0].dynamicFlags -= DynamicFlag.NON_TEMPLATE
+          const anchor = (prevChildren[0].anchor = ctx.increaseId())
 
           ctx.registerOperation({
             type: IRNodeTypes.INSERT_NODE,

@@ -199,7 +199,7 @@ export enum DynamicFlag {
 export interface IRDynamicInfo {
   id: number | null
   dynamicFlags: DynamicFlag
-  placeholder: number | null
+  anchor: number | null
   children: IRDynamicInfo[]
 }
 
