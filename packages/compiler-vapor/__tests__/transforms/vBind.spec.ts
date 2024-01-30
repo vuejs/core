@@ -20,7 +20,7 @@ describe('compiler v-bind', () => {
 
     expect(ir.dynamic.children[0]).toMatchObject({
       id: 1,
-      dynamicFlags: DynamicFlag.REFERENCED,
+      flags: DynamicFlag.REFERENCED,
     })
     expect(ir.template[0]).toMatchObject({
       type: IRNodeTypes.TEMPLATE_FACTORY,

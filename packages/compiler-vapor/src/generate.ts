@@ -280,14 +280,14 @@ function genChildren(children: IRDynamicInfo[]) {
   let offset = 0
 
   for (const [index, child] of children.entries()) {
-    if (child.dynamicFlags & DynamicFlag.NON_TEMPLATE) {
+    if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
     }
 
     const idx = Number(index) + offset
     const id =
-      child.dynamicFlags & DynamicFlag.REFERENCED
-        ? child.dynamicFlags & DynamicFlag.INSERT
+      child.flags & DynamicFlag.REFERENCED
+        ? child.flags & DynamicFlag.INSERT
           ? child.anchor
           : child.id
         : null

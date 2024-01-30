@@ -101,7 +101,7 @@ const defaultOptions = {
 
 export const genDefaultDynamic = (): IRDynamicInfo => ({
   id: null,
-  dynamicFlags: 0,
+  flags: DynamicFlag.NONE,
   anchor: null,
   children: [],
 })
@@ -141,7 +141,7 @@ function createRootContext(
     increaseId: () => globalId++,
     reference() {
       if (this.dynamic.id !== null) return this.dynamic.id
-      this.dynamic.dynamicFlags |= DynamicFlag.REFERENCED
+      this.dynamic.flags |= DynamicFlag.REFERENCED
       return (this.dynamic.id = this.increaseId())
     },
     registerEffect(expressions, operations) {
@@ -244,7 +244,7 @@ export function transform(
     template: [],
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
-      dynamicFlags: DynamicFlag.REFERENCED,
+      flags: DynamicFlag.REFERENCED,
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
@@ -331,12 +331,12 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
   let hasStatic = false
 
   for (const [index, child] of ctx.dynamic.children.entries()) {
-    if (!child || !(child.dynamicFlags & DynamicFlag.INSERT)) {
+    if (!child || !(child.flags & DynamicFlag.INSERT)) {
       if (prevChildren.length) {
         if (hasStatic) {
           ctx.childrenTemplate[index - prevChildren.length] = `<!>`
 
-          prevChildren[0].dynamicFlags -= DynamicFlag.NON_TEMPLATE
+          prevChildren[0].flags -= DynamicFlag.NON_TEMPLATE
           const anchor = (prevChildren[0].anchor = ctx.increaseId())
 
           ctx.registerOperation({

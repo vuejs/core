@@ -42,10 +42,10 @@ export function processIf(
     dir.exp = createSimpleExpression(`true`, false, loc)
   }
 
-  context.dynamic.dynamicFlags |= DynamicFlag.NON_TEMPLATE
+  context.dynamic.flags |= DynamicFlag.NON_TEMPLATE
   if (dir.name === 'if') {
     const id = context.reference()
-    context.dynamic.dynamicFlags |= DynamicFlag.INSERT
+    context.dynamic.flags |= DynamicFlag.INSERT
     const [branch, onExit] = createIfBranch(node, context)
 
     return () => {
@@ -78,7 +78,7 @@ export function processIf(
       ) {
         if (__DEV__ && sibling.type === NodeTypes.COMMENT)
           comments.unshift(sibling)
-        siblingsDynamic[i].dynamicFlags |= DynamicFlag.NON_TEMPLATE
+        siblingsDynamic[i].flags |= DynamicFlag.NON_TEMPLATE
         templates[i] = null
       } else {
         break
@@ -154,7 +154,7 @@ export function createIfBranch(
     node,
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
-      dynamicFlags: DynamicFlag.REFERENCED,
+      flags: DynamicFlag.REFERENCED,
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
