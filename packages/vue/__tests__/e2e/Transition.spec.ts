@@ -1748,20 +1748,20 @@ describe('e2e: Transition', () => {
               Comp: {
                 setup() {
                   return () => h('div', { class: 'test' }, 'content')
-                }
-              }
+                },
+              },
             },
             setup: () => {
               const toggle = ref(false)
               const click = () => (toggle.value = !toggle.value)
               return { toggle, click }
-            }
+            },
           }).mount('#app')
         })
 
         expect(await html('#target')).toBe('<!-- comment --><!--v-if-->')
         expect(await html('#container')).toBe(
-          '<!--teleport start--><!--teleport end-->'
+          '<!--teleport start--><!--teleport end-->',
         )
 
         const classWhenTransitionStart = () =>
@@ -1779,38 +1779,38 @@ describe('e2e: Transition', () => {
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
           'v-enter-from',
-          'v-enter-active'
+          'v-enter-active',
         ])
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
           'v-enter-active',
-          'v-enter-to'
+          'v-enter-to',
         ])
         await transitionFinish()
         expect(await html('#target')).toBe(
-          '<!-- comment --><div class="test">content</div>'
+          '<!-- comment --><div class="test">content</div>',
         )
 
         // leave
         expect(await classWhenTransitionStart()).toStrictEqual([
           'test',
           'v-leave-from',
-          'v-leave-active'
+          'v-leave-active',
         ])
         await nextFrame()
         expect(await classList('.test')).toStrictEqual([
           'test',
           'v-leave-active',
-          'v-leave-to'
+          'v-leave-to',
         ])
         await transitionFinish()
         expect(await html('#target')).toBe('<!-- comment --><!--v-if-->')
         expect(await html('#container')).toBe(
-          '<!--teleport start--><!--teleport end-->'
+          '<!--teleport start--><!--teleport end-->',
         )
       },
-      E2E_TIMEOUT
+      E2E_TIMEOUT,
     )
   })
 
