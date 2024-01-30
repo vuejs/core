@@ -17,7 +17,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > custom directive > basic 1`] = `
-"import { template as _template, children as _children, withDirectives as _withDirectives, resolveDirective("vTest") as _resolveDirective("vTest"), resolveDirective("vHello") as _resolveDirective("vHello") } from 'vue/vapor';
+"import { template as _template, children as _children, resolveDirective("vTest") as _resolveDirective("vTest"), resolveDirective("vHello") as _resolveDirective("vHello"), withDirectives as _withDirectives } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")

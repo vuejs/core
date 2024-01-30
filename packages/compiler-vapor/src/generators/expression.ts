@@ -8,23 +8,27 @@ import {
 import { isGloballyAllowed, isString, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
 import type { IRExpression } from '../ir'
-import type { CodegenContext } from '../generate'
+import {
+  type CodeFragment,
+  type CodegenContext,
+  buildCodeFragment,
+} from '../generate'
 
 export function genExpression(
   node: IRExpression,
   context: CodegenContext,
   knownIds: Record<string, number> = Object.create(null),
-): void {
+): CodeFragment[] {
   const {
-    push,
     options: { prefixIdentifiers },
   } = context
-  if (isString(node)) return push(node)
+  if (isString(node)) return [node]
 
   const { content: rawExpr, ast, isStatic, loc } = node
   if (isStatic) {
-    return push(JSON.stringify(rawExpr), NewlineType.None, loc)
+    return [[JSON.stringify(rawExpr), NewlineType.None, loc]]
   }
+
   if (
     __BROWSER__ ||
     !prefixIdentifiers ||
@@ -34,12 +38,12 @@ export function genExpression(
     isGloballyAllowed(rawExpr) ||
     isLiteralWhitelisted(rawExpr)
   ) {
-    return push(rawExpr, NewlineType.None, loc)
+    return [[rawExpr, NewlineType.None, loc]]
   }
 
   if (ast === null) {
     // the expression is a simple identifier
-    return genIdentifier(rawExpr, context, loc)
+    return [genIdentifier(rawExpr, context, loc)]
   }
 
   const ids: Identifier[] = []
@@ -55,6 +59,7 @@ export function genExpression(
   )
   if (ids.length) {
     ids.sort((a, b) => a.start! - b.start!)
+    const [frag, push] = buildCodeFragment()
     ids.forEach((id, i) => {
       // range is offset by -1 due to the wrapping parens when parsed
       const start = id.start! - 1
@@ -62,21 +67,24 @@ export function genExpression(
       const last = ids[i - 1]
 
       const leadingText = rawExpr.slice(last ? last.end! - 1 : 0, start)
-      if (leadingText.length) push(leadingText, NewlineType.Unknown)
+      if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
       const source = rawExpr.slice(start, end)
-      genIdentifier(source, context, {
-        start: advancePositionWithClone(node.loc.start, source, start),
-        end: advancePositionWithClone(node.loc.start, source, end),
-        source,
-      })
+      push(
+        genIdentifier(source, context, {
+          start: advancePositionWithClone(node.loc.start, source, start),
+          end: advancePositionWithClone(node.loc.start, source, end),
+          source,
+        }),
+      )
 
       if (i === ids.length - 1 && end < rawExpr.length) {
-        push(rawExpr.slice(end), NewlineType.Unknown)
+        push([rawExpr.slice(end), NewlineType.Unknown])
       }
     })
+    return frag
   } else {
-    push(rawExpr, NewlineType.Unknown)
+    return [[rawExpr, NewlineType.Unknown]]
   }
 }
 
@@ -84,9 +92,9 @@ const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 function genIdentifier(
   id: string,
-  { options, vaporHelper, push }: CodegenContext,
+  { options, vaporHelper }: CodegenContext,
   loc?: SourceLocation,
-): void {
+): CodeFragment {
   const { inline, bindingMetadata } = options
   let name: string | undefined = id
   if (inline) {
@@ -102,5 +110,5 @@ function genIdentifier(
   } else {
     id = `_ctx.${id}`
   }
-  push(id, NewlineType.None, loc, name)
+  return [id, NewlineType.None, loc, name]
 }

@@ -1,41 +1,41 @@
 import { camelize, isString } from '@vue/shared'
 import { genExpression } from './expression'
 import type { SetModelValueIRNode } from '../ir'
-import type { CodegenContext } from '../generate'
+import type { CodeFragment, CodegenContext } from '../generate'
 
 export function genSetModelValue(
   oper: SetModelValueIRNode,
   context: CodegenContext,
-) {
+): CodeFragment[] {
   const {
     vaporHelper,
-    push,
     newline,
-    pushCall,
+    call,
     options: { isTS },
   } = context
 
-  newline()
-  pushCall(
-    vaporHelper('on'),
-    // 1st arg: event name
-    () => push(`n${oper.element}`),
-    // 2nd arg: event name
-    () => {
-      if (isString(oper.key)) {
-        push(JSON.stringify(`update:${camelize(oper.key)}`))
-      } else {
-        push('`update:${')
-        genExpression(oper.key, context)
-        push('}`')
-      }
-    },
-    // 3rd arg: event handler
-    () => {
-      push((isTS ? `($event: any)` : `$event`) + ' => ((')
+  const name = genName()
+  const handler = genHandler()
+
+  return [
+    newline(),
+    ...call(vaporHelper('on'), [`n${oper.element}`], name, handler),
+  ]
+
+  function genName(): CodeFragment[] {
+    if (isString(oper.key)) {
+      return [JSON.stringify(`update:${camelize(oper.key)}`)]
+    } else {
+      return ['`update:${', ...genExpression(oper.key, context), '}`']
+    }
+  }
+
+  function genHandler(): CodeFragment[] {
+    return [
+      (isTS ? `($event: any)` : `$event`) + ' => ((',
       // TODO handle not a ref
-      genExpression(oper.value, context)
-      push(') = $event)')
-    },
-  )
+      ...genExpression(oper.value, context),
+      ') = $event)',
+    ]
+  }
 }

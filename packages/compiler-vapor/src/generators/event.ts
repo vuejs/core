@@ -1,5 +1,5 @@
 import { isMemberExpression } from '@vue/compiler-dom'
-import type { CodegenContext } from '../generate'
+import type { CodeFragment, CodegenContext } from '../generate'
 import type { SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
 
@@ -7,60 +7,38 @@ import { genExpression } from './expression'
 const fnExpRE =
   /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
-export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
-  const {
-    vaporHelper,
-    push,
-    newline,
-    pushMulti,
-    pushCall,
-    options: ctxOptions,
-  } = context
+export function genSetEvent(
+  oper: SetEventIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { vaporHelper, newline, call, options: ctxOptions } = context
   const { keys, nonKeys, options } = oper.modifiers
 
-  newline()
-  pushCall(
-    vaporHelper('on'),
-    // 1st arg: event name
-    () => push(`n${oper.element}`),
-    // 2nd arg: event name
-    () => {
-      if (oper.keyOverride) {
-        const find = JSON.stringify(oper.keyOverride[0])
-        const replacement = JSON.stringify(oper.keyOverride[1])
-        pushMulti(['(', ')'], () => genExpression(oper.key, context))
-        push(` === ${find} ? ${replacement} : `)
-        pushMulti(['(', ')'], () => genExpression(oper.key, context))
-      } else {
-        genExpression(oper.key, context)
-      }
-    },
-    // 3rd arg: event handler
-    () => {
-      const pushWithKeys = (fn: () => void) => {
-        push(`${vaporHelper('withKeys')}(`)
-        fn()
-        push(`, ${genArrayExpression(keys)})`)
-      }
-      const pushWithModifiers = (fn: () => void) => {
-        push(`${vaporHelper('withModifiers')}(`)
-        fn()
-        push(`, ${genArrayExpression(nonKeys)})`)
-      }
-      const pushNoop = (fn: () => void) => fn()
+  const name = genName()
+  const handler = genFinalizedHandler()
+  const opt = !!options.length && [
+    `{ ${options.map(v => `${v}: true`).join(', ')} }`,
+  ]
 
-      ;(keys.length ? pushWithKeys : pushNoop)(() =>
-        (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
-          genEventHandler()
-        }),
-      )
-    },
-    // 4th arg, gen options
-    !!options.length &&
-      (() => push(`{ ${options.map(v => `${v}: true`).join(', ')} }`)),
-  )
+  return [
+    newline(),
+    ...call(vaporHelper('on'), [`n${oper.element}`], name, handler, opt),
+  ]
 
-  function genEventHandler() {
+  function genName(): CodeFragment[] {
+    const expr = genExpression(oper.key, context)
+    // TODO unit test
+    if (oper.keyOverride) {
+      const find = JSON.stringify(oper.keyOverride[0])
+      const replacement = JSON.stringify(oper.keyOverride[1])
+      const wrapped: CodeFragment[] = ['(', ...expr, ')']
+      return [...wrapped, ` === ${find} ? ${replacement} : `, ...wrapped]
+    } else {
+      return genExpression(oper.key, context)
+    }
+  }
+
+  function genEventHandler(): CodeFragment[] {
     const exp = oper.value
     if (exp && exp.content.trim()) {
       const isMemberExp = isMemberExpression(exp.content, ctxOptions)
@@ -68,24 +46,52 @@ export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
       const hasMultipleStatements = exp.content.includes(`;`)
 
       if (isInlineStatement) {
-        push('$event => ')
-        push(hasMultipleStatements ? '{' : '(')
         const knownIds = Object.create(null)
         knownIds['$event'] = 1
-        genExpression(exp, context, knownIds)
-        push(hasMultipleStatements ? '}' : ')')
-      } else if (isMemberExp) {
-        push('(...args) => (')
-        genExpression(exp, context)
-        push(' && ')
-        genExpression(exp, context)
-        push('(...args))')
+
+        return [
+          '$event => ',
+          hasMultipleStatements ? '{' : '(',
+          ...genExpression(exp, context, knownIds),
+          hasMultipleStatements ? '}' : ')',
+        ]
       } else {
-        genExpression(exp, context)
+        const expr = genExpression(exp, context)
+        if (isMemberExp) {
+          return ['(...args) => (', ...expr, ' && ', ...expr, '(...args))']
+        } else {
+          return expr
+        }
       }
-    } else {
-      push('() => {}')
     }
+    return ['() => {}']
+  }
+
+  function genFinalizedHandler(): CodeFragment[] {
+    let expr = genEventHandler()
+
+    if (nonKeys.length) {
+      expr = [
+        vaporHelper('withModifiers'),
+        '(',
+        ...expr,
+        ', ',
+        genArrayExpression(nonKeys),
+        ')',
+      ]
+    }
+    if (keys.length) {
+      expr = [
+        vaporHelper('withKeys'),
+        '(',
+        ...expr,
+        ', ',
+        genArrayExpression(keys),
+        ')',
+      ]
+    }
+
+    return expr
   }
 }
 

@@ -1,86 +1,73 @@
 import { createSimpleExpression, isSimpleIdentifier } from '@vue/compiler-dom'
 import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
-import type { CodegenContext } from '../generate'
+import type { CodeFragment, CodegenContext } from '../generate'
 import type { WithDirectiveIRNode } from '../ir'
 
 export function genWithDirective(
   opers: WithDirectiveIRNode[],
   context: CodegenContext,
 ) {
-  const {
-    push,
-    newline,
-    pushCall,
-    pushMulti,
-    vaporHelper,
-    options: { bindingMetadata },
-  } = context
+  const { newline, call, multi, vaporHelper } = context
 
-  newline()
-  pushCall(
-    vaporHelper('withDirectives'),
-    // 1st arg: node
-    `n${opers[0].element}`,
-    // 2nd arg: directives
-    () => {
-      // directive
-      pushMulti(
-        ['[', ']', ', '],
-        ...opers.map(oper => () => {
-          push('[')
+  const element = `n${opers[0].element}`
+  const directiveItems = opers.map(genDirective)
+  const directives = multi(['[', ']', ', '], ...directiveItems)
 
-          const { dir, builtin } = oper
-          if (dir.name === 'show') {
-            push(vaporHelper('vShow'))
-          } else if (builtin) {
-            push(vaporHelper(builtin))
-          } else {
-            const directiveReference = camelize(`v-${dir.name}`)
-            // TODO resolve directive
-            if (bindingMetadata[directiveReference]) {
-              const directiveExpression =
-                createSimpleExpression(directiveReference)
-              directiveExpression.ast = null
-              genExpression(directiveExpression, context)
-            } else {
-              push(vaporHelper(`resolveDirective("${directiveReference}")`))
-            }
-          }
+  return [
+    newline(),
+    ...call(vaporHelper('withDirectives'), [element], directives),
+  ]
 
-          if (dir.exp) {
-            push(', () => ')
-            genExpression(dir.exp, context)
-          } else if (dir.arg || dir.modifiers.length) {
-            push(', void 0')
-          }
+  function genDirective({ dir, builtin }: WithDirectiveIRNode): CodeFragment[] {
+    const NULL = ['void 0']
 
-          if (dir.arg) {
-            push(', ')
-            genExpression(dir.arg, context)
-          } else if (dir.modifiers.length) {
-            push(', void 0')
-          }
+    const directive = genDirective()
+    const value = dir.exp
+      ? ['() => ', ...genExpression(dir.exp, context)]
+      : dir.arg || dir.modifiers.length
+        ? NULL
+        : false
+    const argument = dir.arg
+      ? genExpression(dir.arg, context)
+      : dir.modifiers.length
+        ? NULL
+        : false
+    const modifiers = dir.modifiers.length
+      ? ['{ ', genDirectiveModifiers(), ' }']
+      : false
 
-          if (dir.modifiers.length) {
-            push(', ')
-            push('{ ')
-            push(genDirectiveModifiers(dir.modifiers))
-            push(' }')
-          }
+    return multi(['[', ']', ', '], directive, value, argument, modifiers)
 
-          push(']')
-        }),
-      )
-    },
-  )
-}
+    function genDirective(): CodeFragment[] {
+      const {
+        vaporHelper,
+        options: { bindingMetadata },
+      } = context
+      if (dir.name === 'show') {
+        return [vaporHelper('vShow')]
+      } else if (builtin) {
+        return [vaporHelper(builtin)]
+      } else {
+        const directiveReference = camelize(`v-${dir.name}`)
+        // TODO resolve directive
+        if (bindingMetadata[directiveReference]) {
+          const directiveExpression = createSimpleExpression(directiveReference)
+          directiveExpression.ast = null
+          return genExpression(directiveExpression, context)
+        } else {
+          return [vaporHelper(`resolveDirective("${directiveReference}")`)]
+        }
+      }
+    }
 
-function genDirectiveModifiers(modifiers: string[]) {
-  return modifiers
-    .map(
-      value =>
-        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
-    )
-    .join(', ')
+    function genDirectiveModifiers() {
+      return dir.modifiers
+        .map(
+          value =>
+            `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
+        )
+        .join(', ')
+    }
+  }
 }
