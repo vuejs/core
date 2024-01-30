@@ -13,7 +13,7 @@ import {
   isStaticArgOf,
 } from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
-import { IRNodeTypes } from '..'
+import { IRNodeTypes, type VaporHelper } from '../ir'
 
 export const transformVModel: DirectiveTransform = (dir, node, context) => {
   const { exp, arg, loc } = dir
@@ -61,7 +61,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   }
 
   const isComponent = node.tagType === ElementTypes.COMPONENT
-  let runtimeDirective: string | undefined
+  let runtimeDirective: VaporHelper | undefined
 
   if (isComponent) {
     if (dir.arg)

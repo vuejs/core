@@ -156,7 +156,7 @@ export interface WithDirectiveIRNode extends BaseIRNode {
   type: IRNodeTypes.WITH_DIRECTIVE
   element: number
   dir: VaporDirectiveNode
-  builtin?: string
+  builtin?: VaporHelper
 }
 
 export type IRNode =

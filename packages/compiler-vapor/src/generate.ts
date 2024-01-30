@@ -67,7 +67,7 @@ export interface CodegenContext {
   helpers: Set<string>
   vaporHelpers: Set<string>
   helper(name: string): string
-  vaporHelper(name: string): string
+  vaporHelper(name: VaporHelper): string
 }
 
 function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {

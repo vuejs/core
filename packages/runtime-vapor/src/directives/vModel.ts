@@ -98,3 +98,9 @@ export const vModelText: ObjectDirective<
     el.value = newValue
   },
 }
+
+// TODO
+export const vModelDynamic = {}
+export const vModelRadio = {}
+export const vModelCheckbox = {}
+export const vModelSelect = {}

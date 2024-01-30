@@ -16,11 +16,11 @@ export function genWithDirective(
 
   return [
     newline(),
-    ...call(vaporHelper('withDirectives'), [element], directives),
+    ...call(vaporHelper('withDirectives'), element, directives),
   ]
 
   function genDirective({ dir, builtin }: WithDirectiveIRNode): CodeFragment[] {
-    const NULL = ['void 0']
+    const NULL = 'void 0'
 
     const directive = genDirective()
     const value = dir.exp
@@ -39,7 +39,7 @@ export function genWithDirective(
 
     return multi(['[', ']', ', '], directive, value, argument, modifiers)
 
-    function genDirective(): CodeFragment[] {
+    function genDirective() {
       const {
         vaporHelper,
         options: { bindingMetadata },
@@ -56,7 +56,7 @@ export function genWithDirective(
           directiveExpression.ast = null
           return genExpression(directiveExpression, context)
         } else {
-          return [vaporHelper(`resolveDirective("${directiveReference}")`)]
+          return `${vaporHelper('resolveDirective')}("${directiveReference}")`
         }
       }
     }

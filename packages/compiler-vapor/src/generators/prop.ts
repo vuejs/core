@@ -1,5 +1,5 @@
 import type { CodeFragment, CodegenContext } from '../generate'
-import type { SetPropIRNode } from '../ir'
+import type { SetPropIRNode, VaporHelper } from '../ir'
 import { genExpression } from './expression'
 import { isString } from '@vue/shared'
 
@@ -16,7 +16,7 @@ export function genSetProp(
   if (isString(oper.key) || oper.key.isStatic) {
     const keyName = isString(oper.key) ? oper.key : oper.key.content
 
-    let helperName: string | undefined
+    let helperName: VaporHelper | undefined
     let omitKey = false
     if (keyName === 'class') {
       helperName = 'setClass'

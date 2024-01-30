@@ -144,3 +144,7 @@ function callDirectiveHook(
   resetTracking()
   if (name !== 'beforeUpdate') binding.oldValue = binding.value
 }
+
+export function resolveDirective() {
+  // TODO
+}
