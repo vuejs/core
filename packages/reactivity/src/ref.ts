@@ -233,7 +233,7 @@ export type MaybeRefOrGetter<T = any> = MaybeRef<T> | (() => T)
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#unref}
  */
 export function unref<T>(ref: MaybeRef<T> | ComputedRef<T>): T {
-  return isRef(ref) ? ref.value : ref
+  return isRef(ref) ? unref(ref.value) : ref
 }
 
 /**
@@ -501,12 +501,11 @@ export type ShallowUnwrapRef<T> = {
 
 type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
 
-export type UnwrapRef<T> =
-  T extends ShallowRef<infer V>
-    ? V
-    : T extends Ref<infer V>
-      ? UnwrapRefSimple<V>
-      : UnwrapRefSimple<T>
+export type UnwrapRef<T> = T extends ShallowRef<infer V>
+  ? V
+  : T extends Ref<infer V>
+    ? UnwrapRefSimple<V>
+    : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
