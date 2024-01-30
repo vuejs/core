@@ -44,111 +44,94 @@ export type CodeFragment =
   | [code: string, newlineIndex?: number, loc?: SourceLocation, name?: string]
   | undefined
 
-export interface CodegenContext {
+export class CodegenContext {
   options: Required<CodegenOptions>
 
   source: string
   code: CodeFragment[]
-  indentLevel: number
+  indentLevel: number = 0
   map?: SourceMapGenerator
 
-  push(...args: CodeFragment[]): void
-  newline(): CodeFragment
-  multi(
-    codes: [left: string, right: string, segment: string],
-    ...fn: Array<false | string | CodeFragment[]>
-  ): CodeFragment[]
-  call(
+  push: (...args: CodeFragment[]) => void
+  newline = (): CodeFragment => {
+    return [`\n${`  `.repeat(this.indentLevel)}`, NewlineType.Start]
+  }
+  multi = (
+    [left, right, seg]: [left: string, right: string, segment: string],
+    ...fns: Array<false | string | CodeFragment[]>
+  ): CodeFragment[] => {
+    const frag: CodeFragment[] = []
+    fns = fns.filter(Boolean)
+    frag.push(left)
+    for (let [i, fn] of fns.entries()) {
+      if (fn) {
+        if (isString(fn)) fn = [fn]
+        frag.push(...fn)
+        if (i < fns.length - 1) frag.push(seg)
+      }
+    }
+    frag.push(right)
+    return frag
+  }
+  call = (
     name: string,
     ...args: Array<false | string | CodeFragment[]>
-  ): CodeFragment[]
-  withIndent<T>(fn: () => T): T
-
-  helpers: Set<string>
-  vaporHelpers: Set<string>
-  helper(name: string): string
-  vaporHelper(name: VaporHelper): string
-}
-
-function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {
-  const helpers = new Set<string>([])
-  const vaporHelpers = new Set<string>([])
-  const [code, push] = buildCodeFragment()
-  const context: CodegenContext = {
-    options: extend(
-      {
-        mode: 'function',
-        prefixIdentifiers: options.mode === 'module',
-        sourceMap: false,
-        filename: `template.vue.html`,
-        scopeId: null,
-        optimizeImports: false,
-        runtimeGlobalName: `Vue`,
-        runtimeModuleName: `vue`,
-        ssrRuntimeModuleName: 'vue/server-renderer',
-        ssr: false,
-        isTS: false,
-        inSSR: false,
-        inline: false,
-        bindingMetadata: {},
-        expressionPlugins: [],
-      },
-      options,
-    ),
-
-    source: ir.source,
-    code,
-    indentLevel: 0,
-
-    helpers,
-    vaporHelpers,
-    helper(name: string) {
-      helpers.add(name)
-      return `_${name}`
-    },
-    vaporHelper(name: VaporHelper) {
-      vaporHelpers.add(name)
-      return `_${name}`
-    },
-
-    push,
-    newline() {
-      return [`\n${`  `.repeat(context.indentLevel)}`, NewlineType.Start]
-    },
-    multi([left, right, seg], ...fns) {
-      const frag: CodeFragment[] = []
-      fns = fns.filter(Boolean)
-      frag.push(left)
-      for (let [i, fn] of fns.entries()) {
-        if (fn) {
-          if (isString(fn)) fn = [fn]
-          frag.push(...fn)
-          if (i < fns.length - 1) frag.push(seg)
-        }
-      }
-      frag.push(right)
-      return frag
-    },
-    call(name, ...args) {
-      return [name, ...context.multi(['(', ')', ', '], ...args)]
-    },
-    withIndent(fn) {
-      ++context.indentLevel
-      const ret = fn()
-      --context.indentLevel
-      return ret
-    },
+  ): CodeFragment[] => {
+    return [name, ...this.multi(['(', ')', ', '], ...args)]
+  }
+  withIndent = <T>(fn: () => T): T => {
+    ++this.indentLevel
+    const ret = fn()
+    --this.indentLevel
+    return ret
   }
 
-  const filename = context.options.filename
-  if (!__BROWSER__ && context.options.sourceMap) {
-    // lazy require source-map implementation, only in non-browser builds
-    context.map = new SourceMapGenerator()
-    context.map.setSourceContent(filename, context.source)
-    context.map._sources.add(filename)
+  helpers = new Set<string>([])
+  vaporHelpers = new Set<string>([])
+  helper = (name: string) => {
+    this.helpers.add(name)
+    return `_${name}`
+  }
+  vaporHelper = (name: VaporHelper) => {
+    this.vaporHelpers.add(name)
+    return `_${name}`
   }
 
-  return context
+  constructor(ir: RootIRNode, options: CodegenOptions) {
+    const defaultOptions = {
+      mode: 'function',
+      prefixIdentifiers: options.mode === 'module',
+      sourceMap: false,
+      filename: `template.vue.html`,
+      scopeId: null,
+      optimizeImports: false,
+      runtimeGlobalName: `Vue`,
+      runtimeModuleName: `vue`,
+      ssrRuntimeModuleName: 'vue/server-renderer',
+      ssr: false,
+      isTS: false,
+      inSSR: false,
+      inline: false,
+      bindingMetadata: {},
+      expressionPlugins: [],
+    }
+    this.options = extend(defaultOptions, options)
+    this.source = ir.source
+
+    const [code, push] = buildCodeFragment()
+    this.code = code
+    this.push = push
+
+    const {
+      options: { filename, sourceMap },
+    } = this
+    if (!__BROWSER__ && sourceMap) {
+      // lazy require source-map implementation, only in non-browser builds
+      this.map = new SourceMapGenerator()
+      this.map.setSourceContent(filename, this.source)
+      this.map._sources.add(filename)
+    }
+  }
 }
 
 export interface VaporCodegenResult extends BaseCodegenResult {
@@ -162,7 +145,7 @@ export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
 ): VaporCodegenResult {
-  const ctx = createCodegenContext(ir, options)
+  const ctx = new CodegenContext(ir, options)
   const { push, withIndent, newline, helpers, vaporHelpers } = ctx
 
   const functionName = 'render'
