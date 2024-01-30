@@ -7,10 +7,16 @@ export function genSetModelValue(
   oper: SetModelValueIRNode,
   context: CodegenContext,
 ) {
-  const { vaporHelper, push, newline, pushFnCall } = context
+  const {
+    vaporHelper,
+    push,
+    newline,
+    pushCall,
+    options: { isTS },
+  } = context
 
   newline()
-  pushFnCall(
+  pushCall(
     vaporHelper('on'),
     // 1st arg: event name
     () => push(`n${oper.element}`),
@@ -26,7 +32,7 @@ export function genSetModelValue(
     },
     // 3rd arg: event handler
     () => {
-      push((context.isTS ? `($event: any)` : `$event`) + ' => ((')
+      push((isTS ? `($event: any)` : `$event`) + ' => ((')
       // TODO handle not a ref
       genExpression(oper.value, context)
       push(') = $event)')

@@ -7,7 +7,7 @@ export function genIf(
   context: CodegenContext,
   isNested = false,
 ) {
-  const { pushFnCall, vaporHelper, pushNewline, push } = context
+  const { pushCall, vaporHelper, newline, push } = context
   const { condition, positive, negative } = oper
 
   let positiveArg = () => genBlockFunction(positive, context)
@@ -24,8 +24,8 @@ export function genIf(
     }
   }
 
-  if (!isNested) pushNewline(`const n${oper.id} = `)
-  pushFnCall(
+  if (!isNested) newline(`const n${oper.id} = `)
+  pushCall(
     vaporHelper('createIf'),
     () => {
       push('() => (')
@@ -38,11 +38,11 @@ export function genIf(
 }
 
 function genBlockFunction(oper: BlockFunctionIRNode, context: CodegenContext) {
-  const { pushNewline, push, withIndent } = context
+  const { newline, push, withIndent } = context
 
   push('() => {')
   withIndent(() => {
     genBlockFunctionContent(oper, context)
   })
-  pushNewline('}')
+  newline('}')
 }

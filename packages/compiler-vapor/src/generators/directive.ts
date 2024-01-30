@@ -8,11 +8,17 @@ export function genWithDirective(
   opers: WithDirectiveIRNode[],
   context: CodegenContext,
 ) {
-  const { push, newline, pushFnCall, pushMulti, vaporHelper, bindingMetadata } =
-    context
+  const {
+    push,
+    newline,
+    pushCall,
+    pushMulti,
+    vaporHelper,
+    options: { bindingMetadata },
+  } = context
 
   newline()
-  pushFnCall(
+  pushCall(
     vaporHelper('withDirectives'),
     // 1st arg: node
     `n${opers[0].element}`,

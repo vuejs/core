@@ -15,7 +15,10 @@ export function genExpression(
   context: CodegenContext,
   knownIds: Record<string, number> = Object.create(null),
 ): void {
-  const { push } = context
+  const {
+    push,
+    options: { prefixIdentifiers },
+  } = context
   if (isString(node)) return push(node)
 
   const { content: rawExpr, ast, isStatic, loc } = node
@@ -24,7 +27,7 @@ export function genExpression(
   }
   if (
     __BROWSER__ ||
-    !context.prefixIdentifiers ||
+    !prefixIdentifiers ||
     !node.content.trim() ||
     // there was a parsing error
     ast === false ||
@@ -81,9 +84,10 @@ const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 function genIdentifier(
   id: string,
-  { inline, bindingMetadata, vaporHelper, push }: CodegenContext,
+  { options, vaporHelper, push }: CodegenContext,
   loc?: SourceLocation,
 ): void {
+  const { inline, bindingMetadata } = options
   let name: string | undefined = id
   if (inline) {
     switch (bindingMetadata[id]) {

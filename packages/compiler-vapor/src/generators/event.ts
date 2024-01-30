@@ -8,11 +8,18 @@ const fnExpRE =
   /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
 
 export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
-  const { vaporHelper, push, newline, pushMulti, pushFnCall } = context
+  const {
+    vaporHelper,
+    push,
+    newline,
+    pushMulti,
+    pushCall,
+    options: ctxOptions,
+  } = context
   const { keys, nonKeys, options } = oper.modifiers
 
   newline()
-  pushFnCall(
+  pushCall(
     vaporHelper('on'),
     // 1st arg: event name
     () => push(`n${oper.element}`),
@@ -44,7 +51,7 @@ export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
 
       ;(keys.length ? pushWithKeys : pushNoop)(() =>
         (nonKeys.length ? pushWithModifiers : pushNoop)(() => {
-          genEventHandler(context)
+          genEventHandler()
         }),
       )
     },
@@ -53,10 +60,10 @@ export function genSetEvent(oper: SetEventIRNode, context: CodegenContext) {
       (() => push(`{ ${options.map(v => `${v}: true`).join(', ')} }`)),
   )
 
-  function genEventHandler(context: CodegenContext) {
+  function genEventHandler() {
     const exp = oper.value
     if (exp && exp.content.trim()) {
-      const isMemberExp = isMemberExpression(exp.content, context)
+      const isMemberExp = isMemberExpression(exp.content, ctxOptions)
       const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
       const hasMultipleStatements = exp.content.includes(`;`)
 

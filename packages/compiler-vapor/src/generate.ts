@@ -18,7 +18,7 @@ import {
   type WithDirectiveIRNode,
 } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { isString } from '@vue/shared'
+import { extend, isString } from '@vue/shared'
 import type { ParserPlugin } from '@babel/parser'
 import { genSetProp } from './generators/prop'
 import { genCreateTextNode, genSetText } from './generators/text'
@@ -38,7 +38,9 @@ interface CodegenOptions extends BaseCodegenOptions {
 // @ts-expect-error
 function checkNever(x: never): never {}
 
-export interface CodegenContext extends Required<CodegenOptions> {
+export interface CodegenContext {
+  options: Required<CodegenOptions>
+
   source: string
   code: string
   line: number
@@ -53,8 +55,8 @@ export interface CodegenContext extends Required<CodegenOptions> {
     loc?: SourceLocation,
     name?: string,
   ): void
-  pushNewline(
-    code: string,
+  newline(
+    code?: string,
     newlineIndex?: number,
     loc?: SourceLocation,
     name?: string,
@@ -63,9 +65,8 @@ export interface CodegenContext extends Required<CodegenOptions> {
     codes: [left: string, right: string, segment?: string],
     ...fn: Array<false | string | (() => void)>
   ): void
-  pushFnCall(name: string, ...args: Array<false | string | (() => void)>): void
+  pushCall(name: string, ...args: Array<false | string | (() => void)>): void
   withIndent(fn: () => void): void
-  newline(): void
 
   helpers: Set<string>
   vaporHelpers: Set<string>
@@ -73,47 +74,33 @@ export interface CodegenContext extends Required<CodegenOptions> {
   vaporHelper(name: string): string
 }
 
-function createCodegenContext(
-  ir: RootIRNode,
-  {
-    mode = 'function',
-    prefixIdentifiers = mode === 'module',
-    sourceMap = false,
-    filename = `template.vue.html`,
-    scopeId = null,
-    optimizeImports = false,
-    runtimeGlobalName = `Vue`,
-    runtimeModuleName = `vue`,
-    ssrRuntimeModuleName = 'vue/server-renderer',
-    ssr = false,
-    isTS = false,
-    inSSR = false,
-    inline = false,
-    bindingMetadata = {},
-    expressionPlugins = [],
-  }: CodegenOptions,
-) {
+function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {
   const helpers = new Set<string>([])
   const vaporHelpers = new Set<string>([])
   const context: CodegenContext = {
-    mode,
-    prefixIdentifiers,
-    sourceMap,
-    filename,
-    scopeId,
-    optimizeImports,
-    runtimeGlobalName,
-    runtimeModuleName,
-    ssrRuntimeModuleName,
-    ssr,
-    isTS,
-    inSSR,
-    bindingMetadata,
-    expressionPlugins,
-    inline,
+    options: extend(
+      {
+        mode: 'function',
+        prefixIdentifiers: options.mode === 'module',
+        sourceMap: false,
+        filename: `template.vue.html`,
+        scopeId: null,
+        optimizeImports: false,
+        runtimeGlobalName: `Vue`,
+        runtimeModuleName: `vue`,
+        ssrRuntimeModuleName: 'vue/server-renderer',
+        ssr: false,
+        isTS: false,
+        inSSR: false,
+        inline: false,
+        bindingMetadata: {},
+        expressionPlugins: [],
+      },
+      options,
+    ),
 
     source: ir.source,
-    code: ``,
+    code: '',
     column: 1,
     line: 1,
     offset: 0,
@@ -129,6 +116,7 @@ function createCodegenContext(
       vaporHelpers.add(name)
       return `_${name}`
     },
+
     push(code, newlineIndex = NewlineType.None, loc, name) {
       context.code += code
       if (!__BROWSER__ && context.map) {
@@ -174,23 +162,21 @@ function createCodegenContext(
         }
       }
     },
-    pushNewline(code, newlineIndex, node) {
-      context.newline()
-      context.push(code, newlineIndex, node)
+    newline(code, newlineIndex, node) {
+      context.push(`\n${`  `.repeat(context.indentLevel)}`, NewlineType.Start)
+      code && context.push(code, newlineIndex, node)
     },
     pushMulti([left, right, seg], ...fns) {
       fns = fns.filter(Boolean)
       context.push(left)
-      for (let i = 0; i < fns.length; i++) {
-        const fn = fns[i] as string | (() => void)
-
+      for (const [i, fn] of fns.entries()) {
         if (isString(fn)) context.push(fn)
-        else fn()
+        else (fn as () => void)()
         if (seg && i < fns.length - 1) context.push(seg)
       }
       context.push(right)
     },
-    pushFnCall(name, ...args) {
+    pushCall(name, ...args) {
       context.push(name)
       context.pushMulti(['(', ')', ', '], ...args)
     },
@@ -199,10 +185,9 @@ function createCodegenContext(
       fn()
       --context.indentLevel
     },
-    newline() {
-      context.push(`\n${`  `.repeat(context.indentLevel)}`, NewlineType.Start)
-    },
   }
+
+  const filename = context.options.filename
 
   function addMapping(loc: Position, name: string | null = null) {
     // we use the private property to directly add the mapping
@@ -221,7 +206,7 @@ function createCodegenContext(
     })
   }
 
-  if (!__BROWSER__ && sourceMap) {
+  if (!__BROWSER__ && context.options.sourceMap) {
     // lazy require source-map implementation, only in non-browser builds
     context.map = new SourceMapGenerator()
     context.map.setSourceContent(filename, context.source)
@@ -243,15 +228,7 @@ export function generate(
   options: CodegenOptions = {},
 ): VaporCodegenResult {
   const ctx = createCodegenContext(ir, options)
-  const {
-    push,
-    pushNewline,
-    withIndent,
-    newline,
-    helpers,
-    vaporHelper,
-    vaporHelpers,
-  } = ctx
+  const { push, withIndent, newline, helpers, vaporHelper, vaporHelpers } = ctx
 
   const functionName = 'render'
   const isSetupInlined = !!options.inline
@@ -260,21 +237,21 @@ export function generate(
   } else {
     // placeholder for preamble
     newline()
-    pushNewline(`export function ${functionName}(_ctx) {`)
+    newline(`export function ${functionName}(_ctx) {`)
   }
 
   withIndent(() => {
     ir.template.forEach((template, i) => {
       if (template.type === IRNodeTypes.TEMPLATE_FACTORY) {
         // TODO source map?
-        pushNewline(
+        newline(
           `const t${i} = ${vaporHelper('template')}(${JSON.stringify(
             template.template,
           )})`,
         )
       } else {
         // fragment
-        pushNewline(`const t${i} = ${vaporHelper('fragment')}()`)
+        newline(`const t${i} = ${vaporHelper('fragment')}()`)
       }
     })
 
@@ -380,14 +357,12 @@ export function genBlockFunctionContent(
   ir: BlockFunctionIRNode | RootIRNode,
   ctx: CodegenContext,
 ) {
-  const { pushNewline, withIndent, vaporHelper } = ctx
-  pushNewline(`const n${ir.dynamic.id} = t${ir.templateIndex}()`)
+  const { newline, withIndent, vaporHelper } = ctx
+  newline(`const n${ir.dynamic.id} = t${ir.templateIndex}()`)
 
   const children = genChildren(ir.dynamic.children)
   if (children) {
-    pushNewline(
-      `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
-    )
+    newline(`const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`)
   }
 
   const directiveOps = ir.operation.filter(
@@ -403,16 +378,16 @@ export function genBlockFunctionContent(
   }
 
   for (const { operations } of ir.effect) {
-    pushNewline(`${vaporHelper('renderEffect')}(() => {`)
+    newline(`${vaporHelper('renderEffect')}(() => {`)
     withIndent(() => {
       for (const operation of operations) {
         genOperation(operation, ctx)
       }
     })
-    pushNewline('})')
+    newline('})')
   }
 
-  pushNewline(`return n${ir.dynamic.id}`)
+  newline(`return n${ir.dynamic.id}`)
 }
 
 function groupDirective(ops: WithDirectiveIRNode[]): WithDirectiveIRNode[][] {

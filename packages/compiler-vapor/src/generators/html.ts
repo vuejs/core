@@ -3,9 +3,9 @@ import type { SetHtmlIRNode } from '../ir'
 import { genExpression } from './expression'
 
 export function genSetHtml(oper: SetHtmlIRNode, context: CodegenContext) {
-  const { newline, pushFnCall, vaporHelper } = context
+  const { newline, pushCall, vaporHelper } = context
   newline()
-  pushFnCall(vaporHelper('setHtml'), `n${oper.element}`, () =>
+  pushCall(vaporHelper('setHtml'), `n${oper.element}`, () =>
     genExpression(oper.value, context),
   )
 }

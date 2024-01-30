@@ -4,7 +4,7 @@ import { genExpression } from './expression'
 import { isString } from '@vue/shared'
 
 export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
-  const { pushFnCall, pushMulti, newline, vaporHelper, helper } = context
+  const { pushCall, pushMulti, newline, vaporHelper, helper } = context
 
   newline()
 
@@ -27,7 +27,7 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
     }
 
     if (helperName) {
-      pushFnCall(
+      pushCall(
         vaporHelper(helperName),
         element,
         omitKey
@@ -35,7 +35,7 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
           : () => {
               const expr = () => genExpression(oper.key, context)
               if (oper.runtimeCamelize) {
-                pushFnCall(helper('camelize'), expr)
+                pushCall(helper('camelize'), expr)
               } else {
                 expr()
               }
@@ -46,13 +46,13 @@ export function genSetProp(oper: SetPropIRNode, context: CodegenContext) {
     }
   }
 
-  pushFnCall(
+  pushCall(
     vaporHelper('setDynamicProp'),
     element,
     // 2. key name
     () => {
       if (oper.runtimeCamelize) {
-        pushFnCall(helper('camelize'), () => genExpression(oper.key, context))
+        pushCall(helper('camelize'), () => genExpression(oper.key, context))
       } else if (oper.modifier) {
         pushMulti([`\`${oper.modifier}\${`, `}\``], () =>
           genExpression(oper.key, context),
