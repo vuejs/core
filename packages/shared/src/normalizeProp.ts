@@ -1,9 +1,9 @@
-import { isArray, isString, isObject, hyphenate } from './general'
+import { hyphenate, isArray, isObject, isString } from './general'
 
 export type NormalizedStyle = Record<string, string | number>
 
 export function normalizeStyle(
-  value: unknown
+  value: unknown,
 ): NormalizedStyle | string | undefined {
   if (isArray(value)) {
     const res: NormalizedStyle = {}
@@ -43,7 +43,7 @@ export function parseStringStyle(cssText: string): NormalizedStyle {
 }
 
 export function stringifyStyle(
-  styles: NormalizedStyle | string | undefined
+  styles: NormalizedStyle | string | undefined,
 ): string {
   let ret = ''
   if (!styles || isString(styles)) {
