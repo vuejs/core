@@ -2,9 +2,9 @@ import {
   type CodeFragment,
   type CodegenContext,
   buildCodeFragment,
-  genBlockFunctionContent,
 } from '../generate'
-import { type BlockFunctionIRNode, IRNodeTypes, type IfIRNode } from '../ir'
+import { IRNodeTypes, type IfIRNode } from '../ir'
+import { genBlockFunction } from './block'
 import { genExpression } from './expression'
 
 export function genIf(
@@ -39,17 +39,4 @@ export function genIf(
   )
 
   return frag
-}
-
-function genBlockFunction(
-  oper: BlockFunctionIRNode,
-  context: CodegenContext,
-): CodeFragment[] {
-  const { newline, withIndent } = context
-  return [
-    '() => {',
-    ...withIndent(() => genBlockFunctionContent(oper, context)),
-    newline(),
-    '}',
-  ]
 }

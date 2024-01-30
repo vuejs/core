@@ -3,7 +3,6 @@ import {
   ElementTypes,
   ErrorCodes,
   NodeTypes,
-  type RootNode,
   type TemplateChildNode,
   type TemplateNode,
   createCompilerError,
@@ -32,7 +31,7 @@ export const transformVIf = createStructuralDirectiveTransform(
 export function processIf(
   node: ElementNode,
   dir: VaporDirectiveNode,
-  context: TransformContext<RootNode | TemplateChildNode>,
+  context: TransformContext<ElementNode>,
 ) {
   if (dir.name !== 'else' && (!dir.exp || !dir.exp.content.trim())) {
     const loc = dir.exp ? dir.exp.loc : node.loc
@@ -144,7 +143,7 @@ export function processIf(
 
 export function createIfBranch(
   node: ElementNode,
-  context: TransformContext<RootNode | TemplateChildNode>,
+  context: TransformContext<ElementNode>,
 ): [BlockFunctionIRNode, () => void] {
   context.node = node = wrapTemplate(node)
 
