@@ -9,7 +9,7 @@ export function genSetProp(
 ): CodeFragment[] {
   const { call, newline, vaporHelper, helper } = context
 
-  const element = [`n${oper.element}`]
+  const element = `n${oper.element}`
   const expr = genExpression(oper.key, context)
 
   // fast path for static props

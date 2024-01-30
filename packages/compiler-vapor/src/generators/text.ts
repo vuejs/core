@@ -11,7 +11,7 @@ export function genSetText(
     newline(),
     ...call(
       vaporHelper('setText'),
-      [`n${oper.element}`],
+      `n${oper.element}`,
       genExpression(oper.value, context),
     ),
   ]

@@ -16,13 +16,12 @@ export function genSetEvent(
 
   const name = genName()
   const handler = genFinalizedHandler()
-  const opt = !!options.length && [
-    `{ ${options.map(v => `${v}: true`).join(', ')} }`,
-  ]
+  const opt =
+    !!options.length && `{ ${options.map(v => `${v}: true`).join(', ')} }`
 
   return [
     newline(),
-    ...call(vaporHelper('on'), [`n${oper.element}`], name, handler, opt),
+    ...call(vaporHelper('on'), `n${oper.element}`, name, handler, opt),
   ]
 
   function genName(): CodeFragment[] {
@@ -38,7 +37,7 @@ export function genSetEvent(
     }
   }
 
-  function genEventHandler(): CodeFragment[] {
+  function genEventHandler() {
     const exp = oper.value
     if (exp && exp.content.trim()) {
       const isMemberExp = isMemberExpression(exp.content, ctxOptions)
@@ -64,10 +63,10 @@ export function genSetEvent(
         }
       }
     }
-    return ['() => {}']
+    return '() => {}'
   }
 
-  function genFinalizedHandler(): CodeFragment[] {
+  function genFinalizedHandler() {
     let expr = genEventHandler()
 
     if (nonKeys.length) {

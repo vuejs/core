@@ -11,7 +11,7 @@ export function genSetHtml(
     newline(),
     ...call(
       vaporHelper('setHtml'),
-      [`n${oper.element}`],
+      `n${oper.element}`,
       genExpression(oper.value, context),
     ),
   ]

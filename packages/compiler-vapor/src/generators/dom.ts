@@ -16,9 +16,9 @@ export function genInsertNode(
     newline(),
     ...call(
       vaporHelper('insert'),
-      [element],
-      [`n${oper.parent}`],
-      [`n${oper.anchor}`],
+      element,
+      `n${oper.parent}`,
+      `n${oper.anchor}`,
     ),
   ]
 }
@@ -31,8 +31,8 @@ export function genPrependNode(
     newline(),
     ...call(
       vaporHelper('prepend'),
-      [`n${oper.parent}`],
-      ...oper.elements.map(el => [`n${el}`]),
+      `n${oper.parent}`,
+      ...oper.elements.map(el => `n${el}`),
     ),
   ]
 }
@@ -46,8 +46,8 @@ export function genAppendNode(
     newline(),
     ...call(
       vaporHelper('append'),
-      [`n${oper.parent}`],
-      ...oper.elements.map(el => [`n${el}`]),
+      `n${oper.parent}`,
+      ...oper.elements.map(el => `n${el}`),
     ),
   ]
 }

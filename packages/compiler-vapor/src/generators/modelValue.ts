@@ -19,7 +19,7 @@ export function genSetModelValue(
 
   return [
     newline(),
-    ...call(vaporHelper('on'), [`n${oper.element}`], name, handler),
+    ...call(vaporHelper('on'), `n${oper.element}`, name, handler),
   ]
 
   function genName(): CodeFragment[] {

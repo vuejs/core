@@ -56,9 +56,12 @@ export interface CodegenContext {
   newline(): CodeFragment
   multi(
     codes: [left: string, right: string, segment: string],
-    ...fn: Array<false | CodeFragment[]>
+    ...fn: Array<false | string | CodeFragment[]>
   ): CodeFragment[]
-  call(name: string, ...args: Array<false | CodeFragment[]>): CodeFragment[]
+  call(
+    name: string,
+    ...args: Array<false | string | CodeFragment[]>
+  ): CodeFragment[]
   withIndent<T>(fn: () => T): T
 
   helpers: Set<string>
@@ -116,8 +119,9 @@ function createCodegenContext(ir: RootIRNode, options: CodegenOptions) {
       const frag: CodeFragment[] = []
       fns = fns.filter(Boolean)
       frag.push(left)
-      for (const [i, fn] of fns.entries()) {
+      for (let [i, fn] of fns.entries()) {
         if (fn) {
+          if (isString(fn)) fn = [fn]
           frag.push(...fn)
           if (i < fns.length - 1) frag.push(seg)
         }
