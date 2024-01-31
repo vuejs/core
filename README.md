@@ -15,7 +15,7 @@ PR are welcome!
 - [x] Counter App
   - [x] simple bindings
   - [x] simple events
-- [ ] TODO-MVC App
+- [x] TODO-MVC App
 - [x] Repl
 - [x] transform
   - [x] NodeTransform
@@ -38,19 +38,13 @@ PR are welcome!
     - [x] compound expression
     - [x] modifiers
   - [x] runtime directives
-  - [ ] `v-memo`
-    - #18
+  - [ ] `v-memo` [on hold]
   - [ ] `v-model`
-    - #17
-    - needs #19 first
-  - [ ] `v-if` / `v-else` / `v-else-if`
-    - [x] `v-if`
-    - [ ] `v-else`
-    - [ ] `v-else-if`
-    - [ ] with `<template>`
-    - #9
+    - [x] text field
+  - [x] `v-if` / `v-else` / `v-else-if`
   - [ ] `v-for`
-    - #21
+    - [x] basic
+    - [ ] object
   - [x] `v-show`
 - [x] Fragment
 - [ ] Codegen
