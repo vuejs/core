@@ -193,9 +193,7 @@ export function generate(
 
 function genCodeFragment(context: CodegenContext) {
   let codegen = ''
-  let line = 1
-  let column = 1
-  let offset = 0
+  const pos = { line: 1, column: 1, offset: 0 }
 
   for (let frag of context.code) {
     if (!frag) continue
@@ -208,10 +206,10 @@ function genCodeFragment(context: CodegenContext) {
       if (loc) addMapping(loc.start, name)
       if (newlineIndex === NewlineType.Unknown) {
         // multiple newlines, full iteration
-        advancePositionWithMutation({ line, column, offset }, code)
+        advancePositionWithMutation(pos, code)
       } else {
         // fast paths
-        offset += code.length
+        pos.offset += code.length
         if (newlineIndex === NewlineType.None) {
           // no newlines; fast path to avoid newline detection
           if (__TEST__ && code.includes('\n')) {
@@ -220,7 +218,7 @@ function genCodeFragment(context: CodegenContext) {
                 `newlines: ${code.replace(/\n/g, '\\n')}`,
             )
           }
-          column += code.length
+          pos.column += code.length
         } else {
           // single newline at known index
           if (newlineIndex === NewlineType.End) {
@@ -237,8 +235,8 @@ function genCodeFragment(context: CodegenContext) {
                 `but does not conform: ${code.replace(/\n/g, '\\n')}`,
             )
           }
-          line++
-          column = code.length - newlineIndex
+          pos.line++
+          pos.column = code.length - newlineIndex
         }
       }
       if (loc && loc !== locStub) {
@@ -258,8 +256,8 @@ function genCodeFragment(context: CodegenContext) {
     _mappings.add({
       originalLine: loc.line,
       originalColumn: loc.column - 1, // source-map column is 0 based
-      generatedLine: line,
-      generatedColumn: column - 1,
+      generatedLine: pos.line,
+      generatedColumn: pos.column - 1,
       source: context.options.filename,
       // @ts-expect-error it is possible to be null
       name,

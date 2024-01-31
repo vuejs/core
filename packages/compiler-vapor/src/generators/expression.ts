@@ -84,7 +84,7 @@ export function genExpression(
     })
     return frag
   } else {
-    return [[rawExpr, NewlineType.Unknown]]
+    return [[rawExpr, NewlineType.Unknown, loc]]
   }
 }
 
