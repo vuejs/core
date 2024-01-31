@@ -54,12 +54,6 @@ function genOperation(
       return genIf(oper, context)
     case IRNodeTypes.FOR:
       return genFor(oper, context)
-    case IRNodeTypes.WITH_DIRECTIVE:
-      // TODO remove this after remove checkNever
-      // generated, skip
-      break
-    default:
-      return checkNever(oper)
   }
 
   return []
@@ -87,7 +81,3 @@ function genEffect({ operations }: IREffect, context: CodegenContext) {
   push(INDENT_END, NEWLINE, '})')
   return frag
 }
-
-// remove when stable
-// @ts-expect-error
-function checkNever(x: never): never {}
