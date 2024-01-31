@@ -448,8 +448,15 @@ export function createHydrationFunctions(
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
           for (const key in props) {
+            const cssVars = parentComponent?.ut?.(undefined, true) as Record<
+              string,
+              string
+            >
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
+            if (
+              __DEV__ &&
+              propHasMismatch(el, key, props[key], vnode, cssVars)
+            ) {
               hasMismatch = true
             }
             if (
@@ -718,6 +725,7 @@ function propHasMismatch(
   key: string,
   clientValue: any,
   vnode: VNode,
+  cssVars?: Record<string, string>,
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
@@ -746,6 +754,11 @@ function propHasMismatch(
         if (dir.name === 'show' && !value) {
           expectedMap.set('display', 'none')
         }
+      }
+    }
+    if (cssVars) {
+      for (const key in cssVars) {
+        expectedMap.set(key, cssVars[key])
       }
     }
     if (!isMapEqual(actualMap, expectedMap)) {

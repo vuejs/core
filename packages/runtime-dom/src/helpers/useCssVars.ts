@@ -26,7 +26,13 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     return
   }
 
-  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
+  const updateTeleports = (instance.ut = (
+    vars = getter(instance.proxy),
+    ssr = false,
+  ) => {
+    if (ssr) {
+      return vars
+    }
     Array.from(
       document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
     ).forEach(node => setVarsOnNode(node, vars))

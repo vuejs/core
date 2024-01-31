@@ -518,7 +518,10 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (vars?: Record<string, string>) => void
+  ut?: (
+    vars?: Record<string, string>,
+    ssr?: boolean,
+  ) => void | Record<string, string>
 }
 
 const emptyAppContext = createAppContext()
