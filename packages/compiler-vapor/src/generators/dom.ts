@@ -1,4 +1,4 @@
-import type { CodeFragment, CodegenContext } from '../generate'
+import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import type {
   AppendNodeIRNode,
   InsertNodeIRNode,
@@ -7,13 +7,13 @@ import type {
 
 export function genInsertNode(
   oper: InsertNodeIRNode,
-  { newline, call, vaporHelper }: CodegenContext,
+  { call, vaporHelper }: CodegenContext,
 ): CodeFragment[] {
   const elements = ([] as number[]).concat(oper.element)
   let element = elements.map(el => `n${el}`).join(', ')
   if (elements.length > 1) element = `[${element}]`
   return [
-    newline(),
+    NEWLINE,
     ...call(
       vaporHelper('insert'),
       element,
@@ -25,10 +25,10 @@ export function genInsertNode(
 
 export function genPrependNode(
   oper: PrependNodeIRNode,
-  { newline, call, vaporHelper }: CodegenContext,
+  { call, vaporHelper }: CodegenContext,
 ): CodeFragment[] {
   return [
-    newline(),
+    NEWLINE,
     ...call(
       vaporHelper('prepend'),
       `n${oper.parent}`,
@@ -39,11 +39,10 @@ export function genPrependNode(
 
 export function genAppendNode(
   oper: AppendNodeIRNode,
-  { newline, call, vaporHelper }: CodegenContext,
+  { call, vaporHelper }: CodegenContext,
 ): CodeFragment[] {
-  newline()
   return [
-    newline(),
+    NEWLINE,
     ...call(
       vaporHelper('append'),
       `n${oper.parent}`,

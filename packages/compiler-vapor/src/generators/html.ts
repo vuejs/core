@@ -1,4 +1,4 @@
-import type { CodeFragment, CodegenContext } from '../generate'
+import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import type { SetHtmlIRNode } from '../ir'
 import { genExpression } from './expression'
 
@@ -6,9 +6,9 @@ export function genSetHtml(
   oper: SetHtmlIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { newline, call, vaporHelper } = context
+  const { call, vaporHelper } = context
   return [
-    newline(),
+    NEWLINE,
     ...call(
       vaporHelper('setHtml'),
       `n${oper.element}`,

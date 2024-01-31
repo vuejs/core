@@ -40,8 +40,7 @@ export interface BaseIRNode {
   loc: SourceLocation
 }
 
-// TODO refactor
-export type VaporHelper = keyof typeof import('../../runtime-vapor/src')
+export type VaporHelper = keyof typeof import('@vue/runtime-vapor')
 
 export interface BlockFunctionIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK_FUNCTION

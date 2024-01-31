@@ -3,6 +3,9 @@ import { genExpression } from './expression'
 import {
   type CodeFragment,
   type CodegenContext,
+  INDENT_END,
+  INDENT_START,
+  NEWLINE,
   buildCodeFragment,
 } from '../generate'
 import type { ForIRNode, IREffect } from '../ir'
@@ -13,7 +16,7 @@ export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { newline, call, vaporHelper } = context
+  const { call, vaporHelper } = context
   const { source, value, key, render } = oper
 
   const rawValue = value && value.content
@@ -39,50 +42,49 @@ export function genFor(
   context.genEffect = undefined
 
   return [
-    newline(),
+    NEWLINE,
     `const n${oper.id} = `,
     ...call(vaporHelper('createFor'), sourceExpr, blockFn),
   ]
 
-  function genEffectInFor(effects: IREffect[]) {
+  function genEffectInFor(effects: IREffect[]): CodeFragment[] {
     if (!effects.length) {
       updateFn = '() => {}'
       return []
     }
 
-    const [frag, push] = buildCodeFragment()
+    const [frag, push] = buildCodeFragment(INDENT_START)
+    // const [value, key] = _block.s
+    if (rawValue || rawKey) {
+      push(
+        NEWLINE,
+        'const ',
+        '[',
+        rawValue && [rawValue, NewlineType.None, value.loc],
+        rawKey && ', ',
+        rawKey && [rawKey, NewlineType.None, key.loc],
+        '] = _block.s',
+      )
+    }
 
-    context.withIndent(() => {
-      if (rawValue || rawKey) {
-        push(
-          newline(),
-          'const ',
-          '[',
-          rawValue && [rawValue, NewlineType.None, value.loc],
-          rawKey && ', ',
-          rawKey && [rawKey, NewlineType.None, key.loc],
-          '] = _block.s',
-        )
-      }
+    const idMap: Record<string, string | null> = {}
+    if (value) idMap[value.content] = null
+    if (key) idMap[key.content] = null
+    context.withId(() => {
+      effects.forEach(effect =>
+        push(...genOperations(effect.operations, context)),
+      )
+    }, idMap)
 
-      const idMap: Record<string, string | null> = {}
-      if (value) idMap[value.content] = null
-      if (key) idMap[key.content] = null
-
-      context.withId(() => {
-        effects.forEach(effect =>
-          push(...genOperations(effect.operations, context)),
-        )
-      }, idMap)
-    })
+    push(INDENT_END)
 
     return [
-      newline(),
+      NEWLINE,
       `const ${updateFn} = () => {`,
       ...frag,
-      newline(),
+      NEWLINE,
       '}',
-      newline(),
+      NEWLINE,
       `${vaporHelper('renderEffect')}(${updateFn})`,
     ]
   }

@@ -19,6 +19,9 @@ interface CodegenOptions extends BaseCodegenOptions {
 }
 
 export type CodeFragment =
+  | typeof NEWLINE
+  | typeof INDENT_START
+  | typeof INDENT_END
   | string
   | [code: string, newlineIndex?: number, loc?: SourceLocation, name?: string]
   | undefined
@@ -28,13 +31,9 @@ export class CodegenContext {
 
   source: string
   code: CodeFragment[]
-  indentLevel: number = 0
   map?: SourceMapGenerator
 
   push: (...args: CodeFragment[]) => void
-  newline = (): CodeFragment => {
-    return [`\n${`  `.repeat(this.indentLevel)}`, NewlineType.Start]
-  }
   multi = (
     [left, right, seg]: [left: string, right: string, segment: string],
     ...fns: Array<false | string | CodeFragment[]>
@@ -57,12 +56,6 @@ export class CodegenContext {
     ...args: Array<false | string | CodeFragment[]>
   ): CodeFragment[] => {
     return [name, ...this.multi(['(', ')', ', '], ...args)]
-  }
-  withIndent = <T>(fn: () => T): T => {
-    ++this.indentLevel
-    const ret = fn()
-    --this.indentLevel
-    return ret
   }
 
   helpers = new Set<string>([])
@@ -136,13 +129,17 @@ export interface VaporCodegenResult extends BaseCodegenResult {
   vaporHelpers: Set<string>
 }
 
+export const NEWLINE = Symbol(__DEV__ ? `newline` : ``)
+export const INDENT_START = Symbol(__DEV__ ? `indent start` : ``)
+export const INDENT_END = Symbol(__DEV__ ? `indent end` : ``)
+
 // IR -> JS codegen
 export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
 ): VaporCodegenResult {
   const ctx = new CodegenContext(ir, options)
-  const { push, withIndent, newline, helpers, vaporHelpers } = ctx
+  const { push, helpers, vaporHelpers } = ctx
 
   const functionName = 'render'
   const isSetupInlined = !!options.inline
@@ -151,18 +148,17 @@ export function generate(
   } else {
     push(
       // placeholder for preamble
-      newline(),
-      newline(),
+      NEWLINE,
+      NEWLINE,
       `export function ${functionName}(_ctx) {`,
     )
   }
 
-  withIndent(() => {
-    ir.template.forEach((template, i) => push(...genTemplate(template, i, ctx)))
-    push(...genBlockFunctionContent(ir, ctx))
-  })
+  push(INDENT_START)
+  ir.template.forEach((template, i) => push(...genTemplate(template, i, ctx)))
+  push(...genBlockFunctionContent(ir, ctx))
+  push(INDENT_END, NEWLINE)
 
-  push(newline())
   if (isSetupInlined) {
     push('})()')
   } else {
@@ -198,9 +194,21 @@ export function generate(
 function genCodeFragment(context: CodegenContext) {
   let codegen = ''
   const pos = { line: 1, column: 1, offset: 0 }
+  let indentLevel = 0
 
   for (let frag of context.code) {
     if (!frag) continue
+
+    if (frag === NEWLINE) {
+      frag = [`\n${`  `.repeat(indentLevel)}`, NewlineType.Start]
+    } else if (frag === INDENT_START) {
+      indentLevel++
+      continue
+    } else if (frag === INDENT_END) {
+      indentLevel--
+      continue
+    }
+
     if (isString(frag)) frag = [frag]
 
     let [code, newlineIndex = NewlineType.None, loc, name] = frag
@@ -269,8 +277,7 @@ function genCodeFragment(context: CodegenContext) {
   }
 }
 
-export function buildCodeFragment() {
-  const frag: CodeFragment[] = []
+export function buildCodeFragment(...frag: CodeFragment[]) {
   const push = frag.push.bind(frag)
   return [frag, push] as const
 }

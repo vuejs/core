@@ -1,6 +1,7 @@
 import {
   type CodeFragment,
   type CodegenContext,
+  NEWLINE,
   buildCodeFragment,
 } from '../generate'
 import { IRNodeTypes, type IfIRNode } from '../ir'
@@ -12,7 +13,7 @@ export function genIf(
   context: CodegenContext,
   isNested = false,
 ): CodeFragment[] {
-  const { call, vaporHelper, newline } = context
+  const { call, vaporHelper } = context
   const { condition, positive, negative } = oper
   const [frag, push] = buildCodeFragment()
 
@@ -33,7 +34,7 @@ export function genIf(
     }
   }
 
-  if (!isNested) push(newline(), `const n${oper.id} = `)
+  if (!isNested) push(NEWLINE, `const n${oper.id} = `)
   push(
     ...call(vaporHelper('createIf'), conditionExpr, positiveArg, negativeArg),
   )

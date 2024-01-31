@@ -12,7 +12,7 @@ import { invokeDirectiveHook } from './directive'
 import { insert, querySelector, remove } from './dom'
 import { queuePostRenderEffect } from './scheduler'
 
-export const fragmentKey = Symbol('fragment')
+export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
 export type Block = Node | Fragment | Block[]
 export type ParentBlock = ParentNode | Block[]

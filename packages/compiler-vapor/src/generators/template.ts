@@ -1,4 +1,4 @@
-import type { CodeFragment, CodegenContext } from '../generate'
+import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import {
   type FragmentFactoryIRNode,
   IRNodeTypes,
@@ -8,18 +8,18 @@ import {
 export function genTemplate(
   node: TemplateFactoryIRNode | FragmentFactoryIRNode,
   index: number,
-  { newline, vaporHelper }: CodegenContext,
+  { vaporHelper }: CodegenContext,
 ): CodeFragment[] {
   if (node.type === IRNodeTypes.TEMPLATE_FACTORY) {
     // TODO source map?
     return [
-      newline(),
+      NEWLINE,
       `const t${index} = ${vaporHelper('template')}(${JSON.stringify(
         node.template,
       )})`,
     ]
   } else {
     // fragment
-    return [newline(), `const t${index} = ${vaporHelper('fragment')}()`]
+    return [NEWLINE, `const t${index} = ${vaporHelper('fragment')}()`]
   }
 }

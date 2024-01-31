@@ -1,4 +1,4 @@
-import type { CodeFragment, CodegenContext } from '../generate'
+import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import type { SetPropIRNode, VaporHelper } from '../ir'
 import { genExpression } from './expression'
 import { isString } from '@vue/shared'
@@ -7,7 +7,7 @@ export function genSetProp(
   oper: SetPropIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, newline, vaporHelper, helper } = context
+  const { call, vaporHelper, helper } = context
 
   const element = `n${oper.element}`
   const key = genExpression(oper.key, context)
@@ -31,14 +31,14 @@ export function genSetProp(
 
     if (helperName) {
       return [
-        newline(),
+        NEWLINE,
         ...call(vaporHelper(helperName), element, omitKey ? false : key, value),
       ]
     }
   }
 
   return [
-    newline(),
+    NEWLINE,
     ...call(vaporHelper('setDynamicProp'), element, genDynamicKey(), value),
   ]
 

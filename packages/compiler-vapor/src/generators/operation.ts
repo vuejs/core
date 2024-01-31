@@ -2,6 +2,9 @@ import { type IREffect, IRNodeTypes, type OperationNode } from '../ir'
 import {
   type CodeFragment,
   type CodegenContext,
+  INDENT_END,
+  INDENT_START,
+  NEWLINE,
   buildCodeFragment,
 } from '../generate'
 import { genAppendNode, genInsertNode, genPrependNode } from './dom'
@@ -74,13 +77,14 @@ export function genEffects(effects: IREffect[], context: CodegenContext) {
 }
 
 function genEffect({ operations }: IREffect, context: CodegenContext) {
-  const { newline, withIndent, vaporHelper } = context
-  const [frag, push] = buildCodeFragment()
-  push(newline(), `${vaporHelper('renderEffect')}(() => {`)
-  withIndent(() => {
-    operations.forEach(op => push(...genOperation(op, context)))
-  })
-  push(newline(), '})')
+  const { vaporHelper } = context
+  const [frag, push] = buildCodeFragment(
+    NEWLINE,
+    `${vaporHelper('renderEffect')}(() => {`,
+    INDENT_START,
+  )
+  operations.forEach(op => push(...genOperation(op, context)))
+  push(INDENT_END, NEWLINE, '})')
   return frag
 }
 

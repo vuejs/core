@@ -1,5 +1,5 @@
 import { isMemberExpression } from '@vue/compiler-dom'
-import type { CodeFragment, CodegenContext } from '../generate'
+import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import type { SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
 
@@ -11,7 +11,7 @@ export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper, newline, call, options: ctxOptions } = context
+  const { vaporHelper, call, options: ctxOptions } = context
   const { keys, nonKeys, options } = oper.modifiers
 
   const name = genName()
@@ -20,7 +20,7 @@ export function genSetEvent(
     !!options.length && `{ ${options.map(v => `${v}: true`).join(', ')} }`
 
   return [
-    newline(),
+    NEWLINE,
     ...call(vaporHelper('on'), `n${oper.element}`, name, handler, opt),
   ]
 

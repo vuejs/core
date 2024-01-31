@@ -9,6 +9,9 @@ import {
 import {
   type CodeFragment,
   type CodegenContext,
+  INDENT_END,
+  INDENT_START,
+  NEWLINE,
   buildCodeFragment,
 } from '../generate'
 import { genWithDirective } from './directive'
@@ -20,13 +23,14 @@ export function genBlockFunction(
   args: CodeFragment[] = [],
   returnValue?: () => CodeFragment[],
 ): CodeFragment[] {
-  const { newline, withIndent } = context
   return [
     '(',
     ...args,
     ') => {',
-    ...withIndent(() => genBlockFunctionContent(oper, context, returnValue)),
-    newline(),
+    INDENT_START,
+    ...genBlockFunctionContent(oper, context, returnValue),
+    INDENT_END,
+    NEWLINE,
     '}',
   ]
 }
@@ -36,15 +40,16 @@ export function genBlockFunctionContent(
   ctx: CodegenContext,
   returnValue?: () => CodeFragment[],
 ): CodeFragment[] {
-  const { newline, vaporHelper } = ctx
-  const [frag, push] = buildCodeFragment()
-
-  push(newline(), `const n${ir.dynamic.id} = t${ir.templateIndex}()`)
+  const { vaporHelper } = ctx
+  const [frag, push] = buildCodeFragment(
+    NEWLINE,
+    `const n${ir.dynamic.id} = t${ir.templateIndex}()`,
+  )
 
   const children = genChildren(ir.dynamic.children)
   if (children) {
     push(
-      newline(),
+      NEWLINE,
       `const ${children} = ${vaporHelper('children')}(n${ir.dynamic.id})`,
     )
   }
@@ -61,7 +66,7 @@ export function genBlockFunctionContent(
   push(...genEffects(ir.effect, ctx))
 
   push(
-    newline(),
+    NEWLINE,
     'return ',
     ...(returnValue ? returnValue() : [`n${ir.dynamic.id}`]),
   )
