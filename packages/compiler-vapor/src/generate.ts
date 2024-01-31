@@ -29,7 +29,6 @@ export type CodeFragment =
 export class CodegenContext {
   options: Required<CodegenOptions>
 
-  source: string
   code: CodeFragment[]
   map?: SourceMapGenerator
 
@@ -86,7 +85,10 @@ export class CodegenContext {
   }
   genEffect?: (effects: IREffect[]) => CodeFragment[]
 
-  constructor(ir: RootIRNode, options: CodegenOptions) {
+  constructor(
+    public ir: RootIRNode,
+    options: CodegenOptions,
+  ) {
     const defaultOptions = {
       mode: 'function',
       prefixIdentifiers: options.mode === 'module',
@@ -105,7 +107,6 @@ export class CodegenContext {
       expressionPlugins: [],
     }
     this.options = extend(defaultOptions, options)
-    this.source = ir.source
 
     const [code, push] = buildCodeFragment()
     this.code = code
@@ -117,7 +118,7 @@ export class CodegenContext {
     if (!__BROWSER__ && sourceMap) {
       // lazy require source-map implementation, only in non-browser builds
       this.map = new SourceMapGenerator()
-      this.map.setSourceContent(filename, this.source)
+      this.map.setSourceContent(filename, ir.source)
       this.map._sources.add(filename)
     }
   }
