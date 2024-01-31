@@ -1,13 +1,16 @@
 import {
   type AllNode,
+  type AttributeNode,
   type TransformOptions as BaseTransformOptions,
   type CompilerCompatOptions,
+  type DirectiveNode,
   type ElementNode,
   ElementTypes,
   NodeTypes,
   type ParentNode,
   type RootNode,
   type TemplateChildNode,
+  type TemplateNode,
   defaultOnError,
   defaultOnWarn,
   isVSlot,
@@ -402,4 +405,28 @@ export function createStructuralDirectiveTransform(
       return exitFns
     }
   }
+}
+
+export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
+  if (node.tagType === ElementTypes.TEMPLATE) {
+    return node
+  }
+
+  const reserved: Array<AttributeNode | DirectiveNode> = []
+  const pass: Array<AttributeNode | DirectiveNode> = []
+  node.props.forEach(prop => {
+    if (prop.type === NodeTypes.DIRECTIVE && dirs.includes(prop.name)) {
+      reserved.push(prop)
+    } else {
+      pass.push(prop)
+    }
+  })
+
+  return extend({}, node, {
+    type: NodeTypes.ELEMENT,
+    tag: 'template',
+    props: reserved,
+    tagType: ElementTypes.TEMPLATE,
+    children: [extend({}, node, { props: pass } as TemplateChildNode)],
+  } as Partial<TemplateNode>)
 }

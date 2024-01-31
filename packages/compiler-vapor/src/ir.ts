@@ -12,6 +12,8 @@ import type { DirectiveTransform, NodeTransform } from './transform'
 
 export enum IRNodeTypes {
   ROOT,
+  BLOCK_FUNCTION,
+
   TEMPLATE_FACTORY,
   FRAGMENT_FACTORY,
 
@@ -30,7 +32,7 @@ export enum IRNodeTypes {
   WITH_DIRECTIVE,
 
   IF,
-  BLOCK_FUNCTION,
+  FOR,
 }
 
 export interface BaseIRNode {
@@ -63,6 +65,16 @@ export interface IfIRNode extends BaseIRNode {
   condition: IRExpression
   positive: BlockFunctionIRNode
   negative?: BlockFunctionIRNode | IfIRNode
+}
+
+export interface ForIRNode extends BaseIRNode {
+  type: IRNodeTypes.FOR
+  id: number
+  source: IRExpression
+  value?: SimpleExpressionNode
+  key?: SimpleExpressionNode
+  index?: SimpleExpressionNode
+  render: BlockFunctionIRNode
 }
 
 export interface TemplateFactoryIRNode extends BaseIRNode {
@@ -176,6 +188,7 @@ export type OperationNode =
   | AppendNodeIRNode
   | WithDirectiveIRNode
   | IfIRNode
+  | ForIRNode
 
 export type BlockIRNode = RootIRNode | BlockFunctionIRNode
 

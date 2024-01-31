@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: v-for > basic v-for 1`] = `
+"import { template as _template, fragment as _fragment, children as _children, on as _on, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createFor(() => (_ctx.items), (_block) => {
+    const n2 = t0()
+    const { 0: [n3],} = _children(n2)
+    _on(n3, "click", $event => (_ctx.remove(_block.s[0])))
+    const _updateEffect = () => {
+      const [item] = _block.s
+      _setText(n3, item)
+    }
+    _renderEffect(_updateEffect)
+    return [n2, _updateEffect]
+  })
+  _append(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > basic v-for 2`] = `
+"import { template as _template, fragment as _fragment, createFor as _createFor, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div>item</div>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createFor(() => (_ctx.items), (_block) => {
+    const n2 = t0()
+    return [n2, () => {}]
+  })
+  _append(n0, n1)
+  return n0
+}"
+`;

@@ -17,7 +17,6 @@ import {
 export function genExpression(
   node: IRExpression,
   context: CodegenContext,
-  knownIds: Record<string, number> = Object.create(null),
 ): CodeFragment[] {
   const {
     options: { prefixIdentifiers },
@@ -41,22 +40,13 @@ export function genExpression(
     return [[rawExpr, NewlineType.None, loc]]
   }
 
+  // the expression is a simple identifier
   if (ast === null) {
-    // the expression is a simple identifier
     return [genIdentifier(rawExpr, context, loc)]
   }
 
   const ids: Identifier[] = []
-  walkIdentifiers(
-    ast!,
-    (id, parent, parentStack, isReference, isLocal) => {
-      if (isLocal) return
-      ids.push(id)
-    },
-    false,
-    [],
-    knownIds,
-  )
+  walkIdentifiers(ast!, id => ids.push(id))
   if (ids.length) {
     ids.sort((a, b) => a.start! - b.start!)
     const [frag, push] = buildCodeFragment()
@@ -92,11 +82,17 @@ const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 function genIdentifier(
   id: string,
-  { options, vaporHelper }: CodegenContext,
+  { options, vaporHelper, identifiers }: CodegenContext,
   loc?: SourceLocation,
 ): CodeFragment {
   const { inline, bindingMetadata } = options
   let name: string | undefined = id
+
+  const idMap = identifiers[id]
+  if (idMap && idMap.length) {
+    return [idMap[0], NewlineType.None, loc]
+  }
+
   if (inline) {
     switch (bindingMetadata[id]) {
       case BindingTypes.SETUP_REF:

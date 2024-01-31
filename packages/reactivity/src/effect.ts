@@ -70,7 +70,7 @@ export class ReactiveEffect<T = any> {
     public fn: () => T,
     public trigger: () => void,
     public scheduler?: EffectScheduler,
-    scope?: EffectScope,
+    public scope?: EffectScope,
   ) {
     recordEffectScope(this, scope)
   }

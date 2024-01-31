@@ -34,7 +34,8 @@ function handleClearAll() {
   tasks.value = []
 }
 
-function handleRemove(idx: number) {
+function handleRemove(idx: number, task: Task) {
+  console.log(task)
   tasks.value.splice(idx, 1)
 }
 </script>
@@ -42,42 +43,18 @@ function handleRemove(idx: number) {
 <template>
   <h1>todos</h1>
   <ul>
-    <!-- TODO: v-for -->
-    <li v-if="tasks[0]" :class="{ del: tasks[0]?.completed }">
+    <li
+      v-for="(task, index) of tasks"
+      :key="index"
+      :class="{ del: task.completed }"
+    >
       <input
         type="checkbox"
-        :checked="tasks[0]?.completed"
-        @change="handleComplete(0, $event)"
+        :checked="task.completed"
+        @change="handleComplete(index, $event)"
       />
-      {{ tasks[0]?.title }}
-      <button @click="handleRemove(0)">x</button>
-    </li>
-    <li v-if="tasks[1]" :class="{ del: tasks[1]?.completed }">
-      <input
-        type="checkbox"
-        :checked="tasks[1]?.completed"
-        @change="handleComplete(1, $event)"
-      />
-      {{ tasks[1]?.title }}
-      <button @click="handleRemove(1)">x</button>
-    </li>
-    <li v-if="tasks[2]" :class="{ del: tasks[2]?.completed }">
-      <input
-        type="checkbox"
-        :checked="tasks[2]?.completed"
-        @change="handleComplete(2, $event)"
-      />
-      {{ tasks[2]?.title }}
-      <button @click="handleRemove(2)">x</button>
-    </li>
-    <li v-if="tasks[3]" :class="{ del: tasks[3]?.completed }">
-      <input
-        type="checkbox"
-        :checked="tasks[3]?.completed"
-        @change="handleComplete(3, $event)"
-      />
-      {{ tasks[3]?.title }}
-      <button @click="handleRemove(3)">x</button>
+      {{ task.title }}
+      <button @click="handleRemove(index, task)">x</button>
     </li>
   </ul>
   <p>

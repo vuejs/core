@@ -45,13 +45,13 @@ export function genSetEvent(
       const hasMultipleStatements = exp.content.includes(`;`)
 
       if (isInlineStatement) {
-        const knownIds = Object.create(null)
-        knownIds['$event'] = 1
-
+        const expr = context.withId(() => genExpression(exp, context), {
+          $event: null,
+        })
         return [
           '$event => ',
           hasMultipleStatements ? '{' : '(',
-          ...genExpression(exp, context, knownIds),
+          ...expr,
           hasMultipleStatements ? '}' : ')',
         ]
       } else {

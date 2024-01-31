@@ -1,10 +1,8 @@
 import {
   type ElementNode,
-  ElementTypes,
   ErrorCodes,
   NodeTypes,
   type TemplateChildNode,
-  type TemplateNode,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -12,6 +10,7 @@ import {
   type TransformContext,
   createStructuralDirectiveTransform,
   genDefaultDynamic,
+  wrapTemplate,
 } from '../transform'
 import {
   type BlockFunctionIRNode,
@@ -117,7 +116,7 @@ export function processIf(
 
     // TODO ignore comments if the v-if is direct child of <transition> (PR #3622)
     if (__DEV__ && comments.length) {
-      node = wrapTemplate(node)
+      node = wrapTemplate(node, ['else-if', 'else'])
       context.node = node = extend({}, node, {
         children: [...comments, ...node.children],
       })
@@ -145,7 +144,7 @@ export function createIfBranch(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): [BlockFunctionIRNode, () => void] {
-  context.node = node = wrapTemplate(node)
+  context.node = node = wrapTemplate(node, ['if', 'else-if', 'else'])
 
   const branch: BlockFunctionIRNode = {
     type: IRNodeTypes.BLOCK_FUNCTION,
@@ -167,23 +166,4 @@ export function createIfBranch(
     exitBlock()
   }
   return [branch, onExit]
-}
-
-function wrapTemplate(node: ElementNode): TemplateNode {
-  if (node.tagType === ElementTypes.TEMPLATE) {
-    return node
-  }
-  return extend({}, node, {
-    type: NodeTypes.ELEMENT,
-    tag: 'template',
-    props: [],
-    tagType: ElementTypes.TEMPLATE,
-    children: [
-      extend({}, node, {
-        props: node.props.filter(
-          p => p.type !== NodeTypes.DIRECTIVE && p.name !== 'if',
-        ),
-      } as TemplateChildNode),
-    ],
-  } as Partial<TemplateNode>)
 }

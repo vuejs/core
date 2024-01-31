@@ -229,16 +229,18 @@ export function baseWatch(
     getter = () => traverse(baseGetter())
   }
 
+  const scope = getCurrentScope()
+
   if (once) {
     if (!cb) {
       // onEffectCleanup need use effect as a key
-      getCurrentScope()?.effects.push((effect = {} as any))
+      scope?.effects.push((effect = {} as any))
       getter()
       return
     }
     if (immediate) {
       // onEffectCleanup need use effect as a key
-      getCurrentScope()?.effects.push((effect = {} as any))
+      scope?.effects.push((effect = {} as any))
       callWithAsyncErrorHandling(
         cb,
         onError,
@@ -317,7 +319,7 @@ export function baseWatch(
 
   let effectScheduler: EffectScheduler = () => scheduler(job, effect, false)
 
-  effect = new ReactiveEffect(getter, NOOP, effectScheduler)
+  effect = new ReactiveEffect(getter, NOOP, effectScheduler, scope)
 
   cleanup = effect.onStop = () => {
     const cleanups = cleanupMap.get(effect)
