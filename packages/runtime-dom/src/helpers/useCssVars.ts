@@ -28,9 +28,9 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   const updateTeleports = (instance.ut = (
     vars = getter(instance.proxy),
-    ssr = false,
+    hydration = false,
   ) => {
-    if (ssr) {
+    if (hydration) {
       return vars
     }
     Array.from(

@@ -447,11 +447,11 @@ export function createHydrationFunctions(
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
         ) {
+          const cssVars = parentComponent?.ut?.(undefined, true) as Record<
+            string,
+            string
+          >
           for (const key in props) {
-            const cssVars = parentComponent?.ut?.(undefined, true) as Record<
-              string,
-              string
-            >
             // check hydration mismatch
             if (
               __DEV__ &&

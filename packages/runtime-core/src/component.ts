@@ -520,7 +520,7 @@ export interface ComponentInternalInstance {
    */
   ut?: (
     vars?: Record<string, string>,
-    ssr?: boolean,
+    hydration?: boolean,
   ) => void | Record<string, string>
 }
 
