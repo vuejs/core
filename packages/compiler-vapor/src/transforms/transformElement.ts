@@ -8,9 +8,9 @@ import { isBuiltInDirective, isReservedProp, isVoidTag } from '@vue/shared'
 import type { NodeTransform, TransformContext } from '../transform'
 import { IRNodeTypes, type VaporDirectiveNode } from '../ir'
 
-export const transformElement: NodeTransform = (node, ctx) => {
+export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
-    node = ctx.node
+    node = context.node
 
     if (
       !(
@@ -25,20 +25,20 @@ export const transformElement: NodeTransform = (node, ctx) => {
     const { tag, props } = node
     const isComponent = node.tagType === ElementTypes.COMPONENT
 
-    ctx.template += `<${tag}`
+    context.template += `<${tag}`
     if (props.length) {
       buildProps(
         node,
-        ctx as TransformContext<ElementNode>,
+        context as TransformContext<ElementNode>,
         undefined,
         isComponent,
       )
     }
-    ctx.template += `>` + ctx.childrenTemplate.join('')
+    context.template += `>` + context.childrenTemplate.join('')
 
     // TODO remove unnecessary close tag, e.g. if it's the last element of the template
     if (!isVoidTag(tag)) {
-      ctx.template += `</${tag}>`
+      context.template += `</${tag}>`
     }
   }
 }

@@ -117,7 +117,7 @@ function createRootContext(
 ): TransformContext<RootNode> {
   let globalId = 0
 
-  const ctx: TransformContext<RootNode> = {
+  const context: TransformContext<RootNode> = {
     node,
     parent: null,
     index: 0,
@@ -210,9 +210,9 @@ function createRootContext(
       this.block.operation.push(...node)
     },
   }
-  ctx.root = ctx
-  ctx.reference()
-  return ctx
+  context.root = context
+  context.reference()
+  return context
 }
 
 function createContext<T extends TemplateChildNode>(
@@ -220,7 +220,7 @@ function createContext<T extends TemplateChildNode>(
   parent: TransformContext<ParentNode>,
   index: number,
 ): TransformContext<T> {
-  const ctx: TransformContext<T> = extend({}, parent, {
+  return extend({}, parent, {
     node,
     parent,
     index,
@@ -228,8 +228,7 @@ function createContext<T extends TemplateChildNode>(
     template: '',
     childrenTemplate: [],
     dynamic: genDefaultDynamic(),
-  } satisfies Partial<TransformContext<T>>)
-  return ctx
+  } satisfies Partial<TransformContext<T>>) satisfies TransformContext<T>
 }
 
 // AST -> IR
@@ -250,10 +249,10 @@ export function transform(
     operation: [],
   }
 
-  const ctx = createRootContext(ir, root, options)
+  const context = createRootContext(ir, root, options)
 
-  transformNode(ctx)
-  ctx.registerTemplate()
+  transformNode(context)
+  context.registerTemplate()
 
   return ir
 }
@@ -311,17 +310,17 @@ function transformNode(
     context.template += context.childrenTemplate.filter(Boolean).join('')
 }
 
-function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
-  const { children } = ctx.node
+function transformChildren(context: TransformContext<RootNode | ElementNode>) {
+  const { children } = context.node
 
   for (const [i, child] of children.entries()) {
-    const childContext = createContext(child, ctx, i)
+    const childContext = createContext(child, context, i)
     transformNode(childContext)
-    ctx.childrenTemplate.push(childContext.template)
-    ctx.dynamic.children[i] = childContext.dynamic
+    context.childrenTemplate.push(childContext.template)
+    context.dynamic.children[i] = childContext.dynamic
   }
 
-  processDynamicChildren(ctx)
+  processDynamicChildren(context)
 }
 
 function processDynamicChildren(

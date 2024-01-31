@@ -37,10 +37,10 @@ export function genBlockFunction(
 
 export function genBlockFunctionContent(
   ir: BlockFunctionIRNode | RootIRNode,
-  ctx: CodegenContext,
+  context: CodegenContext,
   returnValue?: () => CodeFragment[],
 ): CodeFragment[] {
-  const { vaporHelper } = ctx
+  const { vaporHelper } = context
   const [frag, push] = buildCodeFragment(
     NEWLINE,
     `const n${ir.dynamic.id} = t${ir.templateIndex}()`,
@@ -59,11 +59,11 @@ export function genBlockFunctionContent(
       oper.type === IRNodeTypes.WITH_DIRECTIVE,
   )
   for (const directives of groupDirective(directiveOps)) {
-    push(...genWithDirective(directives, ctx))
+    push(...genWithDirective(directives, context))
   }
 
-  push(...genOperations(ir.operation, ctx))
-  push(...genEffects(ir.effect, ctx))
+  push(...genOperations(ir.operation, context))
+  push(...genEffects(ir.effect, context))
 
   push(
     NEWLINE,

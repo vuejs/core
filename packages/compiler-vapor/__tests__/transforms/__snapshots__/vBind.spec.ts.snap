@@ -44,6 +44,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize } from 'vue';
+import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")

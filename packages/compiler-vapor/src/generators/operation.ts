@@ -17,10 +17,10 @@ import { genSetProp } from './prop'
 import { genSetRef } from './ref'
 import { genCreateTextNode, genSetText } from './text'
 
-export function genOperations(opers: OperationNode[], ctx: CodegenContext) {
+export function genOperations(opers: OperationNode[], context: CodegenContext) {
   const [frag, push] = buildCodeFragment()
   for (const operation of opers) {
-    push(...genOperation(operation, ctx))
+    push(...genOperation(operation, context))
   }
   return frag
 }

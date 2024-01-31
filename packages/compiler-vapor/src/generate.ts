@@ -20,6 +20,7 @@ interface CodegenOptions extends BaseCodegenOptions {
 
 export type CodeFragment =
   | typeof NEWLINE
+  | typeof LF
   | typeof INDENT_START
   | typeof INDENT_END
   | string
@@ -131,6 +132,8 @@ export interface VaporCodegenResult extends BaseCodegenResult {
 }
 
 export const NEWLINE = Symbol(__DEV__ ? `newline` : ``)
+/** increase offset but don't push actual code */
+export const LF = Symbol(__DEV__ ? `line feed` : ``)
 export const INDENT_START = Symbol(__DEV__ ? `indent start` : ``)
 export const INDENT_END = Symbol(__DEV__ ? `indent end` : ``)
 
@@ -139,25 +142,22 @@ export function generate(
   ir: RootIRNode,
   options: CodegenOptions = {},
 ): VaporCodegenResult {
-  const ctx = new CodegenContext(ir, options)
-  const { push, helpers, vaporHelpers } = ctx
+  const context = new CodegenContext(ir, options)
+  const { push, helpers, vaporHelpers } = context
 
   const functionName = 'render'
   const isSetupInlined = !!options.inline
   if (isSetupInlined) {
     push(`(() => {`)
   } else {
-    push(
-      // placeholder for preamble
-      NEWLINE,
-      NEWLINE,
-      `export function ${functionName}(_ctx) {`,
-    )
+    push(NEWLINE, `export function ${functionName}(_ctx) {`)
   }
 
   push(INDENT_START)
-  ir.template.forEach((template, i) => push(...genTemplate(template, i, ctx)))
-  push(...genBlockFunctionContent(ir, ctx))
+  ir.template.forEach((template, i) =>
+    push(...genTemplate(template, i, context)),
+  )
+  push(...genBlockFunctionContent(ir, context))
   push(INDENT_END, NEWLINE)
 
   if (isSetupInlined) {
@@ -166,18 +166,9 @@ export function generate(
     push('}')
   }
 
-  let preamble = ''
-  if (vaporHelpers.size)
-    // TODO: extract import codegen
-    preamble = `import { ${[...vaporHelpers]
-      .map(h => `${h} as _${h}`)
-      .join(', ')} } from 'vue/vapor';`
-  if (helpers.size)
-    preamble = `import { ${[...helpers]
-      .map(h => `${h} as _${h}`)
-      .join(', ')} } from 'vue';`
+  const preamble = genHelperImports(context)
+  let codegen = genCodeFragment(context)
 
-  let codegen = genCodeFragment(ctx)
   if (!isSetupInlined) {
     codegen = preamble + codegen
   }
@@ -186,7 +177,7 @@ export function generate(
     code: codegen,
     ast: ir,
     preamble,
-    map: ctx.map ? ctx.map.toJSON() : undefined,
+    map: context.map ? context.map.toJSON() : undefined,
     helpers,
     vaporHelpers,
   }
@@ -207,6 +198,11 @@ function genCodeFragment(context: CodegenContext) {
       continue
     } else if (frag === INDENT_END) {
       indentLevel--
+      continue
+    } else if (frag === LF) {
+      pos.line++
+      pos.column = 0
+      pos.offset++
       continue
     }
 
@@ -281,4 +277,21 @@ function genCodeFragment(context: CodegenContext) {
 export function buildCodeFragment(...frag: CodeFragment[]) {
   const push = frag.push.bind(frag)
   return [frag, push] as const
+}
+
+function genHelperImports({ helpers, vaporHelpers, code }: CodegenContext) {
+  let imports = ''
+  if (helpers.size) {
+    code.unshift(LF)
+    imports += `import { ${[...helpers]
+      .map(h => `${h} as _${h}`)
+      .join(', ')} } from 'vue';\n`
+  }
+  if (vaporHelpers.size) {
+    code.unshift(LF)
+    imports += `import { ${[...vaporHelpers]
+      .map(h => `${h} as _${h}`)
+      .join(', ')} } from 'vue/vapor';\n`
+  }
+  return imports
 }

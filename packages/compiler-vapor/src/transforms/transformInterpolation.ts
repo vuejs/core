@@ -2,19 +2,19 @@ import { NodeTypes, type SimpleExpressionNode } from '@vue/compiler-dom'
 import type { NodeTransform } from '../transform'
 import { DynamicFlag, IRNodeTypes } from '../ir'
 
-export const transformInterpolation: NodeTransform = (node, ctx) => {
+export const transformInterpolation: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.INTERPOLATION) return
 
   const expr = node.content as SimpleExpressionNode
-  const parentChildren = ctx.parent ? ctx.parent.node.children : []
-  const isFirst = ctx.index === 0
-  const isLast = ctx.index === parentChildren.length - 1
-  const isRoot = ctx.parent === ctx.root
+  const parentChildren = context.parent ? context.parent.node.children : []
+  const isFirst = context.index === 0
+  const isLast = context.index === parentChildren.length - 1
+  const isRoot = context.parent === context.root
 
   if (isFirst && isLast && !isRoot) {
-    const parent = ctx.parent!
+    const parent = context.parent!
     const parentId = parent.reference()
-    ctx.registerEffect(
+    context.registerEffect(
       [expr],
       [
         {
@@ -25,13 +25,13 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
       ],
     )
   } else {
-    const id = ctx.reference()
-    ctx.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
-    ctx.registerOperation({
+    const id = context.reference()
+    context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+    context.registerOperation({
       type: IRNodeTypes.CREATE_TEXT_NODE,
       id,
     })
-    ctx.registerEffect(
+    context.registerEffect(
       [expr],
       [
         {
