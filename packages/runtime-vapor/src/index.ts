@@ -50,6 +50,7 @@ export * from './dom'
 export * from './apiLifecycle'
 export * from './if'
 export * from './for'
+export { defineComponent } from './apiDefineComponent'
 
 export * from './directives/vShow'
 export * from './directives/vModel'
