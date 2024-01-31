@@ -36,7 +36,7 @@ window.addEventListener('resize', setVH)
 setVH()
 
 const useSSRMode = ref(false)
-const useVaporMode = ref(false)
+const useVaporMode = ref(true)
 
 const {
   vueVersion,
