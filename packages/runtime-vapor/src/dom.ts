@@ -73,9 +73,9 @@ export function children(nodes: ChildNode[]): Children {
   return result
 }
 
-export function createTextNode(val: unknown): Text {
+export function createTextNode(val?: unknown): Text {
   // eslint-disable-next-line no-restricted-globals
-  return document.createTextNode(toDisplayString(val))
+  return document.createTextNode(val === undefined ? '' : toDisplayString(val))
 }
 
 export function createComment(data: string): Comment {

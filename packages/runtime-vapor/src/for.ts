@@ -24,7 +24,7 @@ export const createFor = (
   let oldBlocks: ForBlock[] = []
   let newBlocks: ForBlock[]
   let parent: ParentNode | undefined | null
-  const parentAnchor = __DEV__ ? createComment('for') : createTextNode('')
+  const parentAnchor = __DEV__ ? createComment('for') : createTextNode()
   const ref: Fragment = {
     nodes: oldBlocks,
     [fragmentKey]: true,

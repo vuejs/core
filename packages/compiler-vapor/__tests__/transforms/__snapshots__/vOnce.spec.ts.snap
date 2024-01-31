@@ -19,7 +19,7 @@ export function render(_ctx) {
   const t0 = _template("<div> <span></span></div>")
   const n0 = t0()
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
-  const n1 = _createTextNode(_ctx.msg)
+  const n1 = _createTextNode()
   _setText(n1, _ctx.msg)
   _setClass(n2, _ctx.clz)
   _prepend(n3, n1)

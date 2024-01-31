@@ -130,7 +130,6 @@ export interface SetModelValueIRNode extends BaseIRNode {
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
-  value: IRExpression
 }
 
 export interface InsertNodeIRNode extends BaseIRNode {

@@ -32,7 +32,6 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
       type: IRNodeTypes.CREATE_TEXT_NODE,
       loc: node.loc,
       id,
-      value: expr,
     })
     ctx.registerEffect(
       [expr],

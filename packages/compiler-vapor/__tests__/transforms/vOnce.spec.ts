@@ -31,11 +31,6 @@ describe('compiler: v-once', () => {
       {
         id: 1,
         type: IRNodeTypes.CREATE_TEXT_NODE,
-        value: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'msg',
-          isStatic: false,
-        },
       },
       {
         element: 1,

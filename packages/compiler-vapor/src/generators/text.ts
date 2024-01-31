@@ -25,6 +25,6 @@ export function genCreateTextNode(
   return [
     newline(),
     `const n${oper.id} = `,
-    ...call(vaporHelper('createTextNode'), genExpression(oper.value, context)),
+    ...call(vaporHelper('createTextNode')),
   ]
 }

@@ -15,7 +15,7 @@ export const createIf = (
   let parent: ParentNode | undefined | null
   let block: Block | undefined
   let scope: EffectScope | undefined
-  const anchor = __DEV__ ? createComment('if') : createTextNode('')
+  const anchor = __DEV__ ? createComment('if') : createTextNode()
   const fragment: Fragment = {
     nodes: [],
     anchor,
