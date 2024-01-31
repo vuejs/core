@@ -19,7 +19,6 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
       [
         {
           type: IRNodeTypes.SET_TEXT,
-          loc: node.loc,
           element: parentId,
           value: expr,
         },
@@ -30,7 +29,6 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
     ctx.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
     ctx.registerOperation({
       type: IRNodeTypes.CREATE_TEXT_NODE,
-      loc: node.loc,
       id,
     })
     ctx.registerEffect(
@@ -38,7 +36,6 @@ export const transformInterpolation: NodeTransform = (node, ctx) => {
       [
         {
           type: IRNodeTypes.SET_TEXT,
-          loc: node.loc,
           element: id,
           value: expr,
         },

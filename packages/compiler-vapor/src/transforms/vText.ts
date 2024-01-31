@@ -21,7 +21,6 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     [
       {
         type: IRNodeTypes.SET_TEXT,
-        loc: dir.loc,
         element: context.reference(),
         value: exp || '""',
       },

@@ -72,7 +72,6 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
 
   const operation: SetEventIRNode = {
     type: IRNodeTypes.SET_EVENT,
-    loc,
     element: context.reference(),
     key: arg,
     value: exp,

@@ -59,7 +59,7 @@ function transformProp(
   node: ElementNode,
   context: TransformContext<ElementNode>,
 ): void {
-  const { name, loc } = prop
+  const { name } = prop
   if (isReservedProp(name)) return
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
@@ -76,7 +76,6 @@ function transformProp(
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir: prop,
-      loc,
     })
   }
 }

@@ -16,7 +16,7 @@ import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes, type VaporHelper } from '../ir'
 
 export const transformVModel: DirectiveTransform = (dir, node, context) => {
-  const { exp, arg, loc } = dir
+  const { exp, arg } = dir
   if (!exp) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_MODEL_NO_EXPRESSION, dir.loc),
@@ -140,7 +140,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
     key: (arg && arg.isStatic ? arg.content : arg) || 'modelValue',
     value: exp,
     isComponent,
-    loc: loc,
   })
 
   if (runtimeDirective)
@@ -148,7 +147,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir,
-      loc,
       builtin: runtimeDirective,
     })
 

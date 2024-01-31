@@ -197,12 +197,10 @@ function createRootContext(
         templateNode = {
           type: IRNodeTypes.TEMPLATE_FACTORY,
           template: this.template,
-          loc: node.loc,
         }
       } else {
         templateNode = {
           type: IRNodeTypes.FRAGMENT_FACTORY,
-          loc: node.loc,
         }
       }
       root.template.push(templateNode)
@@ -243,7 +241,6 @@ export function transform(
     type: IRNodeTypes.ROOT,
     node: root,
     source: root.source,
-    loc: root.loc,
     template: [],
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
@@ -327,34 +324,32 @@ function transformChildren(ctx: TransformContext<RootNode | ElementNode>) {
   processDynamicChildren(ctx)
 }
 
-function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
-  const { node } = ctx
-
+function processDynamicChildren(
+  context: TransformContext<RootNode | ElementNode>,
+) {
   let prevChildren: IRDynamicInfo[] = []
   let hasStatic = false
 
-  for (const [index, child] of ctx.dynamic.children.entries()) {
+  for (const [index, child] of context.dynamic.children.entries()) {
     if (!child || !(child.flags & DynamicFlag.INSERT)) {
       if (prevChildren.length) {
         if (hasStatic) {
-          ctx.childrenTemplate[index - prevChildren.length] = `<!>`
+          context.childrenTemplate[index - prevChildren.length] = `<!>`
 
           prevChildren[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevChildren[0].anchor = ctx.increaseId())
+          const anchor = (prevChildren[0].anchor = context.increaseId())
 
-          ctx.registerOperation({
+          context.registerOperation({
             type: IRNodeTypes.INSERT_NODE,
-            loc: node.loc,
             element: prevChildren.map(child => child.id!),
-            parent: ctx.reference(),
+            parent: context.reference(),
             anchor,
           })
         } else {
-          ctx.registerOperation({
+          context.registerOperation({
             type: IRNodeTypes.PREPEND_NODE,
-            loc: node.loc,
             elements: prevChildren.map(child => child.id!),
-            parent: ctx.reference(),
+            parent: context.reference(),
           })
         }
       }
@@ -365,12 +360,11 @@ function processDynamicChildren(ctx: TransformContext<RootNode | ElementNode>) {
 
     prevChildren.push(child)
 
-    if (index === ctx.dynamic.children.length - 1) {
-      ctx.registerOperation({
+    if (index === context.dynamic.children.length - 1) {
+      context.registerOperation({
         type: IRNodeTypes.APPEND_NODE,
-        loc: node.loc,
         elements: prevChildren.map(child => child.id!),
-        parent: ctx.reference(),
+        parent: context.reference(),
       })
     }
   }

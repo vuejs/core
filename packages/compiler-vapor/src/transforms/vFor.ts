@@ -50,7 +50,6 @@ export function processFor(
   const id = context.reference()
   const render: BlockFunctionIRNode = {
     type: IRNodeTypes.BLOCK_FUNCTION,
-    loc: node.loc,
     node,
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
@@ -69,7 +68,6 @@ export function processFor(
     context.registerOperation({
       type: IRNodeTypes.FOR,
       id,
-      loc: dir.loc,
       source: source as SimpleExpressionNode,
       value: value as SimpleExpressionNode | undefined,
       key: key as SimpleExpressionNode | undefined,

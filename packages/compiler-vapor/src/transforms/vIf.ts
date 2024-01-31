@@ -51,7 +51,6 @@ export function processIf(
       context.registerOperation({
         type: IRNodeTypes.IF,
         id,
-        loc: dir.loc,
         condition: dir.exp!,
         positive: branch,
       })
@@ -130,7 +129,6 @@ export function processIf(
       lastIfNode.negative = {
         type: IRNodeTypes.IF,
         id: -1,
-        loc: dir.loc,
         condition: dir.exp!,
         positive: branch,
       }
@@ -148,7 +146,6 @@ export function createIfBranch(
 
   const branch: BlockFunctionIRNode = {
     type: IRNodeTypes.BLOCK_FUNCTION,
-    loc: node.loc,
     node,
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {

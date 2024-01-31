@@ -21,7 +21,6 @@ export const transformVHtml: DirectiveTransform = (dir, node, context) => {
     [
       {
         type: IRNodeTypes.SET_HTML,
-        loc: dir.loc,
         element: context.reference(),
         value: exp || '""',
       },

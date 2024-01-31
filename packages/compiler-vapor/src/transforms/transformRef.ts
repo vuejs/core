@@ -26,6 +26,5 @@ export const transformRef: NodeTransform = (node, context) => {
     type: IRNodeTypes.SET_REF,
     element: context.reference(),
     value,
-    loc: dir.loc,
   })
 }

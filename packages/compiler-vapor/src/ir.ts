@@ -4,7 +4,6 @@ import type {
   DirectiveNode,
   RootNode,
   SimpleExpressionNode,
-  SourceLocation,
   TemplateChildNode,
 } from '@vue/compiler-dom'
 import type { Prettify } from '@vue/shared'
@@ -37,7 +36,6 @@ export enum IRNodeTypes {
 
 export interface BaseIRNode {
   type: IRNodeTypes
-  loc: SourceLocation
 }
 
 export type VaporHelper = keyof typeof import('@vue/runtime-vapor')
