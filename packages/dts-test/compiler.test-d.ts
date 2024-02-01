@@ -1,13 +1,13 @@
 import {
-  createBlock,
-  VNode,
-  Teleport,
-  Text,
-  Static,
   Comment,
   Fragment,
+  Static,
   Suspense,
-  defineComponent
+  Teleport,
+  Text,
+  type VNode,
+  createBlock,
+  defineComponent,
 } from 'vue'
 import { expectType } from './utils'
 
