@@ -13,7 +13,6 @@ import {
   transformBind,
   transformExpression,
   transformOn,
-  transformOn,
   transformStyle,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'

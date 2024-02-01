@@ -4,7 +4,7 @@ describe('ssr: v-scope', () => {
   test('basic', () => {
     expect(compile(`<div v-scope="{ a:1 }">{{a}}</div>`).code)
       .toMatchInlineSnapshot(`
-        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+        "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
         return function ssrRender(_ctx, _push, _parent, _attrs) {
           _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
@@ -24,7 +24,7 @@ describe('ssr: v-scope', () => {
         </div>`,
       ).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         _push(\`<div\${_ssrRenderAttrs(_attrs)}>\`)
@@ -48,7 +48,7 @@ describe('ssr: v-scope', () => {
       </div>
     `).code,
     ).toMatchInlineSnapshot(`
-      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
+      "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require("vue/server-renderer")
 
       return function ssrRender(_ctx, _push, _parent, _attrs) {
         if (_ctx.ok) {

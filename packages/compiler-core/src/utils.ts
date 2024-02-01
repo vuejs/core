@@ -36,14 +36,7 @@ import {
   TO_HANDLERS,
   WITH_MEMO,
 } from './runtimeHelpers'
-import {
-  NOOP,
-  extend,
-  hyphenate,
-  isObject,
-  isString,
-  isSymbol,
-} from '@vue/shared'
+import { NOOP, isObject, isString, isSymbol } from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression } from '@babel/types'
