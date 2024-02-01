@@ -298,7 +298,7 @@ function hasNotDisabledTeleport(vnodes: VNode[]): Boolean {
   return false
 }
 
-export const enum TeleportMoveTypes {
+export enum TeleportMoveTypes {
   TARGET_CHANGE,
   TOGGLE, // enable / disable
   REORDER, // moved in the main view
