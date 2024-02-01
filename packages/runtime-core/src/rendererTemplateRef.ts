@@ -1,20 +1,20 @@
-import { SuspenseBoundary } from './components/Suspense'
-import { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
+import type { SuspenseBoundary } from './components/Suspense'
+import type { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
 import {
   EMPTY_OBJ,
+  ShapeFlags,
   hasOwn,
   isArray,
   isFunction,
   isString,
   remove,
-  ShapeFlags
 } from '@vue/shared'
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { getExposeProxy } from './component'
 import { warn } from './warning'
 import { isRef } from '@vue/reactivity'
-import { callWithErrorHandling, ErrorCodes } from './errorHandling'
-import { SchedulerJob } from './scheduler'
+import { ErrorCodes, callWithErrorHandling } from './errorHandling'
+import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
 
 /**
@@ -25,7 +25,7 @@ export function setRef(
   oldRawRef: VNodeNormalizedRef | null,
   parentSuspense: SuspenseBoundary | null,
   vnode: VNode,
-  isUnmount = false
+  isUnmount = false,
 ) {
   if (isArray(rawRef)) {
     rawRef.forEach((r, i) =>
@@ -34,8 +34,8 @@ export function setRef(
         oldRawRef && (isArray(oldRawRef) ? oldRawRef[i] : oldRawRef),
         parentSuspense,
         vnode,
-        isUnmount
-      )
+        isUnmount,
+      ),
     )
     return
   }
@@ -56,7 +56,7 @@ export function setRef(
   if (__DEV__ && !owner) {
     warn(
       `Missing ref owner context. ref cannot be used on hoisted vnodes. ` +
-        `A vnode with ref must be created inside the render function.`
+        `A vnode with ref must be created inside the render function.`,
     )
     return
   }
@@ -81,9 +81,10 @@ export function setRef(
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
+    const isVFor = rawRef.f
     if (_isString || _isRef) {
       const doSet = () => {
-        if (rawRef.f) {
+        if (isVFor) {
           const existing = _isString
             ? hasOwn(setupState, ref)
               ? setupState[ref]
@@ -118,14 +119,15 @@ export function setRef(
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      if (value) {
-        // #1789: for non-null values, set them after render
-        // null values means this is unmount and it should not overwrite another
-        // ref with the same key
+      // #9908 ref on v-for mutates the same array for both mount and unmount
+      // and should be done together
+      if (isUnmount || isVFor) {
+        doSet()
+      } else {
+        // #1789: set new refs in a post job so that they don't get overwritten
+        // by unmounting ones.
         ;(doSet as SchedulerJob).id = -1
         queuePostRenderEffect(doSet, parentSuspense)
-      } else {
-        doSet()
       }
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)

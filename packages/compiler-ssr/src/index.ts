@@ -1,24 +1,26 @@
 import {
-  CodegenResult,
+  type CodegenResult,
+  type CompilerOptions,
+  type RootNode,
   baseParse,
-  parserOptions,
-  transform,
   generate,
-  CompilerOptions,
-  transformExpression,
-  trackVForSlotScopes,
-  trackSlotScopes,
   noopDirectiveTransform,
+  parserOptions,
+  trackSlotScopes,
+  trackVForSlotScopes,
+  transform,
   transformBind,
+  transformExpression,
+  transformOn,
   transformStyle,
   transformOn,
-  trackVScopeScopes
+  trackVScopeScopes,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'
 import {
+  rawOptionsMap,
   ssrTransformComponent,
-  rawOptionsMap
 } from './transforms/ssrTransformComponent'
 import { ssrTransformSlotOutlet } from './transforms/ssrTransformSlotOutlet'
 import { ssrTransformIf } from './transforms/ssrVIf'
@@ -29,12 +31,11 @@ import { ssrInjectFallthroughAttrs } from './transforms/ssrInjectFallthroughAttr
 import { ssrInjectCssVars } from './transforms/ssrInjectCssVars'
 
 export function compile(
-  template: string,
-  options: CompilerOptions = {}
+  source: string | RootNode,
+  options: CompilerOptions = {},
 ): CodegenResult {
   options = {
     ...options,
-    // apply DOM-specific parsing options
     ...parserOptions,
     ssr: true,
     inSSR: true,
@@ -43,10 +44,10 @@ export function compile(
     prefixIdentifiers: true,
     // disable optimizations that are unnecessary for ssr
     cacheHandlers: false,
-    hoistStatic: false
+    hoistStatic: false,
   }
 
-  const ast = baseParse(template, options)
+  const ast = typeof source === 'string' ? baseParse(source, options) : source
 
   // Save raw options for AST. This is needed when performing sub-transforms
   // on slot vnode branches.
@@ -68,13 +69,13 @@ export function compile(
       trackSlotScopes,
       trackVScopeScopes,
       transformStyle,
-      ...(options.nodeTransforms || []) // user transforms
+      ...(options.nodeTransforms || []), // user transforms
     ],
     directiveTransforms: {
       // reusing core v-bind
       bind: transformBind,
       on: transformOn,
-      // model and show has dedicated SSR handling
+      // model and show have dedicated SSR handling
       model: ssrTransformModel,
       show: ssrTransformShow,
       // the following are ignored during SSR
@@ -82,8 +83,8 @@ export function compile(
       cloak: noopDirectiveTransform,
       once: noopDirectiveTransform,
       memo: noopDirectiveTransform,
-      ...(options.directiveTransforms || {}) // user transforms
-    }
+      ...(options.directiveTransforms || {}), // user transforms
+    },
   })
 
   // traverse the template AST and convert into SSR codegen AST

@@ -1,25 +1,29 @@
 import {
+  type TransformContext,
   createStructuralDirectiveTransform,
-  TransformContext,
-  traverseNode
+  traverseNode,
 } from '../transform'
 import {
-  NodeTypes,
+  type AttributeNode,
+  type BlockCodegenNode,
+  type CacheExpression,
+  ConstantTypes,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  ElementNode,
-  DirectiveNode,
-  IfBranchNode,
-  SimpleExpressionNode,
+  type IfBranchNode,
+  type IfConditionalExpression,
+  type IfNode,
+  type MemoExpression,
+  NodeTypes,
+  type SimpleExpressionNode,
+  convertToBlock,
   createCallExpression,
   createConditionalExpression,
-  createSimpleExpression,
-  createObjectProperty,
   createObjectExpression,
-  IfConditionalExpression,
-  BlockCodegenNode,
-  IfNode,
+  createObjectProperty,
+  createSimpleExpression,
   createVNodeCall,
-  AttributeNode,
   locStub,
   CacheExpression,
   ConstantTypes,
@@ -27,20 +31,14 @@ import {
   VNodeCall,
   CallExpression,
   FunctionExpression,
-  convertToBlock
+  convertToBlock,
 } from '../ast'
-import { createCompilerError, ErrorCodes } from '../errors'
+import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { FRAGMENT, CREATE_COMMENT } from '../runtimeHelpers'
-import {
-  injectProp,
-  findDir,
-  findProp,
-  isBuiltInType,
-  getMemoedVNodeCall
-} from '../utils'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
+import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
+import { PatchFlagNames, PatchFlags } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
   /^(if|else|else-if)$/,
@@ -66,7 +64,7 @@ export const transformIf = createStructuralDirectiveTransform(
           ifNode.codegenNode = createCodegenNodeForBranch(
             branch,
             key,
-            context
+            context,
           ) as IfConditionalExpression
         } else {
           // attach this branch's codegen node to the v-if root.
@@ -74,12 +72,12 @@ export const transformIf = createStructuralDirectiveTransform(
           parentCondition.alternate = createCodegenNodeForBranch(
             branch,
             key + ifNode.branches.length - 1,
-            context
+            context,
           )
         }
       }
     })
-  }
+  },
 )
 
 // target-agnostic transform used for both Client and SSR
@@ -90,8 +88,8 @@ export function processIf(
   processCodegen?: (
     node: IfNode,
     branch: IfBranchNode,
-    isRoot: boolean
-  ) => (() => void) | undefined
+    isRoot: boolean,
+  ) => (() => void) | undefined,
 ) {
   if (
     dir.name !== 'else' &&
@@ -99,7 +97,7 @@ export function processIf(
   ) {
     const loc = dir.exp ? dir.exp.loc : node.loc
     context.onError(
-      createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc)
+      createCompilerError(ErrorCodes.X_V_IF_NO_EXPRESSION, dir.loc),
     )
     dir.exp = createSimpleExpression(`true`, false, loc)
   }
@@ -119,7 +117,7 @@ export function processIf(
     const ifNode: IfNode = {
       type: NodeTypes.IF,
       loc: node.loc,
-      branches: [branch]
+      branches: [branch],
     }
     context.replaceNode(ifNode)
     if (processCodegen) {
@@ -154,7 +152,7 @@ export function processIf(
           sibling.branches[sibling.branches.length - 1].condition === undefined
         ) {
           context.onError(
-            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
+            createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
           )
         }
 
@@ -168,7 +166,8 @@ export function processIf(
           !(
             context.parent &&
             context.parent.type === NodeTypes.ELEMENT &&
-            isBuiltInType(context.parent.tag, 'transition')
+            (context.parent.tag === 'transition' ||
+              context.parent.tag === 'Transition')
           )
         ) {
           branch.children = [...comments, ...branch.children]
@@ -183,8 +182,8 @@ export function processIf(
                 context.onError(
                   createCompilerError(
                     ErrorCodes.X_V_IF_SAME_KEY,
-                    branch.userKey!.loc
-                  )
+                    branch.userKey!.loc,
+                  ),
                 )
               }
             })
@@ -203,7 +202,7 @@ export function processIf(
         context.currentNode = null
       } else {
         context.onError(
-          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc)
+          createCompilerError(ErrorCodes.X_V_ELSE_NO_ADJACENT_IF, node.loc),
         )
       }
       break
@@ -219,14 +218,14 @@ function createIfBranch(node: ElementNode, dir: DirectiveNode): IfBranchNode {
     condition: dir.name === 'else' ? undefined : dir.exp,
     children: isTemplateIf && !findDir(node, 'for') ? node.children : [node],
     userKey: findProp(node, `key`),
-    isTemplateIf
+    isTemplateIf,
   }
 }
 
 function createCodegenNodeForBranch(
   branch: IfBranchNode,
   keyIndex: number,
-  context: TransformContext
+  context: TransformContext,
 ): IfConditionalExpression | BlockCodegenNode | MemoExpression {
   if (branch.condition) {
     return createConditionalExpression(
@@ -236,8 +235,8 @@ function createCodegenNodeForBranch(
       // closes the current block.
       createCallExpression(context.helper(CREATE_COMMENT), [
         __DEV__ ? '"v-if"' : '""',
-        'true'
-      ])
+        'true',
+      ]),
     ) as IfConditionalExpression
   } else {
     return createChildrenCodegenNode(branch, keyIndex, context)
@@ -247,7 +246,7 @@ function createCodegenNodeForBranch(
 function createChildrenCodegenNode(
   branch: IfBranchNode,
   keyIndex: number,
-  context: TransformContext
+  context: TransformContext,
 ): BlockCodegenNode | MemoExpression {
   const { helper } = context
   const keyProperty = createObjectProperty(
@@ -256,8 +255,8 @@ function createChildrenCodegenNode(
       `${keyIndex}`,
       false,
       locStub,
-      ConstantTypes.CAN_HOIST
-    )
+      ConstantTypes.CAN_HOIST,
+    ),
   )
   const { children } = branch
   const firstChild = children[0]
@@ -294,7 +293,7 @@ function createChildrenCodegenNode(
         true,
         false,
         false /* isComponent */,
-        branch.loc
+        branch.loc,
       )
     }
   } else {
@@ -319,7 +318,7 @@ function createChildrenCodegenNode(
 
 function isSameKey(
   a: AttributeNode | DirectiveNode | undefined,
-  b: AttributeNode | DirectiveNode
+  b: AttributeNode | DirectiveNode,
 ): boolean {
   if (!a || a.type !== b.type) {
     return false
@@ -347,7 +346,7 @@ function isSameKey(
 }
 
 function getParentCondition(
-  node: IfConditionalExpression | CacheExpression
+  node: IfConditionalExpression | CacheExpression,
 ): IfConditionalExpression {
   while (true) {
     if (node.type === NodeTypes.JS_CONDITIONAL_EXPRESSION) {
