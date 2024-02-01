@@ -8,13 +8,13 @@ import {
   parserOptions,
   trackSlotScopes,
   trackVForSlotScopes,
+  trackVScopeScopes,
   transform,
   transformBind,
   transformExpression,
   transformOn,
-  transformStyle,
   transformOn,
-  trackVScopeScopes,
+  transformStyle,
 } from '@vue/compiler-dom'
 import { ssrCodegenTransform } from './ssrCodegenTransform'
 import { ssrTransformElement } from './transforms/ssrTransformElement'

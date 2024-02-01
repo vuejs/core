@@ -56,7 +56,7 @@ export {
 export {
   transformScope,
   trackVScopeScopes,
-  transformScopeExpression
+  transformScopeExpression,
 } from './transforms/vScope'
 export {
   transformElement,

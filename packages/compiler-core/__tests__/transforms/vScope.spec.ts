@@ -1,11 +1,11 @@
-import { baseCompile, CompilerOptions } from '../../src'
+import { type CompilerOptions, baseCompile } from '../../src'
 
 describe('compiler: v-scope transform', () => {
   function compile(content: string, options: CompilerOptions = {}) {
     return baseCompile(`<div>${content}</div>`, {
       mode: 'module',
       prefixIdentifiers: true,
-      ...options
+      ...options,
     }).code
   }
 
@@ -14,8 +14,8 @@ describe('compiler: v-scope transform', () => {
       compile(
         `<div v-scope="{ a:1, b:2 }">
         {{a}} {{b}}
-      </div>`
-      )
+      </div>`,
+      ),
     ).toMatchSnapshot()
   })
 
@@ -24,8 +24,8 @@ describe('compiler: v-scope transform', () => {
       compile(
         `<div v-scope="{ a:1 }">
         <span v-scope="{ b:1 }">{{ a }}{{ b }}</span>
-      </div>`
-      )
+      </div>`,
+      ),
     ).toMatchSnapshot()
   })
 
@@ -34,8 +34,8 @@ describe('compiler: v-scope transform', () => {
       compile(
         `<div v-scope="{ a:msg }">
         <span v-scope="{ b:a }">{{ b }}</span>
-      </div>`
-      )
+      </div>`,
+      ),
     ).toMatchSnapshot()
   })
 
@@ -46,7 +46,7 @@ describe('compiler: v-scope transform', () => {
           <span v-scope="{ b:a + baz }">{{ b }}</span>
         </div>
         <div v-scope="{ exp:getExp() }">{{ exp }}</div>
-        `)
+        `),
     ).toMatchSnapshot()
   })
 
@@ -56,7 +56,7 @@ describe('compiler: v-scope transform', () => {
       <div v-for="i in [1,2,3]" v-scope="{ a:i+1 }">
         {{ a }}
       </div>
-    `)
+    `),
     ).toMatchSnapshot()
   })
 
@@ -66,7 +66,7 @@ describe('compiler: v-scope transform', () => {
       <div v-if="ok" v-scope="{ a:true }" >
         {{ a }}
       </div>
-    `)
+    `),
     ).toMatchSnapshot()
   })
 

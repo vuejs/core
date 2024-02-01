@@ -46,7 +46,7 @@ import {
 } from '../runtimeHelpers'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
-import { PatchFlags, PatchFlagNames } from '@vue/shared'
+import { PatchFlagNames, PatchFlags } from '@vue/shared'
 import { transformScopeExpression } from './vScope'
 
 export const transformFor = createStructuralDirectiveTransform(
@@ -234,8 +234,8 @@ export const transformFor = createStructuralDirectiveTransform(
             child = createCallExpression(
               createFunctionExpression(
                 transformScopeExpression(vScope.exp!),
-                childBlock
-              )
+                childBlock,
+              ),
             )
           } else {
             child = childBlock
@@ -245,7 +245,7 @@ export const transformFor = createStructuralDirectiveTransform(
             createFunctionExpression(
               createForLoopParams(forNode.parseResult),
               child,
-              true /* force newline */
+              true /* force newline */,
             ) as ForIteratorExpression,
           )
         }

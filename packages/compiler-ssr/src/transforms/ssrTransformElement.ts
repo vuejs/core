@@ -1,6 +1,7 @@
 import {
   type ArrayExpression,
   type AttributeNode,
+  type AttributeNode,
   type CallExpression,
   type DirectiveNode,
   ElementTypes,
@@ -13,9 +14,12 @@ import {
   NodeTypes,
   type PlainElementNode,
   type PropsExpression,
+  type PropsExpression,
   type TemplateLiteral,
   type TextNode,
   type TransformContext,
+  type TransformContext,
+  buildDirectiveArgs,
   buildDirectiveArgs,
   buildProps,
   createArrayExpression,
@@ -23,19 +27,15 @@ import {
   createCallExpression,
   createCompilerError,
   createConditionalExpression,
+  createFunctionExpression,
   createInterpolation,
   createSequenceExpression,
   createSimpleExpression,
   createTemplateLiteral,
+  findDir,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
-  AttributeNode,
-  buildDirectiveArgs,
-  TransformContext,
-  PropsExpression,
-  findDir,
-  createFunctionExpression,
   transformScopeExpression,
 } from '@vue/compiler-dom'
 import {
@@ -59,9 +59,9 @@ import {
   SSR_RENDER_STYLE,
 } from '../runtimeHelpers'
 import {
-  processChildrenAsStatement,
   type SSRTransformContext,
   processChildren,
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
@@ -444,7 +444,7 @@ export function ssrProcessElement(
     const dir = findDir(node, 'scope')
     if (dir) {
       const scopeFn = createFunctionExpression(
-        transformScopeExpression(dir.exp!)
+        transformScopeExpression(dir.exp!),
       )
       scopeFn.body = processChildrenAsStatement(node, context)
       context.pushStatement(createCallExpression(scopeFn))

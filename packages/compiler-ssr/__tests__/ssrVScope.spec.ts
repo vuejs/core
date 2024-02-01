@@ -21,8 +21,8 @@ describe('ssr: v-scope', () => {
       compile(
         `<div v-scope="{ a:1 }">
             <div v-scope="{ b:2 }">{{a}} {{b}}</div>
-        </div>`
-      ).code
+        </div>`,
+      ).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 
@@ -46,7 +46,7 @@ describe('ssr: v-scope', () => {
       <div v-if="ok" v-scope="{ a:true }" >
         {{ a }}
       </div>
-    `).code
+    `).code,
     ).toMatchInlineSnapshot(`
       "const { ssrRenderAttrs: _ssrRenderAttrs, ssrInterpolate: _ssrInterpolate } = require(\\"vue/server-renderer\\")
 

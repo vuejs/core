@@ -1,13 +1,13 @@
-import { NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 import { findDir } from '../utils'
 import {
+  type ExpressionNode,
+  NodeTypes,
+  type PlainElementNode,
+  type SimpleExpressionNode,
   createCallExpression,
   createFunctionExpression,
   createSimpleExpression,
-  ExpressionNode,
-  NodeTypes,
-  PlainElementNode,
-  SimpleExpressionNode
 } from '../ast'
 import { stringifyExpression } from './transformExpression'
 
@@ -29,8 +29,8 @@ export const transformScope: NodeTransform = (node, context) => {
         node.codegenNode = createCallExpression(
           createFunctionExpression(
             transformScopeExpression(dir.exp!),
-            codegenNode
-          )
+            codegenNode,
+          ),
         )
       }
     }
@@ -38,7 +38,7 @@ export const transformScope: NodeTransform = (node, context) => {
 }
 
 export function transformScopeExpression(
-  exp: string | ExpressionNode
+  exp: string | ExpressionNode,
 ): ExpressionNode[] {
   const params: SimpleExpressionNode[] = []
   const rExpString = stringifyExpression(exp)

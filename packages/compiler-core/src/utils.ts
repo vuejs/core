@@ -37,11 +37,11 @@ import {
   WITH_MEMO,
 } from './runtimeHelpers'
 import {
-  isString,
-  isObject,
-  hyphenate,
-  extend,
   NOOP,
+  extend,
+  hyphenate,
+  isObject,
+  isString,
   isSymbol,
 } from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
