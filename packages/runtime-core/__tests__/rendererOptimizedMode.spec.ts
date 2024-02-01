@@ -8,6 +8,8 @@ import {
   createApp,
   createBlock,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createTextVNode,
   createVNode,
   defineComponent,
@@ -17,13 +19,11 @@ import {
   nodeOps,
   onBeforeUnmount,
   onUnmounted,
+  onUnmounted,
   openBlock,
   ref,
   render,
   renderList,
-  onUnmounted,
-  createElementBlock,
-  createElementVNode,
   renderSlot,
   serialize,
   withCtx,
@@ -715,14 +715,14 @@ describe('renderer: optimized mode', () => {
                       Fragment,
                       { key: 0 },
                       [createTextVNode('foo')],
-                      PatchFlags.STABLE_FRAGMENT
+                      PatchFlags.STABLE_FRAGMENT,
                     )))
-                  : createCommentVNode('v-if', true)
-              ])
+                  : createCommentVNode('v-if', true),
+              ]),
             ])
           )
         }
-      }
+      },
     }
 
     const show = ref(true)
@@ -746,20 +746,20 @@ describe('renderer: optimized mode', () => {
                           'div',
                           null,
                           'bar',
-                          PatchFlags.HOISTED
-                        )
+                          PatchFlags.HOISTED,
+                        ),
                       ],
-                      PatchFlags.STABLE_FRAGMENT
+                      PatchFlags.STABLE_FRAGMENT,
                     ))
-                  : createCommentVNode('v-if', true)
+                  : createCommentVNode('v-if', true),
               ]),
-              _: SlotFlags.STABLE
+              _: SlotFlags.STABLE,
             },
             PatchFlags.PROPS,
-            ['show']
+            ['show'],
           )
         )
-      }
+      },
     })
 
     app.mount(root)
