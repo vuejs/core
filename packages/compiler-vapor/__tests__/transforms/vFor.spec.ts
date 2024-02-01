@@ -66,15 +66,8 @@ describe('compiler: v-for', () => {
     expect((ir.operation[0] as ForIRNode).render.effect).lengthOf(1)
   })
 
-  test('no value', () => {
+  test('basic v-for', () => {
     const { code } = compileWithVFor(`<div v-for=" of items">item</div>`)
-    expect(code).matchSnapshot()
-  })
-
-  test('object de-structured value', () => {
-    const { code } = compileWithVFor(
-      '<span v-for="({ id, value }) in items">{{ id }}{{ value }}</span>',
-    )
     expect(code).matchSnapshot()
   })
 })

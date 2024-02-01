@@ -88,8 +88,9 @@ function genIdentifier(
   const { inline, bindingMetadata } = options
   let name: string | undefined = id
 
-  if (identifiers[id]) {
-    return [id, NewlineType.None, loc]
+  const idMap = identifiers[id]
+  if (idMap && idMap.length) {
+    return [idMap[0], NewlineType.None, loc]
   }
 
   if (inline) {
