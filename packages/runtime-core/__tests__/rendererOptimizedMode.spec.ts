@@ -639,7 +639,7 @@ describe('renderer: optimized mode', () => {
           Teleport as any,
           {
             to: target,
-            disabled: true // disabled
+            disabled: true, // disabled
           },
           [
             createVNode('div', null, [
@@ -647,19 +647,19 @@ describe('renderer: optimized mode', () => {
               createBlock(
                 Teleport as any, // not disabled
                 {
-                  to: target
+                  to: target,
                 },
-                [createVNode('div', null, 'foo')]
-              ))
-            ])
-          ]
-        ))
+                [createVNode('div', null, 'foo')],
+              )),
+            ]),
+          ],
+        )),
       ])),
-      root
+      root,
     )
     expect(inner(target)).toMatchInlineSnapshot(`"<div>foo</div>"`)
     expect(inner(root)).toMatchInlineSnapshot(
-      `"<div><!--teleport start--><div><!--teleport start--><!--teleport end--></div><!--teleport end--></div>"`
+      `"<div><!--teleport start--><div><!--teleport start--><!--teleport end--></div><!--teleport end--></div>"`,
     )
 
     render(null, root)
