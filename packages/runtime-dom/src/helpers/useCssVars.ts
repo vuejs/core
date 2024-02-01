@@ -26,17 +26,15 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     return
   }
 
-  const updateTeleports = (instance.ut = (
-    vars = getter(instance.proxy),
-    hydration = false,
-  ) => {
-    if (hydration) {
-      return vars
-    }
+  const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
       document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
     ).forEach(node => setVarsOnNode(node, vars))
   })
+
+  if (__DEV__ && __SSR__) {
+    instance.getCssVars = () => fommaterVars(getter(instance.proxy))
+  }
 
   const setVars = () => {
     const vars = getter(instance.proxy)
@@ -93,4 +91,11 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }
+}
+function fommaterVars(vars: Record<string, string>) {
+  const cssVars: Record<string, string> = {}
+  for (const key in vars) {
+    cssVars[`--${key}`] = vars[key]
+  }
+  return cssVars
 }

@@ -518,10 +518,13 @@ export interface ComponentInternalInstance {
    * For updating css vars on contained teleports
    * @internal
    */
-  ut?: (
-    vars?: Record<string, string>,
-    hydration?: boolean,
-  ) => void | Record<string, string>
+  ut?: (vars?: Record<string, string>) => void
+
+  /**
+   * For getCssVars on hydration
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 }
 
 const emptyAppContext = createAppContext()
