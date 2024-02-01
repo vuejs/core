@@ -7,9 +7,9 @@ import {
   advancePositionWithMutation,
   locStub,
 } from '@vue/compiler-dom'
-import type { IREffect, RootIRNode, VaporHelper } from './ir'
+import type { RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { extend, isString, remove } from '@vue/shared'
+import { extend, isString } from '@vue/shared'
 import type { ParserPlugin } from '@babel/parser'
 import { genTemplate } from './generators/template'
 import { genBlockFunctionContent } from './generators/block'
@@ -69,22 +69,19 @@ export class CodegenContext {
     return `_${name}`
   }
 
-  identifiers: Record<string, string[]> = Object.create(null)
-  withId = <T>(fn: () => T, map: Record<string, string | null>): T => {
+  identifiers: Record<string, number> = Object.create(null)
+  withId = <T>(fn: () => T, ids: string[]): T => {
     const { identifiers } = this
-    const ids = Object.keys(map)
-
     for (const id of ids) {
-      identifiers[id] ||= []
-      identifiers[id].unshift(map[id] || id)
+      if (identifiers[id] === undefined) identifiers[id] = 0
+      identifiers[id]!++
     }
 
     const ret = fn()
-    ids.forEach(id => remove(identifiers[id], map[id] || id))
+    ids.forEach(id => identifiers[id]!--)
 
     return ret
   }
-  genEffect?: (effects: IREffect[]) => CodeFragment[]
 
   constructor(
     public ir: RootIRNode,

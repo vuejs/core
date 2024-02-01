@@ -6,11 +6,14 @@ import {
   INDENT_END,
   INDENT_START,
   NEWLINE,
-  buildCodeFragment,
 } from '../generate'
-import type { ForIRNode, IREffect } from '../ir'
-import { genOperations } from './operation'
-import { NewlineType } from '@vue/compiler-dom'
+import type { ForIRNode } from '../ir'
+import {
+  NewlineType,
+  type SimpleExpressionNode,
+  walkIdentifiers,
+} from '@vue/compiler-dom'
+import type { ArrowFunctionExpression } from '@babel/types'
 
 export function genFor(
   oper: ForIRNode,
@@ -19,73 +22,63 @@ export function genFor(
   const { call, vaporHelper } = context
   const { source, value, key, render } = oper
 
-  const rawValue = value && value.content
   const rawKey = key && key.content
-
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
-  let updateFn = '_updateEffect'
-  context.genEffect = genEffectInFor
+  const valueIds = value ? extractParams(value) : new Set<string>()
+  const keyIds = key ? extractParams(key) : new Set<string>()
+  const ids = [...valueIds, ...keyIds]
 
-  const idMap: Record<string, string> = {}
-  if (rawValue) idMap[rawValue] = `_block.s[0]`
-  if (rawKey) idMap[rawKey] = `_block.s[1]`
+  let preamble: CodeFragment[] = []
+  if (value || rawKey) {
+    const assignment: CodeFragment[] = ['let ', ids.join(', ')]
 
-  const blockRet = (): CodeFragment[] => [
-    `[n${render.dynamic.id!}, ${updateFn}]`,
-  ]
+    preamble = [
+      NEWLINE,
+      ...assignment,
+      NEWLINE,
+      ...call(vaporHelper('renderEffect'), [
+        '() => {',
+        INDENT_START,
+        NEWLINE,
+        '(',
+        '[',
+        value && [value.content, NewlineType.None, value.loc],
+        rawKey && ', ',
+        rawKey && [rawKey, NewlineType.None, key.loc],
+        '] = _block.s',
+        ');',
+        INDENT_END,
+        NEWLINE,
+        '}',
+      ]),
+    ]
+  }
 
+  const blockRet: CodeFragment[] = [`n${render.dynamic.id!}`]
   const blockFn = context.withId(
-    () => genBlockFunction(render, context, ['_block'], blockRet),
-    idMap,
+    () => genBlockFunction(render, context, ['_block'], preamble, blockRet),
+    ids,
   )
-
-  context.genEffect = undefined
 
   return [
     NEWLINE,
     `const n${oper.id} = `,
     ...call(vaporHelper('createFor'), sourceExpr, blockFn),
   ]
+}
 
-  function genEffectInFor(effects: IREffect[]): CodeFragment[] {
-    if (!effects.length) {
-      updateFn = '() => {}'
-      return []
-    }
-
-    const [frag, push] = buildCodeFragment(INDENT_START)
-    // const [value, key] = _block.s
-    if (rawValue || rawKey) {
-      push(
-        NEWLINE,
-        'const ',
-        '[',
-        rawValue && [rawValue, NewlineType.None, value.loc],
-        rawKey && ', ',
-        rawKey && [rawKey, NewlineType.None, key.loc],
-        '] = _block.s',
-      )
-    }
-
-    const idMap: Record<string, string | null> = {}
-    if (value) idMap[value.content] = null
-    if (key) idMap[key.content] = null
-    context.withId(() => {
-      effects.forEach(effect =>
-        push(...genOperations(effect.operations, context)),
-      )
-    }, idMap)
-
-    push(INDENT_END)
-
-    return [
-      NEWLINE,
-      `const ${updateFn} = () => {`,
-      ...frag,
-      NEWLINE,
-      '}',
-      NEWLINE,
-      `${vaporHelper('renderEffect')}(${updateFn})`,
-    ]
+function extractParams(node: SimpleExpressionNode) {
+  const ids = new Set<string>()
+  if (node.ast === null || node.ast === false) {
+    ids.add(node.content)
+  } else {
+    walkIdentifiers(
+      node.ast as ArrowFunctionExpression,
+      (id, parent, parentStack, isReference, isLocal) => {
+        if (isLocal) ids.add(id.name)
+      },
+      true,
+    )
   }
+  return ids
 }
