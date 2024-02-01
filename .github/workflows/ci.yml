@@ -22,10 +22,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
@@ -44,10 +44,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
@@ -73,17 +73,20 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
-      - run: node node_modules/puppeteer/install.js
+      - run: node node_modules/puppeteer/install.mjs
 
       - name: Run e2e tests
         run: pnpm run test-e2e
+
+      - name: verify treeshaking
+        run: node scripts/verify-treeshaking.js
 
   lint-and-test-dts:
     runs-on: ubuntu-latest
@@ -96,10 +99,10 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
 
-      - name: Set node version to 18
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version-file: '.node-version'
           cache: 'pnpm'
 
       - run: pnpm install
@@ -112,3 +115,28 @@ jobs:
 
       - name: Run type declaration tests
         run: pnpm run test-dts
+
+  # benchmarks:
+  #   runs-on: ubuntu-latest
+  #   if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+  #   env:
+  #     PUPPETEER_SKIP_DOWNLOAD: 'true'
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Install pnpm
+  #       uses: pnpm/action-setup@v2
+
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version-file: '.node-version'
+  #         cache: 'pnpm'
+
+  #     - run: pnpm install
+
+  #     - name: Run benchmarks
+  #       uses: CodSpeedHQ/action@v2
+  #       with:
+  #         run: pnpm vitest bench --run
+  #         token: ${{ secrets.CODSPEED_TOKEN }}

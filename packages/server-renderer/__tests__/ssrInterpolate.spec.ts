@@ -7,23 +7,23 @@ test('ssr: interpolate', () => {
   expect(ssrInterpolate(`<div>`)).toBe(`&lt;div&gt;`)
   // should escape interpolated values
   expect(ssrInterpolate([1, 2, 3])).toBe(
-    escapeHtml(JSON.stringify([1, 2, 3], null, 2))
+    escapeHtml(JSON.stringify([1, 2, 3], null, 2)),
   )
   expect(
     ssrInterpolate({
       foo: 1,
-      bar: `<div>`
-    })
+      bar: `<div>`,
+    }),
   ).toBe(
     escapeHtml(
       JSON.stringify(
         {
           foo: 1,
-          bar: `<div>`
+          bar: `<div>`,
         },
         null,
-        2
-      )
-    )
+        2,
+      ),
+    ),
   )
 })
