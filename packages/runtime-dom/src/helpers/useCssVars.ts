@@ -32,7 +32,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     ).forEach(node => setVarsOnNode(node, vars))
   })
 
-  if (__DEV__ && __SSR__) {
+  if (__DEV__) {
     instance.getCssVars = () => fommaterVars(getter(instance.proxy))
   }
 

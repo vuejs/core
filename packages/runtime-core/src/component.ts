@@ -521,7 +521,7 @@ export interface ComponentInternalInstance {
   ut?: (vars?: Record<string, string>) => void
 
   /**
-   * For getCssVars on hydration
+   * dev only. For getCssVars on hydration
    * @internal
    */
   getCssVars?: () => Record<string, string>
