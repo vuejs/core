@@ -39,7 +39,7 @@ const App = {
         compilerOptions.prefixIdentifiers || compilerOptions.mode === 'module'
 
       return [
-        h('h1', `Vue 3 Template Explorer`),
+        h('h1', `Vue Vapor Template Explorer`),
         h(
           'a',
           {
