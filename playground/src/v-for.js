@@ -23,12 +23,16 @@ export default defineComponent({
           const container = document.createElement('li')
           append(container, node)
 
-          const update = () => {
+          renderEffect(() => {
             const [item, index] = block.s
             node.textContent = `${index}. ${item}`
-          }
-          renderEffect(update)
-          return [container, update]
+          })
+
+          renderEffect(() => {
+            const [item, index] = block.s
+            node.textContent = `${index}/ ${item}`
+          })
+          return container
         },
         (item, index) => index,
       )
