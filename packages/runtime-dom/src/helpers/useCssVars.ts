@@ -95,7 +95,7 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
 function fommaterVars(vars: Record<string, string>) {
   const cssVars: Record<string, string> = {}
   for (const key in vars) {
-    cssVars[`--${key}`] = vars[key]
+    cssVars[`--${key}`] = String(vars[key])
   }
   return cssVars
 }
