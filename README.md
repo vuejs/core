@@ -2,6 +2,9 @@
 
 This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is used for research and development of no virtual dom mode.
 
+- [Vapor Playground](https://vapor-repl.netlify.app/)
+- [Vapor Template Explorer](https://vapor-template-explorer.netlify.app/)
+
 ## TODO
 
 PR are welcome!
