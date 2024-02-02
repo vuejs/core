@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { template as _template, fragment as _fragment, children as _children, on as _on, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, append as _append } from 'vue/vapor';
+"import { template as _template, fragment as _fragment, children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, append as _append } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
@@ -11,19 +11,43 @@ export function render(_ctx) {
     const n2 = t0()
     const { 0: [n3],} = _children(n2)
     _on(n3, "click", $event => (_ctx.remove(_block.s[0])))
-    const _updateEffect = () => {
+    _renderEffect(() => {
       const [item] = _block.s
       _setText(n3, item)
-    }
-    _renderEffect(_updateEffect)
-    return [n2, _updateEffect]
+    })
+    return n2
   })
   _append(n0, n1)
   return n0
 }"
 `;
 
-exports[`compiler: v-for > basic v-for 2`] = `
+exports[`compiler: v-for > multi effect 1`] = `
+"import { template as _template, fragment as _fragment, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, append as _append } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const t1 = _fragment()
+  const n0 = t1()
+  const n1 = _createFor(() => (_ctx.items), (_block) => {
+    const n2 = t0()
+    const { 0: [n3],} = _children(n2)
+    _renderEffect(() => {
+      const [item, index] = _block.s
+      _setDynamicProp(n3, "item", item)
+    })
+    _renderEffect(() => {
+      const [item, index] = _block.s
+      _setDynamicProp(n3, "index", index)
+    })
+    return n2
+  })
+  _append(n0, n1)
+  return n0
+}"
+`;
+
+exports[`compiler: v-for > w/o value 1`] = `
 "import { template as _template, fragment as _fragment, createFor as _createFor, append as _append } from 'vue/vapor';
 
 export function render(_ctx) {
@@ -32,7 +56,7 @@ export function render(_ctx) {
   const n0 = t1()
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
-    return [n2, () => {}]
+    return n2
   })
   _append(n0, n1)
   return n0

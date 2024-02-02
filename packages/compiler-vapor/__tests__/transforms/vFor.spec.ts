@@ -4,6 +4,7 @@ import {
   IRNodeTypes,
   transformElement,
   transformInterpolation,
+  transformVBind,
   transformVFor,
   transformVOn,
 } from '../../src'
@@ -11,7 +12,10 @@ import { NodeTypes } from '@vue/compiler-dom'
 
 const compileWithVFor = makeCompile({
   nodeTransforms: [transformInterpolation, transformVFor, transformElement],
-  directiveTransforms: { on: transformVOn },
+  directiveTransforms: {
+    bind: transformVBind,
+    on: transformVOn,
+  },
 })
 
 describe('compiler: v-for', () => {
@@ -66,8 +70,22 @@ describe('compiler: v-for', () => {
     expect((ir.operation[0] as ForIRNode).render.effect).lengthOf(1)
   })
 
-  test('basic v-for', () => {
+  test('multi effect', () => {
+    const { code } = compileWithVFor(
+      `<div v-for="(item, index) of items" :item="item" :index="index" />`,
+    )
+    expect(code).matchSnapshot()
+  })
+
+  test('w/o value', () => {
     const { code } = compileWithVFor(`<div v-for=" of items">item</div>`)
+    expect(code).matchSnapshot()
+  })
+
+  test.todo('object de-structured value', () => {
+    const { code } = compileWithVFor(
+      '<span v-for="({ id, value }) in items">{{ id }}{{ value }}</span>',
+    )
     expect(code).matchSnapshot()
   })
 })

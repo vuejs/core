@@ -9,7 +9,7 @@ import {
   buildCodeFragment,
 } from '../generate'
 import type { ForIRNode, IREffect } from '../ir'
-import { genOperations } from './operation'
+import { genOperation } from './operation'
 import { NewlineType } from '@vue/compiler-dom'
 
 export function genFor(
@@ -23,19 +23,14 @@ export function genFor(
   const rawKey = key && key.content
 
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
-  let updateFn = '_updateEffect'
   context.genEffect = genEffectInFor
 
   const idMap: Record<string, string> = {}
   if (rawValue) idMap[rawValue] = `_block.s[0]`
   if (rawKey) idMap[rawKey] = `_block.s[1]`
 
-  const blockRet = (): CodeFragment[] => [
-    `[n${render.dynamic.id!}, ${updateFn}]`,
-  ]
-
   const blockFn = context.withId(
-    () => genBlockFunction(render, context, ['_block'], blockRet),
+    () => genBlockFunction(render, context, ['_block']),
     idMap,
   )
 
@@ -48,15 +43,16 @@ export function genFor(
   ]
 
   function genEffectInFor(effects: IREffect[]): CodeFragment[] {
-    if (!effects.length) {
-      updateFn = '() => {}'
-      return []
-    }
+    const [frag, push] = buildCodeFragment()
 
-    const [frag, push] = buildCodeFragment(INDENT_START)
-    // const [value, key] = _block.s
+    const idMap: Record<string, string | null> = {}
+    if (value) idMap[value.content] = null
+    if (key) idMap[key.content] = null
+
+    let statement: CodeFragment[] = []
     if (rawValue || rawKey) {
-      push(
+      // const [value, key] = _block.s
+      statement = [
         NEWLINE,
         'const ',
         '[',
@@ -64,28 +60,22 @@ export function genFor(
         rawKey && ', ',
         rawKey && [rawKey, NewlineType.None, key.loc],
         '] = _block.s',
-      )
+      ]
     }
 
-    const idMap: Record<string, string | null> = {}
-    if (value) idMap[value.content] = null
-    if (key) idMap[key.content] = null
     context.withId(() => {
-      effects.forEach(effect =>
-        push(...genOperations(effect.operations, context)),
-      )
+      for (const { operations } of effects) {
+        push(
+          NEWLINE,
+          `${vaporHelper('renderEffect')}(() => {`,
+          INDENT_START,
+          ...statement,
+        )
+        operations.forEach(op => push(...genOperation(op, context)))
+        push(INDENT_END, NEWLINE, '})')
+      }
     }, idMap)
 
-    push(INDENT_END)
-
-    return [
-      NEWLINE,
-      `const ${updateFn} = () => {`,
-      ...frag,
-      NEWLINE,
-      '}',
-      NEWLINE,
-      `${vaporHelper('renderEffect')}(${updateFn})`,
-    ]
+    return frag
   }
 }
