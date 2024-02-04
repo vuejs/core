@@ -43,16 +43,18 @@ describe('compiler: v-once', () => {
       },
       {
         element: 2,
-        key: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'class',
-          isStatic: true,
-        },
         type: IRNodeTypes.SET_PROP,
-        value: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'clz',
-          isStatic: false,
+        prop: {
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'class',
+            isStatic: true,
+          },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'clz',
+            isStatic: false,
+          },
         },
       },
       {
@@ -73,15 +75,17 @@ describe('compiler: v-once', () => {
       {
         type: IRNodeTypes.SET_PROP,
         element: 1,
-        key: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'id',
-          isStatic: true,
-        },
-        value: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'foo',
-          isStatic: false,
+        prop: {
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'id',
+            isStatic: true,
+          },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'foo',
+            isStatic: false,
+          },
         },
       },
     ])
@@ -100,16 +104,18 @@ describe('compiler: v-once', () => {
       {
         type: IRNodeTypes.SET_PROP,
         element: 1,
-        runtimeCamelize: false,
-        key: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'id',
-          isStatic: true,
-        },
-        value: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'foo',
-          isStatic: false,
+        prop: {
+          runtimeCamelize: false,
+          key: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'id',
+            isStatic: true,
+          },
+          value: {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'foo',
+            isStatic: false,
+          },
         },
       },
     ])

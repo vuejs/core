@@ -2,11 +2,22 @@ import {
   type AttributeNode,
   type ElementNode,
   ElementTypes,
+  ErrorCodes,
   NodeTypes,
+  type SimpleExpressionNode,
+  createCompilerError,
 } from '@vue/compiler-dom'
 import { isBuiltInDirective, isReservedProp, isVoidTag } from '@vue/shared'
-import type { NodeTransform, TransformContext } from '../transform'
-import { IRNodeTypes, type VaporDirectiveNode } from '../ir'
+import type {
+  DirectiveTransformResult,
+  NodeTransform,
+  TransformContext,
+} from '../transform'
+import {
+  IRNodeTypes,
+  type PropsExpression,
+  type VaporDirectiveNode,
+} from '../ir'
 
 export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
@@ -49,8 +60,75 @@ function buildProps(
   props: ElementNode['props'] = node.props,
   isComponent: boolean,
 ) {
-  for (const prop of props) {
-    transformProp(prop as VaporDirectiveNode | AttributeNode, node, context)
+  const dynamicArgs: PropsExpression[] = []
+  const dynamicExpr: SimpleExpressionNode[] = []
+  let results: DirectiveTransformResult[] = []
+
+  function pushExpressions(...exprs: SimpleExpressionNode[]) {
+    for (const expr of exprs) {
+      if (!expr.isStatic) dynamicExpr.push(expr)
+    }
+  }
+
+  function pushMergeArg() {
+    if (results.length) {
+      dynamicArgs.push(results)
+      results = []
+    }
+  }
+
+  for (const prop of props as (VaporDirectiveNode | AttributeNode)[]) {
+    if (
+      prop.type === NodeTypes.DIRECTIVE &&
+      prop.name === 'bind' &&
+      !prop.arg
+    ) {
+      if (prop.exp) {
+        pushExpressions(prop.exp)
+        pushMergeArg()
+        dynamicArgs.push(prop.exp)
+      } else {
+        context.options.onError(
+          createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
+        )
+      }
+      continue
+    }
+
+    const result = transformProp(prop, node, context)
+    if (result) {
+      results.push(result)
+      pushExpressions(result.key, result.value)
+    }
+  }
+
+  // take rest of props as dynamic props
+  if (dynamicArgs.length || results.some(({ key }) => !key.isStatic)) {
+    pushMergeArg()
+  }
+
+  // has dynamic key or v-bind="{}"
+  if (dynamicArgs.length) {
+    context.registerEffect(dynamicExpr, [
+      {
+        type: IRNodeTypes.SET_DYNAMIC_PROPS,
+        element: context.reference(),
+        props: dynamicArgs,
+      },
+    ])
+  } else {
+    for (const result of results) {
+      context.registerEffect(
+        [result.value],
+        [
+          {
+            type: IRNodeTypes.SET_PROP,
+            element: context.reference(),
+            prop: result,
+          },
+        ],
+      )
+    }
   }
 }
 
@@ -58,7 +136,7 @@ function transformProp(
   prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
-): void {
+): DirectiveTransformResult | void {
   const { name } = prop
   if (isReservedProp(name)) return
 
@@ -70,7 +148,7 @@ function transformProp(
 
   const directiveTransform = context.options.directiveTransforms[name]
   if (directiveTransform) {
-    directiveTransform(prop, node, context)
+    return directiveTransform(prop, node, context)
   } else if (!isBuiltInDirective(name)) {
     context.registerOperation({
       type: IRNodeTypes.WITH_DIRECTIVE,

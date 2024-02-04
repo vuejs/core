@@ -1,54 +1,107 @@
 import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
-import type { SetPropIRNode, VaporHelper } from '../ir'
+import type { SetDynamicPropsIRNode, SetPropIRNode, VaporHelper } from '../ir'
 import { genExpression } from './expression'
-import { isString } from '@vue/shared'
+import type { DirectiveTransformResult } from '../transform'
+import { isSimpleIdentifier } from '@vue/compiler-core'
 
+// only the static key prop will reach here
 export function genSetProp(
   oper: SetPropIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper, helper } = context
+  const { call, vaporHelper } = context
+  const {
+    prop: { key, value, modifier },
+  } = oper
 
-  const element = `n${oper.element}`
-  const key = genExpression(oper.key, context)
-  const value = genExpression(oper.value, context)
+  const keyName = key.content
 
-  // fast path for static props
-  if (isString(oper.key) || oper.key.isStatic) {
-    const keyName = isString(oper.key) ? oper.key : oper.key.content
-
-    let helperName: VaporHelper | undefined
-    let omitKey = false
-    if (keyName === 'class') {
-      helperName = 'setClass'
-      omitKey = true
-    } else if (keyName === 'style') {
-      helperName = 'setStyle'
-      omitKey = true
-    } else if (oper.modifier) {
-      helperName = oper.modifier === '.' ? 'setDOMProp' : 'setAttr'
-    }
-
-    if (helperName) {
-      return [
-        NEWLINE,
-        ...call(vaporHelper(helperName), element, omitKey ? false : key, value),
-      ]
-    }
+  let helperName: VaporHelper
+  let omitKey = false
+  if (keyName === 'class') {
+    helperName = 'setClass'
+    omitKey = true
+  } else if (keyName === 'style') {
+    helperName = 'setStyle'
+    omitKey = true
+  } else if (modifier) {
+    helperName = modifier === '.' ? 'setDOMProp' : 'setAttr'
+  } else {
+    helperName = 'setDynamicProp'
   }
 
   return [
     NEWLINE,
-    ...call(vaporHelper('setDynamicProp'), element, genDynamicKey(), value),
+    ...call(
+      vaporHelper(helperName),
+      `n${oper.element}`,
+      omitKey ? false : genExpression(key, context),
+      genExpression(value, context),
+    ),
   ]
+}
 
-  function genDynamicKey(): CodeFragment[] {
-    if (oper.runtimeCamelize) {
-      return call(helper('camelize'), key)
-    } else if (oper.modifier) {
-      return [`\`${oper.modifier}\${`, ...key, `}\``]
-    } else {
-      return key
-    }
+// dynamic key props and v-bind="{}" will reach here
+export function genDynamicProps(
+  oper: SetDynamicPropsIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { call, vaporHelper } = context
+  return [
+    NEWLINE,
+    ...call(
+      vaporHelper('setDynamicProps'),
+      `n${oper.element}`,
+      ...oper.props.map(
+        props =>
+          Array.isArray(props)
+            ? genLiteralObjectProps(props, context) // static and dynamic arg props
+            : genExpression(props, context), // v-bind="{}"
+      ),
+    ),
+  ]
+}
+
+function genLiteralObjectProps(
+  props: DirectiveTransformResult[],
+  context: CodegenContext,
+): CodeFragment[] {
+  const { multi } = context
+  return multi(
+    ['{ ', ' }', ', '],
+    ...props.map(prop => [
+      ...genPropertyKey(prop, context),
+      `: `,
+      ...genExpression(prop.value, context),
+    ]),
+  )
+}
+
+function genPropertyKey(
+  { key: node, runtimeCamelize, modifier }: DirectiveTransformResult,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { call, helper } = context
+
+  // static arg was transformed by v-bind transformer
+  if (node.isStatic) {
+    // only quote keys if necessary
+    const keyName = node.content
+    return [isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName)]
   }
+
+  const key = genExpression(node, context)
+  if (runtimeCamelize && modifier) {
+    return [`[\`${modifier}\${`, ...call(helper('camelize'), key), `}\`]`]
+  }
+
+  if (runtimeCamelize) {
+    return [`[`, ...call(helper('camelize'), key), `]`]
+  }
+
+  if (modifier) {
+    return [`[\`${modifier}\${`, ...key, `}\`]`]
+  }
+
+  return [`[`, ...key, `]`]
 }

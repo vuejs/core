@@ -5,7 +5,6 @@ import {
   createSimpleExpression,
 } from '@vue/compiler-dom'
 import { camelize, isReservedProp } from '@vue/shared'
-import { IRNodeTypes } from '../ir'
 import type { DirectiveTransform } from '../transform'
 
 export function normalizeBindShorthand(
@@ -19,12 +18,9 @@ export function normalizeBindShorthand(
 }
 
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
-  let { arg, exp, loc, modifiers } = dir
+  let { exp, loc, modifiers } = dir
+  const arg = dir.arg!
 
-  if (!arg) {
-    // TODO support v-bind="{}"
-    return
-  }
   if (arg.isStatic && isReservedProp(arg.content)) return
 
   if (!exp) exp = normalizeBindShorthand(arg)
@@ -46,21 +42,15 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     return
   }
 
-  context.registerEffect(
-    [exp],
-    [
-      {
-        type: IRNodeTypes.SET_PROP,
-        element: context.reference(),
-        key: arg,
-        value: exp,
-        runtimeCamelize: camel,
-        modifier: modifiers.includes('prop')
-          ? '.'
-          : modifiers.includes('attr')
-            ? '^'
-            : undefined,
-      },
-    ],
-  )
+  return {
+    key: arg,
+    value: exp,
+    loc,
+    runtimeCamelize: camel,
+    modifier: modifiers.includes('prop')
+      ? '.'
+      : modifiers.includes('attr')
+        ? '^'
+        : undefined,
+  }
 }

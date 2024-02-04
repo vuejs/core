@@ -13,7 +13,7 @@ import { genFor } from './for'
 import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genSetModelValue } from './modelValue'
-import { genSetProp } from './prop'
+import { genDynamicProps, genSetProp } from './prop'
 import { genSetRef } from './ref'
 import { genCreateTextNode, genSetText } from './text'
 
@@ -32,6 +32,8 @@ export function genOperation(
   switch (oper.type) {
     case IRNodeTypes.SET_PROP:
       return genSetProp(oper, context)
+    case IRNodeTypes.SET_DYNAMIC_PROPS:
+      return genDynamicProps(oper, context)
     case IRNodeTypes.SET_TEXT:
       return genSetText(oper, context)
     case IRNodeTypes.SET_EVENT:

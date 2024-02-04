@@ -44,14 +44,14 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize } from 'vue';
-import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
+import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, _camelize(_ctx.foo), _ctx.id)
+    _setDynamicProps(n1, { [_camelize(_ctx.foo)]: _ctx.id })
   })
   return n0
 }"
@@ -114,14 +114,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, \`.\${_ctx.fooBar}\`, _ctx.id)
+    _setDynamicProps(n1, { [\`.\${_ctx.fooBar}\`]: _ctx.id })
   })
   return n0
 }"
@@ -156,14 +156,14 @@ export function render(_ctx) {
 `;
 
 exports[`compiler v-bind > dynamic arg 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
 export function render(_ctx) {
   const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
-    _setDynamicProp(n1, _ctx.id, _ctx.id)
+    _setDynamicProps(n1, { [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title })
   })
   return n0
 }"
