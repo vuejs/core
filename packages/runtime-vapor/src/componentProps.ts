@@ -12,7 +12,8 @@ import {
   isFunction,
   isReservedProp,
 } from '@vue/shared'
-import { shallowReactive, toRaw } from '@vue/reactivity'
+import { shallowReactive, shallowReadonly, toRaw } from '@vue/reactivity'
+import { warn } from './warning'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -35,7 +36,7 @@ export interface PropOptions<T = any, D = T> {
   type?: PropType<T> | true | null
   required?: boolean
   default?: D | DefaultFactory<D> | null | undefined | object
-  validator?(value: unknown): boolean
+  validator?(value: unknown, props: Data): boolean
   /**
    * @internal
    */
@@ -140,6 +141,11 @@ export function initProps(
         },
       })
     }
+  }
+
+  // validation
+  if (__DEV__) {
+    validateProps(rawProps || {}, props, instance)
   }
 
   instance.props = shallowReactive(props)
@@ -262,4 +268,71 @@ function getTypeIndex(
     return isSameType(expectedTypes, type) ? 0 : -1
   }
   return -1
+}
+
+/**
+ * dev only
+ */
+function validateProps(
+  rawProps: Data,
+  props: Data,
+  instance: ComponentInternalInstance,
+) {
+  const resolvedValues = toRaw(props)
+  const options = instance.propsOptions[0]
+  for (const key in options) {
+    let opt = options[key]
+    if (opt == null) continue
+    validateProp(
+      key,
+      resolvedValues[key],
+      opt,
+      __DEV__ ? shallowReadonly(resolvedValues) : resolvedValues,
+      !hasOwn(rawProps, key) && !hasOwn(rawProps, hyphenate(key)),
+    )
+  }
+}
+
+/**
+ * dev only
+ */
+function validateProp(
+  name: string,
+  value: unknown,
+  prop: PropOptions,
+  props: Data,
+  isAbsent: boolean,
+) {
+  const { required, validator } = prop
+  // required!
+  if (required && isAbsent) {
+    warn('Missing required prop: "' + name + '"')
+    return
+  }
+  // missing but optional
+  if (value == null && !required) {
+    return
+  }
+  // NOTE: type check is not supported in vapor
+  // // type check
+  // if (type != null && type !== true) {
+  //   let isValid = false
+  //   const types = isArray(type) ? type : [type]
+  //   const expectedTypes = []
+  //   // value is valid as long as one of the specified types match
+  //   for (let i = 0; i < types.length && !isValid; i++) {
+  //     const { valid, expectedType } = assertType(value, types[i])
+  //     expectedTypes.push(expectedType || '')
+  //     isValid = valid
+  //   }
+  //   if (!isValid) {
+  //     warn(getInvalidTypeMessage(name, value, expectedTypes))
+  //     return
+  //   }
+  // }
+
+  // custom validator
+  if (validator && !validator(value, props)) {
+    warn('Invalid prop: custom validator check failed for prop "' + name + '".')
+  }
 }
