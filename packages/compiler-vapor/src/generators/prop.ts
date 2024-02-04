@@ -2,7 +2,7 @@ import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
 import type { SetDynamicPropsIRNode, SetPropIRNode, VaporHelper } from '../ir'
 import { genExpression } from './expression'
 import type { DirectiveTransformResult } from '../transform'
-import { isSimpleIdentifier } from '@vue/compiler-core'
+import { NewlineType, isSimpleIdentifier } from '@vue/compiler-core'
 
 // only the static key prop will reach here
 export function genSetProp(
@@ -87,7 +87,13 @@ function genPropertyKey(
   if (node.isStatic) {
     // only quote keys if necessary
     const keyName = node.content
-    return [isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName)]
+    return [
+      [
+        isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),
+        NewlineType.None,
+        node.loc,
+      ],
+    ]
   }
 
   const key = genExpression(node, context)
