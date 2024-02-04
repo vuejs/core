@@ -36,6 +36,7 @@ export type DirectiveHookName =
 export type ObjectDirective<T = any, V = any, M extends string = string> = {
   [K in DirectiveHookName]?: DirectiveHook<T, V, M> | undefined
 } & {
+  /** Watch value deeply */
   deep?: boolean
 }
 
@@ -100,7 +101,7 @@ export function withDirectives<T extends Node>(
     // register source
     if (source) {
       // callback will be overridden by middleware
-      renderWatch(source, NOOP)
+      renderWatch(source, NOOP, { deep: dir.deep })
     }
   }
 
