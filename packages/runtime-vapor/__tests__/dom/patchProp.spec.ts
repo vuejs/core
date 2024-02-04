@@ -18,7 +18,9 @@ import {
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
-  const reset = setCurrentInstance(createComponentInstance((() => {}) as any))
+  const reset = setCurrentInstance(
+    createComponentInstance((() => {}) as any, {}),
+  )
   removeComponentInstance = () => {
     reset()
     removeComponentInstance = NOOP
