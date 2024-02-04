@@ -1,5 +1,6 @@
 import {
   type Data,
+  includeBooleanAttr,
   isArray,
   isFunction,
   isOn,
@@ -9,6 +10,7 @@ import {
   toDisplayString,
 } from '@vue/shared'
 import { currentInstance } from '../component'
+import { warn } from '../warning'
 
 export function recordPropMetadata(el: Node, key: string, value: any): any {
   if (!currentInstance) {
@@ -56,10 +58,74 @@ export function setAttr(el: Element, key: string, value: any) {
 
 export function setDOMProp(el: any, key: string, value: any) {
   const oldVal = recordPropMetadata(el, key, value)
-  // TODO special checks
-  if (value !== oldVal) {
-    el[key] = value
+  if (value === oldVal) return
+
+  if (key === 'innerHTML' || key === 'textContent') {
+    // TODO special checks
+    // if (prevChildren) {
+    //   unmountChildren(prevChildren, parentComponent, parentSuspense)
+    // }
+    el[key] = value == null ? '' : value
+    return
   }
+
+  const tag = el.tagName
+
+  if (
+    key === 'value' &&
+    tag !== 'PROGRESS' &&
+    // custom elements may use _value internally
+    !tag.includes('-')
+  ) {
+    // store value as _value as well since
+    // non-string values will be stringified.
+    el._value = value
+    // #4956: <option> value will fallback to its text content so we need to
+    // compare against its attribute value instead.
+    const oldValue = tag === 'OPTION' ? el.getAttribute('value') : el.value
+    const newValue = value == null ? '' : value
+    if (oldValue !== newValue) {
+      el.value = newValue
+    }
+    if (value == null) {
+      el.removeAttribute(key)
+    }
+    return
+  }
+
+  let needRemove = false
+  if (value === '' || value == null) {
+    const type = typeof el[key]
+    if (type === 'boolean') {
+      // e.g. <select multiple> compiles to { multiple: '' }
+      value = includeBooleanAttr(value)
+    } else if (value == null && type === 'string') {
+      // e.g. <div :id="null">
+      value = ''
+      needRemove = true
+    } else if (type === 'number') {
+      // e.g. <img :width="null">
+      value = 0
+      needRemove = true
+    }
+  }
+
+  // some properties perform value validation and throw,
+  // some properties has getter, no setter, will error in 'use strict'
+  // eg. <select :type="null"></select> <select :willValidate="null"></select>
+  try {
+    el[key] = value
+  } catch (e: any) {
+    // do not warn if value is auto-coerced from nullish values
+    if (__DEV__ && !needRemove) {
+      warn(
+        `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
+          `value ${value} is invalid.`,
+        e,
+      )
+    }
+  }
+  needRemove && el.removeAttribute(key)
 }
 
 export function setDynamicProp(el: Element, key: string, value: any) {
