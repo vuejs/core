@@ -169,6 +169,20 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler v-bind > dynamic arg w/ static attribute 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setDynamicProps(n1, { [_ctx.id]: _ctx.id, foo: "bar", checked: "" })
+  })
+  return n0
+}"
+`;
+
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 

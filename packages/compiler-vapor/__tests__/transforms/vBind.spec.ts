@@ -167,6 +167,55 @@ describe('compiler v-bind', () => {
     )
   })
 
+  test('dynamic arg w/ static attribute', () => {
+    const { ir, code } = compileWithVBind(
+      `<div v-bind:[id]="id" foo="bar" checked />`,
+    )
+    expect(code).matchSnapshot()
+    expect(ir.effect[0].operations[0]).toMatchObject({
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      element: 1,
+      props: [
+        [
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'id',
+              isStatic: false,
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'id',
+              isStatic: false,
+            },
+          },
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: true,
+            },
+            value: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'bar',
+              isStatic: true,
+            },
+          },
+          {
+            key: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'checked',
+              isStatic: true,
+            },
+          },
+        ],
+      ],
+    })
+    expect(code).contains(
+      '_setDynamicProps(n1, { [_ctx.id]: _ctx.id, foo: "bar", checked: "" })',
+    )
+  })
+
   test('should error if empty expression', () => {
     const onError = vi.fn()
     const { ir, code } = compileWithVBind(`<div v-bind:arg="" />`, {

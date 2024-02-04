@@ -6,6 +6,7 @@ import {
   NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
+  createSimpleExpression,
 } from '@vue/compiler-dom'
 import { isBuiltInDirective, isReservedProp, isVoidTag } from '@vue/shared'
 import type {
@@ -57,16 +58,18 @@ export const transformElement: NodeTransform = (node, context) => {
 function buildProps(
   node: ElementNode,
   context: TransformContext<ElementNode>,
-  props: ElementNode['props'] = node.props,
+  props: (VaporDirectiveNode | AttributeNode)[] = node.props as any,
   isComponent: boolean,
 ) {
   const dynamicArgs: PropsExpression[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
 
-  function pushExpressions(...exprs: SimpleExpressionNode[]) {
+  function pushDynamicExpressions(
+    ...exprs: (SimpleExpressionNode | undefined)[]
+  ) {
     for (const expr of exprs) {
-      if (!expr.isStatic) dynamicExpr.push(expr)
+      if (expr && !expr.isStatic) dynamicExpr.push(expr)
     }
   }
 
@@ -77,14 +80,22 @@ function buildProps(
     }
   }
 
-  for (const prop of props as (VaporDirectiveNode | AttributeNode)[]) {
+  // treat all props as dynamic key
+  const asDynamic = props.some(
+    prop =>
+      prop.type === NodeTypes.DIRECTIVE &&
+      prop.name === 'bind' &&
+      (!prop.arg || !prop.arg.isStatic),
+  )
+
+  for (const prop of props) {
     if (
       prop.type === NodeTypes.DIRECTIVE &&
       prop.name === 'bind' &&
       !prop.arg
     ) {
       if (prop.exp) {
-        pushExpressions(prop.exp)
+        pushDynamicExpressions(prop.exp)
         pushMergeArg()
         dynamicArgs.push(prop.exp)
       } else {
@@ -95,10 +106,10 @@ function buildProps(
       continue
     }
 
-    const result = transformProp(prop, node, context)
+    const result = transformProp(prop, node, context, asDynamic)
     if (result) {
       results.push(result)
-      pushExpressions(result.key, result.value)
+      asDynamic && pushDynamicExpressions(result.key, result.value)
     }
   }
 
@@ -136,14 +147,26 @@ function transformProp(
   prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
+  asDynamic: boolean,
 ): DirectiveTransformResult | void {
   const { name } = prop
   if (isReservedProp(name)) return
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
-    context.template += ` ${name}`
-    if (prop.value) context.template += `="${prop.value.content}"`
-    return
+    if (asDynamic) {
+      return {
+        key: createSimpleExpression(prop.name, true, prop.nameLoc),
+        value: createSimpleExpression(
+          prop.value ? prop.value.content : '',
+          true,
+          prop.value && prop.value.loc,
+        ),
+      }
+    } else {
+      context.template += ` ${name}`
+      if (prop.value) context.template += `="${prop.value.content}"`
+      return
+    }
   }
 
   const directiveTransform = context.options.directiveTransforms[name]

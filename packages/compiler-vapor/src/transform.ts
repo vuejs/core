@@ -10,7 +10,6 @@ import {
   type ParentNode,
   type RootNode,
   type SimpleExpressionNode,
-  type SourceLocation,
   type TemplateChildNode,
   type TemplateNode,
   defaultOnError,
@@ -46,7 +45,6 @@ export type DirectiveTransform = (
 export interface DirectiveTransformResult {
   key: SimpleExpressionNode
   value: SimpleExpressionNode
-  loc: SourceLocation
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
 }
