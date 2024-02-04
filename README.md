@@ -72,6 +72,7 @@ The code provided here is a duplicate from `runtime-core` as Vapor cannot import
 
 - packages/runtime-vapor/src/apiWatch.ts
 - packages/runtime-vapor/src/component.ts
+- packages/runtime-vapor/src/componentEmits.ts
 - packages/runtime-vapor/src/componentProps.ts
 - packages/runtime-vapor/src/enums.ts
 - packages/runtime-vapor/src/errorHandling.ts
