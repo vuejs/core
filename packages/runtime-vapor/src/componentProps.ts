@@ -13,7 +13,11 @@ import {
   isReservedProp,
 } from '@vue/shared'
 import { shallowReactive, toRaw } from '@vue/reactivity'
-import type { Component, ComponentInternalInstance } from './component'
+import {
+  type Component,
+  type ComponentInternalInstance,
+  setCurrentInstance,
+} from './component'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -165,15 +169,9 @@ function resolvePropValue(
         // if (key in propsDefaults) {
         //   value = propsDefaults[key]
         // } else {
-        //   setCurrentInstance(instance)
-        //   value = propsDefaults[key] = defaultValue.call(
-        //     __COMPAT__ &&
-        //       isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
-        //       ? createPropsDefaultThis(instance, props, key)
-        //       : null,
-        //     props,
-        //   )
-        //   unsetCurrentInstance()
+        const reset = setCurrentInstance(instance)
+        value = defaultValue.call(null, props)
+        reset()
         // }
       } else {
         value = defaultValue
