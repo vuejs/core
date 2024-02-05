@@ -238,6 +238,22 @@ export type SetupContext<
     }
   : never
 
+export type FunctionalContext<
+  E extends (key: any, ...args: any[]) => any = (
+    key: string,
+    ...args: any[]
+  ) => any,
+  S extends Record<string, (...args: any[]) => any> = {},
+  Data extends Record<string, any> = Record<string, any>,
+> = E extends any
+  ? {
+      attrs: Data
+      slots: Partial<S>
+      emit: E
+      expose: (exposed?: Record<string, any>) => void
+    }
+  : never
+
 /**
  * @internal
  */

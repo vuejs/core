@@ -13,6 +13,7 @@ import type {
 import type {
   AllowedComponentProps,
   ComponentCustomProps,
+  FunctionalContext,
   SetupContext,
 } from './component'
 import type {
@@ -109,12 +110,7 @@ export function defineComponent<
 >(
   setup: (
     props: Props,
-    ctx: {
-      attrs: Data
-      slots: Slots
-      emit: E
-      expose: (exposed?: Record<string, any>) => void
-    },
+    ctx: FunctionalContext<E, S, Data>,
   ) => RenderFunction | Promise<RenderFunction>,
 ): (props: Props & EmitsOverloadFnToProps<E>) => any
 
