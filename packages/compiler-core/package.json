@@ -46,13 +46,13 @@
   },
   "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/compiler-core#readme",
   "dependencies": {
-    "@babel/parser": "^7.23.6",
+    "@babel/parser": "^7.23.9",
     "@vue/shared": "workspace:*",
     "entities": "^4.5.0",
     "estree-walker": "^2.0.2",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.23.6"
+    "@babel/types": "^7.23.9"
   }
 }

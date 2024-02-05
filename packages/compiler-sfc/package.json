@@ -42,19 +42,19 @@
   },
   "homepage": "https://github.com/vuejs/core-vapor/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.23.6",
+    "@babel/parser": "^7.23.9",
     "@vue/compiler-core": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/compiler-ssr": "workspace:*",
     "@vue/compiler-vapor": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "^2.0.2",
-    "magic-string": "^0.30.5",
+    "magic-string": "^0.30.6",
     "postcss": "^8.4.33",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/types": "^7.23.6",
+    "@babel/types": "^7.23.9",
     "@vue/consolidate": "^0.17.3",
     "hash-sum": "^2.0.0",
     "lru-cache": "^10.2.0",
