@@ -170,6 +170,29 @@ describe('v-on', () => {
     expect(code).contains('_on(n1, "click", $event => (_ctx.i++))')
   })
 
+  test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
+    const { code, helpers, vaporHelpers } = compileWithVOn(
+      `<div @click="x=y"/><div @click="x++"/><div @click="{ x } = y"/>`,
+      {
+        mode: 'module',
+        inline: true,
+        bindingMetadata: {
+          x: BindingTypes.SETUP_MAYBE_REF,
+          y: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+    expect(code).matchSnapshot()
+
+    expect(vaporHelpers).contains('unref')
+    expect(helpers.size).toBe(0)
+    expect(code).contains('_on(n1, "click", $event => (x.value=_unref(y)))')
+    expect(code).contains('_on(n2, "click", $event => (x.value++))')
+    expect(code).contains(
+      '_on(n3, "click", $event => ({ x: x.value } = _unref(y)))',
+    )
+  })
+
   test('should handle multiple inline statement', () => {
     const { ir, code } = compileWithVOn(`<div @click="foo();bar()"/>`)
 

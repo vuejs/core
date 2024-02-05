@@ -353,6 +353,18 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline: true 1`] = `
+"(() => {
+  const t0 = _template("<div></div><div></div><div></div>")
+  const n0 = t0()
+  const { 0: [n1], 1: [n2], 2: [n3],} = _children(n0)
+  _on(n1, "click", $event => (x.value=_unref(y)))
+  _on(n2, "click", $event => (x.value++))
+  _on(n3, "click", $event => ({ x: x.value } = _unref(y)))
+  return n0
+})()"
+`;
+
 exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`] = `
 "import { template as _template, children as _children, withModifiers as _withModifiers, withKeys as _withKeys, on as _on } from 'vue/vapor';
 
