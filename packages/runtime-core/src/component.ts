@@ -519,6 +519,11 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
+  /**
+   * hoisted vnodes
+   * @internal
+   */
+  hoistedVNodes?: VNode[] | null
 }
 
 const emptyAppContext = createAppContext()
@@ -555,6 +560,7 @@ export function createComponentInstance(
     provides: parent ? parent.provides : Object.create(appContext.provides),
     accessCache: null!,
     renderCache: [],
+    hoistedVNodes: null,
 
     // local resolved assets
     components: null,
