@@ -21,7 +21,11 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type { EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitsOptions,
+  EmitsOverloadFnToProps,
+  EmitsToProps,
+} from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
@@ -98,6 +102,24 @@ export type DefineComponent<
 // (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
+  E extends (key: any, ...args: any[]) => any,
+  Data extends Record<string, any>,
+  S extends Record<string, (...args: any[]) => any>,
+  Slots extends Partial<S>,
+>(
+  setup: (
+    props: Props,
+    ctx: {
+      attrs: Data
+      slots: Slots
+      emit: E
+      expose: (exposed?: Record<string, any>) => void
+    },
+  ) => RenderFunction | Promise<RenderFunction>,
+): (props: Props & EmitsOverloadFnToProps<E>) => any
+
+export function defineComponent<
+  Props extends Record<string, any>,
   E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
@@ -106,7 +128,7 @@ export function defineComponent<
     props: Props,
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: (keyof Props)[]
     emits?: E | EE[]
     slots?: S
@@ -122,7 +144,7 @@ export function defineComponent<
     props: Props,
     ctx: SetupContext<E, S>,
   ) => RenderFunction | Promise<RenderFunction>,
-  options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
+  options: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
     props?: ComponentObjectPropsOptions<Props>
     emits?: E | EE[]
     slots?: S

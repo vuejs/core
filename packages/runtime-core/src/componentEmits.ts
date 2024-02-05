@@ -1,5 +1,6 @@
 import {
   EMPTY_OBJ,
+  type Prettify,
   type UnionToIntersection,
   camelize,
   extend,
@@ -78,6 +79,26 @@ export type EmitFn<
                 : (event: key, ...args: any[]) => void
           }[Event]
         >
+
+type EmitsOverloadFnToPropsHelper<
+  T extends (key: string, ...args: any[]) => any,
+  PartialOverload = unknown,
+  P = {},
+> = T extends (key: infer K, ...args: infer Args) => infer TReturn
+  ? K extends string
+    ? PartialOverload extends T
+      ? P
+      : EmitsOverloadFnToPropsHelper<
+          PartialOverload & T,
+          PartialOverload & ((key: K, ...args: Args) => TReturn),
+          P & { [k in K as `on${Capitalize<K>}`]: (...args: Args) => any }
+        >
+    : never
+  : never
+
+export type EmitsOverloadFnToProps<
+  T extends (key: any, ...args: any[]) => any,
+> = Partial<Prettify<EmitsOverloadFnToPropsHelper<T>>>
 
 export function emit(
   instance: ComponentInternalInstance,

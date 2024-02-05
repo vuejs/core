@@ -1290,6 +1290,72 @@ describe('function syntax w/ generics', () => {
   )
 })
 
+describe('function syntax w/ resolveType plugin', () => {
+  const Comp = defineComponent(
+    // jsx plugin resolveType is true
+    <T extends string | number>(
+      props: { msg: T; list: T[] },
+      ctx: {
+        emit: {
+          (key: 'foo', args1: string): any
+          (key: 'bar', args1: number): any
+        }
+        slots: {
+          foo?: (args1: string, args2: number) => any
+          default?: () => any
+        }
+      },
+    ) => {
+      // use Composition API here like in <script setup>
+      const count = ref(0)
+      // @ts-expect-error
+      ctx.emit('foo', 1)
+      // @ts-expect-error
+      ctx.emit('bar')
+
+      ctx.emit('bar', 1)
+
+      return () => (
+        // return a render function (both JSX and h() works)
+        <div>
+          {props.msg} {count.value}
+          {// @ts-expect-error
+          ctx.slots.foo?.()}
+          {// @ts-expect-error
+          ctx.slots.foo?.(1)}
+          {ctx.slots.foo?.('', 1)}
+        </div>
+      )
+    },
+  )
+
+  expectType<JSX.Element>(<Comp msg="fse" list={['foo']} onBar={args1 => {}} />)
+  expectType<JSX.Element>(<Comp msg={123} list={[123]} />)
+
+  expectType<JSX.Element>(
+    // @ts-expect-error missing prop
+    <Comp msg={123} />,
+  )
+
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <Comp msg="fse" list={[123]} />,
+  )
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <Comp msg={123} list={['123']} />,
+  )
+
+  expectType<JSX.Element>(
+    // @ts-expect-error generics don't match
+    <Comp msg={123} list={['123']} />,
+  )
+  expectType<JSX.Element>(
+    // @ts-expect-error Type 'string' is not assignable to type 'number'
+    <Comp msg={123} list={[123]} onFoo={(arg: number) => {}} />,
+  )
+})
+
 describe('function syntax w/ emits', () => {
   const Foo = defineComponent(
     (props: { msg: string }, ctx) => {
