@@ -1,4 +1,4 @@
-import { type DebuggerOptions, ReactiveEffect, scheduleEffects } from './effect'
+import { type DebuggerOptions, ReactiveEffect } from './effect'
 import { type Ref, trackRefValue, triggerRefValue } from './ref'
 import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
@@ -44,7 +44,6 @@ export class ComputedRefImpl<T> {
     this.effect = new ReactiveEffect(
       () => getter(this._value),
       () => triggerRefValue(this, DirtyLevels.MaybeDirty),
-      () => this.dep && scheduleEffects(this.dep),
     )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
@@ -60,9 +59,6 @@ export class ComputedRefImpl<T> {
       }
     }
     trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty) {
-      triggerRefValue(self, DirtyLevels.MaybeDirty)
-    }
     return self._value
   }
 
