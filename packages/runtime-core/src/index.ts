@@ -246,6 +246,7 @@ export type {
   FunctionalComponent,
   ComponentInternalInstance,
   SetupContext,
+  FunctionalContext,
   ComponentCustomProps,
   AllowedComponentProps,
   ComponentInstance,
