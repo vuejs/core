@@ -50,11 +50,13 @@ describe('compiler: v-once', () => {
             content: 'class',
             isStatic: true,
           },
-          value: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'clz',
-            isStatic: false,
-          },
+          values: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'clz',
+              isStatic: false,
+            },
+          ],
         },
       },
       {
@@ -81,11 +83,13 @@ describe('compiler: v-once', () => {
             content: 'id',
             isStatic: true,
           },
-          value: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'foo',
-            isStatic: false,
-          },
+          values: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: false,
+            },
+          ],
         },
       },
     ])
@@ -111,11 +115,13 @@ describe('compiler: v-once', () => {
             content: 'id',
             isStatic: true,
           },
-          value: {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'foo',
-            isStatic: false,
-          },
+          values: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'foo',
+              isStatic: false,
+            },
+          ],
         },
       },
     ])

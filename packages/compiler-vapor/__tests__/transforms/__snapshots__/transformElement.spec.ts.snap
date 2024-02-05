@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: element transform > props merging: class 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setClass as _setClass } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setClass(n1, ["foo", { bar: _ctx.isBar }])
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > props merging: style 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setStyle as _setStyle } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setStyle(n1, ["color: green", { color: 'red' }])
+  })
+  return n0
+}"
+`;

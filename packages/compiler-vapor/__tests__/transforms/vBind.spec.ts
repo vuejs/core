@@ -52,16 +52,18 @@ describe('compiler v-bind', () => {
                 source: 'id',
               },
             },
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'id',
-              isStatic: false,
-              loc: {
-                source: 'id',
-                start: { line: 1, column: 17, offset: 16 },
-                end: { line: 1, column: 19, offset: 18 },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'id',
+                isStatic: false,
+                loc: {
+                  source: 'id',
+                  start: { line: 1, column: 17, offset: 16 },
+                  end: { line: 1, column: 19, offset: 18 },
+                },
               },
-            },
+            ],
             loc: {
               start: { column: 6, line: 1, offset: 5 },
               end: { column: 20, line: 1, offset: 19 },
@@ -92,14 +94,16 @@ describe('compiler v-bind', () => {
             end: { line: 1, column: 15, offset: 14 },
           },
         },
-        value: {
-          content: `id`,
-          isStatic: false,
-          loc: {
-            start: { line: 1, column: 13, offset: 12 },
-            end: { line: 1, column: 15, offset: 14 },
+        values: [
+          {
+            content: `id`,
+            isStatic: false,
+            loc: {
+              start: { line: 1, column: 13, offset: 12 },
+              end: { line: 1, column: 15, offset: 14 },
+            },
           },
-        },
+        ],
       },
     })
     expect(code).contains('_setDynamicProp(n1, "id", _ctx.id)')
@@ -116,10 +120,12 @@ describe('compiler v-bind', () => {
           content: `camel-case`,
           isStatic: true,
         },
-        value: {
-          content: `camelCase`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `camelCase`,
+            isStatic: false,
+          },
+        ],
       },
     })
     expect(code).contains('_setDynamicProp(n1, "camel-case", _ctx.camelCase)')
@@ -141,11 +147,13 @@ describe('compiler v-bind', () => {
               content: 'id',
               isStatic: false,
             },
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'id',
-              isStatic: false,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'id',
+                isStatic: false,
+              },
+            ],
           },
           {
             key: {
@@ -153,11 +161,13 @@ describe('compiler v-bind', () => {
               content: 'title',
               isStatic: false,
             },
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'title',
-              isStatic: false,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'title',
+                isStatic: false,
+              },
+            ],
           },
         ],
       ],
@@ -183,11 +193,13 @@ describe('compiler v-bind', () => {
               content: 'id',
               isStatic: false,
             },
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'id',
-              isStatic: false,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'id',
+                isStatic: false,
+              },
+            ],
           },
           {
             key: {
@@ -195,11 +207,13 @@ describe('compiler v-bind', () => {
               content: 'foo',
               isStatic: true,
             },
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'bar',
-              isStatic: true,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'bar',
+                isStatic: true,
+              },
+            ],
           },
           {
             key: {
@@ -247,10 +261,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `id`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `id`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: undefined,
       },
@@ -270,10 +286,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `fooBar`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `fooBar`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: undefined,
       },
@@ -294,10 +312,12 @@ describe('compiler v-bind', () => {
               content: `foo`,
               isStatic: false,
             },
-            value: {
-              content: `id`,
-              isStatic: false,
-            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
             runtimeCamelize: true,
             modifier: undefined,
           },
@@ -324,10 +344,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `id`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `id`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '.',
       },
@@ -346,10 +368,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `fooBar`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `fooBar`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '.',
       },
@@ -371,10 +395,12 @@ describe('compiler v-bind', () => {
               content: `fooBar`,
               isStatic: false,
             },
-            value: {
-              content: `id`,
-              isStatic: false,
-            },
+            values: [
+              {
+                content: `id`,
+                isStatic: false,
+              },
+            ],
             runtimeCamelize: false,
             modifier: '.',
           },
@@ -399,10 +425,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `id`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `id`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '.',
       },
@@ -421,10 +449,12 @@ describe('compiler v-bind', () => {
           content: `fooBar`,
           isStatic: true,
         },
-        value: {
-          content: `fooBar`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `fooBar`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '.',
       },
@@ -443,10 +473,12 @@ describe('compiler v-bind', () => {
           content: `foo-bar`,
           isStatic: true,
         },
-        value: {
-          content: `id`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `id`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '^',
       },
@@ -465,10 +497,12 @@ describe('compiler v-bind', () => {
           content: `foo-bar`,
           isStatic: true,
         },
-        value: {
-          content: `fooBar`,
-          isStatic: false,
-        },
+        values: [
+          {
+            content: `fooBar`,
+            isStatic: false,
+          },
+        ],
         runtimeCamelize: false,
         modifier: '^',
       },

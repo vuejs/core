@@ -88,18 +88,21 @@ export interface FragmentFactoryIRNode extends BaseIRNode {
   type: IRNodeTypes.FRAGMENT_FACTORY
 }
 
+export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
+  values: SimpleExpressionNode[]
+}
+export type IRProps = IRProp[] | SimpleExpressionNode
+
 export interface SetPropIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_PROP
   element: number
-  prop: DirectiveTransformResult
+  prop: IRProp
 }
-
-export type PropsExpression = DirectiveTransformResult[] | SimpleExpressionNode
 
 export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
-  props: PropsExpression[]
+  props: IRProps[]
 }
 
 export interface SetTextIRNode extends BaseIRNode {

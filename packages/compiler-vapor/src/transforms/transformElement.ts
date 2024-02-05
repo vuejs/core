@@ -8,7 +8,12 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { isBuiltInDirective, isReservedProp, isVoidTag } from '@vue/shared'
+import {
+  extend,
+  isBuiltInDirective,
+  isReservedProp,
+  isVoidTag,
+} from '@vue/shared'
 import type {
   DirectiveTransformResult,
   NodeTransform,
@@ -16,7 +21,8 @@ import type {
 } from '../transform'
 import {
   IRNodeTypes,
-  type PropsExpression,
+  type IRProp,
+  type IRProps,
   type VaporDirectiveNode,
 } from '../ir'
 
@@ -61,7 +67,7 @@ function buildProps(
   props: (VaporDirectiveNode | AttributeNode)[] = node.props as any,
   isComponent: boolean,
 ) {
-  const dynamicArgs: PropsExpression[] = []
+  const dynamicArgs: IRProps[] = []
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
 
@@ -75,18 +81,10 @@ function buildProps(
 
   function pushMergeArg() {
     if (results.length) {
-      dynamicArgs.push(results)
+      dynamicArgs.push(dedupeProperties(results))
       results = []
     }
   }
-
-  // treat all props as dynamic key
-  const asDynamic = props.some(
-    prop =>
-      prop.type === NodeTypes.DIRECTIVE &&
-      prop.name === 'bind' &&
-      (!prop.arg || !prop.arg.isStatic),
-  )
 
   for (const prop of props) {
     if (
@@ -106,20 +104,17 @@ function buildProps(
       continue
     }
 
-    const result = transformProp(prop, node, context, asDynamic)
+    const result = transformProp(prop, node, context)
     if (result) {
       results.push(result)
-      asDynamic && pushDynamicExpressions(result.key, result.value)
+      pushDynamicExpressions(result.key, result.value)
     }
   }
 
-  // take rest of props as dynamic props
-  if (dynamicArgs.length || results.some(({ key }) => !key.isStatic)) {
-    pushMergeArg()
-  }
-
   // has dynamic key or v-bind="{}"
-  if (dynamicArgs.length) {
+  if (dynamicArgs.length || results.some(({ key }) => !key.isStatic)) {
+    // take rest of props as dynamic props
+    pushMergeArg()
     context.registerEffect(dynamicExpr, [
       {
         type: IRNodeTypes.SET_DYNAMIC_PROPS,
@@ -128,17 +123,22 @@ function buildProps(
       },
     ])
   } else {
-    for (const result of results) {
-      context.registerEffect(
-        [result.value],
-        [
+    const irProps = dedupeProperties(results)
+    for (const prop of irProps) {
+      const { key, values } = prop
+      if (key.isStatic && values.length === 1 && values[0].isStatic) {
+        context.template += ` ${key.content}`
+        if (values[0].content) context.template += `="${values[0].content}"`
+      } else {
+        const expressions = values.filter(v => !v.isStatic)
+        context.registerEffect(expressions, [
           {
             type: IRNodeTypes.SET_PROP,
             element: context.reference(),
-            prop: result,
+            prop: prop,
           },
-        ],
-      )
+        ])
+      }
     }
   }
 }
@@ -147,36 +147,70 @@ function transformProp(
   prop: VaporDirectiveNode | AttributeNode,
   node: ElementNode,
   context: TransformContext<ElementNode>,
-  asDynamic: boolean,
 ): DirectiveTransformResult | void {
   const { name } = prop
   if (isReservedProp(name)) return
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
-    if (asDynamic) {
-      return {
-        key: createSimpleExpression(prop.name, true, prop.nameLoc),
-        value: createSimpleExpression(
-          prop.value ? prop.value.content : '',
-          true,
-          prop.value && prop.value.loc,
-        ),
-      }
-    } else {
-      context.template += ` ${name}`
-      if (prop.value) context.template += `="${prop.value.content}"`
-      return
+    return {
+      key: createSimpleExpression(prop.name, true, prop.nameLoc),
+      value: createSimpleExpression(
+        prop.value ? prop.value.content : '',
+        true,
+        prop.value && prop.value.loc,
+      ),
     }
   }
 
   const directiveTransform = context.options.directiveTransforms[name]
   if (directiveTransform) {
     return directiveTransform(prop, node, context)
-  } else if (!isBuiltInDirective(name)) {
+  }
+
+  if (!isBuiltInDirective(name)) {
     context.registerOperation({
       type: IRNodeTypes.WITH_DIRECTIVE,
       element: context.reference(),
       dir: prop,
     })
   }
+}
+
+// Dedupe props in an object literal.
+// Literal duplicated attributes would have been warned during the parse phase,
+// however, it's possible to encounter duplicated `onXXX` handlers with different
+// modifiers. We also need to merge static and dynamic class / style attributes.
+function dedupeProperties(results: DirectiveTransformResult[]): IRProp[] {
+  const knownProps: Map<string, IRProp> = new Map()
+  const deduped: IRProp[] = []
+
+  for (const result of results) {
+    const prop = normalizeIRProp(result)
+    // dynamic keys are always allowed
+    if (!prop.key.isStatic) {
+      deduped.push(prop)
+      continue
+    }
+    const name = prop.key.content
+    const existing = knownProps.get(name)
+    if (existing) {
+      if (name === 'style' || name === 'class') {
+        mergeAsArray(existing, prop)
+      }
+      // unexpected duplicate, should have emitted error during parse
+    } else {
+      knownProps.set(name, prop)
+      deduped.push(prop)
+    }
+  }
+  return deduped
+}
+
+function normalizeIRProp(prop: DirectiveTransformResult): IRProp {
+  return extend({}, prop, { value: undefined, values: [prop.value] })
+}
+
+function mergeAsArray(existing: IRProp, incoming: IRProp) {
+  const newValues = incoming.values
+  existing.values.push(...newValues)
 }
