@@ -54,6 +54,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  isVNodeSuspensible,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
@@ -1581,9 +1582,29 @@ function baseCreateRenderer(
       instance.scope, // track it in component's effect scope
     ))
 
+    const hasSuspensibleChild = (vnode: VNode): boolean => {
+      if (vnode.shapeFlag & ShapeFlags.SUSPENSE && isVNodeSuspensible(vnode))
+        return true
+
+      if (isArray(vnode.children)) {
+        return vnode.children.some(child => hasSuspensibleChild(child as VNode))
+      }
+      return false
+    }
+
     const update: SchedulerJob = (instance.update = () => {
       if (effect.dirty) {
-        effect.run()
+        if (
+          __FEATURE_SUSPENSE__ &&
+          parentSuspense &&
+          parentSuspense.deps > 0 &&
+          instance.subTree &&
+          hasSuspensibleChild(instance.subTree)
+        ) {
+          parentSuspense.preEffects.push(effect.run)
+        } else {
+          effect.run()
+        }
       }
     })
     update.id = instance.uid

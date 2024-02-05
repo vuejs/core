@@ -742,29 +742,22 @@ function createSuspenseBoundary(
     },
 
     unmount(parentSuspense, doRemove) {
-      const performUnmount = () => {
-        suspense.isUnmounted = true
-        if (suspense.activeBranch) {
-          unmount(
-            suspense.activeBranch,
-            parentComponent,
-            parentSuspense,
-            doRemove,
-          )
-        }
-        if (suspense.pendingBranch) {
-          unmount(
-            suspense.pendingBranch,
-            parentComponent,
-            parentSuspense,
-            doRemove,
-          )
-        }
+      suspense.isUnmounted = true
+      if (suspense.activeBranch) {
+        unmount(
+          suspense.activeBranch,
+          parentComponent,
+          parentSuspense,
+          doRemove,
+        )
       }
-      if (parentSuspense && parentSuspense.deps > 0) {
-        parentSuspense.preEffects.push(performUnmount)
-      } else {
-        performUnmount()
+      if (suspense.pendingBranch) {
+        unmount(
+          suspense.pendingBranch,
+          parentComponent,
+          parentSuspense,
+          doRemove,
+        )
       }
     },
   }
@@ -906,6 +899,6 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   }
 }
 
-function isVNodeSuspensible(vnode: VNode) {
+export function isVNodeSuspensible(vnode: VNode) {
   return vnode.props?.suspensible != null && vnode.props.suspensible !== false
 }
