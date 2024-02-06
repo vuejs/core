@@ -190,14 +190,11 @@ function mergeProps(...args: Data[]) {
   return ret
 }
 
-export function setText(el: Node, value: any) {
-  const oldVal = recordPropMetadata(
-    el,
-    'textContent',
-    (value = toDisplayString(value)),
-  )
-  if (value !== oldVal) {
-    el.textContent = value
+export function setText(el: Node, ...values: any[]) {
+  const text = values.map(v => toDisplayString(v)).join('')
+  const oldVal = recordPropMetadata(el, 'textContent', text)
+  if (text !== oldVal) {
+    el.textContent = text
   }
 }
 

@@ -22,7 +22,7 @@ export function render(_ctx) {
   const n0 = t0()
   const { 0: [n3, { 0: [n2],}],} = _children(n0)
   const n1 = _createTextNode()
-  _setText(n1, _ctx.msg + " ")
+  _setText(n1, _ctx.msg, " ")
   _setClass(n2, _ctx.clz)
   _prepend(n3, n1)
   return n0

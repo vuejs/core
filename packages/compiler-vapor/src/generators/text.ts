@@ -6,25 +6,14 @@ export function genSetText(
   oper: SetTextIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, multi, vaporHelper } = context
+  const { call, vaporHelper } = context
   const { values } = oper
   return [
     NEWLINE,
     ...call(
       vaporHelper('setText'),
       `n${oper.element}`,
-      multi(
-        ['', '', ' + '],
-        ...values.map((value, idx) => [
-          idx === 0 &&
-          values.length > 1 &&
-          !value.isStatic &&
-          !values[1].isStatic
-            ? '"" + '
-            : '',
-          ...genExpression(value, context),
-        ]),
-      ),
+      ...values.map(value => genExpression(value, context)),
     ),
   ]
 }
