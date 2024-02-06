@@ -132,10 +132,104 @@ describe('patchProp', () => {
   describe('setDOMProp', () => {
     test('should set DOM property', () => {
       const el = document.createElement('div')
+      setDOMProp(el, 'textContent', null)
+      expect(el.textContent).toBe('')
       setDOMProp(el, 'textContent', 'foo')
       expect(el.textContent).toBe('foo')
+
+      setDOMProp(el, 'innerHTML', null)
+      expect(el.innerHTML).toBe('')
       setDOMProp(el, 'innerHTML', '<p>bar</p>')
       expect(el.innerHTML).toBe('<p>bar</p>')
+    })
+
+    test('should set value prop', () => {
+      const el = document.createElement('input')
+      setDOMProp(el, 'value', 'foo')
+      expect(el.value).toBe('foo')
+      setDOMProp(el, 'value', null)
+      expect(el.value).toBe('')
+      expect(el.getAttribute('value')).toBe(null)
+      const obj = {}
+      setDOMProp(el, 'value', obj)
+      expect(el.value).toBe(obj.toString())
+      expect((el as any)._value).toBe(obj)
+
+      const option = document.createElement('option')
+      setDOMProp(option, 'textContent', 'foo')
+      expect(option.value).toBe('foo')
+      expect(option.getAttribute('value')).toBe(null)
+
+      setDOMProp(option, 'value', 'bar')
+      expect(option.textContent).toBe('foo')
+      expect(option.value).toBe('bar')
+      expect(option.getAttribute('value')).toBe('bar')
+    })
+
+    test('should be boolean prop', () => {
+      const el = document.createElement('select')
+      setDOMProp(el, 'multiple', '')
+      expect(el.multiple).toBe(true)
+      setDOMProp(el, 'multiple', null)
+      expect(el.multiple).toBe(false)
+      setDOMProp(el, 'multiple', true)
+      expect(el.multiple).toBe(true)
+      setDOMProp(el, 'multiple', 0)
+      expect(el.multiple).toBe(false)
+      setDOMProp(el, 'multiple', '0')
+      expect(el.multiple).toBe(true)
+      setDOMProp(el, 'multiple', false)
+      expect(el.multiple).toBe(false)
+      setDOMProp(el, 'multiple', 1)
+      expect(el.multiple).toBe(true)
+      setDOMProp(el, 'multiple', undefined)
+      expect(el.multiple).toBe(false)
+    })
+
+    test('should remove attribute when value is falsy', () => {
+      const el = document.createElement('div')
+      setDOMProp(el, 'id', '')
+      expect(el.hasAttribute('id')).toBe(true)
+      setDOMProp(el, 'id', null)
+      expect(el.hasAttribute('id')).toBe(false)
+
+      setDOMProp(el, 'id', '')
+      expect(el.hasAttribute('id')).toBe(true)
+      setDOMProp(el, 'id', undefined)
+      expect(el.hasAttribute('id')).toBe(false)
+
+      setDOMProp(el, 'id', '')
+      expect(el.hasAttribute('id')).toBe(true)
+
+      const img = document.createElement('img')
+      setDOMProp(img, 'width', '')
+      expect(img.hasAttribute('width')).toBe(false)
+      setDOMProp(img, 'width', 0)
+      expect(img.hasAttribute('width')).toBe(true)
+
+      setDOMProp(img, 'width', null)
+      expect(img.hasAttribute('width')).toBe(false)
+      setDOMProp(img, 'width', 0)
+      expect(img.hasAttribute('width')).toBe(true)
+
+      setDOMProp(img, 'width', undefined)
+      expect(img.hasAttribute('width')).toBe(false)
+      setDOMProp(img, 'width', 0)
+      expect(img.hasAttribute('width')).toBe(true)
+    })
+
+    test('should warn when set prop error', () => {
+      const el = document.createElement('div')
+      Object.defineProperty(el, 'someProp', {
+        set() {
+          throw new TypeError('Invalid type')
+        },
+      })
+      setDOMProp(el, 'someProp', 'foo')
+
+      expect(
+        `Failed setting prop "someProp" on <div>: value foo is invalid.`,
+      ).toHaveBeenWarnedLast()
     })
   })
 
