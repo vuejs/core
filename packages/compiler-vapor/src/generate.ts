@@ -9,7 +9,7 @@ import {
 } from '@vue/compiler-dom'
 import type { IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
-import { extend, isString, remove } from '@vue/shared'
+import { extend, isArray, isString, remove } from '@vue/shared'
 import type { ParserPlugin } from '@babel/parser'
 import { genTemplate } from './generators/template'
 import { genBlockFunctionContent } from './generators/block'
@@ -18,6 +18,7 @@ interface CodegenOptions extends BaseCodegenOptions {
   expressionPlugins?: ParserPlugin[]
 }
 
+type FalsyValue = false | null | undefined
 export type CodeFragment =
   | typeof NEWLINE
   | typeof LF
@@ -25,7 +26,9 @@ export type CodeFragment =
   | typeof INDENT_END
   | string
   | [code: string, newlineIndex?: number, loc?: SourceLocation, name?: string]
-  | undefined
+  | FalsyValue
+
+type CodeFragments = Exclude<CodeFragment, any[]> | CodeFragment[]
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -35,26 +38,27 @@ export class CodegenContext {
 
   push: (...args: CodeFragment[]) => void
   multi = (
-    [left, right, seg]: [left: string, right: string, segment: string],
-    ...fns: Array<false | string | CodeFragment[]>
+    [left, right, seg]: [
+      left: CodeFragment,
+      right: CodeFragment,
+      segment: CodeFragment,
+    ],
+    ...fns: CodeFragments[]
   ): CodeFragment[] => {
     const frag: CodeFragment[] = []
     fns = fns.filter(Boolean)
     frag.push(left)
-    for (let [i, fn] of fns.entries()) {
-      if (fn) {
-        if (isString(fn)) fn = [fn]
-        frag.push(...fn)
-        if (i < fns.length - 1) frag.push(seg)
-      }
+    for (let [i, fn] of (
+      fns as Array<Exclude<CodeFragments, FalsyValue>>
+    ).entries()) {
+      if (!isArray(fn)) fn = [fn]
+      frag.push(...fn)
+      if (i < fns.length - 1) frag.push(seg)
     }
     frag.push(right)
     return frag
   }
-  call = (
-    name: string,
-    ...args: Array<false | string | CodeFragment[]>
-  ): CodeFragment[] => {
+  call = (name: string, ...args: CodeFragments[]): CodeFragment[] => {
     return [name, ...this.multi(['(', ')', ', '], ...args)]
   }
 
@@ -153,7 +157,7 @@ export function generate(
   }
 
   const functionName = 'render'
-  const isSetupInlined = !!options.inline
+  const isSetupInlined = options.inline
   if (isSetupInlined) {
     push(`(() => {`)
   } else {
