@@ -33,7 +33,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   })
 
   if (__DEV__) {
-    instance.getCssVars = () => fommaterVars(getter(instance.proxy))
+    instance.getCssVars = () => getter(instance.proxy)
   }
 
   const setVars = () => {
@@ -91,11 +91,4 @@ function setVarsOnNode(el: Node, vars: Record<string, string>) {
     }
     ;(style as any)[CSS_VAR_TEXT] = cssText
   }
-}
-function fommaterVars(vars: Record<string, string>) {
-  const cssVars: Record<string, string> = {}
-  for (const key in vars) {
-    cssVars[`--${key}`] = String(vars[key])
-  }
-  return cssVars
 }

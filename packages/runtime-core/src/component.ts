@@ -521,7 +521,7 @@ export interface ComponentInternalInstance {
   ut?: (vars?: Record<string, string>) => void
 
   /**
-   * dev only. For getCssVars on hydration
+   * dev only. For style v-bind hydration mismatch checks
    * @internal
    */
   getCssVars?: () => Record<string, string>
