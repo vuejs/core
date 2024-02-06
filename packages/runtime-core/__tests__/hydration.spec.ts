@@ -19,6 +19,7 @@ import {
   onMounted,
   ref,
   renderSlot,
+  useCssVars,
   vModelCheckbox,
   vShow,
   withDirectives,
@@ -1537,6 +1538,21 @@ describe('SSR hydration', () => {
         h('select', [h('option', { value: ['foo'] }, 'hello')]),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn css v-bind', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h('div', { style: { color: 'var(--foo)' } })
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
   })
 })

@@ -10,6 +10,7 @@ import {
   isReadonly,
   reactive,
   ref,
+  shallowRef,
   toRaw,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
@@ -481,8 +482,12 @@ describe('reactivity/computed', () => {
     c3.value
 
     expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -521,6 +526,49 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(2)
   })
 
+  // #10185
+  it('should not override queried MaybeDirty result', () => {
+    class Item {
+      v = ref(0)
+    }
+    const v1 = shallowRef()
+    const v2 = ref(false)
+    const c1 = computed(() => {
+      let c = v1.value
+      if (!v1.value) {
+        c = new Item()
+        v1.value = c
+      }
+      return c.v.value
+    })
+    const c2 = computed(() => {
+      if (!v2.value) return 'no'
+      return c1.value ? 'yes' : 'no'
+    })
+    const c3 = computed(() => c2.value)
+
+    c3.value
+    v2.value = true
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    c3.value
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+    expect(c3.effect._dirtyLevel).toBe(
+      DirtyLevels.MaybeDirty_ComputedSideEffect,
+    )
+
+    v1.value.v.value = 999
+    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
+    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
+
+    expect(c3.value).toBe('yes')
+  })
+
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
     const state = reactive<any>({})
     const consumer = computed(() => {
@@ -540,5 +588,27 @@ describe('reactivity/computed', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(`2`)
+  })
+
+  it('should not trigger effect scheduler by recurse computed effect', async () => {
+    const v = ref('Hello')
+    const c = computed(() => {
+      v.value += ' World'
+      return v.value
+    })
+    const Comp = {
+      setup: () => {
+        return () => c.value
+      },
+    }
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp), root)
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World')
+
+    v.value += ' World'
+    await nextTick()
+    expect(serializeInner(root)).toBe('Hello World World World World')
   })
 })

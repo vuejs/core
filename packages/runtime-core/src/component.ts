@@ -518,6 +518,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
+
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 }
 
 const emptyAppContext = createAppContext()

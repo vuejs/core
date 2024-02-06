@@ -1,4 +1,4 @@
-import { type DebuggerOptions, ReactiveEffect, scheduleEffects } from './effect'
+import { type DebuggerOptions, ReactiveEffect } from './effect'
 import { type Ref, trackRefValue, triggerRefValue } from './ref'
 import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
@@ -43,8 +43,13 @@ export class ComputedRefImpl<T> {
   ) {
     this.effect = new ReactiveEffect(
       () => getter(this._value),
-      () => triggerRefValue(this, DirtyLevels.MaybeDirty),
-      () => this.dep && scheduleEffects(this.dep),
+      () =>
+        triggerRefValue(
+          this,
+          this.effect._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect
+            ? DirtyLevels.MaybeDirty_ComputedSideEffect
+            : DirtyLevels.MaybeDirty,
+        ),
     )
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
@@ -54,14 +59,15 @@ export class ComputedRefImpl<T> {
   get value() {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
-    if (!self._cacheable || self.effect.dirty) {
-      if (hasChanged(self._value, (self._value = self.effect.run()!))) {
-        triggerRefValue(self, DirtyLevels.Dirty)
-      }
+    if (
+      (!self._cacheable || self.effect.dirty) &&
+      hasChanged(self._value, (self._value = self.effect.run()!))
+    ) {
+      triggerRefValue(self, DirtyLevels.Dirty)
     }
     trackRefValue(self)
-    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty) {
-      triggerRefValue(self, DirtyLevels.MaybeDirty)
+    if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
+      triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
   }
