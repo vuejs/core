@@ -449,7 +449,10 @@ export function createHydrationFunctions(
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
+            if (
+              __DEV__ &&
+              propHasMismatch(el, key, props[key], vnode, parentComponent)
+            ) {
               hasMismatch = true
             }
             if (
@@ -718,6 +721,7 @@ function propHasMismatch(
   key: string,
   clientValue: any,
   vnode: VNode,
+  instance: ComponentInternalInstance | null,
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
@@ -748,6 +752,12 @@ function propHasMismatch(
         }
       }
     }
+
+    const cssVars = instance?.getCssVars?.()
+    for (const key in cssVars) {
+      expectedMap.set(`--${key}`, String(cssVars[key]))
+    }
+
     if (!isMapEqual(actualMap, expectedMap)) {
       mismatchType = mismatchKey = 'style'
     }
