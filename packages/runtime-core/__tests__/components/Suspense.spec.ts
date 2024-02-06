@@ -530,7 +530,7 @@ describe('Suspense', () => {
           onUnmounted(() => {
             calls.push('InnerA unmounted')
           })
-          return () => h('div', 'innerA')
+          return () => h('div', 'InnerA')
         },
       },
       5,
@@ -564,7 +564,7 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(
-      `<div><div>OuterA</div><div>innerA</div></div>`,
+      `<div><div>OuterA</div><div>InnerA</div></div>`,
     )
     expect(calls).toEqual([`OuterA mounted`, 'InnerA mounted'])
 
@@ -575,7 +575,7 @@ describe('Suspense', () => {
 
     // expect not change
     expect(serializeInner(root)).toBe(
-      `<div><div>OuterA</div><div>innerA</div></div>`,
+      `<div><div>OuterA</div><div>InnerA</div></div>`,
     )
     expect(calls).toEqual([])
 
