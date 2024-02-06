@@ -27,3 +27,69 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: element transform > static props 1`] = `
+"import { template as _template } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
+  const n0 = t0()
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setDynamicProps(n1, _ctx.obj)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setDynamicProps(n1, { id: "foo" }, _ctx.obj)
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setDynamicProps(n1, _ctx.obj, { id: "foo" })
+  })
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
+"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
+
+export function render(_ctx) {
+  const t0 = _template("<div></div>")
+  const n0 = t0()
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => {
+    _setDynamicProps(n1, { id: "foo" }, _ctx.obj, { class: "bar" })
+  })
+  return n0
+}"
+`;
