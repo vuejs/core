@@ -1,3 +1,42 @@
+## [3.4.15](https://github.com/vuejs/core/compare/v3.4.14...v3.4.15) (2024-01-18)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** fix type resolution for symlinked node_modules structure w/ pnpm ([75e866b](https://github.com/vuejs/core/commit/75e866bd4ef368b4e037a4933dbaf188920dc683)), closes [#10121](https://github.com/vuejs/core/issues/10121)
+* correct url for production error reference links ([c3087ff](https://github.com/vuejs/core/commit/c3087ff2cce7d96c60a870f8233441311ab4dfb4))
+* **hydration:** fix incorect mismatch warning for option with non-string value and inner text ([d16a213](https://github.com/vuejs/core/commit/d16a2138a33b106b9e1499bbb9e1c67790370c97))
+* **reactivity:** re-fix [#10114](https://github.com/vuejs/core/issues/10114) ([#10123](https://github.com/vuejs/core/issues/10123)) ([c2b274a](https://github.com/vuejs/core/commit/c2b274a887f61deb7e0185d1bef3b77d31e991cc))
+* **runtime-core:** should not warn out-of-render slot fn usage when mounting another app in setup ([#10125](https://github.com/vuejs/core/issues/10125)) ([6fa33e6](https://github.com/vuejs/core/commit/6fa33e67ec42af140a86fbdb86939032c3a1f345)), closes [#10124](https://github.com/vuejs/core/issues/10124)
+
+
+### Performance Improvements
+
+* **templateRef:** avoid double render when using template ref on v-for ([de4d2e2](https://github.com/vuejs/core/commit/de4d2e2143ea8397cebeb1c7a57a60007b283c9f)), closes [#9908](https://github.com/vuejs/core/issues/9908)
+* **v-model:** optimize v-model multiple select w/ large lists ([2ffb956](https://github.com/vuejs/core/commit/2ffb956efe692da059f4895669084c5278871351)), closes [#10014](https://github.com/vuejs/core/issues/10014)
+
+
+
+## [3.4.14](https://github.com/vuejs/core/compare/v3.4.13...v3.4.14) (2024-01-15)
+
+
+### Bug Fixes
+
+* **compiler-sfc:** enable prefixIdentifiers by default when reparsing on consumed AST ([#10105](https://github.com/vuejs/core/issues/10105)) ([48bf8e4](https://github.com/vuejs/core/commit/48bf8e4c708ec620e4852d71c8713394457108ee))
+* **deps:** update dependency postcss to ^8.4.33 ([#10110](https://github.com/vuejs/core/issues/10110)) ([a557006](https://github.com/vuejs/core/commit/a557006f8e7f110c6f322de38931dceaab8e9cbb))
+* **reactivity:** fix regression for computed with mutation ([#10119](https://github.com/vuejs/core/issues/10119)) ([20f62af](https://github.com/vuejs/core/commit/20f62afaafd422e42b99dde9c16f9a4ebfb9c5f7)), closes [#10114](https://github.com/vuejs/core/issues/10114)
+
+
+
+## [3.4.13](https://github.com/vuejs/core/compare/v3.4.12...v3.4.13) (2024-01-13)
+
+
+### Bug Fixes
+
+* **reactivity:** fix dirtyLevel checks for recursive effects ([#10101](https://github.com/vuejs/core/issues/10101)) ([e45a8d2](https://github.com/vuejs/core/commit/e45a8d24b46c174deb46ed952bdaf54c81ad5a85)), closes [#10082](https://github.com/vuejs/core/issues/10082)
+
+
+
 ## [3.4.12](https://github.com/vuejs/core/compare/v3.4.11...v3.4.12) (2024-01-13)
 
 
@@ -12,7 +51,7 @@
 
 ### Bug Fixes
 
-* **hydration:** improve mismatch when client valut is null or undefined ([#10086](https://github.com/vuejs/core/issues/10086)) ([08b60f5](https://github.com/vuejs/core/commit/08b60f5d0d5b57fcf3347ef66cbeab472c475a88))
+* **hydration:** improve mismatch when client value is null or undefined ([#10086](https://github.com/vuejs/core/issues/10086)) ([08b60f5](https://github.com/vuejs/core/commit/08b60f5d0d5b57fcf3347ef66cbeab472c475a88))
 * **reactivity:** correct dirty assign in render function ([#10091](https://github.com/vuejs/core/issues/10091)) ([8d04205](https://github.com/vuejs/core/commit/8d042050411fdf04d9d1d6c153287164b12e0255)), closes [#10082](https://github.com/vuejs/core/issues/10082)
 * **runtime-core:** filter single root for nested DEV_ROOT_FRAGMENT ([#8593](https://github.com/vuejs/core/issues/8593)) ([d35b877](https://github.com/vuejs/core/commit/d35b87725ab3e2bdc86fb5781ab34939f7ec1029)), closes [#5203](https://github.com/vuejs/core/issues/5203) [#8581](https://github.com/vuejs/core/issues/8581) [#10087](https://github.com/vuejs/core/issues/10087)
 

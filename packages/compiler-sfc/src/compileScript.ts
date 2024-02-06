@@ -118,6 +118,7 @@ export interface SFCScriptCompileOptions {
   fs?: {
     fileExists(file: string): boolean
     readFile(file: string): string | undefined
+    realpath?(file: string): string
   }
   /**
    * Transform Vue SFCs into custom elements.
