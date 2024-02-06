@@ -8,7 +8,7 @@ import {
 } from '@vue/shared'
 import type { ComponentInternalInstance } from '../component'
 import type { ObjectDirective } from '../directive'
-import { on } from '../dom/on'
+import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'
 
@@ -50,7 +50,7 @@ export const vModelText: ObjectDirective<
     assignFnMap.set(el, assigner)
 
     const castToNumber = number // || (vnode.props && vnode.props.type === 'number')
-    on(el, lazy ? 'change' : 'input', e => {
+    addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value
       if (trim) {
@@ -62,18 +62,18 @@ export const vModelText: ObjectDirective<
       assigner(domValue)
     })
     if (trim) {
-      on(el, 'change', () => {
+      addEventListener(el, 'change', () => {
         el.value = el.value.trim()
       })
     }
     if (!lazy) {
-      on(el, 'compositionstart', onCompositionStart)
-      on(el, 'compositionend', onCompositionEnd)
+      addEventListener(el, 'compositionstart', onCompositionStart)
+      addEventListener(el, 'compositionend', onCompositionEnd)
       // Safari < 10.2 & UIWebView doesn't fire compositionend when
       // switching focus before confirming composition choice
       // this also fixes the issue where some browsers e.g. iOS Chrome
       // fires "change" instead of "input" on autocomplete.
-      on(el, 'change', onCompositionEnd)
+      addEventListener(el, 'change', onCompositionEnd)
     }
   },
   // set value on mounted so it's after min/max for type="range"
@@ -122,7 +122,7 @@ export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
     { value, oldValue, instance, modifiers: { number = false } = {} },
   ) {
     const isSetModel = isSet(value)
-    on(el, 'change', () => {
+    addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
         .call(el.options, (o: HTMLOptionElement) => o.selected)
         .map((o: HTMLOptionElement) =>

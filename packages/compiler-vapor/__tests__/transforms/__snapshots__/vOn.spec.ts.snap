@@ -8,7 +8,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "fooBar", (...args) => (_ctx.onMount && _ctx.onMount(...args)))
+  _on(n1, "fooBar", () => _ctx.onMount)
   return n0
 }"
 `;
@@ -21,7 +21,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", (...args) => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](...args)))
+  _on(n1, "click", () => _ctx.a['b' + _ctx.c])
   return n0
 }"
 `;
@@ -34,7 +34,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args))))
+  _renderEffect(() => _on(n1, _ctx.event, () => _ctx.handler))
   return n0
 }"
 `;
@@ -47,7 +47,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, _ctx.event(_ctx.foo), (...args) => (_ctx.handler && _ctx.handler(...args))))
+  _renderEffect(() => _on(n1, _ctx.event(_ctx.foo), () => _ctx.handler))
   return n0
 }"
 `;
@@ -60,41 +60,80 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args))))
+  _renderEffect(() => _on(n1, _ctx.event, () => _ctx.handler))
   return n0
 }"
 `;
 
 exports[`v-on > event modifier 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on, withKeys as _withKeys } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<a></a><form></form><a></a><div></div><div></div><a></a><div></div><input><input><input><input><input><input><input><input><input><input><input><input><input><input><input>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1], 1: [n2], 2: [n3], 3: [n4], 4: [n5], 5: [n6], 6: [n7], 7: [n8], 8: [n9], 9: [n10], 10: [n11], 11: [n12], 12: [n13], 13: [n14], 14: [n15], 15: [n16], 16: [n17], 17: [n18], 18: [n19], 19: [n20], 20: [n21], 21: [n22],} = _children(n0)
-  _on(n1, "click", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["stop"]))
-  _on(n2, "submit", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["prevent"]))
-  _on(n3, "click", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["stop", "prevent"]))
-  _on(n4, "click", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["self"]))
-  _on(n5, "click", (...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), { capture: true })
-  _on(n6, "click", (...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), { once: true })
-  _on(n7, "scroll", (...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), { passive: true })
-  _on(n8, "contextmenu", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["right"]))
-  _on(n9, "click", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["left"]))
-  _on(n10, "mouseup", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["middle"]))
-  _on(n11, "contextmenu", _withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["right"]))
-  _on(n12, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["enter"]))
-  _on(n13, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["tab"]))
-  _on(n14, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["delete"]))
-  _on(n15, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["esc"]))
-  _on(n16, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["space"]))
-  _on(n17, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["up"]))
-  _on(n18, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["down"]))
-  _on(n19, "keyup", _withKeys((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["left"]))
-  _on(n20, "keyup", _withModifiers((...args) => (_ctx.submit && _ctx.submit(...args)), ["middle"]))
-  _on(n21, "keyup", _withModifiers((...args) => (_ctx.submit && _ctx.submit(...args)), ["middle", "self"]))
-  _on(n22, "keyup", _withKeys(_withModifiers((...args) => (_ctx.handleEvent && _ctx.handleEvent(...args)), ["self"]), ["enter"]))
+  _on(n1, "click", () => _ctx.handleEvent, undefined, {
+    modifiers: ["stop"]
+  })
+  _on(n2, "submit", () => _ctx.handleEvent, undefined, {
+    modifiers: ["prevent"]
+  })
+  _on(n3, "click", () => _ctx.handleEvent, undefined, {
+    modifiers: ["stop", "prevent"]
+  })
+  _on(n4, "click", () => _ctx.handleEvent, undefined, {
+    modifiers: ["self"]
+  })
+  _on(n5, "click", () => _ctx.handleEvent, { capture: true })
+  _on(n6, "click", () => _ctx.handleEvent, { once: true })
+  _on(n7, "scroll", () => _ctx.handleEvent, { passive: true })
+  _on(n8, "contextmenu", () => _ctx.handleEvent, undefined, {
+    modifiers: ["right"]
+  })
+  _on(n9, "click", () => _ctx.handleEvent, undefined, {
+    modifiers: ["left"]
+  })
+  _on(n10, "mouseup", () => _ctx.handleEvent, undefined, {
+    modifiers: ["middle"]
+  })
+  _on(n11, "contextmenu", () => _ctx.handleEvent, undefined, {
+    modifiers: ["right"]
+  })
+  _on(n12, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["enter"]
+  })
+  _on(n13, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["tab"]
+  })
+  _on(n14, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["delete"]
+  })
+  _on(n15, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["esc"]
+  })
+  _on(n16, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["space"]
+  })
+  _on(n17, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["up"]
+  })
+  _on(n18, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["down"]
+  })
+  _on(n19, "keyup", () => _ctx.handleEvent, undefined, {
+    keys: ["left"]
+  })
+  _on(n20, "keyup", () => _ctx.submit, undefined, {
+    modifiers: ["middle"]
+  })
+  _on(n21, "keyup", () => _ctx.submit, undefined, {
+    modifiers: ["middle", "self"]
+  })
+  _on(n22, "keyup", () => _ctx.handleEvent, undefined, {
+    modifiers: ["self"],
+    keys: ["enter"]
+  })
   return n0
 }"
 `;
@@ -107,7 +146,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", e => _ctx.foo(e))
+  _on(n1, "click", () => e => _ctx.foo(e))
   return n0
 }"
 `;
@@ -120,7 +159,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => (_ctx.foo($event)))
+  _on(n1, "click", () => $event => (_ctx.foo($event)))
   return n0
 }"
 `;
@@ -133,7 +172,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => {_ctx.foo($event);_ctx.bar()})
+  _on(n1, "click", () => $event => {_ctx.foo($event);_ctx.bar()})
   return n0
 }"
 `;
@@ -146,7 +185,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => {_ctx.i++;_ctx.foo($event)})
+  _on(n1, "click", () => $event => {_ctx.i++;_ctx.foo($event)})
   return n0
 }"
 `;
@@ -159,7 +198,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", (e: any): any => _ctx.foo(e))
+  _on(n1, "click", () => (e: any): any => _ctx.foo(e))
   return n0
 }"
 `;
@@ -172,7 +211,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", 
+  _on(n1, "click", () => 
       $event => {
         _ctx.foo($event)
       }
@@ -189,7 +228,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => _ctx.foo($event))
+  _on(n1, "click", () => $event => _ctx.foo($event))
   return n0
 }"
 `;
@@ -202,7 +241,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", (...args) => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](...args)))
+  _on(n1, "click", () => _ctx.a['b' + _ctx.c])
   return n0
 }"
 `;
@@ -215,7 +254,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => {
+  _on(n1, "click", () => $event => {
 _ctx.foo();
 _ctx.bar()
 })
@@ -231,7 +270,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => {_ctx.foo();_ctx.bar()})
+  _on(n1, "click", () => $event => {_ctx.foo();_ctx.bar()})
   return n0
 }"
 `;
@@ -244,99 +283,118 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", (...args) => (_ctx.foo.bar && _ctx.foo.bar(...args)))
+  _on(n1, "click", () => _ctx.foo.bar)
   return n0
 }"
 `;
 
 exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "keyup", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["exact"]))
+  _on(n1, "keyup", () => _ctx.test, undefined, {
+    modifiers: ["exact"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should support multiple events and modifiers options w/ prefixIdentifiers: true 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on, withKeys as _withKeys } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["stop"]))
-  _on(n1, "keyup", _withKeys((...args) => (_ctx.test && _ctx.test(...args)), ["enter"]))
+  _on(n1, "click", () => _ctx.test, undefined, {
+    modifiers: ["stop"]
+  })
+  _on(n1, "keyup", () => _ctx.test, undefined, {
+    keys: ["enter"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should support multiple modifiers and event options w/ prefixIdentifiers: true 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["stop", "prevent"]), { capture: true, once: true })
+  _on(n1, "click", () => _ctx.test, { capture: true, once: true }, {
+    modifiers: ["stop", "prevent"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.middle 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "mouseup", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["middle"]))
+  _on(n1, "mouseup", () => _ctx.test, undefined, {
+    modifiers: ["middle"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.middle 2`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, withModifiers as _withModifiers, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["middle"])))
+  _renderEffect(() => {
+    _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, undefined, {
+      modifiers: ["middle"]
+    })})
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.right 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "contextmenu", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["right"]))
+  _on(n1, "contextmenu", () => _ctx.test, undefined, {
+    modifiers: ["right"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should transform click.right 2`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, withModifiers as _withModifiers, withKeys as _withKeys, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["right"]), ["right"])))
+  _renderEffect(() => {
+    _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, undefined, {
+      modifiers: ["right"],
+      keys: ["right"]
+    })})
   return n0
 }"
 `;
@@ -349,20 +407,24 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", $event => (_ctx.i++))
+  _on(n1, "click", () => $event => (_ctx.i++))
   return n0
 }"
 `;
 
 exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, withModifiers as _withModifiers, withKeys as _withKeys, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _on(n1, _ctx.e, _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["left"]), ["left"])))
+  _renderEffect(() => {
+    _on(n1, _ctx.e, () => _ctx.test, undefined, {
+      modifiers: ["left"],
+      keys: ["left"]
+    })})
   return n0
 }"
 `;
@@ -373,35 +435,40 @@ const t0 = _template("<div></div><div></div><div></div>")
 (() => {
   const n0 = t0()
   const { 0: [n1], 1: [n2], 2: [n3],} = _children(n0)
-  _on(n1, "click", $event => (x.value=_unref(y)))
-  _on(n2, "click", $event => (x.value++))
-  _on(n3, "click", $event => ({ x: x.value } = _unref(y)))
+  _on(n1, "click", () => $event => (x.value=_unref(y)))
+  _on(n2, "click", () => $event => (x.value++))
+  _on(n3, "click", () => $event => ({ x: x.value } = _unref(y)))
   return n0
 })()"
 `;
 
 exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`] = `
-"import { template as _template, children as _children, withModifiers as _withModifiers, withKeys as _withKeys, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "keydown", _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["stop", "ctrl"]), ["a"]), { capture: true })
+  _on(n1, "keydown", () => _ctx.test, { capture: true }, {
+    modifiers: ["stop", "ctrl"],
+    keys: ["a"]
+  })
   return n0
 }"
 `;
 
 exports[`v-on > should wrap keys guard for static key event w/ left/right modifiers 1`] = `
-"import { template as _template, children as _children, withKeys as _withKeys, on as _on } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "keyup", _withKeys((...args) => (_ctx.test && _ctx.test(...args)), ["left"]))
+  _on(n1, "keyup", () => _ctx.test, undefined, {
+    keys: ["left"]
+  })
   return n0
 }"
 `;
@@ -414,7 +481,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _on(n1, "click", (...args) => (_ctx.handleClick && _ctx.handleClick(...args)))
+  _on(n1, "click", () => _ctx.handleClick)
   return n0
 }"
 `;

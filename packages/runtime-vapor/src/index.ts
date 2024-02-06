@@ -37,7 +37,6 @@ export {
   getCurrentScope,
   onScopeDispose,
 } from '@vue/reactivity'
-export { withModifiers, withKeys } from '@vue/runtime-dom'
 
 export { nextTick } from './scheduler'
 export { getCurrentInstance, type ComponentInternalInstance } from './component'

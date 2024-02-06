@@ -167,7 +167,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains('_on(n1, "click", $event => (_ctx.i++))')
+    expect(code).contains('_on(n1, "click", () => $event => (_ctx.i++))')
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -186,10 +186,12 @@ describe('v-on', () => {
 
     expect(vaporHelpers).contains('unref')
     expect(helpers.size).toBe(0)
-    expect(code).contains('_on(n1, "click", $event => (x.value=_unref(y)))')
-    expect(code).contains('_on(n2, "click", $event => (x.value++))')
     expect(code).contains(
-      '_on(n3, "click", $event => ({ x: x.value } = _unref(y)))',
+      '_on(n1, "click", () => $event => (x.value=_unref(y)))',
+    )
+    expect(code).contains('_on(n2, "click", () => $event => (x.value++))')
+    expect(code).contains(
+      '_on(n3, "click", () => $event => ({ x: x.value } = _unref(y)))',
     )
   })
 
@@ -207,7 +209,9 @@ describe('v-on', () => {
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
-    expect(code).contains('_on(n1, "click", $event => {_ctx.foo();_ctx.bar()})')
+    expect(code).contains(
+      '_on(n1, "click", () => $event => {_ctx.foo();_ctx.bar()})',
+    )
   })
 
   test('should handle multi-line statement', () => {
@@ -225,7 +229,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      '_on(n1, "click", $event => {\n_ctx.foo();\n_ctx.bar()\n})',
+      '_on(n1, "click", () => $event => {\n_ctx.foo();\n_ctx.bar()\n})',
     )
   })
 
@@ -243,7 +247,9 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     // should NOT prefix $event
-    expect(code).contains('_on(n1, "click", $event => (_ctx.foo($event)))')
+    expect(code).contains(
+      '_on(n1, "click", () => $event => (_ctx.foo($event)))',
+    )
   })
 
   test('multiple inline statements w/ prefixIdentifiers: true', () => {
@@ -261,7 +267,7 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
     // should NOT prefix $event
     expect(code).contains(
-      '_on(n1, "click", $event => {_ctx.foo($event);_ctx.bar()})',
+      '_on(n1, "click", () => $event => {_ctx.foo($event);_ctx.bar()})',
     )
   })
 
@@ -276,7 +282,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains('_on(n1, "click", $event => _ctx.foo($event))')
+    expect(code).contains('_on(n1, "click", () => $event => _ctx.foo($event))')
   })
 
   test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
@@ -293,7 +299,9 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains('_on(n1, "click", (e: any): any => _ctx.foo(e))')
+    expect(code).contains(
+      '_on(n1, "click", () => (e: any): any => _ctx.foo(e))',
+    )
   })
 
   test('should NOT wrap as function if expression is already function expression (with newlines)', () => {
@@ -359,9 +367,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_on(n1, "click", (...args) => (_ctx.a['b' + _ctx.c] && _ctx.a['b' + _ctx.c](...args)))`,
-    )
+    expect(code).contains(`_on(n1, "click", () => _ctx.a['b' + _ctx.c])`)
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -377,7 +383,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains('_on(n1, "click", e => _ctx.foo(e))')
+    expect(code).contains('_on(n1, "click", () => e => _ctx.foo(e))')
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -463,8 +469,6 @@ describe('v-on', () => {
     )
 
     expect(vaporHelpers).contains('on')
-    expect(vaporHelpers).contains('withModifiers')
-
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -483,8 +487,7 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains('_withModifiers')
-    expect(code).contains('["stop", "prevent"]')
+    expect(code).contains('modifiers: ["stop", "prevent"]')
     expect(code).contains('{ capture: true, once: true }')
   })
 
@@ -536,12 +539,11 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      '_on(n1, "click", _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["stop"]))',
-    )
-    expect(code).contains(
-      '_on(n1, "keyup", _withKeys((...args) => (_ctx.test && _ctx.test(...args)), ["enter"]))',
-    )
+    expect(code).contains(`_on(n1, "click", () => _ctx.test, undefined`)
+    expect(code).contains(`modifiers: ["stop"]`)
+
+    expect(code).contains(`_on(n1, "keyup", () => _ctx.test, undefined`)
+    expect(code).contains(`keys: ["enter"]`)
   })
 
   test('should wrap keys guard for keyboard events or dynamic events', () => {
@@ -723,8 +725,6 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_on(n1, "click", (...args) => (_ctx.foo.bar && _ctx.foo.bar(...args)))`,
-    )
+    expect(code).contains(`_on(n1, "click", () => _ctx.foo.bar)`)
   })
 })

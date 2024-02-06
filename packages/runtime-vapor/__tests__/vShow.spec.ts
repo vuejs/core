@@ -29,7 +29,7 @@ const createDemo = (defaultValue: boolean) =>
         1: [n2],
       } = children(n0)
       withDirectives(n2, [[vShow, () => visible.value]])
-      on(n1 as HTMLElement, 'click', handleClick)
+      on(n1 as HTMLElement, 'click', () => handleClick)
       return n0
     },
   })

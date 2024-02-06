@@ -1,9 +1,9 @@
 import { isArray, toDisplayString } from '@vue/shared'
 import type { Block, ParentBlock } from './render'
 
-export * from './dom/patchProp'
+export * from './dom/prop'
+export * from './dom/event'
 export * from './dom/templateRef'
-export * from './dom/on'
 
 export function normalizeBlock(block: Block): Node[] {
   const nodes: Node[] = []

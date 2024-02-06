@@ -203,7 +203,7 @@ export function render(_ctx) {
   _prepend(n4, n1)
   _insert(n2, n4, n5)
   _append(n4, n3)
-  _on(n4, "click", (...args) => (_ctx.handleClick && _ctx.handleClick(...args)))
+  _on(n4, "click", () => _ctx.handleClick)
   _renderEffect(() => {
     _setText(n1, _ctx.count)
     _setText(n2, _ctx.count)
