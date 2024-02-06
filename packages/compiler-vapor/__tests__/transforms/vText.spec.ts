@@ -38,11 +38,13 @@ describe('v-text', () => {
           {
             type: IRNodeTypes.SET_TEXT,
             element: 1,
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'str',
-              isStatic: false,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'str',
+                isStatic: false,
+              },
+            ],
           },
         ],
       },
@@ -76,11 +78,13 @@ describe('v-text', () => {
           {
             type: IRNodeTypes.SET_TEXT,
             element: 1,
-            value: {
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              content: 'test',
-              isStatic: false,
-            },
+            values: [
+              {
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                content: 'test',
+                isStatic: false,
+              },
+            ],
           },
         ],
       },

@@ -108,7 +108,7 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
 export interface SetTextIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_TEXT
   element: number
-  value: IRExpression
+  values: SimpleExpressionNode[]
 }
 
 export type KeyOverride = [find: string, replacement: string]

@@ -21,7 +21,7 @@ import { transformVBind } from './transforms/vBind'
 import { transformVOn } from './transforms/vOn'
 import { transformVShow } from './transforms/vShow'
 import { transformRef } from './transforms/transformRef'
-import { transformInterpolation } from './transforms/transformInterpolation'
+import { transformText } from './transforms/transformText'
 import type { HackOptions } from './ir'
 import { transformVModel } from './transforms/vModel'
 import { transformVIf } from './transforms/vIf'
@@ -101,9 +101,9 @@ export function getBaseTransformPreset(
     [
       transformOnce,
       transformRef,
-      transformInterpolation,
       transformVIf,
       transformVFor,
+      transformText,
       transformElement,
     ],
     {

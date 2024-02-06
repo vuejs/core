@@ -3,7 +3,7 @@ import {
   type ForIRNode,
   IRNodeTypes,
   transformElement,
-  transformInterpolation,
+  transformText,
   transformVBind,
   transformVFor,
   transformVOn,
@@ -11,7 +11,7 @@ import {
 import { NodeTypes } from '@vue/compiler-dom'
 
 const compileWithVFor = makeCompile({
-  nodeTransforms: [transformInterpolation, transformVFor, transformElement],
+  nodeTransforms: [transformVFor, transformText, transformElement],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,

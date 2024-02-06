@@ -87,7 +87,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > v-if + v-else 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
@@ -102,13 +102,13 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   })
-  _prepend(n0, n1)
+  _append(n0, n1)
   return n0
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
@@ -127,13 +127,13 @@ export function render(_ctx) {
     const n4 = t2()
     return n4
   }))
-  _prepend(n0, n1)
+  _append(n0, n1)
   return n0
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else-if 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, prepend as _prepend } from 'vue/vapor';
+"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
@@ -148,7 +148,7 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   }))
-  _prepend(n0, n1)
+  _append(n0, n1)
   return n0
 }"
 `;

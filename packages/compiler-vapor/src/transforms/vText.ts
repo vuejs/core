@@ -1,4 +1,8 @@
-import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
+import {
+  DOMErrorCodes,
+  createDOMCompilerError,
+  createSimpleExpression,
+} from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes } from '../ir'
 
@@ -22,7 +26,7 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
       {
         type: IRNodeTypes.SET_TEXT,
         element: context.reference(),
-        value: exp || '""',
+        values: [exp || createSimpleExpression('', true)],
       },
     ],
   )

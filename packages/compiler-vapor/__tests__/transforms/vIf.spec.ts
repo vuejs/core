@@ -3,8 +3,8 @@ import {
   IRNodeTypes,
   type IfIRNode,
   transformElement,
-  transformInterpolation,
   transformOnce,
+  transformText,
   transformVIf,
   transformVText,
 } from '../../src'
@@ -13,8 +13,8 @@ import { NodeTypes } from '@vue/compiler-core'
 const compileWithVIf = makeCompile({
   nodeTransforms: [
     transformOnce,
-    transformInterpolation,
     transformVIf,
+    transformText,
     transformElement,
   ],
   directiveTransforms: {
@@ -92,11 +92,13 @@ describe('compiler: v-if', () => {
           {
             type: IRNodeTypes.SET_TEXT,
             element: 3,
-            value: {
-              content: 'msg',
-              type: NodeTypes.SIMPLE_EXPRESSION,
-              isStatic: false,
-            },
+            values: [
+              {
+                content: 'msg',
+                type: NodeTypes.SIMPLE_EXPRESSION,
+                isStatic: false,
+              },
+            ],
           },
         ],
       },
@@ -160,7 +162,7 @@ describe('compiler: v-if', () => {
         },
       },
       {
-        type: IRNodeTypes.PREPEND_NODE,
+        type: IRNodeTypes.APPEND_NODE,
         elements: [1],
         parent: 0,
       },
@@ -212,7 +214,7 @@ describe('compiler: v-if', () => {
         },
       },
       {
-        type: IRNodeTypes.PREPEND_NODE,
+        type: IRNodeTypes.APPEND_NODE,
         elements: [1],
         parent: 0,
       },
@@ -262,7 +264,7 @@ describe('compiler: v-if', () => {
         },
       },
       {
-        type: IRNodeTypes.PREPEND_NODE,
+        type: IRNodeTypes.APPEND_NODE,
         elements: [1],
         parent: 0,
       },

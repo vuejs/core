@@ -1,16 +1,14 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compile > bindings 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
-const t0 = _template("<div>count is <!>.</div>")
+const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n3, { 1: [n2],}],} = _children(n0)
-  const n1 = _createTextNode()
-  _insert(n1, n3, n2)
-  _renderEffect(() => _setText(n1, _ctx.count))
+  const { 0: [n1],} = _children(n0)
+  _renderEffect(() => _setText(n1, "count is " + _ctx.count + "."))
   return n0
 }"
 `;
@@ -181,34 +179,23 @@ const t0 = _fragment()
 export function render(_ctx) {
   const n0 = t0()
   const n1 = _createTextNode()
-  const n2 = _createTextNode()
-  _append(n0, n1, n2)
-  _renderEffect(() => _setText(n1, 1))
-  _renderEffect(() => _setText(n2, 2))
+  _append(n0, n1)
+  _renderEffect(() => _setText(n1, "" + 1 + 2))
   return n0
 }"
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
+"import { template as _template, children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
-const t0 = _template("<button>foo<!>foo</button>")
+const t0 = _template("<button></button>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n4, { 1: [n5],}],} = _children(n0)
-  const n1 = _createTextNode()
-  const n2 = _createTextNode()
-  const n3 = _createTextNode()
-  _prepend(n4, n1)
-  _insert(n2, n4, n5)
-  _append(n4, n3)
-  _on(n4, "click", () => _ctx.handleClick)
-  _renderEffect(() => {
-    _setText(n1, _ctx.count)
-    _setText(n2, _ctx.count)
-    _setText(n3, _ctx.count)
-    _setDynamicProp(n4, "id", _ctx.count)})
+  const { 0: [n1],} = _children(n0)
+  _on(n1, "click", () => _ctx.handleClick)
+  _renderEffect(() => _setText(n1, _ctx.count + "foo" + _ctx.count + "foo" + _ctx.count))
+  _renderEffect(() => _setDynamicProp(n1, "id", _ctx.count))
   return n0
 }"
 `;
@@ -248,33 +235,15 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
+"import { fragment as _fragment, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
-const t0 = _template("3<!>6<!>9")
+const t0 = _fragment()
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 1: [n9], 3: [n10],} = _children(n0)
   const n1 = _createTextNode()
-  const n2 = _createTextNode()
-  const n3 = _createTextNode()
-  const n4 = _createTextNode()
-  const n5 = _createTextNode()
-  const n6 = _createTextNode()
-  const n7 = _createTextNode()
-  const n8 = _createTextNode()
-  _prepend(n0, n1, n2)
-  _insert([n3, n4], n0, n9)
-  _insert([n5, n6], n0, n10)
-  _append(n0, n7, n8)
-  _renderEffect(() => _setText(n1, 1))
-  _renderEffect(() => _setText(n2, 2))
-  _renderEffect(() => _setText(n3, 4))
-  _renderEffect(() => _setText(n4, 5))
-  _renderEffect(() => _setText(n5, 7))
-  _renderEffect(() => _setText(n6, 8))
-  _renderEffect(() => _setText(n7, 'A'))
-  _renderEffect(() => _setText(n8, 'B'))
+  _append(n0, n1)
+  _renderEffect(() => _setText(n1, "" + 1 + 2 + "3" + 4 + 5 + "6" + 7 + 8 + "9" + 'A' + 'B'))
   return n0
 }"
 `;

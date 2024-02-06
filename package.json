@@ -75,6 +75,7 @@
     "@typescript-eslint/eslint-plugin": "^6.18.1",
     "@typescript-eslint/parser": "^6.18.1",
     "@vitest/coverage-istanbul": "^1.2.2",
+    "@vitest/ui": "^1.2.2",
     "@vue/consolidate": "0.17.3",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",

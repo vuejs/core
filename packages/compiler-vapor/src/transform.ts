@@ -7,7 +7,6 @@ import {
   type ElementNode,
   ElementTypes,
   NodeTypes,
-  type ParentNode,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
@@ -61,7 +60,7 @@ export type TransformOptions = HackOptions<BaseTransformOptions>
 
 export interface TransformContext<T extends AllNode = AllNode> {
   node: T
-  parent: TransformContext<ParentNode> | null
+  parent: TransformContext<RootNode | ElementNode> | null
   root: TransformContext<RootNode>
   index: number
   block: BlockIRNode
@@ -175,14 +174,16 @@ function createRootContext(
       }
 
       function isSameExpression(a: IRExpression[], b: IRExpression[]) {
+        a = a.filter(filterStatic)
+        b = b.filter(filterStatic)
         if (a.length !== b.length) return false
-        return a.every(
-          (exp, i) => identifyExpression(exp) === identifyExpression(b[i]),
+        return (a as SimpleExpressionNode[]).every(
+          (exp, i) => exp.content === (b as SimpleExpressionNode[])[i].content,
         )
       }
 
-      function identifyExpression(exp: IRExpression) {
-        return typeof exp === 'string' ? exp : exp.content
+      function filterStatic(exp: IRExpression): exp is SimpleExpressionNode {
+        return !isString(exp) && !exp.isStatic
       }
     },
 
@@ -225,7 +226,7 @@ function createRootContext(
 
 function createContext<T extends TemplateChildNode>(
   node: T,
-  parent: TransformContext<ParentNode>,
+  parent: TransformContext<RootNode | ElementNode>,
   index: number,
 ): TransformContext<T> {
   return extend({}, parent, {
@@ -297,10 +298,6 @@ function transformNode(
       transformChildren(context as TransformContext<RootNode | ElementNode>)
       break
     }
-    case NodeTypes.TEXT: {
-      context.template += node.content
-      break
-    }
     case NodeTypes.COMMENT: {
       context.template += `<!--${node.content}-->`
       break
@@ -334,46 +331,47 @@ function transformChildren(context: TransformContext<RootNode | ElementNode>) {
 function processDynamicChildren(
   context: TransformContext<RootNode | ElementNode>,
 ) {
-  let prevChildren: IRDynamicInfo[] = []
-  let hasStatic = false
+  let prevDynamics: IRDynamicInfo[] = []
+  let hasStaticTemplate = false
 
   for (const [index, child] of context.dynamic.children.entries()) {
-    if (!child || !(child.flags & DynamicFlag.INSERT)) {
-      if (prevChildren.length) {
-        if (hasStatic) {
-          context.childrenTemplate[index - prevChildren.length] = `<!>`
+    if (child.flags & DynamicFlag.INSERT) {
+      prevDynamics.push(child)
+    }
 
-          prevChildren[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevChildren[0].anchor = context.increaseId())
+    if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
+      if (prevDynamics.length) {
+        if (hasStaticTemplate) {
+          context.childrenTemplate[index - prevDynamics.length] = `<!>`
+
+          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
+          const anchor = (prevDynamics[0].anchor = context.increaseId())
 
           context.registerOperation({
             type: IRNodeTypes.INSERT_NODE,
-            element: prevChildren.map(child => child.id!),
+            element: prevDynamics.map(child => child.id!),
             parent: context.reference(),
             anchor,
           })
         } else {
           context.registerOperation({
             type: IRNodeTypes.PREPEND_NODE,
-            elements: prevChildren.map(child => child.id!),
+            elements: prevDynamics.map(child => child.id!),
             parent: context.reference(),
           })
         }
+        prevDynamics = []
       }
-      hasStatic = true
-      prevChildren = []
-      continue
+      hasStaticTemplate = true
     }
+  }
 
-    prevChildren.push(child)
-
-    if (index === context.dynamic.children.length - 1) {
-      context.registerOperation({
-        type: IRNodeTypes.APPEND_NODE,
-        elements: prevChildren.map(child => child.id!),
-        parent: context.reference(),
-      })
-    }
+  if (prevDynamics.length) {
+    context.registerOperation({
+      type: IRNodeTypes.APPEND_NODE,
+      elements: prevDynamics.map(child => child.id!),
+      parent: context.reference(),
+    })
   }
 }
 
