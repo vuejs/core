@@ -22,7 +22,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
-import { createApp, defineComponent } from 'vue'
+import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 
@@ -458,6 +458,135 @@ describe('Suspense', () => {
     expect(serializeInner(root)).toBe(`<!---->`)
     // should discard effects
     expect(calls).toEqual([])
+  })
+
+  // #10042
+  test('unmount suspensible child before parent suspense resolve', async () => {
+    const calls: string[] = []
+    const RouterView = {
+      setup(_: any, { slots }: any) {
+        const route = inject('route') as any
+        const depth = inject('depth', 0)
+        provide('depth', depth + 1)
+        return () => {
+          const current = route.value[depth]
+          return slots.default({ Component: current })[0]
+        }
+      },
+    }
+
+    const OuterB = defineAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('OuterB mounted')
+          })
+          onUnmounted(() => {
+            calls.push('OuterB unmounted')
+          })
+          return () => h('div', 'OuterB')
+        },
+      },
+      10,
+    )
+
+    const OuterA = defineAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('OuterA mounted')
+          })
+          onUnmounted(() => {
+            calls.push('OuterA unmounted')
+          })
+          return () =>
+            h('div', null, [
+              h('div', 'OuterA'),
+              h(RouterView, null, {
+                default: ({ Component }: any) => [
+                  Component
+                    ? h(
+                        Suspense,
+                        { suspensible: true },
+                        {
+                          default: () => h(Component),
+                        },
+                      )
+                    : null,
+                ],
+              }),
+            ])
+        },
+      },
+      10,
+    )
+
+    const InnerA = defineAsyncComponent(
+      {
+        setup: () => {
+          onMounted(() => {
+            calls.push('InnerA mounted')
+          })
+          onUnmounted(() => {
+            calls.push('InnerA unmounted')
+          })
+          return () => h('div', 'innerA')
+        },
+      },
+      5,
+    )
+
+    const toggle = ref(true)
+    const route = computed(() => {
+      return toggle.value ? [OuterA, InnerA] : [OuterB]
+    })
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(
+      `<div><div>OuterA</div><div>innerA</div></div>`,
+    )
+    expect(calls).toEqual([`OuterA mounted`, 'InnerA mounted'])
+
+    deps.length = 0
+    calls.length = 0
+    toggle.value = false
+    await nextTick()
+
+    // expect not change
+    expect(serializeInner(root)).toBe(
+      `<div><div>OuterA</div><div>innerA</div></div>`,
+    )
+    expect(calls).toEqual([])
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>OuterB</div>`)
+    expect(calls).toEqual([
+      'OuterB mounted',
+      'InnerA unmounted',
+      'OuterA unmounted',
+    ])
   })
 
   test('unmount suspense after resolve', async () => {

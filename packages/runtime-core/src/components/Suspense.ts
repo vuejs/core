@@ -899,6 +899,18 @@ function setActiveBranch(suspense: SuspenseBoundary, branch: VNode) {
   }
 }
 
-export function isVNodeSuspensible(vnode: VNode) {
+function isVNodeSuspensible(vnode: VNode) {
   return vnode.props?.suspensible != null && vnode.props.suspensible !== false
+}
+
+export function hasSuspensibleChild(vnode: VNode): boolean {
+  if (vnode.shapeFlag & ShapeFlags.SUSPENSE && isVNodeSuspensible(vnode)) {
+    return true
+  }
+
+  if (isArray(vnode.children)) {
+    return vnode.children.some(child => hasSuspensibleChild(child as VNode))
+  }
+
+  return false
 }
