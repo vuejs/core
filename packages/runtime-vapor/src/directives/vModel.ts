@@ -175,12 +175,6 @@ function setSelected(
     return
   }
 
-  // Disable fast path due to https://github.com/vuejs/core/issues/10267
-  // fast path for updates triggered by other changes
-  // if (isArrayValue && looseEqual(value, oldValue)) {
-  //   return
-  // }
-
   for (let i = 0, l = el.options.length; i < l; i++) {
     const option = el.options[i]
     const optionValue = getValue(option, instance)
