@@ -3,8 +3,9 @@
 exports[`compiler v-bind > .attr modifier 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setAttr as _setAttr } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -17,8 +18,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .attr modifier w/ no expression 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setAttr as _setAttr } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -31,8 +33,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .camel modifier 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -46,8 +49,9 @@ exports[`compiler v-bind > .camel modifier w/ dynamic arg 1`] = `
 "import { camelize as _camelize } from 'vue';
 import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -60,8 +64,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .camel modifier w/ no expression 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -74,8 +79,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .prop modifier (shortband) w/ no expression 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDOMProp as _setDOMProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -88,8 +94,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .prop modifier (shorthand) 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDOMProp as _setDOMProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -102,8 +109,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .prop modifier 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDOMProp as _setDOMProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -116,8 +124,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .prop modifier w/ dynamic arg 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -130,8 +139,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > .prop modifier w/ no expression 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDOMProp as _setDOMProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -144,8 +154,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > basic 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -158,8 +169,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > dynamic arg 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -172,8 +184,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > dynamic arg w/ static attribute 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -186,8 +199,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > no expression (shorthand) 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -200,8 +214,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > no expression 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -214,8 +229,9 @@ export function render(_ctx) {
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div arg=\\"\\"></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div arg=\\"\\"></div>")
   const n0 = t0()
   return n0
 }"

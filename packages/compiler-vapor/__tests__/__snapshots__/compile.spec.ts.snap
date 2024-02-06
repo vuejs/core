@@ -3,8 +3,9 @@
 exports[`compile > bindings 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
+const t0 = _template("<div>count is <!>.</div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div>count is <!>.</div>")
   const n0 = t0()
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode()
@@ -19,8 +20,9 @@ export function render(_ctx) {
 exports[`compile > custom directive > basic 1`] = `
 "import { template as _template, children as _children, resolveDirective as _resolveDirective, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_resolveDirective("vTest")], [_resolveDirective("vHello"), void 0, void 0, { world: true }]])
@@ -31,8 +33,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > basic 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample]])
@@ -43,8 +46,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > binding value 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg]])
@@ -55,8 +59,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > dynamic parameters 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
@@ -67,8 +72,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > modifiers 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
@@ -79,8 +85,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > modifiers w/o binding 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, void 0, void 0, { "foo-bar": true }]])
@@ -91,8 +98,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > static parameters 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo"]])
@@ -103,8 +111,9 @@ export function render(_ctx) {
 exports[`compile > directives > custom directive > static parameters and modifiers 1`] = `
 "import { template as _template, children as _children, withDirectives as _withDirectives } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
@@ -115,8 +124,9 @@ export function render(_ctx) {
 exports[`compile > directives > v-cloak > basic 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div>test</div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div>test</div>")
   const n0 = t0()
   return n0
 }"
@@ -125,8 +135,9 @@ export function render(_ctx) {
 exports[`compile > directives > v-pre > basic 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
   const n0 = t0()
   return n0
 }"
@@ -135,8 +146,9 @@ export function render(_ctx) {
 exports[`compile > directives > v-pre > self-closing v-pre 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div><div><Comp></Comp></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div><div><Comp></Comp></div>")
   const n0 = t0()
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode()
@@ -154,8 +166,9 @@ export function render(_ctx) {
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp></Comp></div>")
   const n0 = t0()
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode()
@@ -173,8 +186,9 @@ export function render(_ctx) {
 exports[`compile > dynamic root 1`] = `
 "import { fragment as _fragment, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
+const t0 = _fragment()
+
 export function render(_ctx) {
-  const t0 = _fragment()
   const n0 = t0()
   const n1 = _createTextNode()
   const n2 = _createTextNode()
@@ -192,8 +206,9 @@ export function render(_ctx) {
 exports[`compile > dynamic root nodes and interpolation 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, on as _on, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<button>foo<!>foo</button>")
+
 export function render(_ctx) {
-  const t0 = _template("<button>foo<!>foo</button>")
   const n0 = t0()
   const { 0: [n4, { 1: [n5],}],} = _children(n0)
   const n1 = _createTextNode()
@@ -214,8 +229,9 @@ export function render(_ctx) {
 `;
 
 exports[`compile > expression parsing > interpolation 1`] = `
-"(() => {
-  const t0 = _fragment()
+"
+const t0 = _fragment()
+(() => {
   const n0 = t0()
   const n1 = _createTextNode()
   _append(n0, n1)
@@ -227,8 +243,9 @@ exports[`compile > expression parsing > interpolation 1`] = `
 `;
 
 exports[`compile > expression parsing > v-bind 1`] = `
-"(() => {
-  const t0 = _template("<div></div>")
+"
+const t0 = _template("<div></div>")
+(() => {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -241,8 +258,9 @@ exports[`compile > expression parsing > v-bind 1`] = `
 exports[`compile > fragment 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<p></p><span></span><div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<p></p><span></span><div></div>")
   const n0 = t0()
   return n0
 }"
@@ -251,8 +269,9 @@ export function render(_ctx) {
 exports[`compile > static + dynamic root 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, prepend as _prepend, insert as _insert, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
+const t0 = _template("3<!>6<!>9")
+
 export function render(_ctx) {
-  const t0 = _template("3<!>6<!>9")
   const n0 = t0()
   const { 1: [n9], 3: [n10],} = _children(n0)
   const n1 = _createTextNode()
@@ -298,8 +317,9 @@ export function render(_ctx) {
 exports[`compile > static template 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div><p>hello</p><input><span></span></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div><p>hello</p><input><span></span></div>")
   const n0 = t0()
   return n0
 }"

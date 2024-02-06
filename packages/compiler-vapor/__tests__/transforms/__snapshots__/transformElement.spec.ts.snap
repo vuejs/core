@@ -3,8 +3,9 @@
 exports[`compiler: element transform > props merging: class 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setClass as _setClass } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -17,8 +18,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > props merging: style 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setStyle as _setStyle } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -31,8 +33,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
   const n0 = t0()
   return n0
 }"
@@ -41,8 +44,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > v-bind="obj" 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -55,8 +59,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -69,8 +74,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -83,8 +89,9 @@ export function render(_ctx) {
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {

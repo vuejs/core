@@ -3,8 +3,9 @@
 exports[`compiler: v-once > as root node 1`] = `
 "import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _setDynamicProp(n1, "id", _ctx.foo)
@@ -15,8 +16,9 @@ export function render(_ctx) {
 exports[`compiler: v-once > basic 1`] = `
 "import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend } from 'vue/vapor';
 
+const t0 = _template("<div> <span></span></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div> <span></span></div>")
   const n0 = t0()
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode()
@@ -30,8 +32,9 @@ export function render(_ctx) {
 exports[`compiler: v-once > inside v-once 1`] = `
 "import { template as _template } from 'vue/vapor';
 
+const t0 = _template("<div><div></div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div><div></div></div>")
   const n0 = t0()
   return n0
 }"
@@ -40,8 +43,9 @@ export function render(_ctx) {
 exports[`compiler: v-once > on nested plain element 1`] = `
 "import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
 
+const t0 = _template("<div><div></div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div><div></div></div>")
   const n0 = t0()
   const { 0: [, { 0: [n1],}],} = _children(n0)
   _setDynamicProp(n1, "id", _ctx.foo)

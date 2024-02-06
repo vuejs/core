@@ -145,6 +145,13 @@ export function generate(
   const context = new CodegenContext(ir, options)
   const { push, helpers, vaporHelpers } = context
 
+  if (ir.template.length) {
+    ir.template.forEach((template, i) =>
+      push(...genTemplate(template, i, context)),
+    )
+    push(NEWLINE)
+  }
+
   const functionName = 'render'
   const isSetupInlined = !!options.inline
   if (isSetupInlined) {
@@ -154,9 +161,6 @@ export function generate(
   }
 
   push(INDENT_START)
-  ir.template.forEach((template, i) =>
-    push(...genTemplate(template, i, context)),
-  )
   push(...genBlockFunctionContent(ir, context))
   push(INDENT_END, NEWLINE)
 

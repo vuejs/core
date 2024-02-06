@@ -3,9 +3,10 @@
 exports[`compiler: v-for > basic v-for 1`] = `
 "import { template as _template, fragment as _fragment, children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, append as _append } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+const t1 = _fragment()
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
-  const t1 = _fragment()
   const n0 = t1()
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
@@ -25,9 +26,10 @@ export function render(_ctx) {
 exports[`compiler: v-for > multi effect 1`] = `
 "import { template as _template, fragment as _fragment, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, append as _append } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+const t1 = _fragment()
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
-  const t1 = _fragment()
   const n0 = t1()
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
@@ -50,9 +52,10 @@ export function render(_ctx) {
 exports[`compiler: v-for > w/o value 1`] = `
 "import { template as _template, fragment as _fragment, createFor as _createFor, append as _append } from 'vue/vapor';
 
+const t0 = _template("<div>item</div>")
+const t1 = _fragment()
+
 export function render(_ctx) {
-  const t0 = _template("<div>item</div>")
-  const t1 = _fragment()
   const n0 = t1()
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()

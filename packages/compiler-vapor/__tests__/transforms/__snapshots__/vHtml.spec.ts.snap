@@ -3,8 +3,9 @@
 exports[`v-html > should convert v-html to innerHTML 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setHtml as _setHtml } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -17,8 +18,9 @@ export function render(_ctx) {
 exports[`v-html > should raise error and ignore children when v-html is present 1`] = `
 "import { template as _template, children as _children, renderEffect as _renderEffect, setHtml as _setHtml } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _renderEffect(() => {
@@ -31,8 +33,9 @@ export function render(_ctx) {
 exports[`v-html > should raise error if has no expression 1`] = `
 "import { template as _template, children as _children, setHtml as _setHtml } from 'vue/vapor';
 
+const t0 = _template("<div></div>")
+
 export function render(_ctx) {
-  const t0 = _template("<div></div>")
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
   _setHtml(n1, "")
