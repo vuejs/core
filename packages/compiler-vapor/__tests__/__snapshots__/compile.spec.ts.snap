@@ -10,9 +10,7 @@ export function render(_ctx) {
   const { 0: [n3, { 1: [n2],}],} = _children(n0)
   const n1 = _createTextNode()
   _insert(n1, n3, n2)
-  _renderEffect(() => {
-    _setText(n1, _ctx.count)
-  })
+  _renderEffect(() => _setText(n1, _ctx.count))
   return n0
 }"
 `;
@@ -153,12 +151,8 @@ export function render(_ctx) {
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode()
   _append(n2, n1)
-  _renderEffect(() => {
-    _setText(n1, _ctx.bar)
-  })
-  _renderEffect(() => {
-    _setDynamicProp(n2, "id", _ctx.foo)
-  })
+  _renderEffect(() => _setText(n1, _ctx.bar))
+  _renderEffect(() => _setDynamicProp(n2, "id", _ctx.foo))
   return n0
 }"
 `;
@@ -173,12 +167,8 @@ export function render(_ctx) {
   const { 1: [n2],} = _children(n0)
   const n1 = _createTextNode()
   _append(n2, n1)
-  _renderEffect(() => {
-    _setText(n1, _ctx.bar)
-  })
-  _renderEffect(() => {
-    _setDynamicProp(n2, "id", _ctx.foo)
-  })
+  _renderEffect(() => _setText(n1, _ctx.bar))
+  _renderEffect(() => _setDynamicProp(n2, "id", _ctx.foo))
   return n0
 }"
 `;
@@ -193,12 +183,8 @@ export function render(_ctx) {
   const n1 = _createTextNode()
   const n2 = _createTextNode()
   _append(n0, n1, n2)
-  _renderEffect(() => {
-    _setText(n1, 1)
-  })
-  _renderEffect(() => {
-    _setText(n2, 2)
-  })
+  _renderEffect(() => _setText(n1, 1))
+  _renderEffect(() => _setText(n2, 2))
   return n0
 }"
 `;
@@ -222,8 +208,7 @@ export function render(_ctx) {
     _setText(n1, _ctx.count)
     _setText(n2, _ctx.count)
     _setText(n3, _ctx.count)
-    _setDynamicProp(n4, "id", _ctx.count)
-  })
+    _setDynamicProp(n4, "id", _ctx.count)})
   return n0
 }"
 `;
@@ -235,9 +220,7 @@ const t0 = _fragment()
   const n0 = t0()
   const n1 = _createTextNode()
   _append(n0, n1)
-  _renderEffect(() => {
-    _setText(n1, a + b.value)
-  })
+  _renderEffect(() => _setText(n1, a + b.value))
   return n0
 })()"
 `;
@@ -248,9 +231,7 @@ const t0 = _template("<div></div>")
 (() => {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _setDynamicProps(n1, { [key.value+1]: _unref(foo)[key.value+1]() })
-  })
+  _renderEffect(() => _setDynamicProps(n1, { [key.value+1]: _unref(foo)[key.value+1]() }))
   return n0
 })()"
 `;
@@ -286,30 +267,14 @@ export function render(_ctx) {
   _insert([n3, n4], n0, n9)
   _insert([n5, n6], n0, n10)
   _append(n0, n7, n8)
-  _renderEffect(() => {
-    _setText(n1, 1)
-  })
-  _renderEffect(() => {
-    _setText(n2, 2)
-  })
-  _renderEffect(() => {
-    _setText(n3, 4)
-  })
-  _renderEffect(() => {
-    _setText(n4, 5)
-  })
-  _renderEffect(() => {
-    _setText(n5, 7)
-  })
-  _renderEffect(() => {
-    _setText(n6, 8)
-  })
-  _renderEffect(() => {
-    _setText(n7, 'A')
-  })
-  _renderEffect(() => {
-    _setText(n8, 'B')
-  })
+  _renderEffect(() => _setText(n1, 1))
+  _renderEffect(() => _setText(n2, 2))
+  _renderEffect(() => _setText(n3, 4))
+  _renderEffect(() => _setText(n4, 5))
+  _renderEffect(() => _setText(n5, 7))
+  _renderEffect(() => _setText(n6, 8))
+  _renderEffect(() => _setText(n7, 'A'))
+  _renderEffect(() => _setText(n8, 'B'))
   return n0
 }"
 `;

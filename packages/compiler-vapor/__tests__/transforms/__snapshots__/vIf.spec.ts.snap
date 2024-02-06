@@ -11,9 +11,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const { 0: [n3],} = _children(n2)
-    _renderEffect(() => {
-      _setText(n3, _ctx.msg)
-    })
+    _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
   _append(n0, n1)
@@ -43,9 +41,7 @@ export function render(_ctx) {
     return n4
   }))
   _prepend(n0, n1)
-  _renderEffect(() => {
-    _setText(n5, _ctx.text)
-  })
+  _renderEffect(() => _setText(n5, _ctx.text))
   return n0
 }"
 `;
@@ -82,9 +78,7 @@ export function render(_ctx) {
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const { 2: [n3],} = _children(n2)
-    _renderEffect(() => {
-      _setText(n3, _ctx.msg)
-    })
+    _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
   _append(n0, n1)

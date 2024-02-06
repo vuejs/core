@@ -34,9 +34,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args)))
-  })
+  _renderEffect(() => _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args))))
   return n0
 }"
 `;
@@ -49,9 +47,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, _ctx.event(_ctx.foo), (...args) => (_ctx.handler && _ctx.handler(...args)))
-  })
+  _renderEffect(() => _on(n1, _ctx.event(_ctx.foo), (...args) => (_ctx.handler && _ctx.handler(...args))))
   return n0
 }"
 `;
@@ -64,9 +60,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args)))
-  })
+  _renderEffect(() => _on(n1, _ctx.event, (...args) => (_ctx.handler && _ctx.handler(...args))))
   return n0
 }"
 `;
@@ -316,9 +310,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["middle"]))
-  })
+  _renderEffect(() => _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), _withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["middle"])))
   return n0
 }"
 `;
@@ -344,9 +336,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["right"]), ["right"]))
-  })
+  _renderEffect(() => _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["right"]), ["right"])))
   return n0
 }"
 `;
@@ -372,9 +362,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => {
-    _on(n1, _ctx.e, _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["left"]), ["left"]))
-  })
+  _renderEffect(() => _on(n1, _ctx.e, _withKeys(_withModifiers((...args) => (_ctx.test && _ctx.test(...args)), ["left"]), ["left"])))
   return n0
 }"
 `;
