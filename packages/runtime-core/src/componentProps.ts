@@ -650,6 +650,11 @@ function validateProp(
   props: Data,
   isAbsent: boolean,
 ) {
+  // reserved prop
+  if (isReservedProp(name)) {
+    warn(getReservedPropMessage(name))
+    return
+  }
   const { type, required, validator, skipCheck } = prop
   // required!
   if (required && isAbsent) {
@@ -753,6 +758,13 @@ function getInvalidTypeMessage(
   if (isExplicable(receivedType)) {
     message += `with value ${receivedValue}.`
   }
+  return message
+}
+
+function getReservedPropMessage(name: string): string {
+  let message =
+    `Invalid prop: "${name}" is a reserved prop in Vue.` +
+    ` It can't be defined as a component prop.`
   return message
 }
 

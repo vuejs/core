@@ -729,4 +729,24 @@ describe('component props', () => {
 
     expect(Object.keys(props.msg).length).toBe(1)
   })
+
+  test('warn on reserved prop', () => {
+    const Comp = {
+      props: {
+        key: { type: String, required: true },
+      },
+      setup() {
+        return () => null
+      },
+    }
+    render(
+      h(Comp, {
+        key: '123',
+      }),
+      nodeOps.createElement('div'),
+    )
+    expect(
+      `Invalid prop: "key" is a reserved prop in Vue. It can't be defined as a component prop.`,
+    ).toHaveBeenWarned()
+  })
 })
