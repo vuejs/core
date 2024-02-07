@@ -210,7 +210,7 @@ function getValue(
   instance: ComponentInternalInstance,
 ) {
   const metadata = instance.metadata.get(el)
-  return metadata ? metadata.props.value : el.value
+  return (metadata && metadata.props.value) || el.value
 }
 
 export const vModelCheckbox = {}
