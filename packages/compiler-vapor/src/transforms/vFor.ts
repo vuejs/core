@@ -62,7 +62,6 @@ export function processFor(
   context.reference()
 
   return () => {
-    context.template += context.childrenTemplate.filter(Boolean).join('')
     context.registerTemplate()
     exitBlock()
     context.registerOperation({

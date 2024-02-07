@@ -190,6 +190,7 @@ function createRootContext(
     template: '',
     childrenTemplate: [],
     registerTemplate() {
+      this.template += this.childrenTemplate.filter(Boolean).join('')
       let templateNode: TemplateFactoryIRNode | FragmentFactoryIRNode
 
       const existing = root.template.findIndex(t =>
@@ -261,7 +262,6 @@ export function transform(
   const context = createRootContext(ir, root, options)
 
   transformNode(context)
-  context.registerTemplate()
 
   return ir
 }
@@ -311,8 +311,9 @@ function transformNode(
     exitFns[i]()
   }
 
-  if (context.node.type === NodeTypes.ROOT)
-    context.template += context.childrenTemplate.filter(Boolean).join('')
+  if (context.node.type === NodeTypes.ROOT) {
+    context.registerTemplate()
+  }
 }
 
 function transformChildren(context: TransformContext<RootNode | ElementNode>) {
