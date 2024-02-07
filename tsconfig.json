@@ -3,7 +3,7 @@
     "baseUrl": ".",
     "outDir": "temp",
     "sourceMap": false,
-    "target": "es2016",
+    "target": "es2015",
     "newLine": "LF",
     "useDefineForClassFields": false,
     "module": "esnext",
