@@ -1,11 +1,10 @@
 import {
   type ComponentInternalInstance,
-  type SetupContext,
   type ComputedRef,
   type ReactiveSideEffect,
+  type SetupContext,
   Suspense,
   computed,
-  watchEffect,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -15,6 +14,7 @@ import {
   render,
   serializeInner,
   shallowReactive,
+  watchEffect,
 } from '@vue/runtime-test'
 import {
   createPropsRestProxy,
