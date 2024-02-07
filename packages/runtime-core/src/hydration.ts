@@ -24,6 +24,7 @@ import {
   isOn,
   isRenderableAttrValue,
   isReservedProp,
+  isSet,
   isString,
   normalizeClass,
   normalizeStyle,
@@ -791,8 +792,12 @@ function propHasMismatch(
   }
 
   if (mismatchType) {
-    const format = (v: any) =>
-      v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
+    const format = (v: any) => {
+      if (isSet(v)) {
+        v = Array.from(v).join(' ')
+      }
+      return v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
+    }
     const preSegment = `Hydration ${mismatchType} mismatch on`
     const postSegment =
       `\n  - rendered on server: ${format(actual)}` +
