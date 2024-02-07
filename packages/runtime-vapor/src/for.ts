@@ -6,7 +6,6 @@ import { type Block, type Fragment, fragmentKey } from './render'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
-  item: any
   s: [any, number] // state, use short key since it's used a lot in generated code
   update: () => void
   key: any
@@ -41,7 +40,6 @@ export const createFor = (
       nodes: null as any,
       update: null as any,
       scope,
-      item,
       s: [item, index],
       key: getKey && getKey(item, index),
       memo: getMemo && getMemo(item),
@@ -99,7 +97,7 @@ export const createFor = (
         newIndex = oldIndex,
       ) => {
         if (
-          newItem !== block.item ||
+          newItem !== block.s[0] ||
           newIndex !== oldIndex ||
           !isReactive(newItem)
         ) {
