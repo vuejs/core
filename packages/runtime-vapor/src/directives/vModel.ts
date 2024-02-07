@@ -7,13 +7,17 @@ import {
   looseToNumber,
 } from '@vue/shared'
 import type { ComponentInternalInstance } from '../component'
-import type { ObjectDirective } from '../directive'
+import type {
+  DirectiveBinding,
+  DirectiveHook,
+  DirectiveHookName,
+  ObjectDirective,
+} from '../directive'
 import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'
 
 type AssignerFn = (value: any) => void
-
 function getModelAssigner(
   el: Element,
   instance: ComponentInternalInstance,
@@ -117,10 +121,7 @@ export const vModelRadio = {}
 export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
   // <select multiple> value need to be deep traversed
   deep: true,
-  beforeMount(
-    el,
-    { value, oldValue, instance, modifiers: { number = false } = {} },
-  ) {
+  beforeMount(el, { value, instance, modifiers: { number = false } = {} }) {
     const isSetModel = isSet(value)
     addEventListener(el, 'change', () => {
       const selectedVal = Array.prototype.filter
@@ -142,7 +143,7 @@ export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
       })
     })
     assignFnMap.set(el, getModelAssigner(el, instance))
-    setSelected(el, instance, value, oldValue, number)
+    setSelected(el, instance, value, number)
   },
   beforeUpdate(el, { instance }) {
     assignFnMap.set(el, getModelAssigner(el, instance))
@@ -152,7 +153,7 @@ export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
     { value, oldValue, instance, modifiers: { number = false } = {} },
   ) {
     if (!assigningMap.get(el)) {
-      setSelected(el, instance, value, oldValue, number)
+      setSelected(el, instance, value, number)
     }
   },
 }
@@ -161,7 +162,6 @@ function setSelected(
   el: HTMLSelectElement,
   instance: ComponentInternalInstance,
   value: any,
-  oldValue: any,
   number: boolean,
 ) {
   const isMultiple = el.multiple
@@ -213,6 +213,125 @@ function getValue(
   return (metadata && metadata.props.value) || el.value
 }
 
-export const vModelCheckbox = {}
+// retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
+function getCheckboxValue(
+  el: HTMLInputElement,
+  instance: ComponentInternalInstance,
+  checked: boolean,
+) {
+  const metadata = instance.metadata.get(el)
+  const props = metadata && metadata.props
+  const key = checked ? 'true-value' : 'false-value'
+  if (props && key in props) {
+    return props[key]
+  }
+  if (el.hasAttribute(key)) {
+    return el.getAttribute(key)
+  }
+  return checked
+}
 
-export const vModelDynamic = {}
+const setChecked: DirectiveHook<HTMLInputElement> = (
+  el,
+  { value, oldValue, instance },
+) => {
+  if (isArray(value)) {
+    el.checked = looseIndexOf(value, getValue(el, instance)) > -1
+  } else if (isSet(value)) {
+    el.checked = value.has(getValue(el, instance))
+  } else if (value !== oldValue) {
+    el.checked = looseEqual(value, getCheckboxValue(el, instance, true))
+  }
+}
+
+export const vModelCheckbox: ObjectDirective<HTMLInputElement> = {
+  // #4096 array checkboxes need to be deep traversed
+  deep: true,
+  beforeMount(el, binding) {
+    const { instance } = binding
+    assignFnMap.set(el, getModelAssigner(el, binding.instance))
+
+    addEventListener(el, 'change', () => {
+      const modelValue = binding.value
+      const elementValue = getValue(el, instance)
+      const checked = el.checked
+      const assigner = assignFnMap.get(el)!
+      if (isArray(modelValue)) {
+        const index = looseIndexOf(modelValue, elementValue)
+        const found = index !== -1
+        if (checked && !found) {
+          assigner(modelValue.concat(elementValue))
+        } else if (!checked && found) {
+          const filtered = [...modelValue]
+          filtered.splice(index, 1)
+          assigner(filtered)
+        }
+      } else if (isSet(modelValue)) {
+        const cloned = new Set(modelValue)
+        if (checked) {
+          cloned.add(elementValue)
+        } else {
+          cloned.delete(elementValue)
+        }
+        assigner(cloned)
+      } else {
+        assigner(getCheckboxValue(el, instance, checked))
+      }
+    })
+  },
+  // set initial checked on mount to wait for true-value/false-value
+  mounted: setChecked,
+  beforeUpdate(el, binding) {
+    assignFnMap.set(el, getModelAssigner(el, binding.instance))
+    setChecked(el, binding)
+  },
+}
+
+export const vModelDynamic: ObjectDirective<
+  HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+> = {
+  beforeMount(el, binding) {
+    callModelHook(el, binding, 'beforeMount')
+  },
+  mounted(el, binding) {
+    callModelHook(el, binding, 'mounted')
+  },
+  beforeUpdate(el, binding) {
+    callModelHook(el, binding, 'beforeUpdate')
+  },
+  updated(el, binding) {
+    callModelHook(el, binding, 'updated')
+  },
+}
+
+function resolveDynamicModel(
+  tagName: string,
+  type: string | null,
+): ObjectDirective {
+  switch (tagName) {
+    case 'SELECT':
+      return vModelSelect
+    case 'TEXTAREA':
+      return vModelText
+    default:
+      switch (type) {
+        case 'checkbox':
+          return vModelCheckbox
+        case 'radio':
+          return vModelRadio
+        default:
+          return vModelText
+      }
+  }
+}
+
+function callModelHook(
+  el: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  binding: DirectiveBinding,
+  hook: DirectiveHookName,
+) {
+  const type = el.getAttribute('type')
+  const modelToUse = resolveDynamicModel(el.tagName, type)
+  const fn = modelToUse[hook]
+  fn && fn(el, binding)
+}
