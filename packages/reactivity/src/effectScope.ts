@@ -1,4 +1,4 @@
-import type { ReactiveEffect } from './effect'
+import type { ReactiveEffect, ReactiveSideEffect } from './effect'
 import { warn } from './warning'
 
 let activeEffectScope: EffectScope | undefined
@@ -11,7 +11,7 @@ export class EffectScope {
   /**
    * @internal
    */
-  effects: ReactiveEffect[] = []
+  effects: (ReactiveEffect | ReactiveSideEffect)[] = []
   /**
    * @internal
    */
@@ -82,7 +82,10 @@ export class EffectScope {
     if (this._active) {
       let i, l
       for (i = 0, l = this.effects.length; i < l; i++) {
-        this.effects[i].stop()
+        const effect = this.effects[i]
+        if ('stop' in effect) {
+          effect.stop()
+        }
       }
       for (i = 0, l = this.cleanups.length; i < l; i++) {
         this.cleanups[i]()

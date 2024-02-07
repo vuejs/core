@@ -1185,7 +1185,11 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    expect(instance!.scope.effects[0].active).toBe(false)
+    for (const effect of instance!.scope.effects) {
+      if ('active' in effect) {
+        expect(effect.active).toBe(false)
+      }
+    }
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {

@@ -136,20 +136,4 @@ describe('deferred computed', () => {
     c2.value
     expect(effectSpy).toHaveBeenCalledTimes(2)
   })
-
-  test('should not compute if deactivated before scheduler is called', () => {
-    const c1Spy = vi.fn()
-    const src = ref(0)
-    const c1 = computed(() => {
-      c1Spy()
-      return src.value % 2
-    })
-    effect(() => c1.value)
-    expect(c1Spy).toHaveBeenCalledTimes(1)
-
-    c1.effect.stop()
-    // trigger
-    src.value++
-    expect(c1Spy).toHaveBeenCalledTimes(1)
-  })
 })

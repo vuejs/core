@@ -2,7 +2,7 @@ import {
   type ComputedRef,
   type DebuggerOptions,
   type EffectScheduler,
-  ReactiveEffect,
+  ReactiveSideEffect,
   ReactiveFlags,
   type Ref,
   getCurrentScope,
@@ -392,7 +392,7 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  const effect = new ReactiveSideEffect(getter, NOOP, scheduler)
 
   const scope = getCurrentScope()
   const unwatch = () => {

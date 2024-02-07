@@ -54,6 +54,7 @@ export {
   pauseScheduling,
   resetScheduling,
   ReactiveEffect,
+  ReactiveSideEffect,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,

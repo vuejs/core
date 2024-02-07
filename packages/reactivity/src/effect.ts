@@ -26,7 +26,6 @@ export type DebuggerEventExtraInfo = {
 export let activeEffect: ReactiveEffect | undefined
 
 export class ReactiveEffect<T = any> {
-  active = true
   deps: Dep[] = []
 
   /**
@@ -39,7 +38,6 @@ export class ReactiveEffect<T = any> {
    */
   allowRecurse?: boolean
 
-  onStop?: () => void
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
@@ -105,9 +103,6 @@ export class ReactiveEffect<T = any> {
 
   run() {
     this._dirtyLevel = DirtyLevels.NotDirty
-    if (!this.active) {
-      return this.fn()
-    }
     let lastShouldTrack = shouldTrack
     let lastEffect = activeEffect
     try {
@@ -122,6 +117,19 @@ export class ReactiveEffect<T = any> {
       activeEffect = lastEffect
       shouldTrack = lastShouldTrack
     }
+  }
+}
+
+export class ReactiveSideEffect<T = any> extends ReactiveEffect<T> {
+  active = true
+
+  onStop?: () => void
+
+  run() {
+    if (!this.active) {
+      return this.fn()
+    }
+    return super.run()
   }
 
   stop() {
@@ -177,7 +185,7 @@ export interface ReactiveEffectOptions extends DebuggerOptions {
 
 export interface ReactiveEffectRunner<T = any> {
   (): T
-  effect: ReactiveEffect
+  effect: ReactiveSideEffect
 }
 
 /**
@@ -198,7 +206,7 @@ export function effect<T = any>(
     fn = (fn as ReactiveEffectRunner).effect.fn
   }
 
-  const _effect = new ReactiveEffect(fn, NOOP, () => {
+  const _effect = new ReactiveSideEffect(fn, NOOP, () => {
     if (_effect.dirty) {
       _effect.run()
     }
