@@ -255,6 +255,14 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('inline-block')
 
+    isVisible.value = false
+    await nextTick()
+    expect($div.style.display).toEqual('none')
+
+    isVisible.value = true
+    await nextTick()
+    expect($div.style.display).toEqual('inline-block')
+
     useDisplayStyle.value = false
     await nextTick()
     expect($div.style.display).toEqual('')
@@ -263,5 +271,9 @@ describe('runtime-dom: v-show directive', () => {
     isVisible.value = false
     await nextTick()
     expect($div.style.display).toEqual('none')
+
+    isVisible.value = true
+    await nextTick()
+    expect($div.style.display).toEqual('')
   })
 })
