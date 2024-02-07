@@ -1,8 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-once > as root node 1`] = `
-"import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
-
+"import { children as _children, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -14,8 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { template as _template, children as _children, createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend } from 'vue/vapor';
-
+"import { children as _children, createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
 const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx) {
@@ -31,7 +29,6 @@ export function render(_ctx) {
 
 exports[`compiler: v-once > inside v-once 1`] = `
 "import { template as _template } from 'vue/vapor';
-
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
@@ -41,8 +38,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { template as _template, children as _children, setDynamicProp as _setDynamicProp } from 'vue/vapor';
-
+"import { children as _children, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {

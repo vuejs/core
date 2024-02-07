@@ -7,11 +7,15 @@ import {
   advancePositionWithMutation,
   locStub,
 } from '@vue/compiler-dom'
-import type { IREffect, RootIRNode, VaporHelper } from './ir'
+import type {
+  IREffect,
+  RootIRNode,
+  TemplateFactoryIRNode,
+  VaporHelper,
+} from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { extend, isArray, isString, remove } from '@vue/shared'
 import type { ParserPlugin } from '@babel/parser'
-import { genTemplate } from './generators/template'
 import { genBlockFunctionContent } from './generators/block'
 
 interface CodegenOptions extends BaseCodegenOptions {
@@ -149,13 +153,6 @@ export function generate(
   const context = new CodegenContext(ir, options)
   const { push, helpers, vaporHelpers } = context
 
-  if (ir.template.length) {
-    ir.template.forEach((template, i) =>
-      push(...genTemplate(template, i, context)),
-    )
-    push(NEWLINE)
-  }
-
   const functionName = 'render'
   const isSetupInlined = options.inline
   if (isSetupInlined) {
@@ -174,9 +171,18 @@ export function generate(
     push('}')
   }
 
-  const preamble = genHelperImports(context)
-  let codegen = genCodeFragment(context)
+  // TODO source map?
+  const templates = ir.template.length ? genTemplates(ir.template, context) : ''
 
+  const imports = genHelperImports(context)
+  const preamble = imports + templates
+
+  const newlineCount = [...preamble].filter(c => c === '\n').length
+  if (newlineCount && !isSetupInlined) {
+    context.code.unshift(...new Array<CodeFragment>(newlineCount).fill(LF))
+  }
+
+  let codegen = genCodeFragment(context)
   if (!isSetupInlined) {
     codegen = preamble + codegen
   }
@@ -290,16 +296,26 @@ export function buildCodeFragment(...frag: CodeFragment[]) {
 function genHelperImports({ helpers, vaporHelpers, code }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
-    code.unshift(LF)
     imports += `import { ${[...helpers]
       .map(h => `${h} as _${h}`)
       .join(', ')} } from 'vue';\n`
   }
   if (vaporHelpers.size) {
-    code.unshift(LF)
     imports += `import { ${[...vaporHelpers]
       .map(h => `${h} as _${h}`)
       .join(', ')} } from 'vue/vapor';\n`
   }
   return imports
+}
+
+export function genTemplates(
+  templates: TemplateFactoryIRNode[],
+  { vaporHelper }: CodegenContext,
+) {
+  return templates
+    .map(
+      (template, i) =>
+        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(template.template)})\n`,
+    )
+    .join('')
 }

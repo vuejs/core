@@ -1,8 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { template as _template, children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, createFor as _createFor } from 'vue/vapor';
-
+"import { children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -21,8 +20,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -44,8 +42,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-for > w/o value 1`] = `
-"import { template as _template, createFor as _createFor } from 'vue/vapor';
-
+"import { createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div>item</div>")
 
 export function render(_ctx) {

@@ -1,8 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setClass as _setClass } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -14,8 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setStyle as _setStyle } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -28,7 +26,6 @@ export function render(_ctx) {
 
 exports[`compiler: element transform > static props 1`] = `
 "import { template as _template } from 'vue/vapor';
-
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
 
 export function render(_ctx) {
@@ -38,8 +35,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -51,8 +47,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -64,8 +59,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -77,8 +71,7 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {

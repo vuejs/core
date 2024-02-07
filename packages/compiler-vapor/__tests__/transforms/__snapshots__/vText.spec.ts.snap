@@ -1,8 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`v-text > should convert v-text to textContent 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -14,8 +13,7 @@ export function render(_ctx) {
 `;
 
 exports[`v-text > should raise error and ignore children when v-text is present 1`] = `
-"import { template as _template, children as _children, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
-
+"import { children as _children, renderEffect as _renderEffect, setText as _setText, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -27,8 +25,7 @@ export function render(_ctx) {
 `;
 
 exports[`v-text > should raise error if has no expression 1`] = `
-"import { template as _template, children as _children, setText as _setText } from 'vue/vapor';
-
+"import { children as _children, setText as _setText, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
