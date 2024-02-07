@@ -16,7 +16,7 @@ interface ForBlock extends Fragment {
 export const createFor = (
   src: () => any[] | Record<string, string> | Set<any> | Map<any, any>,
   renderItem: (block: ForBlock) => Block,
-  getKey: ((item: any, index: number) => any) | null,
+  getKey?: (item: any, index: number) => any,
   getMemo?: (item: any) => any[],
   hydrationNode?: Node,
 ): Fragment => {

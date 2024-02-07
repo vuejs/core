@@ -1,4 +1,3 @@
-import { defineComponent } from 'vue'
 import {
   append,
   children,
@@ -6,26 +5,14 @@ import {
   insert,
   nextTick,
   ref,
-  render,
   renderEffect,
   setText,
   template,
 } from '../src'
 import type { Mock } from 'vitest'
+import { makeRender } from './_utils'
 
-let host: HTMLElement
-
-const initHost = () => {
-  host = document.createElement('div')
-  host.setAttribute('id', 'host')
-  document.body.appendChild(host)
-}
-beforeEach(() => {
-  initHost()
-})
-afterEach(() => {
-  host.remove()
-})
+const define = makeRender()
 
 describe('createIf', () => {
   test('basic', async () => {
@@ -44,42 +31,36 @@ describe('createIf', () => {
     const t1 = template('<p></p>')
     const t2 = template('<p>zero</p>')
 
-    const component = defineComponent({
-      setup() {
-        // render
-        return (() => {
-          const n0 = t0()
-          const {
-            0: [n1],
-          } = children(n0)
+    const { host } = define(() => {
+      const n0 = t0()
+      const {
+        0: [n1],
+      } = children(n0)
 
-          insert(
-            createIf(
-              () => count.value,
-              // v-if
-              (spyIfFn ||= vi.fn(() => {
-                const n2 = t1()
-                const {
-                  0: [n3],
-                } = children(n2)
-                renderEffect(() => {
-                  setText(n3, count.value)
-                })
-                return n2
-              })),
-              // v-else
-              (spyElseFn ||= vi.fn(() => {
-                const n4 = t2()
-                return n4
-              })),
-            ),
-            n1 as any as ParentNode,
-          )
-          return n0
-        })()
-      },
-    })
-    render(component as any, {}, '#host')
+      insert(
+        createIf(
+          () => count.value,
+          // v-if
+          (spyIfFn ||= vi.fn(() => {
+            const n2 = t1()
+            const {
+              0: [n3],
+            } = children(n2)
+            renderEffect(() => {
+              setText(n3, count.value)
+            })
+            return n2
+          })),
+          // v-else
+          (spyElseFn ||= vi.fn(() => {
+            const n4 = t2()
+            return n4
+          })),
+        ),
+        n1 as any as ParentNode,
+      )
+      return n0
+    }).render()
 
     expect(host.innerHTML).toBe('<div><p>zero</p><!--if--></div>')
     expect(spyIfFn!).toHaveBeenCalledTimes(0)
@@ -115,33 +96,25 @@ describe('createIf', () => {
 
     const t0 = template('Vapor')
     const t1 = template('Hello ')
-    render(
-      defineComponent({
-        setup() {
-          // render
-          return (() => {
-            const n1 = createIf(
-              () => ok1.value,
-              () => {
-                const n2 = t1()
-                const n3 = createIf(
-                  () => ok2.value,
-                  () => {
-                    const n4 = t0()
-                    return n4
-                  },
-                )
-                append(n2, n3)
-                return n2
-              },
-            )
-            return [n1]
-          })()
+    const { host } = define(() => {
+      const n1 = createIf(
+        () => ok1.value,
+        () => {
+          const n2 = t1()
+          const n3 = createIf(
+            () => ok2.value,
+            () => {
+              const n4 = t0()
+              return n4
+            },
+          )
+          append(n2, n3)
+          return n2
         },
-      }) as any,
-      {},
-      '#host',
-    )
+      )
+      return [n1]
+    }).render()
+
     expect(host.innerHTML).toBe('Hello Vapor<!--if--><!--if-->')
 
     ok1.value = false

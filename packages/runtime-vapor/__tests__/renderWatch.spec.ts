@@ -1,11 +1,9 @@
-import { defineComponent } from 'vue'
 import {
   nextTick,
   onBeforeUpdate,
   onEffectCleanup,
   onUpdated,
   ref,
-  render,
   renderEffect,
   renderWatch,
   template,
@@ -13,41 +11,25 @@ import {
   watchPostEffect,
   watchSyncEffect,
 } from '../src'
+import { makeRender } from './_utils'
 
-let host: HTMLElement
-
-const initHost = () => {
-  host = document.createElement('div')
-  host.setAttribute('id', 'host')
-  document.body.appendChild(host)
-}
-beforeEach(() => {
-  initHost()
-})
-afterEach(() => {
-  host.remove()
-})
-const createDemo = (
-  setupFn: (porps: any, ctx: any) => any,
-  renderFn: (ctx: any) => any,
-) => {
-  const demo = defineComponent({
-    setup(...args) {
-      const returned = setupFn(...args)
+const define = makeRender<any>()
+const createDemo = (setupFn: () => any, renderFn: (ctx: any) => any) =>
+  define({
+    setup: () => {
+      const returned = setupFn()
       Object.defineProperty(returned, '__isScriptSetup', {
         enumerable: false,
         value: true,
       })
       return returned
     },
+    render: (ctx: any) => {
+      const t0 = template('<div></div>')
+      renderFn(ctx)
+      return t0()
+    },
   })
-  demo.render = (ctx: any) => {
-    const t0 = template('<div></div>')
-    renderFn(ctx)
-    return t0()
-  }
-  return () => render(demo as any, {}, '#host')
-}
 
 describe('renderWatch', () => {
   test('effect', async () => {
@@ -79,7 +61,7 @@ describe('renderWatch', () => {
   test('should run with the scheduling order', async () => {
     const calls: string[] = []
 
-    const mount = createDemo(
+    const { instance } = createDemo(
       () => {
         // setup
         const source = ref(0)
@@ -129,10 +111,7 @@ describe('renderWatch', () => {
           },
         )
       },
-    )
-
-    // Mount
-    const instance = mount()
+    ).render()
     const { change, changeRender } = instance.setupState as any
 
     expect(calls).toEqual(['pre 0', 'sync 0', 'renderEffect 0'])
@@ -164,7 +143,7 @@ describe('renderWatch', () => {
   })
 
   test('errors should include the execution location with beforeUpdate hook', async () => {
-    const mount = createDemo(
+    const { instance } = createDemo(
       // setup
       () => {
         const source = ref()
@@ -180,9 +159,7 @@ describe('renderWatch', () => {
           ctx.source
         })
       },
-    )
-
-    const instance = mount()
+    ).render()
     const { update } = instance.setupState as any
     await expect(async () => {
       update()
@@ -195,7 +172,7 @@ describe('renderWatch', () => {
   })
 
   test('errors should include the execution location with updated hook', async () => {
-    const mount = createDemo(
+    const { instance } = createDemo(
       // setup
       () => {
         const source = ref(0)
@@ -211,9 +188,8 @@ describe('renderWatch', () => {
           ctx.source
         })
       },
-    )
+    ).render()
 
-    const instance = mount()
     const { update } = instance.setupState as any
     await expect(async () => {
       update()

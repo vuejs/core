@@ -39,7 +39,14 @@ export {
 } from '@vue/reactivity'
 
 export { nextTick } from './scheduler'
-export { getCurrentInstance, type ComponentInternalInstance } from './component'
+export {
+  getCurrentInstance,
+  type ComponentInternalInstance,
+  type Component,
+  type ObjectComponent,
+  type FunctionalComponent,
+  type SetupFn,
+} from './component'
 export * from './render'
 export * from './renderWatch'
 export * from './template'
