@@ -21,6 +21,7 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
+  isMap,
   isOn,
   isRenderableAttrValue,
   isReservedProp,
@@ -795,6 +796,10 @@ function propHasMismatch(
     const format = (v: any) => {
       if (isSet(v)) {
         v = Array.from(v).join(' ')
+      } else if (isMap(v)) {
+        v = Array.from(v)
+          .map(([k, v]) => `${k}:${v}`)
+          .join('; ')
       }
       return v === false ? `(not rendered)` : `${mismatchKey}="${v}"`
     }
