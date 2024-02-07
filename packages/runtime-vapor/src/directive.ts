@@ -90,7 +90,7 @@ export function withDirectives<T extends Node>(
       instance,
       source,
       value: null, // set later
-      oldValue: null,
+      oldValue: undefined,
       arg,
       modifiers,
     }
@@ -133,6 +133,7 @@ function callDirectiveHook(
   const hook = dir[name]
   if (!hook) return
 
+  if (name === 'beforeUpdate') binding.oldValue = binding.value
   const newValue = binding.source ? binding.source() : undefined
   binding.value = newValue
   // disable tracking inside all lifecycle hooks
@@ -143,7 +144,6 @@ function callDirectiveHook(
     binding,
   ])
   resetTracking()
-  if (name !== 'beforeUpdate') binding.oldValue = binding.value
 }
 
 export function resolveDirective() {
