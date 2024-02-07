@@ -129,11 +129,11 @@ function callDirectiveHook(
   instance: ComponentInternalInstance | null,
   name: DirectiveHookName,
 ) {
+  if (name === 'beforeUpdate') binding.oldValue = binding.value
   const { dir } = binding
   const hook = dir[name]
   if (!hook) return
 
-  if (name === 'beforeUpdate') binding.oldValue = binding.value
   const newValue = binding.source ? binding.source() : undefined
   binding.value = newValue
   // disable tracking inside all lifecycle hooks
