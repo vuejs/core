@@ -18,7 +18,6 @@ export enum IRNodeTypes {
   BLOCK_FUNCTION,
 
   TEMPLATE_FACTORY,
-  FRAGMENT_FACTORY,
 
   SET_PROP,
   SET_DYNAMIC_PROPS,
@@ -52,13 +51,14 @@ export interface BlockFunctionIRNode extends BaseIRNode {
   dynamic: IRDynamicInfo
   effect: IREffect[]
   operation: OperationNode[]
+  returns?: number[]
 }
 
 export interface RootIRNode extends Omit<BlockFunctionIRNode, 'type'> {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
-  template: Array<TemplateFactoryIRNode | FragmentFactoryIRNode>
+  template: Array<TemplateFactoryIRNode>
 }
 
 export interface IfIRNode extends BaseIRNode {
@@ -82,10 +82,6 @@ export interface ForIRNode extends BaseIRNode {
 export interface TemplateFactoryIRNode extends BaseIRNode {
   type: IRNodeTypes.TEMPLATE_FACTORY
   template: string
-}
-
-export interface FragmentFactoryIRNode extends BaseIRNode {
-  type: IRNodeTypes.FRAGMENT_FACTORY
 }
 
 export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
@@ -180,11 +176,7 @@ export interface WithDirectiveIRNode extends BaseIRNode {
   builtin?: VaporHelper
 }
 
-export type IRNode =
-  | OperationNode
-  | RootIRNode
-  | TemplateFactoryIRNode
-  | FragmentFactoryIRNode
+export type IRNode = OperationNode | RootIRNode | TemplateFactoryIRNode
 export type OperationNode =
   | SetPropIRNode
   | SetDynamicPropsIRNode

@@ -1,21 +1,18 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-if > basic v-if 1`] = `
-"import { template as _template, fragment as _fragment, children as _children, renderEffect as _renderEffect, setText as _setText, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setText as _setText, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
-const t1 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t1()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const { 0: [n3],} = _children(n2)
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
-  _append(n0, n1)
-  return n0
+  return [n1]
 }"
 `;
 
@@ -47,13 +44,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-if > dedupe same template 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div>hello</div>")
-const t1 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t1()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -62,39 +57,33 @@ export function render(_ctx) {
     const n4 = t0()
     return n4
   })
-  _append(n0, n1, n3)
-  return n0
+  return [n1, n3]
 }"
 `;
 
 exports[`compiler: v-if > template v-if 1`] = `
-"import { template as _template, fragment as _fragment, children as _children, renderEffect as _renderEffect, setText as _setText, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, children as _children, renderEffect as _renderEffect, setText as _setText, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div></div>hello<p></p>")
-const t1 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t1()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     const { 2: [n3],} = _children(n2)
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
-  _append(n0, n1)
-  return n0
+  return [n1]
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
-const t2 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t2()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -102,21 +91,18 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   })
-  _append(n0, n1)
-  return n0
+  return [n1]
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else-if + v-else 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
 const t2 = _template("fine")
-const t3 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t3()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -127,20 +113,17 @@ export function render(_ctx) {
     const n4 = t2()
     return n4
   }))
-  _append(n0, n1)
-  return n0
+  return [n1]
 }"
 `;
 
 exports[`compiler: v-if > v-if + v-else-if 1`] = `
-"import { template as _template, fragment as _fragment, createIf as _createIf, append as _append } from 'vue/vapor';
+"import { template as _template, createIf as _createIf } from 'vue/vapor';
 
 const t0 = _template("<div></div>")
 const t1 = _template("<p></p>")
-const t2 = _fragment()
 
 export function render(_ctx) {
-  const n0 = t2()
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -148,7 +131,6 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   }))
-  _append(n0, n1)
-  return n0
+  return [n1]
 }"
 `;

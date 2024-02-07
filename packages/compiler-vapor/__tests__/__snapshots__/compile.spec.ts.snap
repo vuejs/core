@@ -172,16 +172,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { fragment as _fragment, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
-
-const t0 = _fragment()
+"import { createTextNode as _createTextNode, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = t0()
   const n1 = _createTextNode()
-  _append(n0, n1)
   _renderEffect(() => _setText(n1, 1, 2))
-  return n0
+  return [n1]
 }"
 `;
 
@@ -201,14 +197,10 @@ export function render(_ctx) {
 `;
 
 exports[`compile > expression parsing > interpolation 1`] = `
-"
-const t0 = _fragment()
-(() => {
-  const n0 = t0()
+"(() => {
   const n1 = _createTextNode()
-  _append(n0, n1)
   _renderEffect(() => _setText(n1, a + b.value))
-  return n0
+  return [n1]
 })()"
 `;
 
@@ -235,16 +227,12 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { fragment as _fragment, createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
-
-const t0 = _fragment()
+"import { createTextNode as _createTextNode, renderEffect as _renderEffect, setText as _setText } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = t0()
   const n1 = _createTextNode()
-  _append(n0, n1)
   _renderEffect(() => _setText(n1, 1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'))
-  return n0
+  return [n1]
 }"
 `;
 

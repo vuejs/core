@@ -23,7 +23,3 @@ export function template(str: string): () => ChildNode[] {
 function fragmentToNodes(node: DocumentFragment): ChildNode[] {
   return Array.from((node.cloneNode(true) as DocumentFragment).childNodes)
 }
-
-export function fragment(): () => ChildNode[] {
-  return () => []
-}

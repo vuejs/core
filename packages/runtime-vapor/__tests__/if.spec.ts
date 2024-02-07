@@ -3,7 +3,6 @@ import {
   append,
   children,
   createIf,
-  fragment,
   insert,
   nextTick,
   ref,
@@ -116,31 +115,27 @@ describe('createIf', () => {
 
     const t0 = template('Vapor')
     const t1 = template('Hello ')
-    const t2 = fragment()
     render(
       defineComponent({
         setup() {
           // render
           return (() => {
-            const n0 = t2()
-            append(
-              n0,
-              createIf(
-                () => ok1.value,
-                () => {
-                  const n2 = t1()
-                  append(
-                    n2,
-                    createIf(
-                      () => ok2.value,
-                      () => t0(),
-                    ),
-                  )
-                  return n2
-                },
-              ),
+            const n1 = createIf(
+              () => ok1.value,
+              () => {
+                const n2 = t1()
+                const n3 = createIf(
+                  () => ok2.value,
+                  () => {
+                    const n4 = t0()
+                    return n4
+                  },
+                )
+                append(n2, n3)
+                return n2
+              },
             )
-            return n0
+            return [n1]
           })()
         },
       }) as any,

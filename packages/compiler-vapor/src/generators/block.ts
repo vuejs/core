@@ -38,11 +38,12 @@ export function genBlockFunctionContent(
   ir: BlockFunctionIRNode | RootIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
-  const [frag, push] = buildCodeFragment(
-    NEWLINE,
-    `const n${ir.dynamic.id} = t${ir.templateIndex}()`,
-  )
+  const { vaporHelper, multi } = context
+  const [frag, push] = buildCodeFragment()
+
+  if (ir.templateIndex > -1) {
+    push(NEWLINE, `const n${ir.dynamic.id} = t${ir.templateIndex}()`)
+  }
 
   const children = genChildren(ir.dynamic.children)
   if (children) {
@@ -62,7 +63,15 @@ export function genBlockFunctionContent(
 
   push(...genOperations(ir.operation, context))
   push(...(context.genEffect || genEffects)(ir.effect, context))
-  push(NEWLINE, `return n${ir.dynamic.id}`)
+  if (ir.returns) {
+    push(
+      NEWLINE,
+      `return `,
+      ...multi(['[', ']', ', '], ...ir.returns.map(n => `n${n}`)),
+    )
+  } else {
+    push(NEWLINE, `return n${ir.dynamic.id}`)
+  }
 
   return frag
 }

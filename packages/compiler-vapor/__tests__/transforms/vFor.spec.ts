@@ -27,14 +27,11 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
     expect(vaporHelpers).contains('createFor')
     expect(helpers.size).toBe(0)
-    expect(ir.template).lengthOf(2)
+    expect(ir.template).lengthOf(1)
     expect(ir.template).toMatchObject([
       {
         template: '<div></div>',
         type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        type: IRNodeTypes.FRAGMENT_FACTORY,
       },
     ])
     expect(ir.operation).toMatchObject([
@@ -56,12 +53,8 @@ describe('compiler: v-for', () => {
           templateIndex: 0,
         },
       },
-      {
-        type: IRNodeTypes.APPEND_NODE,
-        elements: [1],
-        parent: 0,
-      },
     ])
+    expect(ir.returns).toEqual([1])
     expect(ir.dynamic).toMatchObject({
       id: 0,
       children: { 0: { id: 1 } },

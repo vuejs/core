@@ -31,14 +31,11 @@ describe('compiler: v-if', () => {
     expect(vaporHelpers).contains('createIf')
     expect(helpers.size).toBe(0)
 
-    expect(ir.template).lengthOf(2)
+    expect(ir.template).lengthOf(1)
     expect(ir.template).toMatchObject([
       {
         template: '<div></div>',
         type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        type: IRNodeTypes.FRAGMENT_FACTORY,
       },
     ])
     expect(ir.operation).toMatchObject([
@@ -55,12 +52,8 @@ describe('compiler: v-if', () => {
           templateIndex: 0,
         },
       },
-      {
-        type: IRNodeTypes.APPEND_NODE,
-        elements: [1],
-        parent: 0,
-      },
     ])
+    expect(ir.returns).toEqual([1])
 
     expect(ir.dynamic).toMatchObject({
       id: 0,
@@ -79,11 +72,13 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
 
-    expect(ir.template).lengthOf(2)
-    expect(ir.template[0]).toMatchObject({
-      template: '<div></div>hello<p></p>',
-      type: IRNodeTypes.TEMPLATE_FACTORY,
-    })
+    expect(ir.template).lengthOf(1)
+    expect(ir.template).toMatchObject([
+      {
+        template: '<div></div>hello<p></p>',
+        type: IRNodeTypes.TEMPLATE_FACTORY,
+      },
+    ])
 
     expect(ir.effect).toEqual([])
     expect((ir.operation[0] as IfIRNode).positive.effect).toMatchObject([
@@ -114,7 +109,14 @@ describe('compiler: v-if', () => {
       `<div v-if="ok">hello</div><div v-if="ok">hello</div>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(2)
+    expect(ir.template).lengthOf(1)
+    expect(ir.template).toMatchObject([
+      {
+        template: '<div>hello</div>',
+        type: 2,
+      },
+    ])
+    expect(ir.returns).toEqual([1, 3])
   })
 
   test.todo('v-if with v-once')
@@ -125,7 +127,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else/>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(3)
+    expect(ir.template).lengthOf(2)
     expect(ir.template).toMatchObject([
       {
         template: '<div></div>',
@@ -134,9 +136,6 @@ describe('compiler: v-if', () => {
       {
         template: '<p></p>',
         type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        type: IRNodeTypes.FRAGMENT_FACTORY,
       },
     ])
 
@@ -161,12 +160,8 @@ describe('compiler: v-if', () => {
           templateIndex: 1,
         },
       },
-      {
-        type: IRNodeTypes.APPEND_NODE,
-        elements: [1],
-        parent: 0,
-      },
     ])
+    expect(ir.returns).toEqual([1])
   })
 
   test('v-if + v-else-if', () => {
@@ -174,7 +169,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else-if="orNot"/>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(3)
+    expect(ir.template).lengthOf(2)
     expect(ir.template).toMatchObject([
       {
         template: '<div></div>',
@@ -184,7 +179,6 @@ describe('compiler: v-if', () => {
         template: '<p></p>',
         type: IRNodeTypes.TEMPLATE_FACTORY,
       },
-      { type: IRNodeTypes.FRAGMENT_FACTORY },
     ])
 
     expect(ir.operation).toMatchObject([
@@ -213,12 +207,8 @@ describe('compiler: v-if', () => {
           },
         },
       },
-      {
-        type: IRNodeTypes.APPEND_NODE,
-        elements: [1],
-        parent: 0,
-      },
     ])
+    expect(ir.returns).toEqual([1])
   })
 
   test('v-if + v-else-if + v-else', () => {
@@ -226,7 +216,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(4)
+    expect(ir.template).lengthOf(3)
     expect(ir.template).toMatchObject([
       {
         template: '<div></div>',
@@ -240,9 +230,9 @@ describe('compiler: v-if', () => {
         template: 'fine',
         type: IRNodeTypes.TEMPLATE_FACTORY,
       },
-      { type: IRNodeTypes.FRAGMENT_FACTORY },
     ])
 
+    expect(ir.returns).toEqual([1])
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
@@ -262,11 +252,6 @@ describe('compiler: v-if', () => {
             templateIndex: 2,
           },
         },
-      },
-      {
-        type: IRNodeTypes.APPEND_NODE,
-        elements: [1],
-        parent: 0,
       },
     ])
   })
