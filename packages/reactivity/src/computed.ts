@@ -52,8 +52,6 @@ export class ComputedRefImpl<T> {
         ),
     )
     this.effect.computed = this
-    // TODO: How SSR affect computed?
-    // this.effect.active = this._cacheable = !isSSR
     this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }

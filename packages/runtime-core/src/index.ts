@@ -29,6 +29,7 @@ export {
   effect,
   stop,
   ReactiveEffect,
+  ReactiveSideEffect,
   // effect scope
   effectScope,
   EffectScope,

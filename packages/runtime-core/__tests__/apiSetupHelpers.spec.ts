@@ -1,7 +1,11 @@
 import {
   type ComponentInternalInstance,
   type SetupContext,
+  type ComputedRef,
+  type ReactiveSideEffect,
   Suspense,
+  computed,
+  watchEffect,
   createApp,
   defineComponent,
   getCurrentInstance,
@@ -416,6 +420,42 @@ describe('SFC <script setup> helpers', () => {
       expect(uids.one.before).not.toBe(uids.two.before)
       expect(uids.one.before).toBe(uids.one.after)
       expect(uids.two.before).toBe(uids.two.after)
+    })
+
+    test('should teardown in-scope effects', async () => {
+      let resolve: (val?: any) => void
+      const ready = new Promise(r => {
+        resolve = r
+      })
+
+      let c: ComputedRef
+      let effect: ReactiveSideEffect
+
+      const Comp = defineComponent({
+        async setup() {
+          let __temp: any, __restore: any
+          ;[__temp, __restore] = withAsyncContext(() => Promise.resolve())
+          __temp = await __temp
+          __restore()
+
+          c = computed(() => {})
+          watchEffect(() => c.value)
+          effect = [...(c! as any).dep!.keys()][0]
+          // register the lifecycle after an await statement
+          onMounted(resolve)
+          return () => ''
+        },
+      })
+
+      const app = createApp(() => h(Suspense, () => h(Comp)))
+      const root = nodeOps.createElement('div')
+      app.mount(root)
+
+      await ready
+      expect(effect!.active).toBe(true)
+
+      app.unmount()
+      expect(effect!.active).toBe(false)
     })
   })
 })
