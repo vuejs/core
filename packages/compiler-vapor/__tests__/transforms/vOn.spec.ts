@@ -440,26 +440,6 @@ describe('v-on', () => {
     expect(code).contains('fooBar')
   })
 
-  test('error for vnode hooks', () => {
-    const onError = vi.fn()
-    compileWithVOn(`<div v-on:vnode-mounted="onMount"/>`, { onError })
-    expect(onError.mock.calls[0][0]).toMatchObject({
-      code: ErrorCodes.X_VNODE_HOOKS,
-      loc: {
-        start: {
-          line: 1,
-          column: 11,
-        },
-        end: {
-          line: 1,
-          column: 24,
-        },
-      },
-    })
-  })
-
-  test.todo('vue: prefixed events')
-
   test('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const { code, ir, vaporHelpers } = compileWithVOn(
       `<div @click.stop.prevent.capture.once="test"/>`,

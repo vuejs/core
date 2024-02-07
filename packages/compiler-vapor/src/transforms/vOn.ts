@@ -22,18 +22,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   }
 
   if (arg.isStatic) {
-    let rawName = arg.content
-    if (__DEV__ && rawName.startsWith('vnode')) {
-      context.options.onError(
-        createCompilerError(ErrorCodes.X_VNODE_HOOKS, arg.loc),
-      )
-    }
-
-    if (
-      node.tagType !== ElementTypes.ELEMENT ||
-      rawName.startsWith('vnode') ||
-      !/[A-Z]/.test(rawName)
-    ) {
+    if (node.tagType !== ElementTypes.ELEMENT || !/[A-Z]/.test(arg.content)) {
       arg.content = camelize(arg.content)
     }
   }
@@ -47,18 +36,9 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     )
 
   let keyOverride: KeyOverride | undefined
-
-  // normalize click.right and click.middle since they don't actually fire
-
   const isStaticClick = arg.isStatic && arg.content.toLowerCase() === 'click'
 
-  if (nonKeyModifiers.includes('right')) {
-    if (isStaticClick) {
-      arg = extend({}, arg, { content: 'contextmenu' })
-    } else if (!arg.isStatic) {
-      keyOverride = ['click', 'contextmenu']
-    }
-  }
+  // normalize click.right and click.middle since they don't actually fire
   if (nonKeyModifiers.includes('middle')) {
     if (keyOverride) {
       // TODO error here
@@ -67,6 +47,13 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       arg = extend({}, arg, { content: 'mouseup' })
     } else if (!arg.isStatic) {
       keyOverride = ['click', 'mouseup']
+    }
+  }
+  if (nonKeyModifiers.includes('right')) {
+    if (isStaticClick) {
+      arg = extend({}, arg, { content: 'contextmenu' })
+    } else if (!arg.isStatic) {
+      keyOverride = ['click', 'contextmenu']
     }
   }
 

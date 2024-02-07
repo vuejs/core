@@ -220,7 +220,6 @@ export interface IRDynamicInfo {
 
 export type IRExpression = SimpleExpressionNode | string
 export interface IREffect {
-  // TODO multi-expression effect
   expressions: IRExpression[]
   operations: OperationNode[]
 }
