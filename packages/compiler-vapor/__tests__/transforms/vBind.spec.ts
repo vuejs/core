@@ -245,11 +245,29 @@ describe('compiler v-bind', () => {
     })
     expect(ir.template[0]).toMatchObject({
       type: IRNodeTypes.TEMPLATE_FACTORY,
-      template: '<div arg=""></div>',
+      template: '<div arg></div>',
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(JSON.stringify('<div arg=""></div>'))
+    expect(code).contains(JSON.stringify('<div arg></div>'))
+  })
+
+  test('error on invalid argument for same-name shorthand', () => {
+    const onError = vi.fn()
+    compileWithVBind(`<div v-bind:[arg] />`, { onError })
+    expect(onError.mock.calls[0][0]).toMatchObject({
+      code: ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+      loc: {
+        start: {
+          line: 1,
+          column: 13,
+        },
+        end: {
+          line: 1,
+          column: 18,
+        },
+      },
+    })
   })
 
   test('.camel modifier', () => {

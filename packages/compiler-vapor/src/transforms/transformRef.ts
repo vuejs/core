@@ -17,7 +17,7 @@ export const transformRef: NodeTransform = (node, context) => {
   if (dir.type === NodeTypes.DIRECTIVE) {
     value =
       (dir.exp as SimpleExpressionNode | undefined) ||
-      normalizeBindShorthand(dir.arg as SimpleExpressionNode)
+      normalizeBindShorthand(dir.arg as SimpleExpressionNode, context)
   } else {
     value = dir.value ? JSON.stringify(dir.value.content) : '""'
   }

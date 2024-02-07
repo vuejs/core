@@ -183,7 +183,7 @@ export function render(_ctx) {
 
 exports[`compiler v-bind > should error if empty expression 1`] = `
 "import { template as _template } from 'vue/vapor';
-const t0 = _template("<div arg=\\"\\"></div>")
+const t0 = _template("<div arg></div>")
 
 export function render(_ctx) {
   const n0 = t0()

@@ -1,16 +1,29 @@
 import {
   ErrorCodes,
+  NodeTypes,
   type SimpleExpressionNode,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
 import { camelize, isReservedProp } from '@vue/shared'
-import type { DirectiveTransform } from '../transform'
+import type { DirectiveTransform, TransformContext } from '../transform'
 
+// same-name shorthand - :arg is expanded to :arg="arg"
 export function normalizeBindShorthand(
   arg: SimpleExpressionNode,
+  context: TransformContext,
 ): SimpleExpressionNode {
-  // shorthand syntax https://github.com/vuejs/core/pull/9451
+  if (arg.type !== NodeTypes.SIMPLE_EXPRESSION || !arg.isStatic) {
+    // only simple expression is allowed for same-name shorthand
+    context.options.onError(
+      createCompilerError(
+        ErrorCodes.X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
+        arg.loc,
+      ),
+    )
+    return createSimpleExpression('', true, arg.loc)
+  }
+
   const propName = camelize(arg.content)
   const exp = createSimpleExpression(propName, false, arg.loc)
   exp.ast = null
@@ -18,12 +31,13 @@ export function normalizeBindShorthand(
 }
 
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
-  let { exp, loc, modifiers } = dir
+  const { loc, modifiers } = dir
+  let { exp } = dir
   const arg = dir.arg!
 
   if (arg.isStatic && isReservedProp(arg.content)) return
 
-  if (!exp) exp = normalizeBindShorthand(arg)
+  if (!exp) exp = normalizeBindShorthand(arg, context)
 
   let camel = false
   if (modifiers.includes('camel')) {
@@ -35,11 +49,15 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   }
 
   if (!exp.content.trim()) {
-    context.options.onError(
-      createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
-    )
-    context.template += ` ${arg.content}=""`
-    return
+    if (!__BROWSER__) {
+      // #10280 only error against empty expression in non-browser build
+      // because :foo in in-DOM templates will be parsed into :foo="" by the
+      // browser
+      context.options.onError(
+        createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, loc),
+      )
+    }
+    exp = createSimpleExpression('', true, loc)
   }
 
   return {
