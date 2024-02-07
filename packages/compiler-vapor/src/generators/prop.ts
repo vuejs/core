@@ -105,19 +105,12 @@ function genPropertyKey(
   }
 
   const key = genExpression(node, context)
-  if (runtimeCamelize && modifier) {
-    return [`[\`${modifier}\${`, ...call(helper('camelize'), key), `}\`]`]
-  }
-
-  if (runtimeCamelize) {
-    return [`[`, ...call(helper('camelize'), key), `]`]
-  }
-
-  if (modifier) {
-    return [`[\`${modifier}\${`, ...key, `}\`]`]
-  }
-
-  return [`[`, ...key, `]`]
+  return [
+    '[',
+    modifier && `${JSON.stringify(modifier)} + `,
+    ...(runtimeCamelize ? call(helper('camelize'), key) : key),
+    ']',
+  ]
 }
 
 function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {

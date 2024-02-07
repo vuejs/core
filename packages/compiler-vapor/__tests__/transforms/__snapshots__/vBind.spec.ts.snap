@@ -104,7 +104,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n0 = t0()
   const { 0: [n1],} = _children(n0)
-  _renderEffect(() => _setDynamicProps(n1, { [\`.\${_ctx.fooBar}\`]: _ctx.id }))
+  _renderEffect(() => _setDynamicProps(n1, { ["." + _ctx.fooBar]: _ctx.id }))
   return n0
 }"
 `;

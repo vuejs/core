@@ -427,7 +427,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      '_setDynamicProps(n1, { [`.${_ctx.fooBar}`]: _ctx.id })',
+      `_setDynamicProps(n1, { ["." + _ctx.fooBar]: _ctx.id })`,
     )
   })
 
