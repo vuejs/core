@@ -5,10 +5,11 @@ import {
   type SourceLocation,
   advancePositionWithClone,
   isInDestructureAssignment,
+  isLiteralWhitelisted,
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { isGloballyAllowed, makeMap } from '@vue/shared'
+import { isGloballyAllowed } from '@vue/shared'
 import type { Identifier } from '@babel/types'
 import {
   type CodeFragment,
@@ -97,8 +98,6 @@ export function genExpression(
     return [[rawExpr, NewlineType.Unknown, loc]]
   }
 }
-
-const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
 
 function genIdentifier(
   raw: string,

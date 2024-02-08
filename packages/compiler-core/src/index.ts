@@ -54,6 +54,7 @@ export {
   transformExpression,
   processExpression,
   stringifyExpression,
+  isLiteralWhitelisted,
 } from './transforms/transformExpression'
 export {
   buildSlots,

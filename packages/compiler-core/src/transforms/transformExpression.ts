@@ -44,7 +44,9 @@ import { parse } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
-const isLiteralWhitelisted = /*#__PURE__*/ makeMap('true,false,null,this')
+export const isLiteralWhitelisted = /*#__PURE__*/ makeMap(
+  'true,false,null,this',
+)
 
 // a heuristic safeguard to bail constant expressions on presence of
 // likely function invocation and member access
