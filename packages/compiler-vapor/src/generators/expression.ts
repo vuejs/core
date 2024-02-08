@@ -20,6 +20,7 @@ import { isConstantExpression } from '../utils'
 export function genExpression(
   node: SimpleExpressionNode,
   context: CodegenContext,
+  assignment?: string,
 ): CodeFragment[] {
   const {
     options: { prefixIdentifiers },
@@ -38,12 +39,12 @@ export function genExpression(
     ast === false ||
     isConstantExpression(node)
   ) {
-    return [[rawExpr, NewlineType.None, loc]]
+    return [[rawExpr, NewlineType.None, loc], assignment && ` = ${assignment}`]
   }
 
   // the expression is a simple identifier
   if (ast === null) {
-    return genIdentifier(rawExpr, context, loc)
+    return genIdentifier(rawExpr, context, loc, assignment)
   }
 
   const ids: Identifier[] = []
@@ -81,6 +82,7 @@ export function genExpression(
             end: advancePositionWithClone(node.loc.start, source, end),
             source,
           },
+          assignment,
           id,
           parentStack[parentStack.length - 1],
           parentStack,
@@ -101,6 +103,7 @@ function genIdentifier(
   raw: string,
   { options, vaporHelper, identifiers }: CodegenContext,
   loc?: SourceLocation,
+  assignment?: string,
   id?: Identifier,
   parent?: Node,
   parentStack?: Node[],
@@ -114,7 +117,7 @@ function genIdentifier(
   }
 
   let prefix: string | undefined
-  if (isStaticProperty(parent!) && parent.shorthand) {
+  if (isStaticProperty(parent) && parent.shorthand) {
     // property shorthand like { foo }, we need to add the key since
     // we rewrite the value
     prefix = `${raw}: `
@@ -122,8 +125,13 @@ function genIdentifier(
 
   if (inline) {
     switch (bindingMetadata[raw]) {
+      case BindingTypes.SETUP_LET:
+        name = raw = assignment
+          ? `_isRef(${raw}) ? (${raw}.value = ${assignment}) : (${raw} = ${assignment})`
+          : unref()
+        break
       case BindingTypes.SETUP_REF:
-        name = raw = `${raw}.value`
+        name = raw = withAssignment(`${raw}.value`)
         break
       case BindingTypes.SETUP_MAYBE_REF:
         // ({ x } = y)
@@ -142,11 +150,22 @@ function genIdentifier(
         raw =
           isAssignmentLVal || isUpdateArg || isDestructureAssignment
             ? (name = `${raw}.value`)
-            : `${vaporHelper('unref')}(${raw})`
+            : assignment
+              ? `${vaporHelper('isRef')}(${raw}) ? (${raw}.value = ${assignment}) : null`
+              : unref()
         break
+      default:
+        raw = withAssignment(raw)
     }
   } else {
-    raw = `_ctx.${raw}`
+    raw = withAssignment(`_ctx.${raw}`)
   }
   return [prefix, [raw, NewlineType.None, loc, name]]
+
+  function withAssignment(s: string) {
+    return assignment ? `${s} = ${assignment}` : s
+  }
+  function unref() {
+    return `${vaporHelper('unref')}(${raw})`
+  }
 }

@@ -17,10 +17,9 @@ export function genSetModelValue(
     ? [JSON.stringify(`update:${camelize(oper.key.content)}`)]
     : ['`update:${', ...genExpression(oper.key, context), '}`']
   const handler = [
-    (isTS ? `($event: any)` : `$event`) + ' => ((',
-    // TODO handle not a ref
-    ...genExpression(oper.value, context),
-    ') = $event)',
+    (isTS ? `($event: any)` : `$event`) + ' => (',
+    ...genExpression(oper.value, context, '$event'),
+    ')',
   ]
 
   return [
