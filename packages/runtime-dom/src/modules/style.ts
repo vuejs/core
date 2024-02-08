@@ -50,7 +50,6 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
         el[vShowOldKey] = style.display
       }
     }
-
     style.display = currentDisplay
   }
 }
