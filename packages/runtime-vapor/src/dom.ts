@@ -5,6 +5,7 @@ export * from './dom/prop'
 export * from './dom/event'
 export * from './dom/templateRef'
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function normalizeBlock(block: Block): Node[] {
   const nodes: Node[] = []
   if (block instanceof Node) {
@@ -63,6 +64,7 @@ export function remove(block: Block, parent: ParentBlock) {
   }
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function children(node: Node | Node[], ...paths: number[]): Node {
   for (const idx of paths) {
     node = isArray(node) ? node[idx] : node.childNodes[idx]
@@ -70,16 +72,19 @@ export function children(node: Node | Node[], ...paths: number[]): Node {
   return node as Node
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function createTextNode(val?: unknown): Text {
   // eslint-disable-next-line no-restricted-globals
   return document.createTextNode(val === undefined ? '' : toDisplayString(val))
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function createComment(data: string): Comment {
   // eslint-disable-next-line no-restricted-globals
   return document.createComment(data)
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export function querySelector(selectors: string): Element | null {
   // eslint-disable-next-line no-restricted-globals
   return document.querySelector(selectors)

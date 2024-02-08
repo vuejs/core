@@ -1,3 +1,4 @@
+/*! #__NO_SIDE_EFFECTS__ */
 export function template(str: string): () => ChildNode[] {
   let cached = false
   let node: DocumentFragment

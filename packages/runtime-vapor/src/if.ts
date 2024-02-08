@@ -5,6 +5,7 @@ import { createComment, createTextNode, insert, remove } from './dom'
 
 type BlockFn = () => Block
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const createIf = (
   condition: () => any,
   b1: BlockFn,

@@ -12,6 +12,7 @@ interface ForBlock extends Fragment {
   memo: any[] | undefined
 }
 
+/*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => any[] | Record<string, string> | Set<any> | Map<any, any>,
   renderItem: (block: ForBlock) => Block,
