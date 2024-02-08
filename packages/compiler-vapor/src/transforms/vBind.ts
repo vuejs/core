@@ -7,6 +7,7 @@ import {
 } from '@vue/compiler-dom'
 import { camelize, isReservedProp } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
+import { resolveExpression } from '../utils'
 
 // same-name shorthand - :arg is expanded to :arg="arg"
 export function normalizeBindShorthand(
@@ -33,10 +34,9 @@ export function normalizeBindShorthand(
 export const transformVBind: DirectiveTransform = (dir, node, context) => {
   const { loc, modifiers } = dir
   let { exp } = dir
-  const arg = dir.arg!
+  let arg = dir.arg!
 
   if (!exp) exp = normalizeBindShorthand(arg, context)
-
   if (!exp.content.trim()) {
     if (!__BROWSER__) {
       // #10280 only error against empty expression in non-browser build
@@ -48,6 +48,9 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
     }
     exp = createSimpleExpression('', true, loc)
   }
+
+  exp = resolveExpression(exp)
+  arg = resolveExpression(arg)
 
   if (arg.isStatic && isReservedProp(arg.content)) return
   let camel = false

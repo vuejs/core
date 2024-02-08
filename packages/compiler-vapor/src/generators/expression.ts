@@ -5,11 +5,9 @@ import {
   type SourceLocation,
   advancePositionWithClone,
   isInDestructureAssignment,
-  isLiteralWhitelisted,
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { isGloballyAllowed } from '@vue/shared'
 import type { Identifier } from '@babel/types'
 import {
   type CodeFragment,
@@ -17,6 +15,7 @@ import {
   buildCodeFragment,
 } from '../generate'
 import type { Node } from '@babel/types'
+import { isConstantExpression } from '../utils'
 
 export function genExpression(
   node: SimpleExpressionNode,
@@ -37,8 +36,7 @@ export function genExpression(
     !node.content.trim() ||
     // there was a parsing error
     ast === false ||
-    isGloballyAllowed(rawExpr) ||
-    isLiteralWhitelisted(rawExpr)
+    isConstantExpression(node)
   ) {
     return [[rawExpr, NewlineType.None, loc]]
   }

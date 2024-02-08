@@ -14,7 +14,6 @@ import {
   createSimpleExpression,
   defaultOnError,
   defaultOnWarn,
-  isLiteralWhitelisted,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -28,6 +27,7 @@ import {
   type RootIRNode,
   type VaporDirectiveNode,
 } from './ir'
+import { isConstantExpression } from './utils'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -154,16 +154,7 @@ function createRootContext(
       return (this.dynamic.id = this.increaseId())
     },
     registerEffect(expressions, operations) {
-      expressions = expressions.filter(exp => {
-        // filter static expressions
-        if (!__BROWSER__) {
-          if (isLiteralWhitelisted(exp.content)) return false
-          if (exp.ast)
-            // also filter out string and number literals
-            return !['StringLiteral', 'NumericLiteral'].includes(exp.ast.type)
-        }
-        return !exp.isStatic
-      })
+      expressions = expressions.filter(exp => !isConstantExpression(exp))
       if (this.inVOnce || expressions.length === 0) {
         return this.registerOperation(...operations)
       }

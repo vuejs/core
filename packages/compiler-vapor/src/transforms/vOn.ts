@@ -7,6 +7,7 @@ import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { resolveModifiers } from '@vue/compiler-dom'
 import { camelize, extend } from '@vue/shared'
+import { resolveExpression } from '../utils'
 
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
@@ -21,6 +22,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     return
   }
 
+  arg = resolveExpression(arg)
   if (arg.isStatic) {
     if (node.tagType !== ElementTypes.ELEMENT || !/[A-Z]/.test(arg.content)) {
       arg.content = camelize(arg.content)
@@ -70,9 +72,5 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     keyOverride,
   }
 
-  if (arg.isStatic) {
-    context.registerOperation(operation)
-  } else {
-    context.registerEffect([arg], [operation])
-  }
+  context.registerEffect([arg], [operation])
 }

@@ -72,14 +72,6 @@ function buildProps(
   const dynamicExpr: SimpleExpressionNode[] = []
   let results: DirectiveTransformResult[] = []
 
-  function pushDynamicExpressions(
-    ...exprs: (SimpleExpressionNode | undefined)[]
-  ) {
-    for (const expr of exprs) {
-      if (expr && !expr.isStatic) dynamicExpr.push(expr)
-    }
-  }
-
   function pushMergeArg() {
     if (results.length) {
       dynamicArgs.push(dedupeProperties(results))
@@ -94,7 +86,7 @@ function buildProps(
       !prop.arg
     ) {
       if (prop.exp) {
-        pushDynamicExpressions(prop.exp)
+        dynamicExpr.push(prop.exp)
         pushMergeArg()
         dynamicArgs.push(prop.exp)
       } else {
@@ -108,7 +100,7 @@ function buildProps(
     const result = transformProp(prop, node, context)
     if (result) {
       results.push(result)
-      pushDynamicExpressions(result.key, result.value)
+      dynamicExpr.push(result.key, result.value)
     }
   }
 
@@ -131,12 +123,11 @@ function buildProps(
         context.template += ` ${key.content}`
         if (values[0].content) context.template += `="${values[0].content}"`
       } else {
-        const expressions = values.filter(v => !v.isStatic)
-        context.registerEffect(expressions, [
+        context.registerEffect(values, [
           {
             type: IRNodeTypes.SET_PROP,
             element: context.reference(),
-            prop: prop,
+            prop,
           },
         ])
       }
