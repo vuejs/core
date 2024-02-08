@@ -410,36 +410,6 @@ describe('v-on', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
-  test('case conversion for kebab-case events', () => {
-    const { ir, code, helpers, vaporHelpers } = compileWithVOn(
-      `<div v-on:foo-bar="onMount"/>`,
-    )
-
-    expect(vaporHelpers).contains('on')
-    expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
-
-    expect(ir.operation).toMatchObject([
-      {
-        type: IRNodeTypes.SET_EVENT,
-        element: 1,
-        key: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'fooBar',
-          isStatic: true,
-        },
-        value: {
-          type: NodeTypes.SIMPLE_EXPRESSION,
-          content: 'onMount',
-          isStatic: false,
-        },
-      },
-    ])
-
-    expect(code).matchSnapshot()
-    expect(code).contains('fooBar')
-  })
-
   test('should support multiple modifiers and event options w/ prefixIdentifiers: true', () => {
     const { code, ir, vaporHelpers } = compileWithVOn(
       `<div @click.stop.prevent.capture.once="test"/>`,

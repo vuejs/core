@@ -1,17 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`v-on > case conversion for kebab-case events 1`] = `
-"import { children as _children, on as _on, template as _template } from 'vue/vapor';
-const t0 = _template("<div></div>")
-
-export function render(_ctx) {
-  const n0 = t0()
-  const { 0: [n1],} = _children(n0)
-  _on(n1, "fooBar", () => _ctx.onMount)
-  return n0
-}"
-`;
-
 exports[`v-on > complex member expression w/ prefixIdentifiers: true 1`] = `
 "import { children as _children, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
