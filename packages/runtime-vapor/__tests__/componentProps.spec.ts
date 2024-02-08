@@ -4,14 +4,13 @@
 // mixins
 // caching
 
-import { type FunctionalComponent, setCurrentInstance } from '../src/component'
+import { setCurrentInstance } from '../src/component'
 import {
   children,
   defineComponent,
   getCurrentInstance,
   nextTick,
   ref,
-  render,
   setText,
   template,
   watchEffect,
