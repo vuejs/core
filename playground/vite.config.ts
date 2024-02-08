@@ -11,6 +11,12 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        pure_getters: true,
+      },
+    },
   },
   clearScreen: false,
   plugins: [

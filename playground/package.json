@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "node ./setup/vite.js",
-    "build": "node ./setup/vite.js build"
+    "build": "node ./setup/vite.js build",
+    "preview": "node ./setup/vite.js preview"
   },
   "dependencies": {
     "@vueuse/core": "^10.7.2",
