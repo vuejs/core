@@ -1,3 +1,27 @@
+## [3.4.16](https://github.com/vuejs/core/compare/v3.4.15...v3.4.16) (2024-02-08)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle same-name shorthand edge case for in-DOM templates ([cb87b62](https://github.com/vuejs/core/commit/cb87b6213d7b003fa7280712c285c7c9d9f291ca)), closes [#10280](https://github.com/vuejs/core/issues/10280)
+* **compiler-core:** support v-bind shorthand syntax for dynamic slot name ([#10218](https://github.com/vuejs/core/issues/10218)) ([91f058a](https://github.com/vuejs/core/commit/91f058a90cd603492649633d153b120977c4df6b)), closes [#10213](https://github.com/vuejs/core/issues/10213)
+* **deps:** update compiler ([#10269](https://github.com/vuejs/core/issues/10269)) ([336bb65](https://github.com/vuejs/core/commit/336bb65820243006efdf990e6ea3610696467508))
+* **hydration:** fix SFC style v-bind hydration mismatch warnings ([#10250](https://github.com/vuejs/core/issues/10250)) ([f0b5f7e](https://github.com/vuejs/core/commit/f0b5f7ed8ddf74f9f5ba47cb65e8300370875291)), closes [#10215](https://github.com/vuejs/core/issues/10215)
+* **reactivity:** avoid infinite recursion from side effects in computed getter ([#10232](https://github.com/vuejs/core/issues/10232)) ([0bced13](https://github.com/vuejs/core/commit/0bced13ee5c53a02d5f10e5db76fe38b6e131440)), closes [#10214](https://github.com/vuejs/core/issues/10214)
+* **reactivity:** handle `MaybeDirty` recurse ([#10187](https://github.com/vuejs/core/issues/10187)) ([6c7e0bd](https://github.com/vuejs/core/commit/6c7e0bd88f021b0b6365370e97b0c7e243d7d70b)), closes [#10185](https://github.com/vuejs/core/issues/10185)
+* **reactivity:** skip non-extensible objects when using `markRaw` ([#10289](https://github.com/vuejs/core/issues/10289)) ([2312184](https://github.com/vuejs/core/commit/2312184bc335e0d32aa4c0c0b49190b6334849b4)), closes [#10288](https://github.com/vuejs/core/issues/10288)
+* **runtime-core:** avoid inlining isShallow ([#10238](https://github.com/vuejs/core/issues/10238)) ([53eee72](https://github.com/vuejs/core/commit/53eee72c3a96420db35236b5e8e4d9308a56e1b4))
+* **runtime-core:** support for nested calls to runWithContext ([#10261](https://github.com/vuejs/core/issues/10261)) ([75e02b5](https://github.com/vuejs/core/commit/75e02b5099a08166bdf407127916734c48209ee9)), closes [#10260](https://github.com/vuejs/core/issues/10260)
+* **runtime-dom:** ensure v-show respects display value set via v-bind ([#10161](https://github.com/vuejs/core/issues/10161)) ([9b19f09](https://github.com/vuejs/core/commit/9b19f0912104bfccb10c8cf5beab02b21a648935)), closes [#10151](https://github.com/vuejs/core/issues/10151)
+* **runtime-dom:** fix option selected update failed ([#10200](https://github.com/vuejs/core/issues/10200)) ([f31d782](https://github.com/vuejs/core/commit/f31d782e4668050a188ac0f11ba8d5b861b913ca)), closes [#10194](https://github.com/vuejs/core/issues/10194) [#10267](https://github.com/vuejs/core/issues/10267)
+
+
+### Reverts
+
+* perf(templateRef): avoid double render when using template ref on v-for ([eb1b911](https://github.com/vuejs/core/commit/eb1b9116d7cd4a5747e8dadcdc5ba921df011f64)), closes [#9908](https://github.com/vuejs/core/issues/9908) [#10210](https://github.com/vuejs/core/issues/10210) [#10234](https://github.com/vuejs/core/issues/10234)
+
+
+
 ## [3.4.15](https://github.com/vuejs/core/compare/v3.4.14...v3.4.15) (2024-01-18)
 
 
