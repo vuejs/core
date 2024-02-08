@@ -7,7 +7,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
-    const { 0: [n3],} = _children(n2)
+    const n3 = _children(n2, 0)
     _on(n3, "click", () => $event => (_ctx.remove(_block.s[0])))
     _renderEffect(() => {
       const [item] = _block.s
@@ -26,7 +26,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
-    const { 0: [n3],} = _children(n2)
+    const n3 = _children(n2, 0)
     _renderEffect(() => {
       const [item, index] = _block.s
       _setDynamicProp(n3, "item", item)

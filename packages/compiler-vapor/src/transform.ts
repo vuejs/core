@@ -303,11 +303,18 @@ function transformNode(
 function transformChildren(context: TransformContext<RootNode | ElementNode>) {
   const { children } = context.node
 
+  let referencedCount = 0
   for (const [i, child] of children.entries()) {
     const childContext = createContext(child, context, i)
     transformNode(childContext)
     context.childrenTemplate.push(childContext.template)
     context.dynamic.children[i] = childContext.dynamic
+    if (childContext.dynamic.flags & DynamicFlag.REFERENCED) {
+      referencedCount++
+    }
+  }
+  if (referencedCount > 1) {
+    context.reference()
   }
 
   processDynamicChildren(context)

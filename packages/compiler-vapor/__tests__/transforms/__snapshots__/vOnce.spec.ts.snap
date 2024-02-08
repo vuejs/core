@@ -6,7 +6,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _setDynamicProp(n1, "id", _ctx.foo)
   return n0
 }"
@@ -18,7 +18,8 @@ const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n3, { 0: [n2],}],} = _children(n0)
+  const n3 = _children(n0, 0)
+  const n2 = _children(n3, 0)
   const n1 = _createTextNode()
   _setText(n1, _ctx.msg, " ")
   _setClass(n2, _ctx.clz)
@@ -43,7 +44,7 @@ const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [, { 0: [n1],}],} = _children(n0)
+  const n1 = _children(n0, 0, 0)
   _setDynamicProp(n1, "id", _ctx.foo)
   return n0
 }"

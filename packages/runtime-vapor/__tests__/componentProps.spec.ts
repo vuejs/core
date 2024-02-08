@@ -248,9 +248,7 @@ describe('component props (vapor)', () => {
         const instance = getCurrentInstance()!
         const t0 = template('<div><!></div>')
         const n0 = t0()
-        const {
-          0: [n1],
-        } = children(n0)
+        const n1 = children(n0, 0)
         watchEffect(() => {
           setText(n1, instance.props.foo)
         })
@@ -426,9 +424,7 @@ describe('component props (vapor)', () => {
         const instance = getCurrentInstance()!
         const t0 = template('<div></div>')
         const n0 = t0()
-        const {
-          0: [n1],
-        } = children(n0)
+        const n1 = children(n0, 0)
         watchEffect(() => {
           setText(n1, instance.props.foo)
         })

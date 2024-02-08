@@ -7,16 +7,12 @@ import {
   advancePositionWithMutation,
   locStub,
 } from '@vue/compiler-dom'
-import type {
-  IREffect,
-  RootIRNode,
-  TemplateFactoryIRNode,
-  VaporHelper,
-} from './ir'
+import type { IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { extend, isArray, isString, remove } from '@vue/shared'
 import type { ParserPlugin } from '@babel/parser'
 import { genBlockFunctionContent } from './generators/block'
+import { genTemplates } from './generators/template'
 
 interface CodegenOptions extends BaseCodegenOptions {
   expressionPlugins?: ParserPlugin[]
@@ -306,16 +302,4 @@ function genHelperImports({ helpers, vaporHelpers, code }: CodegenContext) {
       .join(', ')} } from 'vue/vapor';\n`
   }
   return imports
-}
-
-export function genTemplates(
-  templates: TemplateFactoryIRNode[],
-  { vaporHelper }: CodegenContext,
-) {
-  return templates
-    .map(
-      (template, i) =>
-        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(template.template)})\n`,
-    )
-    .join('')
 }

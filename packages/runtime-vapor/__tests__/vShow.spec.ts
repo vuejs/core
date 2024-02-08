@@ -13,10 +13,8 @@ const createDemo = (defaultValue: boolean) =>
     }
     const t0 = template('<button>toggle</button><h1>hello world</h1>')
     const n0 = t0()
-    const {
-      0: [n1],
-      1: [n2],
-    } = children(n0)
+    const n1 = children(n0, 0)
+    const n2 = children(n0, 1)
     withDirectives(n2, [[vShow, () => visible.value]])
     on(n1 as HTMLElement, 'click', () => handleClick)
     return n0

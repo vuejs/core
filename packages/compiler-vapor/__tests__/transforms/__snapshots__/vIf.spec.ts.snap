@@ -7,7 +7,7 @@ const t0 = _template("<div></div>")
 export function render(_ctx) {
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const { 0: [n3],} = _children(n2)
+    const n3 = _children(n2, 0)
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
@@ -24,7 +24,7 @@ const t3 = _template("<input>")
 
 export function render(_ctx) {
   const n0 = t3()
-  const { 0: [n5],} = _children(n0)
+  const n5 = _children(n0, 0)
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
     return n2
@@ -65,7 +65,7 @@ const t0 = _template("<div></div>hello<p></p>")
 export function render(_ctx) {
   const n1 = _createIf(() => (_ctx.ok), () => {
     const n2 = t0()
-    const { 2: [n3],} = _children(n2)
+    const n3 = _children(n2, 2)
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })

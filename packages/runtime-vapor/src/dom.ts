@@ -63,14 +63,11 @@ export function remove(block: Block, parent: ParentBlock) {
   }
 }
 
-type Children = Record<number, [ChildNode, Children]>
-export function children(nodes: ChildNode[]): Children {
-  const result: Children = {}
-  for (let i = 0; i < nodes.length; i++) {
-    const n = nodes[i]
-    result[i] = [n, children(Array.from(n.childNodes))]
+export function children(node: Node | Node[], ...paths: number[]): Node {
+  for (const idx of paths) {
+    node = isArray(node) ? node[idx] : node.childNodes[idx]
   }
-  return result
+  return node as Node
 }
 
 export function createTextNode(val?: unknown): Text {

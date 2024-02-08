@@ -33,9 +33,7 @@ describe('createIf', () => {
 
     const { host } = define(() => {
       const n0 = t0()
-      const {
-        0: [n1],
-      } = children(n0)
+      const n1 = children(n0, 0)
 
       insert(
         createIf(
@@ -43,9 +41,8 @@ describe('createIf', () => {
           // v-if
           (spyIfFn ||= vi.fn(() => {
             const n2 = t1()
-            const {
-              0: [n3],
-            } = children(n2)
+            const n3 = children(n2, 0)
+
             renderEffect(() => {
               setText(n3, count.value)
             })

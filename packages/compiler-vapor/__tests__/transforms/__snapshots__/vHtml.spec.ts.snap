@@ -6,7 +6,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _renderEffect(() => _setHtml(n1, _ctx.code))
   return n0
 }"
@@ -18,7 +18,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _renderEffect(() => _setHtml(n1, _ctx.test))
   return n0
 }"
@@ -30,7 +30,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _setHtml(n1, "")
   return n0
 }"

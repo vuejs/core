@@ -6,7 +6,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _renderEffect(() => _setText(n1, "count is ", _ctx.count, "."))
   return n0
 }"
@@ -18,7 +18,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_resolveDirective("vTest")], [_resolveDirective("vHello"), void 0, void 0, { world: true }]])
   return n0
 }"
@@ -30,7 +30,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample]])
   return n0
 }"
@@ -42,7 +42,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg]])
   return n0
 }"
@@ -54,7 +54,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, _ctx.foo]])
   return n0
 }"
@@ -66,7 +66,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, void 0, { bar: true }]])
   return n0
 }"
@@ -78,7 +78,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, void 0, void 0, { "foo-bar": true }]])
   return n0
 }"
@@ -90,7 +90,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo"]])
   return n0
 }"
@@ -102,7 +102,7 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _withDirectives(n1, [[_ctx.vExample, () => _ctx.msg, "foo", { bar: true }]])
   return n0
 }"
@@ -134,7 +134,7 @@ const t0 = _template("<div></div><div><Comp></Comp></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 1: [n2],} = _children(n0)
+  const n2 = _children(n0, 1)
   const n1 = _createTextNode()
   _append(n2, n1)
   _renderEffect(() => _setText(n1, _ctx.bar))
@@ -149,7 +149,7 @@ const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div><div><Comp>
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 1: [n2],} = _children(n0)
+  const n2 = _children(n0, 1)
   const n1 = _createTextNode()
   _append(n2, n1)
   _renderEffect(() => _setText(n1, _ctx.bar))
@@ -174,7 +174,7 @@ const t0 = _template("<button></button>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _on(n1, "click", () => _ctx.handleClick)
   _renderEffect(() => _setText(n1, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
   _renderEffect(() => _setDynamicProp(n1, "id", _ctx.count))
@@ -193,7 +193,7 @@ exports[`compile > expression parsing > interpolation 1`] = `
 exports[`compile > expression parsing > v-bind 1`] = `
 "(() => {
   const n0 = t0()
-  const { 0: [n1],} = _children(n0)
+  const n1 = _children(n0, 0)
   _renderEffect(() => _setDynamicProps(n1, { [key.value+1]: _unref(foo)[key.value+1]() }))
   return n0
 })()"
