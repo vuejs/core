@@ -17,7 +17,7 @@ export function genFor(
   context: CodegenContext,
 ): CodeFragment[] {
   const { call, vaporHelper } = context
-  const { source, value, key, render } = oper
+  const { source, value, key, render, keyProperty } = oper
 
   const rawValue = value && value.content
   const rawKey = key && key.content
@@ -34,12 +34,31 @@ export function genFor(
     idMap,
   )
 
+  let getKeyFn: CodeFragment[] | false = false
+  if (keyProperty) {
+    const idMap: Record<string, null> = {}
+    if (rawValue) idMap[rawValue] = null
+    if (rawKey) idMap[rawKey] = null
+    const expr = context.withId(
+      () => genExpression(keyProperty, context),
+      idMap,
+    )
+    getKeyFn = [
+      '(',
+      rawValue ? rawValue : rawKey ? '_' : '',
+      rawKey && `, ${rawKey}`,
+      ') => (',
+      ...expr,
+      ')',
+    ]
+  }
+
   context.genEffect = undefined
 
   return [
     NEWLINE,
     `const n${oper.id} = `,
-    ...call(vaporHelper('createFor'), sourceExpr, blockFn),
+    ...call(vaporHelper('createFor'), sourceExpr, blockFn, getKeyFn),
   ]
 
   function genEffectInFor(effects: IREffect[]): CodeFragment[] {

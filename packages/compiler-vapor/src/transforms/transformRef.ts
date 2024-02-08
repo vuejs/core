@@ -1,20 +1,16 @@
 import {
-  type AttributeNode,
   NodeTypes,
   type SimpleExpressionNode,
   createSimpleExpression,
-  findProp,
 } from '@vue/compiler-dom'
 import { EMPTY_EXPRESSION, type NodeTransform } from '../transform'
-import { IRNodeTypes, type VaporDirectiveNode } from '../ir'
+import { IRNodeTypes } from '../ir'
 import { normalizeBindShorthand } from './vBind'
+import { findProp } from '../utils'
 
 export const transformRef: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
-  const dir = findProp(node, 'ref', false, true) as
-    | VaporDirectiveNode
-    | AttributeNode
-
+  const dir = findProp(node, 'ref', false, true)
   if (!dir) return
 
   let value: SimpleExpressionNode

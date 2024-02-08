@@ -14,7 +14,7 @@ export function render(_ctx) {
       _setText(n3, item)
     })
     return n2
-  })
+  }, (item) => (item.id))
   return [n1]
 }"
 `;

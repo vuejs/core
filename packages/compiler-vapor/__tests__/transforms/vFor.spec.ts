@@ -21,7 +21,7 @@ const compileWithVFor = makeCompile({
 describe('compiler: v-for', () => {
   test('basic v-for', () => {
     const { code, ir, vaporHelpers, helpers } = compileWithVFor(
-      `<div v-for="item of items" @click="remove(item)">{{ item }}</div>`,
+      `<div v-for="item of items" :key="item.id" @click="remove(item)">{{ item }}</div>`,
     )
 
     expect(code).matchSnapshot()
@@ -51,6 +51,10 @@ describe('compiler: v-for', () => {
         render: {
           type: IRNodeTypes.BLOCK_FUNCTION,
           templateIndex: 0,
+        },
+        keyProperty: {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'item.id',
         },
       },
     ])

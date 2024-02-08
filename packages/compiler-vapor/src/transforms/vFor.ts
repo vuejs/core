@@ -18,6 +18,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { extend } from '@vue/shared'
+import { findProp, propToExpression } from '../utils'
 
 export const transformVFor = createStructuralDirectiveTransform(
   'for',
@@ -45,6 +46,8 @@ export function processFor(
 
   const { source, value, key, index } = parseResult
 
+  const keyProp = findProp(node, 'key')
+  const keyProperty = keyProp && propToExpression(keyProp)
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
@@ -71,6 +74,7 @@ export function processFor(
       value: value as SimpleExpressionNode | undefined,
       key: key as SimpleExpressionNode | undefined,
       index: index as SimpleExpressionNode | undefined,
+      keyProperty,
       render,
     })
   }

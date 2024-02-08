@@ -35,18 +35,7 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   let { exp } = dir
   const arg = dir.arg!
 
-  if (arg.isStatic && isReservedProp(arg.content)) return
-
   if (!exp) exp = normalizeBindShorthand(arg, context)
-
-  let camel = false
-  if (modifiers.includes('camel')) {
-    if (arg.isStatic) {
-      arg.content = camelize(arg.content)
-    } else {
-      camel = true
-    }
-  }
 
   if (!exp.content.trim()) {
     if (!__BROWSER__) {
@@ -58,6 +47,16 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
       )
     }
     exp = createSimpleExpression('', true, loc)
+  }
+
+  if (arg.isStatic && isReservedProp(arg.content)) return
+  let camel = false
+  if (modifiers.includes('camel')) {
+    if (arg.isStatic) {
+      arg.content = camelize(arg.content)
+    } else {
+      camel = true
+    }
   }
 
   return {
