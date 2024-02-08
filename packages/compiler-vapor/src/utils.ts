@@ -1,3 +1,4 @@
+import type { NumericLiteral, StringLiteral } from '@babel/types'
 import { isGloballyAllowed } from '@vue/shared'
 import {
   type AttributeNode,
@@ -9,8 +10,7 @@ import {
   isLiteralWhitelisted,
 } from '@vue/compiler-dom'
 import type { VaporDirectiveNode } from './ir'
-import { EMPTY_EXPRESSION } from './transform'
-import type { NumericLiteral, StringLiteral } from '@babel/types'
+import { EMPTY_EXPRESSION } from './transforms/utils'
 
 export const findProp = _findProp as (
   node: ElementNode,

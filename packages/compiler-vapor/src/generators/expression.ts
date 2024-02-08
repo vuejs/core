@@ -9,13 +9,10 @@ import {
   walkIdentifiers,
 } from '@vue/compiler-dom'
 import type { Identifier } from '@babel/types'
-import {
-  type CodeFragment,
-  type CodegenContext,
-  buildCodeFragment,
-} from '../generate'
+import type { CodegenContext } from '../generate'
 import type { Node } from '@babel/types'
 import { isConstantExpression } from '../utils'
+import { type CodeFragment, buildCodeFragment } from './utils'
 
 export function genExpression(
   node: SimpleExpressionNode,

@@ -1,17 +1,13 @@
 import {
   type AllNode,
-  type AttributeNode,
   type TransformOptions as BaseTransformOptions,
   type CompilerCompatOptions,
-  type DirectiveNode,
   type ElementNode,
   ElementTypes,
   NodeTypes,
   type RootNode,
   type SimpleExpressionNode,
   type TemplateChildNode,
-  type TemplateNode,
-  createSimpleExpression,
   defaultOnError,
   defaultOnWarn,
   isVSlot,
@@ -28,6 +24,7 @@ import {
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression } from './utils'
+import { genDefaultDynamic } from './transforms/utils'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -107,13 +104,6 @@ const defaultOptions = {
   onError: defaultOnError,
   onWarn: defaultOnWarn,
 }
-
-export const genDefaultDynamic = (): IRDynamicInfo => ({
-  id: null,
-  flags: DynamicFlag.NONE,
-  anchor: null,
-  children: [],
-})
 
 // TODO use class for better perf
 function createRootContext(
@@ -411,29 +401,3 @@ export function createStructuralDirectiveTransform(
     }
   }
 }
-
-export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
-  if (node.tagType === ElementTypes.TEMPLATE) {
-    return node
-  }
-
-  const reserved: Array<AttributeNode | DirectiveNode> = []
-  const pass: Array<AttributeNode | DirectiveNode> = []
-  node.props.forEach(prop => {
-    if (prop.type === NodeTypes.DIRECTIVE && dirs.includes(prop.name)) {
-      reserved.push(prop)
-    } else {
-      pass.push(prop)
-    }
-  })
-
-  return extend({}, node, {
-    type: NodeTypes.ELEMENT,
-    tag: 'template',
-    props: reserved,
-    tagType: ElementTypes.TEMPLATE,
-    children: [extend({}, node, { props: pass } as TemplateChildNode)],
-  } as Partial<TemplateNode>)
-}
-
-export const EMPTY_EXPRESSION = createSimpleExpression('', true)

@@ -1,20 +1,24 @@
 import { createSimpleExpression, isSimpleIdentifier } from '@vue/compiler-dom'
 import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
-import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
+import type { CodegenContext } from '../generate'
+import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
 import type { WithDirectiveIRNode } from '../ir'
 
 export function genWithDirective(
   opers: WithDirectiveIRNode[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, multi, vaporHelper } = context
+  const { vaporHelper } = context
 
   const element = `n${opers[0].element}`
   const directiveItems = opers.map(genDirective)
-  const directives = multi(['[', ']', ', '], ...directiveItems)
+  const directives = genMulti(['[', ']', ', '], ...directiveItems)
 
-  return [NEWLINE, ...call(vaporHelper('withDirectives'), element, directives)]
+  return [
+    NEWLINE,
+    ...genCall(vaporHelper('withDirectives'), element, directives),
+  ]
 
   function genDirective({ dir, builtin }: WithDirectiveIRNode): CodeFragment[] {
     const NULL = 'void 0'
@@ -34,7 +38,7 @@ export function genWithDirective(
       ? ['{ ', genDirectiveModifiers(), ' }']
       : false
 
-    return multi(['[', ']', ', '], directive, value, argument, modifiers)
+    return genMulti(['[', ']', ', '], directive, value, argument, modifiers)
 
     function genDirective() {
       const {

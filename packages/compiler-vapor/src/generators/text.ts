@@ -1,16 +1,17 @@
-import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
+import type { CodegenContext } from '../generate'
 import type { CreateTextNodeIRNode, SetTextIRNode } from '../ir'
 import { genExpression } from './expression'
+import { type CodeFragment, NEWLINE, genCall } from './utils'
 
 export function genSetText(
   oper: SetTextIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   const { values } = oper
   return [
     NEWLINE,
-    ...call(
+    ...genCall(
       vaporHelper('setText'),
       `n${oper.element}`,
       ...values.map(value => genExpression(value, context)),
@@ -22,10 +23,10 @@ export function genCreateTextNode(
   oper: CreateTextNodeIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   return [
     NEWLINE,
     `const n${oper.id} = `,
-    ...call(vaporHelper('createTextNode')),
+    ...genCall(vaporHelper('createTextNode')),
   ]
 }

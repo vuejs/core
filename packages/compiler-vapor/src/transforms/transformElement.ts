@@ -14,11 +14,10 @@ import {
   isReservedProp,
   isVoidTag,
 } from '@vue/shared'
-import {
-  type DirectiveTransformResult,
-  EMPTY_EXPRESSION,
-  type NodeTransform,
-  type TransformContext,
+import type {
+  DirectiveTransformResult,
+  NodeTransform,
+  TransformContext,
 } from '../transform'
 import {
   IRNodeTypes,
@@ -26,6 +25,7 @@ import {
   type IRProps,
   type VaporDirectiveNode,
 } from '../ir'
+import { EMPTY_EXPRESSION } from './utils'
 
 export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {

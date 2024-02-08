@@ -3,10 +3,11 @@ import {
   type SimpleExpressionNode,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { EMPTY_EXPRESSION, type NodeTransform } from '../transform'
+import type { NodeTransform } from '../transform'
 import { IRNodeTypes } from '../ir'
 import { normalizeBindShorthand } from './vBind'
 import { findProp } from '../utils'
+import { EMPTY_EXPRESSION } from './utils'
 
 export const transformRef: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return

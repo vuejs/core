@@ -1,7 +1,12 @@
 export { parse } from '@vue/compiler-dom'
-export { transform } from './transform'
-export { generate } from './generate'
-export { compile, type CompilerOptions } from './compile'
+export * from './transform'
+export * from './generate'
+export {
+  wrapTemplate,
+  compile,
+  type CompilerOptions,
+  type TransformPreset,
+} from './compile'
 export * from './ir'
 export * from './errors'
 export { transformElement } from './transforms/transformElement'

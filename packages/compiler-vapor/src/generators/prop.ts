@@ -3,7 +3,7 @@ import {
   type SimpleExpressionNode,
   isSimpleIdentifier,
 } from '@vue/compiler-core'
-import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
+import type { CodegenContext } from '../generate'
 import type {
   IRProp,
   SetDynamicPropsIRNode,
@@ -11,13 +11,14 @@ import type {
   VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
+import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
 
 // only the static key prop will reach here
 export function genSetProp(
   oper: SetPropIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   const {
     prop: { key, values, modifier },
   } = oper
@@ -40,7 +41,7 @@ export function genSetProp(
 
   return [
     NEWLINE,
-    ...call(
+    ...genCall(
       vaporHelper(helperName),
       `n${oper.element}`,
       omitKey ? false : genExpression(key, context),
@@ -54,10 +55,10 @@ export function genDynamicProps(
   oper: SetDynamicPropsIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   return [
     NEWLINE,
-    ...call(
+    ...genCall(
       vaporHelper('setDynamicProps'),
       `n${oper.element}`,
       ...oper.props.map(
@@ -74,8 +75,7 @@ function genLiteralObjectProps(
   props: IRProp[],
   context: CodegenContext,
 ): CodeFragment[] {
-  const { multi } = context
-  return multi(
+  return genMulti(
     ['{ ', ' }', ', '],
     ...props.map(prop => [
       ...genPropertyKey(prop, context),
@@ -89,7 +89,7 @@ function genPropertyKey(
   { key: node, runtimeCamelize, modifier }: IRProp,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, helper } = context
+  const { helper } = context
 
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
@@ -108,7 +108,7 @@ function genPropertyKey(
   return [
     '[',
     modifier && `${JSON.stringify(modifier)} + `,
-    ...(runtimeCamelize ? call(helper('camelize'), key) : key),
+    ...(runtimeCamelize ? genCall(helper('camelize'), key) : key),
     ']',
   ]
 }
@@ -117,8 +117,7 @@ function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {
   if (values.length === 1) {
     return genExpression(values[0], context)
   }
-  const { multi } = context
-  return multi(
+  return genMulti(
     ['[', ']', ', '],
     ...values.map(expr => genExpression(expr, context)),
   )

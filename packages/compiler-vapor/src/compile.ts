@@ -27,7 +27,7 @@ import { transformVModel } from './transforms/vModel'
 import { transformVIf } from './transforms/vIf'
 import { transformVFor } from './transforms/vFor'
 
-export type CompilerOptions = HackOptions<BaseCompilerOptions>
+export { wrapTemplate } from './transforms/utils'
 
 // TODO: copied from @vue/compiler-core
 // code/AST -> IR -> JS codegen
@@ -89,6 +89,7 @@ export function compile(
   return generate(ir, resolvedOptions)
 }
 
+export type CompilerOptions = HackOptions<BaseCompilerOptions>
 export type TransformPreset = [
   NodeTransform[],
   Record<string, DirectiveTransform>,

@@ -1,6 +1,7 @@
 import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
-import { type DirectiveTransform, EMPTY_EXPRESSION } from '../transform'
 import { IRNodeTypes } from '../ir'
+import { EMPTY_EXPRESSION } from './utils'
+import type { DirectiveTransform } from '../transform'
 
 export const transformVText: DirectiveTransform = (dir, node, context) => {
   let { exp, loc } = dir

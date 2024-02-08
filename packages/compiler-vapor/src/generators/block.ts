@@ -6,15 +6,16 @@ import {
 } from '../ir'
 import {
   type CodeFragment,
-  type CodegenContext,
   INDENT_END,
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
-} from '../generate'
+} from './utils'
+import type { CodegenContext } from '../generate'
 import { genWithDirective } from './directive'
 import { genEffects, genOperations } from './operation'
 import { genChildren } from './template'
+import { genMulti } from './utils'
 
 export function genBlockFunction(
   oper: BlockFunctionIRNode,
@@ -37,7 +38,6 @@ export function genBlockFunctionContent(
   ir: BlockFunctionIRNode | RootIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { multi } = context
   const [frag, push] = buildCodeFragment()
 
   if (ir.templateIndex > -1) {
@@ -59,7 +59,7 @@ export function genBlockFunctionContent(
     push(
       NEWLINE,
       `return `,
-      ...multi(['[', ']', ', '], ...ir.returns.map(n => `n${n}`)),
+      ...genMulti(['[', ']', ', '], ...ir.returns.map(n => `n${n}`)),
     )
   } else {
     push(NEWLINE, `return n${ir.dynamic.id}`)

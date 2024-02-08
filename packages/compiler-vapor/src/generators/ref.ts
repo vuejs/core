@@ -1,15 +1,16 @@
 import { genExpression } from './expression'
-import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
+import type { CodegenContext } from '../generate'
 import type { SetRefIRNode } from '../ir'
+import { type CodeFragment, NEWLINE, genCall } from './utils'
 
 export function genSetRef(
   oper: SetRefIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   return [
     NEWLINE,
-    ...call(
+    ...genCall(
       vaporHelper('setRef'),
       [`n${oper.element}`],
       genExpression(oper.value, context),

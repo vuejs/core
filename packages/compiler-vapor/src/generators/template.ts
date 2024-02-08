@@ -1,9 +1,10 @@
-import { type CodegenContext, NEWLINE, buildCodeFragment } from '../generate'
+import type { CodegenContext } from '../generate'
 import {
   DynamicFlag,
   type IRDynamicInfo,
   type TemplateFactoryIRNode,
 } from '../ir'
+import { NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
   templates: TemplateFactoryIRNode[],
@@ -23,7 +24,7 @@ export function genChildren(
   from: number,
   paths: number[] = [],
 ) {
-  const { vaporHelper, call } = context
+  const { vaporHelper } = context
   const [frag, push] = buildCodeFragment()
   let offset = 0
   const { children } = dynamic
@@ -47,7 +48,11 @@ export function genChildren(
       push(
         NEWLINE,
         `const n${id} = `,
-        ...call(vaporHelper('children'), `n${from}`, ...newPaths.map(String)),
+        ...genCall(
+          vaporHelper('children'),
+          `n${from}`,
+          ...newPaths.map(String),
+        ),
       )
       push(...genChildren(child, context, id, []))
     } else {

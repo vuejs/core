@@ -1,12 +1,5 @@
 import { type IREffect, IRNodeTypes, type OperationNode } from '../ir'
-import {
-  type CodeFragment,
-  type CodegenContext,
-  INDENT_END,
-  INDENT_START,
-  NEWLINE,
-  buildCodeFragment,
-} from '../generate'
+import type { CodegenContext } from '../generate'
 import { genAppendNode, genInsertNode, genPrependNode } from './dom'
 import { genSetEvent } from './event'
 import { genFor } from './for'
@@ -16,6 +9,13 @@ import { genSetModelValue } from './modelValue'
 import { genDynamicProps, genSetProp } from './prop'
 import { genSetRef } from './ref'
 import { genCreateTextNode, genSetText } from './text'
+import {
+  type CodeFragment,
+  INDENT_END,
+  INDENT_START,
+  NEWLINE,
+  buildCodeFragment,
+} from './utils'
 
 export function genOperations(opers: OperationNode[], context: CodegenContext) {
   const [frag, push] = buildCodeFragment()

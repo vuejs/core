@@ -7,8 +7,6 @@ import {
 import {
   type TransformContext,
   createStructuralDirectiveTransform,
-  genDefaultDynamic,
-  wrapTemplate,
 } from '../transform'
 import {
   type BlockFunctionIRNode,
@@ -19,6 +17,7 @@ import {
 } from '../ir'
 import { extend } from '@vue/shared'
 import { findProp, propToExpression } from '../utils'
+import { genDefaultDynamic, wrapTemplate } from './utils'
 
 export const transformVFor = createStructuralDirectiveTransform(
   'for',

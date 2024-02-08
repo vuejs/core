@@ -1,22 +1,23 @@
+import { NewlineType } from '@vue/compiler-dom'
 import { genBlockFunction } from './block'
 import { genExpression } from './expression'
+import type { CodegenContext } from '../generate'
+import type { ForIRNode, IREffect } from '../ir'
+import { genOperation } from './operation'
 import {
   type CodeFragment,
-  type CodegenContext,
   INDENT_END,
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
-} from '../generate'
-import type { ForIRNode, IREffect } from '../ir'
-import { genOperation } from './operation'
-import { NewlineType } from '@vue/compiler-dom'
+  genCall,
+} from './utils'
 
 export function genFor(
   oper: ForIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { call, vaporHelper } = context
+  const { vaporHelper } = context
   const { source, value, key, render, keyProperty } = oper
 
   const rawValue = value && value.content
@@ -58,7 +59,7 @@ export function genFor(
   return [
     NEWLINE,
     `const n${oper.id} = `,
-    ...call(vaporHelper('createFor'), sourceExpr, blockFn, getKeyFn),
+    ...genCall(vaporHelper('createFor'), sourceExpr, blockFn, getKeyFn),
   ]
 
   function genEffectInFor(effects: IREffect[]): CodeFragment[] {

@@ -1,7 +1,8 @@
 import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
 import type { SetModelValueIRNode } from '../ir'
-import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
+import type { CodegenContext } from '../generate'
+import { type CodeFragment, NEWLINE, genCall } from './utils'
 
 export function genSetModelValue(
   oper: SetModelValueIRNode,
@@ -9,7 +10,7 @@ export function genSetModelValue(
 ): CodeFragment[] {
   const {
     vaporHelper,
-    call,
+
     options: { isTS },
   } = context
 
@@ -24,6 +25,6 @@ export function genSetModelValue(
 
   return [
     NEWLINE,
-    ...call(vaporHelper('on'), `n${oper.element}`, name, handler),
+    ...genCall(vaporHelper('on'), `n${oper.element}`, name, handler),
   ]
 }

@@ -9,8 +9,6 @@ import {
 import {
   type TransformContext,
   createStructuralDirectiveTransform,
-  genDefaultDynamic,
-  wrapTemplate,
 } from '../transform'
 import {
   type BlockFunctionIRNode,
@@ -21,6 +19,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { extend } from '@vue/shared'
+import { genDefaultDynamic, wrapTemplate } from './utils'
 
 export const transformVIf = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],

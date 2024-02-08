@@ -1,14 +1,15 @@
 import { isMemberExpression } from '@vue/compiler-dom'
+import type { CodegenContext } from '../generate'
+import type { SetEventIRNode } from '../ir'
+import { genExpression } from './expression'
 import {
   type CodeFragment,
-  type CodegenContext,
   INDENT_END,
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
-} from '../generate'
-import type { SetEventIRNode } from '../ir'
-import { genExpression } from './expression'
+  genCall,
+} from './utils'
 
 // TODO: share this with compiler-core
 const fnExpRE =
@@ -18,7 +19,7 @@ export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper, call, options: ctxOptions } = context
+  const { vaporHelper, options: ctxOptions } = context
   const { keys, nonKeys, options } = oper.modifiers
 
   const name = genName()
@@ -32,7 +33,7 @@ export function genSetEvent(
 
   return [
     NEWLINE,
-    ...call(
+    ...genCall(
       vaporHelper('on'),
       `n${oper.element}`,
       name,
