@@ -14,6 +14,7 @@ import {
   createSimpleExpression,
   defaultOnError,
   defaultOnWarn,
+  isLiteralWhitelisted,
   isVSlot,
 } from '@vue/compiler-dom'
 import { EMPTY_OBJ, NOOP, extend, isArray, isString } from '@vue/shared'
@@ -153,7 +154,16 @@ function createRootContext(
       return (this.dynamic.id = this.increaseId())
     },
     registerEffect(expressions, operations) {
-      expressions = expressions.filter(exp => !exp.isStatic)
+      expressions = expressions.filter(exp => {
+        // filter static expressions
+        if (!__BROWSER__) {
+          if (isLiteralWhitelisted(exp.content)) return false
+          if (exp.ast)
+            // also filter out string and number literals
+            return !['StringLiteral', 'NumericLiteral'].includes(exp.ast.type)
+        }
+        return !exp.isStatic
+      })
       if (this.inVOnce || expressions.length === 0) {
         return this.registerOperation(...operations)
       }
