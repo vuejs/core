@@ -1,4 +1,4 @@
-import { camelize, isString } from '@vue/shared'
+import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
 import type { SetModelValueIRNode } from '../ir'
 import { type CodeFragment, type CodegenContext, NEWLINE } from '../generate'
@@ -13,8 +13,8 @@ export function genSetModelValue(
     options: { isTS },
   } = context
 
-  const name = isString(oper.key)
-    ? [JSON.stringify(`update:${camelize(oper.key)}`)]
+  const name = oper.key.isStatic
+    ? [JSON.stringify(`update:${camelize(oper.key.content)}`)]
     : ['`update:${', ...genExpression(oper.key, context), '}`']
   const handler = [
     (isTS ? `($event: any)` : `$event`) + ' => ((',

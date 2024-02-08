@@ -14,10 +14,11 @@ import {
   isReservedProp,
   isVoidTag,
 } from '@vue/shared'
-import type {
-  DirectiveTransformResult,
-  NodeTransform,
-  TransformContext,
+import {
+  type DirectiveTransformResult,
+  EMPTY_EXPRESSION,
+  type NodeTransform,
+  type TransformContext,
 } from '../transform'
 import {
   IRNodeTypes,
@@ -154,11 +155,9 @@ function transformProp(
   if (prop.type === NodeTypes.ATTRIBUTE) {
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
-      value: createSimpleExpression(
-        prop.value ? prop.value.content : '',
-        true,
-        prop.value && prop.value.loc,
-      ),
+      value: prop.value
+        ? createSimpleExpression(prop.value.content, true, prop.value.loc)
+        : EMPTY_EXPRESSION,
     }
   }
 

@@ -64,7 +64,7 @@ export interface RootIRNode extends Omit<BlockFunctionIRNode, 'type'> {
 export interface IfIRNode extends BaseIRNode {
   type: IRNodeTypes.IF
   id: number
-  condition: IRExpression
+  condition: SimpleExpressionNode
   positive: BlockFunctionIRNode
   negative?: BlockFunctionIRNode | IfIRNode
 }
@@ -72,7 +72,7 @@ export interface IfIRNode extends BaseIRNode {
 export interface ForIRNode extends BaseIRNode {
   type: IRNodeTypes.FOR
   id: number
-  source: IRExpression
+  source: SimpleExpressionNode
   value?: SimpleExpressionNode
   key?: SimpleExpressionNode
   index?: SimpleExpressionNode
@@ -111,7 +111,7 @@ export type KeyOverride = [find: string, replacement: string]
 export interface SetEventIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_EVENT
   element: number
-  key: IRExpression
+  key: SimpleExpressionNode
   value?: SimpleExpressionNode
   modifiers: {
     // modifiers for addEventListener() options, e.g. .passive & .capture
@@ -127,20 +127,20 @@ export interface SetEventIRNode extends BaseIRNode {
 export interface SetHtmlIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_HTML
   element: number
-  value: IRExpression
+  value: SimpleExpressionNode
 }
 
 export interface SetRefIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_REF
   element: number
-  value: IRExpression
+  value: SimpleExpressionNode
 }
 
 export interface SetModelValueIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_MODEL_VALUE
   element: number
-  key: IRExpression
-  value: IRExpression
+  key: SimpleExpressionNode
+  value: SimpleExpressionNode
   bindingType?: BindingTypes
   isComponent: boolean
 }
@@ -218,9 +218,8 @@ export interface IRDynamicInfo {
   children: IRDynamicInfo[]
 }
 
-export type IRExpression = SimpleExpressionNode | string
 export interface IREffect {
-  expressions: IRExpression[]
+  expressions: SimpleExpressionNode[]
   operations: OperationNode[]
 }
 

@@ -11,6 +11,7 @@ import {
   type SimpleExpressionNode,
   type TemplateChildNode,
   type TemplateNode,
+  createSimpleExpression,
   defaultOnError,
   defaultOnWarn,
   isVSlot,
@@ -21,7 +22,6 @@ import {
   DynamicFlag,
   type HackOptions,
   type IRDynamicInfo,
-  type IRExpression,
   IRNodeTypes,
   type OperationNode,
   type RootIRNode,
@@ -77,7 +77,7 @@ export interface TransformContext<T extends AllNode = AllNode> {
   increaseId(): number
   registerTemplate(): number
   registerEffect(
-    expressions: Array<IRExpression | null | undefined>,
+    expressions: SimpleExpressionNode[],
     operation: OperationNode[],
   ): void
   registerOperation(...operations: OperationNode[]): void
@@ -153,35 +153,28 @@ function createRootContext(
       return (this.dynamic.id = this.increaseId())
     },
     registerEffect(expressions, operations) {
-      if (
-        this.inVOnce ||
-        (expressions = expressions.filter(Boolean)).length === 0
-      ) {
+      expressions = expressions.filter(exp => !exp.isStatic)
+      if (this.inVOnce || expressions.length === 0) {
         return this.registerOperation(...operations)
       }
       const existing = this.block.effect.find(e =>
-        isSameExpression(e.expressions, expressions as IRExpression[]),
+        isSameExpression(e.expressions, expressions),
       )
       if (existing) {
         existing.operations.push(...operations)
       } else {
         this.block.effect.push({
-          expressions: expressions as IRExpression[],
+          expressions,
           operations,
         })
       }
 
-      function isSameExpression(a: IRExpression[], b: IRExpression[]) {
-        a = a.filter(filterStatic)
-        b = b.filter(filterStatic)
+      function isSameExpression(
+        a: SimpleExpressionNode[],
+        b: SimpleExpressionNode[],
+      ) {
         if (a.length !== b.length) return false
-        return (a as SimpleExpressionNode[]).every(
-          (exp, i) => exp.content === (b as SimpleExpressionNode[])[i].content,
-        )
-      }
-
-      function filterStatic(exp: IRExpression): exp is SimpleExpressionNode {
-        return !isString(exp) && !exp.isStatic
+        return a.every((exp, i) => exp.content === b[i].content)
       }
     },
 
@@ -434,3 +427,5 @@ export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {
     children: [extend({}, node, { props: pass } as TemplateChildNode)],
   } as Partial<TemplateNode>)
 }
+
+export const EMPTY_EXPRESSION = createSimpleExpression('', true)

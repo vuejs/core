@@ -1,13 +1,14 @@
 import { IRNodeTypes } from '../ir'
-import type { DirectiveTransform } from '../transform'
+import { type DirectiveTransform, EMPTY_EXPRESSION } from '../transform'
 import { DOMErrorCodes, createDOMCompilerError } from '@vue/compiler-dom'
 
 export const transformVHtml: DirectiveTransform = (dir, node, context) => {
-  const { exp, loc } = dir
+  let { exp, loc } = dir
   if (!exp) {
     context.options.onError(
       createDOMCompilerError(DOMErrorCodes.X_V_HTML_NO_EXPRESSION, loc),
     )
+    exp = EMPTY_EXPRESSION
   }
   if (node.children.length) {
     context.options.onError(
@@ -22,7 +23,7 @@ export const transformVHtml: DirectiveTransform = (dir, node, context) => {
       {
         type: IRNodeTypes.SET_HTML,
         element: context.reference(),
-        value: exp || '""',
+        value: exp,
       },
     ],
   )

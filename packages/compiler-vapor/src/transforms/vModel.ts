@@ -6,6 +6,7 @@ import {
   NodeTypes,
   createCompilerError,
   createDOMCompilerError,
+  createSimpleExpression,
   findDir,
   findProp,
   hasDynamicKeyVBind,
@@ -137,7 +138,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   context.registerOperation({
     type: IRNodeTypes.SET_MODEL_VALUE,
     element: context.reference(),
-    key: (arg && arg.isStatic ? arg.content : arg) || 'modelValue',
+    key: arg || createSimpleExpression('modelValue', true),
     value: exp,
     isComponent,
   })

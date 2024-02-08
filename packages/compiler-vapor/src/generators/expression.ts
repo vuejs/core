@@ -1,15 +1,15 @@
 import {
   BindingTypes,
   NewlineType,
+  type SimpleExpressionNode,
   type SourceLocation,
   advancePositionWithClone,
   isInDestructureAssignment,
   isStaticProperty,
   walkIdentifiers,
 } from '@vue/compiler-dom'
-import { isGloballyAllowed, isString, makeMap } from '@vue/shared'
+import { isGloballyAllowed, makeMap } from '@vue/shared'
 import type { Identifier } from '@babel/types'
-import type { IRExpression } from '../ir'
 import {
   type CodeFragment,
   type CodegenContext,
@@ -18,13 +18,12 @@ import {
 import type { Node } from '@babel/types'
 
 export function genExpression(
-  node: IRExpression,
+  node: SimpleExpressionNode,
   context: CodegenContext,
 ): CodeFragment[] {
   const {
     options: { prefixIdentifiers },
   } = context
-  if (isString(node)) return [node]
 
   const { content: rawExpr, ast, isStatic, loc } = node
   if (isStatic) {
