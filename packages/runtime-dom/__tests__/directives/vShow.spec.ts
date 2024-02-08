@@ -276,4 +276,37 @@ describe('runtime-dom: v-show directive', () => {
     await nextTick()
     expect($div.style.display).toEqual('')
   })
+
+  // #10294
+  test('should record display by vShowOldKey only when display exists in style', async () => {
+    const isVisible = ref(false)
+    const style = ref({
+      margin: '10px',
+    })
+
+    const Component = {
+      setup() {
+        return () => {
+          return withVShow(
+            h('div', {
+              style: style.value,
+            }),
+            isVisible.value,
+          )
+        }
+      },
+    }
+    render(h(Component), root)
+    const $div = root.children[0]
+
+    expect($div.style.display).toEqual('none')
+
+    style.value.margin = '20px'
+    await nextTick()
+    expect($div.style.display).toEqual('none')
+
+    isVisible.value = true
+    await nextTick()
+    expect($div.style.display).toEqual('')
+  })
 })
