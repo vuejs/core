@@ -76,14 +76,14 @@ export function genEffect({ operations }: IREffect, context: CodegenContext) {
     `${vaporHelper('renderEffect')}(() => `,
   )
 
-  const [fragOps, pushOps] = buildCodeFragment()
+  const [operationsExps, pushOps] = buildCodeFragment()
   operations.forEach(op => pushOps(...genOperation(op, context)))
 
-  const newlineCount = fragOps.filter(frag => frag === NEWLINE).length
+  const newlineCount = operationsExps.filter(frag => frag === NEWLINE).length
   if (newlineCount > 1) {
-    push('{', INDENT_START, ...fragOps, INDENT_END, '})')
+    push('{', INDENT_START, ...operationsExps, INDENT_END, NEWLINE, '})')
   } else {
-    push(...fragOps.filter(frag => frag !== NEWLINE), ')')
+    push(...operationsExps.filter(frag => frag !== NEWLINE), ')')
   }
 
   return frag

@@ -340,7 +340,8 @@ export function render(_ctx) {
   _renderEffect(() => {
     _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, undefined, {
       modifiers: ["middle"]
-    })})
+    })
+  })
   return n0
 }"
 `;
@@ -370,7 +371,8 @@ export function render(_ctx) {
     _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, undefined, {
       modifiers: ["right"],
       keys: ["right"]
-    })})
+    })
+  })
   return n0
 }"
 `;
@@ -398,7 +400,8 @@ export function render(_ctx) {
     _on(n1, _ctx.e, () => _ctx.test, undefined, {
       modifiers: ["left"],
       keys: ["left"]
-    })})
+    })
+  })
   return n0
 }"
 `;
