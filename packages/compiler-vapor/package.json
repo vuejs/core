@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-vapor",
-  "version": "0.0.0-vapor",
+  "version": "3.0.0-vapor",
   "description": "@vue/compiler-vapor",
   "main": "index.js",
   "module": "dist/compiler-vapor.esm-bundler.js",

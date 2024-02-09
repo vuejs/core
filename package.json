@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "0.0.0-vapor",
+  "version": "3.0.0-vapor",
   "packageManager": "pnpm@8.15.1",
   "type": "module",
   "scripts": {

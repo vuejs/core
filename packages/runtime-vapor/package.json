@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-vapor",
-  "version": "0.0.0-vapor",
+  "version": "3.0.0-vapor",
   "description": "@vue/runtime-vapor",
   "main": "index.js",
   "module": "dist/runtime-vapor.esm-bundler.js",
