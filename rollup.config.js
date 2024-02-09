@@ -125,7 +125,9 @@ function createConfig(format, output, plugins = []) {
   const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage =
-    pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
+    pkg.name === '@vue/compat' ||
+    pkg.name === '@vue/compat-canary' ||
+    pkg.name === '@vue-vapor/compat'
   const isCompatBuild = !!packageOptions.compat
   const isBrowserBuild =
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
@@ -315,7 +317,8 @@ function createConfig(format, output, plugins = []) {
     let cjsIgnores = []
     if (
       pkg.name === '@vue/compiler-sfc' ||
-      pkg.name === '@vue/compiler-sfc-canary'
+      pkg.name === '@vue/compiler-sfc-canary' ||
+      pkg.name === '@vue-vapor/compiler-sfc'
     ) {
       cjsIgnores = [
         ...Object.keys(consolidatePkg.devDependencies),
