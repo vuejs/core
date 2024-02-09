@@ -14,13 +14,17 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/vue-vapor.d.ts",
       "import": {
-        "types": "./dist/vue-vapor.d.mts",
         "node": "./index.mjs",
         "default": "./dist/vue-vapor.runtime.esm-bundler.js"
       },
       "require": {
-        "types": "./dist/vue-vapor.d.ts",
+        "node": {
+          "production": "./dist/vue-vapor.cjs.prod.js",
+          "development": "./dist/vue-vapor.cjs.js",
+          "default": "./index.js"
+        },
         "default": "./index.js"
       }
     },
