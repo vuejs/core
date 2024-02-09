@@ -39,8 +39,8 @@ let skipTests = args.skipTests
 const skipBuild = args.skipBuild
 const isCanary = args.canary
 const isVapor = args.vapor
-const skipPrompts = args.skipPrompts || args.canary
-const skipGit = args.skipGit || args.canary
+const skipPrompts = args.skipPrompts || args.canary || args.vapor
+const skipGit = args.skipGit || args.canary || args.vapor
 
 const packages = fs
   .readdirSync(path.resolve(__dirname, '../packages'))
@@ -372,7 +372,7 @@ async function getCIResult() {
   try {
     const sha = await getSha()
     const res = await fetch(
-      `https://api.github.com/repos/vuejs/core/actions/runs?head_sha=${sha}` +
+      `https://api.github.com/repos/vuejs/core-vapor/actions/runs?head_sha=${sha}` +
         `&status=success&exclude_pull_requests=true`,
     )
     const data = await res.json()
