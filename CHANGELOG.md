@@ -1,3 +1,13 @@
+## [3.4.18](https://github.com/vuejs/core/compare/v3.4.17...v3.4.18) (2024-02-09)
+
+
+### Bug Fixes
+
+* **dx:** warn against reserved keys as prop name ([77a804b](https://github.com/vuejs/core/commit/77a804b1d0d6a3f12fb3674cdceb85ebd6481e02)), closes [#10281](https://github.com/vuejs/core/issues/10281)
+* **runtime-dom:**  ensure v-show respects display value set via v-bind ([#10297](https://github.com/vuejs/core/issues/10297)) ([c224897](https://github.com/vuejs/core/commit/c224897dd4e189a10ec601a97fe08cb638ebee19)), closes [#10151](https://github.com/vuejs/core/issues/10151)
+
+
+
 ## [3.4.17](https://github.com/vuejs/core/compare/v3.4.16...v3.4.17) (2024-02-09)
 
 
