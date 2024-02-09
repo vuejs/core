@@ -32,7 +32,6 @@ import {
   type ConcreteComponent,
   type Data,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
@@ -470,7 +469,7 @@ function resolvePropValue(
         if (key in propsDefaults) {
           value = propsDefaults[key]
         } else {
-          setCurrentInstance(instance)
+          const reset = setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -478,7 +477,7 @@ function resolvePropValue(
               : null,
             props,
           )
-          unsetCurrentInstance()
+          reset()
         }
       } else {
         value = defaultValue
@@ -587,7 +586,7 @@ export function normalizePropsOptions(
 }
 
 function validatePropName(key: string) {
-  if (key[0] !== '$') {
+  if (key[0] !== '$' && !isReservedProp(key)) {
     return true
   } else if (__DEV__) {
     warn(`Invalid prop name: "${key}" is a reserved property.`)

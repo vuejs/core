@@ -49,11 +49,10 @@ export function trackRefValue(ref: RefBase<any>) {
     ref = toRaw(ref)
     trackEffect(
       activeEffect,
-      ref.dep ||
-        (ref.dep = createDep(
-          () => (ref.dep = undefined),
-          ref instanceof ComputedRefImpl ? ref : undefined,
-        )),
+      (ref.dep ??= createDep(
+        () => (ref.dep = undefined),
+        ref instanceof ComputedRefImpl ? ref : undefined,
+      )),
       __DEV__
         ? {
             target: ref,
@@ -501,11 +500,12 @@ export type ShallowUnwrapRef<T> = {
 
 type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
 
-export type UnwrapRef<T> = T extends ShallowRef<infer V>
-  ? V
-  : T extends Ref<infer V>
-    ? UnwrapRefSimple<V>
-    : UnwrapRefSimple<T>
+export type UnwrapRef<T> =
+  T extends ShallowRef<infer V>
+    ? V
+    : T extends Ref<infer V>
+      ? UnwrapRefSimple<V>
+      : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
