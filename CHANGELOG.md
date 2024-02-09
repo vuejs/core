@@ -1,3 +1,12 @@
+## [3.4.17](https://github.com/vuejs/core/compare/v3.4.16...v3.4.17) (2024-02-09)
+
+
+### Reverts
+
+* fix(runtime-dom): ensure v-show respects display value set via v-bind ([#10161](https://github.com/vuejs/core/issues/10161)) ([2cd5b05](https://github.com/vuejs/core/commit/2cd5b05c3bf171be5c0b473c084c01704a058ffa)), closes [#10294](https://github.com/vuejs/core/issues/10294) [#10151](https://github.com/vuejs/core/issues/10151)
+
+
+
 ## [3.4.16](https://github.com/vuejs/core/compare/v3.4.15...v3.4.16) (2024-02-08)
 
 
