@@ -13,6 +13,7 @@
     "dist",
     "compiler-sfc",
     "server-renderer",
+    "vapor",
     "jsx-runtime",
     "jsx.d.ts"
   ],
