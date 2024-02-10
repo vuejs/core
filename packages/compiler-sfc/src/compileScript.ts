@@ -124,6 +124,10 @@ export interface SFCScriptCompileOptions {
    * Transform Vue SFCs into custom elements.
    */
   customElement?: boolean | ((filename: string) => boolean)
+  /**
+   * Force to use of Vapor mode.
+   */
+  vapor?: boolean
 }
 
 export interface ImportBinding {
@@ -153,11 +157,12 @@ export function compileScript(
   }
 
   const ctx = new ScriptCompileContext(sfc, options)
-  const { script, scriptSetup, source, filename, vapor } = sfc
+  const { script, scriptSetup, source, filename } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
   const scriptSetupLang = scriptSetup && scriptSetup.lang
+  const vapor = sfc.vapor || options.vapor
 
   let refBindings: string[] | undefined
 
@@ -920,6 +925,9 @@ export function compileScript(
     : `export default`
 
   let runtimeOptions = ``
+  if (vapor) {
+    runtimeOptions += `\n  vapor: true,`
+  }
   if (!ctx.hasDefaultExportName && filename && filename !== DEFAULT_FILENAME) {
     const match = filename.match(/([^/\\]+)\.\w+$/)
     if (match) {

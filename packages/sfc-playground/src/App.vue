@@ -96,6 +96,7 @@ const sfcOptions = computed(
       inlineTemplate: productionMode.value,
       isProd: productionMode.value,
       propsDestructure: true,
+      vapor: useVaporMode.value,
     },
     style: {
       isProd: productionMode.value,
