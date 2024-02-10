@@ -319,6 +319,11 @@ export interface CodegenOptions extends SharedTransformCodegenOptions {
    */
   runtimeModuleName?: string
   /**
+   * Customize where to import runtime helpers from.
+   * @default 'vue/vapor'
+   */
+  vaporRuntimeModuleName?: string
+  /**
    * Customize where to import ssr runtime helpers from/**
    * @default 'vue/server-renderer'
    */

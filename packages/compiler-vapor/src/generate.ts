@@ -63,7 +63,7 @@ export class CodegenContext {
     public ir: RootIRNode,
     options: CodegenOptions,
   ) {
-    const defaultOptions = {
+    const defaultOptions: Required<CodegenOptions> = {
       mode: 'function',
       prefixIdentifiers: options.mode === 'module',
       sourceMap: false,
@@ -72,6 +72,7 @@ export class CodegenContext {
       optimizeImports: false,
       runtimeGlobalName: `Vue`,
       runtimeModuleName: `vue`,
+      vaporRuntimeModuleName: 'vue/vapor',
       ssrRuntimeModuleName: 'vue/server-renderer',
       ssr: false,
       isTS: false,
@@ -156,17 +157,17 @@ export function generate(
   }
 }
 
-function genHelperImports({ helpers, vaporHelpers, code }: CodegenContext) {
+function genHelperImports({ helpers, vaporHelpers, options }: CodegenContext) {
   let imports = ''
   if (helpers.size) {
     imports += `import { ${[...helpers]
       .map(h => `${h} as _${h}`)
-      .join(', ')} } from 'vue';\n`
+      .join(', ')} } from '${options.runtimeModuleName}';\n`
   }
   if (vaporHelpers.size) {
     imports += `import { ${[...vaporHelpers]
       .map(h => `${h} as _${h}`)
-      .join(', ')} } from 'vue/vapor';\n`
+      .join(', ')} } from '${options.vaporRuntimeModuleName}';\n`
   }
   return imports
 }
