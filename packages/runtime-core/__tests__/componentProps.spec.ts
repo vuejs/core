@@ -729,4 +729,23 @@ describe('component props', () => {
 
     expect(Object.keys(props.msg).length).toBe(1)
   })
+
+  test('should warn against reserved prop names', () => {
+    const Comp = defineComponent({
+      props: {
+        key: String,
+        ref: String,
+        $foo: String,
+      },
+      render() {},
+    })
+
+    const root = nodeOps.createElement('div')
+
+    render(h(Comp, { msg: 'test' }), root)
+
+    expect(`Invalid prop name: "key"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "ref"`).toHaveBeenWarned()
+    expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
+  })
 })

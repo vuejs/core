@@ -78,7 +78,6 @@ export enum ErrorCodes {
   X_V_FOR_MALFORMED_EXPRESSION,
   X_V_FOR_TEMPLATE_KEY_PLACEMENT,
   X_V_BIND_NO_EXPRESSION,
-  X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
   X_V_ON_NO_EXPRESSION,
   X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
   X_V_SLOT_MIXED_SLOT_USAGE,
@@ -98,6 +97,10 @@ export enum ErrorCodes {
   X_CACHE_HANDLER_NOT_SUPPORTED,
   X_SCOPE_ID_NOT_SUPPORTED,
   X_VNODE_HOOKS,
+
+  // placed here to preserve order for the current minor
+  // TODO adjust order in 3.5
+  X_V_BIND_INVALID_SAME_NAME_ARGUMENT,
 
   // Special value for higher-order compilers to pick up the last code
   // to avoid collision of error codes. This should always be kept as the last
