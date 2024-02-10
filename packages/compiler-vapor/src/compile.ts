@@ -49,10 +49,9 @@ export function compile(
   const prefixIdentifiers =
     !__BROWSER__ && (options.prefixIdentifiers === true || isModuleMode)
 
-  // TODO scope id
-  // if (options.scopeId && !isModuleMode) {
-  //   onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
-  // }
+  if (options.scopeId && !isModuleMode) {
+    onError(createCompilerError(ErrorCodes.X_SCOPE_ID_NOT_SUPPORTED))
+  }
 
   const resolvedOptions = extend({}, options, {
     prefixIdentifiers,

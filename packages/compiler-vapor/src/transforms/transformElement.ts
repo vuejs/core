@@ -53,6 +53,10 @@ export const transformElement: NodeTransform = (node, context) => {
         isComponent,
       )
     }
+    const { scopeId } = context.options
+    if (scopeId) {
+      context.template += ` ${scopeId}`
+    }
     context.template += `>` + context.childrenTemplate.join('')
 
     // TODO remove unnecessary close tag, e.g. if it's the last element of the template

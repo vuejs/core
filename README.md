@@ -54,6 +54,7 @@ PR are welcome!
   - [x] CodegenContext
   - [x] indent
   - [x] Source map
+  - [x] scope id
   - [ ] Function mode
   - [ ] SSR
 - [ ] Built-in Components
