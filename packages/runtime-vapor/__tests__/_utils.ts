@@ -1,4 +1,4 @@
-import { type Data, isFunction } from '@vue/shared'
+import type { Data } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   type ObjectComponent,
@@ -24,13 +24,7 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
   })
 
   const define = (comp: Component) => {
-    const component = defineComponent(
-      isFunction(comp)
-        ? {
-            setup: comp,
-          }
-        : comp,
-    )
+    const component = defineComponent(comp)
     let instance: ComponentInternalInstance
     const render = (
       props: Data = {},

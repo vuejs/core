@@ -22,13 +22,14 @@ const define = makeRender<any>()
 describe('component props (vapor)', () => {
   test('stateful', () => {
     let props: any
-    // TODO: attrs
+    let attrs: any
 
     const { render } = define({
       props: ['fooBar', 'barBaz'],
       render() {
         const instance = getCurrentInstance()!
         props = instance.props
+        attrs = instance.attrs
       },
     })
 
@@ -36,21 +37,39 @@ describe('component props (vapor)', () => {
       get fooBar() {
         return 1
       },
+      get bar() {
+        return 2
+      },
     })
     expect(props.fooBar).toEqual(1)
+    expect(attrs.bar).toEqual(2)
 
     // test passing kebab-case and resolving to camelCase
     render({
       get ['foo-bar']() {
         return 2
       },
+      get bar() {
+        return 3
+      },
+      get baz() {
+        return 4
+      },
     })
     expect(props.fooBar).toEqual(2)
+    expect(attrs.bar).toEqual(3)
+    expect(attrs.baz).toEqual(4)
 
     // test updating kebab-case should not delete it (#955)
     render({
       get ['foo-bar']() {
         return 3
+      },
+      get bar() {
+        return 3
+      },
+      get baz() {
+        return 4
       },
       get barBaz() {
         return 5
@@ -58,11 +77,17 @@ describe('component props (vapor)', () => {
     })
     expect(props.fooBar).toEqual(3)
     expect(props.barBaz).toEqual(5)
+    expect(attrs.bar).toEqual(3)
+    expect(attrs.baz).toEqual(4)
 
-    render({})
+    render({
+      get qux() {
+        return 5
+      },
+    })
     expect(props.fooBar).toBeUndefined()
     expect(props.barBaz).toBeUndefined()
-    // expect(props.qux).toEqual(5) // TODO: attrs
+    expect(attrs.qux).toEqual(5)
   })
 
   test.todo('stateful with setup', () => {
@@ -71,15 +96,62 @@ describe('component props (vapor)', () => {
 
   test('functional with declaration', () => {
     let props: any
-    // TODO: attrs
+    let attrs: any
 
     const { component: Comp, render } = define((_props: any) => {
       const instance = getCurrentInstance()!
       props = instance.props
+      attrs = instance.attrs
       return {}
     })
     Comp.props = ['foo']
-    Comp.render = (() => {}) as any
+
+    render({
+      get foo() {
+        return 1
+      },
+      get bar() {
+        return 2
+      },
+    })
+    expect(props.foo).toEqual(1)
+    expect(attrs.bar).toEqual(2)
+
+    render({
+      get foo() {
+        return 2
+      },
+      get bar() {
+        return 3
+      },
+      get baz() {
+        return 4
+      },
+    })
+    expect(props.foo).toEqual(2)
+    expect(attrs.bar).toEqual(3)
+    expect(attrs.baz).toEqual(4)
+
+    render({
+      get qux() {
+        return 5
+      },
+    })
+    expect(props.foo).toBeUndefined()
+    expect(attrs.qux).toEqual(5)
+  })
+
+  // FIXME:
+  test('functional without declaration', () => {
+    let props: any
+    let attrs: any
+
+    const { render } = define((_props: any, { attrs: _attrs }: any) => {
+      const instance = getCurrentInstance()!
+      props = instance.props
+      attrs = instance.attrs
+      return {}
+    })
 
     render({
       get foo() {
@@ -87,6 +159,7 @@ describe('component props (vapor)', () => {
       },
     })
     expect(props.foo).toEqual(1)
+    expect(attrs.foo).toEqual(1)
 
     render({
       get foo() {
@@ -94,36 +167,7 @@ describe('component props (vapor)', () => {
       },
     })
     expect(props.foo).toEqual(2)
-
-    render({})
-    expect(props.foo).toBeUndefined()
-  })
-
-  test('functional without declaration', () => {
-    let props: any
-    // TODO: attrs
-
-    const { component: Comp, render } = define((_props: any) => {
-      const instance = getCurrentInstance()!
-      props = instance.props
-      return {}
-    })
-    Comp.props = undefined as any
-    Comp.render = (() => {}) as any
-
-    render({
-      get foo() {
-        return 1
-      },
-    })
-    expect(props.foo).toBeUndefined()
-
-    render({
-      get foo() {
-        return 2
-      },
-    })
-    expect(props.foo).toBeUndefined()
+    expect(attrs.foo).toEqual(2)
   })
 
   test('boolean casting', () => {
@@ -490,8 +534,34 @@ describe('component props (vapor)', () => {
   })
 
   // #5016
-  test.todo('handling attr with undefined value', () => {
-    // TODO: attrs
+  test('handling attr with undefined value', () => {
+    const { render, host } = define({
+      render() {
+        const instance = getCurrentInstance()!
+        const t0 = template('<div></div>')
+        const n0 = t0()
+        const n1 = children(n0, 0)
+        watchEffect(() => {
+          setText(
+            n1,
+            JSON.stringify(instance.attrs) + Object.keys(instance.attrs),
+          )
+        })
+        return n0
+      },
+    })
+
+    let attrs: any = {
+      get foo() {
+        return undefined
+      },
+    }
+
+    render(attrs)
+
+    expect(host.innerHTML).toBe(
+      `<div>${JSON.stringify(attrs) + Object.keys(attrs)}</div>`,
+    )
   })
 
   // #6915

@@ -1,5 +1,11 @@
 import { proxyRefs } from '@vue/reactivity'
-import { type Data, invokeArrayFns, isArray, isObject } from '@vue/shared'
+import {
+  type Data,
+  invokeArrayFns,
+  isArray,
+  isFunction,
+  isObject,
+} from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -28,7 +34,7 @@ export function render(
   container: string | ParentNode,
 ): ComponentInternalInstance {
   const instance = createComponentInstance(comp, props)
-  initProps(instance, props)
+  initProps(instance, props, !isFunction(instance.component))
   return mountComponent(instance, (container = normalizeContainer(container)))
 }
 
@@ -46,11 +52,10 @@ export function mountComponent(
 
   const reset = setCurrentInstance(instance)
   const block = instance.scope.run(() => {
-    const { component, props, emit } = instance
-    const ctx = { expose: () => {}, emit }
+    const { component, props, emit, attrs } = instance
+    const ctx = { expose: () => {}, emit, attrs }
 
-    const setupFn =
-      typeof component === 'function' ? component : component.setup
+    const setupFn = isFunction(component) ? component : component.setup
     const stateOrNode = setupFn && setupFn(props, ctx)
 
     let block: Block | undefined

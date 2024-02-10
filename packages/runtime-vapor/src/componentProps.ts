@@ -19,6 +19,7 @@ import {
   type ComponentInternalInstance,
   setCurrentInstance,
 } from './component'
+import { isEmitListener } from './componentEmits'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -74,10 +75,13 @@ export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
+  isStateful: boolean,
 ) {
   const props: Data = {}
+  const attrs: Data = {}
 
   const [options, needCastKeys] = instance.propsOptions
+  let hasAttrsChanged = false
   let rawCastValues: Data | undefined
   if (rawProps) {
     for (let key in rawProps) {
@@ -96,6 +100,7 @@ export function initProps(
             get() {
               return valueGetter()
             },
+            enumerable: true,
           })
         } else {
           // NOTE: must getter
@@ -105,10 +110,22 @@ export function initProps(
             get() {
               return valueGetter()
             },
+            enumerable: true,
           })
         }
-      } else {
-        // TODO:
+      } else if (!isEmitListener(instance.emitsOptions, key)) {
+        // if (!(key in attrs) || value !== attrs[key]) {
+        if (!(key in attrs)) {
+          // NOTE: must getter
+          // attrs[key] = value
+          Object.defineProperty(attrs, key, {
+            get() {
+              return valueGetter()
+            },
+            enumerable: true,
+          })
+          hasAttrsChanged = true
+        }
       }
     }
   }
@@ -148,7 +165,18 @@ export function initProps(
     validateProps(rawProps || {}, props, instance)
   }
 
-  instance.props = shallowReactive(props)
+  if (isStateful) {
+    instance.props = shallowReactive(props)
+  } else {
+    if (instance.propsOptions === EMPTY_ARR) {
+      instance.props = attrs
+    } else {
+      instance.props = props
+    }
+  }
+  instance.attrs = attrs
+
+  return hasAttrsChanged
 }
 
 function resolvePropValue(
