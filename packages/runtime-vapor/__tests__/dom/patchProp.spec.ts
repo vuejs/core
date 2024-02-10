@@ -90,12 +90,132 @@ describe('patchProp', () => {
       setStyle(el, 'color: red')
       expect(el.style.cssText).toBe('color: red;')
     })
-    test.fails('shoud set style with object and array property', () => {
+
+    test('should work with camelCase', () => {
+      const el = document.createElement('div')
+      setStyle(el, { fontSize: '12px' })
+      expect(el.style.cssText).toBe('font-size: 12px;')
+    })
+
+    test('shoud set style with object and array property', () => {
       const el = document.createElement('div')
       setStyle(el, { color: 'red' })
       expect(el.style.cssText).toBe('color: red;')
       setStyle(el, [{ color: 'blue' }, { fontSize: '12px' }])
       expect(el.style.cssText).toBe('color: blue; font-size: 12px;')
+    })
+
+    test('should remove if falsy value', () => {
+      const el = document.createElement('div')
+      setStyle(el, { color: undefined, borderRadius: null })
+      expect(el.style.cssText).toBe('')
+      setStyle(el, { color: 'red' })
+      expect(el.style.cssText).toBe('color: red;')
+      setStyle(el, { color: undefined, borderRadius: null })
+      expect(el.style.cssText).toBe('')
+    })
+
+    test('should work with !important', () => {
+      const el = document.createElement('div')
+      setStyle(el, { color: 'red !important' })
+      expect(el.style.cssText).toBe('color: red !important;')
+    })
+
+    test('should work with camelCase and !important', () => {
+      const el = document.createElement('div')
+      setStyle(el, { fontSize: '12px !important' })
+      expect(el.style.cssText).toBe('font-size: 12px !important;')
+    })
+
+    test('should work with multiple entries', () => {
+      const el = document.createElement('div')
+      setStyle(el, { color: 'red', marginRight: '10px' })
+      expect(el.style.getPropertyValue('color')).toBe('red')
+      expect(el.style.getPropertyValue('margin-right')).toBe('10px')
+    })
+
+    test('should patch with falsy style value', () => {
+      const el = document.createElement('div')
+      setStyle(el, { width: '100px' })
+      expect(el.style.cssText).toBe('width: 100px;')
+      setStyle(el, { width: 0 })
+      expect(el.style.cssText).toBe('width: 0px;')
+    })
+
+    test('should remove style attribute on falsy value', () => {
+      const el = document.createElement('div')
+      setStyle(el, { width: '100px' })
+      expect(el.style.cssText).toBe('width: 100px;')
+      setStyle(el, { width: undefined })
+      expect(el.style.cssText).toBe('')
+
+      setStyle(el, { width: '100px' })
+      expect(el.style.cssText).toBe('width: 100px;')
+      setStyle(el, null)
+      expect(el.hasAttribute('style')).toBe(false)
+      expect(el.style.cssText).toBe('')
+    })
+
+    test('should warn for trailing semicolons', () => {
+      const el = document.createElement('div')
+      setStyle(el, { color: 'red;' })
+      expect(
+        `Unexpected semicolon at the end of 'color' style value: 'red;'`,
+      ).toHaveBeenWarned()
+
+      setStyle(el, { '--custom': '100; ' })
+      expect(
+        `Unexpected semicolon at the end of '--custom' style value: '100; '`,
+      ).toHaveBeenWarned()
+    })
+
+    test('should not warn for trailing semicolons', () => {
+      const el = document.createElement('div')
+      setStyle(el, { '--custom': '100\\;' })
+      expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
+    })
+
+    test('should work with shorthand properties', () => {
+      const el = document.createElement('div')
+      setStyle(el, { borderBottom: '1px solid red', border: '1px solid green' })
+      expect(el.style.border).toBe('1px solid green')
+      expect(el.style.borderBottom).toBe('1px solid green')
+    })
+
+    // JSDOM doesn't support custom properties on style object so we have to
+    // mock it here.
+    function mockElementWithStyle() {
+      const store: any = {}
+      return {
+        style: {
+          display: '',
+          WebkitTransition: '',
+          setProperty(key: string, val: string) {
+            store[key] = val
+          },
+          getPropertyValue(key: string) {
+            return store[key]
+          },
+        },
+      }
+    }
+
+    test('should work with css custom properties', () => {
+      const el = mockElementWithStyle()
+      setStyle(el as any, { '--theme': 'red' })
+      expect(el.style.getPropertyValue('--theme')).toBe('red')
+    })
+
+    test('should auto vendor prefixing', () => {
+      const el = mockElementWithStyle()
+      setStyle(el as any, { transition: 'all 1s' })
+      expect(el.style.WebkitTransition).toBe('all 1s')
+    })
+
+    test('should work with multiple values', () => {
+      const el = mockElementWithStyle()
+      setStyle(el as any, { display: ['-webkit-box', '-ms-flexbox', 'flex'] })
+      expect(el.style.display).toBe('flex')
     })
   })
 

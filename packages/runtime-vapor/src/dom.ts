@@ -1,6 +1,7 @@
 import { isArray, toDisplayString } from '@vue/shared'
 import type { Block, ParentBlock } from './render'
 
+export * from './dom/style'
 export * from './dom/prop'
 export * from './dom/event'
 export * from './dom/templateRef'
