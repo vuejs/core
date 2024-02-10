@@ -11,7 +11,7 @@ import {
 import {
   extend,
   isBuiltInDirective,
-  isReservedProp,
+  isVaporReservedProp,
   isVoidTag,
 } from '@vue/shared'
 import type {
@@ -141,7 +141,7 @@ function transformProp(
   context: TransformContext<ElementNode>,
 ): DirectiveTransformResult | void {
   const { name } = prop
-  if (isReservedProp(name)) return
+  if (isVaporReservedProp(name)) return
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
     return {

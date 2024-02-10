@@ -10,7 +10,7 @@ import {
   hyphenate,
   isArray,
   isFunction,
-  isReservedProp,
+  isVaporReservedProp,
 } from '@vue/shared'
 import { shallowReactive, shallowReadonly, toRaw } from '@vue/reactivity'
 import { warn } from './warning'
@@ -86,7 +86,7 @@ export function initProps(
   if (rawProps) {
     for (let key in rawProps) {
       // key, ref are reserved and never passed down
-      if (isReservedProp(key)) {
+      if (isVaporReservedProp(key)) {
         continue
       }
 
