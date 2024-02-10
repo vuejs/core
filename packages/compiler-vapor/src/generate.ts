@@ -5,7 +5,6 @@ import type {
 import type { IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { extend, remove } from '@vue/shared'
-import type { ParserPlugin } from '@babel/parser'
 import { genBlockFunctionContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
@@ -20,9 +19,7 @@ import {
 
 export * from './generators/utils'
 
-export interface CodegenOptions extends BaseCodegenOptions {
-  expressionPlugins?: ParserPlugin[]
-}
+export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 export class CodegenContext {
   options: Required<CodegenOptions>
@@ -64,12 +61,11 @@ export class CodegenContext {
     options: CodegenOptions,
   ) {
     const defaultOptions: Required<CodegenOptions> = {
-      mode: 'function',
+      mode: 'function', // TODO
       prefixIdentifiers: options.mode === 'module',
       sourceMap: false,
       filename: `template.vue.html`,
       scopeId: null,
-      optimizeImports: false,
       runtimeGlobalName: `Vue`,
       runtimeModuleName: `vue`,
       vaporRuntimeModuleName: 'vue/vapor',

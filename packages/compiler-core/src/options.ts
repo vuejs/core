@@ -169,6 +169,12 @@ interface SharedTransformCodegenOptions {
    */
   prefixIdentifiers?: boolean
   /**
+   * A list of parser plugins to enable for `@babel/parser`, which is used to
+   * parse expressions in bindings and interpolations.
+   * https://babeljs.io/docs/en/next/babel-parser#plugins
+   */
+  expressionPlugins?: ParserPlugin[]
+  /**
    * Control whether generate SSR-optimized render functions instead.
    * The resulting function must be attached to the component via the
    * `ssrRender` option instead of `render`.
@@ -257,12 +263,6 @@ export interface TransformOptions
    * @default false
    */
   cacheHandlers?: boolean
-  /**
-   * A list of parser plugins to enable for `@babel/parser`, which is used to
-   * parse expressions in bindings and interpolations.
-   * https://babeljs.io/docs/en/next/babel-parser#plugins
-   */
-  expressionPlugins?: ParserPlugin[]
   /**
    * SFC scoped styles ID
    */
