@@ -64,7 +64,7 @@ jobs:
   release:
     concurrency:
       group: release
-    if: github.repository == 'vuejs/core-vapor'
+    if: github.repository == 'vuejs/core-vapor' && github.event_name == 'push'
     runs-on: ubuntu-latest
     needs: [unit-test, lint-and-test-dts]
     steps:
