@@ -18,7 +18,6 @@ function handleAdd() {
     title: value.value,
     completed: false,
   })
-  // TODO: clear input
   value.value = ''
 }
 
