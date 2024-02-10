@@ -163,24 +163,26 @@ async function main() {
       const pkgName = isCanary
         ? renamePackageToCanary('vue')
         : renamePackageToVapor('vue')
-      const { stdout } = await run(
-        'pnpm',
-        ['view', `${pkgName}@~${newVersion}`, 'version', '--json'],
-        { stdio: 'pipe' },
-      )
-      let versions = JSON.parse(stdout)
-      versions = Array.isArray(versions) ? versions : [versions]
-      const latestSameDayPatch = /** @type {string} */ (
-        semver.maxSatisfying(versions, `~${newVersion}`)
-      )
-
-      newVersion = /** @type {string} */ (
-        semver.inc(latestSameDayPatch, 'patch')
-      )
-      if (args.tag && args.tag !== 'latest') {
-        newVersion = /** @type {string} */ (
-          semver.inc(latestSameDayPatch, 'prerelease', args.tag)
+      if (isCanary) {
+        const { stdout } = await run(
+          'pnpm',
+          ['view', `${pkgName}@~${newVersion}`, 'version', '--json'],
+          { stdio: 'pipe' },
         )
+        let versions = JSON.parse(stdout)
+        versions = Array.isArray(versions) ? versions : [versions]
+        const latestSameDayPatch = /** @type {string} */ (
+          semver.maxSatisfying(versions, `~${newVersion}`)
+        )
+
+        newVersion = /** @type {string} */ (
+          semver.inc(latestSameDayPatch, 'patch')
+        )
+        if (args.tag && args.tag !== 'latest') {
+          newVersion = /** @type {string} */ (
+            semver.inc(latestSameDayPatch, 'prerelease', args.tag)
+          )
+        }
       }
     } catch (/** @type {any} */ e) {
       if (/E404/.test(e.message)) {
