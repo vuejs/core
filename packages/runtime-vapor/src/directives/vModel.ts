@@ -115,8 +115,21 @@ export const vModelText: ObjectDirective<
   },
 }
 
-// TODO
-export const vModelRadio = {}
+export const vModelRadio: ObjectDirective<HTMLInputElement> = {
+  beforeMount(el, { value, instance }) {
+    el.checked = looseEqual(value, getValue(el, instance))
+    assignFnMap.set(el, getModelAssigner(el, instance))
+    addEventListener(el, 'change', () => {
+      assignFnMap.get(el)!(getValue(el, instance))
+    })
+  },
+  beforeUpdate(el, { value, oldValue, instance }) {
+    assignFnMap.set(el, getModelAssigner(el, instance))
+    if (value !== oldValue) {
+      el.checked = looseEqual(value, getValue(el, instance))
+    }
+  },
+}
 
 export const vModelSelect: ObjectDirective<HTMLSelectElement, any, 'number'> = {
   // <select multiple> value need to be deep traversed

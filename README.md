@@ -42,8 +42,7 @@ PR are welcome!
     - [x] modifiers
   - [x] runtime directives
   - [ ] `v-memo` [on hold]
-  - [ ] `v-model`
-    - [x] text field
+  - [x] `v-model`
   - [x] `v-if` / `v-else` / `v-else-if`
   - [ ] `v-for`
     - [x] basic
