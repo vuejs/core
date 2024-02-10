@@ -137,20 +137,24 @@ async function main() {
   let targetVersion = args._[0]
 
   if (isCanary || isVapor) {
-    // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
-    // Use UTC date so that it's consistent across CI and maintainers' machines
-    const date = new Date()
-    const yyyy = date.getUTCFullYear()
-    const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
-    const dd = date.getUTCDate().toString().padStart(2, '0')
-
     const major = semver.major(currentVersion)
-    const datestamp = `${yyyy}${MM}${dd}`
-    let canaryVersion
+    let newVersion
 
-    canaryVersion = `${major}.${datestamp}.0`
-    if (args.tag && args.tag !== 'latest') {
-      canaryVersion = `${major}.${datestamp}.0-${args.tag}.0`
+    if (isCanary) {
+      // The canary version string format is `3.yyyyMMdd.0` (or `3.yyyyMMdd.0-minor.0` for minor)
+      // Use UTC date so that it's consistent across CI and maintainers' machines
+      const date = new Date()
+      const yyyy = date.getUTCFullYear()
+      const MM = (date.getUTCMonth() + 1).toString().padStart(2, '0')
+      const dd = date.getUTCDate().toString().padStart(2, '0')
+
+      const datestamp = `${yyyy}${MM}${dd}`
+      newVersion = `${major}.${datestamp}.0`
+      if (args.tag && args.tag !== 'latest') {
+        newVersion = `${major}.${datestamp}.0-${args.tag}.0`
+      }
+    } else {
+      newVersion = `${major}.2024.0-${await getSha(true)}`
     }
 
     // check the registry to avoid version collision
@@ -161,20 +165,20 @@ async function main() {
         : renamePackageToVapor('vue')
       const { stdout } = await run(
         'pnpm',
-        ['view', `${pkgName}@~${canaryVersion}`, 'version', '--json'],
+        ['view', `${pkgName}@~${newVersion}`, 'version', '--json'],
         { stdio: 'pipe' },
       )
       let versions = JSON.parse(stdout)
       versions = Array.isArray(versions) ? versions : [versions]
       const latestSameDayPatch = /** @type {string} */ (
-        semver.maxSatisfying(versions, `~${canaryVersion}`)
+        semver.maxSatisfying(versions, `~${newVersion}`)
       )
 
-      canaryVersion = /** @type {string} */ (
+      newVersion = /** @type {string} */ (
         semver.inc(latestSameDayPatch, 'patch')
       )
       if (args.tag && args.tag !== 'latest') {
-        canaryVersion = /** @type {string} */ (
+        newVersion = /** @type {string} */ (
           semver.inc(latestSameDayPatch, 'prerelease', args.tag)
         )
       }
@@ -186,7 +190,7 @@ async function main() {
       }
     }
 
-    targetVersion = canaryVersion
+    targetVersion = newVersion
   }
 
   if (!targetVersion) {
@@ -407,12 +411,18 @@ async function isInSyncWithRemote() {
     console.error(
       pico.red('Failed to check whether local HEAD is up-to-date with remote.'),
     )
+    console.error(e)
     return false
   }
 }
 
-async function getSha() {
-  return (await execa('git', ['rev-parse', 'HEAD'])).stdout
+/**
+ * @param {boolean=} short
+ */
+async function getSha(short) {
+  return (
+    await execa('git', ['rev-parse', ...(short ? ['--short'] : []), 'HEAD'])
+  ).stdout
 }
 
 async function getBranch() {
