@@ -153,7 +153,7 @@ export function compileScript(
   }
 
   const ctx = new ScriptCompileContext(sfc, options)
-  const { script, scriptSetup, source, filename } = sfc
+  const { script, scriptSetup, source, filename, vapor } = sfc
   const hoistStatic = options.hoistStatic !== false && !script
   const scopeId = options.id ? options.id.replace(/^data-v-/, '') : ''
   const scriptLang = script && script.lang
@@ -961,6 +961,7 @@ export function compileScript(
       startOffset,
       `\n${genDefaultAs} /*#__PURE__*/${ctx.helper(
         `defineComponent`,
+        vapor,
       )}({${def}${runtimeOptions}\n  ${
         hasAwait ? `async ` : ``
       }setup(${args}) {\n${exposeCall}`,
@@ -994,6 +995,13 @@ export function compileScript(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
         .join(', ')} } from 'vue'\n`,
+    )
+  }
+  if (ctx.vaporHelperImports.size > 0) {
+    ctx.s.prepend(
+      `import { ${[...ctx.vaporHelperImports]
+        .map(h => `${h} as _${h}`)
+        .join(', ')} } from 'vue/vapor'\n`,
     )
   }
 
