@@ -9,12 +9,15 @@ const displayRE = /(^|;)\s*display\s*:/
 
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
-  const isCssString = isString(next)
   const currentDisplay = style.display
   let hasControlledDisplay = false
-  if (next && !isCssString) {
-    if (prev && !isString(prev)) {
-      for (const key in prev) {
+
+  const isNextString = isString(next)
+
+  if (next && !isNextString) {
+    const prevObj = isString(prev) ? parseStyleText(prev as string) : prev
+    if (prevObj) {
+      for (const key in prevObj) {
         if (next[key] == null) {
           setStyle(style, key, '')
         }
@@ -27,7 +30,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
       setStyle(style, key, next[key])
     }
   } else {
-    if (isCssString) {
+    if (isNextString) {
       if (prev !== next) {
         // #9821
         const cssVarText = (style as any)[CSS_VAR_TEXT]
@@ -48,6 +51,19 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
     el[vShowOldKey] = hasControlledDisplay ? style.display : ''
     style.display = currentDisplay
   }
+}
+
+function parseStyleText(cssText: string) {
+  const res: Record<string, string> = {}
+  const listDelimiter = /;(?![^(]*\))/g
+  const propertyDelimiter = /:(.+)/
+  cssText.split(listDelimiter).forEach(function (item) {
+    if (item) {
+      const tmp = item.split(propertyDelimiter)
+      tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())
+    }
+  })
+  return res
 }
 
 const semicolonRE = /[^\\];\s*$/

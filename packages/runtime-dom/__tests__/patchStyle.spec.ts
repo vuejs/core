@@ -106,6 +106,21 @@ describe(`runtime-dom: style patching`, () => {
     expect(el.style.getPropertyValue('--custom')).toBe('100\\;')
   })
 
+  it('should clear prev style with string and object', () => {
+    let el = document.createElement('div')
+    patchProp(el, 'style', null, { color: 'red' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+    patchProp(el, 'style', { color: 'red' }, { fontSize: '12px' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
+
+    // reset el
+    el = document.createElement('div')
+    patchProp(el, 'style', null, 'color: red')
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('color:red;')
+    patchProp(el, 'style', 'color: red', { fontSize: '12px' })
+    expect(el.style.cssText.replace(/\s/g, '')).toBe('font-size:12px;')
+  })
+
   it('shorthand properties', () => {
     const el = document.createElement('div')
     patchProp(
