@@ -26,7 +26,7 @@ export interface WritableComputedOptions<T> {
 }
 
 export const COMPUTED_SIDE_EFFECT_WARN =
-  `[Vue warn] Computed keep dirty after evaluation.` +
+  `Computed keep dirty after evaluation.` +
   ` This might happen when you mutate the deps of computed in the getter.` +
   ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
 
