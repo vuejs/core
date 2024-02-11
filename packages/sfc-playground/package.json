@@ -13,7 +13,7 @@
     "vite": "^5.0.12"
   },
   "dependencies": {
-    "@vue/repl": "^4.0.2",
+    "@vue/repl": "^4.1.0",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "vue": "workspace:*"
