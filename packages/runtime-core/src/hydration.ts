@@ -753,7 +753,7 @@ function propHasMismatch(
       }
     }
 
-    if (el === instance?.subTree?.el) {
+    if (instance && isElementWithVars(instance.subTree, el)) {
       const cssVars = instance?.getCssVars?.()
       for (const key in cssVars) {
         expectedMap.set(`--${key}`, String(cssVars[key]))
@@ -853,4 +853,26 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
     }
   }
   return true
+}
+
+function isElementWithVars(vnode: VNode, element: Element): boolean {
+  while (vnode.component) {
+    vnode = vnode.component.subTree
+  }
+
+  if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
+    return element === vnode.el
+  } else if (vnode.type === Fragment) {
+    return (vnode.children as VNode[]).some(c => isElementWithVars(c, element))
+  } else if (vnode.type === Static) {
+    let { el, anchor } = vnode
+    while (el) {
+      if (el === element) {
+        return true
+      }
+      if (el === anchor) break
+      el = el.nextSibling
+    }
+  }
+  return false
 }
