@@ -24,11 +24,12 @@ describe('createFor', () => {
         () => sortedList.value,
         block => {
           const n3 = createTextNode()
-          renderEffect(() => {
+          const update = () => {
             const [item] = block.s
             setText(n3, item.name)
-          })
-          return [n3]
+          }
+          renderEffect(update)
+          return [n3, update]
         },
       )
       return [n1]

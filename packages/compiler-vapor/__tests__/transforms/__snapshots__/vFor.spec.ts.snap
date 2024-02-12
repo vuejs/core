@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { children as _children, on as _on, renderEffect as _renderEffect, setText as _setText, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { children as _children, on as _on, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
@@ -9,33 +9,32 @@ export function render(_ctx) {
     const n2 = t0()
     const n3 = _children(n2, 0)
     _on(n3, "click", () => $event => (_ctx.remove(_block.s[0])))
-    _renderEffect(() => {
+    const _updateEffect = () => {
       const [item] = _block.s
       _setText(n3, item)
-    })
-    return n2
+    }
+    _renderEffect(_updateEffect)
+    return [n2, _updateEffect]
   }, (item) => (item.id))
   return [n1]
 }"
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { children as _children, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
     const n3 = _children(n2, 0)
-    _renderEffect(() => {
+    const _updateEffect = () => {
       const [item, index] = _block.s
       _setDynamicProp(n3, "item", item)
-    })
-    _renderEffect(() => {
-      const [item, index] = _block.s
       _setDynamicProp(n3, "index", index)
-    })
-    return n2
+    }
+    _renderEffect(_updateEffect)
+    return [n2, _updateEffect]
   })
   return [n1]
 }"
@@ -48,7 +47,7 @@ const t0 = _template("<div>item</div>")
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
     const n2 = t0()
-    return n2
+    return [n2, () => {}]
   })
   return [n1]
 }"

@@ -15,7 +15,7 @@ interface ForBlock extends Fragment {
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
   src: () => any[] | Record<string, string> | Set<any> | Map<any, any>,
-  renderItem: (block: ForBlock) => Block,
+  renderItem: (block: ForBlock) => [Block, () => void],
   getKey?: (item: any, index: number) => any,
   getMemo?: (item: any) => any[],
   hydrationNode?: Node,
@@ -46,8 +46,9 @@ export const createFor = (
       memo: getMemo && getMemo(item),
       [fragmentKey]: true,
     })
-    block.nodes = scope.run(() => renderItem(block))!
-    block.update = () => scope.effects.forEach(effect => effect.run())
+    const res = scope.run(() => renderItem(block))!
+    block.nodes = res[0]
+    block.update = res[1]
     if (getMemo) block.update()
     if (parent) insert(block.nodes, parent, anchor)
     return block

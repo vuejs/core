@@ -21,13 +21,14 @@ export function genBlockFunction(
   oper: BlockFunctionIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
+  returnValue?: () => CodeFragment[],
 ): CodeFragment[] {
   return [
     '(',
     ...args,
     ') => {',
     INDENT_START,
-    ...genBlockFunctionContent(oper, context),
+    ...genBlockFunctionContent(oper, context, returnValue),
     INDENT_END,
     NEWLINE,
     '}',
@@ -37,6 +38,7 @@ export function genBlockFunction(
 export function genBlockFunctionContent(
   ir: BlockFunctionIRNode | RootIRNode,
   context: CodegenContext,
+  returnValue?: () => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
 
@@ -55,6 +57,7 @@ export function genBlockFunctionContent(
 
   push(...genOperations(ir.operation, context))
   push(...(context.genEffect || genEffects)(ir.effect, context))
+
   if (ir.returns) {
     push(
       NEWLINE,
@@ -62,7 +65,11 @@ export function genBlockFunctionContent(
       ...genMulti(['[', ']', ', '], ...ir.returns.map(n => `n${n}`)),
     )
   } else {
-    push(NEWLINE, `return n${ir.dynamic.id}`)
+    push(
+      NEWLINE,
+      'return ',
+      ...(returnValue ? returnValue() : [`n${ir.dynamic.id}`]),
+    )
   }
 
   return frag
