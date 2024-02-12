@@ -753,9 +753,11 @@ function propHasMismatch(
       }
     }
 
-    const cssVars = instance?.getCssVars?.()
-    for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+    if (el === instance?.subTree?.el) {
+      const cssVars = instance?.getCssVars?.()
+      for (const key in cssVars) {
+        expectedMap.set(`--${key}`, String(cssVars[key]))
+      }
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {
