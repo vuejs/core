@@ -65,8 +65,6 @@ const log = (arg: any) => {
 }
 
 html {
-  color-scheme: dark;
-  background-color: #000;
   padding: 10px;
 }
 </style>
