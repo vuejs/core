@@ -597,8 +597,23 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
-  return match ? match[2] : ctor === null ? 'null' : ''
+  // Early return for null to avoid unnecessary computations
+  if (ctor === null) {
+    return "null";
+  }
+  
+  // Avoid using regex for common cases by checking the type directly
+  if (typeof ctor === 'function') {
+    // Using name property to avoid converting function to string
+    return ctor.name || '';
+  } else if (typeof ctor === 'object') {
+    // Attempting to directly access constructor name if possible
+    const name = ctor.constructor && ctor.constructor.name;
+    return name || '';
+  }
+
+  // Fallback for other types (though they're less likely to have meaningful names here)
+  return '';
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
