@@ -78,11 +78,9 @@ function shouldSetAsProp(
     if (key === 'innerHTML' || key === 'textContent') {
       return true
     }
+
     // or native onclick with function values
-    if (key in el && isNativeOn(key) && isFunction(value)) {
-      return true
-    }
-    return false
+    return key in el && isNativeOn(key) && isFunction(value)
   }
 
   // these are enumerated attrs, however their corresponding DOM properties
