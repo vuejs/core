@@ -753,7 +753,7 @@ function propHasMismatch(
       }
     }
 
-    if (instance && isElementWithVars(instance.subTree, el)) {
+    if (instance && isInstanceRootEl(instance.subTree, el)) {
       const cssVars = instance?.getCssVars?.()
       for (const key in cssVars) {
         expectedMap.set(`--${key}`, String(cssVars[key]))
@@ -855,7 +855,7 @@ function isMapEqual(a: Map<string, string>, b: Map<string, string>): boolean {
   return true
 }
 
-function isElementWithVars(vnode: VNode, element: Element): boolean {
+function isInstanceRootEl(vnode: VNode, element: Element): boolean {
   while (vnode.component) {
     vnode = vnode.component.subTree
   }
@@ -863,7 +863,7 @@ function isElementWithVars(vnode: VNode, element: Element): boolean {
   if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
     return element === vnode.el
   } else if (vnode.type === Fragment) {
-    return (vnode.children as VNode[]).some(c => isElementWithVars(c, element))
+    return (vnode.children as VNode[]).some(c => isInstanceRootEl(c, element))
   } else if (vnode.type === Static) {
     let { el, anchor } = vnode
     while (el) {
