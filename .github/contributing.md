@@ -86,7 +86,7 @@ The project uses [simple-git-hooks](https://github.com/toplenboren/simple-git-ho
 
 - Type check the entire project
 - Automatically format changed files using Prettier
-- Verify commit message format (logic in `scripts/verifyCommit.js`)
+- Verify commit message format (logic in `scripts/verify-commit.js`)
 
 ## Scripts
 

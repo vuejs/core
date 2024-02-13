@@ -1,19 +1,19 @@
 import path from 'path'
 import {
   ConstantTypes,
-  createSimpleExpression,
-  ExpressionNode,
-  NodeTransform,
+  type ExpressionNode,
+  type NodeTransform,
   NodeTypes,
-  SimpleExpressionNode,
-  SourceLocation,
-  TransformContext
+  type SimpleExpressionNode,
+  type SourceLocation,
+  type TransformContext,
+  createSimpleExpression,
 } from '@vue/compiler-core'
 import {
+  isDataUrl,
+  isExternalUrl,
   isRelativeUrl,
   parseUrl,
-  isExternalUrl,
-  isDataUrl
 } from './templateUtils'
 import { isArray } from '@vue/shared'
 
@@ -52,23 +52,23 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
 }
 
 export const normalizeOptions = (
-  options: AssetURLOptions | AssetURLTagConfig
+  options: AssetURLOptions | AssetURLTagConfig,
 ): Required<AssetURLOptions> => {
   if (Object.keys(options).some(key => isArray((options as any)[key]))) {
     // legacy option format which directly passes in tags config
     return {
       ...defaultAssetUrlOptions,
-      tags: options as any
+      tags: options as any,
     }
   }
   return {
     ...defaultAssetUrlOptions,
-    ...options
+    ...options,
   }
 }
 
 export const createAssetUrlTransformWithOptions = (
-  options: Required<AssetURLOptions>
+  options: Required<AssetURLOptions>,
 ): NodeTransform => {
   return (node, context) =>
     (transformAssetUrl as Function)(node, context, options)
@@ -90,7 +90,7 @@ export const createAssetUrlTransformWithOptions = (
 export const transformAssetUrl: NodeTransform = (
   node,
   context,
-  options: AssetURLOptions = defaultAssetUrlOptions
+  options: AssetURLOptions = defaultAssetUrlOptions,
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (!node.props.length) {
@@ -146,7 +146,7 @@ export const transformAssetUrl: NodeTransform = (
         arg: createSimpleExpression(attr.name, true, attr.loc),
         exp,
         modifiers: [],
-        loc: attr.loc
+        loc: attr.loc,
       }
     })
   }
@@ -156,7 +156,7 @@ function getImportsExpressionExp(
   path: string | null,
   hash: string | null,
   loc: SourceLocation,
-  context: TransformContext
+  context: TransformContext,
 ): ExpressionNode {
   if (path) {
     let name: string
@@ -171,14 +171,14 @@ function getImportsExpressionExp(
         name,
         false,
         loc,
-        ConstantTypes.CAN_STRINGIFY
+        ConstantTypes.CAN_STRINGIFY,
       )
 
       // We need to ensure the path is not encoded (to %2F),
       // so we decode it back in case it is encoded
       context.imports.push({
         exp,
-        path: decodeURIComponent(path)
+        path: decodeURIComponent(path),
       })
     }
 
@@ -191,7 +191,7 @@ function getImportsExpressionExp(
       hashExp,
       false,
       loc,
-      ConstantTypes.CAN_STRINGIFY
+      ConstantTypes.CAN_STRINGIFY,
     )
 
     if (!context.hoistStatic) {
@@ -211,7 +211,7 @@ function getImportsExpressionExp(
         `_hoisted_${existingHoistIndex + 1}`,
         false,
         loc,
-        ConstantTypes.CAN_STRINGIFY
+        ConstantTypes.CAN_STRINGIFY,
       )
     }
     return context.hoist(finalExp)
