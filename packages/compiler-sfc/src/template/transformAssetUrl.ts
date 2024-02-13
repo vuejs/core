@@ -48,7 +48,6 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
     embed: ['src'],
     track: ['src'],
     link: ['href'],
-    iframe: ['src']
   }
 }
 
