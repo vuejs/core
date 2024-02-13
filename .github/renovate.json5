@@ -49,6 +49,6 @@
 
     // pinned
     // https://github.com/vuejs/core/issues/10300#issuecomment-1940855364
-    'lru-cache'
+    'lru-cache',
   ],
 }
