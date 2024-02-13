@@ -373,15 +373,24 @@ export function createAppAPI<HostElement>(
         }
       },
 
-      provide(key, value) {
-        if (__DEV__ && (key as string | symbol) in context.provides) {
+      provide(key, newVal) {
+        const oldValue = context.provides[key as string | symbol]
+        const isEqual = oldValue === newVal
+
+        if (
+          __DEV__ &&
+          (key as string | symbol) in context.provides &&
+          !isEqual
+        ) {
           warn(
             `App already provides property with key "${String(key)}". ` +
               `It will be overwritten with the new value.`,
           )
         }
 
-        context.provides[key as string | symbol] = value
+        if (!isEqual) {
+          context.provides[key as string | symbol] = newVal
+        }
 
         return app
       },
