@@ -465,8 +465,8 @@ importers:
         version: link:../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: ^4.5.0
-        version: 4.5.0(vite@5.0.2)(vue@packages+vue)
+        specifier: npm:@vue-vapor/vite-plugin-vue@latest
+        version: /@vue-vapor/vite-plugin-vue@0.0.0-alpha.1(vite@5.0.2)(vue@packages+vue)
       vite:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@20.11.16)(terser@5.27.0)
@@ -1796,17 +1796,6 @@ packages:
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
     dev: true
 
-  /@vitejs/plugin-vue@4.5.0(vite@5.0.2)(vue@packages+vue):
-    resolution: {integrity: sha512-a2WSpP8X8HTEww/U00bU4mX1QpLINNuz/2KMNpLsdu3BzOpak3AGI1CJYBTXcc4SPhaD0eNRUp7IyQK405L5dQ==}
-    engines: {node: ^14.18.0 || >=16.0.0}
-    peerDependencies:
-      vite: ^4.0.0 || ^5.0.0
-      vue: ^3.2.25
-    dependencies:
-      vite: 5.0.2(@types/node@20.11.16)(terser@5.27.0)
-      vue: link:packages/vue
-    dev: true
-
   /@vitejs/plugin-vue@5.0.3(vite@5.0.12)(vue@packages+vue):
     resolution: {integrity: sha512-b8S5dVS40rgHdDrw+DQi/xOM9ed+kSRZzfm1T74bMmBDCd8XO87NKlFYInzCtwvtWwXZvo1QxE2OSspTATWrbA==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -1889,6 +1878,17 @@ packages:
       estree-walker: 3.0.3
       loupe: 2.3.7
       pretty-format: 29.7.0
+    dev: true
+
+  /@vue-vapor/vite-plugin-vue@0.0.0-alpha.1(vite@5.0.2)(vue@packages+vue):
+    resolution: {integrity: sha512-wv64VLcd9dkVZTkjkLUDjr7CsP5Q7fNyN6Ar+AXJyVEXP+0vCRkXuH1HEmVUDJrOalutULRIV8PyehEmjxmG4A==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+    peerDependencies:
+      vite: ^5.0.0
+      vue: '*'
+    dependencies:
+      vite: 5.0.2(@types/node@20.11.16)(terser@5.27.0)
+      vue: link:packages/vue
     dev: true
 
   /@vue/consolidate@0.17.3:

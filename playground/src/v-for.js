@@ -1,7 +1,15 @@
-import { defineComponent, withKeys } from 'vue'
-import { append, createFor, on, ref, renderEffect } from 'vue/vapor'
+// @ts-check
+import {
+  append,
+  createFor,
+  defineComponent,
+  on,
+  ref,
+  renderEffect,
+} from 'vue/vapor'
 
 export default defineComponent({
+  vapor: true,
   setup() {
     const list = ref(['a', 'b', 'c'])
     const value = ref('')
@@ -23,16 +31,13 @@ export default defineComponent({
           const container = document.createElement('li')
           append(container, node)
 
-          renderEffect(() => {
+          const update = () => {
             const [item, index] = block.s
             node.textContent = `${index}. ${item}`
-          })
+          }
 
-          renderEffect(() => {
-            const [item, index] = block.s
-            node.textContent = `${index}/ ${item}`
-          })
-          return container
+          renderEffect(update)
+          return [container, update]
         },
         (item, index) => index,
       )
@@ -40,21 +45,23 @@ export default defineComponent({
       append(container, li)
 
       const input = document.createElement('input')
-      on(input, 'input', e => {
+      on(input, 'input', () => e => {
         value.value = e.target.value
       })
-      on(input, 'keydown', withKeys(handleAdd, ['enter']))
+      on(input, 'keydown', () => handleAdd, undefined, {
+        keys: ['enter'],
+      })
 
       const add = document.createElement('button')
       add.textContent = 'add'
-      on(add, 'click', handleAdd)
+      on(add, 'click', () => handleAdd)
       renderEffect(() => {
         input.value = value.value
       })
 
       const del = document.createElement('button')
       del.textContent = 'shift'
-      on(del, 'click', handleRemove)
+      on(del, 'click', () => handleRemove)
 
       const data = document.createElement('p')
       renderEffect(() => {

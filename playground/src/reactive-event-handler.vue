@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue'
+import { ref, watchEffect } from 'vue/vapor'
 
 const count = ref(0)
 const inc = () => count.value++

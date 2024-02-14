@@ -5,9 +5,6 @@ import Vue from '@vitejs/plugin-vue'
 import * as CompilerSFC from '@vue/compiler-sfc'
 
 export default defineConfig({
-  resolve: {
-    alias: [{ find: /^vue$/, replacement: 'vue/vapor' }],
-  },
   build: {
     target: 'esnext',
     minify: 'terser',
@@ -20,10 +17,7 @@ export default defineConfig({
   clearScreen: false,
   plugins: [
     Vue({
-      template: {
-        // @ts-expect-error
-        vapor: true,
-      },
+      vapor: true,
       compiler: CompilerSFC,
     }),
     DevPlugin(),
