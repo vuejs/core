@@ -41,7 +41,6 @@ export const wrap = (
       `mean: ${mean.toFixed(2)}ms / ` +
       `time: ${time.toFixed(2)}ms / ` +
       `std: ${getStandardDeviation(prevTimes).toFixed(2)} ` +
-      `: ${getStandardDeviation(prevTimes).toFixed(2)} ` +
       `over ${prevTimes.length} runs`
     console.log(msg)
     document.getElementById('time')!.textContent = msg
