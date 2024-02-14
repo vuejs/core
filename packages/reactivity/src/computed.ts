@@ -4,6 +4,7 @@ import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
 import type { Dep } from './dep'
 import { DirtyLevels, ReactiveFlags } from './constants'
+import { warn } from './warning'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -23,6 +24,12 @@ export interface WritableComputedOptions<T> {
   get: ComputedGetter<T>
   set: ComputedSetter<T>
 }
+
+export const COMPUTED_SIDE_EFFECT_WARN =
+  `Computed is still dirty after getter evaluation,` +
+  ` likely because a computed is mutating its own dependency in its getter.` +
+  ` State mutations in computed getters should be avoided. ` +
+  ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
 
 export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
@@ -67,6 +74,7 @@ export class ComputedRefImpl<T> {
     }
     trackRefValue(self)
     if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
+      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN)
       triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
@@ -141,7 +149,7 @@ export function computed<T>(
     getter = getterOrOptions
     setter = __DEV__
       ? () => {
-          console.warn('Write operation failed: computed value is readonly')
+          warn('Write operation failed: computed value is readonly')
         }
       : NOOP
   } else {

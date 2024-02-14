@@ -1,3 +1,26 @@
+## [3.4.19](https://github.com/vuejs/core/compare/v3.4.18...v3.4.19) (2024-02-13)
+
+
+### Bug Fixes
+
+* **deps:** pin lru-cache to avoid hashing error ([b8be990](https://github.com/vuejs/core/commit/b8be99018ceae92d1732dfb414df12b36b90b31f)), closes [#10300](https://github.com/vuejs/core/issues/10300)
+* **hydration:** fix css vars hydration mismatch false positive on non-root nodes ([995d2fd](https://github.com/vuejs/core/commit/995d2fdcca485c24849c99f498c1edc163722e04)), closes [#10317](https://github.com/vuejs/core/issues/10317) [#10325](https://github.com/vuejs/core/issues/10325)
+* **runtime-dom:** should not trigger transition when v-show value is falsy ([#10311](https://github.com/vuejs/core/issues/10311)) ([e509639](https://github.com/vuejs/core/commit/e50963903d93a7f24003b6e2c03647fdf7454b1e))
+
+
+### Features
+
+> Note: this warning is categorized as a feature but released in a patch because it does not affect public APIs.
+
+* **dx:** warn users when computed is self-triggering ([#10299](https://github.com/vuejs/core/issues/10299)) ([f7ba97f](https://github.com/vuejs/core/commit/f7ba97f9754a9882c1f6b1c07ca1a4040479dd13))
+
+
+### Performance Improvements
+
+* **runtime:** improve `getType()` GC and speed ([#10327](https://github.com/vuejs/core/issues/10327)) ([603a1e1](https://github.com/vuejs/core/commit/603a1e1f5ad587c077f0d974c1bbe856be22ebe9))
+
+
+
 ## [3.4.18](https://github.com/vuejs/core/compare/v3.4.17...v3.4.18) (2024-02-09)
 
 

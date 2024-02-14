@@ -70,13 +70,11 @@ export function callWithErrorHandling(
   type: ErrorTypes,
   args?: unknown[],
 ) {
-  let res
   try {
-    res = args ? fn(...args) : fn()
+    return args ? fn(...args) : fn()
   } catch (err) {
     handleError(err, instance, type)
   }
-  return res
 }
 
 export function callWithAsyncErrorHandling(
