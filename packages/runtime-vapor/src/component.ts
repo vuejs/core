@@ -21,17 +21,15 @@ import { VaporLifecycleHooks } from './enums'
 
 export type Component = FunctionalComponent | ObjectComponent
 
-export type SetupFn = (props: any, ctx: any) => Block | Data
-export type FunctionalComponent = SetupFn & {
-  props: ComponentPropsOptions
-  emits: EmitsOptions
-  render(ctx: any): Block
-}
+export type SetupFn = (props: any, ctx: any) => Block | Data | void
+export type FunctionalComponent = SetupFn & Omit<ObjectComponent, 'setup'>
+
 export interface ObjectComponent {
-  props: ComponentPropsOptions
-  emits: EmitsOptions
+  props?: ComponentPropsOptions
+  emits?: EmitsOptions
   setup?: SetupFn
-  render(ctx: any): Block
+  render?(ctx: any): Block
+  vapor?: boolean
 }
 
 type LifecycleHook<TFn = Function> = TFn[] | null
