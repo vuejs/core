@@ -7,6 +7,8 @@ interface VShowElement extends HTMLElement {
   [vShowOriginalDisplay]: string
 }
 
+const resolvedPromise = Promise.resolve()
+
 export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   beforeMount(el, { value }, { transition }) {
     el[vShowOriginalDisplay] =
@@ -25,21 +27,24 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   updated(el, { value, oldValue }, { transition }) {
     if (
       !value === !oldValue &&
-      (el.style.display === el[vShowOriginalDisplay] || !value)
+      (el.style.display === el[vShowOriginalDisplay] || (!value && transition))
     )
       return
     if (transition) {
       if (value) {
         transition.beforeEnter(el)
-        setDisplay(el, true)
+        postSetDisplay(el, true)
         transition.enter(el)
       } else {
         transition.leave(el, () => {
-          setDisplay(el, false)
+          postSetDisplay(el, false)
         })
       }
     } else {
-      setDisplay(el, value)
+      // #10038
+      // when multi vShow be applied to the same element
+      // and the sync setDisplay will impact other vShow
+      postSetDisplay(el, value)
     }
   },
   beforeUnmount(el, { value }) {
@@ -53,6 +58,12 @@ if (__DEV__) {
 
 function setDisplay(el: VShowElement, value: unknown): void {
   el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+}
+
+function postSetDisplay(el: VShowElement, value: unknown): void {
+  resolvedPromise.then(() => {
+    setDisplay(el, value)
+  })
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render
