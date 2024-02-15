@@ -22,7 +22,7 @@ import { warn } from './warning'
 import { type VNode, cloneVNode, createVNode } from './vnode'
 import type { RootHydrateFunction } from './hydration'
 import { devtoolsInitApp, devtoolsUnmountApp } from './devtools'
-import { NO, extend, isFunction, isObject } from '@vue/shared'
+import { NO, extend, hasChanged, isFunction, isObject } from '@vue/shared'
 import { version } from '.'
 import { installAppCompatProperties } from './compat/global'
 import type { NormalizedPropsOptions } from './componentProps'
@@ -375,12 +375,12 @@ export function createAppAPI<HostElement>(
 
       provide(key, newVal) {
         const oldValue = context.provides[key as string | symbol]
-        const isEqual = oldValue === newVal
+        const isValueChanged = hasChanged(oldValue, newVal)
 
         if (
           __DEV__ &&
           (key as string | symbol) in context.provides &&
-          !isEqual
+          isValueChanged
         ) {
           warn(
             `App already provides property with key "${String(key)}". ` +
@@ -388,7 +388,7 @@ export function createAppAPI<HostElement>(
           )
         }
 
-        if (!isEqual) {
+        if (isValueChanged) {
           context.provides[key as string | symbol] = newVal
         }
 

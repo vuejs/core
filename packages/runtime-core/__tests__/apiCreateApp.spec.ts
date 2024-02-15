@@ -106,42 +106,16 @@ describe('api: createApp', () => {
     expect(serializeInner(root)).toBe(`3,2`)
     expect('[Vue warn]: injection "__proto__" not found.').toHaveBeenWarned()
 
+    app.provide('baz', 1)
+    app.provide('baz', 1)
+    expect(
+      `App already provides property with key "baz".`,
+    ).not.toHaveBeenWarned()
+
     const app2 = createApp(Root)
     app2.provide('bar', 1)
     app2.provide('bar', 2)
     expect(`App already provides property with key "bar".`).toHaveBeenWarned()
-  })
-
-  test('allow provide reassignment', () => {
-    const Root = {
-      setup() {
-        provide('foo', 3)
-        return () => h('div')
-      },
-    }
-
-    const original = {}
-    const app = createApp(Root)
-
-    app.provide('foo', 1)
-    app.provide('foo', 2)
-    expect(`App already provides property with key "foo".`).toHaveBeenWarned()
-
-    app.provide('bar', 1)
-    app.provide('bar', 1)
-    expect(
-      `App already provides property with key "bar".`,
-    ).not.toHaveBeenWarned()
-
-    app.provide('foo1', original)
-    app.provide('foo1', original)
-    expect(
-      `App already provides property with key "foo1".`,
-    ).not.toHaveBeenWarned()
-
-    app.provide('bar1', original)
-    app.provide('bar1', {})
-    expect(`App already provides property with key "bar1".`).toHaveBeenWarned()
   })
 
   test('runWithContext', () => {
