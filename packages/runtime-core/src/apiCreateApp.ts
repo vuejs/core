@@ -377,18 +377,14 @@ export function createAppAPI<HostElement>(
         const oldValue = context.provides[key as string | symbol]
         const isValueChanged = hasChanged(oldValue, newVal)
 
-        if (
-          __DEV__ &&
-          (key as string | symbol) in context.provides &&
-          isValueChanged
-        ) {
-          warn(
-            `App already provides property with key "${String(key)}". ` +
-              `It will be overwritten with the new value.`,
-          )
-        }
-
         if (isValueChanged) {
+          if (__DEV__ && (key as string | symbol) in context.provides) {
+            warn(
+              `App already provides property with key "${String(key)}". ` +
+                `It will be overwritten with the new value.`,
+            )
+          }
+
           context.provides[key as string | symbol] = newVal
         }
 
