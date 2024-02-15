@@ -40,6 +40,9 @@ export type DirectiveHook<T = any, Prev = VNode<any, T> | null, V = any> = (
   binding: DirectiveBinding<V>,
   vnode: VNode<any, T>,
   prevVNode: Prev,
+  // register a callback witch will be called
+  // after all dirHooks have been executed
+  postFlushDirs?: (fn: () => void) => void,
 ) => void
 
 export type SSRDirectiveHook = (
@@ -129,6 +132,7 @@ export function invokeDirectiveHook(
 ) {
   const bindings = vnode.dirs!
   const oldBindings = prevVNode && prevVNode.dirs!
+  const postFlushDirsQueue: (() => void)[] = []
   for (let i = 0; i < bindings.length; i++) {
     const binding = bindings[i]
     if (oldBindings) {
@@ -147,8 +151,13 @@ export function invokeDirectiveHook(
         binding,
         vnode,
         prevVNode,
+        (fn: () => void) => {
+          postFlushDirsQueue.push(fn)
+        },
       ])
       resetTracking()
     }
   }
+  postFlushDirsQueue.forEach(postDir => postDir())
+  postFlushDirsQueue.length = 0
 }

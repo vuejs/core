@@ -7,8 +7,6 @@ interface VShowElement extends HTMLElement {
   [vShowOriginalDisplay]: string
 }
 
-const resolvedPromise = Promise.resolve()
-
 export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
   beforeMount(el, { value }, { transition }) {
     el[vShowOriginalDisplay] =
@@ -24,7 +22,7 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
       transition.enter(el)
     }
   },
-  updated(el, { value, oldValue }, { transition }) {
+  updated(el, { value, oldValue }, { transition }, _, postFlush) {
     if (
       !value === !oldValue &&
       (el.style.display === el[vShowOriginalDisplay] || (!value && transition))
@@ -32,9 +30,11 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
       return
     if (transition) {
       if (value) {
-        transition.beforeEnter(el)
-        setDisplay(el, true)
-        transition.enter(el)
+        postFlush!(() => {
+          transition.beforeEnter(el)
+          setDisplay(el, true)
+          transition.enter(el)
+        })
       } else {
         transition.leave(el, () => {
           setDisplay(el, false)
@@ -44,7 +44,9 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
       // #10038
       // when multi vShow be applied to the same element
       // and the sync setDisplay will impact other vShow
-      postSetDisplay(el, value)
+      postFlush!(() => {
+        setDisplay(el, value)
+      })
     }
   },
   beforeUnmount(el, { value }) {
@@ -58,12 +60,6 @@ if (__DEV__) {
 
 function setDisplay(el: VShowElement, value: unknown): void {
   el.style.display = value ? el[vShowOriginalDisplay] : 'none'
-}
-
-function postSetDisplay(el: VShowElement, value: unknown): void {
-  resolvedPromise.then(() => {
-    setDisplay(el, value)
-  })
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render
