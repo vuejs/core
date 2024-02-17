@@ -123,6 +123,13 @@ describe('api: createApp', () => {
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
 
+    expect(
+      app.runWithContext(() => {
+        app.runWithContext(() => {})
+        return inject('foo')
+      }),
+    ).toBe(1)
+
     // ensure the context is restored
     inject('foo')
     expect('inject() can only be used inside setup').toHaveBeenWarned()

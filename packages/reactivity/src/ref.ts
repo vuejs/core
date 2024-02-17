@@ -49,11 +49,10 @@ export function trackRefValue(ref: RefBase<any>) {
     ref = toRaw(ref)
     trackEffect(
       activeEffect,
-      ref.dep ||
-        (ref.dep = createDep(
-          () => (ref.dep = undefined),
-          ref instanceof ComputedRefImpl ? ref : undefined,
-        )),
+      (ref.dep ??= createDep(
+        () => (ref.dep = undefined),
+        ref instanceof ComputedRefImpl ? ref : undefined,
+      )),
       __DEV__
         ? {
             target: ref,

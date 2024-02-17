@@ -5,10 +5,13 @@ import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
 type Style = string | Record<string, string | string[]> | null
 
+const displayRE = /(^|;)\s*display\s*:/
+
 export function patchStyle(el: Element, prev: Style, next: Style) {
   const style = (el as HTMLElement).style
-  const currentDisplay = style.display
   const isCssString = isString(next)
+  const currentDisplay = style.display
+  let hasControlledDisplay = false
   if (next && !isCssString) {
     if (prev && !isString(prev)) {
       for (const key in prev) {
@@ -18,6 +21,9 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
       }
     }
     for (const key in next) {
+      if (key === 'display') {
+        hasControlledDisplay = true
+      }
       setStyle(style, key, next[key])
     }
   } else {
@@ -29,6 +35,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
           ;(next as string) += ';' + cssVarText
         }
         style.cssText = next as string
+        hasControlledDisplay = displayRE.test(next)
       }
     } else if (prev) {
       el.removeAttribute('style')
@@ -38,6 +45,7 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   // so we always keep the current `display` value regardless of the `style`
   // value, thus handing over control to `v-show`.
   if (vShowOldKey in el) {
+    el[vShowOldKey] = hasControlledDisplay ? style.display : ''
     style.display = currentDisplay
   }
 }
