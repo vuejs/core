@@ -21,8 +21,8 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
-  isObject,
   isOn,
+  isRenderableAttrValue,
   isReservedProp,
   isString,
   normalizeClass,
@@ -758,19 +758,21 @@ function propHasMismatch(
     if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
+    } else if (clientValue == null) {
+      actual = el.hasAttribute(key)
+      expected = false
     } else {
-      // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
       if (el.hasAttribute(key)) {
         actual = el.getAttribute(key)
-      } else if (key in el) {
-        const serverValue = el[key as keyof typeof el]
-        if (!isObject(serverValue)) {
-          actual = serverValue == null ? '' : String(serverValue)
-        }
+      } else if (key === 'value' && el.tagName === 'TEXTAREA') {
+        // #10000 textarea.value can't be retrieved by `hasAttribute`
+        actual = (el as HTMLTextAreaElement).value
+      } else {
+        actual = false
       }
-      if (!isObject(clientValue)) {
-        expected = clientValue == null ? '' : String(clientValue)
-      }
+      expected = isRenderableAttrValue(clientValue)
+        ? String(clientValue)
+        : false
     }
     if (actual !== expected) {
       mismatchType = `attribute`

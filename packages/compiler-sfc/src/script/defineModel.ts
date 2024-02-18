@@ -15,6 +15,7 @@ export interface ModelDecl {
   type: TSType | undefined
   options: string | undefined
   identifier: string | undefined
+  runtimeOptionNodes: Node[]
 }
 
 export function processDefineModel(
@@ -48,6 +49,7 @@ export function processDefineModel(
 
   let optionsString = options && ctx.getString(options)
   let optionsRemoved = !options
+  const runtimeOptionNodes: Node[] = []
 
   if (
     options &&
@@ -75,6 +77,8 @@ export function processDefineModel(
         // remove prop options from runtime options
         removed++
         ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
+        // record prop options for invalid scope var reference check
+        runtimeOptionNodes.push(p)
       }
     }
     if (removed === options.properties.length) {
@@ -89,6 +93,7 @@ export function processDefineModel(
   ctx.modelDecls[modelName] = {
     type,
     options: optionsString,
+    runtimeOptionNodes,
     identifier:
       declId && declId.type === 'Identifier' ? declId.name : undefined,
   }

@@ -1512,8 +1512,30 @@ describe('SSR hydration', () => {
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
 
+    test('client value is null or undefined', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { draggable: undefined }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<input />`, () => h('input', { type: null }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
     test('should not warn against object values', () => {
       mountWithHydration(`<input />`, () => h('input', { from: {} }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on falsy bindings of non-property keys', () => {
+      mountWithHydration(`<button />`, () => h('button', { href: undefined }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on non-renderable option values', () => {
+      mountWithHydration(`<select><option>hello</option></select>`, () =>
+        h('select', [h('option', { value: ['foo'] }, 'hello')]),
+      )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
     })
   })
