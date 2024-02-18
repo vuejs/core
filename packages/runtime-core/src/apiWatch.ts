@@ -5,6 +5,7 @@ import {
   ReactiveEffect,
   ReactiveFlags,
   type Ref,
+  getCurrentScope,
   isReactive,
   isRef,
   isShallow,
@@ -29,7 +30,6 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import {
   ErrorCodes,
@@ -394,10 +394,11 @@ function doWatch(
 
   const effect = new ReactiveEffect(getter, NOOP, scheduler)
 
+  const scope = getCurrentScope()
   const unwatch = () => {
     effect.stop()
-    if (instance && instance.scope) {
-      remove(instance.scope.effects!, effect)
+    if (scope) {
+      remove(scope.effects, effect)
     }
   }
 
@@ -446,14 +447,9 @@ export function instanceWatch(
     cb = value.handler as Function
     options = value
   }
-  const cur = currentInstance
-  setCurrentInstance(this)
+  const reset = setCurrentInstance(this)
   const res = doWatch(getter, cb.bind(publicThis), options)
-  if (cur) {
-    setCurrentInstance(cur)
-  } else {
-    unsetCurrentInstance()
-  }
+  reset()
   return res
 }
 

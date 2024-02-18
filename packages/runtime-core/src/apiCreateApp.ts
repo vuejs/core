@@ -387,11 +387,12 @@ export function createAppAPI<HostElement>(
       },
 
       runWithContext(fn) {
+        const lastApp = currentApp
         currentApp = app
         try {
           return fn()
         } finally {
-          currentApp = null
+          currentApp = lastApp
         }
       },
     })
