@@ -3,6 +3,7 @@
 export const version = __VERSION__
 export {
   // core
+  computed,
   reactive,
   ref,
   readonly,
@@ -35,7 +36,6 @@ export {
   getCurrentScope,
   onScopeDispose,
 } from '@vue/reactivity'
-export { computed } from './apiComputed'
 export {
   watch,
   watchEffect,

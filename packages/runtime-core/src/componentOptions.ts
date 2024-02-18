@@ -18,8 +18,7 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, isRef } from '@vue/reactivity'
-import { computed } from './apiComputed'
+import { computed, type Ref, isRef } from '@vue/reactivity'
 import {
   type WatchCallback,
   type WatchOptions,
