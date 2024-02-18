@@ -29,7 +29,7 @@ export const Custom = defineComponent({
   emits: {
     click(payload: number) {
       return typeof payload === 'number'
-    }
+    },
   },
 
   data: () => ({ counter: 0 }),

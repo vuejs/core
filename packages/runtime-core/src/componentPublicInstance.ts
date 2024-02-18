@@ -216,7 +216,8 @@ export type ComponentPublicInstance<
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<Override<PublicProps, Prettify<P>>, keyof Defaults>
+    ? Partial<Defaults> &
+        Omit<Override<PublicProps, Prettify<P>>, keyof Defaults>
     : Override<PublicProps, Prettify<P>>
   $attrs: Data
   $refs: Data
