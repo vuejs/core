@@ -753,9 +753,15 @@ function propHasMismatch(
       }
     }
 
-    const cssVars = instance?.getCssVars?.()
-    for (const key in cssVars) {
-      expectedMap.set(`--${key}`, String(cssVars[key]))
+    const root = instance?.subTree
+    if (
+      vnode === root ||
+      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
+    ) {
+      const cssVars = instance?.getCssVars?.()
+      for (const key in cssVars) {
+        expectedMap.set(`--${key}`, String(cssVars[key]))
+      }
     }
 
     if (!isMapEqual(actualMap, expectedMap)) {

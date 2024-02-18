@@ -14,6 +14,7 @@ import {
   toRaw,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
+import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -467,6 +468,7 @@ describe('reactivity/computed', () => {
     expect(c3.effect._dirtyLevel).toBe(
       DirtyLevels.MaybeDirty_ComputedSideEffect,
     )
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -481,6 +483,7 @@ describe('reactivity/computed', () => {
     expect(c2.value).toBe('0foo')
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.value).toBe('1foo')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should trigger effect even computed already dirty', () => {
@@ -503,6 +506,7 @@ describe('reactivity/computed', () => {
     expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   // #10185
@@ -546,6 +550,7 @@ describe('reactivity/computed', () => {
     expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
 
     expect(c3.value).toBe('yes')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
@@ -567,6 +572,7 @@ describe('reactivity/computed', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(`2`)
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should not trigger effect scheduler by recurse computed effect', async () => {
@@ -589,5 +595,6 @@ describe('reactivity/computed', () => {
     v.value += ' World'
     await nextTick()
     expect(serializeInner(root)).toBe('Hello World World World World')
+    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 })

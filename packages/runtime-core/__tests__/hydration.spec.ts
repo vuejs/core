@@ -1554,5 +1554,22 @@ describe('SSR hydration', () => {
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
+
+    // #10317 - test case from #10325
+    test('css vars should only be added to expected on component root dom', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () =>
+            h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
   })
 })
