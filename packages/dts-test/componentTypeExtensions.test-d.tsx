@@ -22,8 +22,8 @@ export const Custom = defineComponent({
     bar: String,
     baz: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
 
   emits: {
@@ -50,8 +50,8 @@ export const Custom = defineComponent({
       this.state = 'not valid'
       // @ts-expect-error
       this.$.appContext.config.globalProperties.state = 'not valid'
-    }
-  }
+    },
+  },
 })
 
 const Empty = defineComponent({})
