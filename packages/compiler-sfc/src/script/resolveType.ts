@@ -860,6 +860,7 @@ function resolveFS(ctx: TypeResolveContext): FS | undefined {
       }
       return fs.readFile(file)
     },
+    realpath: fs.realpath,
   })
 }
 
@@ -1048,7 +1049,7 @@ function resolveWithTS(
     if (filename.endsWith('.vue.ts')) {
       filename = filename.replace(/\.ts$/, '')
     }
-    return filename
+    return fs.realpath ? fs.realpath(filename) : filename
   }
 }
 
