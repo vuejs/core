@@ -30,11 +30,6 @@ export class ReactiveEffect<T = any> {
   deps: Dep[] = []
 
   /**
-   * Can be attached after creation
-   * @internal
-   */
-  computed?: ComputedRefImpl<T>
-  /**
    * @internal
    */
   allowRecurse?: boolean

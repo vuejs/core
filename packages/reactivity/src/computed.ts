@@ -40,13 +40,10 @@ export class ComputedRefImpl<T> {
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean = false
 
-  public _cacheable: boolean
-
   constructor(
     getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
-    isSSR: boolean,
   ) {
     this.effect = new ReactiveEffect(
       () => getter(this._value),
@@ -58,8 +55,6 @@ export class ComputedRefImpl<T> {
             : DirtyLevels.MaybeDirty,
         ),
     )
-    this.effect.computed = this
-    this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
   }
 
@@ -67,7 +62,7 @@ export class ComputedRefImpl<T> {
     // the computed ref may get wrapped by other proxies e.g. readonly() #3376
     const self = toRaw(this)
     if (
-      (!self._cacheable || self.effect.dirty) &&
+      self.effect.dirty &&
       hasChanged(self._value, (self._value = self.effect.run()!))
     ) {
       triggerRefValue(self, DirtyLevels.Dirty)
@@ -139,7 +134,6 @@ export function computed<T>(
 export function computed<T>(
   getterOrOptions: ComputedGetter<T> | WritableComputedOptions<T>,
   debugOptions?: DebuggerOptions,
-  isSSR = false,
 ) {
   let getter: ComputedGetter<T>
   let setter: ComputedSetter<T>
@@ -157,9 +151,9 @@ export function computed<T>(
     setter = getterOrOptions.set
   }
 
-  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter, isSSR)
+  const cRef = new ComputedRefImpl(getter, setter, onlyGetter || !setter)
 
-  if (__DEV__ && debugOptions && !isSSR) {
+  if (__DEV__ && debugOptions) {
     cRef.effect.onTrack = debugOptions.onTrack
     cRef.effect.onTrigger = debugOptions.onTrigger
   }
