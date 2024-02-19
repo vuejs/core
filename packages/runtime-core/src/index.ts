@@ -380,17 +380,17 @@ export const ssrUtils = (__SSR__ ? _ssrUtils : null) as typeof _ssrUtils
 
 // 2.x COMPAT ------------------------------------------------------------------
 
-import { DeprecationTypes as _DeprecationTypes } from './compat/compatConfig'
-export type { CompatVue } from './compat/global'
-export type { LegacyConfig } from './compat/globalConfig'
-
-import { warnDeprecation } from './compat/compatConfig'
-import { createCompatVue } from './compat/global'
 import {
+  DeprecationTypes as _DeprecationTypes,
   checkCompatEnabled,
   isCompatEnabled,
   softAssertCompatEnabled,
+  warnDeprecation,
 } from './compat/compatConfig'
+export type { CompatVue } from './compat/global'
+export type { LegacyConfig } from './compat/globalConfig'
+
+import { createCompatVue } from './compat/global'
 import { resolveFilter as _resolveFilter } from './helpers/resolveAssets'
 import { NOOP } from '@vue/shared'
 

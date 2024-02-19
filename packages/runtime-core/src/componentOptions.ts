@@ -18,7 +18,13 @@ import {
   isPromise,
   isString,
 } from '@vue/shared'
-import { type Ref, isRef } from '@vue/reactivity'
+import {
+  type ComputedGetter,
+  type Ref,
+  type WritableComputedOptions,
+  isRef,
+  reactive,
+} from '@vue/reactivity'
 import { computed } from './apiComputed'
 import {
   type WatchCallback,
@@ -43,11 +49,6 @@ import {
   onUnmounted,
   onUpdated,
 } from './apiLifecycle'
-import {
-  type ComputedGetter,
-  type WritableComputedOptions,
-  reactive,
-} from '@vue/reactivity'
 import type {
   ComponentObjectPropsOptions,
   ComponentPropsOptions,

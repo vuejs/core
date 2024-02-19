@@ -22,9 +22,7 @@ import { isKeepAlive } from './components/KeepAlive'
 import { type ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
-import { toRaw } from '@vue/reactivity'
-import { trigger } from '@vue/reactivity'
-import { TriggerOpTypes } from '@vue/reactivity'
+import { TriggerOpTypes, toRaw, trigger } from '@vue/reactivity'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>

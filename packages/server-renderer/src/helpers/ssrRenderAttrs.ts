@@ -1,19 +1,17 @@
 import {
   escapeHtml,
-  isRenderableAttrValue,
-  isSVGTag,
-  stringifyStyle,
-} from '@vue/shared'
-import {
   includeBooleanAttr,
   isBooleanAttr,
   isOn,
+  isRenderableAttrValue,
   isSSRSafeAttrName,
+  isSVGTag,
   isString,
   makeMap,
   normalizeClass,
   normalizeStyle,
   propsToAttrMap,
+  stringifyStyle,
 } from '@vue/shared'
 
 // leading comma for empty string ""

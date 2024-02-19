@@ -37,8 +37,11 @@ import { isEmitListener } from './componentEmits'
 import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
-import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
-import { DeprecationTypes } from './compat/compatConfig'
+import {
+  DeprecationTypes,
+  isCompatEnabled,
+  softAssertCompatEnabled,
+} from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
 
 export type ComponentPropsOptions<P = Data> =

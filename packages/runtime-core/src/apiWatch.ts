@@ -38,8 +38,11 @@ import {
 } from './errorHandling'
 import { queuePostRenderEffect } from './renderer'
 import { warn } from './warning'
-import { DeprecationTypes } from './compat/compatConfig'
-import { checkCompatEnabled, isCompatEnabled } from './compat/compatConfig'
+import {
+  DeprecationTypes,
+  checkCompatEnabled,
+  isCompatEnabled,
+} from './compat/compatConfig'
 import type { ObjectWatchOptionItem } from './componentOptions'
 import { useSSRContext } from './helpers/useSsrContext'
 

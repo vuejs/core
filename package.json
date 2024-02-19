@@ -13,7 +13,7 @@
     "size-esm-runtime": "node scripts/build.js vue -f esm-bundler-runtime",
     "size-esm": "node scripts/build.js runtime-dom runtime-core reactivity shared -f esm-bundler",
     "check": "tsc --incremental --noEmit",
-    "lint": "eslint --cache --ext .js,.ts,.tsx . --ignore-path .gitignore",
+    "lint": "eslint --cache --ext .js,.ts,.tsx,.vue . --ignore-path .gitignore",
     "format": "prettier --write --cache .",
     "format-check": "prettier --check --cache .",
     "test": "vitest",
@@ -113,6 +113,7 @@
     "tsx": "^4.7.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.12",
-    "vitest": "^1.2.2"
+    "vitest": "^1.2.2",
+    "vue-eslint-parser": "^9.4.0"
   }
 }

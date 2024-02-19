@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore, SFCOptions } from '@vue/repl'
+import { Repl, ReplStore, type SFCOptions } from '@vue/repl'
 import type Monaco from '@vue/repl/monaco-editor'
 import type CodeMirror from '@vue/repl/codemirror-editor'
-import { ref, watchEffect, onMounted } from 'vue'
-import { shallowRef } from 'vue'
+import { onMounted, ref, shallowRef, watchEffect } from 'vue'
 
 const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
 

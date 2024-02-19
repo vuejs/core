@@ -12,8 +12,9 @@ const banConstEnum = {
  * @type {import('eslint-define-config').ESLintConfig}
  */
 module.exports = {
-  parser: '@typescript-eslint/parser',
+  parser: 'vue-eslint-parser',
   parserOptions: {
+    parser: '@typescript-eslint/parser',
     sourceType: 'module',
   },
   plugins: ['jest', 'import', '@typescript-eslint'],
@@ -36,6 +37,7 @@ module.exports = {
     ],
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
+    'import/no-duplicates': 'error',
     'import/no-nodejs-modules': [
       'error',
       { allow: builtinModules.map(mod => `node:${mod}`) },
