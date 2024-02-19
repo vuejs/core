@@ -57,8 +57,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2(vitest@1.2.2)
       '@vue/consolidate':
-        specifier: 0.17.3
-        version: 0.17.3
+        specifier: 1.0.0
+        version: 1.0.0
       conventional-changelog-cli:
         specifier: ^4.1.0
         version: 4.1.0
@@ -1767,11 +1767,6 @@ packages:
       estree-walker: 3.0.3
       loupe: 2.3.7
       pretty-format: 29.7.0
-    dev: true
-
-  /@vue/consolidate@0.17.3:
-    resolution: {integrity: sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==}
-    engines: {node: '>= 0.12.0'}
     dev: true
 
   /@vue/consolidate@1.0.0:
