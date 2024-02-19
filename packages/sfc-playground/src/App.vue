@@ -70,6 +70,7 @@ const sfcOptions: SFCOptions = {
   template: {
     isProd: useProdMode.value,
     compilerOptions: {
+      comments: !useProdMode.value,
       isCustomElement: (tag: string) => tag === 'mjx-container',
     },
   },
@@ -91,6 +92,8 @@ function toggleProdMode() {
     sfcOptions.template!.isProd =
     sfcOptions.style!.isProd =
       isProd
+  sfcOptions.template.compilerOptions.comments = !isProd
+
   store.toggleProduction()
   store.setFiles(store.getFiles())
 }
