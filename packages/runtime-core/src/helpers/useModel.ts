@@ -1,5 +1,12 @@
 import { type Ref, customRef, ref } from '@vue/reactivity'
-import { EMPTY_OBJ, camelize, hasChanged, hyphenate } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  camelize,
+  hasChanged,
+  hyphenate,
+  isString,
+  looseToNumber,
+} from '@vue/shared'
 import type { DefineModelOptions, ModelRef } from '../apiSetupHelpers'
 import { getCurrentInstance } from '../component'
 import { warn } from '../warning'
@@ -30,6 +37,9 @@ export function useModel(
   const camelizedName = camelize(name)
   const hyphenatedName = hyphenate(name)
 
+  const modifierKey =
+    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
+
   const res = customRef((track, trigger) => {
     let localValue: any
     watchSyncEffect(() => {
@@ -46,6 +56,7 @@ export function useModel(
       },
       set(value) {
         const rawProps = i.vnode!.props
+        let newValue = options.set ? options.set(value) : value
         if (
           !(
             rawProps &&
@@ -61,14 +72,33 @@ export function useModel(
         ) {
           localValue = value
           trigger()
+        } else {
+          if (rawProps) {
+            const { trim, number } = rawProps[modifierKey] ?? EMPTY_OBJ
+            let modifierValue = newValue
+            if (trim) {
+              modifierValue = isString(newValue) ? newValue.trim() : newValue
+            }
+            if (number) {
+              modifierValue = looseToNumber(newValue)
+            }
+            const rawValue =
+              rawProps[name] ??
+              rawProps[camelizedName] ??
+              rawProps[hyphenatedName]
+            if (
+              hasChanged(value, localValue) &&
+              !hasChanged(modifierValue, rawValue)
+            ) {
+              localValue = modifierValue
+              trigger()
+            }
+          }
         }
-        i.emit(`update:${name}`, options.set ? options.set(value) : value)
+        i.emit(`update:${name}`, newValue)
       },
     }
   })
-
-  const modifierKey =
-    name === 'modelValue' ? 'modelModifiers' : `${name}Modifiers`
 
   // @ts-expect-error
   res[Symbol.iterator] = () => {
