@@ -75,12 +75,11 @@ export function useModel(
         } else {
           if (rawProps) {
             const { trim, number } = rawProps[modifierKey] ?? EMPTY_OBJ
-            let modifierValue = newValue
             if (trim) {
-              modifierValue = isString(newValue) ? newValue.trim() : newValue
+              newValue = isString(newValue) ? newValue.trim() : newValue
             }
             if (number) {
-              modifierValue = looseToNumber(newValue)
+              newValue = looseToNumber(newValue)
             }
             const rawValue =
               rawProps[name] ??
@@ -88,9 +87,9 @@ export function useModel(
               rawProps[hyphenatedName]
             if (
               hasChanged(value, localValue) &&
-              !hasChanged(modifierValue, rawValue)
+              !hasChanged(newValue, rawValue)
             ) {
-              localValue = modifierValue
+              localValue = newValue
               trigger()
             }
           }
