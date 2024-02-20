@@ -59,7 +59,8 @@ export default defineComponent({
           return _ctx.count * 2
         },
       },
-      n0,
+      // @ts-expect-error TODO
+      n0[0],
     )
 
     return n0

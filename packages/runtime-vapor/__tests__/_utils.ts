@@ -24,7 +24,7 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
   })
 
   const define = (comp: Component) => {
-    const component = defineComponent(comp)
+    const component = defineComponent(comp as any)
     let instance: ComponentInternalInstance
     const render = (
       props: Data = {},

@@ -402,7 +402,7 @@ describe('component props (vapor)', () => {
             const n0 = t0()
             return n0
           },
-        }).render({
+        }).render!({
           get foo() {
             return 1
           },
