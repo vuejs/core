@@ -11,7 +11,7 @@ const handleClick = () => {
 </script>
 
 <template>
-  <button @click="handleClick">{{ count }}</button>
+  <button @click="handleClick">click me to update props</button>
 
   <!-- prop id's value should update reactively  -->
   <button :id="'before'" :[key]="'dynamic key after' + count">
@@ -34,4 +34,7 @@ const handleClick = () => {
   <!-- prop id's value should update only once since the prop id in object props was override -->
   <button v-bind="obj" :id="'after'">{{ count }}</button>
   <button v-bind="obj" :[key]="'dynamic key after'">{{ count }}</button>
+
+  <!-- old props will be reset after dynamic key changed -->
+  <button :[`key${count}`]="'dynamic key'">{{ count }}</button>
 </template>

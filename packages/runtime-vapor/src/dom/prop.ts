@@ -9,20 +9,28 @@ import {
   normalizeStyle,
   toDisplayString,
 } from '@vue/shared'
-import { currentInstance } from '../component'
+import { type ElementMetadata, currentInstance } from '../component'
 import { warn } from '../warning'
 import { setStyle } from './style'
 
-export function recordPropMetadata(el: Node, key: string, value: any): any {
+function getMetadata(el: Node): ElementMetadata {
+  const EMPTY_METADATA = { props: {} }
+
   if (!currentInstance) {
     // TODO implement error handling
     if (__DEV__) throw new Error('cannot be used out of component')
-    return
+    return EMPTY_METADATA
   }
+
   let metadata = currentInstance.metadata.get(el)
   if (!metadata) {
-    currentInstance.metadata.set(el, (metadata = { props: {} }))
+    currentInstance.metadata.set(el, (metadata = EMPTY_METADATA))
   }
+  return metadata
+}
+
+export function recordPropMetadata(el: Node, key: string, value: any): any {
+  const metadata = getMetadata(el)
   const prev = metadata.props[key]
   metadata.props[key] = value
   return prev
@@ -140,9 +148,21 @@ export function setDynamicProp(el: Element, key: string, value: any) {
 }
 
 export function setDynamicProps(el: Element, ...args: any) {
+  const oldProps = getMetadata(el).props
   const props = args.length > 1 ? mergeProps(...args) : args[0]
 
-  // TODO remove all of old props before set new props since there is containing dynamic key
+  for (const key in oldProps) {
+    // TODO should these keys be allowed as dynamic keys? The current logic of the runtime-core will throw an error
+    if (key === 'textContent' || key === 'innerHTML') {
+      continue
+    }
+
+    const hasNewValue = props[key] || props['.' + key] || props['^' + key]
+    if (oldProps[key] && !hasNewValue) {
+      setDynamicProp(el, key, null)
+    }
+  }
+
   for (const key in props) {
     setDynamicProp(el, key, props[key])
   }
