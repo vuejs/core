@@ -1,4 +1,39 @@
 import type { ComputedRefImpl } from './computed'
+import type { TrackOpTypes, TriggerOpTypes } from './constants'
+import type { EffectScope } from './effectScope'
+
+export type EffectScheduler = (run: () => any) => any
+
+export type DebuggerEvent = {
+  effect: ReactiveEffect
+} & DebuggerEventExtraInfo
+
+export type DebuggerEventExtraInfo = {
+  target: object
+  type: TrackOpTypes | TriggerOpTypes
+  key: any
+  newValue?: any
+  oldValue?: any
+  oldTarget?: Map<any, any> | Set<any>
+}
+
+export interface DebuggerOptions {
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+
+export interface ReactiveEffectOptions extends DebuggerOptions {
+  lazy?: boolean
+  scheduler?: EffectScheduler
+  scope?: EffectScope
+  allowRecurse?: boolean
+  onStop?: () => void
+}
+
+export interface ReactiveEffectRunner<T = any> {
+  (): T
+  effect: ReactiveEffect
+}
 
 export let activeSub: Subscriber | undefined
 
@@ -159,17 +194,27 @@ export class Dep {
   }
 }
 
-export type EffectScheduler = (run: () => any) => any
-
 export class ReactiveEffect implements Subscriber {
+  /**
+   * @internal
+   */
   deps?: Link = undefined
+  /**
+   * @internal
+   */
   flags: Flags = Flags.ACTIVE | Flags.TRACKING
+  /**
+   * @internal
+   */
+  nextEffect?: ReactiveEffect = undefined
 
   scheduler?: EffectScheduler = undefined
-  nextEffect?: ReactiveEffect = undefined
 
   constructor(private _fn: () => any) {}
 
+  /**
+   * @internal
+   */
   notify() {
     if (!(this.flags & Flags.NOTIFIED)) {
       this.flags |= Flags.NOTIFIED
