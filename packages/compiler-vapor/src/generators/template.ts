@@ -1,19 +1,15 @@
 import type { CodegenContext } from '../generate'
-import {
-  DynamicFlag,
-  type IRDynamicInfo,
-  type TemplateFactoryIRNode,
-} from '../ir'
+import { DynamicFlag, type IRDynamicInfo } from '../ir'
 import { NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
-  templates: TemplateFactoryIRNode[],
+  templates: string[],
   { vaporHelper }: CodegenContext,
 ) {
   return templates
     .map(
       (template, i) =>
-        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(template.template)})\n`,
+        `const t${i} = ${vaporHelper('template')}(${JSON.stringify(template)})\n`,
     )
     .join('')
 }

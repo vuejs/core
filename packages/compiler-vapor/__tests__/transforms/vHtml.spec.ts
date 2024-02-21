@@ -63,7 +63,7 @@ describe('v-html', () => {
     expect(helpers.size).toBe(0)
 
     // children should have been removed
-    expect(ir.template).toMatchObject([{ template: '<div></div>' }])
+    expect(ir.template).toEqual(['<div></div>'])
 
     expect(ir.operation).toEqual([])
     expect(ir.effect).toMatchObject([

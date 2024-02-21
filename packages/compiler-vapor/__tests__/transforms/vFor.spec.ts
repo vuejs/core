@@ -27,13 +27,7 @@ describe('compiler: v-for', () => {
     expect(code).matchSnapshot()
     expect(vaporHelpers).contains('createFor')
     expect(helpers.size).toBe(0)
-    expect(ir.template).lengthOf(1)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>'])
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.FOR,

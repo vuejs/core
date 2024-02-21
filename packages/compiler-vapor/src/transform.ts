@@ -178,16 +178,13 @@ function createRootContext(
       }
 
       const existing = root.template.findIndex(
-        t => t.template === this.template,
+        template => template === this.template,
       )
       if (existing !== -1) {
         return (this.block.templateIndex = existing)
       }
 
-      root.template.push({
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-        template: this.template,
-      })
+      root.template.push(this.template)
       return (this.block.templateIndex = root.template.length - 1)
     },
     registerOperation(...node) {

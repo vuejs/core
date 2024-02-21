@@ -31,13 +31,7 @@ describe('compiler: v-if', () => {
     expect(vaporHelpers).contains('createIf')
     expect(helpers.size).toBe(0)
 
-    expect(ir.template).lengthOf(1)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>'])
     expect(ir.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
@@ -72,13 +66,7 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
 
-    expect(ir.template).lengthOf(1)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>hello<p></p>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>hello<p></p>'])
 
     expect(ir.effect).toEqual([])
     expect((ir.operation[0] as IfIRNode).positive.effect).toMatchObject([
@@ -109,13 +97,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok">hello</div><div v-if="ok">hello</div>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(1)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div>hello</div>',
-        type: 2,
-      },
-    ])
+    expect(ir.template).toEqual(['<div>hello</div>'])
     expect(ir.returns).toEqual([1, 3])
   })
 
@@ -127,17 +109,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else/>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(2)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: '<p></p>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>', '<p></p>'])
 
     expect(vaporHelpers).contains('createIf')
     expect(ir.effect).lengthOf(0)
@@ -169,17 +141,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else-if="orNot"/>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(2)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: '<p></p>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>', '<p></p>'])
 
     expect(ir.operation).toMatchObject([
       {
@@ -216,21 +178,7 @@ describe('compiler: v-if', () => {
       `<div v-if="ok"/><p v-else-if="orNot"/><template v-else>fine</template>`,
     )
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(3)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: '<p></p>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: 'fine',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-    ])
+    expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
 
     expect(ir.returns).toEqual([1])
     expect(ir.operation).toMatchObject([
@@ -266,24 +214,12 @@ describe('compiler: v-if', () => {
       <input v-text="text" />
     `)
     expect(code).matchSnapshot()
-    expect(ir.template).lengthOf(4)
-    expect(ir.template).toMatchObject([
-      {
-        template: '<div></div>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: '<!--foo--><p></p>',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        template: '<!--bar-->fine',
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-      },
-      {
-        type: IRNodeTypes.TEMPLATE_FACTORY,
-        template: '<input>',
-      },
+    expect(ir.template).toEqual([
+      '<div></div>',
+      '<!--foo--><p></p>',
+      '<!--bar-->fine',
+
+      '<input>',
     ])
   })
 

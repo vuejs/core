@@ -22,10 +22,7 @@ describe('compiler v-bind', () => {
       id: 1,
       flags: DynamicFlag.REFERENCED,
     })
-    expect(ir.template[0]).toMatchObject({
-      type: IRNodeTypes.TEMPLATE_FACTORY,
-      template: '<div></div>',
-    })
+    expect(ir.template).toEqual(['<div></div>'])
     expect(ir.effect).lengthOf(1)
     expect(ir.effect[0].expressions).lengthOf(1)
     expect(ir.effect[0].operations).lengthOf(1)
@@ -243,10 +240,7 @@ describe('compiler v-bind', () => {
         end: { line: 1, column: 19 },
       },
     })
-    expect(ir.template[0]).toMatchObject({
-      type: IRNodeTypes.TEMPLATE_FACTORY,
-      template: '<div arg></div>',
-    })
+    expect(ir.template).toEqual(['<div arg></div>'])
 
     expect(code).matchSnapshot()
     expect(code).contains(JSON.stringify('<div arg></div>'))
