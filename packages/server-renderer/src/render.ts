@@ -146,9 +146,10 @@ function renderComponentSubTree(
     // perf: enable caching of computed getters during render
     // since there cannot be state mutations during render.
     for (const e of instance.scope.effects) {
+      // @ts-expect-error TODO
       if (e.computed) {
-        e.computed._dirty = true
-        e.computed._cacheable = true
+        // e.computed._dirty = true
+        // e.computed._cacheable = true
       }
     }
 

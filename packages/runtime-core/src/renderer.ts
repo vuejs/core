@@ -1289,7 +1289,6 @@ function baseCreateRenderer(
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect.
-        instance.effect.dirty = true
         instance.update()
       }
     } else {
@@ -1576,17 +1575,14 @@ function baseCreateRenderer(
     // create reactive effect for rendering
     const effect = (instance.effect = new ReactiveEffect(
       componentUpdateFn,
-      NOOP,
-      () => queueJob(update),
+      // @ts-expect-error TODO
       instance.scope, // track it in component's effect scope
     ))
 
-    const update: SchedulerJob = (instance.update = () => {
-      if (effect.dirty) {
-        effect.run()
-      }
-    })
+    const update: SchedulerJob = (instance.update = effect.run.bind(effect))
     update.id = instance.uid
+    effect.scheduler = () => queueJob(update)
+
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
     toggleRecurse(instance, true)

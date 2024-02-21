@@ -232,7 +232,6 @@ describe('reactivity/computed', () => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
-    // @ts-expect-error TODO
     const c = computed(() => (obj.foo, 'bar' in obj, Object.keys(obj)), {
       onTrack,
     })
@@ -269,7 +268,6 @@ describe('reactivity/computed', () => {
       events.push(e)
     })
     const obj = reactive<{ foo?: number }>({ foo: 1 })
-    // @ts-expect-error TODO
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed

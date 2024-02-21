@@ -48,11 +48,6 @@ export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
-  enableTracking,
-  pauseTracking,
-  resetTracking,
-  pauseScheduling,
-  resetScheduling,
   ReactiveEffect,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
@@ -60,7 +55,8 @@ export {
   type DebuggerOptions,
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
-} from './effect-old'
+} from './effect'
+export { enableTracking, pauseTracking, resetTracking } from './dep'
 export { trigger, track, ITERATE_KEY } from './reactiveEffect'
 export {
   effectScope,

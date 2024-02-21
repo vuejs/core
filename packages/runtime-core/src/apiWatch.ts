@@ -338,9 +338,9 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
-      return
-    }
+    // if (!effect.active || !effect.dirty) {
+    // return
+    // }
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()
@@ -392,7 +392,8 @@ function doWatch(
     scheduler = () => queueJob(job)
   }
 
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  const effect = new ReactiveEffect(getter)
+  effect.scheduler = scheduler
 
   const scope = getCurrentScope()
   const unwatch = () => {

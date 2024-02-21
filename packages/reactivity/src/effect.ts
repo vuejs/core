@@ -3,7 +3,7 @@ import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import type { Dep } from './dep'
 import type { EffectScope } from './effectScope'
 
-export type EffectScheduler = (run: () => any) => any
+export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
   effect: ReactiveEffect
@@ -95,7 +95,7 @@ export interface Link {
   prevActiveLink?: Link
 }
 
-export class ReactiveEffect implements Subscriber {
+export class ReactiveEffect<T = any> implements Subscriber {
   /**
    * @internal
    */
@@ -108,10 +108,25 @@ export class ReactiveEffect implements Subscriber {
    * @internal
    */
   nextEffect?: ReactiveEffect = undefined
+  /**
+   * @internal
+   */
+  fn: () => T
+  /**
+   * @internal TODO
+   */
+  allowRecurse?: boolean
 
   scheduler?: EffectScheduler = undefined
+  onStop?: () => void
+  // dev only
+  onTrack?: (event: DebuggerEvent) => void
+  // dev only
+  onTrigger?: (event: DebuggerEvent) => void
 
-  constructor(private _fn: () => any) {}
+  constructor(fn: () => T) {
+    this.fn = fn
+  }
 
   /**
    * @internal
@@ -140,7 +155,7 @@ export class ReactiveEffect implements Subscriber {
     activeSub = this
 
     try {
-      this._fn()
+      return this.fn()
     } finally {
       // TODO make this dev only
       if (activeSub !== this) {
@@ -191,7 +206,7 @@ export function endBatch() {
       if (e.flags & Flags.ACTIVE && isDirty(e)) {
         try {
           if (e.scheduler) {
-            e.scheduler(e.run.bind(e))
+            e.scheduler()
           } else {
             e.run()
           }
@@ -350,7 +365,10 @@ export interface ReactiveEffectRunner<T = any> {
   effect: ReactiveEffect
 }
 
-export function effect<T = any>(fn: () => T): ReactiveEffectRunner<T> {
+export function effect<T = any>(
+  fn: () => T,
+  options?: ReactiveEffectOptions,
+): ReactiveEffectRunner<T> {
   const e = new ReactiveEffect(fn)
   try {
     e.run()
@@ -361,4 +379,13 @@ export function effect<T = any>(fn: () => T): ReactiveEffectRunner<T> {
   const runner = e.run.bind(e) as ReactiveEffectRunner
   runner.effect = e
   return runner
+}
+
+/**
+ * Stops the effect associated with the given runner.
+ *
+ * @param runner - Association with the effect to stop tracking.
+ */
+export function stop(runner: ReactiveEffectRunner) {
+  runner.effect.stop()
 }

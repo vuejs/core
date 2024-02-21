@@ -72,6 +72,7 @@ export class ReactiveEffect<T = any> {
     public scheduler?: EffectScheduler,
     scope?: EffectScope,
   ) {
+    // @ts-expect-error
     recordEffectScope(this, scope)
   }
 
@@ -205,6 +206,7 @@ export function effect<T = any>(
   })
   if (options) {
     extend(_effect, options)
+    // @ts-expect-error
     if (options.scope) recordEffectScope(_effect, options.scope)
   }
   if (!options || !options.lazy) {

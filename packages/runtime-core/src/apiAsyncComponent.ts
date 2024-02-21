@@ -187,6 +187,7 @@ export function defineAsyncComponent<
           if (instance.parent && isKeepAlive(instance.parent.vnode)) {
             // parent is keep-alive, force update so the loaded component's
             // name is taken into account
+            // @ts-expect-error TODO
             instance.parent.effect.dirty = true
             queueJob(instance.parent.update)
           }

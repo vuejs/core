@@ -1185,6 +1185,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
+    // @ts-expect-error TODO
     expect(instance!.scope.effects[0].active).toBe(false)
   })
 

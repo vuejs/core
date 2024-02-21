@@ -12,12 +12,12 @@ import {
 } from './reactive'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
-  pauseScheduling,
+  ITERATE_KEY,
   pauseTracking,
-  resetScheduling,
   resetTracking,
-} from './effect-old'
-import { ITERATE_KEY, track, trigger } from './reactiveEffect'
+  track,
+  trigger,
+} from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -70,9 +70,7 @@ function createArrayInstrumentations() {
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
-      pauseScheduling()
       const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
       resetTracking()
       return res
     }
