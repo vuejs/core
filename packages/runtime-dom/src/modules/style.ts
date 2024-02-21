@@ -13,9 +13,17 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   const currentDisplay = style.display
   let hasControlledDisplay = false
   if (next && !isCssString) {
-    if (prev && !isString(prev)) {
-      for (const key in prev) {
-        if (next[key] == null) {
+    if (prev) {
+      if (!isString(prev)) {
+        for (const key in prev) {
+          if (next[key] == null) {
+            setStyle(style, key, '')
+          }
+        }
+      } else {
+        const prevStyles = prev.split(';')
+        for (const prevStyle of prevStyles) {
+          const key = prevStyle.split(':')[0]?.trim()
           setStyle(style, key, '')
         }
       }
