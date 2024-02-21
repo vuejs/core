@@ -21,14 +21,14 @@ export function genBlockFunction(
   oper: BlockFunctionIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
-  returnValue?: () => CodeFragment[],
+  customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   return [
     '(',
     ...args,
     ') => {',
     INDENT_START,
-    ...genBlockFunctionContent(oper, context, returnValue),
+    ...genBlockFunctionContent(oper, context, customReturns),
     INDENT_END,
     NEWLINE,
     '}',
@@ -36,18 +36,24 @@ export function genBlockFunction(
 }
 
 export function genBlockFunctionContent(
-  ir: BlockFunctionIRNode | RootIRNode,
+  {
+    dynamic,
+    effect,
+    operation,
+    templateIndex,
+    returns,
+  }: BlockFunctionIRNode | RootIRNode,
   context: CodegenContext,
-  returnValue?: () => CodeFragment[],
+  customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
 
-  if (ir.templateIndex > -1) {
-    push(NEWLINE, `const n${ir.dynamic.id} = t${ir.templateIndex}()`)
-    push(...genChildren(ir.dynamic, context, ir.dynamic.id!))
+  if (templateIndex > -1) {
+    push(NEWLINE, `const n${dynamic.id} = t${templateIndex}()`)
+    push(...genChildren(dynamic, context, dynamic.id!))
   }
 
-  const directiveOps = ir.operation.filter(
+  const directiveOps = operation.filter(
     (oper): oper is WithDirectiveIRNode =>
       oper.type === IRNodeTypes.WITH_DIRECTIVE,
   )
@@ -55,22 +61,16 @@ export function genBlockFunctionContent(
     push(...genWithDirective(directives, context))
   }
 
-  push(...genOperations(ir.operation, context))
-  push(...(context.genEffect || genEffects)(ir.effect, context))
+  push(...genOperations(operation, context))
+  push(...(context.genEffect || genEffects)(effect, context))
 
-  if (ir.returns) {
-    push(
-      NEWLINE,
-      `return `,
-      ...genMulti(['[', ']', ', '], ...ir.returns.map(n => `n${n}`)),
-    )
-  } else {
-    push(
-      NEWLINE,
-      'return ',
-      ...(returnValue ? returnValue() : [`n${ir.dynamic.id}`]),
-    )
-  }
+  push(NEWLINE, `return `)
+
+  const returnsCode: CodeFragment[] =
+    returns.length > 1
+      ? genMulti(['[', ']', ', '], ...returns.map(n => `n${n}`))
+      : [`n${returns[0]}`]
+  push(...(customReturns ? customReturns(returnsCode) : returnsCode))
 
   return frag
 }

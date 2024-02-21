@@ -49,7 +49,7 @@ export interface BlockFunctionIRNode extends BaseIRNode {
   dynamic: IRDynamicInfo
   effect: IREffect[]
   operation: OperationNode[]
-  returns?: number[]
+  returns: number[]
 }
 
 export interface RootIRNode extends Omit<BlockFunctionIRNode, 'type'> {

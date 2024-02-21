@@ -31,12 +31,14 @@ export function genFor(
   if (rawValue) idMap[rawValue] = `_block.s[0]`
   if (rawKey) idMap[rawKey] = `_block.s[1]`
 
-  const blockRet = (): CodeFragment[] => [
-    `[n${render.dynamic.id!}, ${updateFn}]`,
+  const blockReturns = (returns: CodeFragment[]): CodeFragment[] => [
+    '[',
+    ...returns,
+    `, ${updateFn}]`,
   ]
 
   const blockFn = context.withId(
-    () => genBlockFunction(render, context, ['_block'], blockRet),
+    () => genBlockFunction(render, context, ['_block'], blockReturns),
     idMap,
   )
 

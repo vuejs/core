@@ -11,7 +11,7 @@ export function render(_ctx) {
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
-  return [n1]
+  return n1
 }"
 `;
 
@@ -69,7 +69,7 @@ export function render(_ctx) {
     _renderEffect(() => _setText(n3, _ctx.msg))
     return n2
   })
-  return [n1]
+  return n1
 }"
 `;
 
@@ -86,7 +86,7 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   })
-  return [n1]
+  return n1
 }"
 `;
 
@@ -107,7 +107,7 @@ export function render(_ctx) {
     const n4 = t2()
     return n4
   }))
-  return [n1]
+  return n1
 }"
 `;
 
@@ -124,6 +124,6 @@ export function render(_ctx) {
     const n3 = t1()
     return n3
   }))
-  return [n1]
+  return n1
 }"
 `;

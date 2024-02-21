@@ -59,6 +59,7 @@ export function processFor(
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
+    returns: [],
   }
   const exitBlock = context.enterBlock(render)
   context.reference()

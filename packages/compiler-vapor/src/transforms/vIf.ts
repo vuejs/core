@@ -152,6 +152,7 @@ export function createIfBranch(
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
+    returns: [],
   }
 
   const exitBlock = context.enterBlock(branch)

@@ -228,6 +228,7 @@ export function transform(
     } satisfies Partial<IRDynamicInfo>),
     effect: [],
     operation: [],
+    returns: [],
   }
 
   const context = createRootContext(ir, root, options)
@@ -327,6 +328,7 @@ function processDynamicChildren(
   }
 
   // mixed: insert with anchor
+  context.block.returns = [context.dynamic.id!]
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.INSERT) {
       prevDynamics.push(child)

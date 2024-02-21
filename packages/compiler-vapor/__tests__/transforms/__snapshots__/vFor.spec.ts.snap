@@ -16,7 +16,7 @@ export function render(_ctx) {
     _renderEffect(_updateEffect)
     return [n2, _updateEffect]
   }, (item) => (item.id))
-  return [n1]
+  return n1
 }"
 `;
 
@@ -36,7 +36,7 @@ export function render(_ctx) {
     _renderEffect(_updateEffect)
     return [n2, _updateEffect]
   })
-  return [n1]
+  return n1
 }"
 `;
 
@@ -49,6 +49,6 @@ export function render(_ctx) {
     const n2 = t0()
     return [n2, () => {}]
   })
-  return [n1]
+  return n1
 }"
 `;
