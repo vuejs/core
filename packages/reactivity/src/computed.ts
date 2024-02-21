@@ -9,6 +9,7 @@ import {
 import type { Ref } from './ref'
 import { warn } from './warning'
 import { Dep } from './dep'
+import { ReactiveFlags } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -36,12 +37,17 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   // track variaous states
   flags = Flags.DIRTY
 
+  public readonly __v_isRef = true
+  public readonly [ReactiveFlags.IS_READONLY]: boolean
+
   constructor(
     public getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T> | undefined,
     // @ts-expect-error TODO
     private isSSR: boolean,
-  ) {}
+  ) {
+    this[ReactiveFlags.IS_READONLY] = !_setter
+  }
 
   notify() {
     if (!(this.flags & Flags.NOTIFIED)) {
