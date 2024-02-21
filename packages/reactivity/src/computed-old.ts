@@ -2,7 +2,7 @@ import { type DebuggerOptions, ReactiveEffect } from './effect-old'
 import { type Ref, trackRefValue, triggerRefValue } from './ref-old'
 import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
-import type { Dep } from './dep'
+import type { Dep } from './dep-old'
 import { DirtyLevels, ReactiveFlags } from './constants'
 import { warn } from './warning'
 

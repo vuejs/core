@@ -11,7 +11,7 @@ import {
   shallowCollectionHandlers,
   shallowReadonlyCollectionHandlers,
 } from './collectionHandlers'
-import type { RawSymbol, Ref, UnwrapRefSimple } from './ref-old'
+import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
 
 export interface Target {

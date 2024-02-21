@@ -147,6 +147,7 @@ describe('deferred computed', () => {
     effect(() => c1.value)
     expect(c1Spy).toHaveBeenCalledTimes(1)
 
+    // @ts-expect-error TODO
     c1.effect.stop()
     // trigger
     src.value++

@@ -1,5 +1,6 @@
 import { bench, describe } from 'vitest'
-import { type ComputedRef, type Ref, computed, ref } from '../src/index'
+import { type ComputedRef, computed } from '../src/computed'
+import { type Ref, ref } from '../src/ref'
 
 describe('computed', () => {
   bench('create computed', () => {

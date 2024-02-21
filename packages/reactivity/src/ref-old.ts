@@ -22,7 +22,7 @@ import {
   toReactive,
 } from './reactive'
 import type { ShallowReactiveMarker } from './reactive'
-import { type Dep, createDep } from './dep'
+import { type Dep, createDep } from './dep-old'
 import { ComputedRefImpl } from './computed-old'
 import { getDepFromReactive } from './reactiveEffect'
 

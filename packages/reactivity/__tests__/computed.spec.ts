@@ -13,7 +13,6 @@ import {
   shallowRef,
   toRaw,
 } from '../src'
-import { DirtyLevels } from '../src/constants'
 import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed-old'
 
 describe('reactivity/computed', () => {
@@ -133,6 +132,7 @@ describe('reactivity/computed', () => {
     expect(dummy).toBe(undefined)
     value.foo = 1
     expect(dummy).toBe(1)
+    // @ts-expect-error TODO
     cValue.effect.stop()
     value.foo = 2
     expect(dummy).toBe(1)
@@ -221,6 +221,7 @@ describe('reactivity/computed', () => {
 
   it('should expose value when stopped', () => {
     const x = computed(() => 1)
+    // @ts-expect-error TODO
     x.effect.stop()
     expect(x.value).toBe(1)
   })
@@ -231,6 +232,7 @@ describe('reactivity/computed', () => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
+    // @ts-expect-error TODO
     const c = computed(() => (obj.foo, 'bar' in obj, Object.keys(obj)), {
       onTrack,
     })
@@ -238,18 +240,21 @@ describe('reactivity/computed', () => {
     expect(onTrack).toHaveBeenCalledTimes(3)
     expect(events).toEqual([
       {
+        // @ts-expect-error TODO
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
         key: 'foo',
       },
       {
+        // @ts-expect-error TODO
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
         key: 'bar',
       },
       {
+        // @ts-expect-error TODO
         effect: c.effect,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
@@ -264,6 +269,7 @@ describe('reactivity/computed', () => {
       events.push(e)
     })
     const obj = reactive<{ foo?: number }>({ foo: 1 })
+    // @ts-expect-error TODO
     const c = computed(() => obj.foo, { onTrigger })
 
     // computed won't trigger compute until accessed
@@ -273,6 +279,7 @@ describe('reactivity/computed', () => {
     expect(c.value).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
+      // @ts-expect-error TODO
       effect: c.effect,
       target: toRaw(obj),
       type: TriggerOpTypes.SET,
@@ -285,6 +292,7 @@ describe('reactivity/computed', () => {
     expect(c.value).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toEqual({
+      // @ts-expect-error TODO
       effect: c.effect,
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
@@ -404,9 +412,13 @@ describe('reactivity/computed', () => {
     a.value++
     e.value
 
+    // @ts-expect-error TODO
     expect(e.effect.deps.length).toBe(3)
+    // @ts-expect-error TODO
     expect(e.effect.deps.indexOf((b as any).dep)).toBe(0)
+    // @ts-expect-error TODO
     expect(e.effect.deps.indexOf((d as any).dep)).toBe(1)
+    // @ts-expect-error TODO
     expect(e.effect.deps.indexOf((c as any).dep)).toBe(2)
     expect(cSpy).toHaveBeenCalledTimes(2)
 
@@ -461,12 +473,11 @@ describe('reactivity/computed', () => {
     const c1 = computed(() => v.value)
     const c2 = computed(() => c1.value)
 
+    // @ts-expect-error TODO
     c1.effect.allowRecurse = true
+    // @ts-expect-error TODO
     c2.effect.allowRecurse = true
     c2.value
-
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.NotDirty)
   })
 
   it('should chained computeds dirtyLevel update with first computed effect', () => {
@@ -481,14 +492,6 @@ describe('reactivity/computed', () => {
     const c3 = computed(() => c2.value)
 
     c3.value
-
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
-    expect(c3.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
@@ -502,7 +505,6 @@ describe('reactivity/computed', () => {
     })
     const c2 = computed(() => v.value + c1.value)
     expect(c2.value).toBe('0foo')
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     expect(c2.value).toBe('1foo')
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
@@ -523,8 +525,6 @@ describe('reactivity/computed', () => {
       c2.value
     })
     expect(fnSpy).toBeCalledTimes(1)
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
@@ -553,22 +553,9 @@ describe('reactivity/computed', () => {
 
     c3.value
     v2.value = true
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
 
     c3.value
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
-    expect(c3.effect._dirtyLevel).toBe(
-      DirtyLevels.MaybeDirty_ComputedSideEffect,
-    )
-
     v1.value.v.value = 999
-    expect(c1.effect._dirtyLevel).toBe(DirtyLevels.Dirty)
-    expect(c2.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
-    expect(c3.effect._dirtyLevel).toBe(DirtyLevels.MaybeDirty)
 
     expect(c3.value).toBe('yes')
     expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()

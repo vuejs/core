@@ -1,15 +1,14 @@
 import { isFunction } from '@vue/shared'
 import {
   type DebuggerOptions,
-  Dep,
   Flags,
   type Link,
-  type ReactiveEffect,
   type Subscriber,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
+import { Dep } from './dep'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -18,9 +17,7 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   [ComputedRefSymbol]: true
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {
-  readonly effect: ReactiveEffect
-}
+export interface WritableComputedRef<T> extends Ref<T> {}
 
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
@@ -33,7 +30,7 @@ export interface WritableComputedOptions<T> {
 export class ComputedRefImpl<T = any> implements Subscriber {
   // A computed is a ref
   _value: any = undefined
-  dep: Dep
+  dep = new Dep(this)
   // A computed is also a subscriber that tracks other deps
   deps?: Link = undefined
   // track variaous states
@@ -44,9 +41,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
     private readonly _setter: ComputedSetter<T> | undefined,
     // @ts-expect-error TODO
     private isSSR: boolean,
-  ) {
-    this.dep = new Dep(this)
-  }
+  ) {}
 
   notify() {
     if (!(this.flags & Flags.NOTIFIED)) {

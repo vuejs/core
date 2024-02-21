@@ -5,7 +5,7 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dep } from './effect'
+import { Dep } from './dep'
 import {
   type ShallowReactiveMarker,
   isProxy,

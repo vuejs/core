@@ -5,7 +5,7 @@ import {
   type TrackOpTypes,
   type TriggerOpTypes,
 } from './constants'
-import type { Dep } from './dep'
+import type { Dep } from './dep-old'
 import { type EffectScope, recordEffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any

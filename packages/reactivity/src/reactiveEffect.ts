@@ -1,6 +1,6 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { DirtyLevels, type TrackOpTypes, TriggerOpTypes } from './constants'
-import { type Dep, createDep } from './dep'
+import { type Dep, createDep } from './dep-old'
 import {
   activeEffect,
   pauseScheduling,

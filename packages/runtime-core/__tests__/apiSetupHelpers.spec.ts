@@ -447,9 +447,11 @@ describe('SFC <script setup> helpers', () => {
       app.mount(root)
 
       await ready
+      // @ts-expect-error TODO
       expect(c!.effect.active).toBe(true)
 
       app.unmount()
+      // @ts-expect-error TODO
       expect(c!.effect.active).toBe(false)
     })
   })

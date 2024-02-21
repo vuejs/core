@@ -19,7 +19,7 @@ export {
   type ShallowUnwrapRef,
   type RefUnwrapBailTypes,
   type CustomRefFactory,
-} from './ref-old'
+} from './ref'
 export {
   reactive,
   readonly,
@@ -43,7 +43,7 @@ export {
   type WritableComputedOptions,
   type ComputedGetter,
   type ComputedSetter,
-} from './computed-old'
+} from './computed'
 export { deferredComputed } from './deferredComputed'
 export {
   effect,

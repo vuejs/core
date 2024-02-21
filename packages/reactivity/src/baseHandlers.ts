@@ -27,7 +27,7 @@ import {
   isSymbol,
   makeMap,
 } from '@vue/shared'
-import { isRef } from './ref-old'
+import { isRef } from './ref'
 import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
