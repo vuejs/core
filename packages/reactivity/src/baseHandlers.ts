@@ -69,6 +69,7 @@ function createArrayInstrumentations() {
   // which leads to infinite loops in some cases (#2137)
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      // TODO enable batching
       pauseTracking()
       const res = (toRaw(this) as any)[key].apply(this, args)
       resetTracking()

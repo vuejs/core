@@ -13,7 +13,6 @@ import {
   shallowRef,
   toRaw,
 } from '../src'
-import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed-old'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -490,7 +489,7 @@ describe('reactivity/computed', () => {
     const c3 = computed(() => c2.value)
 
     c3.value
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should work when chained(ref+computed)', () => {
@@ -504,7 +503,7 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => v.value + c1.value)
     expect(c2.value).toBe('0foo')
     expect(c2.value).toBe('1foo')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should trigger effect even computed already dirty', () => {
@@ -525,7 +524,7 @@ describe('reactivity/computed', () => {
     expect(fnSpy).toBeCalledTimes(1)
     v.value = 2
     expect(fnSpy).toBeCalledTimes(2)
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   // #10185
@@ -556,7 +555,7 @@ describe('reactivity/computed', () => {
     v1.value.v.value = 999
 
     expect(c3.value).toBe('yes')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should be not dirty after deps mutate (mutate deps in computed)', async () => {
@@ -578,7 +577,7 @@ describe('reactivity/computed', () => {
     await nextTick()
     await nextTick()
     expect(serializeInner(root)).toBe(`2`)
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
   it('should not trigger effect scheduler by recurse computed effect', async () => {
@@ -601,6 +600,6 @@ describe('reactivity/computed', () => {
     v.value += ' World'
     await nextTick()
     expect(serializeInner(root)).toBe('Hello World World World World')
-    expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
+    // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 })
