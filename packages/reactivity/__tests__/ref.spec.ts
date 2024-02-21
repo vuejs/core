@@ -9,7 +9,7 @@ import {
   toRefs,
 } from '../src/index'
 import { computed } from '@vue/runtime-dom'
-import { customRef, shallowRef, triggerRef, unref } from '../src/ref'
+import { customRef, shallowRef, triggerRef, unref } from '../src/ref-old'
 import {
   isReadonly,
   isShallow,

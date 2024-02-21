@@ -1,4 +1,4 @@
-import { computed } from './computed'
+import { computed } from './computed-old'
 
 /**
  * @deprecated use `computed` instead. See #5912

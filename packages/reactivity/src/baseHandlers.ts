@@ -16,7 +16,7 @@ import {
   pauseTracking,
   resetScheduling,
   resetTracking,
-} from './effect'
+} from './effect-old'
 import { ITERATE_KEY, track, trigger } from './reactiveEffect'
 import {
   hasChanged,
@@ -27,7 +27,7 @@ import {
   isSymbol,
   makeMap,
 } from '@vue/shared'
-import { isRef } from './ref'
+import { isRef } from './ref-old'
 import { warn } from './warning'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)

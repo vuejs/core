@@ -14,7 +14,7 @@ import {
   toRaw,
 } from '../src'
 import { DirtyLevels } from '../src/constants'
-import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed'
+import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed-old'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {

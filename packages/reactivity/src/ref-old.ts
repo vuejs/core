@@ -1,3 +1,11 @@
+import type { ComputedRef } from './computed-old'
+import {
+  activeEffect,
+  shouldTrack,
+  trackEffect,
+  triggerEffects,
+} from './effect-old'
+import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type IfAny,
   hasChanged,
@@ -5,9 +13,7 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dep } from './effect'
 import {
-  type ShallowReactiveMarker,
   isProxy,
   isReactive,
   isReadonly,
@@ -15,7 +21,10 @@ import {
   toRaw,
   toReactive,
 } from './reactive'
-import type { ComputedRef } from './computed'
+import type { ShallowReactiveMarker } from './reactive'
+import { type Dep, createDep } from './dep'
+import { ComputedRefImpl } from './computed-old'
+import { getDepFromReactive } from './reactiveEffect'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -28,6 +37,54 @@ export interface Ref<T = any> {
    * autocomplete, so we use a private Symbol instead.
    */
   [RefSymbol]: true
+}
+
+type RefBase<T> = {
+  dep?: Dep
+  value: T
+}
+
+export function trackRefValue(ref: RefBase<any>) {
+  if (shouldTrack && activeEffect) {
+    ref = toRaw(ref)
+    trackEffect(
+      activeEffect,
+      (ref.dep ??= createDep(
+        () => (ref.dep = undefined),
+        ref instanceof ComputedRefImpl ? ref : undefined,
+      )),
+      __DEV__
+        ? {
+            target: ref,
+            type: TrackOpTypes.GET,
+            key: 'value',
+          }
+        : void 0,
+    )
+  }
+}
+
+export function triggerRefValue(
+  ref: RefBase<any>,
+  dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
+  newVal?: any,
+) {
+  ref = toRaw(ref)
+  const dep = ref.dep
+  if (dep) {
+    triggerEffects(
+      dep,
+      dirtyLevel,
+      __DEV__
+        ? {
+            target: ref,
+            type: TriggerOpTypes.SET,
+            key: 'value',
+            newValue: newVal,
+          }
+        : void 0,
+    )
+  }
 }
 
 /**
@@ -94,12 +151,11 @@ function createRef(rawValue: unknown, shallow: boolean) {
   return new RefImpl(rawValue, shallow)
 }
 
-class RefImpl<T = any> {
+class RefImpl<T> {
   private _value: T
   private _rawValue: T
 
-  dep: Dep = new Dep()
-
+  public dep?: Dep = undefined
   public readonly __v_isRef = true
 
   constructor(
@@ -111,7 +167,7 @@ class RefImpl<T = any> {
   }
 
   get value() {
-    this.dep.track()
+    trackRefValue(this)
     return this._value
   }
 
@@ -122,7 +178,7 @@ class RefImpl<T = any> {
     if (hasChanged(newVal, this._rawValue)) {
       this._rawValue = newVal
       this._value = useDirectValue ? newVal : toReactive(newVal)
-      this.dep.trigger()
+      triggerRefValue(this, DirtyLevels.Dirty, newVal)
     }
   }
 }
@@ -153,7 +209,7 @@ class RefImpl<T = any> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  ;(ref as unknown as RefImpl).dep.trigger()
+  triggerRefValue(ref, DirtyLevels.Dirty, __DEV__ ? ref.value : void 0)
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
@@ -239,7 +295,7 @@ export type CustomRefFactory<T> = (
 }
 
 class CustomRefImpl<T> {
-  public dep: Dep
+  public dep?: Dep = undefined
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -247,8 +303,10 @@ class CustomRefImpl<T> {
   public readonly __v_isRef = true
 
   constructor(factory: CustomRefFactory<T>) {
-    const dep = (this.dep = new Dep())
-    const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
+    const { get, set } = factory(
+      () => trackRefValue(this),
+      () => triggerRefValue(this),
+    )
     this._get = get
     this._set = set
   }
@@ -315,7 +373,6 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 
   get dep(): Dep | undefined {
-    // @ts-expect-error TODO
     return getDepFromReactive(toRaw(this._object), this._key)
   }
 }

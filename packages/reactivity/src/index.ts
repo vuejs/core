@@ -19,7 +19,7 @@ export {
   type ShallowUnwrapRef,
   type RefUnwrapBailTypes,
   type CustomRefFactory,
-} from './ref'
+} from './ref-old'
 export {
   reactive,
   readonly,
@@ -43,7 +43,7 @@ export {
   type WritableComputedOptions,
   type ComputedGetter,
   type ComputedSetter,
-} from './computed'
+} from './computed-old'
 export { deferredComputed } from './deferredComputed'
 export {
   effect,
@@ -60,7 +60,7 @@ export {
   type DebuggerOptions,
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
-} from './effect'
+} from './effect-old'
 export { trigger, track, ITERATE_KEY } from './reactiveEffect'
 export {
   effectScope,

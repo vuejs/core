@@ -8,7 +8,7 @@ import {
   shouldTrack,
   trackEffect,
   triggerEffects,
-} from './effect'
+} from './effect-old'
 
 // The main WeakMap that stores {target -> key -> dep} connections.
 // Conceptually, it's easier to think of a dependency as a Dep class

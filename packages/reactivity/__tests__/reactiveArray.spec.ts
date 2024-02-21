@@ -1,6 +1,6 @@
 import { isReactive, reactive, toRaw } from '../src/reactive'
-import { isRef, ref } from '../src/ref'
-import { effect } from '../src/effect'
+import { isRef, ref } from '../src/ref-old'
+import { effect } from '../src/effect-old'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {

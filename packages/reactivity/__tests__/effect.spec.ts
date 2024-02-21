@@ -11,7 +11,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { pauseScheduling, resetScheduling } from '../src/effect'
+import { pauseScheduling, resetScheduling } from '../src/effect-old'
 import { ITERATE_KEY, getDepFromReactive } from '../src/reactiveEffect'
 import {
   computed,

@@ -1,5 +1,5 @@
-import type { ReactiveEffect } from './effect'
-import type { ComputedRefImpl } from './computed'
+import type { ReactiveEffect } from './effect-old'
+import type { ComputedRefImpl } from './computed-old'
 
 export type Dep = Map<ReactiveEffect, number> & {
   cleanup: () => void

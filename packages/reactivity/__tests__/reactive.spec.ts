@@ -1,7 +1,7 @@
-import { isRef, ref } from '../src/ref'
+import { isRef, ref } from '../src/ref-old'
 import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
-import { computed } from '../src/computed'
-import { effect } from '../src/effect'
+import { computed } from '../src/computed-old'
+import { effect } from '../src/effect-old'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
