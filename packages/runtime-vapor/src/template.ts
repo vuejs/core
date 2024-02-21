@@ -1,3 +1,5 @@
+import { isArray } from '@vue/shared'
+
 /*! #__NO_SIDE_EFFECTS__ */
 export function template(str: string): () => ChildNode[] {
   let cached = false
@@ -23,4 +25,18 @@ export function template(str: string): () => ChildNode[] {
 
 function fragmentToNodes(node: DocumentFragment): ChildNode[] {
   return Array.from((node.cloneNode(true) as DocumentFragment).childNodes)
+}
+
+/*! #__NO_SIDE_EFFECTS__ */
+export function children(node: Node | Node[], ...paths: number[]): Node {
+  for (const idx of paths) {
+    if (isArray(node)) {
+      node = node[idx]
+    } else {
+      for (let i = 0; i <= idx; i++) {
+        node = (node as Node)[i === 0 ? 'firstChild' : 'nextSibling']!
+      }
+    }
+  }
+  return node as Node
 }
