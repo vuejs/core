@@ -95,7 +95,9 @@ export interface Link {
   prevActiveLink?: Link
 }
 
-export class ReactiveEffect<T = any> implements Subscriber {
+export class ReactiveEffect<T = any>
+  implements Subscriber, ReactiveEffectOptions
+{
   /**
    * @internal
    */
@@ -112,16 +114,11 @@ export class ReactiveEffect<T = any> implements Subscriber {
    * @internal
    */
   fn: () => T
-  /**
-   * @internal TODO
-   */
-  allowRecurse?: boolean
 
   scheduler?: EffectScheduler = undefined
+  allowRecurse?: boolean
   onStop?: () => void
-  // dev only
   onTrack?: (event: DebuggerEvent) => void
-  // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(fn: () => T) {
@@ -132,6 +129,9 @@ export class ReactiveEffect<T = any> implements Subscriber {
    * @internal
    */
   notify() {
+    if (this.flags & Flags.RUNNING && !this.allowRecurse) {
+      return
+    }
     if (!(this.flags & Flags.NOTIFIED)) {
       this.flags |= Flags.NOTIFIED
       this.nextEffect = batchedEffect
@@ -140,15 +140,14 @@ export class ReactiveEffect<T = any> implements Subscriber {
   }
 
   run() {
-    this.flags |= Flags.RUNNING
-
     // TODO cleanupEffect
 
     if (!(this.flags & Flags.ACTIVE)) {
       // stopped during cleanup
-      return
+      return this.fn()
     }
 
+    this.flags |= Flags.RUNNING
     prepareDeps(this)
     batchDepth++
     const prevEffect = activeSub
@@ -170,7 +169,7 @@ export class ReactiveEffect<T = any> implements Subscriber {
 
   stop() {
     if (this.flags & Flags.ACTIVE) {
-      for (let link = this.deps; link !== undefined; link = link.nextDep) {
+      for (let link = this.deps; link; link = link.nextDep) {
         removeSub(link)
       }
       this.deps = undefined
@@ -225,7 +224,7 @@ export function endBatch() {
 
 function prepareDeps(sub: Subscriber) {
   // Prepare deps for tracking, starting from the head
-  for (let link = sub.deps; link !== undefined; link = link.nextDep) {
+  for (let link = sub.deps; link; link = link.nextDep) {
     // set all previous deps' (if any) version to -1 so that we can track
     // which ones are unused after the run
     link.version = -1
@@ -242,9 +241,8 @@ function prepareDeps(sub: Subscriber) {
 
 function cleanupDeps(sub: Subscriber) {
   // Cleanup unsued deps, starting from the tail
-  let link = sub.deps
   let head
-  while (link) {
+  for (let link = sub.deps; link; link = link.prevDep) {
     if (link.version === -1) {
       // unused - remove it from the dep's subscribing effect list
       removeSub(link)
@@ -259,15 +257,13 @@ function cleanupDeps(sub: Subscriber) {
     // restore previous active link if any
     link.dep.activeLink = link.prevActiveLink
     link.prevActiveLink = undefined
-
-    link = link.prevDep
   }
   // set the new head
   sub.deps = head
 }
 
 function isDirty(sub: Subscriber): boolean {
-  for (let link = sub.deps; link !== undefined; link = link.nextDep) {
+  for (let link = sub.deps; link; link = link.nextDep) {
     if (
       link.dep.version !== link.version ||
       (link.dep.computed && refreshComputed(link.dep.computed) === false) ||
@@ -331,35 +327,36 @@ export function refreshComputed(computed: ComputedRefImpl) {
 }
 
 function removeSub(link: Link) {
-  const prevEffect = link.prevSub
-  const nextEffect = link.nextSub
-  if (prevEffect) {
-    prevEffect.nextSub = nextEffect
+  const { dep, prevSub, nextSub } = link
+  if (prevSub) {
+    prevSub.nextSub = nextSub
     link.prevSub = undefined
   }
-  if (nextEffect) {
-    nextEffect.prevSub = prevEffect
+  if (nextSub) {
+    nextSub.prevSub = prevSub
     link.nextSub = undefined
   }
-  if (link.dep.subs === link) {
+  if (dep.subs === link) {
     // was previous tail, point new tail to prev
-    link.dep.subs = prevEffect
+    dep.subs = prevSub
   }
 
-  // computed dep has lost its last subscriber
-  // turn off tracking flag and also unsubscribe it from all its deps
-  const computed = link.dep.computed
-  if (computed && link.dep.subs === undefined) {
-    computed.flags &= ~Flags.TRACKING
-    for (let l = computed.deps; l !== undefined; l = l.nextDep) {
-      removeSub(l)
+  if (!dep.subs) {
+    // last subscriber removed
+    // if this is an object property dep, remove the dep from the map
+    if (dep.map) dep.map.delete(dep.key)
+    // if computed, unsubscribe it from all its deps so they can be GCed
+    else if (dep.computed) {
+      dep.computed.flags &= ~Flags.TRACKING
+      for (let l = dep.computed.deps; l; l = l.nextDep) {
+        removeSub(l)
+      }
     }
   }
 }
 
 function removeDep(link: Link) {
-  const prevDep = link.prevDep
-  const nextDep = link.nextDep
+  const { prevDep, nextDep } = link
   if (prevDep) {
     prevDep.nextDep = nextDep
     link.prevDep = undefined
@@ -379,6 +376,10 @@ export function effect<T = any>(
   fn: () => T,
   options?: ReactiveEffectOptions,
 ): ReactiveEffectRunner<T> {
+  if ((fn as ReactiveEffectRunner).effect instanceof ReactiveEffect) {
+    fn = (fn as ReactiveEffectRunner).effect.fn
+  }
+
   const e = new ReactiveEffect(fn)
   if (options) {
     extend(e, options)

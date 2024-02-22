@@ -11,7 +11,7 @@ import {
   stop,
   toRaw,
 } from '../src/index'
-import { ITERATE_KEY, getDepFromReactive } from '../src/dep'
+import { type Dep, ITERATE_KEY, getDepFromReactive } from '../src/dep'
 import {
   computed,
   h,
@@ -21,6 +21,7 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
+import { endBatch, startBatch } from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -992,21 +993,20 @@ describe('reactivity/effect', () => {
     })
   })
 
-  // TODO use batching API
-  // it('should be triggered once with pauseScheduling', () => {
-  //   const counter = reactive({ num: 0 })
+  it('should be triggered once with batching', () => {
+    const counter = reactive({ num: 0 })
 
-  //   const counterSpy = vi.fn(() => counter.num)
-  //   effect(counterSpy)
+    const counterSpy = vi.fn(() => counter.num)
+    effect(counterSpy)
 
-  //   counterSpy.mockClear()
+    counterSpy.mockClear()
 
-  //   pauseScheduling()
-  //   counter.num++
-  //   counter.num++
-  //   resetScheduling()
-  //   expect(counterSpy).toHaveBeenCalledTimes(1)
-  // })
+    startBatch()
+    counter.num++
+    counter.num++
+    endBatch()
+    expect(counterSpy).toHaveBeenCalledTimes(1)
+  })
 
   // #10082
   it('should set dirtyLevel when effect is allowRecurse and is running', async () => {
@@ -1038,19 +1038,31 @@ describe('reactivity/effect', () => {
   })
 
   describe('empty dep cleanup', () => {
+    function getSubCount(dep: Dep | undefined) {
+      let count = 0
+      let sub = dep!.subs
+      while (sub) {
+        count++
+        sub = sub.prevSub
+      }
+      return count
+    }
+
     it('should remove the dep when the effect is stopped', () => {
       const obj = reactive({ prop: 1 })
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       const runner = effect(() => obj.prop)
       const dep = getDepFromReactive(toRaw(obj), 'prop')
-      expect(dep).toHaveLength(1)
+      expect(getSubCount(dep)).toBe(1)
       obj.prop = 2
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
-      expect(dep).toHaveLength(1)
+      expect(getSubCount(dep)).toBe(1)
       stop(runner)
+      expect(getSubCount(dep)).toBe(0)
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       obj.prop = 3
       runner()
+      expect(getSubCount(dep)).toBe(0)
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
     })
 
@@ -1059,19 +1071,19 @@ describe('reactivity/effect', () => {
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       const runner1 = effect(() => obj.prop)
       const dep = getDepFromReactive(toRaw(obj), 'prop')
-      expect(dep).toHaveLength(1)
+      expect(getSubCount(dep)).toBe(1)
       const runner2 = effect(() => obj.prop)
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
-      expect(dep).toHaveLength(2)
+      expect(getSubCount(dep)).toBe(2)
       obj.prop = 2
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
-      expect(dep).toHaveLength(2)
+      expect(getSubCount(dep)).toBe(2)
       stop(runner1)
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
-      expect(dep).toHaveLength(1)
+      expect(getSubCount(dep)).toBe(1)
       obj.prop = 3
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
-      expect(dep).toHaveLength(1)
+      expect(getSubCount(dep)).toBe(1)
       stop(runner2)
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       obj.prop = 4
@@ -1089,15 +1101,15 @@ describe('reactivity/effect', () => {
       expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       effect(() => obj[obj.c])
       const depC = getDepFromReactive(toRaw(obj), 'c')
-      expect(getDepFromReactive(toRaw(obj), 'a')).toHaveLength(1)
+      expect(getSubCount(getDepFromReactive(toRaw(obj), 'a'))).toBe(1)
       expect(getDepFromReactive(toRaw(obj), 'b')).toBeUndefined()
-      expect(depC).toHaveLength(1)
+      expect(getSubCount(depC)).toBe(1)
       obj.c = 'b'
       obj.a = 4
       expect(getDepFromReactive(toRaw(obj), 'a')).toBeUndefined()
-      expect(getDepFromReactive(toRaw(obj), 'b')).toHaveLength(1)
+      expect(getSubCount(getDepFromReactive(toRaw(obj), 'b'))).toBe(1)
       expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
-      expect(depC).toHaveLength(1)
+      expect(getSubCount(depC)).toBe(1)
     })
   })
 })
