@@ -9,7 +9,7 @@ import {
 } from './effect'
 import type { Ref } from './ref'
 import { warn } from './warning'
-import { Dep } from './dep'
+import { Dep, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
@@ -32,24 +32,25 @@ export interface WritableComputedOptions<T> {
 export class ComputedRefImpl<T = any> implements Subscriber {
   // A computed is a ref
   _value: any = undefined
-  dep = new Dep(this)
+  readonly dep = new Dep(this)
+  readonly __v_isRef = true;
+  readonly [ReactiveFlags.IS_READONLY]: boolean
   // A computed is also a subscriber that tracks other deps
   deps?: Link = undefined
   // track variaous states
   flags = Flags.DIRTY
+  // last seen global version
+  globalVersion = globalVersion - 1
+
   // dev only
   onTrack?: (event: DebuggerEvent) => void
   // dev only
   onTrigger?: (event: DebuggerEvent) => void
 
-  public readonly __v_isRef = true
-  public readonly [ReactiveFlags.IS_READONLY]: boolean
-
   constructor(
     public getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T> | undefined,
-    // @ts-expect-error TODO
-    private isSSR: boolean,
+    public isSSR: boolean,
   ) {
     this[ReactiveFlags.IS_READONLY] = !_setter
   }

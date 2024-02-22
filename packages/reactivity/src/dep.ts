@@ -10,6 +10,13 @@ import {
   startBatch,
 } from './effect'
 
+/**
+ * Incremented every time a reactive change happens
+ * This is used to give computed a fast path to avoid re-compute when nothing
+ * has changed.
+ */
+export let globalVersion = 0
+
 export class Dep {
   version = 0
   /**
@@ -97,6 +104,7 @@ export class Dep {
 
   trigger(debugInfo?: DebuggerEventExtraInfo) {
     this.version++
+    globalVersion++
     this.notify(debugInfo)
   }
 
@@ -226,6 +234,7 @@ export function trigger(
   const depsMap = targetMap.get(target)
   if (!depsMap) {
     // never been tracked
+    globalVersion++
     return
   }
 

@@ -1,6 +1,6 @@
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
-import type { Dep } from './dep'
+import { type Dep, globalVersion } from './dep'
 import type { EffectScope } from './effectScope'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -292,11 +292,20 @@ export function refreshComputed(computed: ComputedRefImpl) {
   }
   computed.flags &= ~Flags.DIRTY
 
-  // TODO global version fast path
+  // Global version fast path when no reactive changes has happened since
+  // last refresh.
+  if (computed.globalVersion === globalVersion) {
+    return
+  }
+  computed.globalVersion = globalVersion
 
   const dep = computed.dep
   computed.flags |= Flags.RUNNING
-  if (dep.version > 0 && !isDirty(computed)) {
+  // In SSR there will be no render effect, so the computed has no subscriber
+  // and therefore tracks no deps, thus we cannot rely on the dirty check.
+  // Instead, computed always re-evaluate and relies on the globalVersion
+  // fast path above for caching.
+  if (dep.version > 0 && !computed.isSSR && !isDirty(computed)) {
     computed.flags &= ~Flags.RUNNING
     return
   }

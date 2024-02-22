@@ -5,7 +5,7 @@ import {
   isFunction,
   isObject,
 } from '@vue/shared'
-import { Dep } from './dep'
+import { Dep, getDepFromReactive } from './dep'
 import {
   type ShallowReactiveMarker,
   isProxy,
@@ -342,7 +342,6 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   }
 
   get dep(): Dep | undefined {
-    // @ts-expect-error TODO
     return getDepFromReactive(toRaw(this._object), this._key)
   }
 }
