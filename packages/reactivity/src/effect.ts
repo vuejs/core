@@ -6,7 +6,7 @@ import type { EffectScope } from './effectScope'
 export type EffectScheduler = (...args: any[]) => any
 
 export type DebuggerEvent = {
-  effect: ReactiveEffect
+  effect: Subscriber
 } & DebuggerEventExtraInfo
 
 export type DebuggerEventExtraInfo = {

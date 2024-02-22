@@ -10,7 +10,7 @@ import {
 import type { Ref } from './ref'
 import { warn } from './warning'
 import { Dep } from './dep'
-import { ReactiveFlags } from './constants'
+import { ReactiveFlags, TrackOpTypes } from './constants'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -62,7 +62,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   get value() {
-    const link = this.dep.track()
+    const link = __DEV__
+      ? this.dep.track({
+          target: this,
+          type: TrackOpTypes.GET,
+          key: 'value',
+        })
+      : this.dep.track()
     refreshComputed(this)
     // sync version after evaluation
     if (link) {

@@ -1,7 +1,14 @@
-import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
+import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
 import { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
-import { Flags, type Link, activeSub, endBatch, startBatch } from './effect'
+import {
+  type DebuggerEventExtraInfo,
+  Flags,
+  type Link,
+  activeSub,
+  endBatch,
+  startBatch,
+} from './effect'
 
 export class Dep {
   version = 0
@@ -16,7 +23,7 @@ export class Dep {
 
   constructor(public computed?: ComputedRefImpl) {}
 
-  track(): Link | undefined {
+  track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
     if (activeSub === undefined) {
       return
     }
@@ -48,10 +55,10 @@ export class Dep {
           // lazily subscribe to all its deps
           computed.flags |= Flags.TRACKING | Flags.DIRTY
           for (let l = computed.deps; l !== undefined; l = l.nextDep) {
-            l.dep.addSub(l)
+            addSub(l)
           }
         }
-        this.addSub(link)
+        addSub(link)
       }
     } else if (link.version === -1) {
       // reused from last run - already a sub, just sync version
@@ -73,30 +80,42 @@ export class Dep {
         activeSub.deps = link
       }
     }
+
+    if (__DEV__ && activeSub.onTrack) {
+      activeSub.onTrack(
+        extend(
+          {
+            effect: activeSub,
+          },
+          debugInfo,
+        ),
+      )
+    }
+
     return link
   }
 
-  addSub(link: Link) {
-    if (this.subs !== link) {
-      link.prevSub = this.subs
-      if (this.subs) {
-        this.subs.nextSub = link
-      }
-      this.subs = link
-    }
-  }
-
-  trigger() {
+  trigger(debugInfo?: DebuggerEventExtraInfo) {
     this.version++
-    this.notify()
+    this.notify(debugInfo)
   }
 
-  notify() {
+  notify(debugInfo?: DebuggerEventExtraInfo) {
     if (!(activeSub instanceof ComputedRefImpl)) {
       startBatch()
       try {
         for (let link = this.subs; link !== undefined; link = link.prevSub) {
           link.sub.notify()
+          if (__DEV__ && link.sub.onTrigger) {
+            link.sub.onTrigger(
+              extend(
+                {
+                  effect: link.sub,
+                },
+                debugInfo,
+              ),
+            )
+          }
         }
       } finally {
         endBatch()
@@ -106,6 +125,15 @@ export class Dep {
       // TODO warning
     }
   }
+}
+
+function addSub(link: Link) {
+  const currentTail = link.dep.subs
+  if (currentTail !== link) {
+    link.prevSub = currentTail
+    if (currentTail) currentTail.nextSub = link
+  }
+  link.dep.subs = link
 }
 
 // The main WeakMap that stores {target -> key -> dep} connections.
@@ -167,8 +195,15 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
     }
-    // TODO track info
-    dep.track()
+    if (__DEV__) {
+      dep.track({
+        target,
+        type,
+        key,
+      })
+    } else {
+      dep.track()
+    }
   }
 }
 
@@ -243,21 +278,18 @@ export function trigger(
 
   for (const dep of deps) {
     if (dep) {
-      dep.trigger()
-      // triggerEffects(
-      //   dep,
-      //   DirtyLevels.Dirty,
-      //   __DEV__
-      //     ? {
-      //         target,
-      //         type,
-      //         key,
-      //         newValue,
-      //         oldValue,
-      //         oldTarget,
-      //       }
-      //     : void 0,
-      // )
+      if (__DEV__) {
+        dep.trigger({
+          target,
+          type,
+          key,
+          newValue,
+          oldValue,
+          oldTarget,
+        })
+      } else {
+        dep.trigger()
+      }
     }
   }
 }

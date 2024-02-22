@@ -217,22 +217,19 @@ describe('reactivity/computed', () => {
     expect(onTrack).toHaveBeenCalledTimes(3)
     expect(events).toEqual([
       {
-        // @ts-expect-error TODO
-        effect: c.effect,
+        effect: c,
         target: toRaw(obj),
         type: TrackOpTypes.GET,
         key: 'foo',
       },
       {
-        // @ts-expect-error TODO
-        effect: c.effect,
+        effect: c,
         target: toRaw(obj),
         type: TrackOpTypes.HAS,
         key: 'bar',
       },
       {
-        // @ts-expect-error TODO
-        effect: c.effect,
+        effect: c,
         target: toRaw(obj),
         type: TrackOpTypes.ITERATE,
         key: ITERATE_KEY,
@@ -248,15 +245,14 @@ describe('reactivity/computed', () => {
     const obj = reactive<{ foo?: number }>({ foo: 1 })
     const c = computed(() => obj.foo, { onTrigger })
 
-    // computed won't trigger compute until accessed
-    c.value
+    // computed won't track until it has a subscriber
+    effect(() => c.value)
 
     obj.foo!++
     expect(c.value).toBe(2)
     expect(onTrigger).toHaveBeenCalledTimes(1)
     expect(events[0]).toEqual({
-      // @ts-expect-error TODO
-      effect: c.effect,
+      effect: c,
       target: toRaw(obj),
       type: TriggerOpTypes.SET,
       key: 'foo',
@@ -268,8 +264,7 @@ describe('reactivity/computed', () => {
     expect(c.value).toBeUndefined()
     expect(onTrigger).toHaveBeenCalledTimes(2)
     expect(events[1]).toEqual({
-      // @ts-expect-error TODO
-      effect: c.effect,
+      effect: c,
       target: toRaw(obj),
       type: TriggerOpTypes.DELETE,
       key: 'foo',

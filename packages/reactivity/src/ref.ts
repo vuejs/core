@@ -16,6 +16,7 @@ import {
   toReactive,
 } from './reactive'
 import type { ComputedRef } from './computed'
+import { TrackOpTypes } from './constants'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -111,7 +112,15 @@ class RefImpl<T = any> {
   }
 
   get value() {
-    this.dep.track()
+    if (__DEV__) {
+      this.dep.track({
+        target: this,
+        type: TrackOpTypes.GET,
+        key: 'value',
+      })
+    } else {
+      this.dep.track()
+    }
     return this._value
   }
 
