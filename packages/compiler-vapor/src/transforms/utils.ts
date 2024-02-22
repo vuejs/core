@@ -12,9 +12,7 @@ import { extend } from '@vue/shared'
 import { DynamicFlag, type IRDynamicInfo } from '../ir'
 
 export const genDefaultDynamic = (): IRDynamicInfo => ({
-  id: null,
   flags: DynamicFlag.NONE,
-  anchor: null,
   children: [],
 })
 

@@ -139,7 +139,7 @@ function createRootContext(
 
     increaseId: () => globalId++,
     reference() {
-      if (this.dynamic.id !== null) return this.dynamic.id
+      if (this.dynamic.id !== undefined) return this.dynamic.id
       this.dynamic.flags |= DynamicFlag.REFERENCED
       return (this.dynamic.id = this.increaseId())
     },
@@ -181,11 +181,11 @@ function createRootContext(
         template => template === this.template,
       )
       if (existing !== -1) {
-        return (this.block.templateIndex = existing)
+        return (this.dynamic.template = existing)
       }
 
       root.template.push(this.template)
-      return (this.block.templateIndex = root.template.length - 1)
+      return (this.dynamic.template = root.template.length - 1)
     },
     registerOperation(...node) {
       this.block.operation.push(...node)
@@ -225,7 +225,6 @@ export function transform(
     block: {
       type: IRNodeTypes.BLOCK,
       node: root,
-      templateIndex: -1,
       dynamic: extend(genDefaultDynamic(), {
         flags: DynamicFlag.REFERENCED,
       } satisfies Partial<IRDynamicInfo>),

@@ -31,16 +31,13 @@ export function genBlockFunction(
 }
 
 export function genBlockFunctionContent(
-  { dynamic, effect, operation, templateIndex, returns }: BlockIRNode,
+  { dynamic, effect, operation, returns }: BlockIRNode,
   context: CodegenContext,
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
 
-  if (templateIndex > -1) {
-    push(NEWLINE, `const n${dynamic.id} = t${templateIndex}()`)
-    push(...genChildren(dynamic, context, dynamic.id!))
-  }
+  push(...genChildren(dynamic, context, dynamic.id!))
 
   const directiveOps = operation.filter(
     (oper): oper is WithDirectiveIRNode =>

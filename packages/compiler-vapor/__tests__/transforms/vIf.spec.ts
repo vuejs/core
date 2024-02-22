@@ -43,7 +43,9 @@ describe('compiler: v-if', () => {
         },
         positive: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 0,
+          dynamic: {
+            template: 0,
+          },
         },
       },
     ])
@@ -125,11 +127,15 @@ describe('compiler: v-if', () => {
         },
         positive: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 0,
+          dynamic: {
+            template: 0,
+          },
         },
         negative: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 1,
+          dynamic: {
+            template: 1,
+          },
         },
       },
     ])
@@ -154,7 +160,9 @@ describe('compiler: v-if', () => {
         },
         positive: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 0,
+          dynamic: {
+            template: 0,
+          },
         },
         negative: {
           type: IRNodeTypes.IF,
@@ -165,7 +173,9 @@ describe('compiler: v-if', () => {
           },
           positive: {
             type: IRNodeTypes.BLOCK,
-            templateIndex: 1,
+            dynamic: {
+              template: 1,
+            },
           },
         },
       },
@@ -187,17 +197,23 @@ describe('compiler: v-if', () => {
         id: 1,
         positive: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 0,
+          dynamic: {
+            template: 0,
+          },
         },
         negative: {
           type: IRNodeTypes.IF,
           positive: {
             type: IRNodeTypes.BLOCK,
-            templateIndex: 1,
+            dynamic: {
+              template: 1,
+            },
           },
           negative: {
             type: IRNodeTypes.BLOCK,
-            templateIndex: 2,
+            dynamic: {
+              template: 2,
+            },
           },
         },
       },

@@ -53,7 +53,6 @@ export function processFor(
   const render: BlockIRNode = {
     type: IRNodeTypes.BLOCK,
     node,
-    templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
       flags: DynamicFlag.REFERENCED,
     } satisfies Partial<IRDynamicInfo>),

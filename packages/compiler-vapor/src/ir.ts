@@ -45,7 +45,6 @@ export type VaporHelper = keyof typeof import('@vue/runtime-vapor')
 export interface BlockIRNode extends BaseIRNode {
   type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
-  templateIndex: number
   dynamic: IRDynamicInfo
   effect: IREffect[]
   operation: OperationNode[]
@@ -205,10 +204,11 @@ export enum DynamicFlag {
 }
 
 export interface IRDynamicInfo {
-  id: number | null
+  id?: number
   flags: DynamicFlag
-  anchor: number | null
+  anchor?: number
   children: IRDynamicInfo[]
+  template?: number
 }
 
 export interface IREffect {

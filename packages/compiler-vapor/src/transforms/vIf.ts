@@ -146,7 +146,6 @@ export function createIfBranch(
   const branch: BlockIRNode = {
     type: IRNodeTypes.BLOCK,
     node,
-    templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {
       flags: DynamicFlag.REFERENCED,
     } satisfies Partial<IRDynamicInfo>),

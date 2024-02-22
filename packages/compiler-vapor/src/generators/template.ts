@@ -23,7 +23,11 @@ export function genChildren(
   const { vaporHelper } = context
   const [frag, push] = buildCodeFragment()
   let offset = 0
-  const { children } = dynamic
+  const { children, id, template } = dynamic
+
+  if (id !== undefined && template !== undefined) {
+    push(NEWLINE, `const n${id} = t${template}()`)
+  }
 
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
@@ -36,11 +40,11 @@ export function genChildren(
         ? child.flags & DynamicFlag.INSERT
           ? child.anchor
           : child.id
-        : null
+        : undefined
 
     const newPaths = [...paths, elementIndex]
 
-    if (id !== null) {
+    if (id !== undefined) {
       push(
         NEWLINE,
         `const n${id} = `,

@@ -44,7 +44,9 @@ describe('compiler: v-for', () => {
         index: undefined,
         render: {
           type: IRNodeTypes.BLOCK,
-          templateIndex: 0,
+          dynamic: {
+            template: 0,
+          },
         },
         keyProperty: {
           type: NodeTypes.SIMPLE_EXPRESSION,
