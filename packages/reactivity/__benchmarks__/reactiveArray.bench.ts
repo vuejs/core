@@ -3,7 +3,7 @@ import { computed, reactive, readonly, shallowRef, triggerRef } from '../src'
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
   {
-    const rawArray = []
+    const rawArray: any[] = []
     for (let i = 0, n = amount; i < n; i++) {
       rawArray.push(i)
     }
@@ -21,7 +21,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
   }
 
   {
-    const rawArray = []
+    const rawArray: any[] = []
     for (let i = 0, n = amount; i < n; i++) {
       rawArray.push(i)
     }
@@ -40,7 +40,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
   }
 
   {
-    const rawArray = []
+    const rawArray: any[] = []
     for (let i = 0, n = amount; i < n; i++) {
       rawArray.push(i)
     }
@@ -56,7 +56,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
   }
 
   {
-    const rawArray = []
+    const rawArray: any[] = []
     for (let i = 0, n = amount; i < n; i++) {
       rawArray.push(i)
     }

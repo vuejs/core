@@ -61,7 +61,7 @@ describe('computed', () => {
 
   {
     const v = ref(100)
-    const computeds = []
+    const computeds: ComputedRef<number>[] = []
     for (let i = 0, n = 1000; i < n; i++) {
       const c = computed(() => {
         return v.value * 2
@@ -76,7 +76,7 @@ describe('computed', () => {
 
   {
     const v = ref(100)
-    const computeds = []
+    const computeds: ComputedRef<number>[] = []
     for (let i = 0, n = 1000; i < n; i++) {
       const c = computed(() => {
         return v.value * 2

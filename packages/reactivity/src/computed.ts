@@ -11,6 +11,7 @@ import type { Ref } from './ref'
 import { warn } from './warning'
 import { Dep, globalVersion } from './dep'
 import { ReactiveFlags, TrackOpTypes } from './constants'
+import { toRaw } from './reactive'
 
 declare const ComputedRefSymbol: unique symbol
 
@@ -63,19 +64,20 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   get value() {
+    const self = toRaw(this)
     const link = __DEV__
-      ? this.dep.track({
-          target: this,
+      ? self.dep.track({
+          target: self,
           type: TrackOpTypes.GET,
           key: 'value',
         })
       : this.dep.track()
-    refreshComputed(this)
+    refreshComputed(self)
     // sync version after evaluation
     if (link) {
-      link.version = this.dep.version
+      link.version = self.dep.version
     }
-    return this._value
+    return self._value
   }
 
   set value(newValue) {
