@@ -1,3 +1,4 @@
+import { extend } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
@@ -24,7 +25,6 @@ export interface DebuggerOptions {
 }
 
 export interface ReactiveEffectOptions extends DebuggerOptions {
-  lazy?: boolean
   scheduler?: EffectScheduler
   scope?: EffectScope
   allowRecurse?: boolean
@@ -170,11 +170,12 @@ export class ReactiveEffect<T = any> implements Subscriber {
 
   stop() {
     if (this.flags & Flags.ACTIVE) {
-      this.flags &= ~Flags.ACTIVE
       for (let link = this.deps; link !== undefined; link = link.nextDep) {
         removeSub(link)
       }
       this.deps = undefined
+      this.onStop && this.onStop()
+      this.flags &= ~Flags.ACTIVE
     }
   }
 }
@@ -379,6 +380,9 @@ export function effect<T = any>(
   options?: ReactiveEffectOptions,
 ): ReactiveEffectRunner<T> {
   const e = new ReactiveEffect(fn)
+  if (options) {
+    extend(e, options)
+  }
   try {
     e.run()
   } catch (err) {

@@ -31,7 +31,7 @@ export class Dep {
   constructor(public computed?: ComputedRefImpl) {}
 
   track(debugInfo?: DebuggerEventExtraInfo): Link | undefined {
-    if (activeSub === undefined) {
+    if (!activeSub || !shouldTrack) {
       return
     }
 
@@ -155,7 +155,6 @@ export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map iterate' : '')
 
 export let shouldTrack = true
-export let pauseScheduleStack = 0
 
 const trackStack: boolean[] = []
 

@@ -29,6 +29,7 @@ import {
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
+import { endBatch, startBatch } from './effect'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
@@ -69,10 +70,11 @@ function createArrayInstrumentations() {
   // which leads to infinite loops in some cases (#2137)
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      // TODO enable batching
+      startBatch()
       pauseTracking()
       const res = (toRaw(this) as any)[key].apply(this, args)
       resetTracking()
+      endBatch()
       return res
     }
   })
