@@ -514,16 +514,24 @@ describe('useModel', () => {
     expect(serializeInner(root)).toBe('hmm')
     // parent should get uppercase value
     expect(msg.value).toBe('HMM')
+    expect(compRender).toBeCalledTimes(2)
 
     // parent update
     msg.value = 'Ughh'
     await nextTick()
     expect(serializeInner(root)).toBe('ughh')
     expect(msg.value).toBe('Ughh')
+    expect(compRender).toBeCalledTimes(3)
 
     // child update again
     childMsg!.value = 'ughh'
     await nextTick()
     expect(msg.value).toBe('UGHH')
+    expect(compRender).toBeCalledTimes(4)
+
+    childMsg!.value = 'Ughh'
+    await nextTick()
+    expect(msg.value).toBe('UGHH')
+    expect(compRender).toBeCalledTimes(5)
   })
 })
