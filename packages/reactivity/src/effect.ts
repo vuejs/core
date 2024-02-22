@@ -2,7 +2,7 @@ import { extend } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
-import type { EffectScope } from './effectScope'
+import { recordEffectScope } from './effectScope'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -27,7 +27,6 @@ export interface DebuggerOptions {
 
 export interface ReactiveEffectOptions extends DebuggerOptions {
   scheduler?: EffectScheduler
-  scope?: EffectScope
   allowRecurse?: boolean
   onStop?: () => void
 }
@@ -123,6 +122,7 @@ export class ReactiveEffect<T = any>
 
   constructor(fn: () => T) {
     this.fn = fn
+    recordEffectScope(this)
   }
 
   /**
