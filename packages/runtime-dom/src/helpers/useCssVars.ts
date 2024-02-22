@@ -1,12 +1,12 @@
 import {
-  getCurrentInstance,
-  warn,
-  VNode,
   Fragment,
   Static,
-  watchPostEffect,
+  type VNode,
+  getCurrentInstance,
   onMounted,
-  onUnmounted
+  onUnmounted,
+  warn,
+  watchPostEffect,
 } from '@vue/runtime-core'
 import { ShapeFlags } from '@vue/shared'
 
@@ -28,9 +28,13 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
-      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`)
+      document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
     ).forEach(node => setVarsOnNode(node, vars))
   })
+
+  if (__DEV__) {
+    instance.getCssVars = () => getter(instance.proxy)
+  }
 
   const setVars = () => {
     const vars = getter(instance.proxy)
