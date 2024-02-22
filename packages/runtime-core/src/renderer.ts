@@ -1573,11 +1573,9 @@ function baseCreateRenderer(
     }
 
     // create reactive effect for rendering
-    const effect = (instance.effect = new ReactiveEffect(
-      componentUpdateFn,
-      // @ts-expect-error TODO
-      instance.scope, // track it in component's effect scope
-    ))
+    instance.scope.on()
+    const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
+    instance.scope.off()
 
     const update: SchedulerJob = (instance.update = effect.run.bind(effect))
     update.id = instance.uid
