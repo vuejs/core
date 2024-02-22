@@ -4,7 +4,7 @@ import {
   onEffectCleanup,
   onScopeDispose,
 } from '@vue/reactivity'
-import { recordPropMetadata } from './prop'
+import { recordPropMetadata } from '../metadata'
 import { toHandlerKey } from '@vue/shared'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
 

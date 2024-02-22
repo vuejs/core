@@ -34,10 +34,6 @@ export interface ObjectComponent {
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
-export interface ElementMetadata {
-  props: Data
-}
-
 export interface ComponentInternalInstance {
   uid: number
   container: ParentNode
@@ -61,7 +57,6 @@ export interface ComponentInternalInstance {
   emit: EmitFn
   emitted: Record<string, boolean> | null
   refs: Data
-  metadata: WeakMap<Node, ElementMetadata>
 
   vapor: true
 
@@ -181,7 +176,6 @@ export const createComponentInstance = (
     attrs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
     refs: EMPTY_OBJ,
-    metadata: new WeakMap(),
     vapor: true,
 
     dirs: new Map(),

@@ -27,7 +27,6 @@ export const wrap = (
     fn(...args)
     await defer()
     const time = performance.now() - start
-    doProfile && console.profileEnd(id)
     const prevTimes = times[id] || (times[id] = [])
     prevTimes.push(time)
     const median = prevTimes.slice().sort((a, b) => a - b)[
@@ -42,6 +41,7 @@ export const wrap = (
       `time: ${time.toFixed(2)}ms / ` +
       `std: ${getStandardDeviation(prevTimes).toFixed(2)} ` +
       `over ${prevTimes.length} runs`
+    doProfile && console.profileEnd(id)
     console.log(msg)
     document.getElementById('time')!.textContent = msg
 

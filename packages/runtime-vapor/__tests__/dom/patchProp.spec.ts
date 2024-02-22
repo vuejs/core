@@ -1,7 +1,6 @@
 import { NOOP } from '@vue/shared'
 import {
   setDynamicProp as _setDynamicProp,
-  recordPropMetadata,
   setAttr,
   setClass,
   setDOMProp,
@@ -12,10 +11,9 @@ import {
 } from '../../src'
 import {
   createComponentInstance,
-  currentInstance,
-  getCurrentInstance,
   setCurrentInstance,
 } from '../../src/component'
+import { getMetadata, recordPropMetadata } from '../../src/metadata'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -44,7 +42,7 @@ describe('patchProp', () => {
       prev = recordPropMetadata(node, 'style', 'color: blue')
       expect(prev).toBe('color: red')
 
-      expect(getCurrentInstance()?.metadata.get(node)).toEqual({
+      expect(getMetadata(node)).toEqual({
         props: { class: 'bar', style: 'color: blue' },
       })
     })
@@ -54,22 +52,12 @@ describe('patchProp', () => {
       const node2 = {} as Node
       recordPropMetadata(node1, 'class', 'foo')
       recordPropMetadata(node2, 'class', 'bar')
-      expect(getCurrentInstance()?.metadata.get(node1)).toEqual({
+      expect(getMetadata(node1)).toEqual({
         props: { class: 'foo' },
       })
-      expect(getCurrentInstance()?.metadata.get(node2)).toEqual({
+      expect(getMetadata(node2)).toEqual({
         props: { class: 'bar' },
       })
-    })
-
-    test('should not record prop metadata outside of component', () => {
-      removeComponentInstance()
-      expect(currentInstance).toBeNull()
-
-      // FIXME
-      expect(() => recordPropMetadata({} as Node, 'class', 'foo')).toThrowError(
-        'cannot be used out of component',
-      )
     })
   })
 

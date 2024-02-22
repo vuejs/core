@@ -128,8 +128,7 @@ export function generate(
   }
 
   // TODO source map?
-  const templates = ir.template.length ? genTemplates(ir.template, context) : ''
-
+  const templates = genTemplates(ir.template, context)
   const imports = genHelperImports(context)
   const preamble = imports + templates
 
