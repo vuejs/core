@@ -492,11 +492,13 @@ describe('reactivity/computed', () => {
     effect(() => {
       fnSpy(c2.value)
     })
-    expect(fnSpy).toBeCalledTimes(2)
-    expect(fnSpy.mock.calls).toMatchObject([['0foo'], ['1foo']])
+    expect(fnSpy).toBeCalledTimes(1)
+    expect(fnSpy.mock.calls).toMatchObject([['0foo']])
+    expect(v.value).toBe(1)
     v.value = 2
-    expect(fnSpy).toBeCalledTimes(3)
-    expect(fnSpy.mock.calls).toMatchObject([['0foo'], ['1foo'], ['2foo']])
+    expect(fnSpy).toBeCalledTimes(2)
+    expect(fnSpy.mock.calls).toMatchObject([['0foo'], ['2foo']])
+    expect(v.value).toBe(2)
     // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 
@@ -572,7 +574,7 @@ describe('reactivity/computed', () => {
 
     v.value += ' World'
     await nextTick()
-    expect(serializeInner(root)).toBe('Hello World World World World')
+    expect(serializeInner(root)).toBe('Hello World World World')
     // expect(COMPUTED_SIDE_EFFECT_WARN).toHaveBeenWarned()
   })
 

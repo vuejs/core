@@ -1,5 +1,5 @@
 import { isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
-import type { ComputedRefImpl } from './computed'
+import { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import { Flags, type Link, activeSub, endBatch, startBatch } from './effect'
 
@@ -92,13 +92,18 @@ export class Dep {
   }
 
   notify() {
-    startBatch()
-    try {
-      for (let link = this.subs; link !== undefined; link = link.prevSub) {
-        link.sub.notify()
+    if (!(activeSub instanceof ComputedRefImpl)) {
+      startBatch()
+      try {
+        for (let link = this.subs; link !== undefined; link = link.prevSub) {
+          link.sub.notify()
+        }
+      } finally {
+        endBatch()
       }
-    } finally {
-      endBatch()
+    } else if (__DEV__) {
+      // reactive side effect triggered during computed evaluation
+      // TODO warning
     }
   }
 }

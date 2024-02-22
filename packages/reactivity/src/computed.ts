@@ -1,5 +1,6 @@
 import { isFunction } from '@vue/shared'
 import {
+  type DebuggerEvent,
   type DebuggerOptions,
   Flags,
   type Link,
@@ -36,6 +37,10 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   deps?: Link = undefined
   // track variaous states
   flags = Flags.DIRTY
+  // dev only
+  onTrack?: (event: DebuggerEvent) => void
+  // dev only
+  onTrigger?: (event: DebuggerEvent) => void
 
   public readonly __v_isRef = true
   public readonly [ReactiveFlags.IS_READONLY]: boolean
@@ -133,10 +138,9 @@ export function computed<T>(
 
   const cRef = new ComputedRefImpl(getter, setter, isSSR)
 
-  // TODO
   if (__DEV__ && debugOptions && !isSSR) {
-    // cRef.effect.onTrack = debugOptions.onTrack
-    // cRef.effect.onTrigger = debugOptions.onTrigger
+    cRef.onTrack = debugOptions.onTrack
+    cRef.onTrigger = debugOptions.onTrigger
   }
 
   return cRef as any

@@ -50,7 +50,7 @@ export enum Flags {
 /**
  * Subscriber is a type that tracks (or subscribes to) a list of deps.
  */
-export interface Subscriber {
+export interface Subscriber extends DebuggerOptions {
   /**
    * doubly linked list representing the deps
    * set to tail before effect run
