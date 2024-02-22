@@ -565,7 +565,7 @@ describe('renderer: teleport', () => {
             ? h(Teleport, { to: root }, [h('div', 'teleported')])
             : h('div', 'foo')
         }
-      }
+      },
     })
 
     domRender(h(App), root)
@@ -575,7 +575,7 @@ describe('renderer: teleport', () => {
     await nextTick()
 
     expect(root.innerHTML).toMatchInlineSnapshot(
-      '"<!--teleport start--><!--teleport end--><div>teleported</div>"'
+      '"<!--teleport start--><!--teleport end--><div>teleported</div>"',
     )
 
     show.value = false
