@@ -1,5 +1,5 @@
 import { isArray, toDisplayString } from '@vue/shared'
-import type { Block, ParentBlock } from './render'
+import type { Block } from './render'
 
 export * from './dom/style'
 export * from './dom/prop'
@@ -22,47 +22,22 @@ export function normalizeBlock(block: Block): Node[] {
 
 export function insert(
   block: Block,
-  parent: ParentBlock,
+  parent: ParentNode,
   anchor: Node | null = null,
 ) {
-  if (isArray(parent)) {
-    const index = anchor ? parent.indexOf(anchor) : -1
-    if (index > -1) {
-      parent.splice(index, 0, block)
-    } else {
-      if (anchor) throw new Error('The child can not be found in the parent.')
-      parent.push(block)
-    }
-  } else {
-    normalizeBlock(block).forEach(node => parent.insertBefore(node, anchor))
-  }
+  normalizeBlock(block).forEach(node => parent.insertBefore(node, anchor))
 }
 
-export function prepend(parent: ParentBlock, ...blocks: Block[]) {
-  if (isArray(parent)) {
-    parent.unshift(...blocks)
-  } else {
-    parent.prepend(...normalizeBlock(blocks))
-  }
+export function prepend(parent: ParentNode, ...blocks: Block[]) {
+  parent.prepend(...normalizeBlock(blocks))
 }
 
-export function append(parent: ParentBlock, ...blocks: Block[]) {
-  if (isArray(parent)) {
-    parent.push(...blocks)
-  } else {
-    parent.append(...normalizeBlock(blocks))
-  }
+export function append(parent: ParentNode, ...blocks: Block[]) {
+  parent.append(...normalizeBlock(blocks))
 }
 
-export function remove(block: Block, parent: ParentBlock) {
-  if (isArray(parent)) {
-    const index = parent.indexOf(block)
-    if (index === -1)
-      throw Error('The node to be removed is not a child of this node.')
-    parent.splice(index, 1)
-  } else {
-    normalizeBlock(block).forEach(node => parent.removeChild(node))
-  }
+export function remove(block: Block, parent: ParentNode) {
+  normalizeBlock(block).forEach(node => parent.removeChild(node))
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
