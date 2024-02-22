@@ -18,15 +18,15 @@ describe('compiler v-bind', () => {
   test('basic', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:id="id"/>`)
 
-    expect(ir.dynamic.children[0]).toMatchObject({
+    expect(ir.block.dynamic.children[0]).toMatchObject({
       id: 1,
       flags: DynamicFlag.REFERENCED,
     })
     expect(ir.template).toEqual(['<div></div>'])
-    expect(ir.effect).lengthOf(1)
-    expect(ir.effect[0].expressions).lengthOf(1)
-    expect(ir.effect[0].operations).lengthOf(1)
-    expect(ir.effect[0]).toMatchObject({
+    expect(ir.block.effect).lengthOf(1)
+    expect(ir.block.effect[0].expressions).lengthOf(1)
+    expect(ir.block.effect[0].operations).lengthOf(1)
+    expect(ir.block.effect[0]).toMatchObject({
       expressions: [
         {
           type: NodeTypes.SIMPLE_EXPRESSION,
@@ -80,7 +80,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:id />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_PROP,
       prop: {
         key: {
@@ -110,7 +110,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div :camel-case />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_PROP,
       prop: {
         key: {
@@ -133,7 +133,7 @@ describe('compiler v-bind', () => {
       `<div v-bind:[id]="id" v-bind:[title]="title" />`,
     )
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
       element: 1,
       props: [
@@ -179,7 +179,7 @@ describe('compiler v-bind', () => {
       `<div v-bind:[id]="id" foo="bar" checked />`,
     )
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
       element: 1,
       props: [
@@ -267,7 +267,7 @@ describe('compiler v-bind', () => {
   test('.camel modifier', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:foo-bar.camel="id"/>`)
 
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -292,7 +292,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:foo-bar.camel />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -315,7 +315,7 @@ describe('compiler v-bind', () => {
   test('.camel modifier w/ dynamic arg', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:[foo].camel="id"/>`)
 
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
       props: [
         [
@@ -350,7 +350,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:fooBar.prop="id"/>`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -374,7 +374,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:fooBar.prop />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -398,7 +398,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:[fooBar].prop="id"/>`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
       props: [
         [
@@ -431,7 +431,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div .fooBar="id"/>`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -455,7 +455,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div .fooBar />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `fooBar`,
@@ -479,7 +479,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:foo-bar.attr="id"/>`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `foo-bar`,
@@ -503,7 +503,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:foo-bar.attr />`)
 
     expect(code).matchSnapshot()
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       prop: {
         key: {
           content: `foo-bar`,

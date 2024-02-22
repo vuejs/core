@@ -9,7 +9,7 @@ import {
   createStructuralDirectiveTransform,
 } from '../transform'
 import {
-  type BlockFunctionIRNode,
+  type BlockIRNode,
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
@@ -50,8 +50,8 @@ export function processFor(
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
-  const render: BlockFunctionIRNode = {
-    type: IRNodeTypes.BLOCK_FUNCTION,
+  const render: BlockIRNode = {
+    type: IRNodeTypes.BLOCK,
     node,
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {

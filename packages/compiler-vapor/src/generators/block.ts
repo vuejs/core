@@ -1,9 +1,4 @@
-import {
-  type BlockFunctionIRNode,
-  IRNodeTypes,
-  type RootIRNode,
-  type WithDirectiveIRNode,
-} from '../ir'
+import { type BlockIRNode, IRNodeTypes, type WithDirectiveIRNode } from '../ir'
 import {
   type CodeFragment,
   INDENT_END,
@@ -18,7 +13,7 @@ import { genChildren } from './template'
 import { genMulti } from './utils'
 
 export function genBlockFunction(
-  oper: BlockFunctionIRNode,
+  oper: BlockIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
@@ -36,13 +31,7 @@ export function genBlockFunction(
 }
 
 export function genBlockFunctionContent(
-  {
-    dynamic,
-    effect,
-    operation,
-    templateIndex,
-    returns,
-  }: BlockFunctionIRNode | RootIRNode,
+  { dynamic, effect, operation, templateIndex, returns }: BlockIRNode,
   context: CodegenContext,
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {

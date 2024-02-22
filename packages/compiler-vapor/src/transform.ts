@@ -118,7 +118,7 @@ function createRootContext(
     parent: null,
     index: 0,
     root: null!, // set later
-    block: root,
+    block: root.block,
     enterBlock(ir) {
       const { block, template, dynamic, childrenTemplate } = this
       this.block = ir
@@ -134,7 +134,7 @@ function createRootContext(
       }
     },
     options: extend({}, defaultOptions, options),
-    dynamic: root.dynamic,
+    dynamic: root.block.dynamic,
     inVOnce: false,
 
     increaseId: () => globalId++,
@@ -222,13 +222,17 @@ export function transform(
     node: root,
     source: root.source,
     template: [],
-    templateIndex: -1,
-    dynamic: extend(genDefaultDynamic(), {
-      flags: DynamicFlag.REFERENCED,
-    } satisfies Partial<IRDynamicInfo>),
-    effect: [],
-    operation: [],
-    returns: [],
+    block: {
+      type: IRNodeTypes.BLOCK,
+      node: root,
+      templateIndex: -1,
+      dynamic: extend(genDefaultDynamic(), {
+        flags: DynamicFlag.REFERENCED,
+      } satisfies Partial<IRDynamicInfo>),
+      effect: [],
+      operation: [],
+      returns: [],
+    },
   }
 
   const context = createRootContext(ir, root, options)

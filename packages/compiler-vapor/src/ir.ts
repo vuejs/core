@@ -15,7 +15,7 @@ import type {
 
 export enum IRNodeTypes {
   ROOT,
-  BLOCK_FUNCTION,
+  BLOCK,
 
   SET_PROP,
   SET_DYNAMIC_PROPS,
@@ -42,8 +42,8 @@ export interface BaseIRNode {
 
 export type VaporHelper = keyof typeof import('@vue/runtime-vapor')
 
-export interface BlockFunctionIRNode extends BaseIRNode {
-  type: IRNodeTypes.BLOCK_FUNCTION
+export interface BlockIRNode extends BaseIRNode {
+  type: IRNodeTypes.BLOCK
   node: RootNode | TemplateChildNode
   templateIndex: number
   dynamic: IRDynamicInfo
@@ -52,19 +52,20 @@ export interface BlockFunctionIRNode extends BaseIRNode {
   returns: number[]
 }
 
-export interface RootIRNode extends Omit<BlockFunctionIRNode, 'type'> {
+export interface RootIRNode {
   type: IRNodeTypes.ROOT
   node: RootNode
   source: string
   template: string[]
+  block: BlockIRNode
 }
 
 export interface IfIRNode extends BaseIRNode {
   type: IRNodeTypes.IF
   id: number
   condition: SimpleExpressionNode
-  positive: BlockFunctionIRNode
-  negative?: BlockFunctionIRNode | IfIRNode
+  positive: BlockIRNode
+  negative?: BlockIRNode | IfIRNode
 }
 
 export interface ForIRNode extends BaseIRNode {
@@ -75,7 +76,7 @@ export interface ForIRNode extends BaseIRNode {
   key?: SimpleExpressionNode
   index?: SimpleExpressionNode
   keyProperty?: SimpleExpressionNode
-  render: BlockFunctionIRNode
+  render: BlockIRNode
 }
 
 export interface IRProp extends Omit<DirectiveTransformResult, 'value'> {
@@ -186,8 +187,6 @@ export type OperationNode =
   | WithDirectiveIRNode
   | IfIRNode
   | ForIRNode
-
-export type BlockIRNode = RootIRNode | BlockFunctionIRNode
 
 export enum DynamicFlag {
   NONE = 0,

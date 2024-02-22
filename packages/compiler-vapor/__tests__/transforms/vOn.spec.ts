@@ -22,9 +22,9 @@ describe('v-on', () => {
 
     expect(vaporHelpers).contains('on')
     expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
+    expect(ir.block.effect).toEqual([])
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         element: 1,
@@ -87,9 +87,9 @@ describe('v-on', () => {
     expect(vaporHelpers).contains('on')
     expect(vaporHelpers).contains('renderEffect')
     expect(helpers.size).toBe(0)
-    expect(ir.operation).toEqual([])
+    expect(ir.block.operation).toEqual([])
 
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
       element: 1,
       key: {
@@ -126,9 +126,9 @@ describe('v-on', () => {
     expect(vaporHelpers).contains('on')
     expect(vaporHelpers).contains('renderEffect')
     expect(helpers.size).toBe(0)
-    expect(ir.operation).toEqual([])
+    expect(ir.block.operation).toEqual([])
 
-    expect(ir.effect[0].operations[0]).toMatchObject({
+    expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
       element: 1,
       key: {
@@ -152,9 +152,9 @@ describe('v-on', () => {
 
     expect(vaporHelpers).contains('on')
     expect(helpers.size).toBe(0)
-    expect(ir.effect).toEqual([])
+    expect(ir.block.effect).toEqual([])
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         element: 1,
@@ -198,7 +198,7 @@ describe('v-on', () => {
   test('should handle multiple inline statement', () => {
     const { ir, code } = compileWithVOn(`<div @click="foo();bar()"/>`)
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo();bar()' },
@@ -217,7 +217,7 @@ describe('v-on', () => {
   test('should handle multi-line statement', () => {
     const { code, ir } = compileWithVOn(`<div @click="\nfoo();\nbar()\n"/>`)
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '\nfoo();\nbar()\n' },
@@ -238,7 +238,7 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event)' },
@@ -257,7 +257,7 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event);bar()' },
@@ -274,7 +274,7 @@ describe('v-on', () => {
   test('should NOT wrap as function if expression is already function expression', () => {
     const { code, ir } = compileWithVOn(`<div @click="$event => foo($event)"/>`)
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '$event => foo($event)' },
@@ -291,7 +291,7 @@ describe('v-on', () => {
       { expressionPlugins: ['typescript'] },
     )
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '(e: any): any => foo(e)' },
@@ -313,7 +313,7 @@ describe('v-on', () => {
     "/>`,
     )
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: {
@@ -337,7 +337,7 @@ describe('v-on', () => {
       },
     )
 
-    expect(ir.operation[0]).toMatchObject({
+    expect(ir.block.operation[0]).toMatchObject({
       type: IRNodeTypes.SET_EVENT,
       value: { content: '$event => {i++;foo($event)}' },
     })
@@ -347,7 +347,7 @@ describe('v-on', () => {
 
   test('should NOT wrap as function if expression is complex member expression', () => {
     const { ir, code } = compileWithVOn(`<div @click="a['b' + c]"/>`)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
@@ -359,7 +359,7 @@ describe('v-on', () => {
 
   test('complex member expression w/ prefixIdentifiers: true', () => {
     const { ir, code } = compileWithVOn(`<div @click="a['b' + c]"/>`)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `a['b' + c]` },
@@ -375,7 +375,7 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `e => foo(e)` },
@@ -419,7 +419,7 @@ describe('v-on', () => {
     )
 
     expect(vaporHelpers).contains('on')
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: {
@@ -449,7 +449,7 @@ describe('v-on', () => {
       },
     )
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {
@@ -504,7 +504,7 @@ describe('v-on', () => {
       },
     )
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         element: 1,
@@ -533,7 +533,7 @@ describe('v-on', () => {
     const { code, ir } = compileWithVOn(`<div @keyup.exact="test"/>`, {
       prefixIdentifiers: true,
     })
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         modifiers: { nonKeys: ['exact'] },
@@ -548,7 +548,7 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         modifiers: {
@@ -567,7 +567,7 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
-    expect(ir.effect[0].operations).toMatchObject([
+    expect(ir.block.effect[0].operations).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {
@@ -588,7 +588,7 @@ describe('v-on', () => {
 
   test('should transform click.right', () => {
     const { code, ir } = compileWithVOn(`<div @click.right="test"/>`)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {
@@ -608,7 +608,7 @@ describe('v-on', () => {
     const { code: code2, ir: ir2 } = compileWithVOn(
       `<div @[event].right="test"/>`,
     )
-    expect(ir2.effect[0].operations).toMatchObject([
+    expect(ir2.block.effect[0].operations).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {
@@ -629,7 +629,7 @@ describe('v-on', () => {
 
   test('should transform click.middle', () => {
     const { code, ir } = compileWithVOn(`<div @click.middle="test"/>`)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {
@@ -650,7 +650,7 @@ describe('v-on', () => {
       `<div @[event].middle="test"/>`,
     )
 
-    expect(ir2.effect[0].operations).toMatchObject([
+    expect(ir2.block.effect[0].operations).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         key: {

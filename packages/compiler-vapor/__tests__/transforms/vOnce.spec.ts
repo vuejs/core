@@ -26,8 +26,8 @@ describe('compiler: v-once', () => {
 
     expect(code).toMatchSnapshot()
     expect(helpers).lengthOf(0)
-    expect(ir.effect).lengthOf(0)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.CREATE_TEXT_NODE,
         id: 1,
@@ -79,8 +79,8 @@ describe('compiler: v-once', () => {
 
     expect(code).toMatchSnapshot()
     expect(helpers).lengthOf(0)
-    expect(ir.effect).lengthOf(0)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_PROP,
         element: 1,
@@ -110,8 +110,8 @@ describe('compiler: v-once', () => {
 
     expect(code).toMatchSnapshot()
     expect(helpers).lengthOf(0)
-    expect(ir.effect).lengthOf(0)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_PROP,
         element: 1,
@@ -144,8 +144,8 @@ describe('compiler: v-once', () => {
 
     expect(code).toMatchSnapshot()
     expect(helpers).lengthOf(0)
-    expect(ir.effect).lengthOf(0)
-    expect(ir.operation).lengthOf(0)
+    expect(ir.block.effect).lengthOf(0)
+    expect(ir.block.operation).lengthOf(0)
   })
 
   test.todo('with hoistStatic: true')

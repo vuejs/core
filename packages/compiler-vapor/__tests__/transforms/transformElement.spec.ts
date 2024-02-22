@@ -24,13 +24,13 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
     expect(code).contains('<div id=\\"foo\\" class=\\"bar\\"></div>"')
-    expect(ir.effect.length).toBe(0)
+    expect(ir.block.effect).lengthOf(0)
   })
 
   test('v-bind="obj"', () => {
     const { code, ir } = compileWithElementTransform(`<div v-bind="obj" />`)
     expect(code).toMatchSnapshot()
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -62,7 +62,7 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -110,7 +110,7 @@ describe('compiler: element transform', () => {
       `<div v-bind="obj" id="foo" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -158,7 +158,7 @@ describe('compiler: element transform', () => {
       `<div id="foo" v-bind="obj" class="bar" />`,
     )
     expect(code).toMatchSnapshot()
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -225,7 +225,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         element: 1,
@@ -261,7 +261,7 @@ describe('compiler: element transform', () => {
     )
     expect(code).toMatchSnapshot()
 
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -306,7 +306,7 @@ describe('compiler: element transform', () => {
 
     expect(code).toMatchSnapshot()
 
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {

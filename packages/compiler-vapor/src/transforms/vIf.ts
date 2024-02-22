@@ -11,7 +11,7 @@ import {
   createStructuralDirectiveTransform,
 } from '../transform'
 import {
-  type BlockFunctionIRNode,
+  type BlockIRNode,
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
@@ -140,11 +140,11 @@ export function processIf(
 export function createIfBranch(
   node: ElementNode,
   context: TransformContext<ElementNode>,
-): [BlockFunctionIRNode, () => void] {
+): [BlockIRNode, () => void] {
   context.node = node = wrapTemplate(node, ['if', 'else-if', 'else'])
 
-  const branch: BlockFunctionIRNode = {
-    type: IRNodeTypes.BLOCK_FUNCTION,
+  const branch: BlockIRNode = {
+    type: IRNodeTypes.BLOCK,
     node,
     templateIndex: -1,
     dynamic: extend(genDefaultDynamic(), {

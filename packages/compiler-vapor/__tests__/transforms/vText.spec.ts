@@ -23,9 +23,9 @@ describe('v-text', () => {
     expect(vaporHelpers).contains('setText')
     expect(helpers.size).toBe(0)
 
-    expect(ir.operation).toEqual([])
+    expect(ir.block.operation).toEqual([])
 
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -65,7 +65,7 @@ describe('v-text', () => {
     // children should have been removed
     expect(ir.template).toEqual(['<div></div>'])
 
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {

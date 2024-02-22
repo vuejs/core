@@ -23,8 +23,8 @@ describe('v-html', () => {
     expect(vaporHelpers).contains('setHtml')
     expect(helpers.size).toBe(0)
 
-    expect(ir.operation).toEqual([])
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.operation).toEqual([])
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {
@@ -65,8 +65,8 @@ describe('v-html', () => {
     // children should have been removed
     expect(ir.template).toEqual(['<div></div>'])
 
-    expect(ir.operation).toEqual([])
-    expect(ir.effect).toMatchObject([
+    expect(ir.block.operation).toEqual([])
+    expect(ir.block.effect).toMatchObject([
       {
         expressions: [
           {

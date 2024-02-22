@@ -32,7 +32,7 @@ describe('compiler: v-if', () => {
     expect(helpers.size).toBe(0)
 
     expect(ir.template).toEqual(['<div></div>'])
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
         id: 1,
@@ -42,20 +42,20 @@ describe('compiler: v-if', () => {
           isStatic: false,
         },
         positive: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 0,
         },
       },
     ])
-    expect(ir.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([1])
 
-    expect(ir.dynamic).toMatchObject({
+    expect(ir.block.dynamic).toMatchObject({
       id: 0,
       children: { 0: { id: 1 } },
     })
 
-    expect(ir.effect).toEqual([])
-    expect((ir.operation[0] as IfIRNode).positive.effect).lengthOf(1)
+    expect(ir.block.effect).toEqual([])
+    expect((ir.block.operation[0] as IfIRNode).positive.effect).lengthOf(1)
 
     expect(code).matchSnapshot()
   })
@@ -68,8 +68,8 @@ describe('compiler: v-if', () => {
 
     expect(ir.template).toEqual(['<div></div>hello<p></p>'])
 
-    expect(ir.effect).toEqual([])
-    expect((ir.operation[0] as IfIRNode).positive.effect).toMatchObject([
+    expect(ir.block.effect).toEqual([])
+    expect((ir.block.operation[0] as IfIRNode).positive.effect).toMatchObject([
       {
         operations: [
           {
@@ -86,7 +86,7 @@ describe('compiler: v-if', () => {
         ],
       },
     ])
-    expect((ir.operation[0] as IfIRNode).positive.dynamic).toMatchObject({
+    expect((ir.block.operation[0] as IfIRNode).positive.dynamic).toMatchObject({
       id: 2,
       children: { 2: { id: 3 } },
     })
@@ -98,7 +98,7 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div>hello</div>'])
-    expect(ir.returns).toEqual([1, 3])
+    expect(ir.block.returns).toEqual([1, 3])
   })
 
   test.todo('v-if with v-once')
@@ -112,9 +112,9 @@ describe('compiler: v-if', () => {
     expect(ir.template).toEqual(['<div></div>', '<p></p>'])
 
     expect(vaporHelpers).contains('createIf')
-    expect(ir.effect).lengthOf(0)
+    expect(ir.block.effect).lengthOf(0)
     expect(helpers).lengthOf(0)
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
         id: 1,
@@ -124,16 +124,16 @@ describe('compiler: v-if', () => {
           isStatic: false,
         },
         positive: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 0,
         },
         negative: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 1,
         },
       },
     ])
-    expect(ir.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([1])
   })
 
   test('v-if + v-else-if', () => {
@@ -143,7 +143,7 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>'])
 
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
         id: 1,
@@ -153,7 +153,7 @@ describe('compiler: v-if', () => {
           isStatic: false,
         },
         positive: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 0,
         },
         negative: {
@@ -164,13 +164,13 @@ describe('compiler: v-if', () => {
             isStatic: false,
           },
           positive: {
-            type: IRNodeTypes.BLOCK_FUNCTION,
+            type: IRNodeTypes.BLOCK,
             templateIndex: 1,
           },
         },
       },
     ])
-    expect(ir.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([1])
   })
 
   test('v-if + v-else-if + v-else', () => {
@@ -180,23 +180,23 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
 
-    expect(ir.returns).toEqual([1])
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
         id: 1,
         positive: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 0,
         },
         negative: {
           type: IRNodeTypes.IF,
           positive: {
-            type: IRNodeTypes.BLOCK_FUNCTION,
+            type: IRNodeTypes.BLOCK,
             templateIndex: 1,
           },
           negative: {
-            type: IRNodeTypes.BLOCK_FUNCTION,
+            type: IRNodeTypes.BLOCK,
             templateIndex: 2,
           },
         },

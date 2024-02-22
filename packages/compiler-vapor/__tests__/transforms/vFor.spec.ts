@@ -28,7 +28,7 @@ describe('compiler: v-for', () => {
     expect(vaporHelpers).contains('createFor')
     expect(helpers.size).toBe(0)
     expect(ir.template).toEqual(['<div></div>'])
-    expect(ir.operation).toMatchObject([
+    expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.FOR,
         id: 1,
@@ -43,7 +43,7 @@ describe('compiler: v-for', () => {
         key: undefined,
         index: undefined,
         render: {
-          type: IRNodeTypes.BLOCK_FUNCTION,
+          type: IRNodeTypes.BLOCK,
           templateIndex: 0,
         },
         keyProperty: {
@@ -52,13 +52,13 @@ describe('compiler: v-for', () => {
         },
       },
     ])
-    expect(ir.returns).toEqual([1])
-    expect(ir.dynamic).toMatchObject({
+    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.dynamic).toMatchObject({
       id: 0,
       children: { 0: { id: 1 } },
     })
-    expect(ir.effect).toEqual([])
-    expect((ir.operation[0] as ForIRNode).render.effect).lengthOf(1)
+    expect(ir.block.effect).toEqual([])
+    expect((ir.block.operation[0] as ForIRNode).render.effect).lengthOf(1)
   })
 
   test('multi effect', () => {

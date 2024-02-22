@@ -23,7 +23,7 @@ export function genIf(
   let negativeArg: false | CodeFragment[] = false
 
   if (negative) {
-    if (negative.type === IRNodeTypes.BLOCK_FUNCTION) {
+    if (negative.type === IRNodeTypes.BLOCK) {
       negativeArg = genBlockFunction(negative, context)
     } else {
       negativeArg = ['() => ', ...genIf(negative!, context, true)]
