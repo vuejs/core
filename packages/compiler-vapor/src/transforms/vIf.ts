@@ -1,8 +1,6 @@
 import {
   type ElementNode,
   ErrorCodes,
-  NodeTypes,
-  type TemplateChildNode,
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
@@ -15,11 +13,11 @@ import {
   DynamicFlag,
   type IRDynamicInfo,
   IRNodeTypes,
-  type OperationNode,
   type VaporDirectiveNode,
 } from '../ir'
 import { extend } from '@vue/shared'
 import { genDefaultDynamic, wrapTemplate } from './utils'
+import { getSiblingIf } from './transformComment'
 
 export const transformVIf = createStructuralDirectiveTransform(
   ['if', 'else', 'else-if'],
@@ -56,43 +54,16 @@ export function processIf(
     }
   } else {
     // check the adjacent v-if
-    const parent = context.parent!
-    const siblings = parent.node.children
-    const templates = parent.childrenTemplate
-    const siblingsDynamic = parent.dynamic.children
-
-    const comments = []
-    let sibling: TemplateChildNode | undefined
-    let i = siblings.indexOf(node)
-    while (i-- >= -1) {
-      sibling = siblings[i]
-
-      if (
-        sibling &&
-        (sibling.type === NodeTypes.COMMENT ||
-          (sibling.type === NodeTypes.TEXT && !sibling.content.trim().length))
-      ) {
-        if (__DEV__ && sibling.type === NodeTypes.COMMENT)
-          comments.unshift(sibling)
-        siblingsDynamic[i].flags |= DynamicFlag.NON_TEMPLATE
-        templates[i] = null
-      } else {
-        break
-      }
-    }
+    const siblingIf = getSiblingIf(context, true)
 
     const { operation } = context.block
-    let lastIfNode: OperationNode
+    let lastIfNode = operation[operation.length - 1]
+
     if (
       // check if v-if is the sibling node
-      !sibling ||
-      sibling.type !== NodeTypes.ELEMENT ||
-      !sibling.props.some(
-        ({ type, name }) =>
-          type === NodeTypes.DIRECTIVE && ['if', 'else-if'].includes(name),
-      ) ||
-      // check if IFNode is the last operation and get the root IFNode
-      !(lastIfNode = operation[operation.length - 1]) ||
+      !siblingIf ||
+      // check if IfNode is the last operation and get the root IfNode
+      !lastIfNode ||
       lastIfNode.type !== IRNodeTypes.IF
     ) {
       context.options.onError(
@@ -113,12 +84,13 @@ export function processIf(
     }
 
     // TODO ignore comments if the v-if is direct child of <transition> (PR #3622)
-    if (__DEV__ && comments.length) {
+    if (__DEV__ && context.root.comment.length) {
       node = wrapTemplate(node, ['else-if', 'else'])
       context.node = node = extend({}, node, {
-        children: [...comments, ...node.children],
+        children: [...context.comment, ...node.children],
       })
     }
+    context.root.comment = []
 
     const [branch, onExit] = createIfBranch(node, context)
 

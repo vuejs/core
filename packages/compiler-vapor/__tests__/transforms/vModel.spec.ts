@@ -1,9 +1,9 @@
 import { makeCompile } from './_utils'
-import { transformElement, transformVModel } from '../../src'
+import { transformChildren, transformElement, transformVModel } from '../../src'
 import { DOMErrorCodes } from '@vue/compiler-dom'
 
 const compileWithVModel = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     model: transformVModel,
   },

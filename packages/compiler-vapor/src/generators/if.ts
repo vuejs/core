@@ -1,6 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { IRNodeTypes, type IfIRNode } from '../ir'
-import { genBlockFunction } from './block'
+import { genBlock } from './block'
 import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
@@ -19,12 +19,12 @@ export function genIf(
     ')',
   ]
 
-  let positiveArg = genBlockFunction(positive, context)
+  let positiveArg = genBlock(positive, context)
   let negativeArg: false | CodeFragment[] = false
 
   if (negative) {
     if (negative.type === IRNodeTypes.BLOCK) {
-      negativeArg = genBlockFunction(negative, context)
+      negativeArg = genBlock(negative, context)
     } else {
       negativeArg = ['() => ', ...genIf(negative!, context, true)]
     }

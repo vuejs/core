@@ -13,6 +13,7 @@ import {
   transform,
 } from './transform'
 import { type VaporCodegenResult, generate } from './generate'
+import { transformChildren } from './transforms/transformChildren'
 import { transformOnce } from './transforms/vOnce'
 import { transformElement } from './transforms/transformElement'
 import { transformVHtml } from './transforms/vHtml'
@@ -26,6 +27,7 @@ import type { HackOptions } from './ir'
 import { transformVModel } from './transforms/vModel'
 import { transformVIf } from './transforms/vIf'
 import { transformVFor } from './transforms/vFor'
+import { transformComment } from './transforms/transformComment'
 
 export { wrapTemplate } from './transforms/utils'
 
@@ -105,6 +107,8 @@ export function getBaseTransformPreset(
       transformVFor,
       transformText,
       transformElement,
+      transformComment,
+      transformChildren,
     ],
     {
       bind: transformVBind,

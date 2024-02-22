@@ -1,11 +1,4 @@
-import {
-  children,
-  ref,
-  setText,
-  template,
-  unmountComponent,
-  watchEffect,
-} from '../src'
+import { ref, setText, template, unmountComponent, watchEffect } from '../src'
 import { describe, expect } from 'vitest'
 import { makeRender } from './_utils'
 
@@ -17,9 +10,8 @@ describe('component', () => {
       const count = ref(0)
       const t0 = template('<div></div>')
       const n0 = t0()
-      const n1 = children(n0, 0)
       watchEffect(() => {
-        setText(n1, count.value)
+        setText(n0, count.value)
       })
       return n0
     }).render()

@@ -34,7 +34,6 @@ export function genChildren(
       offset--
     }
 
-    const elementIndex = Number(index) + offset
     const id =
       child.flags & DynamicFlag.REFERENCED
         ? child.flags & DynamicFlag.INSERT
@@ -42,6 +41,7 @@ export function genChildren(
           : child.id
         : undefined
 
+    const elementIndex = Number(index) + offset
     const newPaths = [...paths, elementIndex]
 
     if (id !== undefined) {

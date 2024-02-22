@@ -6,7 +6,6 @@
 
 import { setCurrentInstance } from '../src/component'
 import {
-  children,
   defineComponent,
   getCurrentInstance,
   nextTick,
@@ -290,11 +289,10 @@ describe('component props (vapor)', () => {
       props: ['foo'],
       render() {
         const instance = getCurrentInstance()!
-        const t0 = template('<div><!></div>')
+        const t0 = template('<div></div>')
         const n0 = t0()
-        const n1 = children(n0, 0)
         watchEffect(() => {
-          setText(n1, instance.props.foo)
+          setText(n0, instance.props.foo)
         })
         return n0
       },
@@ -307,7 +305,7 @@ describe('component props (vapor)', () => {
         return { foo, id }
       },
       render(_ctx: Record<string, any>) {
-        const t0 = template('')
+        const t0 = template('<div>')
         const n0 = t0()
         renderChild(
           {
@@ -318,19 +316,19 @@ describe('component props (vapor)', () => {
               return _ctx.id
             },
           },
-          n0 as any, // TODO: type
+          n0 as HTMLDivElement,
         )
         return n0
       },
     }).render()
     const reset = setCurrentInstance(instance)
     // expect(host.innerHTML).toBe('<div id="a">1</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div>1</div>')
+    expect(host.innerHTML).toBe('<div><div>1</div></div>')
 
     foo.value++
     await nextTick()
     // expect(host.innerHTML).toBe('<div id="a">2</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div>2</div>')
+    expect(host.innerHTML).toBe('<div><div>2</div></div>')
 
     // id.value = 'b'
     // await nextTick()
@@ -468,9 +466,8 @@ describe('component props (vapor)', () => {
         const instance = getCurrentInstance()!
         const t0 = template('<div></div>')
         const n0 = t0()
-        const n1 = children(n0, 0)
         watchEffect(() => {
-          setText(n1, instance.props.foo)
+          setText(n0, instance.props.foo)
         })
         return n0
       },
@@ -540,10 +537,9 @@ describe('component props (vapor)', () => {
         const instance = getCurrentInstance()!
         const t0 = template('<div></div>')
         const n0 = t0()
-        const n1 = children(n0, 0)
         watchEffect(() => {
           setText(
-            n1,
+            n0,
             JSON.stringify(instance.attrs) + Object.keys(instance.attrs),
           )
         })

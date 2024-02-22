@@ -1,40 +1,38 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: v-for > basic v-for 1`] = `
-"import { children as _children, on as _on, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { on as _on, setText as _setText, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
-    const n2 = t0()
-    const n3 = _children(n2, 0)
+    const n3 = t0()
     _on(n3, "click", () => $event => (_ctx.remove(_block.s[0])))
     const _updateEffect = () => {
       const [item] = _block.s
       _setText(n3, item)
     }
     _renderEffect(_updateEffect)
-    return [n2, _updateEffect]
+    return [n3, _updateEffect]
   }, (item) => (item.id))
   return n1
 }"
 `;
 
 exports[`compiler: v-for > multi effect 1`] = `
-"import { children as _children, setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
+"import { setDynamicProp as _setDynamicProp, renderEffect as _renderEffect, createFor as _createFor, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
-    const n2 = t0()
-    const n3 = _children(n2, 0)
+    const n3 = t0()
     const _updateEffect = () => {
       const [item, index] = _block.s
       _setDynamicProp(n3, "item", item)
       _setDynamicProp(n3, "index", index)
     }
     _renderEffect(_updateEffect)
-    return [n2, _updateEffect]
+    return [n3, _updateEffect]
   })
   return n1
 }"
@@ -46,8 +44,8 @@ const t0 = _template("<div>item</div>")
 
 export function render(_ctx) {
   const n1 = _createFor(() => (_ctx.items), (_block) => {
-    const n2 = t0()
-    return [n2, () => {}]
+    const n3 = t0()
+    return [n3, () => {}]
   })
   return n1
 }"

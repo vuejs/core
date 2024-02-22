@@ -1,6 +1,7 @@
 import {
   type AllNode,
   type TransformOptions as BaseTransformOptions,
+  type CommentNode,
   type CompilerCompatOptions,
   type ElementNode,
   ElementTypes,
@@ -67,6 +68,8 @@ export interface TransformContext<T extends AllNode = AllNode> {
   template: string
   childrenTemplate: (string | null)[]
   dynamic: IRDynamicInfo
+
+  comment: CommentNode[]
 
   inVOnce: boolean
 
@@ -136,6 +139,7 @@ function createRootContext(
     options: extend({}, defaultOptions, options),
     dynamic: root.block.dynamic,
     inVOnce: false,
+    comment: [],
 
     increaseId: () => globalId++,
     reference() {
@@ -172,7 +176,6 @@ function createRootContext(
     template: '',
     childrenTemplate: [],
     registerTemplate() {
-      this.template += this.childrenTemplate.filter(Boolean).join('')
       if (!this.template) {
         return -1
       }
@@ -194,22 +197,6 @@ function createRootContext(
   context.root = context
   context.reference()
   return context
-}
-
-function createContext<T extends TemplateChildNode>(
-  node: T,
-  parent: TransformContext<RootNode | ElementNode>,
-  index: number,
-): TransformContext<T> {
-  return extend({}, parent, {
-    node,
-    parent,
-    index,
-
-    template: '',
-    childrenTemplate: [],
-    dynamic: genDefaultDynamic(),
-  } satisfies Partial<TransformContext<T>>) satisfies TransformContext<T>
 }
 
 // AST -> IR
@@ -241,7 +228,7 @@ export function transform(
   return ir
 }
 
-function transformNode(
+export function transformNode(
   context: TransformContext<RootNode | TemplateChildNode>,
 ) {
   let { node } = context
@@ -267,18 +254,6 @@ function transformNode(
     }
   }
 
-  switch (node.type) {
-    case NodeTypes.ROOT:
-    case NodeTypes.ELEMENT: {
-      transformChildren(context as TransformContext<RootNode | ElementNode>)
-      break
-    }
-    case NodeTypes.COMMENT: {
-      context.template += `<!--${node.content}-->`
-      break
-    }
-  }
-
   // exit transforms
   context.node = node
   let i = exitFns.length
@@ -288,88 +263,6 @@ function transformNode(
 
   if (context.node.type === NodeTypes.ROOT) {
     context.registerTemplate()
-  }
-}
-
-function transformChildren(context: TransformContext<RootNode | ElementNode>) {
-  const { children } = context.node
-
-  let referencedCount = 0
-  for (const [i, child] of children.entries()) {
-    const childContext = createContext(child, context, i)
-    transformNode(childContext)
-    context.childrenTemplate.push(childContext.template)
-    context.dynamic.children[i] = childContext.dynamic
-    if (childContext.dynamic.flags & DynamicFlag.REFERENCED) {
-      referencedCount++
-    }
-  }
-  if (referencedCount > 1) {
-    context.reference()
-  }
-
-  processDynamicChildren(context)
-}
-
-function processDynamicChildren(
-  context: TransformContext<RootNode | ElementNode>,
-) {
-  let prevDynamics: IRDynamicInfo[] = []
-  let hasStaticTemplate = false
-  const children = context.dynamic.children
-
-  const isFragment = context.block.node === context.node
-  const allNonTemplate = children.every(
-    child => child.flags & DynamicFlag.NON_TEMPLATE,
-  )
-  // all non-template: don't gen fragment but return array directly
-  if (isFragment && allNonTemplate) {
-    context.block.returns = children
-      .filter(child => child.flags & DynamicFlag.INSERT)
-      .map(child => child.id!)
-    return
-  }
-
-  // mixed: insert with anchor
-  context.block.returns = [context.dynamic.id!]
-  for (const [index, child] of children.entries()) {
-    if (child.flags & DynamicFlag.INSERT) {
-      prevDynamics.push(child)
-    }
-
-    if (!(child.flags & DynamicFlag.NON_TEMPLATE)) {
-      if (prevDynamics.length) {
-        if (hasStaticTemplate) {
-          context.childrenTemplate[index - prevDynamics.length] = `<!>`
-
-          prevDynamics[0].flags -= DynamicFlag.NON_TEMPLATE
-          const anchor = (prevDynamics[0].anchor = context.increaseId())
-
-          context.registerOperation({
-            type: IRNodeTypes.INSERT_NODE,
-            element: prevDynamics.map(child => child.id!),
-            parent: context.reference(),
-            anchor,
-          })
-        } else {
-          context.registerOperation({
-            type: IRNodeTypes.PREPEND_NODE,
-            elements: prevDynamics.map(child => child.id!),
-            parent: context.reference(),
-          })
-        }
-        prevDynamics = []
-      }
-      hasStaticTemplate = true
-    }
-  }
-
-  if (prevDynamics.length) {
-    context.registerOperation({
-      type: IRNodeTypes.APPEND_NODE,
-      elements: prevDynamics.map(child => child.id!),
-      parent: context.reference(),
-    })
   }
 }
 

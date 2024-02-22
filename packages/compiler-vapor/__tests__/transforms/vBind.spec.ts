@@ -2,13 +2,14 @@ import { ErrorCodes, NodeTypes } from '@vue/compiler-dom'
 import {
   DynamicFlag,
   IRNodeTypes,
+  transformChildren,
   transformElement,
   transformVBind,
 } from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVBind = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     bind: transformVBind,
   },

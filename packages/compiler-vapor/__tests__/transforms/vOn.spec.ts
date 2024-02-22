@@ -1,9 +1,14 @@
 import { BindingTypes, ErrorCodes, NodeTypes } from '@vue/compiler-dom'
-import { IRNodeTypes, transformElement, transformVOn } from '../../src'
+import {
+  IRNodeTypes,
+  transformChildren,
+  transformElement,
+  transformVOn,
+} from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVOn = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     on: transformVOn,
   },

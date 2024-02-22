@@ -2,6 +2,8 @@ import { makeCompile } from './_utils'
 import {
   IRNodeTypes,
   type IfIRNode,
+  transformChildren,
+  transformComment,
   transformElement,
   transformOnce,
   transformText,
@@ -16,6 +18,8 @@ const compileWithVIf = makeCompile({
     transformVIf,
     transformText,
     transformElement,
+    transformComment,
+    transformChildren,
   ],
   directiveTransforms: {
     text: transformVText,
@@ -44,7 +48,11 @@ describe('compiler: v-if', () => {
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 0,
+            children: [
+              {
+                template: 0,
+              },
+            ],
           },
         },
       },
@@ -68,15 +76,14 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
 
-    expect(ir.template).toEqual(['<div></div>hello<p></p>'])
-
+    expect(ir.template).toEqual(['<div></div>', 'hello', '<p></p>'])
     expect(ir.block.effect).toEqual([])
     expect((ir.block.operation[0] as IfIRNode).positive.effect).toMatchObject([
       {
         operations: [
           {
             type: IRNodeTypes.SET_TEXT,
-            element: 3,
+            element: 5,
             values: [
               {
                 content: 'msg',
@@ -90,7 +97,11 @@ describe('compiler: v-if', () => {
     ])
     expect((ir.block.operation[0] as IfIRNode).positive.dynamic).toMatchObject({
       id: 2,
-      children: { 2: { id: 3 } },
+      children: {
+        2: {
+          id: 5,
+        },
+      },
     })
   })
 
@@ -100,7 +111,7 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div>hello</div>'])
-    expect(ir.block.returns).toEqual([1, 3])
+    expect(ir.block.returns).toEqual([1, 4])
   })
 
   test.todo('v-if with v-once')
@@ -128,13 +139,13 @@ describe('compiler: v-if', () => {
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 0,
+            children: [{ template: 0 }],
           },
         },
         negative: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 1,
+            children: [{ template: 1 }],
           },
         },
       },
@@ -161,7 +172,7 @@ describe('compiler: v-if', () => {
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 0,
+            children: [{ template: 0 }],
           },
         },
         negative: {
@@ -174,7 +185,7 @@ describe('compiler: v-if', () => {
           positive: {
             type: IRNodeTypes.BLOCK,
             dynamic: {
-              template: 1,
+              children: [{ template: 1 }],
             },
           },
         },
@@ -198,7 +209,7 @@ describe('compiler: v-if', () => {
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 0,
+            children: [{ template: 0 }],
           },
         },
         negative: {
@@ -206,13 +217,13 @@ describe('compiler: v-if', () => {
           positive: {
             type: IRNodeTypes.BLOCK,
             dynamic: {
-              template: 1,
+              children: [{ template: 1 }],
             },
           },
           negative: {
             type: IRNodeTypes.BLOCK,
             dynamic: {
-              template: 2,
+              children: [{ template: 2 }],
             },
           },
         },
@@ -232,8 +243,10 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
     expect(ir.template).toEqual([
       '<div></div>',
-      '<!--foo--><p></p>',
-      '<!--bar-->fine',
+      '<!--foo-->',
+      '<p></p>',
+      '<!--bar-->',
+      'fine',
 
       '<input>',
     ])

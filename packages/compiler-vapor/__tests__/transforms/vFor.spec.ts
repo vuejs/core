@@ -2,6 +2,7 @@ import { makeCompile } from './_utils'
 import {
   type ForIRNode,
   IRNodeTypes,
+  transformChildren,
   transformElement,
   transformText,
   transformVBind,
@@ -11,7 +12,12 @@ import {
 import { NodeTypes } from '@vue/compiler-dom'
 
 const compileWithVFor = makeCompile({
-  nodeTransforms: [transformVFor, transformText, transformElement],
+  nodeTransforms: [
+    transformVFor,
+    transformText,
+    transformElement,
+    transformChildren,
+  ],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -45,7 +51,7 @@ describe('compiler: v-for', () => {
         render: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            template: 0,
+            children: [{ template: 0 }],
           },
         },
         keyProperty: {

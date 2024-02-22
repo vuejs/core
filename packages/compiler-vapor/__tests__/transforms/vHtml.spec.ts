@@ -1,9 +1,14 @@
 import { BindingTypes, DOMErrorCodes, NodeTypes } from '@vue/compiler-dom'
-import { IRNodeTypes, transformElement, transformVHtml } from '../../src'
+import {
+  IRNodeTypes,
+  transformChildren,
+  transformElement,
+  transformVHtml,
+} from '../../src'
 import { makeCompile } from './_utils'
 
 const compileWithVHtml = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     html: transformVHtml,
   },

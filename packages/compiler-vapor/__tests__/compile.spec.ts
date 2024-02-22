@@ -88,17 +88,6 @@ describe('compile', () => {
         expect(code).toMatchSnapshot()
         // Waiting for TODO, There should be more here.
       })
-
-      // TODO: support multiple root nodes and components
-      test('self-closing v-pre', () => {
-        const code = compile(
-          `<div v-pre/>\n<div :id="foo"><Comp/>{{ bar }}</div>`,
-        )
-
-        expect(code).toMatchSnapshot()
-        expect(code).contains('<div></div><div><Comp></Comp></div>')
-        // Waiting for TODO, There should be more here.
-      })
     })
 
     describe('v-cloak', () => {

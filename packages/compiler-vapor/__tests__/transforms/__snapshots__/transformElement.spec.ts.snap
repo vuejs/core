@@ -1,26 +1,24 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: element transform > props merging: class 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setClass as _setClass, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setClass(n1, ["foo", { bar: _ctx.isBar }]))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: element transform > props merging: style 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setStyle as _setStyle, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setStyle(n1, ["color: green", { color: 'red' }]))
-  return n0
+  return n1
 }"
 `;
 
@@ -29,55 +27,51 @@ exports[`compiler: element transform > static props 1`] = `
 const t0 = _template("<div id=\\"foo\\" class=\\"bar\\"></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  return n0
+  const n1 = t0()
+  return n1
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setDynamicProps(n1, _ctx.obj))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" after static prop 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setDynamicProps(n1, { id: "foo" }, _ctx.obj))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" before static prop 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setDynamicProps(n1, _ctx.obj, { id: "foo" }))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: element transform > v-bind="obj" between static props 1`] = `
-"import { children as _children, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _renderEffect(() => _setDynamicProps(n1, { id: "foo" }, _ctx.obj, { class: "bar" }))
-  return n0
+  return n1
 }"
 `;

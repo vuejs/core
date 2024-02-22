@@ -1,9 +1,9 @@
 import { makeCompile } from './_utils'
-import { transformElement, transformVShow } from '../../src'
+import { transformChildren, transformElement, transformVShow } from '../../src'
 import { DOMErrorCodes } from '@vue/compiler-dom'
 
 const compileWithVShow = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     show: transformVShow,
   },

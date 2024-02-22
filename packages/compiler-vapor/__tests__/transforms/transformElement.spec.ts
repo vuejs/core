@@ -1,6 +1,7 @@
 import { makeCompile } from './_utils'
 import {
   IRNodeTypes,
+  transformChildren,
   transformElement,
   transformVBind,
   transformVOn,
@@ -8,7 +9,7 @@ import {
 import { NodeTypes } from '@vue/compiler-core'
 
 const compileWithElementTransform = makeCompile({
-  nodeTransforms: [transformElement],
+  nodeTransforms: [transformElement, transformChildren],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -16,7 +17,7 @@ const compileWithElementTransform = makeCompile({
 })
 
 describe('compiler: element transform', () => {
-  test.todo('baisc')
+  test.todo('basic')
 
   test('static props', () => {
     const { code, ir } = compileWithElementTransform(

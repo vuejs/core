@@ -1,5 +1,5 @@
 import { NewlineType } from '@vue/compiler-dom'
-import { genBlockFunction } from './block'
+import { genBlock } from './block'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import type { ForIRNode, IREffect } from '../ir'
@@ -38,7 +38,7 @@ export function genFor(
   ]
 
   const blockFn = context.withId(
-    () => genBlockFunction(render, context, ['_block'], blockReturns),
+    () => genBlock(render, context, ['_block'], blockReturns),
     idMap,
   )
 

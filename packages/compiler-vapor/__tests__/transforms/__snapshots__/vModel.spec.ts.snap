@@ -1,158 +1,146 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { lazy: true }]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .number 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { number: true }]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > modifiers > .trim 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { trim: true }]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
-"import { children as _children, vModelCheckbox as _vModelCheckbox, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelCheckbox as _vModelCheckbox, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input type=\\"checkbox\\">")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelCheckbox, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (dynamic type) 1`] = `
-"import { children as _children, vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (radio) 1`] = `
-"import { children as _children, vModelRadio as _vModelRadio, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelRadio as _vModelRadio, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input type=\\"radio\\">")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelRadio, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support input (text) 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input type=\\"text\\">")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support select 1`] = `
-"import { children as _children, vModelSelect as _vModelSelect, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelSelect as _vModelSelect, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<select></select>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelSelect, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support simple expression 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support textarea 1`] = `
-"import { children as _children, vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelText as _vModelText, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<textarea></textarea>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
-"import { children as _children, vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, renderEffect as _renderEffect, setDynamicProps as _setDynamicProps, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
   _renderEffect(() => _setDynamicProps(n1, _ctx.obj))
-  return n0
+  return n1
 }"
 `;
 
 exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
-"import { children as _children, vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
+"import { vModelDynamic as _vModelDynamic, withDirectives as _withDirectives, on as _on, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n0 = t0()
-  const n1 = _children(n0, 0)
+  const n1 = t0()
   _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
   _on(n1, "update:modelValue", $event => (_ctx.model = $event))
-  return n0
+  return n1
 }"
 `;

@@ -12,7 +12,7 @@ import { genEffects, genOperations } from './operation'
 import { genChildren } from './template'
 import { genMulti } from './utils'
 
-export function genBlockFunction(
+export function genBlock(
   oper: BlockIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
@@ -23,21 +23,23 @@ export function genBlockFunction(
     ...args,
     ') => {',
     INDENT_START,
-    ...genBlockFunctionContent(oper, context, customReturns),
+    ...genBlockContent(oper, context, customReturns),
     INDENT_END,
     NEWLINE,
     '}',
   ]
 }
 
-export function genBlockFunctionContent(
+export function genBlockContent(
   { dynamic, effect, operation, returns }: BlockIRNode,
   context: CodegenContext,
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
 
-  push(...genChildren(dynamic, context, dynamic.id!))
+  for (const child of dynamic.children) {
+    push(...genChildren(child, context, child.id!))
+  }
 
   const directiveOps = operation.filter(
     (oper): oper is WithDirectiveIRNode =>

@@ -5,7 +5,7 @@ import type {
 import type { IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { extend, remove } from '@vue/shared'
-import { genBlockFunctionContent } from './generators/block'
+import { genBlockContent } from './generators/block'
 import { genTemplates } from './generators/template'
 import {
   type CodeFragment,
@@ -118,7 +118,7 @@ export function generate(
   }
 
   push(INDENT_START)
-  push(...genBlockFunctionContent(ir.block, context))
+  push(...genBlockContent(ir.block, context))
   push(INDENT_END, NEWLINE)
 
   if (isSetupInlined) {
