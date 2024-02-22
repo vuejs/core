@@ -3,6 +3,7 @@ import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
 import type { EffectScope } from './effectScope'
+import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
 
@@ -44,7 +45,6 @@ export enum Flags {
   TRACKING = 1 << 2,
   NOTIFIED = 1 << 3,
   DIRTY = 1 << 4,
-  HAS_ERROR = 1 << 5,
 }
 
 /**
@@ -156,9 +156,11 @@ export class ReactiveEffect<T = any>
     try {
       return this.fn()
     } finally {
-      // TODO make this dev only
-      if (activeSub !== this) {
-        throw new Error('active effect was not restored correctly')
+      if (__DEV__ && activeSub !== this) {
+        warn(
+          'Active effect was not restored correctly - ' +
+            'this is likely a Vue internal bug.',
+        )
       }
       cleanupDeps(this)
       activeSub = prevEffect
@@ -317,7 +319,6 @@ export function refreshComputed(computed: ComputedRefImpl) {
       dep.version++
     }
   } catch (err) {
-    // TODO error recovery?
     dep.version++
   }
 
