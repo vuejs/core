@@ -342,16 +342,12 @@ function removeSub(link: Link) {
     dep.subs = prevSub
   }
 
-  if (!dep.subs) {
+  if (!dep.subs && dep.computed) {
     // last subscriber removed
-    // if this is an object property dep, remove the dep from the map
-    if (dep.map) dep.map.delete(dep.key)
     // if computed, unsubscribe it from all its deps so they can be GCed
-    else if (dep.computed) {
-      dep.computed.flags &= ~Flags.TRACKING
-      for (let l = dep.computed.deps; l; l = l.nextDep) {
-        removeSub(l)
-      }
+    dep.computed.flags &= ~Flags.TRACKING
+    for (let l = dep.computed.deps; l; l = l.nextDep) {
+      removeSub(l)
     }
   }
 }

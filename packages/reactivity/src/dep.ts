@@ -27,12 +27,6 @@ export class Dep {
    * Doubly linked list representing the subscribing effects (tail)
    */
   subs?: Link = undefined
-  /**
-   * Attached after creation, used for cleanup when the Dep has lost all
-   * subscribers
-   */
-  map?: KeyToDepMap
-  key?: unknown
 
   constructor(public computed?: ComputedRefImpl) {}
 
@@ -207,8 +201,6 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     let dep = depsMap.get(key)
     if (!dep) {
       depsMap.set(key, (dep = new Dep()))
-      dep.map = depsMap
-      dep.key = key
     }
     if (__DEV__) {
       dep.track({
