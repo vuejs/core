@@ -16,7 +16,7 @@ import {
   toReactive,
 } from './reactive'
 import type { ComputedRef } from './computed'
-import { TrackOpTypes } from './constants'
+import { TrackOpTypes, TriggerOpTypes } from './constants'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -96,7 +96,7 @@ function createRef(rawValue: unknown, shallow: boolean) {
 }
 
 class RefImpl<T = any> {
-  private _value: T
+  _value: T
   private _rawValue: T
 
   dep: Dep = new Dep()
@@ -124,14 +124,23 @@ class RefImpl<T = any> {
     return this._value
   }
 
-  set value(newVal) {
+  set value(newValue) {
     const useDirectValue =
-      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
-    newVal = useDirectValue ? newVal : toRaw(newVal)
-    if (hasChanged(newVal, this._rawValue)) {
-      this._rawValue = newVal
-      this._value = useDirectValue ? newVal : toReactive(newVal)
-      this.dep.trigger()
+      this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
+    newValue = useDirectValue ? newValue : toRaw(newValue)
+    if (hasChanged(newValue, this._rawValue)) {
+      this._rawValue = newValue
+      this._value = useDirectValue ? newValue : toReactive(newValue)
+      if (__DEV__) {
+        this.dep.trigger({
+          target: this,
+          type: TriggerOpTypes.SET,
+          key: 'value',
+          newValue: newValue,
+        })
+      } else {
+        this.dep.trigger()
+      }
     }
   }
 }
@@ -162,7 +171,16 @@ class RefImpl<T = any> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  ;(ref as unknown as RefImpl).dep.trigger()
+  if (__DEV__) {
+    ;(ref as unknown as RefImpl).dep.trigger({
+      target: ref,
+      type: TriggerOpTypes.SET,
+      key: 'value',
+      newValue: (ref as unknown as RefImpl)._value,
+    })
+  } else {
+    ;(ref as unknown as RefImpl).dep.trigger()
+  }
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
