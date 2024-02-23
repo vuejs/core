@@ -1037,7 +1037,7 @@ describe('reactivity/effect', () => {
     expect(renderSpy).toHaveBeenCalledTimes(2)
   })
 
-  describe('empty dep cleanup', () => {
+  describe('dep unsubscribe', () => {
     function getSubCount(dep: Dep | undefined) {
       let count = 0
       let sub = dep!.subs
@@ -1050,46 +1050,36 @@ describe('reactivity/effect', () => {
 
     it('should remove the dep when the effect is stopped', () => {
       const obj = reactive({ prop: 1 })
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       const runner = effect(() => obj.prop)
       const dep = getDepFromReactive(toRaw(obj), 'prop')
       expect(getSubCount(dep)).toBe(1)
       obj.prop = 2
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
       expect(getSubCount(dep)).toBe(1)
       stop(runner)
       expect(getSubCount(dep)).toBe(0)
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       obj.prop = 3
       runner()
       expect(getSubCount(dep)).toBe(0)
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
     })
 
     it('should only remove the dep when the last effect is stopped', () => {
       const obj = reactive({ prop: 1 })
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       const runner1 = effect(() => obj.prop)
       const dep = getDepFromReactive(toRaw(obj), 'prop')
       expect(getSubCount(dep)).toBe(1)
       const runner2 = effect(() => obj.prop)
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
       expect(getSubCount(dep)).toBe(2)
       obj.prop = 2
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
       expect(getSubCount(dep)).toBe(2)
       stop(runner1)
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
       expect(getSubCount(dep)).toBe(1)
       obj.prop = 3
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBe(dep)
       expect(getSubCount(dep)).toBe(1)
       stop(runner2)
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       obj.prop = 4
       runner1()
       runner2()
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
+      expect(getSubCount(dep)).toBe(0)
     })
 
     it('should remove the dep when it is no longer used by the effect', () => {
@@ -1098,15 +1088,12 @@ describe('reactivity/effect', () => {
         b: 2,
         c: 'a',
       })
-      expect(getDepFromReactive(toRaw(obj), 'prop')).toBeUndefined()
       effect(() => obj[obj.c])
       const depC = getDepFromReactive(toRaw(obj), 'c')
       expect(getSubCount(getDepFromReactive(toRaw(obj), 'a'))).toBe(1)
-      expect(getDepFromReactive(toRaw(obj), 'b')).toBeUndefined()
       expect(getSubCount(depC)).toBe(1)
       obj.c = 'b'
       obj.a = 4
-      expect(getDepFromReactive(toRaw(obj), 'a')).toBeUndefined()
       expect(getSubCount(getDepFromReactive(toRaw(obj), 'b'))).toBe(1)
       expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
       expect(getSubCount(depC)).toBe(1)
