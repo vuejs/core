@@ -4,8 +4,7 @@ import {
   onEffectCleanup,
   onScopeDispose,
 } from '@vue/reactivity'
-import { recordPropMetadata } from '../metadata'
-import { toHandlerKey } from '@vue/shared'
+import { recordMetadata } from '../metadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
 
 export function addEventListener(
@@ -25,24 +24,20 @@ export function on(
   options?: AddEventListenerOptions,
   { modifiers, keys }: { modifiers?: string[]; keys?: string[] } = {},
 ) {
-  recordPropMetadata(el, toHandlerKey(event), handlerGetter)
-  const cleanup = addEventListener(
-    el,
-    event,
-    (...args: any[]) => {
-      let handler = handlerGetter()
-      if (!handler) return
+  const handler = (...args: any[]) => {
+    let handler = handlerGetter()
+    if (!handler) return
 
-      if (modifiers) {
-        handler = withModifiers(handler, modifiers)
-      }
-      if (keys) {
-        handler = withKeys(handler, keys)
-      }
-      handler && handler(...args)
-    },
-    options,
-  )
+    if (modifiers) {
+      handler = withModifiers(handler, modifiers)
+    }
+    if (keys) {
+      handler = withKeys(handler, keys)
+    }
+    handler && handler(...args)
+  }
+  recordMetadata(el, 'events', event, handler)
+  const cleanup = addEventListener(el, event, handler, options)
 
   const scope = getCurrentScope()
   const effect = getCurrentEffect()

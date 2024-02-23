@@ -20,7 +20,7 @@ import { getMetadata } from '../metadata'
 type AssignerFn = (value: any) => void
 function getModelAssigner(el: Element): AssignerFn {
   const metadata = getMetadata(el)
-  const fn: any = metadata.props['onUpdate:modelValue']
+  const fn: any = metadata.events['update:modelValue']
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
