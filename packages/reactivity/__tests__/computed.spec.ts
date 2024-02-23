@@ -757,4 +757,26 @@ describe('reactivity/computed', () => {
     expect(b.value).toBe(true)
     expect(c.value).toBe(true)
   })
+
+  it('chained computed should work when accessed before having subs', () => {
+    const n = ref(0)
+    const c = computed(() => n.value)
+    const d = computed(() => c.value + 1)
+    const spy = vi.fn()
+
+    // access
+    d.value
+
+    let dummy
+    effect(() => {
+      spy()
+      dummy = d.value
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(dummy).toBe(1)
+
+    n.value++
+    expect(spy).toHaveBeenCalledTimes(2)
+    expect(dummy).toBe(2)
+  })
 })

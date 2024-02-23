@@ -58,17 +58,7 @@ export class Dep {
         activeSub.depsTail = link
       }
 
-      // add the link to this dep as a subscriber (as tail)
       if (activeSub.flags & EffectFlags.TRACKING) {
-        const computed = this.computed
-        if (computed && !this.subs) {
-          // a computed dep getting its first subscriber, enable tracking +
-          // lazily subscribe to all its deps
-          computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
-          for (let l = computed.deps; l; l = l.nextDep) {
-            addSub(l)
-          }
-        }
         addSub(link)
       }
     } else if (link.version === -1) {
@@ -150,6 +140,16 @@ export class Dep {
 }
 
 function addSub(link: Link) {
+  const computed = link.dep.computed
+  // computed getting its first subscriber
+  // enable tracking + lazily subscribe to all its deps
+  if (computed && !link.dep.subs) {
+    computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
+    for (let l = computed.deps; l; l = l.nextDep) {
+      addSub(l)
+    }
+  }
+
   const currentTail = link.dep.subs
   if (currentTail !== link) {
     link.prevSub = currentTail
