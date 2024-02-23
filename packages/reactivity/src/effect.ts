@@ -44,6 +44,7 @@ export enum EffectFlags {
   TRACKING = 1 << 2,
   NOTIFIED = 1 << 3,
   DIRTY = 1 << 4,
+  NO_BATCH = 1 << 5,
 }
 
 /**
@@ -143,6 +144,9 @@ export class ReactiveEffect<T = any>
     if (this.flags & EffectFlags.RUNNING && !this.allowRecurse) {
       return
     }
+    if (this.flags & EffectFlags.NO_BATCH) {
+      return this.trigger()
+    }
     if (!(this.flags & EffectFlags.NOTIFIED)) {
       this.flags |= EffectFlags.NOTIFIED
       this.nextEffect = batchedEffect
@@ -191,6 +195,14 @@ export class ReactiveEffect<T = any>
       this.flags &= ~EffectFlags.ACTIVE
     }
   }
+
+  trigger() {
+    if (this.scheduler) {
+      this.scheduler()
+    } else {
+      this.run()
+    }
+  }
 }
 
 let batchDepth = 0
@@ -219,11 +231,7 @@ export function endBatch() {
       e.flags &= ~EffectFlags.NOTIFIED
       if (e.flags & EffectFlags.ACTIVE && isDirty(e)) {
         try {
-          if (e.scheduler) {
-            e.scheduler()
-          } else {
-            e.run()
-          }
+          e.trigger()
         } catch (err) {
           if (!error) error = err
         }

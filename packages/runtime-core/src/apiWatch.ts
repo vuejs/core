@@ -381,8 +381,11 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
+  const effect = new ReactiveEffect(getter)
+
   let scheduler: EffectScheduler
   if (flush === 'sync') {
+    effect.flags |= EffectFlags.NO_BATCH
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
@@ -392,8 +395,6 @@ function doWatch(
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
-
-  const effect = new ReactiveEffect(getter)
   effect.scheduler = scheduler
 
   const scope = getCurrentScope()

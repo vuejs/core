@@ -1475,4 +1475,32 @@ describe('api: watch', () => {
     unwatch!()
     expect(scope.effects.length).toBe(0)
   })
+
+  // simplified case of VueUse syncRef
+  test('sync watcher should not be batched', () => {
+    const a = ref(0)
+    const b = ref(0)
+    let pauseB = false
+    watch(
+      a,
+      () => {
+        pauseB = true
+        b.value = a.value + 1
+        pauseB = false
+      },
+      { flush: 'sync' },
+    )
+    watch(
+      b,
+      () => {
+        if (!pauseB) {
+          throw new Error('should not be called')
+        }
+      },
+      { flush: 'sync' },
+    )
+
+    a.value = 1
+    expect(b.value).toBe(2)
+  })
 })
