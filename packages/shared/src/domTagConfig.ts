@@ -4,15 +4,17 @@ import { makeMap } from './makeMap'
 
 // https://developer.mozilla.org/en-US/docs/Web/HTML/Element
 const HTML_TAGS =
-  'html,body,base,head,link,meta,style,title,address,article,aside,footer,' +
-  'header,hgroup,h1,h2,h3,h4,h5,h6,nav,section,div,dd,dl,dt,figcaption,' +
-  'figure,picture,hr,img,li,main,ol,p,pre,ul,a,b,abbr,bdi,bdo,br,cite,code,' +
-  'data,dfn,em,i,kbd,mark,q,rp,rt,ruby,s,samp,small,span,strong,sub,sup,' +
-  'time,u,var,wbr,area,audio,map,track,video,embed,object,param,source,' +
-  'canvas,script,noscript,del,ins,caption,col,colgroup,table,thead,tbody,td,' +
-  'th,tr,button,datalist,fieldset,form,input,label,legend,meter,optgroup,' +
-  'option,output,progress,select,textarea,details,dialog,menu,' +
-  'summary,template,blockquote,iframe,tfoot'
+  'a,abbr,acronym,address,area,article,aside,audio,b,base,bdi,bdo,big,' +
+  'blockquote,body,br,button,canvas,caption,center,cite,code,col,colgroup,' +
+  'data,datalist,dd,del,details,dfn,dialog,dir,div,dl,dt,em,embed,fieldset,' +
+  'figcaption,figure,font,footer,form,frame,frameset,h1,head,header,hgroup,' +
+  'hr,html,i,iframe,image,img,input,ins,kbd,label,legend,li,link,main,map,' +
+  'mark,marquee,menu,menuitem,meta,meter,nav,nobr,noembed,noframes,noscript,' +
+  'object,ol,optgroup,option,output,p,param,picture,plaintext,portal,pre,' +
+  'progress,q,rb,rp,rt,rtc,ruby,s,samp,script,search,section,select,slot,' +
+  'small,source,span,strike,strong,style,sub,summary,sup,table,tbody,td,' +
+  'template,textarea,tfoot,th,thead,time,title,tr,track,tt,u,ul,var,video,' +
+  'wbr,xmp'
 
 // https://developer.mozilla.org/en-US/docs/Web/SVG/Element
 const SVG_TAGS =
