@@ -60,8 +60,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2(vitest@1.2.2)
       '@vue/consolidate':
-        specifier: 0.17.3
-        version: 0.17.3
+        specifier: 1.0.0
+        version: 1.0.0
       conventional-changelog-cli:
         specifier: ^4.1.0
         version: 4.1.0
@@ -374,8 +374,8 @@ importers:
   packages/sfc-playground:
     dependencies:
       '@vue/repl':
-        specifier: ^4.0.0
-        version: 4.0.0
+        specifier: ^4.1.0
+        version: 4.1.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1891,18 +1891,13 @@ packages:
       vue: link:packages/vue
     dev: true
 
-  /@vue/consolidate@0.17.3:
-    resolution: {integrity: sha512-nl0SWcTMzaaTnJ5G6V8VlMDA1CVVrNnaQKF1aBZU3kXtjgU9jtHMsEAsgjoRUx+T0EVJk9TgbmxGhK3pOk22zw==}
-    engines: {node: '>= 0.12.0'}
-    dev: true
-
   /@vue/consolidate@1.0.0:
     resolution: {integrity: sha512-oTyUE+QHIzLw2PpV14GD/c7EohDyP64xCniWTcqcEmTd699eFqTIwOmtDYjcO1j3QgdXoJEoWv1/cCdLrRoOfg==}
     engines: {node: '>= 0.12.0'}
     dev: true
 
-  /@vue/repl@4.0.0:
-    resolution: {integrity: sha512-/C4moGPnuc/t7JdBdEAOn/9MkdLH0KzY8zhZN33gfKY6E7ln0I2umsTjQAxvjTFuPS01oAOlATvaWz5cW8HLgQ==}
+  /@vue/repl@4.1.0:
+    resolution: {integrity: sha512-4ZNEQWlLjl1Sq+WFiACm5siMdwUAmmqOES4XDgZRRFYeeW/BfabO9I6fpU+Y0zO9HFzKb8dwUUH0e0LK7mIYeg==}
     dev: false
 
   /@vueuse/core@10.7.2(vue@packages+vue):

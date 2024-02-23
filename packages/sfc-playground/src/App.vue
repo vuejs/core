@@ -10,22 +10,9 @@ import {
   StoreState,
   ImportMap,
 } from '@vue/repl'
-import type Monaco from '@vue/repl/monaco-editor'
-import type CodeMirror from '@vue/repl/codemirror-editor'
-import { ref, watchEffect, onMounted, computed, shallowRef, watch } from 'vue'
+import Monaco from '@vue/repl/monaco-editor'
+import { ref, watchEffect, onMounted, computed, watch } from 'vue'
 import welcomeSFC from './welcome.vue?raw'
-
-const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
-
-if (import.meta.env.DEV) {
-  import('@vue/repl/codemirror-editor').then(
-    mod => (EditorComponent.value = mod.default),
-  )
-} else {
-  import('@vue/repl/monaco-editor').then(
-    mod => (EditorComponent.value = mod.default),
-  )
-}
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -186,6 +173,9 @@ function toggleTheme(isDark: boolean) {
 onMounted(() => {
   const cls = document.documentElement.classList
   toggleTheme(cls.contains('dark'))
+
+  // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
+  window.process = { env: {} }
 })
 </script>
 
@@ -202,10 +192,9 @@ onMounted(() => {
     @reload-page="reloadPage"
   />
   <Repl
-    v-if="EditorComponent"
     ref="replRef"
     :theme="theme"
-    :editor="EditorComponent"
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode"
