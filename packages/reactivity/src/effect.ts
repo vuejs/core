@@ -125,16 +125,14 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
-  fn: () => T
+  allowRecurse?: boolean
 
   scheduler?: EffectScheduler = undefined
-  allowRecurse?: boolean
   onStop?: () => void
   onTrack?: (event: DebuggerEvent) => void
   onTrigger?: (event: DebuggerEvent) => void
 
-  constructor(fn: () => T) {
-    this.fn = fn
+  constructor(public fn: () => T) {
     recordEffectScope(this)
   }
 
