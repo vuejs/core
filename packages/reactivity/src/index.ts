@@ -47,7 +47,11 @@ export {
 export {
   effect,
   stop,
+  enableTracking,
+  pauseTracking,
+  resetTracking,
   ReactiveEffect,
+  EffectFlags,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,
@@ -55,14 +59,7 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
 } from './effect'
-export {
-  trigger,
-  track,
-  enableTracking,
-  pauseTracking,
-  resetTracking,
-  ITERATE_KEY,
-} from './dep'
+export { trigger, track, ITERATE_KEY } from './dep'
 export {
   effectScope,
   EffectScope,

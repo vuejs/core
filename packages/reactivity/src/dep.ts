@@ -3,10 +3,11 @@ import { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
-  Flags,
+  EffectFlags,
   type Link,
   activeSub,
   endBatch,
+  shouldTrack,
   startBatch,
 } from './effect'
 
@@ -55,12 +56,12 @@ export class Dep {
       activeSub.deps = link
 
       // add the link to this dep as a subscriber (as tail)
-      if (activeSub.flags & Flags.TRACKING) {
+      if (activeSub.flags & EffectFlags.TRACKING) {
         const computed = this.computed
         if (computed && !this.subs) {
           // a computed dep getting its first subscriber, enable tracking +
           // lazily subscribe to all its deps
-          computed.flags |= Flags.TRACKING | Flags.DIRTY
+          computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
           for (let l = computed.deps; l !== undefined; l = l.nextDep) {
             addSub(l)
           }
@@ -153,34 +154,6 @@ const targetMap = new WeakMap<object, KeyToDepMap>()
 
 export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
 export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map iterate' : '')
-
-export let shouldTrack = true
-
-const trackStack: boolean[] = []
-
-/**
- * Temporarily pauses tracking.
- */
-export function pauseTracking() {
-  trackStack.push(shouldTrack)
-  shouldTrack = false
-}
-
-/**
- * Re-enables effect tracking (if it was paused).
- */
-export function enableTracking() {
-  trackStack.push(shouldTrack)
-  shouldTrack = true
-}
-
-/**
- * Resets the previous global effect tracking state.
- */
-export function resetTracking() {
-  const last = trackStack.pop()
-  shouldTrack = last === undefined ? true : last
-}
 
 /**
  * Tracks access to a reactive property.

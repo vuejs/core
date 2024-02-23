@@ -1,6 +1,7 @@
 import {
   type ComputedRef,
   type DebuggerOptions,
+  EffectFlags,
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
@@ -338,9 +339,9 @@ function doWatch(
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
   const job: SchedulerJob = () => {
-    // if (!effect.active || !effect.dirty) {
-    // return
-    // }
+    if (!(effect.flags & EffectFlags.ACTIVE)) {
+      return
+    }
     if (cb) {
       // watch(source, cb)
       const newValue = effect.run()

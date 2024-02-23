@@ -23,6 +23,7 @@ import {
 } from '@vue/runtime-test'
 import {
   type DebuggerEvent,
+  EffectFlags,
   ITERATE_KEY,
   type Ref,
   type ShallowRef,
@@ -1185,8 +1186,7 @@ describe('api: watch', () => {
     await nextTick()
     await nextTick()
 
-    // @ts-expect-error TODO
-    expect(instance!.scope.effects[0].active).toBe(false)
+    expect(instance!.scope.effects[0].flags & EffectFlags.ACTIVE).toBeFalsy()
   })
 
   test('this.$watch should pass `this.proxy` to watch source as the first argument ', () => {

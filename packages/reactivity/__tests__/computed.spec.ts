@@ -13,7 +13,7 @@ import {
   shallowRef,
   toRaw,
 } from '../src'
-import { Flags } from '../src/effect'
+import { EffectFlags } from '../src/effect'
 import type { ComputedRefImpl } from '../src/computed'
 
 describe('reactivity/computed', () => {
@@ -440,8 +440,8 @@ describe('reactivity/computed', () => {
     const c2 = computed(() => c1.value) as unknown as ComputedRefImpl
 
     c2.value
-    expect(c1.flags & Flags.DIRTY).toBeFalsy()
-    expect(c2.flags & Flags.DIRTY).toBeFalsy()
+    expect(c1.flags & EffectFlags.DIRTY).toBeFalsy()
+    expect(c2.flags & EffectFlags.DIRTY).toBeFalsy()
   })
 
   it('should chained computeds dirtyLevel update with first computed effect', () => {

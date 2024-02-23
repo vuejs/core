@@ -11,13 +11,7 @@ import {
   toRaw,
 } from './reactive'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  ITERATE_KEY,
-  pauseTracking,
-  resetTracking,
-  track,
-  trigger,
-} from './dep'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -29,7 +23,7 @@ import {
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
-import { endBatch, startBatch } from './effect'
+import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 

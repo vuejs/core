@@ -2,7 +2,7 @@ import { isFunction } from '@vue/shared'
 import {
   type DebuggerEvent,
   type DebuggerOptions,
-  Flags,
+  EffectFlags,
   type Link,
   type Subscriber,
   refreshComputed,
@@ -39,7 +39,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   // A computed is also a subscriber that tracks other deps
   deps?: Link = undefined
   // track variaous states
-  flags = Flags.DIRTY
+  flags = EffectFlags.DIRTY
   // last seen global version
   globalVersion = globalVersion - 1
 
@@ -57,8 +57,8 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   notify() {
-    if (!(this.flags & Flags.NOTIFIED)) {
-      this.flags |= Flags.DIRTY | Flags.NOTIFIED
+    if (!(this.flags & EffectFlags.NOTIFIED)) {
+      this.flags |= EffectFlags.DIRTY | EffectFlags.NOTIFIED
       this.dep.notify()
     }
   }
