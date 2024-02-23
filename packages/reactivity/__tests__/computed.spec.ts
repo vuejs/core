@@ -1,4 +1,11 @@
-import { h, nextTick, nodeOps, render, serializeInner } from '@vue/runtime-test'
+import {
+  h,
+  nextTick,
+  nodeOps,
+  onUnmounted,
+  render,
+  serializeInner,
+} from '@vue/runtime-test'
 import {
   type DebuggerEvent,
   ITERATE_KEY,
@@ -778,5 +785,37 @@ describe('reactivity/computed', () => {
     n.value++
     expect(spy).toHaveBeenCalledTimes(2)
     expect(dummy).toBe(2)
+  })
+
+  // #10236
+  it('chained computed should still refresh after owner component unmount', async () => {
+    const a = ref(0)
+    const spy = vi.fn()
+
+    const Child = {
+      setup() {
+        const b = computed(() => a.value + 1)
+        const c = computed(() => b.value + 1)
+        // access
+        c.value
+        onUnmounted(() => spy(c.value))
+        return () => {}
+      },
+    }
+
+    const show = ref(true)
+    const Parent = {
+      setup() {
+        return () => (show.value ? h(Child) : null)
+      },
+    }
+
+    render(h(Parent), nodeOps.createElement('div'))
+
+    a.value++
+    show.value = false
+
+    await nextTick()
+    expect(spy).toHaveBeenCalledWith(3)
   })
 })
