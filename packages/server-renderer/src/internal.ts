@@ -8,7 +8,7 @@ export {
   ssrRenderStyle,
   ssrRenderAttrs,
   ssrRenderAttr,
-  ssrRenderDynamicAttr
+  ssrRenderDynamicAttr,
 } from './helpers/ssrRenderAttrs'
 export { ssrInterpolate } from './helpers/ssrInterpolate'
 export { ssrRenderList } from './helpers/ssrRenderList'
@@ -21,5 +21,5 @@ export {
   ssrLooseEqual,
   ssrLooseContain,
   ssrRenderDynamicModel,
-  ssrGetDynamicModelProps
+  ssrGetDynamicModelProps,
 } from './helpers/ssrVModelHelpers'

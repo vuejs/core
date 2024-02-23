@@ -1,5 +1,5 @@
-import path from 'path'
-import { setupPuppeteer, E2E_TIMEOUT } from './e2eUtils'
+import path from 'node:path'
+import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 
 describe('e2e: tree', () => {
   const { page, click, count, text, children, isVisible } = setupPuppeteer()
@@ -7,7 +7,7 @@ describe('e2e: tree', () => {
   async function testTree(apiType: 'classic' | 'composition') {
     const baseUrl = `file://${path.resolve(
       __dirname,
-      `../../examples/${apiType}/tree.html`
+      `../../examples/${apiType}/tree.html`,
     )}`
 
     await page().goto(baseUrl)
@@ -23,57 +23,57 @@ describe('e2e: tree', () => {
     expect((await children('#demo li ul')).length).toBe(4)
     expect(await text('#demo li div span')).toContain('[-]')
     expect(await text('#demo > .item > ul > .item:nth-child(1)')).toContain(
-      'hello'
+      'hello',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(2)')).toContain(
-      'wat'
+      'wat',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      'child folder'
+      'child folder',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      '[+]'
+      '[+]',
     )
 
     // add items to root
     await click('#demo > .item > ul > .add')
     expect((await children('#demo li ul')).length).toBe(5)
     expect(await text('#demo > .item > ul > .item:nth-child(1)')).toContain(
-      'hello'
+      'hello',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(2)')).toContain(
-      'wat'
+      'wat',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      'child folder'
+      'child folder',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      '[+]'
+      '[+]',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(4)')).toContain(
-      'new stuff'
+      'new stuff',
     )
 
     // add another item
     await click('#demo > .item > ul > .add')
     expect((await children('#demo li ul')).length).toBe(6)
     expect(await text('#demo > .item > ul > .item:nth-child(1)')).toContain(
-      'hello'
+      'hello',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(2)')).toContain(
-      'wat'
+      'wat',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      'child folder'
+      'child folder',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(3)')).toContain(
-      '[+]'
+      '[+]',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(4)')).toContain(
-      'new stuff'
+      'new stuff',
     )
     expect(await text('#demo > .item > ul > .item:nth-child(5)')).toContain(
-      'new stuff'
+      'new stuff',
     )
 
     await click('#demo ul .bold')
@@ -93,7 +93,7 @@ describe('e2e: tree', () => {
     expect(await count('.item > ul')).toBe(5)
     expect(await text('#demo ul > .item:nth-child(1)')).toContain('[-]')
     expect((await children('#demo ul > .item:nth-child(1) > ul')).length).toBe(
-      2
+      2,
     )
   }
 
@@ -102,7 +102,7 @@ describe('e2e: tree', () => {
     async () => {
       await testTree('classic')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   test(
@@ -110,6 +110,6 @@ describe('e2e: tree', () => {
     async () => {
       await testTree('composition')
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })

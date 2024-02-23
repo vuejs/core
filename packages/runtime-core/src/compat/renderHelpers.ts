@@ -5,14 +5,14 @@ import {
   isArray,
   isObject,
   isReservedProp,
-  normalizeClass
+  normalizeClass,
 } from '@vue/shared'
-import { ComponentInternalInstance } from '../component'
-import { Slot } from '../componentSlots'
+import type { ComponentInternalInstance } from '../component'
+import type { Slot } from '../componentSlots'
 import { createSlots } from '../helpers/createSlots'
 import { renderSlot } from '../helpers/renderSlot'
 import { toHandlers } from '../helpers/toHandlers'
-import { mergeProps, VNode } from '../vnode'
+import { type VNode, mergeProps } from '../vnode'
 
 function toObject(arr: Array<any>): Object {
   const res = {}
@@ -29,7 +29,7 @@ export function legacyBindObjectProps(
   _tag: string,
   value: any,
   _asProp: boolean,
-  isSync?: boolean
+  isSync?: boolean,
 ) {
   if (value && isObject(value)) {
     if (isArray(value)) {
@@ -71,7 +71,7 @@ export function legacyRenderSlot(
   name: string,
   fallback?: VNode[],
   props?: any,
-  bindObject?: any
+  bindObject?: any,
 ) {
   if (bindObject) {
     props = mergeProps(props, bindObject)
@@ -91,12 +91,12 @@ export function legacyresolveScopedSlots(
   fns: LegacyScopedSlotsData,
   raw?: Record<string, Slot>,
   // the following are added in 2.6
-  hasDynamicKeys?: boolean
+  hasDynamicKeys?: boolean,
 ) {
   // v2 default slot doesn't have name
   return createSlots(
     raw || ({ $stable: !hasDynamicKeys } as any),
-    mapKeyToName(fns)
+    mapKeyToName(fns),
   )
 }
 
@@ -121,7 +121,7 @@ const staticCacheMap = /*#__PURE__*/ new WeakMap<
 
 export function legacyRenderStatic(
   instance: ComponentInternalInstance,
-  index: number
+  index: number,
 ) {
   let cache = staticCacheMap.get(instance)
   if (!cache) {
@@ -141,7 +141,7 @@ export function legacyCheckKeyCodes(
   key: string,
   builtInKeyCode?: number | number[],
   eventKeyName?: string,
-  builtInKeyName?: string | string[]
+  builtInKeyName?: string | string[],
 ) {
   const config = instance.appContext.config as any
   const configKeyCodes = config.keyCodes || {}

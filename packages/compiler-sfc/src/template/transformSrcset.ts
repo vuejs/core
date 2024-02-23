@@ -1,20 +1,23 @@
 import path from 'path'
 import {
   ConstantTypes,
+  type ExpressionNode,
+  type NodeTransform,
+  NodeTypes,
+  type SimpleExpressionNode,
   createCompoundExpression,
   createSimpleExpression,
-  ExpressionNode,
-  NodeTransform,
-  NodeTypes,
-  SimpleExpressionNode
 } from '@vue/compiler-core'
 import {
+  isDataUrl,
+  isExternalUrl,
   isRelativeUrl,
   parseUrl,
-  isExternalUrl,
-  isDataUrl
 } from './templateUtils'
-import { AssetURLOptions, defaultAssetUrlOptions } from './transformAssetUrl'
+import {
+  type AssetURLOptions,
+  defaultAssetUrlOptions,
+} from './transformAssetUrl'
 
 const srcsetTags = ['img', 'source']
 
@@ -27,7 +30,7 @@ interface ImageCandidate {
 const escapedSpaceCharacters = /( |\\t|\\n|\\f|\\r)+/g
 
 export const createSrcsetTransformWithOptions = (
-  options: Required<AssetURLOptions>
+  options: Required<AssetURLOptions>,
 ): NodeTransform => {
   return (node, context) =>
     (transformSrcset as Function)(node, context, options)
@@ -36,7 +39,7 @@ export const createSrcsetTransformWithOptions = (
 export const transformSrcset: NodeTransform = (
   node,
   context,
-  options: Required<AssetURLOptions> = defaultAssetUrlOptions
+  options: Required<AssetURLOptions> = defaultAssetUrlOptions,
 ) => {
   if (node.type === NodeTypes.ELEMENT) {
     if (srcsetTags.includes(node.tag) && node.props.length) {
@@ -109,21 +112,21 @@ export const transformSrcset: NodeTransform = (
               let exp: SimpleExpressionNode
               if (path) {
                 const existingImportsIndex = context.imports.findIndex(
-                  i => i.path === path
+                  i => i.path === path,
                 )
                 if (existingImportsIndex > -1) {
                   exp = createSimpleExpression(
                     `_imports_${existingImportsIndex}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_STRINGIFY
+                    ConstantTypes.CAN_STRINGIFY,
                   )
                 } else {
                   exp = createSimpleExpression(
                     `_imports_${context.imports.length}`,
                     false,
                     attr.loc,
-                    ConstantTypes.CAN_STRINGIFY
+                    ConstantTypes.CAN_STRINGIFY,
                   )
                   context.imports.push({ exp, path })
                 }
@@ -134,7 +137,7 @@ export const transformSrcset: NodeTransform = (
                 `"${url}"`,
                 false,
                 attr.loc,
-                ConstantTypes.CAN_STRINGIFY
+                ConstantTypes.CAN_STRINGIFY,
               )
               compoundExpression.children.push(exp)
             }
@@ -160,7 +163,7 @@ export const transformSrcset: NodeTransform = (
             arg: createSimpleExpression('srcset', true, attr.loc),
             exp,
             modifiers: [],
-            loc: attr.loc
+            loc: attr.loc,
           }
         }
       })

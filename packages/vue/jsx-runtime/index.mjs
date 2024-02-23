@@ -9,9 +9,4 @@ function jsx(type, props, key) {
   return h(type, props, children)
 }
 
-export {
-  Fragment,
-  jsx,
-  jsx as jsxs,
-  jsx as jsxDEV
-}
+export { Fragment, jsx, jsx as jsxs, jsx as jsxDEV }

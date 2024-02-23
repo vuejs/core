@@ -1,15 +1,18 @@
 import {
-  ComponentInternalInstance,
+  type ComponentInternalInstance,
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance
 } from './component'
-import { ComponentPublicInstance } from './componentPublicInstance'
-import { callWithAsyncErrorHandling, ErrorTypeStrings } from './errorHandling'
+import type { ComponentPublicInstance } from './componentPublicInstance'
+import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { warn } from './warning'
 import { toHandlerKey } from '@vue/shared'
-import { DebuggerEvent, pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  type DebuggerEvent,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import { LifecycleHooks } from './enums'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
@@ -18,7 +21,7 @@ export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
-  prepend: boolean = false
+  prepend: boolean = false,
 ): Function | undefined {
   if (target) {
     const hooks = target[type] || (target[type] = [])
@@ -37,9 +40,9 @@ export function injectHook(
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
-        setCurrentInstance(target)
+        const reset = setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        unsetCurrentInstance()
+        reset()
         resetTracking()
         return res
       })
@@ -58,7 +61,7 @@ export function injectHook(
         (__FEATURE_SUSPENSE__
           ? ` If you are using async setup(), make sure to register lifecycle ` +
             `hooks before the first await statement.`
-          : ``)
+          : ``),
     )
   }
 }
@@ -80,21 +83,21 @@ export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
 export const onRenderTriggered = createHook<DebuggerHook>(
-  LifecycleHooks.RENDER_TRIGGERED
+  LifecycleHooks.RENDER_TRIGGERED,
 )
 export const onRenderTracked = createHook<DebuggerHook>(
-  LifecycleHooks.RENDER_TRACKED
+  LifecycleHooks.RENDER_TRACKED,
 )
 
 export type ErrorCapturedHook<TError = unknown> = (
   err: TError,
   instance: ComponentPublicInstance | null,
-  info: string
+  info: string,
 ) => boolean | void
 
 export function onErrorCaptured<TError = Error>(
   hook: ErrorCapturedHook<TError>,
-  target: ComponentInternalInstance | null = currentInstance
+  target: ComponentInternalInstance | null = currentInstance,
 ) {
   injectHook(LifecycleHooks.ERROR_CAPTURED, hook, target)
 }

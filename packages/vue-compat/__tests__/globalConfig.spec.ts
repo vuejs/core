@@ -1,7 +1,7 @@
 import Vue from '@vue/compat'
 import {
   DeprecationTypes,
-  toggleDeprecationWarning
+  toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import { createApp } from '../src/esm-index'
 import { triggerEvent } from './utils'
@@ -21,7 +21,7 @@ afterEach(() => {
 test('GLOBAL_KEY_CODES', () => {
   Vue.config.keyCodes = {
     foo: 86,
-    bar: [38, 87]
+    bar: [38, 87],
   }
 
   const onFoo = vi.fn()
@@ -33,8 +33,8 @@ test('GLOBAL_KEY_CODES', () => {
     template: `<input type="text" @keyup.foo="onFoo" @keyup.bar="onBar">`,
     methods: {
       onFoo,
-      onBar
-    }
+      onBar,
+    },
   })
 
   triggerEvent(el.children[0], 'keyup', e => {
@@ -64,7 +64,7 @@ test('GLOBAL_IGNORED_ELEMENTS', () => {
   const el = document.createElement('div')
   new Vue({
     el,
-    template: `<v-foo/><foo/>`
+    template: `<v-foo/><foo/>`,
   })
   expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
 })
@@ -73,7 +73,7 @@ test('singleton config should affect apps created with createApp()', () => {
   Vue.config.ignoredElements = [/^v-/, 'foo']
   const el = document.createElement('div')
   createApp({
-    template: `<v-foo/><foo/>`
+    template: `<v-foo/><foo/>`,
   }).mount(el)
   expect(el.innerHTML).toBe(`<v-foo></v-foo><foo></foo>`)
 })

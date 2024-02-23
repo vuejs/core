@@ -7,8 +7,6 @@
     <link rel="icon" type="image/svg" href="/logo.svg" />
     <title>Vue SFC Playground</title>
     <script>
-      // process shim for old versions of @vue/compiler-sfc dependency
-       window.process = { env: {} }
        const savedPreferDark = localStorage.getItem('vue-sfc-playground-prefer-dark')
        if (
          savedPreferDark === 'true' ||

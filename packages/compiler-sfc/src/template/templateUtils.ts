@@ -1,4 +1,4 @@
-import { UrlWithStringQuery, parse as uriParse } from 'url'
+import { type UrlWithStringQuery, parse as uriParse } from 'url'
 import { isString } from '@vue/shared'
 
 export function isRelativeUrl(url: string): boolean {

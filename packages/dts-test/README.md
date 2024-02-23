@@ -1,6 +1,6 @@
 # dts-test
 
-Tests Typescript types to ensure the types remain as expected.
+Tests TypeScript types to ensure the types remain as expected.
 
 - This directory is included in the root `tsconfig.json`, where package imports are aliased to `src` directories, so in IDEs and the `pnpm check` script the types are validated against source code.
 

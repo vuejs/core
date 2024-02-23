@@ -1,20 +1,20 @@
 import { createApp, h, mergeProps, withCtx } from 'vue'
 import { renderToString } from '../src/renderToString'
-import { ssrRenderComponent, ssrRenderAttrs, ssrRenderSlot } from '../src'
+import { ssrRenderAttrs, ssrRenderComponent, ssrRenderSlot } from '../src'
 
 describe('ssr: scopedId runtime behavior', () => {
   test('id on component root', async () => {
     const Child = {
       ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
         push(`<div${ssrRenderAttrs(attrs)}></div>`)
-      }
+      },
     }
 
     const Comp = {
       __scopeId: 'parent',
       ssrRender: (ctx: any, push: any, parent: any) => {
         push(ssrRenderComponent(Child), null, null, parent)
-      }
+      },
     }
 
     const result = await renderToString(createApp(Comp))
@@ -26,7 +26,7 @@ describe('ssr: scopedId runtime behavior', () => {
       // <div></div>
       ssrRender: (_: any, push: any, _parent: any, attrs: any) => {
         push(`<div${ssrRenderAttrs(attrs)} child></div>`)
-      }
+      },
     }
 
     const Wrapper = {
@@ -40,9 +40,9 @@ describe('ssr: scopedId runtime behavior', () => {
           null,
           push,
           parent,
-          'wrapper-s'
+          'wrapper-s',
         )
-      }
+      },
     }
 
     const Comp = {
@@ -57,14 +57,14 @@ describe('ssr: scopedId runtime behavior', () => {
               default: withCtx(
                 (_: any, push: any, parent: any, scopeId: string) => {
                   push(ssrRenderComponent(Child, null, null, parent, scopeId))
-                }
+                },
               ),
-              _: 1
+              _: 1,
             } as any,
-            parent
-          )
+            parent,
+          ),
         )
-      }
+      },
     }
 
     const result = await renderToString(createApp(Comp))
@@ -79,8 +79,8 @@ describe('ssr: scopedId runtime behavior', () => {
         // <div class="wrapper"><slot/></div>
         push(
           `<div${ssrRenderAttrs(
-            mergeProps({ class: 'wrapper' }, attrs)
-          )} wrapper>`
+            mergeProps({ class: 'wrapper' }, attrs),
+          )} wrapper>`,
         )
         ssrRenderSlot(
           ctx.$slots,
@@ -89,10 +89,10 @@ describe('ssr: scopedId runtime behavior', () => {
           null,
           push,
           parent,
-          'wrapper-s'
+          'wrapper-s',
         )
         push(`</div>`)
-      }
+      },
     }
 
     const Slotted = {
@@ -113,16 +113,16 @@ describe('ssr: scopedId runtime behavior', () => {
                     null,
                     push,
                     parent,
-                    'slotted-s' + scopeId
+                    'slotted-s' + scopeId,
                   )
-                }
+                },
               ),
-              _: 1
+              _: 1,
             } as any,
-            parent
-          )
+            parent,
+          ),
         )
-      }
+      },
     }
 
     const Root = {
@@ -137,21 +137,21 @@ describe('ssr: scopedId runtime behavior', () => {
               default: withCtx(
                 (_: any, push: any, parent: any, scopeId: string) => {
                   push(`<div root${scopeId}></div>`)
-                }
+                },
               ),
-              _: 1
+              _: 1,
             } as any,
-            parent
-          )
+            parent,
+          ),
         )
-      }
+      },
     }
 
     const result = await renderToString(createApp(Root))
     expect(result).toBe(
       `<div class="wrapper" root slotted wrapper>` +
         `<!--[--><!--[--><div root slotted-s wrapper-s></div><!--]--><!--]-->` +
-        `</div>`
+        `</div>`,
     )
   })
 
@@ -160,20 +160,20 @@ describe('ssr: scopedId runtime behavior', () => {
     const Child = {
       ssrRender: (ctx: any, push: any, parent: any, attrs: any) => {
         push(`<div${ssrRenderAttrs(attrs)}></div>`)
-      }
+      },
     }
 
     const Middle = {
       render() {
         return h(Child)
-      }
+      },
     }
 
     const Comp = {
       __scopeId: 'parent',
       ssrRender: (ctx: any, push: any, parent: any) => {
         push(ssrRenderComponent(Middle, null, null, parent))
-      }
+      },
     }
 
     const result = await renderToString(createApp(Comp)) // output: `<div></div>`

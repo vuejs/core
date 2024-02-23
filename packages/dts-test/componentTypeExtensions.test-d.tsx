@@ -20,8 +20,8 @@ export const Custom = defineComponent({
     bar: String,
     baz: {
       type: Number,
-      required: true
-    }
+      required: true,
+    },
   },
 
   data: () => ({ counter: 0 }),
@@ -42,8 +42,8 @@ export const Custom = defineComponent({
       this.state = 'not valid'
       // @ts-expect-error
       this.$.appContext.config.globalProperties.state = 'not valid'
-    }
-  }
+    },
+  },
 })
 
 expectType<JSX.Element>(<Custom baz={1} />)

@@ -1,12 +1,12 @@
-import { Node } from '@babel/types'
+import type { Node } from '@babel/types'
 import { isCallOf } from './utils'
-import { ScriptCompileContext } from './context'
+import type { ScriptCompileContext } from './context'
 
 export const DEFINE_EXPOSE = 'defineExpose'
 
 export function processDefineExpose(
   ctx: ScriptCompileContext,
-  node: Node
+  node: Node,
 ): boolean {
   if (isCallOf(node, DEFINE_EXPOSE)) {
     if (ctx.hasDefineExposeCall) {

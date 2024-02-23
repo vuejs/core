@@ -1,8 +1,8 @@
 import { hyphenate, isArray } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   ErrorCodes,
-  ComponentInternalInstance,
-  callWithAsyncErrorHandling
+  callWithAsyncErrorHandling,
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -16,7 +16,7 @@ export function addEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
+  options?: EventListenerOptions,
 ) {
   el.addEventListener(event, handler, options)
 }
@@ -25,7 +25,7 @@ export function removeEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
+  options?: EventListenerOptions,
 ) {
   el.removeEventListener(event, handler, options)
 }
@@ -37,7 +37,7 @@ export function patchEvent(
   rawName: string,
   prevValue: EventValue | null,
   nextValue: EventValue | null,
-  instance: ComponentInternalInstance | null = null
+  instance: ComponentInternalInstance | null = null,
 ) {
   // vei = vue event invokers
   const invokers = el[veiKey] || (el[veiKey] = {})
@@ -84,7 +84,7 @@ const getNow = () =>
 
 function createInvoker(
   initialValue: EventValue,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
     // async edge case vuejs/vue#6566
@@ -108,7 +108,7 @@ function createInvoker(
       patchStopImmediatePropagation(e, invoker.value),
       instance,
       ErrorCodes.NATIVE_EVENT_HANDLER,
-      [e]
+      [e],
     )
   }
   invoker.value = initialValue
@@ -118,7 +118,7 @@ function createInvoker(
 
 function patchStopImmediatePropagation(
   e: Event,
-  value: EventValue
+  value: EventValue,
 ): EventValue {
   if (isArray(value)) {
     const originalStop = e.stopImmediatePropagation

@@ -6,8 +6,7 @@ const packagesToCheck = [
   'compiler-core',
   'compiler-dom',
   'compiler-ssr',
-  'reactivity-transform',
-  'shared'
+  'shared',
 ]
 
 let allFilesPresent = true
@@ -15,7 +14,7 @@ let allFilesPresent = true
 for (const pkg of packagesToCheck) {
   if (
     !fs.existsSync(
-      new URL(`../packages/${pkg}/dist/${pkg}.cjs.js`, import.meta.url)
+      new URL(`../packages/${pkg}/dist/${pkg}.cjs.js`, import.meta.url),
     )
   ) {
     allFilesPresent = false

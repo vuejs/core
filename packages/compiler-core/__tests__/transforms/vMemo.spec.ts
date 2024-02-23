@@ -4,7 +4,7 @@ describe('compiler: v-memo transform', () => {
   function compile(content: string) {
     return baseCompile(`<div>${content}</div>`, {
       mode: 'module',
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     }).code
   }
 
@@ -12,8 +12,8 @@ describe('compiler: v-memo transform', () => {
     expect(
       baseCompile(`<div v-memo="[x]"></div>`, {
         mode: 'module',
-        prefixIdentifiers: true
-      }).code
+        prefixIdentifiers: true,
+      }).code,
     ).toMatchSnapshot()
   })
 
@@ -29,8 +29,8 @@ describe('compiler: v-memo transform', () => {
     expect(
       compile(
         `<div v-if="ok" v-memo="[x]"><span>foo</span>bar</div>
-        <Comp v-else v-memo="[x]"></Comp>`
-      )
+        <Comp v-else v-memo="[x]"></Comp>`,
+      ),
     ).toMatchSnapshot()
   })
 
@@ -39,8 +39,8 @@ describe('compiler: v-memo transform', () => {
       compile(
         `<div v-for="{ x, y } in list" :key="x" v-memo="[x, y === z]">
           <span>foobar</span>
-        </div>`
-      )
+        </div>`,
+      ),
     ).toMatchSnapshot()
   })
 
@@ -49,8 +49,8 @@ describe('compiler: v-memo transform', () => {
       compile(
         `<template v-for="{ x, y } in list" :key="x" v-memo="[x, y === z]">
           <span>foobar</span>
-        </template>`
-      )
+        </template>`,
+      ),
     ).toMatchSnapshot()
   })
 })
