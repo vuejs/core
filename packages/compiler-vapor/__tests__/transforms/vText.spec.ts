@@ -42,7 +42,7 @@ describe('v-text', () => {
         operations: [
           {
             type: IRNodeTypes.SET_TEXT,
-            element: 1,
+            element: 0,
             values: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,
@@ -82,7 +82,7 @@ describe('v-text', () => {
         operations: [
           {
             type: IRNodeTypes.SET_TEXT,
-            element: 1,
+            element: 0,
             values: [
               {
                 type: NodeTypes.SIMPLE_EXPRESSION,

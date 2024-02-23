@@ -5,9 +5,9 @@ exports[`v-text > should convert v-text to textContent 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _renderEffect(() => _setText(n1, _ctx.str))
-  return n1
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _ctx.str))
+  return n0
 }"
 `;
 
@@ -16,9 +16,9 @@ exports[`v-text > should raise error and ignore children when v-text is present 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _renderEffect(() => _setText(n1, _ctx.test))
-  return n1
+  const n0 = t0()
+  _renderEffect(() => _setText(n0, _ctx.test))
+  return n0
 }"
 `;
 
@@ -27,8 +27,8 @@ exports[`v-text > should raise error if has no expression 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _setText(n1, "")
-  return n1
+  const n0 = t0()
+  _setText(n0, "")
+  return n0
 }"
 `;

@@ -195,7 +195,6 @@ function createRootContext(
     },
   }
   context.root = context
-  context.reference()
   return context
 }
 

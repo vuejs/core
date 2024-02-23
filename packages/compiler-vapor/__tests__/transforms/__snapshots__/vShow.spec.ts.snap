@@ -5,8 +5,8 @@ exports[`compiler: v-show transform > simple expression 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vShow, () => _ctx.foo]])
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vShow, () => _ctx.foo]])
+  return n0
 }"
 `;

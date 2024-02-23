@@ -5,9 +5,9 @@ exports[`v-on > complex member expression w/ prefixIdentifiers: true 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.a['b' + _ctx.c])
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.a['b' + _ctx.c])
+  return n0
 }"
 `;
 
@@ -16,9 +16,9 @@ exports[`v-on > dynamic arg 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _renderEffect(() => _on(n1, _ctx.event, () => _ctx.handler))
-  return n1
+  const n0 = t0()
+  _renderEffect(() => _on(n0, _ctx.event, () => _ctx.handler))
+  return n0
 }"
 `;
 
@@ -27,9 +27,9 @@ exports[`v-on > dynamic arg with complex exp prefixing 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _renderEffect(() => _on(n1, _ctx.event(_ctx.foo), () => _ctx.handler))
-  return n1
+  const n0 = t0()
+  _renderEffect(() => _on(n0, _ctx.event(_ctx.foo), () => _ctx.handler))
+  return n0
 }"
 `;
 
@@ -38,9 +38,9 @@ exports[`v-on > dynamic arg with prefixing 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _renderEffect(() => _on(n1, _ctx.event, () => _ctx.handler))
-  return n1
+  const n0 = t0()
+  _renderEffect(() => _on(n0, _ctx.event, () => _ctx.handler))
+  return n0
 }"
 `;
 
@@ -52,13 +52,14 @@ const t2 = _template("<div></div>")
 const t3 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  const n2 = t1()
-  const n3 = t0()
+  const n0 = t0()
+  const n1 = t1()
+  const n2 = t0()
+  const n3 = t2()
   const n4 = t2()
-  const n5 = t2()
-  const n6 = t0()
-  const n7 = t2()
+  const n5 = t0()
+  const n6 = t2()
+  const n7 = t3()
   const n8 = t3()
   const n9 = t3()
   const n10 = t3()
@@ -73,69 +74,68 @@ export function render(_ctx) {
   const n19 = t3()
   const n20 = t3()
   const n21 = t3()
-  const n22 = t3()
-  _on(n1, "click", () => _ctx.handleEvent, undefined, {
+  _on(n0, "click", () => _ctx.handleEvent, undefined, {
     modifiers: ["stop"]
   })
-  _on(n2, "submit", () => _ctx.handleEvent, undefined, {
+  _on(n1, "submit", () => _ctx.handleEvent, undefined, {
     modifiers: ["prevent"]
   })
-  _on(n3, "click", () => _ctx.handleEvent, undefined, {
+  _on(n2, "click", () => _ctx.handleEvent, undefined, {
     modifiers: ["stop", "prevent"]
   })
-  _on(n4, "click", () => _ctx.handleEvent, undefined, {
+  _on(n3, "click", () => _ctx.handleEvent, undefined, {
     modifiers: ["self"]
   })
-  _on(n5, "click", () => _ctx.handleEvent, { capture: true })
-  _on(n6, "click", () => _ctx.handleEvent, { once: true })
-  _on(n7, "scroll", () => _ctx.handleEvent, { passive: true })
-  _on(n8, "contextmenu", () => _ctx.handleEvent, undefined, {
+  _on(n4, "click", () => _ctx.handleEvent, { capture: true })
+  _on(n5, "click", () => _ctx.handleEvent, { once: true })
+  _on(n6, "scroll", () => _ctx.handleEvent, { passive: true })
+  _on(n7, "contextmenu", () => _ctx.handleEvent, undefined, {
     modifiers: ["right"]
   })
-  _on(n9, "click", () => _ctx.handleEvent, undefined, {
+  _on(n8, "click", () => _ctx.handleEvent, undefined, {
     modifiers: ["left"]
   })
-  _on(n10, "mouseup", () => _ctx.handleEvent, undefined, {
+  _on(n9, "mouseup", () => _ctx.handleEvent, undefined, {
     modifiers: ["middle"]
   })
-  _on(n11, "contextmenu", () => _ctx.handleEvent, undefined, {
+  _on(n10, "contextmenu", () => _ctx.handleEvent, undefined, {
     modifiers: ["right"]
   })
-  _on(n12, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n11, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["enter"]
   })
-  _on(n13, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n12, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["tab"]
   })
-  _on(n14, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n13, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["delete"]
   })
-  _on(n15, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n14, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["esc"]
   })
-  _on(n16, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n15, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["space"]
   })
-  _on(n17, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n16, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["up"]
   })
-  _on(n18, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n17, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["down"]
   })
-  _on(n19, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n18, "keyup", () => _ctx.handleEvent, undefined, {
     keys: ["left"]
   })
-  _on(n20, "keyup", () => _ctx.submit, undefined, {
+  _on(n19, "keyup", () => _ctx.submit, undefined, {
     modifiers: ["middle"]
   })
-  _on(n21, "keyup", () => _ctx.submit, undefined, {
+  _on(n20, "keyup", () => _ctx.submit, undefined, {
     modifiers: ["middle", "self"]
   })
-  _on(n22, "keyup", () => _ctx.handleEvent, undefined, {
+  _on(n21, "keyup", () => _ctx.handleEvent, undefined, {
     modifiers: ["self"],
     keys: ["enter"]
   })
-  return [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21, n22]
+  return [n0, n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11, n12, n13, n14, n15, n16, n17, n18, n19, n20, n21]
 }"
 `;
 
@@ -144,9 +144,9 @@ exports[`v-on > function expression w/ prefixIdentifiers: true 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => e => _ctx.foo(e))
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => e => _ctx.foo(e))
+  return n0
 }"
 `;
 
@@ -155,9 +155,9 @@ exports[`v-on > inline statement w/ prefixIdentifiers: true 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => (_ctx.foo($event)))
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => (_ctx.foo($event)))
+  return n0
 }"
 `;
 
@@ -166,9 +166,9 @@ exports[`v-on > multiple inline statements w/ prefixIdentifiers: true 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => {_ctx.foo($event);_ctx.bar()})
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()})
+  return n0
 }"
 `;
 
@@ -177,9 +177,9 @@ exports[`v-on > should NOT add a prefix to $event if the expression is a functio
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => {_ctx.i++;_ctx.foo($event)})
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => {_ctx.i++;_ctx.foo($event)})
+  return n0
 }"
 `;
 
@@ -188,9 +188,9 @@ exports[`v-on > should NOT wrap as function if expression is already function ex
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => (e: any): any => _ctx.foo(e))
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => (e: any): any => _ctx.foo(e))
+  return n0
 }"
 `;
 
@@ -199,13 +199,13 @@ exports[`v-on > should NOT wrap as function if expression is already function ex
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => 
+  const n0 = t0()
+  _on(n0, "click", () => 
       $event => {
         _ctx.foo($event)
       }
     )
-  return n1
+  return n0
 }"
 `;
 
@@ -214,9 +214,9 @@ exports[`v-on > should NOT wrap as function if expression is already function ex
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => _ctx.foo($event))
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => _ctx.foo($event))
+  return n0
 }"
 `;
 
@@ -225,9 +225,9 @@ exports[`v-on > should NOT wrap as function if expression is complex member expr
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.a['b' + _ctx.c])
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.a['b' + _ctx.c])
+  return n0
 }"
 `;
 
@@ -236,12 +236,12 @@ exports[`v-on > should handle multi-line statement 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => {
+  const n0 = t0()
+  _on(n0, "click", () => $event => {
 _ctx.foo();
 _ctx.bar()
 })
-  return n1
+  return n0
 }"
 `;
 
@@ -250,9 +250,9 @@ exports[`v-on > should handle multiple inline statement 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => {_ctx.foo();_ctx.bar()})
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => {_ctx.foo();_ctx.bar()})
+  return n0
 }"
 `;
 
@@ -261,9 +261,9 @@ exports[`v-on > should not prefix member expression 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.foo.bar)
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.foo.bar)
+  return n0
 }"
 `;
 
@@ -272,11 +272,11 @@ exports[`v-on > should not wrap keys guard if no key modifier is present 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "keyup", () => _ctx.test, undefined, {
+  const n0 = t0()
+  _on(n0, "keyup", () => _ctx.test, undefined, {
     modifiers: ["exact"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -285,14 +285,14 @@ exports[`v-on > should support multiple events and modifiers options w/ prefixId
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.test, undefined, {
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.test, undefined, {
     modifiers: ["stop"]
   })
-  _on(n1, "keyup", () => _ctx.test, undefined, {
+  _on(n0, "keyup", () => _ctx.test, undefined, {
     keys: ["enter"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -301,11 +301,11 @@ exports[`v-on > should support multiple modifiers and event options w/ prefixIde
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.test, { capture: true, once: true }, {
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.test, { capture: true, once: true }, {
     modifiers: ["stop", "prevent"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -314,11 +314,11 @@ exports[`v-on > should transform click.middle 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "mouseup", () => _ctx.test, undefined, {
+  const n0 = t0()
+  _on(n0, "mouseup", () => _ctx.test, undefined, {
     modifiers: ["middle"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -327,13 +327,13 @@ exports[`v-on > should transform click.middle 2`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
+  const n0 = t0()
   _renderEffect(() => {
-    _on(n1, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, undefined, {
+    _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, undefined, {
       modifiers: ["middle"]
     })
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -342,11 +342,11 @@ exports[`v-on > should transform click.right 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "contextmenu", () => _ctx.test, undefined, {
+  const n0 = t0()
+  _on(n0, "contextmenu", () => _ctx.test, undefined, {
     modifiers: ["right"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -355,14 +355,14 @@ exports[`v-on > should transform click.right 2`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
+  const n0 = t0()
   _renderEffect(() => {
-    _on(n1, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, undefined, {
+    _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, undefined, {
       modifiers: ["right"],
       keys: ["right"]
     })
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -371,9 +371,9 @@ exports[`v-on > should wrap as function if expression is inline statement 1`] = 
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => $event => (_ctx.i++))
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => $event => (_ctx.i++))
+  return n0
 }"
 `;
 
@@ -382,26 +382,26 @@ exports[`v-on > should wrap both for dynamic key event w/ left/right modifiers 1
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
+  const n0 = t0()
   _renderEffect(() => {
-    _on(n1, _ctx.e, () => _ctx.test, undefined, {
+    _on(n0, _ctx.e, () => _ctx.test, undefined, {
       modifiers: ["left"],
       keys: ["left"]
     })
   })
-  return n1
+  return n0
 }"
 `;
 
 exports[`v-on > should wrap in unref if identifier is setup-maybe-ref w/ inline: true 1`] = `
 "(() => {
+  const n0 = t0()
   const n1 = t0()
   const n2 = t0()
-  const n3 = t0()
-  _on(n1, "click", () => $event => (x.value=_unref(y)))
-  _on(n2, "click", () => $event => (x.value++))
-  _on(n3, "click", () => $event => ({ x: x.value } = _unref(y)))
-  return [n1, n2, n3]
+  _on(n0, "click", () => $event => (x.value=_unref(y)))
+  _on(n1, "click", () => $event => (x.value++))
+  _on(n2, "click", () => $event => ({ x: x.value } = _unref(y)))
+  return [n0, n1, n2]
 })()"
 `;
 
@@ -410,12 +410,12 @@ exports[`v-on > should wrap keys guard for keyboard events or dynamic events 1`]
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "keydown", () => _ctx.test, { capture: true }, {
+  const n0 = t0()
+  _on(n0, "keydown", () => _ctx.test, { capture: true }, {
     modifiers: ["stop", "ctrl"],
     keys: ["a"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -424,11 +424,11 @@ exports[`v-on > should wrap keys guard for static key event w/ left/right modifi
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "keyup", () => _ctx.test, undefined, {
+  const n0 = t0()
+  _on(n0, "keyup", () => _ctx.test, undefined, {
     keys: ["left"]
   })
-  return n1
+  return n0
 }"
 `;
 
@@ -437,8 +437,8 @@ exports[`v-on > simple expression 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _on(n1, "click", () => _ctx.handleClick)
-  return n1
+  const n0 = t0()
+  _on(n0, "click", () => _ctx.handleClick)
+  return n0
 }"
 `;

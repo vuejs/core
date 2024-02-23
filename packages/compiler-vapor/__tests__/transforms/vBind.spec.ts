@@ -20,7 +20,7 @@ describe('compiler v-bind', () => {
     const { ir, code } = compileWithVBind(`<div v-bind:id="id"/>`)
 
     expect(ir.block.dynamic.children[0]).toMatchObject({
-      id: 1,
+      id: 0,
       flags: DynamicFlag.REFERENCED,
     })
     expect(ir.template).toEqual(['<div></div>'])
@@ -38,7 +38,7 @@ describe('compiler v-bind', () => {
       operations: [
         {
           type: IRNodeTypes.SET_PROP,
-          element: 1,
+          element: 0,
           prop: {
             key: {
               type: NodeTypes.SIMPLE_EXPRESSION,
@@ -74,7 +74,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProp(n1, "id", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id)')
   })
 
   test('no expression', () => {
@@ -104,7 +104,7 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setDynamicProp(n1, "id", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "id", _ctx.id)')
   })
 
   test('no expression (shorthand)', () => {
@@ -126,7 +126,7 @@ describe('compiler v-bind', () => {
         ],
       },
     })
-    expect(code).contains('_setDynamicProp(n1, "camel-case", _ctx.camelCase)')
+    expect(code).contains('_setDynamicProp(n0, "camel-case", _ctx.camelCase)')
   })
 
   test('dynamic arg', () => {
@@ -136,7 +136,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
-      element: 1,
+      element: 0,
       props: [
         [
           {
@@ -171,7 +171,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n1, { [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title })',
+      '_setDynamicProps(n0, { [_ctx.id]: _ctx.id, [_ctx.title]: _ctx.title })',
     )
   })
 
@@ -182,7 +182,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(ir.block.effect[0].operations[0]).toMatchObject({
       type: IRNodeTypes.SET_DYNAMIC_PROPS,
-      element: 1,
+      element: 0,
       props: [
         [
           {
@@ -224,7 +224,7 @@ describe('compiler v-bind', () => {
       ],
     })
     expect(code).contains(
-      '_setDynamicProps(n1, { [_ctx.id]: _ctx.id, foo: "bar", checked: "" })',
+      '_setDynamicProps(n0, { [_ctx.id]: _ctx.id, foo: "bar", checked: "" })',
     )
   })
 
@@ -286,7 +286,7 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains('_setDynamicProp(n1, "fooBar", _ctx.id)')
+    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.id)')
   })
 
   test('.camel modifier w/ no expression', () => {
@@ -310,7 +310,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDynamicProp(n1, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDynamicProp(n0, "fooBar", _ctx.fooBar)')
   })
 
   test('.camel modifier w/ dynamic arg', () => {
@@ -341,7 +341,7 @@ describe('compiler v-bind', () => {
     expect(code).matchSnapshot()
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n1, { [_camelize(_ctx.foo)]: _ctx.id })`,
+      `_setDynamicProps(n0, { [_camelize(_ctx.foo)]: _ctx.id })`,
     )
   })
 
@@ -368,7 +368,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n1, "fooBar", _ctx.id)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
   })
 
   test('.prop modifier w/ no expression', () => {
@@ -392,7 +392,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n1, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
   })
 
   test('.prop modifier w/ dynamic arg', () => {
@@ -422,7 +422,7 @@ describe('compiler v-bind', () => {
     })
     expect(code).contains('renderEffect')
     expect(code).contains(
-      `_setDynamicProps(n1, { ["." + _ctx.fooBar]: _ctx.id })`,
+      `_setDynamicProps(n0, { ["." + _ctx.fooBar]: _ctx.id })`,
     )
   })
 
@@ -449,7 +449,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n1, "fooBar", _ctx.id)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.id)')
   })
 
   test('.prop modifier (shortband) w/ no expression', () => {
@@ -473,7 +473,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setDOMProp(n1, "fooBar", _ctx.fooBar)')
+    expect(code).contains('_setDOMProp(n0, "fooBar", _ctx.fooBar)')
   })
 
   test('.attr modifier', () => {
@@ -497,7 +497,7 @@ describe('compiler v-bind', () => {
       },
     })
     expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n1, "foo-bar", _ctx.id)')
+    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.id)')
   })
 
   test('.attr modifier w/ no expression', () => {
@@ -522,6 +522,6 @@ describe('compiler v-bind', () => {
     })
 
     expect(code).contains('renderEffect')
-    expect(code).contains('_setAttr(n1, "foo-bar", _ctx.fooBar)')
+    expect(code).contains('_setAttr(n0, "foo-bar", _ctx.fooBar)')
   })
 })

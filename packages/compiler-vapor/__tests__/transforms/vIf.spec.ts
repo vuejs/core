@@ -39,7 +39,7 @@ describe('compiler: v-if', () => {
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
-        id: 1,
+        id: 0,
         condition: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'ok',
@@ -48,20 +48,15 @@ describe('compiler: v-if', () => {
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {
-            children: [
-              {
-                template: 0,
-              },
-            ],
+            children: [{ template: 0 }],
           },
         },
       },
     ])
-    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([0])
 
     expect(ir.block.dynamic).toMatchObject({
-      id: 0,
-      children: { 0: { id: 1 } },
+      children: [{ id: 0 }],
     })
 
     expect(ir.block.effect).toEqual([])
@@ -83,7 +78,7 @@ describe('compiler: v-if', () => {
         operations: [
           {
             type: IRNodeTypes.SET_TEXT,
-            element: 5,
+            element: 4,
             values: [
               {
                 content: 'msg',
@@ -96,10 +91,10 @@ describe('compiler: v-if', () => {
       },
     ])
     expect((ir.block.operation[0] as IfIRNode).positive.dynamic).toMatchObject({
-      id: 2,
+      id: 1,
       children: {
         2: {
-          id: 5,
+          id: 4,
         },
       },
     })
@@ -111,7 +106,7 @@ describe('compiler: v-if', () => {
     )
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div>hello</div>'])
-    expect(ir.block.returns).toEqual([1, 4])
+    expect(ir.block.returns).toEqual([0, 3])
   })
 
   test.todo('v-if with v-once')
@@ -130,7 +125,7 @@ describe('compiler: v-if', () => {
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
-        id: 1,
+        id: 0,
         condition: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'ok',
@@ -150,7 +145,7 @@ describe('compiler: v-if', () => {
         },
       },
     ])
-    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([0])
   })
 
   test('v-if + v-else-if', () => {
@@ -163,7 +158,7 @@ describe('compiler: v-if', () => {
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
-        id: 1,
+        id: 0,
         condition: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'ok',
@@ -191,7 +186,7 @@ describe('compiler: v-if', () => {
         },
       },
     ])
-    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([0])
   })
 
   test('v-if + v-else-if + v-else', () => {
@@ -201,11 +196,11 @@ describe('compiler: v-if', () => {
     expect(code).matchSnapshot()
     expect(ir.template).toEqual(['<div></div>', '<p></p>', 'fine'])
 
-    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([0])
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.IF,
-        id: 1,
+        id: 0,
         positive: {
           type: IRNodeTypes.BLOCK,
           dynamic: {

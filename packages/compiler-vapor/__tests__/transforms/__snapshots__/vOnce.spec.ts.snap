@@ -5,9 +5,9 @@ exports[`compiler: v-once > as root node 1`] = `
 const t0 = _template("<div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _setDynamicProp(n1, "id", _ctx.foo)
-  return n1
+  const n0 = t0()
+  _setDynamicProp(n0, "id", _ctx.foo)
+  return n0
 }"
 `;
 
@@ -16,13 +16,13 @@ exports[`compiler: v-once > basic 1`] = `
 const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx) {
-  const n3 = t0()
-  const n2 = _children(n3, 0)
-  const n1 = _createTextNode()
-  _setText(n1, _ctx.msg, " ")
-  _setClass(n2, _ctx.clz)
-  _prepend(n3, n1)
-  return n3
+  const n2 = t0()
+  const n1 = _children(n2, 0)
+  const n0 = _createTextNode()
+  _setText(n0, _ctx.msg, " ")
+  _setClass(n1, _ctx.clz)
+  _prepend(n2, n0)
+  return n2
 }"
 `;
 
@@ -31,8 +31,8 @@ exports[`compiler: v-once > inside v-once 1`] = `
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  return n1
+  const n0 = t0()
+  return n0
 }"
 `;
 
@@ -41,9 +41,9 @@ exports[`compiler: v-once > on nested plain element 1`] = `
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
-  const n2 = t0()
-  const n1 = _children(n2, 0)
-  _setDynamicProp(n1, "id", _ctx.foo)
-  return n2
+  const n1 = t0()
+  const n0 = _children(n1, 0)
+  _setDynamicProp(n0, "id", _ctx.foo)
+  return n1
 }"
 `;

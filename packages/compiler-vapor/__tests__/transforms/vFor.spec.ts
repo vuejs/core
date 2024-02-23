@@ -37,7 +37,7 @@ describe('compiler: v-for', () => {
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.FOR,
-        id: 1,
+        id: 0,
         source: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'items',
@@ -60,10 +60,9 @@ describe('compiler: v-for', () => {
         },
       },
     ])
-    expect(ir.block.returns).toEqual([1])
+    expect(ir.block.returns).toEqual([0])
     expect(ir.block.dynamic).toMatchObject({
-      id: 0,
-      children: { 0: { id: 1 } },
+      children: [{ id: 0 }],
     })
     expect(ir.block.effect).toEqual([])
     expect((ir.block.operation[0] as ForIRNode).render.effect).lengthOf(1)

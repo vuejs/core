@@ -5,10 +5,10 @@ exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { lazy: true }]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { lazy: true }]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -17,10 +17,10 @@ exports[`compiler: vModel transform > modifiers > .number 1`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { number: true }]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { number: true }]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -29,10 +29,10 @@ exports[`compiler: vModel transform > modifiers > .trim 1`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model, void 0, { trim: true }]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model, void 0, { trim: true }]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -41,10 +41,10 @@ exports[`compiler: vModel transform > should support input (checkbox) 1`] = `
 const t0 = _template("<input type=\\"checkbox\\">")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelCheckbox, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelCheckbox, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -53,10 +53,10 @@ exports[`compiler: vModel transform > should support input (dynamic type) 1`] = 
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -65,10 +65,10 @@ exports[`compiler: vModel transform > should support input (radio) 1`] = `
 const t0 = _template("<input type=\\"radio\\">")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelRadio, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelRadio, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -77,10 +77,10 @@ exports[`compiler: vModel transform > should support input (text) 1`] = `
 const t0 = _template("<input type=\\"text\\">")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -89,10 +89,10 @@ exports[`compiler: vModel transform > should support select 1`] = `
 const t0 = _template("<select></select>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelSelect, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelSelect, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -101,10 +101,10 @@ exports[`compiler: vModel transform > should support simple expression 1`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -113,10 +113,10 @@ exports[`compiler: vModel transform > should support textarea 1`] = `
 const t0 = _template("<textarea></textarea>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelText, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;
 
@@ -125,11 +125,11 @@ exports[`compiler: vModel transform > should support w/ dynamic v-bind 1`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  _renderEffect(() => _setDynamicProps(n1, _ctx.obj))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  _renderEffect(() => _setDynamicProps(n0, _ctx.obj))
+  return n0
 }"
 `;
 
@@ -138,9 +138,9 @@ exports[`compiler: vModel transform > should support w/ dynamic v-bind 2`] = `
 const t0 = _template("<input>")
 
 export function render(_ctx) {
-  const n1 = t0()
-  _withDirectives(n1, [[_vModelDynamic, () => _ctx.model]])
-  _on(n1, "update:modelValue", () => $event => (_ctx.model = $event))
-  return n1
+  const n0 = t0()
+  _withDirectives(n0, [[_vModelDynamic, () => _ctx.model]])
+  _on(n0, "update:modelValue", () => $event => (_ctx.model = $event))
+  return n0
 }"
 `;

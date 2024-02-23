@@ -41,7 +41,7 @@ describe('v-html', () => {
         operations: [
           {
             type: IRNodeTypes.SET_HTML,
-            element: 1,
+            element: 0,
             value: {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'code',
@@ -83,7 +83,7 @@ describe('v-html', () => {
         operations: [
           {
             type: IRNodeTypes.SET_HTML,
-            element: 1,
+            element: 0,
             value: {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: 'test',
