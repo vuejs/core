@@ -1,7 +1,7 @@
-import { children, on, template, vShow, withDirectives } from '../src'
+import { children, on, template, vShow, withDirectives } from '../../src'
 import { nextTick, ref } from 'vue'
 import { describe, expect, test } from 'vitest'
-import { makeRender } from './_utils'
+import { makeRender } from '../_utils'
 
 const define = makeRender()
 
