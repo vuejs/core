@@ -39,7 +39,7 @@ export interface Ref<T = any> {
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return !!(r && r.__v_isRef === true)
+  return r ? r.__v_isRef === true : false
 }
 
 /**
@@ -112,17 +112,16 @@ class RefImpl<T = any> {
   }
 
   get value() {
-    const self = toRaw(this)
     if (__DEV__) {
-      self.dep.track({
+      this.dep.track({
         target: this,
         type: TrackOpTypes.GET,
         key: 'value',
       })
     } else {
-      self.dep.track()
+      this.dep.track()
     }
-    return self._value
+    return this._value
   }
 
   set value(newValue) {
