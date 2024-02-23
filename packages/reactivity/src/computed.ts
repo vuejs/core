@@ -35,6 +35,7 @@ export class ComputedRefImpl<T> {
   public dep?: Dep = undefined
 
   private _value!: T
+  private _getter?: ComputedGetter<T>
   public readonly effect: ReactiveEffect<T>
 
   public readonly __v_isRef = true
@@ -61,6 +62,7 @@ export class ComputedRefImpl<T> {
     this.effect.computed = this
     this.effect.active = this._cacheable = !isSSR
     this[ReactiveFlags.IS_READONLY] = isReadonly
+    this._getter = getter
   }
 
   get value() {
@@ -74,7 +76,7 @@ export class ComputedRefImpl<T> {
     }
     trackRefValue(self)
     if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN)
+      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN, this._getter)
       triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
