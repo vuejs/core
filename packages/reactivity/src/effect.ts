@@ -105,6 +105,10 @@ export class ReactiveEffect<T = any>
   /**
    * @internal
    */
+  depsTail?: Link = undefined
+  /**
+   * @internal
+   */
   flags: EffectFlags = EffectFlags.ACTIVE | EffectFlags.TRACKING
   /**
    * @internal
@@ -176,7 +180,7 @@ export class ReactiveEffect<T = any>
       for (let link = this.deps; link; link = link.nextDep) {
         removeSub(link)
       }
-      this.deps = undefined
+      this.deps = this.depsTail = undefined
       this.onStop && this.onStop()
       this.flags &= ~EffectFlags.ACTIVE
     }
@@ -351,7 +355,8 @@ function removeSub(link: Link) {
 
   if (!dep.subs && dep.computed) {
     // last subscriber removed
-    // if computed, unsubscribe it from all its deps so they can be GCed
+    // if computed, unsubscribe it from all its deps so this computed and its
+    // value can be GCed
     dep.computed.flags &= ~EffectFlags.TRACKING
     for (let l = dep.computed.deps; l; l = l.nextDep) {
       removeSub(l)

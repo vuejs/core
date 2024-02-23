@@ -37,6 +37,7 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   readonly [ReactiveFlags.IS_READONLY]: boolean
   // A computed is also a subscriber that tracks other deps
   deps?: Link = undefined
+  depsTail?: Link = undefined
   // track variaous states
   flags = EffectFlags.DIRTY
   // last seen global version
