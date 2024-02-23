@@ -43,17 +43,20 @@ export class Dep {
         sub: activeSub,
         version: this.version,
         nextDep: undefined,
-        prevDep: activeSub.deps,
+        prevDep: undefined,
         nextSub: undefined,
         prevSub: undefined,
         prevActiveLink: undefined,
       }
 
       // add the link to the activeEffect as a dep (as tail)
-      if (activeSub.deps) {
-        activeSub.deps.nextDep = link
+      if (!activeSub.deps) {
+        activeSub.deps = activeSub.depsTail = link
+      } else {
+        link.prevDep = activeSub.depsTail
+        activeSub.depsTail!.nextDep = link
+        activeSub.depsTail = link
       }
-      activeSub.deps = link
 
       // add the link to this dep as a subscriber (as tail)
       if (activeSub.flags & EffectFlags.TRACKING) {
@@ -76,16 +79,21 @@ export class Dep {
       // tail. This ensures the effect's dep list is in the order they are
       // accessed during evaluation.
       if (link.nextDep) {
-        link.nextDep.prevDep = link.prevDep
+        const next = link.nextDep
+        next.prevDep = link.prevDep
         if (link.prevDep) {
-          link.prevDep.nextDep = link.nextDep
+          link.prevDep.nextDep = next
         }
 
-        link.prevDep = activeSub.deps
+        link.prevDep = activeSub.depsTail
         link.nextDep = undefined
+        activeSub.depsTail!.nextDep = link
+        activeSub.depsTail = link
 
-        activeSub.deps!.nextDep = link
-        activeSub.deps = link
+        // this was the head - point to the new head
+        if (activeSub.deps === link) {
+          activeSub.deps = next
+        }
       }
     }
 

@@ -51,12 +51,13 @@ export enum EffectFlags {
  */
 export interface Subscriber extends DebuggerOptions {
   /**
-   * doubly linked list representing the deps
-   * set to tail before effect run
-   * points to tail during effect run
-   * set to head after effect run
+   * Head of the doubly linked list representing the deps
    */
   deps?: Link
+  /**
+   * Tail of the same list
+   */
+  depsTail?: Link
   flags: EffectFlags
   notify(): void
 }
@@ -234,19 +235,16 @@ function prepareDeps(sub: Subscriber) {
     // store previous active sub if link was being used in another context
     link.prevActiveLink = link.dep.activeLink
     link.dep.activeLink = link
-    if (!link.nextDep) {
-      // point deps to the tail
-      sub.deps = link
-      break
-    }
   }
 }
 
 function cleanupDeps(sub: Subscriber) {
-  // Cleanup unsued deps, starting from the tail
+  // Cleanup unsued deps
   let head
-  for (let link = sub.deps; link; link = link.prevDep) {
+  let tail = sub.depsTail
+  for (let link = tail; link; link = link.prevDep) {
     if (link.version === -1) {
+      if (link === tail) tail = link.prevDep
       // unused - remove it from the dep's subscribing effect list
       removeSub(link)
       // also remove it from this effect's dep list
@@ -261,8 +259,9 @@ function cleanupDeps(sub: Subscriber) {
     link.dep.activeLink = link.prevActiveLink
     link.prevActiveLink = undefined
   }
-  // set the new head
+  // set the new head & tail
   sub.deps = head
+  sub.depsTail = tail
 }
 
 function isDirty(sub: Subscriber): boolean {
