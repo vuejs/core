@@ -65,7 +65,7 @@ export class Dep {
           // a computed dep getting its first subscriber, enable tracking +
           // lazily subscribe to all its deps
           computed.flags |= EffectFlags.TRACKING | EffectFlags.DIRTY
-          for (let l = computed.deps; l !== undefined; l = l.nextDep) {
+          for (let l = computed.deps; l; l = l.nextDep) {
             addSub(l)
           }
         }
@@ -121,7 +121,7 @@ export class Dep {
     if (!(activeSub instanceof ComputedRefImpl)) {
       startBatch()
       try {
-        for (let link = this.subs; link !== undefined; link = link.prevSub) {
+        for (let link = this.subs; link; link = link.prevSub) {
           if (
             __DEV__ &&
             link.sub.onTrigger &&

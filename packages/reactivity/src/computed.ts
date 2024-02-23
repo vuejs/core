@@ -4,6 +4,7 @@ import {
   type DebuggerOptions,
   EffectFlags,
   type Link,
+  type ReactiveEffect,
   type Subscriber,
   refreshComputed,
 } from './effect'
@@ -19,7 +20,12 @@ export interface ComputedRef<T = any> extends WritableComputedRef<T> {
   [ComputedRefSymbol]: true
 }
 
-export interface WritableComputedRef<T> extends Ref<T> {}
+export interface WritableComputedRef<T> extends Ref<T> {
+  /**
+   * @deprecated computed no longer uses effect
+   */
+  effect: ReactiveEffect
+}
 
 export type ComputedGetter<T> = (oldValue?: T) => T
 export type ComputedSetter<T> = (newValue: T) => void
@@ -42,6 +48,8 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   flags = EffectFlags.DIRTY
   // last seen global version
   globalVersion = globalVersion - 1
+  // for backwards compat
+  effect = this
 
   // dev only
   onTrack?: (event: DebuggerEvent) => void
@@ -49,11 +57,11 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(
-    public getter: ComputedGetter<T>,
-    private readonly _setter: ComputedSetter<T> | undefined,
+    public fn: ComputedGetter<T>,
+    private readonly setter: ComputedSetter<T> | undefined,
     public isSSR: boolean,
   ) {
-    this[ReactiveFlags.IS_READONLY] = !_setter
+    this.__v_isReadonly = !setter
   }
 
   notify() {
@@ -80,8 +88,8 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   set value(newValue) {
-    if (this._setter) {
-      this._setter(newValue)
+    if (this.setter) {
+      this.setter(newValue)
     } else if (__DEV__) {
       warn('Write operation failed: computed value is readonly')
     }
