@@ -214,7 +214,7 @@ export function trigger(
     return
   }
 
-  let deps: (Dep | undefined)[] = []
+  let deps: Dep[] = []
   if (type === TriggerOpTypes.CLEAR) {
     // collection being cleared
     // trigger all effects for target
@@ -227,35 +227,37 @@ export function trigger(
       }
     })
   } else {
+    const push = (dep: Dep | undefined) => dep && deps.push(dep)
+
     // schedule runs for SET | ADD | DELETE
     if (key !== void 0) {
-      deps.push(depsMap.get(key))
+      push(depsMap.get(key))
     }
 
     // also run for iteration key on ADD | DELETE | Map.SET
     switch (type) {
       case TriggerOpTypes.ADD:
         if (!isArray(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         } else if (isIntegerKey(key)) {
           // new index added to array -> length changes
-          deps.push(depsMap.get('length'))
+          push(depsMap.get('length'))
         }
         break
       case TriggerOpTypes.DELETE:
         if (!isArray(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
           if (isMap(target)) {
-            deps.push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            push(depsMap.get(MAP_KEY_ITERATE_KEY))
           }
         }
         break
       case TriggerOpTypes.SET:
         if (isMap(target)) {
-          deps.push(depsMap.get(ITERATE_KEY))
+          push(depsMap.get(ITERATE_KEY))
         }
         break
     }
@@ -263,19 +265,17 @@ export function trigger(
 
   startBatch()
   for (const dep of deps) {
-    if (dep) {
-      if (__DEV__) {
-        dep.trigger({
-          target,
-          type,
-          key,
-          newValue,
-          oldValue,
-          oldTarget,
-        })
-      } else {
-        dep.trigger()
-      }
+    if (__DEV__) {
+      dep.trigger({
+        target,
+        type,
+        key,
+        newValue,
+        oldValue,
+        oldTarget,
+      })
+    } else {
+      dep.trigger()
     }
   }
   endBatch()

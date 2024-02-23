@@ -314,7 +314,10 @@ export function refreshComputed(computed: ComputedRefImpl) {
   }
 
   const prevSub = activeSub
+  const prevShouldTrack = shouldTrack
   activeSub = computed
+  shouldTrack = true
+
   try {
     prepareDeps(computed)
     const value = computed.getter()
@@ -327,6 +330,7 @@ export function refreshComputed(computed: ComputedRefImpl) {
   }
 
   activeSub = prevSub
+  shouldTrack = prevShouldTrack
   cleanupDeps(computed)
   computed.flags &= ~EffectFlags.RUNNING
 }

@@ -13,8 +13,8 @@ import {
   shallowRef,
   toRaw,
 } from '../src'
-import { EffectFlags } from '../src/effect'
-import type { ComputedRefImpl } from '../src/computed'
+import { EffectFlags, pauseTracking, resetTracking } from '../src/effect'
+import type { ComputedRef, ComputedRefImpl } from '../src/computed'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -707,5 +707,33 @@ describe('reactivity/computed', () => {
     // sync access c2
     c2.value
     expect(effectSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('computed should force track in untracked zone', () => {
+    const n = ref(0)
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+
+    let c: ComputedRef
+    effect(() => {
+      spy1()
+      pauseTracking()
+      n.value
+      c = computed(() => n.value + 1)
+      // access computed now to force refresh
+      c.value
+      effect(() => spy2(c.value))
+      n.value
+      resetTracking()
+    })
+
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+
+    n.value++
+    // outer effect should not trigger
+    expect(spy1).toHaveBeenCalledTimes(1)
+    // inner effect should trigger
+    expect(spy2).toHaveBeenCalledTimes(2)
   })
 })

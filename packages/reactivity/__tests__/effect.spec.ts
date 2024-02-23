@@ -21,7 +21,12 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
-import { endBatch, startBatch } from '../src/effect'
+import {
+  endBatch,
+  pauseTracking,
+  resetTracking,
+  startBatch,
+} from '../src/effect'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -1035,6 +1040,33 @@ describe('reactivity/effect', () => {
     await nextTick()
     expect(serializeInner(root)).toBe('22')
     expect(renderSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('nested effect should force track in untracked zone', () => {
+    const n = ref(0)
+    const spy1 = vi.fn()
+    const spy2 = vi.fn()
+
+    effect(() => {
+      spy1()
+      pauseTracking()
+      n.value
+      effect(() => {
+        n.value
+        spy2()
+      })
+      n.value
+      resetTracking()
+    })
+
+    expect(spy1).toHaveBeenCalledTimes(1)
+    expect(spy2).toHaveBeenCalledTimes(1)
+
+    n.value++
+    // outer effect should not trigger
+    expect(spy1).toHaveBeenCalledTimes(1)
+    // inner effect should trigger
+    expect(spy2).toHaveBeenCalledTimes(2)
   })
 
   describe('dep unsubscribe', () => {
