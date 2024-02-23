@@ -76,7 +76,7 @@ export class ComputedRefImpl<T> {
     }
     trackRefValue(self)
     if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN, this._getter)
+      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this._getter)
       triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
