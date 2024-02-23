@@ -736,4 +736,25 @@ describe('reactivity/computed', () => {
     // inner effect should trigger
     expect(spy2).toHaveBeenCalledTimes(2)
   })
+
+  // not recommended behavior, but needed for backwards compatibility
+  // used in VueUse asyncComputed
+  it('computed side effect should be able trigger', () => {
+    const a = ref(false)
+    const b = ref(false)
+    const c = computed(() => {
+      a.value = true
+      return b.value
+    })
+    effect(() => {
+      if (a.value) {
+        b.value = true
+      }
+    })
+    expect(b.value).toBe(false)
+    // accessing c triggers change
+    c.value
+    expect(b.value).toBe(true)
+    expect(c.value).toBe(true)
+  })
 })

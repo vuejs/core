@@ -118,32 +118,33 @@ export class Dep {
   }
 
   notify(debugInfo?: DebuggerEventExtraInfo) {
-    if (!(activeSub instanceof ComputedRefImpl)) {
-      startBatch()
-      try {
-        for (let link = this.subs; link; link = link.prevSub) {
-          if (
-            __DEV__ &&
-            link.sub.onTrigger &&
-            !(link.sub.flags & EffectFlags.NOTIFIED)
-          ) {
-            link.sub.onTrigger(
-              extend(
-                {
-                  effect: link.sub,
-                },
-                debugInfo,
-              ),
-            )
-          }
-          link.sub.notify()
+    const isInComputed = activeSub instanceof ComputedRefImpl
+    startBatch()
+    try {
+      for (let link = this.subs; link; link = link.prevSub) {
+        // avoid computed infinite self recursion
+        if (isInComputed && activeSub === link.sub) {
+          // TODO warning
+          continue
         }
-      } finally {
-        endBatch()
+        if (
+          __DEV__ &&
+          link.sub.onTrigger &&
+          !(link.sub.flags & EffectFlags.NOTIFIED)
+        ) {
+          link.sub.onTrigger(
+            extend(
+              {
+                effect: link.sub,
+              },
+              debugInfo,
+            ),
+          )
+        }
+        link.sub.notify()
       }
-    } else if (__DEV__) {
-      // reactive side effect triggered during computed evaluation
-      // TODO warning
+    } finally {
+      endBatch()
     }
   }
 }

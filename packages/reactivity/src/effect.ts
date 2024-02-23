@@ -291,8 +291,6 @@ function isDirty(sub: Subscriber): boolean {
  * Returning false indicates the refresh failed
  */
 export function refreshComputed(computed: ComputedRefImpl) {
-  computed.flags &= ~EffectFlags.NOTIFIED
-
   if (computed.flags & EffectFlags.RUNNING) {
     return false
   }

@@ -65,10 +65,8 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   notify() {
-    if (!(this.flags & EffectFlags.NOTIFIED)) {
-      this.flags |= EffectFlags.DIRTY | EffectFlags.NOTIFIED
-      this.dep.notify()
-    }
+    this.flags |= EffectFlags.DIRTY
+    this.dep.notify()
   }
 
   get value() {
