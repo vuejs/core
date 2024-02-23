@@ -52,13 +52,21 @@ export enum EffectFlags {
 export interface Subscriber extends DebuggerOptions {
   /**
    * Head of the doubly linked list representing the deps
+   * @internal
    */
   deps?: Link
   /**
    * Tail of the same list
+   * @internal
    */
   depsTail?: Link
+  /**
+   * @internal
+   */
   flags: EffectFlags
+  /**
+   * @internal
+   */
   notify(): void
 }
 
