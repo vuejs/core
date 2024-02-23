@@ -114,8 +114,11 @@ export class Dep {
       startBatch()
       try {
         for (let link = this.subs; link !== undefined; link = link.prevSub) {
-          link.sub.notify()
-          if (__DEV__ && link.sub.onTrigger) {
+          if (
+            __DEV__ &&
+            link.sub.onTrigger &&
+            !(link.sub.flags & EffectFlags.NOTIFIED)
+          ) {
             link.sub.onTrigger(
               extend(
                 {
@@ -125,6 +128,7 @@ export class Dep {
               ),
             )
           }
+          link.sub.notify()
         }
       } finally {
         endBatch()

@@ -112,16 +112,17 @@ class RefImpl<T = any> {
   }
 
   get value() {
+    const self = toRaw(this)
     if (__DEV__) {
-      this.dep.track({
+      self.dep.track({
         target: this,
         type: TrackOpTypes.GET,
         key: 'value',
       })
     } else {
-      this.dep.track()
+      self.dep.track()
     }
-    return this._value
+    return self._value
   }
 
   set value(newValue) {
