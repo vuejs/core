@@ -1577,9 +1577,10 @@ function baseCreateRenderer(
     const effect = (instance.effect = new ReactiveEffect(componentUpdateFn))
     instance.scope.off()
 
-    const update: SchedulerJob = (instance.update = effect.run.bind(effect))
-    update.id = instance.uid
-    effect.scheduler = () => queueJob(update)
+    const update = (instance.update = effect.run.bind(effect))
+    const job: SchedulerJob = (instance.job = effect.runIfDirty.bind(effect))
+    job.id = instance.uid
+    effect.scheduler = () => queueJob(job)
 
     // allowRecurse
     // #1801, #2043 component render effects should allow recursive updates
@@ -1592,7 +1593,7 @@ function baseCreateRenderer(
       effect.onTrigger = instance.rtg
         ? e => invokeArrayFns(instance.rtg!, e)
         : void 0
-      update.ownerInstance = instance
+      job.ownerInstance = instance
     }
 
     update()
@@ -2259,7 +2260,7 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, job, subTree, um } = instance
 
     // beforeUnmount hook
     if (bum) {
@@ -2276,11 +2277,11 @@ function baseCreateRenderer(
     // stop effects in component scope
     scope.stop()
 
-    // update may be null if a component is unmounted before its async
+    // job may be null if a component is unmounted before its async
     // setup has resolved.
-    if (update) {
+    if (job) {
       // so that scheduler will no longer invoke it
-      update.active = false
+      job.active = false
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2415,10 +2416,10 @@ function resolveChildrenNamespace(
 }
 
 function toggleRecurse(
-  { effect, update }: ComponentInternalInstance,
+  { effect, job }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  effect.allowRecurse = update.allowRecurse = allowed
+  effect.allowRecurse = job.allowRecurse = allowed
 }
 
 export function needTransition(

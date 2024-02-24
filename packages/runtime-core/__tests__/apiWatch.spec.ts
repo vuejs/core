@@ -1503,4 +1503,18 @@ describe('api: watch', () => {
     a.value = 1
     expect(b.value).toBe(2)
   })
+
+  test('watchEffect should not fire on computed deps that did not change', async () => {
+    const a = ref(0)
+    const c = computed(() => a.value % 2)
+    const spy = vi.fn()
+    watchEffect(() => {
+      spy()
+      c.value
+    })
+    expect(spy).toHaveBeenCalledTimes(1)
+    a.value += 2
+    await nextTick()
+    expect(spy).toHaveBeenCalledTimes(1)
+  })
 })

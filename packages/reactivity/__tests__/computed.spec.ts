@@ -2,6 +2,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onMounted,
   onUnmounted,
   render,
   serializeInner,
@@ -817,5 +818,38 @@ describe('reactivity/computed', () => {
 
     await nextTick()
     expect(spy).toHaveBeenCalledWith(3)
+  })
+
+  // case: radix-vue `useForwardExpose` sets a template ref during mount,
+  // and checks for the element's closest form element in a computed.
+  // the computed is expected to only evaluate after mount.
+  it('computed deps should only be refreshed when the subscribing effect is run, not when scheduled', async () => {
+    const calls: string[] = []
+    const a = ref(0)
+    const b = computed(() => {
+      calls.push('b eval')
+      return a.value + 1
+    })
+
+    const App = {
+      setup() {
+        onMounted(() => {
+          calls.push('mounted')
+        })
+        return () =>
+          h(
+            'div',
+            {
+              ref: () => (a.value = 1),
+            },
+            b.value,
+          )
+      },
+    }
+
+    render(h(App), nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(calls).toMatchObject(['b eval', 'mounted', 'b eval'])
   })
 })

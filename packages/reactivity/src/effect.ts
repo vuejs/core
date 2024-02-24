@@ -201,8 +201,21 @@ export class ReactiveEffect<T = any>
     if (this.scheduler) {
       this.scheduler()
     } else {
+      this.runIfDirty()
+    }
+  }
+
+  /**
+   * @internal
+   */
+  runIfDirty() {
+    if (isDirty(this)) {
       this.run()
     }
+  }
+
+  get dirty() {
+    return isDirty(this)
   }
 }
 
@@ -230,7 +243,7 @@ export function endBatch() {
       const next: ReactiveEffect | undefined = e.nextEffect
       e.nextEffect = undefined
       e.flags &= ~EffectFlags.NOTIFIED
-      if (e.flags & EffectFlags.ACTIVE && isDirty(e)) {
+      if (e.flags & EffectFlags.ACTIVE) {
         try {
           e.trigger()
         } catch (err) {

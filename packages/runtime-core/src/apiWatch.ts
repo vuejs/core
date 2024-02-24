@@ -338,8 +338,11 @@ function doWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!(effect.flags & EffectFlags.ACTIVE)) {
+  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+    if (
+      !(effect.flags & EffectFlags.ACTIVE) ||
+      (!effect.dirty && !immediateFirstRun)
+    ) {
       return
     }
     if (cb) {
@@ -413,7 +416,7 @@ function doWatch(
   // initial run
   if (cb) {
     if (immediate) {
-      job()
+      job(true)
     } else {
       oldValue = effect.run()
     }
