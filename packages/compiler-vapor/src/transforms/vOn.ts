@@ -2,8 +2,15 @@ import { ErrorCodes, createCompilerError } from '@vue/compiler-dom'
 import type { DirectiveTransform } from '../transform'
 import { IRNodeTypes, type KeyOverride, type SetEventIRNode } from '../ir'
 import { resolveModifiers } from '@vue/compiler-dom'
-import { extend } from '@vue/shared'
+import { extend, makeMap } from '@vue/shared'
 import { resolveExpression } from '../utils'
+
+const delegatedEvents = /*#__PURE__*/ makeMap(
+  'beforeinput,click,dblclick,contextmenu,focusin,focusout,input,keydown,' +
+    'keyup,mousedown,mousemove,mouseout,mouseover,mouseup,pointerdown,' +
+    'pointermove,pointerout,pointerover,pointerup,touchend,touchmove,' +
+    'touchstart',
+)
 
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
@@ -29,6 +36,8 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
 
   let keyOverride: KeyOverride | undefined
   const isStaticClick = arg.isStatic && arg.content.toLowerCase() === 'click'
+  const delegate =
+    arg.isStatic && !eventOptionModifiers.length && delegatedEvents(arg.content)
 
   // normalize click.right and click.middle since they don't actually fire
   if (nonKeyModifiers.includes('middle')) {
@@ -60,6 +69,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
       options: eventOptionModifiers,
     },
     keyOverride,
+    delegate,
   }
 
   context.registerEffect([arg], [operation])

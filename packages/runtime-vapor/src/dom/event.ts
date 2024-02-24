@@ -4,7 +4,7 @@ import {
   onEffectCleanup,
   onScopeDispose,
 } from '@vue/reactivity'
-import { recordMetadata } from '../metadata'
+import { getMetadata, recordMetadata } from '../metadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
 
 export function addEventListener(
@@ -17,25 +17,19 @@ export function addEventListener(
   return () => el.removeEventListener(event, handler, options)
 }
 
+interface ModifierOptions {
+  modifiers?: string[]
+  keys?: string[]
+}
+
 export function on(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
   options?: AddEventListenerOptions,
-  { modifiers, keys }: { modifiers?: string[]; keys?: string[] } = {},
+  modifierOptions?: ModifierOptions,
 ) {
-  const handler = (...args: any[]) => {
-    let handler = handlerGetter()
-    if (!handler) return
-
-    if (modifiers) {
-      handler = withModifiers(handler, modifiers)
-    }
-    if (keys) {
-      handler = withKeys(handler, keys)
-    }
-    handler && handler(...args)
-  }
+  const handler = eventHandler(handlerGetter, modifierOptions)
   recordMetadata(el, 'events', event, handler)
   const cleanup = addEventListener(el, event, handler, options)
 
@@ -46,5 +40,66 @@ export function on(
     onEffectCleanup(cleanup)
   } else if (scope) {
     onScopeDispose(cleanup)
+  }
+}
+
+export function eventHandler(
+  getter: () => undefined | ((...args: any[]) => any),
+  { modifiers, keys }: ModifierOptions = {},
+) {
+  return (...args: any[]) => {
+    let handler = getter()
+    if (!handler) return
+
+    if (modifiers) {
+      handler = withModifiers(handler, modifiers)
+    }
+    if (keys) {
+      handler = withKeys(handler, keys)
+    }
+    handler && handler(...args)
+  }
+}
+
+/**
+ * Event delegation borrowed from solid
+ */
+const delegatedEvents = Object.create(null)
+
+export const delegateEvents = (...names: string[]) => {
+  for (const name of names) {
+    if (!delegatedEvents[name]) {
+      delegatedEvents[name] = true
+      // eslint-disable-next-line no-restricted-globals
+      document.addEventListener(name, delegatedEventHandler)
+    }
+  }
+}
+
+const delegatedEventHandler = (e: Event) => {
+  let node = ((e.composedPath && e.composedPath()[0]) || e.target) as any
+  if (e.target !== node) {
+    Object.defineProperty(e, 'target', {
+      configurable: true,
+      value: node,
+    })
+  }
+  Object.defineProperty(e, 'currentTarget', {
+    configurable: true,
+    get() {
+      // eslint-disable-next-line no-restricted-globals
+      return node || document
+    },
+  })
+  while (node !== null) {
+    const handler = getMetadata(node).events[e.type] as (...args: any[]) => any
+    if (handler && !node.disabled) {
+      handler(e)
+      if (e.cancelBubble) return
+    }
+    node =
+      node.host && node.host !== node && node.host instanceof Node
+        ? node.host
+        : node.parentNode
   }
 }

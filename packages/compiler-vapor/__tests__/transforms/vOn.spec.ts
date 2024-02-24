@@ -25,10 +25,10 @@ describe('v-on', () => {
       },
     )
 
-    expect(vaporHelpers).contains('on')
+    expect(code).matchSnapshot()
+    expect(vaporHelpers).not.contains('on')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
-
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -45,10 +45,9 @@ describe('v-on', () => {
         },
         modifiers: { keys: [], nonKeys: [], options: [] },
         keyOverride: undefined,
+        delegate: true,
       },
     ])
-
-    expect(code).matchSnapshot()
   })
 
   test('event modifier', () => {
@@ -155,10 +154,10 @@ describe('v-on', () => {
     const { code, ir, helpers, vaporHelpers } =
       compileWithVOn(`<div @click="i++"/>`)
 
-    expect(vaporHelpers).contains('on')
+    expect(code).matchSnapshot()
+    expect(vaporHelpers).not.contains('on')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
-
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -168,11 +167,12 @@ describe('v-on', () => {
           content: 'i++',
           isStatic: false,
         },
+        delegate: true,
       },
     ])
-
-    expect(code).matchSnapshot()
-    expect(code).contains('_on(n0, "click", () => $event => (_ctx.i++))')
+    expect(code).contains(
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (_ctx.i++)))',
+    )
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -192,49 +192,49 @@ describe('v-on', () => {
     expect(vaporHelpers).contains('unref')
     expect(helpers.size).toBe(0)
     expect(code).contains(
-      '_on(n0, "click", () => $event => (x.value=_unref(y)))',
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (x.value=_unref(y))))',
     )
-    expect(code).contains('_on(n1, "click", () => $event => (x.value++))')
     expect(code).contains(
-      '_on(n2, "click", () => $event => ({ x: x.value } = _unref(y)))',
+      '_recordMetadata(n1, "events", "click", _eventHandler(() => $event => (x.value++)))',
+    )
+    expect(code).contains(
+      '_recordMetadata(n2, "events", "click", _eventHandler(() => $event => ({ x: x.value } = _unref(y))))',
     )
   })
 
   test('should handle multiple inline statement', () => {
     const { ir, code } = compileWithVOn(`<div @click="foo();bar()"/>`)
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo();bar()' },
       },
     ])
-
-    expect(code).matchSnapshot()
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      '_on(n0, "click", () => $event => {_ctx.foo();_ctx.bar()})',
+      `_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {_ctx.foo();_ctx.bar()}))`,
     )
   })
 
   test('should handle multi-line statement', () => {
     const { code, ir } = compileWithVOn(`<div @click="\nfoo();\nbar()\n"/>`)
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '\nfoo();\nbar()\n' },
       },
     ])
-
-    expect(code).matchSnapshot()
     // should wrap with `{` for multiple statements
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      '_on(n0, "click", () => $event => {\n_ctx.foo();\n_ctx.bar()\n})',
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {\n_ctx.foo();\n_ctx.bar()\n})',
     )
   })
 
@@ -243,17 +243,16 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event)' },
       },
     ])
-
-    expect(code).matchSnapshot()
     // should NOT prefix $event
     expect(code).contains(
-      '_on(n0, "click", () => $event => (_ctx.foo($event)))',
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (_ctx.foo($event))))',
     )
   })
 
@@ -262,32 +261,32 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: 'foo($event);bar()' },
       },
     ])
-
-    expect(code).matchSnapshot()
     // should NOT prefix $event
     expect(code).contains(
-      '_on(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()})',
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {_ctx.foo($event);_ctx.bar()}))',
     )
   })
 
   test('should NOT wrap as function if expression is already function expression', () => {
     const { code, ir } = compileWithVOn(`<div @click="$event => foo($event)"/>`)
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '$event => foo($event)' },
       },
     ])
-
-    expect(code).matchSnapshot()
-    expect(code).contains('_on(n0, "click", () => $event => _ctx.foo($event))')
+    expect(code).contains(
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => _ctx.foo($event)))',
+    )
   })
 
   test('should NOT wrap as function if expression is already function expression (with Typescript)', () => {
@@ -296,16 +295,15 @@ describe('v-on', () => {
       { expressionPlugins: ['typescript'] },
     )
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: '(e: any): any => foo(e)' },
       },
     ])
-
-    expect(code).matchSnapshot()
     expect(code).contains(
-      '_on(n0, "click", () => (e: any): any => _ctx.foo(e))',
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => (e: any): any => _ctx.foo(e)))',
     )
   })
 
@@ -318,6 +316,7 @@ describe('v-on', () => {
     "/>`,
     )
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
@@ -330,8 +329,6 @@ describe('v-on', () => {
         },
       },
     ])
-
-    expect(code).matchSnapshot()
   })
 
   test('should NOT add a prefix to $event if the expression is a function expression', () => {
@@ -372,7 +369,9 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", () => _ctx.a['b' + _ctx.c])`)
+    expect(code).contains(
+      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.a['b' + _ctx.c]))`,
+    )
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -380,15 +379,16 @@ describe('v-on', () => {
       prefixIdentifiers: true,
     })
 
+    expect(code).matchSnapshot()
     expect(ir.block.operation).toMatchObject([
       {
         type: IRNodeTypes.SET_EVENT,
         value: { content: `e => foo(e)` },
       },
     ])
-
-    expect(code).matchSnapshot()
-    expect(code).contains('_on(n0, "click", () => e => _ctx.foo(e))')
+    expect(code).contains(
+      '_recordMetadata(n0, "events", "click", _eventHandler(() => e => _ctx.foo(e)))',
+    )
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -423,6 +423,7 @@ describe('v-on', () => {
       },
     )
 
+    expect(code).matchSnapshot()
     expect(vaporHelpers).contains('on')
     expect(ir.block.operation).toMatchObject([
       {
@@ -438,12 +439,13 @@ describe('v-on', () => {
           options: ['capture', 'once'],
         },
         keyOverride: undefined,
+        delegate: false,
       },
     ])
-
-    expect(code).matchSnapshot()
+    expect(code).contains(
+      '_on(n0, "click", () => _ctx.test, { capture: true, once: true }, {',
+    )
     expect(code).contains('modifiers: ["stop", "prevent"]')
-    expect(code).contains('{ capture: true, once: true }')
   })
 
   test('should support multiple events and modifiers options w/ prefixIdentifiers: true', () => {
@@ -494,10 +496,14 @@ describe('v-on', () => {
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", () => _ctx.test, undefined`)
+    expect(code).contains(
+      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.test, {`,
+    )
     expect(code).contains(`modifiers: ["stop"]`)
 
-    expect(code).contains(`_on(n0, "keyup", () => _ctx.test, undefined`)
+    expect(code).contains(
+      `_recordMetadata(n0, "events", "keyup", _eventHandler(() => _ctx.test, {`,
+    )
     expect(code).contains(`keys: ["enter"]`)
   })
 
@@ -680,6 +686,22 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", () => _ctx.foo.bar)`)
+    expect(code).contains(
+      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.foo.bar))`,
+    )
+  })
+
+  test('should delegate event', () => {
+    const { code, ir, vaporHelpers } = compileWithVOn(`<div @click="test"/>`)
+
+    expect(code).matchSnapshot()
+    expect(code).contains('_delegateEvents("click")')
+    expect(vaporHelpers).contains('delegateEvents')
+    expect(ir.block.operation).toMatchObject([
+      {
+        type: IRNodeTypes.SET_EVENT,
+        delegate: true,
+      },
+    ])
   })
 })

@@ -1,4 +1,4 @@
-import { isMemberExpression } from '@vue/compiler-dom'
+import { fnExpRE, isMemberExpression } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import type { SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
@@ -11,10 +11,6 @@ import {
   genCall,
 } from './utils'
 
-// TODO: share this with compiler-core
-const fnExpRE =
-  /^\s*([\w$_]+|(async\s*)?\([^)]*?\))\s*(:[^=]+)?=>|^\s*(async\s+)?function(?:\s+[\w$]+)?\s*\(/
-
 export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
@@ -25,6 +21,22 @@ export function genSetEvent(
   const name = genName()
   const handler = genEventHandler()
   const modifierOptions = genModifierOptions()
+
+  if (oper.delegate) {
+    // oper.key is static
+    context.delegates.add(oper.key.content)
+    return [
+      NEWLINE,
+      ...genCall(
+        vaporHelper('recordMetadata'),
+        `n${oper.element}`,
+        '"events"',
+        name,
+        genCall(vaporHelper('eventHandler'), handler, modifierOptions),
+      ),
+    ]
+  }
+
   const handlerOptions = options.length
     ? `{ ${options.map(v => `${v}: true`).join(', ')} }`
     : modifierOptions
@@ -45,8 +57,8 @@ export function genSetEvent(
 
   function genName(): CodeFragment[] {
     const expr = genExpression(oper.key, context)
-    // TODO unit test
     if (oper.keyOverride) {
+      // TODO unit test
       const find = JSON.stringify(oper.keyOverride[0])
       const replacement = JSON.stringify(oper.keyOverride[1])
       const wrapped: CodeFragment[] = ['(', ...expr, ')']

@@ -14,6 +14,7 @@ import {
   LF,
   NEWLINE,
   buildCodeFragment,
+  genCall,
   genCodeFragment,
 } from './generators/utils'
 
@@ -38,6 +39,8 @@ export class CodegenContext {
     this.vaporHelpers.add(name)
     return `_${name}`
   }
+
+  delegates = new Set<string>()
 
   identifiers: Record<string, string[]> = Object.create(null)
   withId = <T>(fn: () => T, map: Record<string, string | null>): T => {
@@ -127,10 +130,11 @@ export function generate(
     push('}')
   }
 
+  const deligates = genDeligates(context)
   // TODO source map?
   const templates = genTemplates(ir.template, context)
   const imports = genHelperImports(context)
-  const preamble = imports + templates
+  const preamble = imports + templates + deligates
 
   const newlineCount = [...preamble].filter(c => c === '\n').length
   if (newlineCount && !isSetupInlined) {
@@ -150,6 +154,15 @@ export function generate(
     helpers,
     vaporHelpers,
   }
+}
+
+function genDeligates({ delegates, vaporHelper }: CodegenContext) {
+  return delegates.size
+    ? genCall(
+        vaporHelper('delegateEvents'),
+        ...Array.from(delegates).map(v => `"${v}"`),
+      ).join('') + '\n'
+    : ''
 }
 
 function genHelperImports({ helpers, vaporHelpers, options }: CodegenContext) {

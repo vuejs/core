@@ -146,12 +146,13 @@ export function render(_ctx) {
 `;
 
 exports[`compile > dynamic root nodes and interpolation 1`] = `
-"import { on as _on, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { recordMetadata as _recordMetadata, eventHandler as _eventHandler, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, delegateEvents as _delegateEvents, template as _template } from 'vue/vapor';
 const t0 = _template("<button></button>")
+_delegateEvents("click")
 
 export function render(_ctx) {
   const n0 = t0()
-  _on(n0, "click", () => _ctx.handleClick)
+  _recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.handleClick))
   _renderEffect(() => _setText(n0, _ctx.count, "foo", _ctx.count, "foo", _ctx.count))
   _renderEffect(() => _setDynamicProp(n0, "id", _ctx.count))
   return n0

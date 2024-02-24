@@ -45,7 +45,7 @@ export * from './runtimeHelpers'
 
 export { getBaseTransformPreset, type TransformPreset } from './compile'
 export { transformModel } from './transforms/vModel'
-export { transformOn } from './transforms/vOn'
+export { transformOn, fnExpRE } from './transforms/vOn'
 export { transformBind } from './transforms/vBind'
 export { noopDirectiveTransform } from './transforms/noopDirectiveTransform'
 export { processIf } from './transforms/vIf'
