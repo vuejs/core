@@ -80,6 +80,8 @@ export interface Subscriber extends DebuggerOptions {
  * A Link is also a node in two doubly-linked lists - one for the associated
  * sub to track all its deps, and one for the associated dep to track all its
  * subs.
+ *
+ * @internal
  */
 export interface Link {
   dep: Dep
@@ -222,12 +224,16 @@ export class ReactiveEffect<T = any>
 let batchDepth = 0
 let batchedEffect: ReactiveEffect | undefined
 
+/**
+ * @internal
+ */
 export function startBatch() {
   batchDepth++
 }
 
 /**
  * Run batched effects when all batches have ended
+ * @internal
  */
 export function endBatch() {
   if (batchDepth > 1) {
@@ -316,6 +322,7 @@ function isDirty(sub: Subscriber): boolean {
 
 /**
  * Returning false indicates the refresh failed
+ * @internal
  */
 export function refreshComputed(computed: ComputedRefImpl) {
   if (computed.flags & EffectFlags.RUNNING) {
@@ -444,6 +451,9 @@ export function stop(runner: ReactiveEffectRunner) {
   runner.effect.stop()
 }
 
+/**
+ * @internal
+ */
 export let shouldTrack = true
 const trackStack: boolean[] = []
 

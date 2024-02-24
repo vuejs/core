@@ -18,6 +18,9 @@ import {
  */
 export let globalVersion = 0
 
+/**
+ * @internal
+ */
 export class Dep {
   version = 0
   /**

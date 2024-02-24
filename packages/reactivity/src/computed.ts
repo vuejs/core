@@ -36,6 +36,9 @@ export interface WritableComputedOptions<T> {
   set: ComputedSetter<T>
 }
 
+/**
+ * @internal
+ */
 export class ComputedRefImpl<T = any> implements Subscriber {
   // A computed is a ref
   _value: any = undefined

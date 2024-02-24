@@ -95,6 +95,9 @@ function createRef(rawValue: unknown, shallow: boolean) {
   return new RefImpl(rawValue, shallow)
 }
 
+/**
+ * @internal
+ */
 class RefImpl<T = any> {
   _value: T
   private _rawValue: T
