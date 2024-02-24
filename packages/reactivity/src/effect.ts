@@ -1,4 +1,4 @@
-import { extend } from '@vue/shared'
+import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
@@ -355,7 +355,7 @@ export function refreshComputed(computed: ComputedRefImpl) {
   try {
     prepareDeps(computed)
     const value = computed.fn()
-    if (dep.version === 0 || !Object.is(value, computed._value)) {
+    if (dep.version === 0 || !hasChanged(value, computed._value)) {
       computed._value = value
       dep.version++
     }
