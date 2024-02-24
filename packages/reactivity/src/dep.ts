@@ -1,5 +1,5 @@
 import { extend, isArray, isIntegerKey, isMap, isSymbol } from '@vue/shared'
-import { ComputedRefImpl } from './computed'
+import type { ComputedRefImpl } from './computed'
 import { type TrackOpTypes, TriggerOpTypes } from './constants'
 import {
   type DebuggerEventExtraInfo,
@@ -108,15 +108,9 @@ export class Dep {
   }
 
   notify(debugInfo?: DebuggerEventExtraInfo) {
-    const isInComputed = activeSub instanceof ComputedRefImpl
     startBatch()
     try {
       for (let link = this.subs; link; link = link.prevSub) {
-        // avoid computed infinite self recursion
-        if (isInComputed && activeSub === link.sub) {
-          // TODO warning
-          continue
-        }
         if (
           __DEV__ &&
           link.sub.onTrigger &&

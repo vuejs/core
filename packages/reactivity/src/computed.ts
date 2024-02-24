@@ -6,6 +6,7 @@ import {
   type Link,
   type ReactiveEffect,
   type Subscriber,
+  activeSub,
   refreshComputed,
 } from './effect'
 import type { Ref } from './ref'
@@ -65,8 +66,13 @@ export class ComputedRefImpl<T = any> implements Subscriber {
   }
 
   notify() {
-    this.flags |= EffectFlags.DIRTY
-    this.dep.notify()
+    // avoid infinite self recursion
+    if (activeSub !== this) {
+      this.flags |= EffectFlags.DIRTY
+      this.dep.notify()
+    } else if (__DEV__) {
+      // TODO warn
+    }
   }
 
   get value() {

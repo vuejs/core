@@ -44,7 +44,8 @@ export enum EffectFlags {
   TRACKING = 1 << 2,
   NOTIFIED = 1 << 3,
   DIRTY = 1 << 4,
-  NO_BATCH = 1 << 5,
+  ALLOW_RECURSE = 1 << 5,
+  NO_BATCH = 1 << 6,
 }
 
 /**
