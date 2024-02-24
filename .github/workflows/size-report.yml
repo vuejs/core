@@ -36,7 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Download PR number
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           name: pr-number
           run_id: ${{ github.event.workflow_run.id }}
@@ -48,14 +48,14 @@ jobs:
           path: ./pr.txt
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           branch: main
           workflow: size-data.yml
