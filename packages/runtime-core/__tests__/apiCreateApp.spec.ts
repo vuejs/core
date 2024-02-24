@@ -450,11 +450,6 @@ describe('api: createApp', () => {
       }
 
       const app = createApp(Root)
-      Object.defineProperty(app.config, 'isNativeTag', {
-        value: isNativeTag,
-        writable: false,
-      })
-
       app.mount(nodeOps.createElement('div'))
       expect(
         `Do not use built-in directive ids as custom directive id: bind`,
