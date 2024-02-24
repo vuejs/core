@@ -61,7 +61,7 @@ describe('effect', () => {
         refs[i].value
       }
     })
-    bench(`${size} refs invoke`, () => {
+    bench(`1 effect, mutate ${size} refs`, () => {
       for (let i = 0; i < size; i++) {
         refs[i].value = i + j++
       }

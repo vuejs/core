@@ -7,14 +7,6 @@ describe('computed', () => {
   })
 
   {
-    let i = 0
-    const o = ref(100)
-    bench('write independent ref dep', () => {
-      o.value = i++
-    })
-  }
-
-  {
     const v = ref(100)
     computed(() => v.value * 2)
     let i = 0
