@@ -11,7 +11,7 @@ import type {
   DirectiveHook,
   DirectiveHookName,
   ObjectDirective,
-} from '../directive'
+} from '../directives'
 import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'

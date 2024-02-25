@@ -18,8 +18,6 @@ import {
   genCodeFragment,
 } from './generators/utils'
 
-export * from './generators/utils'
-
 export type CodegenOptions = Omit<BaseCodegenOptions, 'optimizeImports'>
 
 export class CodegenContext {

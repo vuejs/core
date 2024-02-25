@@ -16,7 +16,7 @@ import {
 } from './scheduler'
 import { handleError as handleErrorWithInstance } from './errorHandling'
 import { warn } from './warning'
-import { invokeDirectiveHook } from './directive'
+import { invokeDirectiveHook } from './directives'
 
 interface RenderWatchOptions {
   immediate?: boolean

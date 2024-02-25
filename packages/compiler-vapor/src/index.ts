@@ -1,6 +1,25 @@
 export { parse } from '@vue/compiler-dom'
-export * from './transform'
-export * from './generate'
+export {
+  transform,
+  createStructuralDirectiveTransform,
+  type TransformContext,
+  type NodeTransform,
+  type StructuralDirectiveTransform,
+  type DirectiveTransform,
+} from './transform'
+export {
+  generate,
+  type CodegenContext,
+  type CodegenOptions,
+  type VaporCodegenResult,
+} from './generate'
+export {
+  genCall,
+  genMulti,
+  buildCodeFragment,
+  genCodeFragment,
+  type CodeFragment,
+} from './generators/utils'
 export {
   wrapTemplate,
   compile,
@@ -8,7 +27,13 @@ export {
   type TransformPreset,
 } from './compile'
 export * from './ir'
-export * from './errors'
+export {
+  VaporErrorCodes,
+  VaporErrorMessages,
+  createVaporCompilerError,
+  type VaporCompilerError,
+} from './errors'
+
 export { transformElement } from './transforms/transformElement'
 export { transformChildren } from './transforms/transformChildren'
 export { transformText } from './transforms/transformText'

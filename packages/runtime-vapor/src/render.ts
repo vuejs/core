@@ -14,7 +14,7 @@ import {
   unsetCurrentInstance,
 } from './component'
 import { initProps } from './componentProps'
-import { invokeDirectiveHook } from './directive'
+import { invokeDirectiveHook } from './directives'
 import { insert, querySelector, remove } from './dom/dom'
 import { queuePostRenderEffect } from './scheduler'
 
@@ -37,13 +37,13 @@ export function render(
   return mountComponent(instance, (container = normalizeContainer(container)))
 }
 
-export function normalizeContainer(container: string | ParentNode): ParentNode {
+function normalizeContainer(container: string | ParentNode): ParentNode {
   return typeof container === 'string'
     ? (querySelector(container) as ParentNode)
     : container
 }
 
-export function mountComponent(
+function mountComponent(
   instance: ComponentInternalInstance,
   container: ParentNode,
 ) {

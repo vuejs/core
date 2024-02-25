@@ -47,11 +47,32 @@ export {
   type FunctionalComponent,
   type SetupFn,
 } from './component'
-export * from './render'
-export * from './renderWatch'
-export * from './template'
-export * from './apiWatch'
-export * from './directive'
+export { render, unmountComponent } from './render'
+export { renderEffect, renderWatch } from './renderWatch'
+export { template, children } from './template'
+export {
+  watch,
+  watchEffect,
+  watchPostEffect,
+  watchSyncEffect,
+  type WatchEffect,
+  type WatchOptions,
+  type WatchOptionsBase,
+  type WatchCallback,
+  type WatchSource,
+  type WatchStopHandle,
+} from './apiWatch'
+export {
+  withDirectives,
+  resolveDirective,
+  type Directive,
+  type DirectiveBinding,
+  type DirectiveHook,
+  type ObjectDirective,
+  type FunctionDirective,
+  type DirectiveArguments,
+  type DirectiveModifiers,
+} from './directives'
 
 export { insert, prepend, append, remove, createTextNode } from './dom/dom'
 export { setStyle } from './dom/style'
@@ -67,10 +88,30 @@ export {
 export { on, delegateEvents } from './dom/event'
 export { setRef } from './dom/templateRef'
 
-export * from './apiLifecycle'
-export * from './if'
-export * from './for'
 export { defineComponent } from './apiDefineComponent'
+export {
+  onBeforeMount,
+  onMounted,
+  onBeforeUpdate,
+  onUpdated,
+  onBeforeUnmount,
+  onUnmounted,
+  // onActivated,
+  // onDeactivated,
+  // onRenderTracked,
+  // onRenderTriggered,
+  onErrorCaptured,
+  // onServerPrefetch,
+} from './apiLifecycle'
+export { createIf } from './if'
+export { createFor } from './for'
 
-export * from './directives/vShow'
-export * from './directives/vModel'
+// **Internal** DOM-only runtime directive helpers
+export {
+  vModelText,
+  vModelCheckbox,
+  vModelRadio,
+  vModelSelect,
+  vModelDynamic,
+} from './directives/vModel'
+export { vShow } from './directives/vShow'

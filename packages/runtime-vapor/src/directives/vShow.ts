@@ -1,4 +1,4 @@
-import type { ObjectDirective } from '../directive'
+import type { ObjectDirective } from '../directives'
 
 const vShowMap = new WeakMap<HTMLElement, string>()
 
