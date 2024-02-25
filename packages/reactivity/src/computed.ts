@@ -43,7 +43,7 @@ export class ComputedRefImpl<T> {
   public _cacheable: boolean
 
   constructor(
-    getter: ComputedGetter<T>,
+    private getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
     isReadonly: boolean,
     isSSR: boolean,
@@ -74,7 +74,7 @@ export class ComputedRefImpl<T> {
     }
     trackRefValue(self)
     if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN)
+      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
       triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
