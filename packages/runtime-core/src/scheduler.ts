@@ -92,25 +92,14 @@ function findInsertionIndex(id: number) {
 }
 
 export function queueJob(job: SchedulerJob) {
-  // the dedupe search uses the startIndex argument of Array.includes()
-  // by default the search index includes the current job that is being run
-  // so it cannot recursively trigger itself again.
-  // if the job is a watch() callback, the search will start with a +1 index to
-  // allow it recursively trigger itself - it is the user's responsibility to
-  // ensure it doesn't end up in an infinite loop.
-  if (
-    !queue.length ||
-    !queue.includes(
-      job,
-      isFlushing && job.flags! & SchedulerJobFlags.ALLOW_RECURSE
-        ? flushIndex + 1
-        : flushIndex,
-    )
-  ) {
+  if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
     } else {
       queue.splice(findInsertionIndex(job.id), 0, job)
+    }
+    if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+      job.flags! |= SchedulerJobFlags.QUEUED
     }
     queueFlush()
   }
@@ -132,16 +121,11 @@ export function invalidateJob(job: SchedulerJob) {
 
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (
-      !activePostFlushCbs ||
-      !activePostFlushCbs.includes(
-        cb,
-        cb.flags! & SchedulerJobFlags.ALLOW_RECURSE
-          ? postFlushIndex + 1
-          : postFlushIndex,
-      )
-    ) {
+    if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! |= SchedulerJobFlags.QUEUED
+      }
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
@@ -173,6 +157,7 @@ export function flushPreFlushCbs(
       queue.splice(i, 1)
       i--
       cb()
+      cb.flags! &= ~SchedulerJobFlags.QUEUED
     }
   }
 }
@@ -207,6 +192,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
         continue
       }
       activePostFlushCbs[postFlushIndex]()
+      activePostFlushCbs[postFlushIndex].flags! &= ~SchedulerJobFlags.QUEUED
     }
     activePostFlushCbs = null
     postFlushIndex = 0
@@ -260,6 +246,7 @@ function flushJobs(seen?: CountMap) {
           continue
         }
         callWithErrorHandling(job, null, ErrorCodes.SCHEDULER)
+        job.flags! &= ~SchedulerJobFlags.QUEUED
       }
     }
   } finally {
