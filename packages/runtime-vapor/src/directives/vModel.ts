@@ -191,11 +191,9 @@ function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
       } else {
         option.selected = value.has(optionValue)
       }
-    } else {
-      if (looseEqual(getValue(option), value)) {
-        if (el.selectedIndex !== i) el.selectedIndex = i
-        return
-      }
+    } else if (looseEqual(getValue(option), value)) {
+      if (el.selectedIndex !== i) el.selectedIndex = i
+      return
     }
   }
   if (!isMultiple && el.selectedIndex !== -1) {
