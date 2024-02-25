@@ -42,6 +42,11 @@ export class ComputedRefImpl<T> {
 
   public _cacheable: boolean
 
+  /**
+   * Dev only
+   */
+  _warnRecursive?: boolean
+
   constructor(
     private getter: ComputedGetter<T>,
     private readonly _setter: ComputedSetter<T>,
@@ -74,7 +79,9 @@ export class ComputedRefImpl<T> {
     }
     trackRefValue(self)
     if (self.effect._dirtyLevel >= DirtyLevels.MaybeDirty_ComputedSideEffect) {
-      __DEV__ && warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
+      if (__DEV__ && (__TEST__ || this._warnRecursive)) {
+        warn(COMPUTED_SIDE_EFFECT_WARN, `\n\ngetter: `, this.getter)
+      }
       triggerRefValue(self, DirtyLevels.MaybeDirty_ComputedSideEffect)
     }
     return self._value
