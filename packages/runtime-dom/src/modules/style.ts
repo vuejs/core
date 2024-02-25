@@ -1,6 +1,6 @@
 import { capitalize, hyphenate, isArray, isString } from '@vue/shared'
 import { camelize, warn } from '@vue/runtime-core'
-import { vShowOldKey } from '../directives/vShow'
+import { vShowOriginalDisplay } from '../directives/vShow'
 import { CSS_VAR_TEXT } from '../helpers/useCssVars'
 
 type Style = string | Record<string, string | string[]> | null
@@ -53,8 +53,8 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
   // indicates that the `display` of the element is controlled by `v-show`,
   // so we always keep the current `display` value regardless of the `style`
   // value, thus handing over control to `v-show`.
-  if (vShowOldKey in el) {
-    el[vShowOldKey] = hasControlledDisplay ? style.display : ''
+  if (vShowOriginalDisplay in el) {
+    el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : ''
     style.display = currentDisplay
   }
 }
