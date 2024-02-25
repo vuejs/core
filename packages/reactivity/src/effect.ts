@@ -126,10 +126,6 @@ export class ReactiveEffect<T = any>
    * @internal
    */
   nextEffect?: ReactiveEffect = undefined
-  /**
-   * @internal
-   */
-  allowRecurse?: boolean
 
   scheduler?: EffectScheduler = undefined
   onStop?: () => void
@@ -144,7 +140,10 @@ export class ReactiveEffect<T = any>
    * @internal
    */
   notify() {
-    if (this.flags & EffectFlags.RUNNING && !this.allowRecurse) {
+    if (
+      this.flags & EffectFlags.RUNNING &&
+      !(this.flags & EffectFlags.ALLOW_RECURSE)
+    ) {
       return
     }
     if (this.flags & EffectFlags.NO_BATCH) {

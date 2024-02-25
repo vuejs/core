@@ -2,10 +2,9 @@ import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
 import { type Awaited, NOOP, isArray } from '@vue/shared'
 import { type ComponentInternalInstance, getComponentName } from './component'
 
-export interface SchedulerJob extends Function {
-  id?: number
-  pre?: boolean
-  active?: boolean
+export enum SchedulerJobFlags {
+  QUEUED = 1 << 0,
+  PRE = 1 << 1,
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.
@@ -21,7 +20,17 @@ export interface SchedulerJob extends Function {
    * responsibility to perform recursive state mutation that eventually
    * stabilizes (#1727).
    */
-  allowRecurse?: boolean
+  ALLOW_RECURSE = 1 << 2,
+  DISPOSED = 1 << 3,
+}
+
+export interface SchedulerJob extends Function {
+  id?: number
+  /**
+   * flags can technically be undefined, but it can still be used in bitwise
+   * operations just like 0.
+   */
+  flags?: SchedulerJobFlags
   /**
    * Attached by renderer.ts when setting up a component's render effect
    * Used to obtain component information when reporting max recursive updates.
@@ -69,7 +78,10 @@ function findInsertionIndex(id: number) {
     const middle = (start + end) >>> 1
     const middleJob = queue[middle]
     const middleJobId = getId(middleJob)
-    if (middleJobId < id || (middleJobId === id && middleJob.pre)) {
+    if (
+      middleJobId < id ||
+      (middleJobId === id && middleJob.flags! & SchedulerJobFlags.PRE)
+    ) {
       start = middle + 1
     } else {
       end = middle
@@ -90,7 +102,9 @@ export function queueJob(job: SchedulerJob) {
     !queue.length ||
     !queue.includes(
       job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex,
+      isFlushing && job.flags! & SchedulerJobFlags.ALLOW_RECURSE
+        ? flushIndex + 1
+        : flushIndex,
     )
   ) {
     if (job.id == null) {
@@ -122,7 +136,9 @@ export function queuePostFlushCb(cb: SchedulerJobs) {
       !activePostFlushCbs ||
       !activePostFlushCbs.includes(
         cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
+        cb.flags! & SchedulerJobFlags.ALLOW_RECURSE
+          ? postFlushIndex + 1
+          : postFlushIndex,
       )
     ) {
       pendingPostFlushCbs.push(cb)
@@ -147,7 +163,7 @@ export function flushPreFlushCbs(
   }
   for (; i < queue.length; i++) {
     const cb = queue[i]
-    if (cb && cb.pre) {
+    if (cb && cb.flags! & SchedulerJobFlags.PRE) {
       if (instance && cb.id !== instance.uid) {
         continue
       }
@@ -203,8 +219,10 @@ const getId = (job: SchedulerJob): number =>
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   const diff = getId(a) - getId(b)
   if (diff === 0) {
-    if (a.pre && !b.pre) return -1
-    if (b.pre && !a.pre) return 1
+    const isAPre = a.flags! & SchedulerJobFlags.PRE
+    const isBPre = b.flags! & SchedulerJobFlags.PRE
+    if (isAPre && !isBPre) return -1
+    if (isBPre && !isAPre) return 1
   }
   return diff
 }
@@ -237,7 +255,7 @@ function flushJobs(seen?: CountMap) {
   try {
     for (flushIndex = 0; flushIndex < queue.length; flushIndex++) {
       const job = queue[flushIndex]
-      if (job && job.active !== false) {
+      if (job && !(job.flags! & SchedulerJobFlags.DISPOSED)) {
         if (__DEV__ && check(job)) {
           continue
         }
