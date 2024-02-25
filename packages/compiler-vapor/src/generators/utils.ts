@@ -32,24 +32,28 @@ export function buildCodeFragment(...frag: CodeFragment[]) {
 
 export function genMulti(
   [left, right, seg]: [
-    left: CodeFragment,
-    right: CodeFragment,
-    segment: CodeFragment,
+    left: CodeFragments,
+    right: CodeFragments,
+    segment: CodeFragments,
   ],
   ...fns: CodeFragments[]
 ): CodeFragment[] {
   const frag: CodeFragment[] = []
   fns = fns.filter(Boolean)
-  frag.push(left)
+  push(left)
   for (let [i, fn] of (
     fns as Array<Exclude<CodeFragments, FalsyValue>>
   ).entries()) {
+    push(fn)
+    if (i < fns.length - 1) push(seg)
+  }
+  push(right)
+  return frag
+
+  function push(fn: CodeFragments) {
     if (!isArray(fn)) fn = [fn]
     frag.push(...fn)
-    if (i < fns.length - 1) frag.push(seg)
   }
-  frag.push(right)
-  return frag
 }
 
 export function genCall(

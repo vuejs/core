@@ -1,10 +1,5 @@
 import { isArray, toDisplayString } from '@vue/shared'
-import type { Block } from './render'
-
-export * from './dom/style'
-export * from './dom/prop'
-export * from './dom/event'
-export * from './dom/templateRef'
+import type { Block } from '../render'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function normalizeBlock(block: Block): Node[] {

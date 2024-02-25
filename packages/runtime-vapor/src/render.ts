@@ -15,7 +15,7 @@ import {
 } from './component'
 import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directive'
-import { insert, querySelector, remove } from './dom'
+import { insert, querySelector, remove } from './dom/dom'
 import { queuePostRenderEffect } from './scheduler'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)

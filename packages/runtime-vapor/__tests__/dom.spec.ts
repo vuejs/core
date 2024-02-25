@@ -1,4 +1,4 @@
-import { append, insert, normalizeBlock, prepend, remove } from '../src/dom'
+import { append, insert, normalizeBlock, prepend, remove } from '../src/dom/dom'
 import { fragmentKey } from '../src/render'
 
 const node1 = document.createTextNode('node1')

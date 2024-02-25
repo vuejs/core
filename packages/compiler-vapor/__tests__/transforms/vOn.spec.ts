@@ -26,7 +26,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).not.contains('on')
+    expect(vaporHelpers).contains('on')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
@@ -155,7 +155,7 @@ describe('v-on', () => {
       compileWithVOn(`<div @click="i++"/>`)
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).not.contains('on')
+    expect(vaporHelpers).contains('on')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
@@ -171,7 +171,9 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (_ctx.i++)))',
+      `_on(n0, "click", () => $event => (_ctx.i++), {
+    delegate: true
+  })`,
     )
   })
 
@@ -188,18 +190,19 @@ describe('v-on', () => {
       },
     )
     expect(code).matchSnapshot()
-
     expect(vaporHelpers).contains('unref')
     expect(helpers.size).toBe(0)
-    expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (x.value=_unref(y))))',
-    )
-    expect(code).contains(
-      '_recordMetadata(n1, "events", "click", _eventHandler(() => $event => (x.value++)))',
-    )
-    expect(code).contains(
-      '_recordMetadata(n2, "events", "click", _eventHandler(() => $event => ({ x: x.value } = _unref(y))))',
-    )
+    expect(code)
+      .contains(`_on(n0, "click", () => $event => (x.value=_unref(y)), {
+    delegate: true
+  })`)
+    expect(code).contains(`_on(n1, "click", () => $event => (x.value++), {
+    delegate: true
+  })`)
+    expect(code)
+      .contains(`_on(n2, "click", () => $event => ({ x: x.value } = _unref(y)), {
+    delegate: true
+  })`)
   })
 
   test('should handle multiple inline statement', () => {
@@ -216,7 +219,9 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {_ctx.foo();_ctx.bar()}))`,
+      `_on(n0, "click", () => $event => {_ctx.foo();_ctx.bar()}, {
+    delegate: true
+  })`,
     )
   })
 
@@ -234,7 +239,12 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {\n_ctx.foo();\n_ctx.bar()\n})',
+      `_on(n0, "click", () => $event => {
+_ctx.foo();
+_ctx.bar()
+}, {
+    delegate: true
+  })`,
     )
   })
 
@@ -252,7 +262,9 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => (_ctx.foo($event))))',
+      `_on(n0, "click", () => $event => (_ctx.foo($event)), {
+    delegate: true
+  })`,
     )
   })
 
@@ -270,7 +282,9 @@ describe('v-on', () => {
     ])
     // should NOT prefix $event
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => {_ctx.foo($event);_ctx.bar()}))',
+      `_on(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()}, {
+    delegate: true
+  })`,
     )
   })
 
@@ -285,7 +299,9 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => $event => _ctx.foo($event)))',
+      `_on(n0, "click", () => $event => _ctx.foo($event), {
+    delegate: true
+  })`,
     )
   })
 
@@ -303,7 +319,9 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => (e: any): any => _ctx.foo(e)))',
+      `_on(n0, "click", () => (e: any): any => _ctx.foo(e), {
+    delegate: true
+  })`,
     )
   })
 
@@ -370,7 +388,9 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.a['b' + _ctx.c]))`,
+      `_on(n0, "click", () => _ctx.a['b' + _ctx.c], {
+    delegate: true
+  })`,
     )
   })
 
@@ -387,7 +407,9 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      '_recordMetadata(n0, "events", "click", _eventHandler(() => e => _ctx.foo(e)))',
+      `_on(n0, "click", () => e => _ctx.foo(e), {
+    delegate: true
+  })`,
     )
   })
 
@@ -443,9 +465,12 @@ describe('v-on', () => {
       },
     ])
     expect(code).contains(
-      '_on(n0, "click", () => _ctx.test, { capture: true, once: true }, {',
+      `_on(n0, "click", () => _ctx.test, {
+    modifiers: ["stop", "prevent"], 
+    capture: true, 
+    once: true
+  })`,
     )
-    expect(code).contains('modifiers: ["stop", "prevent"]')
   })
 
   test('should support multiple events and modifiers options w/ prefixIdentifiers: true', () => {
@@ -497,14 +522,16 @@ describe('v-on', () => {
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.test, {`,
+      `_on(n0, "click", () => _ctx.test, {
+    modifiers: ["stop"], 
+    delegate: true
+  })`,
     )
-    expect(code).contains(`modifiers: ["stop"]`)
 
-    expect(code).contains(
-      `_recordMetadata(n0, "events", "keyup", _eventHandler(() => _ctx.test, {`,
-    )
-    expect(code).contains(`keys: ["enter"]`)
+    expect(code).contains(`_on(n0, "keyup", () => _ctx.test, {
+    keys: ["enter"], 
+    delegate: true
+  })`)
   })
 
   test('should wrap keys guard for keyboard events or dynamic events', () => {
@@ -686,9 +713,8 @@ describe('v-on', () => {
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_recordMetadata(n0, "events", "click", _eventHandler(() => _ctx.foo.bar))`,
-    )
+    expect(code).contains(`_on(n0, "click", () => _ctx.foo.bar, {`)
+    expect(code).contains(`delegate: true`)
   })
 
   test('should delegate event', () => {

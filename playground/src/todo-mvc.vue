@@ -13,7 +13,8 @@ const remaining = computed(() => {
   return tasks.value.filter(task => !task.completed).length
 })
 
-function handleAdd() {
+function handleAdd(evt: MouseEvent) {
+  console.log(evt)
   tasks.value.push({
     title: value.value,
     completed: false,
@@ -67,7 +68,7 @@ function handleRemove(idx: number, task: Task) {
       @keydown.enter="handleAdd"
       placeholder="What need to be done?"
     />
-    <button @click="handleAdd">Add</button>
+    <button @click.passive="handleAdd">Add</button>
     <button @click="handleClearComplete">Clear completed</button>
     <button @click="handleClearAll">Clear all</button>
   </div>

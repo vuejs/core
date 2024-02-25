@@ -1,6 +1,5 @@
 import { NOOP } from '@vue/shared'
 import {
-  setDynamicProp as _setDynamicProp,
   setAttr,
   setClass,
   setDOMProp,
@@ -9,6 +8,7 @@ import {
   setStyle,
   setText,
 } from '../../src'
+import { setDynamicProp as _setDynamicProp } from '../../src/dom/prop'
 import {
   createComponentInstance,
   setCurrentInstance,

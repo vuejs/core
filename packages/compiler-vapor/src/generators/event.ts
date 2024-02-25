@@ -7,78 +7,49 @@ import {
   INDENT_END,
   INDENT_START,
   NEWLINE,
-  buildCodeFragment,
   genCall,
+  genMulti,
 } from './utils'
 
 export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper, options: ctxOptions } = context
-  const { keys, nonKeys, options } = oper.modifiers
+  const { vaporHelper, options } = context
+  const { element, key, keyOverride, value, modifiers, delegate } = oper
 
   const name = genName()
   const handler = genEventHandler()
-  const modifierOptions = genModifierOptions()
-
-  if (oper.delegate) {
-    // oper.key is static
-    context.delegates.add(oper.key.content)
-    return [
-      NEWLINE,
-      ...genCall(
-        vaporHelper('recordMetadata'),
-        `n${oper.element}`,
-        '"events"',
-        name,
-        genCall(vaporHelper('eventHandler'), handler, modifierOptions),
-      ),
-    ]
-  }
-
-  const handlerOptions = options.length
-    ? `{ ${options.map(v => `${v}: true`).join(', ')} }`
-    : modifierOptions
-      ? 'undefined'
-      : undefined
+  const eventOptions = genEventOptions()
 
   return [
     NEWLINE,
-    ...genCall(
-      vaporHelper('on'),
-      `n${oper.element}`,
-      name,
-      handler,
-      handlerOptions,
-      modifierOptions,
-    ),
+    ...genCall(vaporHelper('on'), `n${element}`, name, handler, eventOptions),
   ]
 
   function genName(): CodeFragment[] {
-    const expr = genExpression(oper.key, context)
-    if (oper.keyOverride) {
+    const expr = genExpression(key, context)
+    if (keyOverride) {
       // TODO unit test
-      const find = JSON.stringify(oper.keyOverride[0])
-      const replacement = JSON.stringify(oper.keyOverride[1])
+      const find = JSON.stringify(keyOverride[0])
+      const replacement = JSON.stringify(keyOverride[1])
       const wrapped: CodeFragment[] = ['(', ...expr, ')']
       return [...wrapped, ` === ${find} ? ${replacement} : `, ...wrapped]
     } else {
-      return genExpression(oper.key, context)
+      return genExpression(key, context)
     }
   }
 
   function genEventHandler() {
-    const exp = oper.value
-    if (exp && exp.content.trim()) {
-      const isMemberExp = isMemberExpression(exp.content, ctxOptions)
-      const isInlineStatement = !(isMemberExp || fnExpRE.test(exp.content))
+    if (value && value.content.trim()) {
+      const isMemberExp = isMemberExpression(value.content, options)
+      const isInlineStatement = !(isMemberExp || fnExpRE.test(value.content))
 
       if (isInlineStatement) {
-        const expr = context.withId(() => genExpression(exp, context), {
+        const expr = context.withId(() => genExpression(value, context), {
           $event: null,
         })
-        const hasMultipleStatements = exp.content.includes(`;`)
+        const hasMultipleStatements = value.content.includes(`;`)
         return [
           '() => $event => ',
           hasMultipleStatements ? '{' : '(',
@@ -86,28 +57,33 @@ export function genSetEvent(
           hasMultipleStatements ? '}' : ')',
         ]
       } else {
-        return ['() => ', ...genExpression(exp, context)]
+        return ['() => ', ...genExpression(value, context)]
       }
     }
 
     return ['() => {}']
   }
 
-  function genModifierOptions() {
-    const hasOptions = nonKeys.length || keys.length
-    if (!hasOptions) return
-    const [frag, push] = buildCodeFragment('{', INDENT_START)
-    if (nonKeys.length) {
-      push(NEWLINE, 'modifiers: ', genArrayExpression(nonKeys))
+  function genEventOptions(): CodeFragment[] | undefined {
+    let { options, keys, nonKeys } = modifiers
+
+    if (delegate) {
+      // key is static
+      context.delegates.add(key.content)
+      options = [...options, 'delegate']
     }
-    if (keys.length && nonKeys.length) {
-      push(',')
-    }
-    if (keys.length) {
-      push(NEWLINE, 'keys: ', genArrayExpression(keys))
-    }
-    push(INDENT_END, NEWLINE, '}')
-    return frag
+    if (!options.length && !nonKeys.length && !keys.length) return
+
+    return genMulti(
+      [
+        ['{', INDENT_START, NEWLINE],
+        [INDENT_END, NEWLINE, '}'],
+        [', ', NEWLINE],
+      ],
+      !!nonKeys.length && ['modifiers: ', genArrayExpression(nonKeys)],
+      !!keys.length && ['keys: ', genArrayExpression(keys)],
+      ...options.map((option): CodeFragment[] => [`${option}: true`]),
+    )
   }
 }
 

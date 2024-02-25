@@ -22,28 +22,39 @@ interface ModifierOptions {
   keys?: string[]
 }
 
+interface EventOptions extends AddEventListenerOptions, ModifierOptions {
+  delegate?: boolean
+}
+
+export type DelegatedHandler = {
+  (...args: any[]): any
+  delegate?: boolean
+}
+
 export function on(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options?: AddEventListenerOptions,
-  modifierOptions?: ModifierOptions,
+  options: EventOptions = {},
 ) {
-  const handler = eventHandler(handlerGetter, modifierOptions)
+  const handler: DelegatedHandler = eventHandler(handlerGetter, options)
+  handler.delegate = options.delegate
   recordMetadata(el, 'events', event, handler)
-  const cleanup = addEventListener(el, event, handler, options)
 
-  const scope = getCurrentScope()
-  const effect = getCurrentEffect()
+  if (!options.delegate) {
+    const cleanup = addEventListener(el, event, handler, options)
+    const scope = getCurrentScope()
+    const effect = getCurrentEffect()
 
-  if (effect && effect.scope === scope) {
-    onEffectCleanup(cleanup)
-  } else if (scope) {
-    onScopeDispose(cleanup)
+    if (effect && effect.scope === scope) {
+      onEffectCleanup(cleanup)
+    } else if (scope) {
+      onScopeDispose(cleanup)
+    }
   }
 }
 
-export function eventHandler(
+function eventHandler(
   getter: () => undefined | ((...args: any[]) => any),
   { modifiers, keys }: ModifierOptions = {},
 ) {
@@ -51,12 +62,8 @@ export function eventHandler(
     let handler = getter()
     if (!handler) return
 
-    if (modifiers) {
-      handler = withModifiers(handler, modifiers)
-    }
-    if (keys) {
-      handler = withKeys(handler, keys)
-    }
+    if (modifiers) handler = withModifiers(handler, modifiers)
+    if (keys) handler = withKeys(handler, keys)
     handler && handler(...args)
   }
 }
@@ -92,8 +99,8 @@ const delegatedEventHandler = (e: Event) => {
     },
   })
   while (node !== null) {
-    const handler = getMetadata(node).events[e.type] as (...args: any[]) => any
-    if (handler && !node.disabled) {
+    const handler = getMetadata(node).events[e.type]
+    if (handler && handler.delegate && !node.disabled) {
       handler(e)
       if (e.cancelBubble) return
     }

@@ -1,8 +1,9 @@
 import type { Data } from '@vue/shared'
+import type { DelegatedHandler } from './dom/event'
 
 export interface ElementMetadata {
   props: Data
-  events: Data
+  events: Record<string, DelegatedHandler>
 }
 
 export function getMetadata(

@@ -48,7 +48,7 @@ export default defineComponent({
       on(input, 'input', () => e => {
         value.value = e.target.value
       })
-      on(input, 'keydown', () => handleAdd, undefined, {
+      on(input, 'keydown', () => handleAdd, {
         keys: ['enter'],
       })
 

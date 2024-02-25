@@ -1,6 +1,6 @@
 import { type EffectScope, effectScope, isReactive } from '@vue/reactivity'
 import { isArray } from '@vue/shared'
-import { createComment, createTextNode, insert, remove } from './dom'
+import { createComment, createTextNode, insert, remove } from './dom/dom'
 import { renderEffect } from './renderWatch'
 import { type Block, type Fragment, fragmentKey } from './render'
 
