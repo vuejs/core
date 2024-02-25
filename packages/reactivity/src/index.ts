@@ -43,6 +43,7 @@ export {
   type WritableComputedOptions,
   type ComputedGetter,
   type ComputedSetter,
+  type ComputedRefImpl,
 } from './computed'
 export { deferredComputed } from './deferredComputed'
 export {
