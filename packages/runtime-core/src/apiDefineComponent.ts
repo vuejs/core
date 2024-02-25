@@ -89,7 +89,7 @@ export type DefineComponent<
   > &
   PP
 
-type DirectSetupComponent<
+export type DefineSetupFnComponent<
   P extends Record<string, any>,
   E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
@@ -135,7 +135,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): DirectSetupComponent<Props, E, S>
+): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -151,7 +151,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): DirectSetupComponent<Props, E, S>
+): DefineSetupFnComponent<Props, E, S>
 
 // overload 2: object format with no props
 // (uses user defined props interface)
