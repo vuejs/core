@@ -21,10 +21,11 @@ export function patchStyle(el: Element, prev: Style, next: Style) {
           }
         }
       } else {
-        const prevStyles = prev.split(';')
-        for (const prevStyle of prevStyles) {
-          const key = prevStyle.split(':')[0]?.trim()
-          setStyle(style, key, '')
+        for (const prevStyle of prev.split(';')) {
+          const key = prevStyle.slice(0, prevStyle.indexOf(':')).trim()
+          if (next[key] == null) {
+            setStyle(style, key, '')
+          }
         }
       }
     }
