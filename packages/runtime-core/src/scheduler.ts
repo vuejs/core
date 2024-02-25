@@ -6,7 +6,6 @@ export interface SchedulerJob extends Function {
   id?: number
   pre?: boolean
   active?: boolean
-  computed?: boolean
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.

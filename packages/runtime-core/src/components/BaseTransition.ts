@@ -245,8 +245,7 @@ const BaseTransitionImpl: ComponentOptions = {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
-            if (instance.update.active !== false) {
-              instance.effect.dirty = true
+            if (instance.job.active !== false) {
               instance.update()
             }
           }

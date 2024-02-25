@@ -1,6 +1,7 @@
 import {
   type ComputedRef,
   type DebuggerOptions,
+  EffectFlags,
   type EffectScheduler,
   ReactiveEffect,
   ReactiveFlags,
@@ -337,8 +338,11 @@ function doWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
+  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+    if (
+      !(effect.flags & EffectFlags.ACTIVE) ||
+      (!effect.dirty && !immediateFirstRun)
+    ) {
       return
     }
     if (cb) {
@@ -380,8 +384,11 @@ function doWatch(
   // it is allowed to self-trigger (#1727)
   job.allowRecurse = !!cb
 
+  const effect = new ReactiveEffect(getter)
+
   let scheduler: EffectScheduler
   if (flush === 'sync') {
+    effect.flags |= EffectFlags.NO_BATCH
     scheduler = job as any // the scheduler function gets called directly
   } else if (flush === 'post') {
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
@@ -391,8 +398,7 @@ function doWatch(
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }
-
-  const effect = new ReactiveEffect(getter, NOOP, scheduler)
+  effect.scheduler = scheduler
 
   const scope = getCurrentScope()
   const unwatch = () => {
@@ -410,7 +416,7 @@ function doWatch(
   // initial run
   if (cb) {
     if (immediate) {
-      job()
+      job(true)
     } else {
       oldValue = effect.run()
     }

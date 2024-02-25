@@ -44,16 +44,14 @@ export {
   type ComputedGetter,
   type ComputedSetter,
 } from './computed'
-export { deferredComputed } from './deferredComputed'
 export {
   effect,
   stop,
   enableTracking,
   pauseTracking,
   resetTracking,
-  pauseScheduling,
-  resetScheduling,
   ReactiveEffect,
+  EffectFlags,
   type ReactiveEffectRunner,
   type ReactiveEffectOptions,
   type EffectScheduler,
@@ -61,7 +59,7 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
 } from './effect'
-export { trigger, track, ITERATE_KEY } from './reactiveEffect'
+export { trigger, track, ITERATE_KEY } from './dep'
 export {
   effectScope,
   EffectScope,

@@ -6,7 +6,7 @@ import {
   shallowRef as ref,
   toRaw,
 } from '../src/index'
-import { getDepFromReactive } from '../src/reactiveEffect'
+import { getDepFromReactive } from '../src/dep'
 
 describe.skipIf(!global.gc)('reactivity/gc', () => {
   const gc = () => {

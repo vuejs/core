@@ -286,9 +286,13 @@ export interface ComponentInternalInstance {
    */
   effect: ReactiveEffect
   /**
-   * Bound effect runner to be passed to schedulers
+   * Force update render effect
    */
-  update: SchedulerJob
+  update: () => void
+  /**
+   * Render effect job to be passed to scheduler (checks if dirty)
+   */
+  job: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -552,6 +556,7 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
+    job: null!,
     scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,

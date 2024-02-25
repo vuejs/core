@@ -11,13 +11,7 @@ import {
   toRaw,
 } from './reactive'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  pauseScheduling,
-  pauseTracking,
-  resetScheduling,
-  resetTracking,
-} from './effect'
-import { ITERATE_KEY, track, trigger } from './reactiveEffect'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -29,6 +23,7 @@ import {
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
+import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
@@ -69,11 +64,11 @@ function createArrayInstrumentations() {
   // which leads to infinite loops in some cases (#2137)
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
+      startBatch()
       pauseTracking()
-      pauseScheduling()
       const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
       resetTracking()
+      endBatch()
       return res
     }
   })
@@ -133,7 +128,14 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       }
     }
 
-    const res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(
+      target,
+      key,
+      // if this is a proxy wrapping a ref, return methods using the raw ref
+      // as receiver so that we don't have to call `toRaw` on the ref in all
+      // its class methods
+      isRef(target) ? target : receiver,
+    )
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
