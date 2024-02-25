@@ -95,9 +95,16 @@ export function queueJob(job: SchedulerJob) {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
+    } else if (
+      // fast path when the job id is larger than the tail
+      !(job.flags! & SchedulerJobFlags.PRE) &&
+      job.id >= (queue[queue.length - 1]?.id || 0)
+    ) {
+      queue.push(job)
     } else {
       queue.splice(findInsertionIndex(job.id), 0, job)
     }
+
     if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
       job.flags! |= SchedulerJobFlags.QUEUED
     }
