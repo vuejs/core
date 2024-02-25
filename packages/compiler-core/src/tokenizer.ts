@@ -553,12 +553,11 @@ export default class Tokenizer {
         // HTML mode
         // - <script>, <style> RAWTEXT
         // - <title>, <textarea> RCDATA
-        const lower = c | 0x20
-        if (lower === 116 /* t */) {
+        if (c === 116 /* t */) {
           this.state = State.BeforeSpecialT
         } else {
           this.state =
-            lower === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
+            c === 115 /* s */ ? State.BeforeSpecialS : State.InTagName
         }
       } else {
         this.state = State.InTagName
@@ -862,10 +861,9 @@ export default class Tokenizer {
     }
   }
   private stateBeforeSpecialS(c: number): void {
-    const lower = c | 0x20
-    if (lower === Sequences.ScriptEnd[3]) {
+    if (c === Sequences.ScriptEnd[3]) {
       this.startSpecial(Sequences.ScriptEnd, 4)
-    } else if (lower === Sequences.StyleEnd[3]) {
+    } else if (c === Sequences.StyleEnd[3]) {
       this.startSpecial(Sequences.StyleEnd, 4)
     } else {
       this.state = State.InTagName
@@ -873,10 +871,9 @@ export default class Tokenizer {
     }
   }
   private stateBeforeSpecialT(c: number): void {
-    const lower = c | 0x20
-    if (lower === Sequences.TitleEnd[3]) {
+    if (c === Sequences.TitleEnd[3]) {
       this.startSpecial(Sequences.TitleEnd, 4)
-    } else if (lower === Sequences.TextareaEnd[3]) {
+    } else if (c === Sequences.TextareaEnd[3]) {
       this.startSpecial(Sequences.TextareaEnd, 4)
     } else {
       this.state = State.InTagName
