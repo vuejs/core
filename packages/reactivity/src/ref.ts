@@ -128,10 +128,11 @@ class RefImpl<T = any> {
   }
 
   set value(newValue) {
+    const oldValue = this._rawValue
     const useDirectValue =
       this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
     newValue = useDirectValue ? newValue : toRaw(newValue)
-    if (hasChanged(newValue, this._rawValue)) {
+    if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
       if (__DEV__) {
@@ -139,7 +140,8 @@ class RefImpl<T = any> {
           target: this,
           type: TriggerOpTypes.SET,
           key: 'value',
-          newValue: newValue,
+          newValue,
+          oldValue,
         })
       } else {
         this.dep.trigger()
