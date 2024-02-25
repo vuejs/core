@@ -28,17 +28,19 @@ const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
 function queueJob(job: SchedulerJob) {
-  if (
-    !queue.length ||
-    !queue.includes(
-      job,
-      isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex,
-    )
-  ) {
+  if (!job.queued) {
     if (job.id == null) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      // fast path when the job id is larger than the tail
+      if (!job.pre && job.id >= (queue[queue.length - 1]?.id || 0)) {
+        queue.push(job)
+      } else {
+        queue.splice(findInsertionIndex(job.id), 0, job)
+      }
+    }
+    if (!job.allowRecurse) {
+      job.queued = true
     }
     queueFlush()
   }
@@ -46,14 +48,11 @@ function queueJob(job: SchedulerJob) {
 
 export function queuePostRenderEffect(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (
-      !activePostFlushCbs ||
-      !activePostFlushCbs.includes(
-        cb,
-        cb.allowRecurse ? postFlushIndex + 1 : postFlushIndex,
-      )
-    ) {
+    if (!cb.queued) {
       pendingPostFlushCbs.push(cb)
+      if (!cb.allowRecurse) {
+        cb.queued = true
+      }
     }
   } else {
     // if cb is an array, it is a component lifecycle hook which can only be
@@ -93,6 +92,7 @@ function flushPostFlushCbs() {
     postFlushIndex++
   ) {
     activePostFlushCbs[postFlushIndex]()
+    activePostFlushCbs[postFlushIndex].queued = false
   }
   activePostFlushCbs = null
   postFlushIndex = 0
@@ -115,6 +115,7 @@ function flushJobs() {
   try {
     for (let i = 0; i < queue!.length; i++) {
       queue![i]()
+      queue![i].queued = false
     }
   } finally {
     flushIndex = 0

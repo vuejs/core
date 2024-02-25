@@ -36,9 +36,11 @@ export enum BaseWatchErrorCodes {
 // TODO move to a scheduler package
 export interface SchedulerJob extends Function {
   id?: number
+  // TODO refactor these boolean flags to a single bitwise flag
   pre?: boolean
   active?: boolean
   computed?: boolean
+  queued?: boolean
   /**
    * Indicates whether the effect is allowed to recursively trigger itself
    * when managed by the scheduler.
