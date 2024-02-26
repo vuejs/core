@@ -31,6 +31,8 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
+  toReactive,
+  toReadonly,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,

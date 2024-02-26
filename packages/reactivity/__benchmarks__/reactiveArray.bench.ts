@@ -1,5 +1,5 @@
 import { bench } from 'vitest'
-import { effect, reactive, reactiveReadArray, shallowReadArray } from '../src'
+import { effect, reactive, shallowReadArray } from '../src'
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
   {

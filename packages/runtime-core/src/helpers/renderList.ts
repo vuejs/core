@@ -1,5 +1,5 @@
 import type { VNode, VNodeChild } from '../vnode'
-import { reactiveReadArray } from '@vue/reactivity'
+import { isReactive, shallowReadArray, toReactive } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -60,14 +60,20 @@ export function renderList(
   let ret: VNodeChild[]
   const cached = (cache && cache[index!]) as VNode[] | undefined
   const sourceIsArray = isArray(source)
+  const sourceIsReactiveArray = sourceIsArray && isReactive(source)
 
   if (sourceIsArray || isString(source)) {
-    if (sourceIsArray) {
-      source = reactiveReadArray(source)
+    if (sourceIsReactiveArray) {
+      source = shallowReadArray(source)
     }
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
-      ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
+      ret[i] = renderItem(
+        sourceIsReactiveArray ? toReactive(source[i]) : source[i],
+        i,
+        undefined,
+        cached && cached[i],
+      )
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
