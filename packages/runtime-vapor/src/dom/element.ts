@@ -27,10 +27,6 @@ export function prepend(parent: ParentNode, ...blocks: Block[]) {
   parent.prepend(...normalizeBlock(blocks))
 }
 
-export function append(parent: ParentNode, ...blocks: Block[]) {
-  parent.append(...normalizeBlock(blocks))
-}
-
 export function remove(block: Block, parent: ParentNode) {
   normalizeBlock(block).forEach(node => parent.removeChild(node))
 }

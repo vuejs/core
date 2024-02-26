@@ -78,7 +78,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
           context.registerOperation({
             type: IRNodeTypes.INSERT_NODE,
-            element: prevDynamics.map(child => child.id!),
+            elements: prevDynamics.map(child => child.id!),
             parent: context.reference(),
             anchor,
           })
@@ -97,7 +97,7 @@ function processDynamicChildren(context: TransformContext<ElementNode>) {
 
   if (prevDynamics.length) {
     context.registerOperation({
-      type: IRNodeTypes.APPEND_NODE,
+      type: IRNodeTypes.INSERT_NODE,
       elements: prevDynamics.map(child => child.id!),
       parent: context.reference(),
     })

@@ -1,7 +1,7 @@
 import { renderWatch } from './renderWatch'
 import { type Block, type Fragment, fragmentKey } from './render'
 import { type EffectScope, effectScope } from '@vue/reactivity'
-import { createComment, createTextNode, insert, remove } from './dom/dom'
+import { createComment, createTextNode, insert, remove } from './dom/element'
 
 type BlockFn = () => Block
 

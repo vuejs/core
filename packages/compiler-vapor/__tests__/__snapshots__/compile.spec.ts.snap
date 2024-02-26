@@ -120,7 +120,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { createTextNode as _createTextNode, append as _append, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div><Comp></Comp></div>")
 
@@ -128,7 +128,7 @@ export function render(_ctx) {
   const n0 = t0()
   const n2 = t1()
   const n1 = _createTextNode()
-  _append(n2, n1)
+  _insert(n1, n2)
   _renderEffect(() => _setText(n1, _ctx.bar))
   _renderEffect(() => _setDynamicProp(n2, "id", _ctx.foo))
   return [n0, n2]

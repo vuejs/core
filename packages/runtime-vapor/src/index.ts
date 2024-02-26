@@ -74,7 +74,7 @@ export {
 } from './directives'
 
 export { template, children } from './dom/template'
-export { insert, prepend, append, remove, createTextNode } from './dom/dom'
+export { insert, prepend, remove, createTextNode } from './dom/element'
 export { setStyle } from './dom/style'
 export {
   setText,

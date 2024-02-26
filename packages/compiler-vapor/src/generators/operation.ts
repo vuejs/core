@@ -1,6 +1,6 @@
 import { type IREffect, IRNodeTypes, type OperationNode } from '../ir'
 import type { CodegenContext } from '../generate'
-import { genAppendNode, genInsertNode, genPrependNode } from './dom'
+import { genInsertNode, genPrependNode } from './dom'
 import { genSetEvent } from './event'
 import { genFor } from './for'
 import { genSetHtml } from './html'
@@ -50,8 +50,6 @@ export function genOperation(
       return genInsertNode(oper, context)
     case IRNodeTypes.PREPEND_NODE:
       return genPrependNode(oper, context)
-    case IRNodeTypes.APPEND_NODE:
-      return genAppendNode(oper, context)
     case IRNodeTypes.IF:
       return genIf(oper, context)
     case IRNodeTypes.FOR:

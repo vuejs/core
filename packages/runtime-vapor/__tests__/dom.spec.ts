@@ -1,4 +1,4 @@
-import { append, insert, normalizeBlock, prepend, remove } from '../src/dom/dom'
+import { insert, normalizeBlock, prepend, remove } from '../src/dom/element'
 import { fragmentKey } from '../src/render'
 
 const node1 = document.createTextNode('node1')
@@ -41,13 +41,6 @@ describe('dom', () => {
     prepend(container, [node1], node2)
     prepend(container, { nodes: node3, [fragmentKey]: true })
     expect(Array.from(container.childNodes)).toEqual([node3, node1, node2])
-  })
-
-  test('append', () => {
-    const container = document.createElement('div')
-    append(container, [node1], node2)
-    append(container, { nodes: node3, [fragmentKey]: true })
-    expect(Array.from(container.childNodes)).toEqual([node1, node2, node3])
   })
 
   test('remove', () => {

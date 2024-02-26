@@ -1,8 +1,8 @@
 // @ts-check
 import {
-  append,
   createFor,
   defineComponent,
+  insert,
   on,
   ref,
   renderEffect,
@@ -29,7 +29,7 @@ export default defineComponent({
         block => {
           const node = document.createTextNode('')
           const container = document.createElement('li')
-          append(container, node)
+          insert(node, container)
 
           const update = () => {
             const [item, index] = block.s
@@ -42,7 +42,7 @@ export default defineComponent({
         (item, index) => index,
       )
       const container = document.createElement('ul')
-      append(container, li)
+      insert(li, container)
 
       const input = document.createElement('input')
       on(input, 'input', () => e => {

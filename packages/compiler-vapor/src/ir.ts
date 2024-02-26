@@ -27,7 +27,6 @@ export enum IRNodeTypes {
 
   INSERT_NODE,
   PREPEND_NODE,
-  APPEND_NODE,
   CREATE_TEXT_NODE,
 
   WITH_DIRECTIVE,
@@ -147,19 +146,13 @@ export interface CreateTextNodeIRNode extends BaseIRNode {
 
 export interface InsertNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.INSERT_NODE
-  element: number | number[]
+  elements: number[]
   parent: number
-  anchor: number
+  anchor?: number
 }
 
 export interface PrependNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.PREPEND_NODE
-  elements: number[]
-  parent: number
-}
-
-export interface AppendNodeIRNode extends BaseIRNode {
-  type: IRNodeTypes.APPEND_NODE
   elements: number[]
   parent: number
 }
@@ -183,7 +176,6 @@ export type OperationNode =
   | CreateTextNodeIRNode
   | InsertNodeIRNode
   | PrependNodeIRNode
-  | AppendNodeIRNode
   | WithDirectiveIRNode
   | IfIRNode
   | ForIRNode
