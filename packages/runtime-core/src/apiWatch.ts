@@ -11,7 +11,7 @@ import {
   isRef,
   isShallow,
 } from '@vue/reactivity'
-import { type SchedulerJob, queueJob } from './scheduler'
+import { type SchedulerJob, SchedulerJobFlags, queueJob } from './scheduler'
 import {
   EMPTY_OBJ,
   NOOP,
@@ -382,7 +382,7 @@ function doWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows
   // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
+  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
 
   const effect = new ReactiveEffect(getter)
 
@@ -394,7 +394,7 @@ function doWatch(
     scheduler = () => queuePostRenderEffect(job, instance && instance.suspense)
   } else {
     // default: 'pre'
-    job.pre = true
+    job.flags! |= SchedulerJobFlags.PRE
     if (instance) job.id = instance.uid
     scheduler = () => queueJob(job)
   }

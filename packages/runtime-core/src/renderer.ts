@@ -39,13 +39,19 @@ import {
 } from '@vue/shared'
 import {
   type SchedulerJob,
+  SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
-import { ReactiveEffect, pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  EffectFlags,
+  ReactiveEffect,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import { updateProps } from './componentProps'
 import { updateSlots } from './componentSlots'
 import { popWarningContext, pushWarningContext, warn } from './warning'
@@ -2281,7 +2287,7 @@ function baseCreateRenderer(
     // setup has resolved.
     if (job) {
       // so that scheduler will no longer invoke it
-      job.active = false
+      job.flags! |= SchedulerJobFlags.DISPOSED
       unmount(subTree, instance, parentSuspense, doRemove)
     }
     // unmounted hook
@@ -2419,7 +2425,13 @@ function toggleRecurse(
   { effect, job }: ComponentInternalInstance,
   allowed: boolean,
 ) {
-  effect.allowRecurse = job.allowRecurse = allowed
+  if (allowed) {
+    effect.flags |= EffectFlags.ALLOW_RECURSE
+    job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
+  } else {
+    effect.flags &= ~EffectFlags.ALLOW_RECURSE
+    job.flags! &= ~SchedulerJobFlags.ALLOW_RECURSE
+  }
 }
 
 export function needTransition(
