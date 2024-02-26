@@ -143,6 +143,8 @@ function createConfig(format, output, plugins = []) {
   }
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
+  // https://github.com/rollup/rollup/pull/5380
+  output.reexportProtoFromExternal = false
 
   if (isGlobalBuild) {
     output.name = packageOptions.name

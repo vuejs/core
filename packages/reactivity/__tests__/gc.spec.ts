@@ -21,6 +21,7 @@ describe.skipIf(!global.gc)('reactivity/gc', () => {
   // #9233
   it('should release computed cache', async () => {
     const src = ref<{} | undefined>({})
+    // @ts-expect-error ES2021 API
     const srcRef = new WeakRef(src.value!)
 
     let c: ComputedRef | undefined = computed(() => src.value)

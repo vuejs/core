@@ -17,6 +17,7 @@ import {
 } from './reactive'
 import type { ComputedRef } from './computed'
 import { TrackOpTypes, TriggerOpTypes } from './constants'
+import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -128,10 +129,11 @@ class RefImpl<T = any> {
   }
 
   set value(newValue) {
+    const oldValue = this._rawValue
     const useDirectValue =
       this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
     newValue = useDirectValue ? newValue : toRaw(newValue)
-    if (hasChanged(newValue, this._rawValue)) {
+    if (hasChanged(newValue, oldValue)) {
       this._rawValue = newValue
       this._value = useDirectValue ? newValue : toReactive(newValue)
       if (__DEV__) {
@@ -139,7 +141,8 @@ class RefImpl<T = any> {
           target: this,
           type: TriggerOpTypes.SET,
           key: 'value',
-          newValue: newValue,
+          newValue,
+          oldValue,
         })
       } else {
         this.dep.trigger()
@@ -317,7 +320,7 @@ export type ToRefs<T = any> = {
  */
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
-    console.warn(`toRefs() expects a reactive object but received a plain one.`)
+    warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {

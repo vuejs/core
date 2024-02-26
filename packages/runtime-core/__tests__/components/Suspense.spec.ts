@@ -22,7 +22,7 @@ import {
   watch,
   watchEffect,
 } from '@vue/runtime-test'
-import { createApp, defineComponent } from 'vue'
+import { computed, createApp, defineComponent, inject, provide } from 'vue'
 import type { RawSlots } from 'packages/runtime-core/src/componentSlots'
 import { resetSuspenseId } from '../../src/components/Suspense'
 
@@ -1037,6 +1037,99 @@ describe('Suspense', () => {
       `bar unmounted`,
     ])
     expect(serializeInner(root)).toBe(`<div>foo<div>foo nested</div></div>`)
+  })
+
+  // #10098
+  test('switching branches w/ nested suspense', async () => {
+    const RouterView = {
+      setup(_: any, { slots }: any) {
+        const route = inject('route') as any
+        const depth = inject('depth', 0)
+        provide('depth', depth + 1)
+        return () => {
+          const current = route.value[depth]
+          return slots.default({ Component: current })[0]
+        }
+      },
+    }
+
+    const OuterB = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerB = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerB')
+      },
+    })
+
+    const OuterA = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerA = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerA')
+      },
+    })
+
+    const toggle = ref(true)
+    const route = computed(() => {
+      return toggle.value ? [OuterA, InnerA] : [OuterB, InnerB]
+    })
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+
+    deps.length = 0
+
+    toggle.value = false
+    await nextTick()
+    // toggle again
+    toggle.value = true
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
   })
 
   test('branch switch to 3rd branch before resolve', async () => {
