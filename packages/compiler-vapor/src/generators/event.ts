@@ -22,9 +22,20 @@ export function genSetEvent(
   const handler = genEventHandler()
   const eventOptions = genEventOptions()
 
+  if (delegate) {
+    // key is static
+    context.delegates.add(key.content)
+  }
+
   return [
     NEWLINE,
-    ...genCall(vaporHelper('on'), `n${element}`, name, handler, eventOptions),
+    ...genCall(
+      vaporHelper(delegate ? 'delegate' : 'on'),
+      `n${element}`,
+      name,
+      handler,
+      eventOptions,
+    ),
   ]
 
   function genName(): CodeFragment[] {
@@ -66,12 +77,6 @@ export function genSetEvent(
 
   function genEventOptions(): CodeFragment[] | undefined {
     let { options, keys, nonKeys } = modifiers
-
-    if (delegate) {
-      // key is static
-      context.delegates.add(key.content)
-      options = [...options, 'delegate']
-    }
     if (!options.length && !nonKeys.length && !keys.length) return
 
     return genMulti(

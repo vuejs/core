@@ -22,14 +22,7 @@ interface ModifierOptions {
   keys?: string[]
 }
 
-interface EventOptions extends AddEventListenerOptions, ModifierOptions {
-  delegate?: boolean
-}
-
-export type DelegatedHandler = {
-  (...args: any[]): any
-  delegate?: boolean
-}
+interface EventOptions extends AddEventListenerOptions, ModifierOptions {}
 
 export function on(
   el: HTMLElement,
@@ -38,20 +31,33 @@ export function on(
   options: EventOptions = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
-  handler.delegate = options.delegate
   recordMetadata(el, 'events', event, handler)
 
-  if (!options.delegate) {
-    const cleanup = addEventListener(el, event, handler, options)
-    const scope = getCurrentScope()
-    const effect = getCurrentEffect()
+  const cleanup = addEventListener(el, event, handler, options)
+  const scope = getCurrentScope()
+  const effect = getCurrentEffect()
 
-    if (effect && effect.scope === scope) {
-      onEffectCleanup(cleanup)
-    } else if (scope) {
-      onScopeDispose(cleanup)
-    }
+  if (effect && effect.scope === scope) {
+    onEffectCleanup(cleanup)
+  } else if (scope) {
+    onScopeDispose(cleanup)
   }
+}
+
+export type DelegatedHandler = {
+  (...args: any[]): any
+  delegate?: boolean
+}
+
+export function delegate(
+  el: HTMLElement,
+  event: string,
+  handlerGetter: () => undefined | ((...args: any[]) => any),
+  options: EventOptions = {},
+) {
+  const handler: DelegatedHandler = eventHandler(handlerGetter, options)
+  handler.delegate = true
+  recordMetadata(el, 'events', event, handler)
 }
 
 function eventHandler(

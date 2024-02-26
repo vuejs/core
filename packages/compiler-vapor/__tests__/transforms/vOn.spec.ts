@@ -26,7 +26,7 @@ describe('v-on', () => {
     )
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('on')
+    expect(vaporHelpers).contains('delegate')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
@@ -155,7 +155,7 @@ describe('v-on', () => {
       compileWithVOn(`<div @click="i++"/>`)
 
     expect(code).matchSnapshot()
-    expect(vaporHelpers).contains('on')
+    expect(vaporHelpers).contains('delegate')
     expect(helpers.size).toBe(0)
     expect(ir.block.effect).toEqual([])
     expect(ir.block.operation).toMatchObject([
@@ -170,11 +170,7 @@ describe('v-on', () => {
         delegate: true,
       },
     ])
-    expect(code).contains(
-      `_on(n0, "click", () => $event => (_ctx.i++), {
-    delegate: true
-  })`,
-    )
+    expect(code).contains(`_delegate(n0, "click", () => $event => (_ctx.i++))`)
   })
 
   test('should wrap in unref if identifier is setup-maybe-ref w/ inline: true', () => {
@@ -192,17 +188,13 @@ describe('v-on', () => {
     expect(code).matchSnapshot()
     expect(vaporHelpers).contains('unref')
     expect(helpers.size).toBe(0)
-    expect(code)
-      .contains(`_on(n0, "click", () => $event => (x.value=_unref(y)), {
-    delegate: true
-  })`)
-    expect(code).contains(`_on(n1, "click", () => $event => (x.value++), {
-    delegate: true
-  })`)
-    expect(code)
-      .contains(`_on(n2, "click", () => $event => ({ x: x.value } = _unref(y)), {
-    delegate: true
-  })`)
+    expect(code).contains(
+      `_delegate(n0, "click", () => $event => (x.value=_unref(y)))`,
+    )
+    expect(code).contains(`_delegate(n1, "click", () => $event => (x.value++))`)
+    expect(code).contains(
+      `_delegate(n2, "click", () => $event => ({ x: x.value } = _unref(y)))`,
+    )
   })
 
   test('should handle multiple inline statement', () => {
@@ -219,9 +211,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `_on(n0, "click", () => $event => {_ctx.foo();_ctx.bar()}, {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => $event => {_ctx.foo();_ctx.bar()})`,
     )
   })
 
@@ -239,12 +229,7 @@ describe('v-on', () => {
     // in this case the return value is discarded and the behavior is
     // consistent with 2.x
     expect(code).contains(
-      `_on(n0, "click", () => $event => {
-_ctx.foo();
-_ctx.bar()
-}, {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => $event => {\n_ctx.foo();\n_ctx.bar()\n})`,
     )
   })
 
@@ -262,9 +247,7 @@ _ctx.bar()
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `_on(n0, "click", () => $event => (_ctx.foo($event)), {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => $event => (_ctx.foo($event)))`,
     )
   })
 
@@ -282,9 +265,7 @@ _ctx.bar()
     ])
     // should NOT prefix $event
     expect(code).contains(
-      `_on(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()}, {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => $event => {_ctx.foo($event);_ctx.bar()})`,
     )
   })
 
@@ -299,9 +280,7 @@ _ctx.bar()
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", () => $event => _ctx.foo($event), {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => $event => _ctx.foo($event))`,
     )
   })
 
@@ -319,9 +298,7 @@ _ctx.bar()
       },
     ])
     expect(code).contains(
-      `_on(n0, "click", () => (e: any): any => _ctx.foo(e), {
-    delegate: true
-  })`,
+      `_delegate(n0, "click", () => (e: any): any => _ctx.foo(e))`,
     )
   })
 
@@ -387,11 +364,7 @@ _ctx.bar()
     ])
 
     expect(code).matchSnapshot()
-    expect(code).contains(
-      `_on(n0, "click", () => _ctx.a['b' + _ctx.c], {
-    delegate: true
-  })`,
-    )
+    expect(code).contains(`_delegate(n0, "click", () => _ctx.a['b' + _ctx.c])`)
   })
 
   test('function expression w/ prefixIdentifiers: true', () => {
@@ -406,11 +379,7 @@ _ctx.bar()
         value: { content: `e => foo(e)` },
       },
     ])
-    expect(code).contains(
-      `_on(n0, "click", () => e => _ctx.foo(e), {
-    delegate: true
-  })`,
-    )
+    expect(code).contains(`_delegate(n0, "click", () => e => _ctx.foo(e))`)
   })
 
   test('should error if no expression AND no modifier', () => {
@@ -522,15 +491,13 @@ _ctx.bar()
 
     expect(code).matchSnapshot()
     expect(code).contains(
-      `_on(n0, "click", () => _ctx.test, {
-    modifiers: ["stop"], 
-    delegate: true
+      `_delegate(n0, "click", () => _ctx.test, {
+    modifiers: ["stop"]
   })`,
     )
 
-    expect(code).contains(`_on(n0, "keyup", () => _ctx.test, {
-    keys: ["enter"], 
-    delegate: true
+    expect(code).contains(`_delegate(n0, "keyup", () => _ctx.test, {
+    keys: ["enter"]
   })`)
   })
 
@@ -713,8 +680,7 @@ _ctx.bar()
     })
 
     expect(code).matchSnapshot()
-    expect(code).contains(`_on(n0, "click", () => _ctx.foo.bar, {`)
-    expect(code).contains(`delegate: true`)
+    expect(code).contains(`_delegate(n0, "click", () => _ctx.foo.bar)`)
   })
 
   test('should delegate event', () => {
