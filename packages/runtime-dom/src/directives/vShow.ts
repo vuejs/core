@@ -1,10 +1,12 @@
 import type { ObjectDirective } from '@vue/runtime-core'
 
 export const vShowOriginalDisplay = Symbol('_vod')
+export const vShowHidden = Symbol('_vsh')
 
-interface VShowElement extends HTMLElement {
+export interface VShowElement extends HTMLElement {
   // _vod = vue original display
   [vShowOriginalDisplay]: string
+  [vShowHidden]: boolean
 }
 
 export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
@@ -23,11 +25,7 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
     }
   },
   updated(el, { value, oldValue }, { transition }) {
-    if (
-      !value === !oldValue &&
-      (el.style.display === el[vShowOriginalDisplay] || !value)
-    )
-      return
+    if (!value === !oldValue) return
     if (transition) {
       if (value) {
         transition.beforeEnter(el)
@@ -53,6 +51,7 @@ if (__DEV__) {
 
 function setDisplay(el: VShowElement, value: unknown): void {
   el.style.display = value ? el[vShowOriginalDisplay] : 'none'
+  el[vShowHidden] = !value
 }
 
 // SSR vnode transforms, only used when user includes client-oriented render
