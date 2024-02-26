@@ -56,7 +56,11 @@ import {
   type SuspenseImpl,
   queueEffectWithSuspense,
 } from './components/Suspense'
-import type { TeleportImpl, TeleportVNode } from './components/Teleport'
+import {
+  type TeleportImpl,
+  type TeleportVNode,
+  isTeleport,
+} from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -2352,7 +2356,13 @@ function baseCreateRenderer(
     let node = hostNextSibling((vnode.anchor || vnode.el)!)
 
     // avoid using teleported node as anchor
-    while (node && node.__teleported) {
+    while (
+      node &&
+      isTeleport(vnode.type) &&
+      ((isArray(vnode.children) &&
+        (vnode.children as VNode[]).some(c => c.el === node)) ||
+        node === vnode.targetAnchor)
+    ) {
       node = hostNextSibling(node)
     }
     return node
