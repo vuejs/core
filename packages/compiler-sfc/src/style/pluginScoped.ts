@@ -1,6 +1,7 @@
 import type { AtRule, PluginCreator, Rule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
+import { getKeys } from '@vue/shared'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
@@ -24,7 +25,7 @@ const scopedPlugin: PluginCreator<string> = (id = '') => {
       }
     },
     OnceExit(root) {
-      if (Object.keys(keyframes).length) {
+      if (getKeys(keyframes).length) {
         // If keyframes are found in this <style>, find and rewrite animation names
         // in declarations.
         // Caveat: this only works for keyframes and animation rules in the same

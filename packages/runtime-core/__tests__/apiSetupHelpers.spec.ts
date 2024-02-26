@@ -26,6 +26,7 @@ import {
   withAsyncContext,
   withDefaults,
 } from '../src/apiSetupHelpers'
+import { getKeys } from '@vue/shared'
 
 describe('SFC <script setup> helpers', () => {
   test('should warn runtime usage', () => {
@@ -184,7 +185,7 @@ describe('SFC <script setup> helpers', () => {
     expect('foo' in rest).toBe(false)
     expect('bar' in rest).toBe(false)
     expect(rest.baz).toBe(3)
-    expect(Object.keys(rest)).toEqual(['baz'])
+    expect(getKeys(rest)).toEqual(['baz'])
 
     original.baz = 4
     expect(rest.baz).toBe(4)

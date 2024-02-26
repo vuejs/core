@@ -1,5 +1,5 @@
 import type { VNode, VNodeChild } from '../vnode'
-import { isArray, isObject, isString } from '@vue/shared'
+import { getKeys, isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
 /**
@@ -78,7 +78,7 @@ export function renderList(
         renderItem(item, i, undefined, cached && cached[i]),
       )
     } else {
-      const keys = Object.keys(source)
+      const keys = getKeys(source)
       ret = new Array(keys.length)
       for (let i = 0, l = keys.length; i < l; i++) {
         const key = keys[i]

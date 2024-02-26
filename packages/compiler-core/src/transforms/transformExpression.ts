@@ -27,6 +27,7 @@ import {
 import { advancePositionWithClone, isSimpleIdentifier } from '../utils'
 import {
   genPropsAccessExp,
+  getKeys,
   hasOwn,
   isGloballyAllowed,
   isString,
@@ -374,7 +375,7 @@ export function processExpression(
       ? ConstantTypes.NOT_CONSTANT
       : ConstantTypes.CAN_STRINGIFY
   }
-  ret.identifiers = Object.keys(knownIds)
+  ret.identifiers = getKeys(knownIds)
   return ret
 }
 

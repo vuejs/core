@@ -23,7 +23,14 @@ import {
   nextTick,
   warn,
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  getKeys,
+  hyphenate,
+  isArray,
+  toNumber,
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -290,10 +297,10 @@ export class VueElement extends BaseClass {
 
   private _resolveProps(def: InnerComponentDef) {
     const { props } = def
-    const declaredPropKeys = isArray(props) ? props : Object.keys(props || {})
+    const declaredPropKeys = isArray(props) ? props : getKeys(props || {})
 
     // check if there are props set pre-upgrade or connect
-    for (const key of Object.keys(this)) {
+    for (const key of getKeys(this)) {
       if (key[0] !== '_' && declaredPropKeys.includes(key)) {
         this._setProp(key, this[key as keyof this], true, false)
       }

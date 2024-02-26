@@ -1,6 +1,7 @@
 import { isReactive, reactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
+import { getKeys } from '@vue/shared'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
@@ -15,7 +16,7 @@ describe('reactivity/reactive/Array', () => {
     // has
     expect(0 in observed).toBe(true)
     // ownKeys
-    expect(Object.keys(observed)).toEqual(['0'])
+    expect(getKeys(observed)).toEqual(['0'])
   })
 
   test('cloned reactive Array should point to observed values', () => {

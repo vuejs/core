@@ -12,6 +12,7 @@ import {
   serialize,
   serializeInner,
 } from '@vue/runtime-test'
+import { getKeys } from '@vue/shared'
 
 function mount(
   props: BaseTransitionProps,
@@ -78,7 +79,7 @@ function assertCalls(
   props: BaseTransitionProps,
   calls: Record<string, number>,
 ) {
-  Object.keys(calls).forEach(key => {
+  getKeys(calls).forEach(key => {
     expect(props[key as keyof BaseTransitionProps]).toHaveBeenCalledTimes(
       calls[key],
     )

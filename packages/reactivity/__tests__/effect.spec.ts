@@ -22,6 +22,7 @@ import {
   render,
   serializeInner,
 } from '@vue/runtime-test'
+import { getKeys } from '@vue/shared'
 
 describe('reactivity/effect', () => {
   it('should run the passed function once (wrapped by a effect)', () => {
@@ -747,7 +748,7 @@ describe('reactivity/effect', () => {
       () => {
         dummy = obj.foo
         dummy = 'bar' in obj
-        dummy = Object.keys(obj)
+        dummy = getKeys(obj)
       },
       { onTrack },
     )

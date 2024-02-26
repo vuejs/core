@@ -19,6 +19,7 @@ import {
   toRefs,
   watch,
 } from '@vue/runtime-test'
+import { getKeys } from '@vue/shared'
 import { render as domRender, nextTick } from 'vue'
 
 describe('component props', () => {
@@ -609,7 +610,7 @@ describe('component props', () => {
         foo: String,
       },
       setup(props: any) {
-        initialKeys = Object.keys(props)
+        initialKeys = getKeys(props)
         const { foo } = toRefs(props)
         watch(foo, changeSpy)
       },
@@ -693,7 +694,7 @@ describe('component props', () => {
   test('handling attr with undefined value', () => {
     const Comp = {
       render(this: any) {
-        return JSON.stringify(this.$attrs) + Object.keys(this.$attrs)
+        return JSON.stringify(this.$attrs) + getKeys(this.$attrs)
       },
     }
     const root = nodeOps.createElement('div')
@@ -701,14 +702,10 @@ describe('component props', () => {
     let attrs: any = { foo: undefined }
 
     render(h(Comp, attrs), root)
-    expect(serializeInner(root)).toBe(
-      JSON.stringify(attrs) + Object.keys(attrs),
-    )
+    expect(serializeInner(root)).toBe(JSON.stringify(attrs) + getKeys(attrs))
 
     render(h(Comp, (attrs = { foo: 'bar' })), root)
-    expect(serializeInner(root)).toBe(
-      JSON.stringify(attrs) + Object.keys(attrs),
-    )
+    expect(serializeInner(root)).toBe(JSON.stringify(attrs) + getKeys(attrs))
   })
 
   // #691ef
@@ -727,7 +724,7 @@ describe('component props', () => {
 
     render(h(Comp, { msg: 'test' }), root)
 
-    expect(Object.keys(props.msg).length).toBe(1)
+    expect(getKeys(props.msg).length).toBe(1)
   })
 
   test('should warn against reserved prop names', () => {

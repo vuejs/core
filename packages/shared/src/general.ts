@@ -35,6 +35,7 @@ export const hasOwn = (
   key: string | symbol,
 ): key is keyof typeof val => hasOwnProperty.call(val, key)
 
+export const getKeys = Object.keys
 export const isArray = Array.isArray
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'

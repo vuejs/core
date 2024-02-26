@@ -15,7 +15,13 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  getKeys,
+  isModelListener,
+  isOn,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -148,7 +154,7 @@ export function renderComponentRoot(
   }
 
   if (fallthroughAttrs && inheritAttrs !== false) {
-    const keys = Object.keys(fallthroughAttrs)
+    const keys = getKeys(fallthroughAttrs)
     const { shapeFlag } = root
     if (keys.length) {
       if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
@@ -164,7 +170,7 @@ export function renderComponentRoot(
         }
         root = cloneVNode(root, fallthroughAttrs)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
-        const allAttrs = Object.keys(attrs)
+        const allAttrs = getKeys(attrs)
         const eventAttrs: string[] = []
         const extraAttrs: string[] = []
         for (let i = 0, l = allAttrs.length; i < l; i++) {
@@ -424,8 +430,8 @@ function hasPropsChanged(
   nextProps: Data,
   emitsOptions: ComponentInternalInstance['emitsOptions'],
 ): boolean {
-  const nextKeys = Object.keys(nextProps)
-  if (nextKeys.length !== Object.keys(prevProps).length) {
+  const nextKeys = getKeys(nextProps)
+  if (nextKeys.length !== getKeys(prevProps).length) {
     return true
   }
   for (let i = 0; i < nextKeys.length; i++) {

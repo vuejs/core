@@ -27,6 +27,7 @@ import {
   PatchFlags,
   camelize,
   capitalize,
+  getKeys,
   isBuiltInDirective,
   isObject,
   isOn,
@@ -213,7 +214,7 @@ export const transformElement: NodeTransform = (node, context) => {
             patchFlag + ` /* ${PatchFlagNames[patchFlag as PatchFlags]} */`
         } else {
           // bitwise flags
-          const flagNames = Object.keys(PatchFlagNames)
+          const flagNames = getKeys(PatchFlagNames)
             .map(Number)
             .filter(n => n > 0 && patchFlag & n)
             .map(n => PatchFlagNames[n as PatchFlags])
@@ -911,7 +912,7 @@ export function buildDirectiveArgs(
     }
     dirArgs.push(dir.arg)
   }
-  if (Object.keys(dir.modifiers).length) {
+  if (getKeys(dir.modifiers).length) {
     if (!dir.arg) {
       if (!dir.exp) {
         dirArgs.push(`void 0`)

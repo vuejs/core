@@ -9,6 +9,7 @@ import {
 import {
   NOOP,
   extend,
+  getKeys,
   invokeArrayFns,
   isArray,
   isFunction,
@@ -626,7 +627,7 @@ function defineReactive(obj: any, key: string, val: any) {
         }
       })
     } else {
-      Object.keys(val).forEach(key => {
+      getKeys(val).forEach(key => {
         try {
           defineReactiveSimple(val, key, val[key])
         } catch (e: any) {}

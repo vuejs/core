@@ -21,6 +21,7 @@ import {
   ITERATE_KEY,
   TriggerOpTypes,
 } from '@vue/reactivity'
+import { getKeys } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#lifecycle-hooks
 
@@ -309,8 +310,7 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         onRenderTracked(onTrack)
-        return () =>
-          h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+        return () => h('div', [obj.foo, 'bar' in obj, getKeys(obj).join('')])
       },
     }
 
@@ -348,8 +348,7 @@ describe('api: lifecycle hooks', () => {
     const Comp = {
       setup() {
         onRenderTriggered(onTrigger)
-        return () =>
-          h('div', [obj.foo, 'bar' in obj, Object.keys(obj).join('')])
+        return () => h('div', [obj.foo, 'bar' in obj, getKeys(obj).join('')])
       },
     }
 

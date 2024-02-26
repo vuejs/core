@@ -25,7 +25,7 @@ import {
 } from '../../src/transforms/vSlot'
 import { CREATE_SLOTS, RENDER_LIST } from '../../src/runtimeHelpers'
 import { createObjectMatcher, genFlagText } from '../testUtils'
-import { PatchFlags } from '@vue/shared'
+import { PatchFlags, getKeys } from '@vue/shared'
 import { transformFor } from '../../src/transforms/vFor'
 import { transformIf } from '../../src/transforms/vIf'
 
@@ -63,7 +63,7 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
 function createSlotMatcher(obj: Record<string, any>, isDynamic = false) {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
-    properties: Object.keys(obj)
+    properties: getKeys(obj)
       .map(key => {
         return {
           type: NodeTypes.JS_PROPERTY,

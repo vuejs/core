@@ -7,6 +7,7 @@ import {
 } from '../../runtime-core/src/compat/compatConfig'
 import { triggerEvent } from './utils'
 import { h } from '@vue/runtime-core'
+import { getKeys } from '@vue/shared'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
@@ -140,8 +141,7 @@ test('CUSTOM_DIR', async () => {
     unbind: vi.fn(),
   } as any
 
-  const getCalls = () =>
-    Object.keys(myDir).map(key => myDir[key].mock.calls.length)
+  const getCalls = () => getKeys(myDir).map(key => myDir[key].mock.calls.length)
 
   const vm = new Vue({
     data() {

@@ -6,7 +6,14 @@ import {
   isShallow,
   toRaw,
 } from '@vue/reactivity'
-import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  extend,
+  getKeys,
+  isArray,
+  isFunction,
+  isObject,
+} from '@vue/shared'
 import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
@@ -113,7 +120,7 @@ export function initCustomFormatter() {
 
   function createInstanceBlock(type: string, target: any) {
     target = extend({}, target)
-    if (!Object.keys(target).length) {
+    if (!getKeys(target).length) {
       return ['span', {}]
     }
     return [
@@ -131,7 +138,7 @@ export function initCustomFormatter() {
         {
           style: 'padding-left:1.25em',
         },
-        ...Object.keys(target).map(key => {
+        ...getKeys(target).map(key => {
           return [
             'div',
             {},

@@ -65,6 +65,7 @@ import {
   ShapeFlags,
   extend,
   getGlobalThis,
+  getKeys,
   isArray,
   isFunction,
   isObject,
@@ -753,13 +754,13 @@ function setupStatefulComponent(
       validateComponentName(Component.name, instance.appContext.config)
     }
     if (Component.components) {
-      const names = Object.keys(Component.components)
+      const names = getKeys(Component.components)
       for (let i = 0; i < names.length; i++) {
         validateComponentName(names[i], instance.appContext.config)
       }
     }
     if (Component.directives) {
-      const names = Object.keys(Component.directives)
+      const names = getKeys(Component.directives)
       for (let i = 0; i < names.length; i++) {
         validateDirectiveName(names[i])
       }

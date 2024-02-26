@@ -13,6 +13,7 @@ import {
   resolveTypeElements,
   resolveUnionType,
 } from './resolveType'
+import { getKeys } from '@vue/shared'
 
 export const DEFINE_EMITS = 'defineEmits'
 
@@ -58,7 +59,7 @@ export function genRuntimeEmits(ctx: ScriptCompileContext): string | undefined {
       : ``
   }
   if (ctx.hasDefineModelCall) {
-    let modelEmitsDecl = `[${Object.keys(ctx.modelDecls)
+    let modelEmitsDecl = `[${getKeys(ctx.modelDecls)
       .map(n => JSON.stringify(`update:${n}`))
       .join(', ')}]`
     emitsDecl = emitsDecl

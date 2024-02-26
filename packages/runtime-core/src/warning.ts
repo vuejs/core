@@ -5,7 +5,7 @@ import {
   type Data,
   formatComponentName,
 } from './component'
-import { isFunction, isString } from '@vue/shared'
+import { getKeys, isFunction, isString } from '@vue/shared'
 import { isRef, pauseTracking, resetTracking, toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 
@@ -127,7 +127,7 @@ function formatTraceEntry({ vnode, recurseCount }: TraceEntry): any[] {
 /* istanbul ignore next */
 function formatProps(props: Data): any[] {
   const res: any[] = []
-  const keys = Object.keys(props)
+  const keys = getKeys(props)
   keys.slice(0, 3).forEach(key => {
     res.push(...formatProp(key, props[key]))
   })

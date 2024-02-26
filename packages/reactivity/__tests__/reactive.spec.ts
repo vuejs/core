@@ -2,6 +2,7 @@ import { isRef, ref } from '../src/ref'
 import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
+import { getKeys } from '@vue/shared'
 
 describe('reactivity/reactive', () => {
   test('Object', () => {
@@ -15,7 +16,7 @@ describe('reactivity/reactive', () => {
     // has
     expect('foo' in observed).toBe(true)
     // ownKeys
-    expect(Object.keys(observed)).toEqual(['foo'])
+    expect(getKeys(observed)).toEqual(['foo'])
   })
 
   test('proto', () => {

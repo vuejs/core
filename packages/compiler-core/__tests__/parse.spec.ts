@@ -15,6 +15,7 @@ import {
 
 import { baseParse } from '../src/parser'
 import type { Program } from '@babel/types'
+import { getKeys } from '@vue/shared'
 
 /* eslint jest/no-disabled-tests: "off" */
 
@@ -3220,7 +3221,7 @@ describe('compiler: parse', () => {
       ],
     }
 
-    for (const key of Object.keys(patterns)) {
+    for (const key of getKeys(patterns)) {
       describe(key, () => {
         for (const { code, errors, options } of patterns[key]) {
           test(

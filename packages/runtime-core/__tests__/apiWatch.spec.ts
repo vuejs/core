@@ -34,6 +34,7 @@ import {
   toRef,
   triggerRef,
 } from '@vue/reactivity'
+import { getKeys } from '@vue/shared'
 
 // reference: https://vue-composition-api-rfc.netlify.com/api.html#watch
 
@@ -970,7 +971,7 @@ describe('api: watch', () => {
     const obj = reactive({ foo: 1, bar: 2 })
     watchEffect(
       () => {
-        dummy = [obj.foo, 'bar' in obj, Object.keys(obj)]
+        dummy = [obj.foo, 'bar' in obj, getKeys(obj)]
       },
       { onTrack },
     )

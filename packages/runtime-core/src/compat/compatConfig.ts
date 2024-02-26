@@ -1,4 +1,4 @@
-import { extend, hasOwn, isArray, isFunction } from '@vue/shared'
+import { extend, getKeys, hasOwn, isArray, isFunction } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -522,7 +522,7 @@ export function validateCompatConfig(
   }
   seenConfigObjects.add(config)
 
-  for (const key of Object.keys(config)) {
+  for (const key of getKeys(config)) {
     if (
       key !== 'MODE' &&
       !(key in deprecationData) &&

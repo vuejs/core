@@ -6,6 +6,7 @@ import {
 } from './compatConfig'
 import { isCopyingConfig } from './global'
 import { internalOptionMergeStrats } from '../componentOptions'
+import { getKeys } from '@vue/shared'
 
 // legacy config warnings
 export type LegacyConfig = {
@@ -45,7 +46,7 @@ export function installLegacyConfigWarnings(config: AppConfig) {
     productionTip: DeprecationTypes.CONFIG_PRODUCTION_TIP,
   }
 
-  Object.keys(legacyConfigOptions).forEach(key => {
+  getKeys(legacyConfigOptions).forEach(key => {
     let val = (config as any)[key]
     Object.defineProperty(config, key, {
       enumerable: true,

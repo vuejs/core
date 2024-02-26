@@ -15,7 +15,7 @@ import {
   isRelativeUrl,
   parseUrl,
 } from './templateUtils'
-import { isArray } from '@vue/shared'
+import { getKeys, isArray } from '@vue/shared'
 
 export interface AssetURLTagConfig {
   [name: string]: string[]
@@ -49,7 +49,7 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
 export const normalizeOptions = (
   options: AssetURLOptions | AssetURLTagConfig,
 ): Required<AssetURLOptions> => {
-  if (Object.keys(options).some(key => isArray((options as any)[key]))) {
+  if (getKeys(options).some(key => isArray((options as any)[key]))) {
     // legacy option format which directly passes in tags config
     return {
       ...defaultAssetUrlOptions,

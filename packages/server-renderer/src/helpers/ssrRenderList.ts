@@ -1,4 +1,4 @@
-import { isArray, isObject, isString } from '@vue/shared'
+import { getKeys, isArray, isObject, isString } from '@vue/shared'
 import { warn } from '@vue/runtime-core'
 
 export function ssrRenderList(
@@ -24,7 +24,7 @@ export function ssrRenderList(
         renderItem(arr[i], i)
       }
     } else {
-      const keys = Object.keys(source)
+      const keys = getKeys(source)
       for (let i = 0, l = keys.length; i < l; i++) {
         const key = keys[i]
         renderItem(source[key], key, i)

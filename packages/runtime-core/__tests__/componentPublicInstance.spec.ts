@@ -11,6 +11,7 @@ import type {
   ComponentInternalInstance,
   ComponentOptions,
 } from '../src/component'
+import { getKeys } from '@vue/shared'
 
 describe('component: proxy', () => {
   test('data', () => {
@@ -210,12 +211,7 @@ describe('component: proxy', () => {
 
     // dev mode ownKeys check for console inspection
     // should only expose own keys
-    expect(Object.keys(instanceProxy)).toMatchObject([
-      'msg',
-      'bar',
-      'foo',
-      'baz',
-    ])
+    expect(getKeys(instanceProxy)).toMatchObject(['msg', 'bar', 'foo', 'baz'])
   })
 
   test('allow updating proxy with Object.defineProperty', () => {

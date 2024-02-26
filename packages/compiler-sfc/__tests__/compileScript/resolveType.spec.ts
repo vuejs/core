@@ -11,6 +11,7 @@ import {
 } from '../../src/script/resolveType'
 
 import ts from 'typescript'
+import { getKeys } from '@vue/shared'
 registerTS(() => ts)
 
 describe('resolveType', () => {
@@ -558,7 +559,7 @@ describe('resolveType', () => {
         foo: ['Number'],
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
@@ -587,7 +588,7 @@ describe('resolveType', () => {
         buz: ['String'],
       })
       expect(deps && [...deps].map(normalize)).toStrictEqual(
-        Object.keys(files).map(normalize),
+        getKeys(files).map(normalize),
       )
     })
 
@@ -627,7 +628,7 @@ describe('resolveType', () => {
         foo: ['Number'],
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (chained)', () => {
@@ -648,7 +649,7 @@ describe('resolveType', () => {
         foo: ['Number'],
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (chained, re-export)', () => {
@@ -666,7 +667,7 @@ describe('resolveType', () => {
       expect(props).toStrictEqual({
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (chained, export *)', () => {
@@ -684,7 +685,7 @@ describe('resolveType', () => {
       expect(props).toStrictEqual({
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (default export)', () => {
@@ -704,7 +705,7 @@ describe('resolveType', () => {
         foo: ['String'],
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (default re-export)', () => {
@@ -725,7 +726,7 @@ describe('resolveType', () => {
         foo: ['String'],
         bar: ['Number'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('relative (re-export /w same source type name)', () => {
@@ -762,7 +763,7 @@ describe('resolveType', () => {
         foo: ['String'],
         bar: ['Number'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     // #8339
@@ -782,7 +783,7 @@ describe('resolveType', () => {
       expect(props).toStrictEqual({
         foo: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('ts module resolve', () => {
@@ -902,14 +903,14 @@ describe('resolveType', () => {
       }
 
       const { props, deps } = resolve(`defineProps<App.User & PP>()`, files, {
-        globalTypeFiles: Object.keys(files),
+        globalTypeFiles: getKeys(files),
       })
 
       expect(props).toStrictEqual({
         name: ['String'],
         bar: ['String'],
       })
-      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+      expect(deps && [...deps]).toStrictEqual(getKeys(files))
     })
 
     test('global types with ambient references', () => {
@@ -931,7 +932,7 @@ describe('resolveType', () => {
       }
 
       const { props } = resolve(`defineProps<App.Data.AircraftData>()`, files, {
-        globalTypeFiles: Object.keys(files),
+        globalTypeFiles: getKeys(files),
       })
 
       expect(props).toStrictEqual({

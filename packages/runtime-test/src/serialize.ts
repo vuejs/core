@@ -5,7 +5,7 @@ import {
   TestNodeTypes,
   type TestText,
 } from './nodeOps'
-import { isOn } from '@vue/shared'
+import { getKeys, isOn } from '@vue/shared'
 
 export function serialize(
   node: TestNode,
@@ -37,7 +37,7 @@ function serializeElement(
   indent: number,
   depth: number,
 ): string {
-  const props = Object.keys(node.props)
+  const props = getKeys(node.props)
     .map(key => {
       const value = node.props[key]
       return isOn(key) || value == null

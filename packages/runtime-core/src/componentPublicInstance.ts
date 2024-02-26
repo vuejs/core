@@ -17,6 +17,7 @@ import {
   type Prettify,
   type UnionToIntersection,
   extend,
+  getKeys,
   hasOwn,
   isFunction,
   isGloballyAllowed,
@@ -548,7 +549,7 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
   })
 
   // expose public properties
-  Object.keys(publicPropertiesMap).forEach(key => {
+  getKeys(publicPropertiesMap).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,
       enumerable: false,
@@ -571,7 +572,7 @@ export function exposePropsOnRenderContext(
     propsOptions: [propsOptions],
   } = instance
   if (propsOptions) {
-    Object.keys(propsOptions).forEach(key => {
+    getKeys(propsOptions).forEach(key => {
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
@@ -587,7 +588,7 @@ export function exposeSetupStateOnRenderContext(
   instance: ComponentInternalInstance,
 ) {
   const { ctx, setupState } = instance
-  Object.keys(toRaw(setupState)).forEach(key => {
+  getKeys(toRaw(setupState)).forEach(key => {
     if (!setupState.__isScriptSetup) {
       if (isReservedPrefix(key[0])) {
         warn(

@@ -15,6 +15,7 @@ import {
 } from '../src'
 import { DirtyLevels } from '../src/constants'
 import { COMPUTED_SIDE_EFFECT_WARN } from '../src/computed'
+import { getKeys } from '@vue/shared'
 
 describe('reactivity/computed', () => {
   it('should return updated value', () => {
@@ -231,7 +232,7 @@ describe('reactivity/computed', () => {
       events.push(e)
     })
     const obj = reactive({ foo: 1, bar: 2 })
-    const c = computed(() => (obj.foo, 'bar' in obj, Object.keys(obj)), {
+    const c = computed(() => (obj.foo, 'bar' in obj, getKeys(obj)), {
       onTrack,
     })
     expect(c.value).toEqual(['foo', 'bar'])

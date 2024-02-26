@@ -1,3 +1,4 @@
+import { getKeys } from '@vue/shared'
 import {
   computed,
   effect,
@@ -36,7 +37,7 @@ describe('reactivity/readonly', () => {
       // has
       expect('foo' in wrapped).toBe(true)
       // ownKeys
-      expect(Object.keys(wrapped)).toEqual(['foo', 'bar'])
+      expect(getKeys(wrapped)).toEqual(['foo', 'bar'])
     })
 
     it('should not allow mutation', () => {
@@ -123,7 +124,7 @@ describe('reactivity/readonly', () => {
       // has
       expect(0 in wrapped).toBe(true)
       // ownKeys
-      expect(Object.keys(wrapped)).toEqual(['0'])
+      expect(getKeys(wrapped)).toEqual(['0'])
     })
 
     it('should not allow mutation', () => {

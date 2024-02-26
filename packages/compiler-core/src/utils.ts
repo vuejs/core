@@ -36,7 +36,7 @@ import {
   TO_HANDLERS,
   WITH_MEMO,
 } from './runtimeHelpers'
-import { NOOP, isObject, isString } from '@vue/shared'
+import { NOOP, getKeys, isObject, isString } from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression } from '@babel/types'
@@ -441,7 +441,7 @@ export function hasScopeRef(
   node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
   ids: TransformContext['identifiers'],
 ): boolean {
-  if (!node || Object.keys(ids).length === 0) {
+  if (!node || getKeys(ids).length === 0) {
     return false
   }
   switch (node.type) {

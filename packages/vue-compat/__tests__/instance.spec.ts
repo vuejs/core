@@ -8,6 +8,7 @@ import {
   toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import type { LegacyPublicInstance } from '../../runtime-core/src/compat/instance'
+import { getKeys } from '@vue/shared'
 
 beforeEach(() => {
   toggleDeprecationWarning(true)
@@ -247,7 +248,7 @@ test('INSTANCE_LISTENERS', () => {
     },
   }).$mount()
 
-  expect(Object.keys(listeners!)).toMatchObject(['click', 'custom'])
+  expect(getKeys(listeners!)).toMatchObject(['click', 'custom'])
   expect(listeners!.click()).toBe('foo')
   expect(listeners!.custom()).toBe('bar')
 

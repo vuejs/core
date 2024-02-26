@@ -34,7 +34,7 @@ import {
 } from './utils'
 import { type ScriptCompileContext, resolveParserPlugins } from './context'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { capitalize, hasOwn } from '@vue/shared'
+import { capitalize, getKeys, hasOwn } from '@vue/shared'
 import { parse as babelParse } from '@babel/parser'
 import { parse } from '../parse'
 import { createCache } from '../cache'
@@ -482,7 +482,7 @@ function resolveIndexType(
   let resolved: ResolvedElements
   if (indexType.type === 'TSStringKeyword') {
     resolved = resolveTypeElements(ctx, objectType, scope)
-    keys = Object.keys(resolved.props)
+    keys = getKeys(resolved.props)
   } else {
     keys = resolveStringType(ctx, indexType, scope)
     resolved = resolveTypeElements(ctx, objectType, scope)
@@ -641,14 +641,14 @@ function resolveBuiltin(
   switch (name) {
     case 'Partial': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
-      Object.keys(t.props).forEach(key => {
+      getKeys(t.props).forEach(key => {
         res.props[key] = { ...t.props[key], optional: true }
       })
       return res
     }
     case 'Required': {
       const res: ResolvedElements = { props: {}, calls: t.calls }
-      Object.keys(t.props).forEach(key => {
+      getKeys(t.props).forEach(key => {
         res.props[key] = { ...t.props[key], optional: false }
       })
       return res
@@ -1305,12 +1305,12 @@ function recordTypes(
       }
     }
   }
-  for (const key of Object.keys(types)) {
+  for (const key of getKeys(types)) {
     const node = types[key]
     node._ownerScope = scope
     if (node._ns) node._ns._ownerScope = scope
   }
-  for (const key of Object.keys(declares)) {
+  for (const key of getKeys(declares)) {
     declares[key]._ownerScope = scope
   }
 }

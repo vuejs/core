@@ -10,6 +10,7 @@ import {
   PatchFlagNames,
   type PatchFlags,
   type ShapeFlags,
+  getKeys,
   isArray,
   isString,
 } from '@vue/shared'
@@ -25,7 +26,7 @@ const bracketsRE = /^\[|\]$/g
 export function createObjectMatcher(obj: Record<string, any>) {
   return {
     type: NodeTypes.JS_OBJECT_EXPRESSION,
-    properties: Object.keys(obj).map(key => ({
+    properties: getKeys(obj).map(key => ({
       type: NodeTypes.JS_PROPERTY,
       key: {
         type: NodeTypes.SIMPLE_EXPRESSION,

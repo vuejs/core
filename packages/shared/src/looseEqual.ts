@@ -1,4 +1,4 @@
-import { isArray, isDate, isObject, isSymbol } from './general'
+import { getKeys, isArray, isDate, isObject, isSymbol } from './general'
 
 function looseCompareArrays(a: any[], b: any[]) {
   if (a.length !== b.length) return false
@@ -33,8 +33,8 @@ export function looseEqual(a: any, b: any): boolean {
     if (!aValidType || !bValidType) {
       return false
     }
-    const aKeysCount = Object.keys(a).length
-    const bKeysCount = Object.keys(b).length
+    const aKeysCount = getKeys(a).length
+    const bKeysCount = getKeys(b).length
     if (aKeysCount !== bKeysCount) {
       return false
     }

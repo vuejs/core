@@ -11,7 +11,7 @@ import {
   type SFCScriptBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame } from '@vue/shared'
+import { generateCodeFrame, getKeys } from '@vue/shared'
 import type {
   ArrayPattern,
   CallExpression,
@@ -762,7 +762,7 @@ export function compileScript(
         startOffset + ctx.propsCall!.start!,
         startOffset + ctx.propsCall!.end!,
         `${ctx.helper(`createPropsRestProxy`)}(__props, ${JSON.stringify(
-          Object.keys(ctx.propsDestructuredBindings),
+          getKeys(ctx.propsDestructuredBindings),
         )})`,
       )
       ctx.s.overwrite(
