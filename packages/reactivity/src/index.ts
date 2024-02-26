@@ -31,6 +31,8 @@ export {
   shallowReadonly,
   markRaw,
   toRaw,
+  toReactive,
+  toReadonly,
   type Raw,
   type DeepReadonly,
   type ShallowReactive,
@@ -60,11 +62,18 @@ export {
   type DebuggerEvent,
   type DebuggerEventExtraInfo,
 } from './effect'
-export { trigger, track, ITERATE_KEY } from './dep'
+export {
+  trigger,
+  track,
+  ITERATE_KEY,
+  ARRAY_ITERATE_KEY,
+  MAP_KEY_ITERATE_KEY,
+} from './dep'
 export {
   effectScope,
   EffectScope,
   getCurrentScope,
   onScopeDispose,
 } from './effectScope'
+export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'

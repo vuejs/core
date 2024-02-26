@@ -10,6 +10,7 @@ import {
   shallowReadonlyMap,
   toRaw,
 } from './reactive'
+import { arrayInstrumentations } from './arrayInstrumentations'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { ITERATE_KEY, track, trigger } from './dep'
 import {
@@ -23,7 +24,6 @@ import {
 } from '@vue/shared'
 import { isRef } from './ref'
 import { warn } from './warning'
-import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 
 const isNonTrackableKeys = /*#__PURE__*/ makeMap(`__proto__,__v_isRef,__isVue`)
 
@@ -37,43 +37,6 @@ const builtInSymbols = new Set(
     .map(key => (Symbol as any)[key])
     .filter(isSymbol),
 )
-
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      startBatch()
-      pauseTracking()
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetTracking()
-      endBatch()
-      return res
-    }
-  })
-  return instrumentations
-}
 
 function hasOwnProperty(this: object, key: string) {
   const obj = toRaw(this)
@@ -120,8 +83,9 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      let fn: Function | undefined
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       if (key === 'hasOwnProperty') {
         return hasOwnProperty

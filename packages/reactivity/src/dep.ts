@@ -162,8 +162,9 @@ function addSub(link: Link) {
 type KeyToDepMap = Map<any, Dep>
 const targetMap = new WeakMap<object, KeyToDepMap>()
 
-export const ITERATE_KEY = Symbol(__DEV__ ? 'iterate' : '')
-export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map iterate' : '')
+export const ITERATE_KEY = Symbol(__DEV__ ? 'Object iterate' : '')
+export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map keys iterate' : '')
+export const ARRAY_ITERATE_KEY = Symbol(__DEV__ ? 'Array iterate' : '')
 
 /**
  * Tracks access to a reactive property.
@@ -225,47 +226,61 @@ export function trigger(
     // collection being cleared
     // trigger all effects for target
     deps = [...depsMap.values()]
-  } else if (key === 'length' && isArray(target)) {
-    const newLength = Number(newValue)
-    depsMap.forEach((dep, key) => {
-      if (key === 'length' || (!isSymbol(key) && key >= newLength)) {
-        deps.push(dep)
-      }
-    })
   } else {
-    const push = (dep: Dep | undefined) => dep && deps.push(dep)
+    const targetIsArray = isArray(target)
+    const isArrayIndex = targetIsArray && isIntegerKey(key)
 
-    // schedule runs for SET | ADD | DELETE
-    if (key !== void 0) {
-      push(depsMap.get(key))
-    }
+    if (targetIsArray && key === 'length') {
+      const newLength = Number(newValue)
+      depsMap.forEach((dep, key) => {
+        if (
+          key === 'length' ||
+          key === ARRAY_ITERATE_KEY ||
+          (!isSymbol(key) && key >= newLength)
+        ) {
+          deps.push(dep)
+        }
+      })
+    } else {
+      const push = (dep: Dep | undefined) => dep && deps.push(dep)
 
-    // also run for iteration key on ADD | DELETE | Map.SET
-    switch (type) {
-      case TriggerOpTypes.ADD:
-        if (!isArray(target)) {
-          push(depsMap.get(ITERATE_KEY))
-          if (isMap(target)) {
-            push(depsMap.get(MAP_KEY_ITERATE_KEY))
+      // schedule runs for SET | ADD | DELETE
+      if (key !== void 0) {
+        push(depsMap.get(key))
+      }
+
+      // schedule ARRAY_ITERATE for any numeric key change (length is handled above)
+      if (isArrayIndex) {
+        push(depsMap.get(ARRAY_ITERATE_KEY))
+      }
+
+      // also run for iteration key on ADD | DELETE | Map.SET
+      switch (type) {
+        case TriggerOpTypes.ADD:
+          if (!targetIsArray) {
+            push(depsMap.get(ITERATE_KEY))
+            if (isMap(target)) {
+              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            }
+          } else if (isArrayIndex) {
+            // new index added to array -> length changes
+            push(depsMap.get('length'))
           }
-        } else if (isIntegerKey(key)) {
-          // new index added to array -> length changes
-          push(depsMap.get('length'))
-        }
-        break
-      case TriggerOpTypes.DELETE:
-        if (!isArray(target)) {
-          push(depsMap.get(ITERATE_KEY))
-          if (isMap(target)) {
-            push(depsMap.get(MAP_KEY_ITERATE_KEY))
+          break
+        case TriggerOpTypes.DELETE:
+          if (!targetIsArray) {
+            push(depsMap.get(ITERATE_KEY))
+            if (isMap(target)) {
+              push(depsMap.get(MAP_KEY_ITERATE_KEY))
+            }
           }
-        }
-        break
-      case TriggerOpTypes.SET:
-        if (isMap(target)) {
-          push(depsMap.get(ITERATE_KEY))
-        }
-        break
+          break
+        case TriggerOpTypes.SET:
+          if (isMap(target)) {
+            push(depsMap.get(ITERATE_KEY))
+          }
+          break
+      }
     }
   }
 
