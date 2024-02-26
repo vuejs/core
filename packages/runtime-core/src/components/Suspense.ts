@@ -106,7 +106,9 @@ export const SuspenseImpl = {
       // it is necessary to skip the current patch to avoid multiple mounts
       // of inner components.
       if (parentSuspense && parentSuspense.deps > 0) {
-        n2.suspense = n1.suspense
+        n2.suspense = n1.suspense!
+        n2.suspense.vnode = n2
+        n2.el = n1.el
         return
       }
       patchSuspense(

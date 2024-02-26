@@ -61,7 +61,6 @@ import {
 import {
   EMPTY_OBJ,
   type IfAny,
-  NO,
   NOOP,
   extend,
   getGlobalThis,
@@ -707,9 +706,11 @@ export const unsetCurrentInstance = () => {
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
-export function validateComponentName(name: string, config: AppConfig) {
-  const appIsNativeTag = config.isNativeTag || NO
-  if (isBuiltInTag(name) || appIsNativeTag(name)) {
+export function validateComponentName(
+  name: string,
+  { isNativeTag }: AppConfig,
+) {
+  if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name,
     )

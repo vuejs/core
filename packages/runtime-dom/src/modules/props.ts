@@ -39,7 +39,8 @@ export function patchDOMProp(
     el._value = value
     // #4956: <option> value will fallback to its text content so we need to
     // compare against its attribute value instead.
-    const oldValue = tag === 'OPTION' ? el.getAttribute('value') : el.value
+    const oldValue =
+      tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
     const newValue = value == null ? '' : value
     if (oldValue !== newValue) {
       el.value = newValue
