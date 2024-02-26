@@ -39,14 +39,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return callback(this, 'every', fn, thisArg)
+    return apply(this, 'every', fn, thisArg)
   },
 
   filter(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    const result = callback(this, 'filter', fn, thisArg)
+    const result = apply(this, 'filter', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? result.map(toReactive) : result
   },
 
@@ -54,7 +54,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = callback(this, 'find', fn, thisArg)
+    const result = apply(this, 'find', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? toReactive(result) : result
   },
 
@@ -62,14 +62,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return callback(this, 'findIndex', fn, thisArg)
+    return apply(this, 'findIndex', fn, thisArg)
   },
 
   findLast(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    const result = callback(this, 'findLast', fn, thisArg)
+    const result = apply(this, 'findLast', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? toReactive(result) : result
   },
 
@@ -77,7 +77,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
     thisArg?: unknown,
   ) {
-    return callback(this, 'findLastIndex', fn, thisArg)
+    return apply(this, 'findLastIndex', fn, thisArg)
   },
 
   // flat, flatMap could benefit from ARRAY_ITERATE but are not straight-forward to implement
@@ -86,7 +86,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return callback(this, 'forEach', fn, thisArg)
+    return apply(this, 'forEach', fn, thisArg)
   },
 
   includes(...args: unknown[]) {
@@ -111,7 +111,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return callback(this, 'map', fn, thisArg)
+    return apply(this, 'map', fn, thisArg)
   },
 
   pop() {
@@ -156,7 +156,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
     thisArg?: unknown,
   ) {
-    return callback(this, 'some', fn, thisArg)
+    return apply(this, 'some', fn, thisArg)
   },
 
   splice(...args: unknown[]) {
@@ -222,27 +222,27 @@ type ArrayMethods = keyof Array<any> | 'findLast' | 'findLastIndex'
 
 // instrument functions that read (potentially) all items
 // to take ARRAY_ITERATE dependency
-function callback(
+function apply(
   self: unknown[],
   method: ArrayMethods,
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
   thisArg?: unknown,
 ) {
   const arr = shallowReadArray(self)
-  let fn2 = fn
+  let wrappedFn = fn
   if (arr !== self) {
     if (!isShallow(self)) {
-      fn2 = function (this: unknown, item, index) {
+      wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, toReactive(item), index, self)
       }
     } else if (fn.length > 2) {
-      fn2 = function (this: unknown, item, index) {
+      wrappedFn = function (this: unknown, item, index) {
         return fn.call(this, item, index, self)
       }
     }
   }
-  // @ts-expect-error
-  return arr[method](fn2, thisArg)
+  // @ts-expect-error our code is limited to es2016 but user code is not
+  return arr[method](wrappedFn, thisArg)
 }
 
 // instrument reduce and reduceRight to take ARRAY_ITERATE dependency
@@ -253,19 +253,19 @@ function reduce(
   args: unknown[],
 ) {
   const arr = shallowReadArray(self)
-  let fn2 = fn
+  let wrappedFn = fn
   if (arr !== self) {
     if (!isShallow(self)) {
-      fn2 = function (this: unknown, acc, item, index) {
+      wrappedFn = function (this: unknown, acc, item, index) {
         return fn.call(this, acc, toReactive(item), index, self)
       }
     } else if (fn.length > 3) {
-      fn2 = function (this: unknown, acc, item, index) {
+      wrappedFn = function (this: unknown, acc, item, index) {
         return fn.call(this, acc, item, index, self)
       }
     }
   }
-  return (arr[method] as any)(fn2, ...args)
+  return (arr[method] as any)(wrappedFn, ...args)
 }
 
 // instrument identity-sensitive methods to account for reactive proxies
