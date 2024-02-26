@@ -105,8 +105,8 @@ importers:
         specifier: ^3.0.3
         version: 3.0.3
       marked:
-        specifier: ^11.2.0
-        version: 11.2.0
+        specifier: ^12.0.0
+        version: 12.0.0
       minimist:
         specifier: ^1.2.8
         version: 1.2.8
@@ -4027,8 +4027,8 @@ packages:
     resolution: {integrity: sha512-Z1NL3Tb1M9wH4XESsCDEksWoKTdlUafKc4pt0GRwjUyXaCFZ+dc3g2erqB6zm3szA2IUSi7VnPI+o/9jnxh9hw==}
     dev: true
 
-  /marked@11.2.0:
-    resolution: {integrity: sha512-HR0m3bvu0jAPYiIvLUUQtdg1g6D247//lvcekpHO1WMvbwDlwSkZAX9Lw4F4YHE1T0HaaNve0tuAWuV1UJ6vtw==}
+  /marked@12.0.0:
+    resolution: {integrity: sha512-Vkwtq9rLqXryZnWaQc86+FHLC6tr/fycMfYAhiOIXkrNmeGAyhSxjqu0Rs1i0bBqw5u0S7+lV9fdH2ZSVaoa0w==}
     engines: {node: '>= 18'}
     hasBin: true
     dev: true
