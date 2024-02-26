@@ -2,10 +2,10 @@ import type { SuspenseBoundary } from './components/Suspense'
 import type { VNode, VNodeNormalizedRef, VNodeNormalizedRefAtom } from './vnode'
 import {
   EMPTY_OBJ,
-  ShapeFlags,
   hasOwn,
   isArray,
   isFunction,
+  isStatefulComponentVNode,
   isString,
   remove,
 } from '@vue/shared'
@@ -46,10 +46,9 @@ export function setRef(
     return
   }
 
-  const refValue =
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-      ? getExposeProxy(vnode.component!) || vnode.component!.proxy
-      : vnode.el
+  const refValue = isStatefulComponentVNode(vnode.shapeFlag)
+    ? getExposeProxy(vnode.component!) || vnode.component!.proxy
+    : vnode.el
   const value = isUnmount ? null : refValue
 
   const { i: owner, r: ref } = rawRef

@@ -2,7 +2,6 @@ import {
   type ComponentInternalInstance,
   type Data,
   getExposeProxy,
-  isStatefulComponent,
 } from './component'
 import { nextTick, queueJob } from './scheduler'
 import {
@@ -20,6 +19,7 @@ import {
   hasOwn,
   isFunction,
   isGloballyAllowed,
+  isStatefulComponentVNode,
   isString,
 } from '@vue/shared'
 import {
@@ -254,7 +254,8 @@ const getPublicInstance = (
   i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
-  if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
+  if (isStatefulComponentVNode(i.vnode.shapeFlag))
+    return getExposeProxy(i) || i.proxy
   return getPublicInstance(i.parent)
 }
 

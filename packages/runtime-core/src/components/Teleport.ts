@@ -10,7 +10,7 @@ import {
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
-import { ShapeFlags, isString } from '@vue/shared'
+import { isArrayChildrenVNode, isString } from '@vue/shared'
 import { warn } from '../warning'
 import { isHmrUpdating } from '../hmr'
 
@@ -125,7 +125,7 @@ export const TeleportImpl = {
       const mount = (container: RendererElement, anchor: RendererNode) => {
         // Teleport *always* has Array children. This is enforced in both the
         // compiler and vnode children normalization.
-        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (isArrayChildrenVNode(shapeFlag)) {
           mountChildren(
             children as VNodeArrayChildren,
             container,
@@ -263,7 +263,7 @@ export const TeleportImpl = {
 
     // an unmounted teleport should always unmount its children whether it's disabled or not
     doRemove && hostRemove(anchor!)
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    if (isArrayChildrenVNode(shapeFlag)) {
       const shouldRemove = doRemove || !isTeleportDisabled(props)
       for (let i = 0; i < (children as VNode[]).length; i++) {
         const child = (children as VNode[])[i]
@@ -310,7 +310,7 @@ function moveTeleport(
   // is not a reorder, or the teleport is disabled
   if (!isReorder || isTeleportDisabled(props)) {
     // Teleport has either Array children or no children.
-    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    if (isArrayChildrenVNode(shapeFlag)) {
       for (let i = 0; i < (children as VNode[]).length; i++) {
         move(
           (children as VNode[])[i],
@@ -361,7 +361,7 @@ function hydrateTeleport(
     // pick up from where the last teleport finished instead of the first node
     const targetNode =
       (target as TeleportTargetElement)._lpa || target.firstChild
-    if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    if (isArrayChildrenVNode(vnode.shapeFlag)) {
       if (isTeleportDisabled(vnode.props)) {
         vnode.anchor = hydrateChildren(
           nextSibling(node),

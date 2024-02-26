@@ -1,4 +1,4 @@
-import { ShapeFlags, extend } from '@vue/shared'
+import { extend, isComponentVNode } from '@vue/shared'
 import type { ComponentInternalInstance, ComponentOptions } from '../component'
 import { ErrorCodes, callWithErrorHandling } from '../errorHandling'
 import type { VNode } from '../vnode'
@@ -16,7 +16,7 @@ const warnedTypes = new WeakSet()
 export function convertLegacyVModelProps(vnode: VNode) {
   const { type, shapeFlag, props, dynamicProps } = vnode
   const comp = type as ComponentOptions
-  if (shapeFlag & ShapeFlags.COMPONENT && props && 'modelValue' in props) {
+  if (isComponentVNode(shapeFlag) && props && 'modelValue' in props) {
     if (
       !isCompatEnabled(
         DeprecationTypes.COMPONENT_V_MODEL,

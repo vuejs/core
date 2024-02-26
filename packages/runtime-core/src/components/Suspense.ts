@@ -10,7 +10,13 @@ import {
   normalizeVNode,
   openBlock,
 } from '../vnode'
-import { ShapeFlags, isArray, isFunction, toNumber } from '@vue/shared'
+import {
+  isArray,
+  isComponentKeptAliveVNode,
+  isFunction,
+  isSlotsChildrenVNode,
+  toNumber,
+} from '@vue/shared'
 import { type ComponentInternalInstance, handleSetupResult } from '../component'
 import type { Slots } from '../componentSlots'
 import {
@@ -370,7 +376,7 @@ function patchSuspense(
       triggerEvent(n2, 'onPending')
       // mount pending branch in off-dom container
       suspense.pendingBranch = newBranch
-      if (newBranch.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if (isComponentKeptAliveVNode(newBranch.shapeFlag)) {
         suspense.pendingId = newBranch.component!.suspenseId!
       } else {
         suspense.pendingId = suspenseId++
@@ -813,7 +819,7 @@ function hydrateSuspense(
 
 function normalizeSuspenseChildren(vnode: VNode) {
   const { shapeFlag, children } = vnode
-  const isSlotChildren = shapeFlag & ShapeFlags.SLOTS_CHILDREN
+  const isSlotChildren = isSlotsChildrenVNode(shapeFlag)
   vnode.ssContent = normalizeSuspenseSlot(
     isSlotChildren ? (children as Slots).default : children,
   )
