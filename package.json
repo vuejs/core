@@ -89,7 +89,7 @@
     "jsdom": "^23.2.0",
     "lint-staged": "^15.2.0",
     "lodash": "^4.17.21",
-    "magic-string": "^0.30.6",
+    "magic-string": "^0.30.7",
     "markdown-table": "^3.0.3",
     "marked": "^11.2.0",
     "minimist": "^1.2.8",
