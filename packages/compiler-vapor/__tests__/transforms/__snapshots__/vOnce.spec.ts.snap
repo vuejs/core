@@ -12,12 +12,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { children as _children, createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
+"import { createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
 const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx) {
   const n2 = t0()
-  const n1 = _children(n2, 0)
+  const n1 = n2.firstChild
   const n0 = _createTextNode()
   _setText(n0, _ctx.msg, " ")
   _setClass(n1, _ctx.clz)
@@ -37,12 +37,12 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > on nested plain element 1`] = `
-"import { children as _children, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div><div></div></div>")
 
 export function render(_ctx) {
   const n1 = t0()
-  const n0 = _children(n1, 0)
+  const n0 = n1.firstChild
   _setDynamicProp(n0, "id", _ctx.foo)
   return n1
 }"

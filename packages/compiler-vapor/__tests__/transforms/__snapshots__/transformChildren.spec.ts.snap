@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`compiler: children transform > children & sibling references 1`] = `
+"import { next as _next, setText as _setText, createTextNode as _createTextNode, insert as _insert, template as _template } from 'vue/vapor';
+const t0 = _template("<div><p></p> <!><p></p></div>")
+
+export function render(_ctx) {
+  const n4 = t0()
+  const n0 = n4.firstChild
+  const n3 = _next(n0, 2)
+  const n2 = n3.nextSibling
+  _setText(n0, 'first')
+  const n1 = _createTextNode()
+  _setText(n1, 'second', " ", 'third', " ")
+  _setText(n2, 'forth')
+  _insert(n1, n4, n3)
+  return n4
+}"
+`;

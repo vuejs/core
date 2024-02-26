@@ -1,6 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { DynamicFlag, type IRDynamicInfo } from '../ir'
-import { NEWLINE, buildCodeFragment, genCall } from './utils'
+import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
   templates: string[],
@@ -19,7 +19,7 @@ export function genChildren(
   context: CodegenContext,
   from: number,
   paths: number[] = [],
-) {
+): CodeFragment[] {
   const { vaporHelper } = context
   const [frag, push] = buildCodeFragment()
   let offset = 0
@@ -29,6 +29,7 @@ export function genChildren(
     push(NEWLINE, `const n${id} = t${template}()`)
   }
 
+  let prev: [id: number, elementIndex: number] | undefined
   for (const [index, child] of children.entries()) {
     if (child.flags & DynamicFlag.NON_TEMPLATE) {
       offset--
@@ -44,20 +45,34 @@ export function genChildren(
     const elementIndex = Number(index) + offset
     const newPaths = [...paths, elementIndex]
 
-    if (id !== undefined) {
-      push(
-        NEWLINE,
-        `const n${id} = `,
-        ...genCall(
-          vaporHelper('children'),
-          `n${from}`,
-          ...newPaths.map(String),
-        ),
-      )
-      push(...genChildren(child, context, id, []))
-    } else {
+    if (id === undefined) {
       push(...genChildren(child, context, from, newPaths))
+      continue
     }
+
+    push(NEWLINE, `const n${id} = `)
+    if (prev) {
+      const offset = elementIndex - prev[1]
+      if (offset === 1) {
+        push(`n${prev[0]}.nextSibling`)
+      } else {
+        push(...genCall(vaporHelper('next'), `n${prev[0]}`, String(offset)))
+      }
+    } else {
+      if (newPaths.length === 1 && newPaths[0] === 0) {
+        push(`n${from}.firstChild`)
+      } else {
+        push(
+          ...genCall(
+            vaporHelper('children'),
+            `n${from}`,
+            ...newPaths.map(String),
+          ),
+        )
+      }
+    }
+    prev = [id, elementIndex]
+    push(...genChildren(child, context, id, []))
   }
 
   return frag

@@ -21,7 +21,6 @@ export const transformChildren: NodeTransform = (node, context) => {
 
   if (!isFragment && node.type !== NodeTypes.ELEMENT) return
 
-  let referencedCount = 0
   for (const [i, child] of node.children.entries()) {
     const childContext = createContext(
       child,
@@ -42,18 +41,12 @@ export const transformChildren: NodeTransform = (node, context) => {
       }
     } else {
       context.childrenTemplate.push(childContext.template)
-      if (childContext.dynamic.flags & DynamicFlag.REFERENCED) {
-        referencedCount++
-      }
     }
 
     context.dynamic.children[i] = childContext.dynamic
   }
 
   if (!isFragment) {
-    if (referencedCount > 1) {
-      context.reference()
-    }
     processDynamicChildren(context as TransformContext<ElementNode>)
   }
 }

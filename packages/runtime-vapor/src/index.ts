@@ -73,7 +73,7 @@ export {
   type DirectiveModifiers,
 } from './directives'
 
-export { template, children } from './dom/template'
+export { template, children, next } from './dom/template'
 export { insert, prepend, remove, createTextNode } from './dom/element'
 export { setStyle } from './dom/style'
 export {
