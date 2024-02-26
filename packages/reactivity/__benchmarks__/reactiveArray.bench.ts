@@ -1,12 +1,5 @@
 import { bench } from 'vitest'
-import {
-  computed,
-  effect,
-  reactive,
-  readonly,
-  shallowRef,
-  triggerRef,
-} from '../src'
+import { effect, reactive, reactiveReadArray, shallowReadArray } from '../src'
 
 for (let amount = 1e1; amount < 1e4; amount *= 10) {
   {
@@ -16,7 +9,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track for loop on reactive array, ${amount} elements`, () => {
+    bench(`track for loop, ${amount} elements`, () => {
       let sum = 0
       effect(() => {
         for (let i = 0; i < arr.length; i++) {
@@ -33,7 +26,25 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track iteration on reactive array, ${amount} elements`, () => {
+    bench(`track manual reactiveReadArray, ${amount} elements`, () => {
+      let sum = 0
+      effect(() => {
+        const raw = shallowReadArray(arr)
+        for (let i = 0; i < raw.length; i++) {
+          sum += raw[i]
+        }
+      })
+    })
+  }
+
+  {
+    const rawArray: number[] = []
+    for (let i = 0, n = amount; i < n; i++) {
+      rawArray.push(i)
+    }
+    const arr = reactive(rawArray)
+
+    bench(`track iteration, ${amount} elements`, () => {
       let sum = 0
       effect(() => {
         for (let x of arr) {
@@ -50,7 +61,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track forEach on reactive array, ${amount} elements`, () => {
+    bench(`track forEach, ${amount} elements`, () => {
       let sum = 0
       effect(() => {
         arr.forEach(x => (sum += x))
@@ -65,71 +76,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     }
     const arr = reactive(rawArray)
 
-    bench(`track reduce on reactive array, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        sum = arr.reduce((v, a) => a + v, 0)
-      })
-    })
-  }
-
-  {
-    const rawArray: number[] = []
-    for (let i = 0, n = amount; i < n; i++) {
-      rawArray.push(i)
-    }
-    const arr = readonly(rawArray)
-
-    bench(`track for loop on readonly array, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        for (let i = 0; i < arr.length; i++) {
-          sum += arr[i]
-        }
-      })
-    })
-  }
-
-  {
-    const rawArray: number[] = []
-    for (let i = 0, n = amount; i < n; i++) {
-      rawArray.push(i)
-    }
-    const arr = readonly(rawArray)
-
-    bench(`track iteration on readonly array, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        for (let x of arr) {
-          sum += x
-        }
-      })
-    })
-  }
-
-  {
-    const rawArray: number[] = []
-    for (let i = 0, n = amount; i < n; i++) {
-      rawArray.push(i)
-    }
-    const arr = readonly(rawArray)
-
-    bench(`track forEach on readonly array, ${amount} elements`, () => {
-      let sum = 0
-      effect(() => {
-        arr.forEach(x => (sum += x))
-      })
-    })
-  }
-
-  {
-    const rawArray: number[] = []
-    for (let i = 0, n = amount; i < n; i++) {
-      rawArray.push(i)
-    }
-    const arr = readonly(rawArray)
-
-    bench(`track reduce on readonly array, ${amount} elements`, () => {
+    bench(`track reduce, ${amount} elements`, () => {
       let sum = 0
       effect(() => {
         sum = arr.reduce((v, a) => a + v, 0)
@@ -146,7 +93,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     effect(() => r.reduce((v, a) => a + v, 0))
 
     bench(
-      `trigger index mutation (1st only) on *reactive* array (tracked with reduce), ${amount} elements`,
+      `trigger index mutation (1st only), tracked with reduce, ${amount} elements`,
       () => {
         r[0]++
       },
@@ -162,7 +109,7 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
     effect(() => r.reduce((v, a) => a + v, 0))
 
     bench(
-      `trigger index mutation (all) on *reactive* array (tracked with reduce), ${amount} elements`,
+      `trigger index mutation (all), tracked with reduce, ${amount} elements`,
       () => {
         for (let i = 0, n = r.length; i < n; i++) {
           r[i]++
@@ -184,12 +131,9 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       }
     })
 
-    bench(
-      `push() trigger on reactive array tracked via iteration, ${amount} elements`,
-      () => {
-        arr.push(1)
-      },
-    )
+    bench(`push() trigger, tracked via iteration, ${amount} elements`, () => {
+      arr.push(1)
+    })
   }
 
   {
@@ -203,11 +147,8 @@ for (let amount = 1e1; amount < 1e4; amount *= 10) {
       arr.forEach(x => (sum += x))
     })
 
-    bench(
-      `push() trigger on reactive array tracked via forEach, ${amount} elements`,
-      () => {
-        arr.push(1)
-      },
-    )
+    bench(`push() trigger, tracked via forEach, ${amount} elements`, () => {
+      arr.push(1)
+    })
   }
 }

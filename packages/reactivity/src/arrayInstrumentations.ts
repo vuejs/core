@@ -3,6 +3,11 @@ import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
 
+/**
+ * Track array iteration and return:
+ * - if input is reactive: a cloned raw array with reactive values
+ * - if input is non-reactive or shallowReactive: the original raw array
+ */
 export function reactiveReadArray<T>(array: T[]): T[] {
   const raw = toRaw(array)
   if (raw === array) return raw
@@ -10,7 +15,10 @@ export function reactiveReadArray<T>(array: T[]): T[] {
   return isShallow(array) ? raw : raw.map(toReactive)
 }
 
-function shallowReadArray<T>(arr: T[]): T[] {
+/**
+ * Track array iteration and return raw array
+ */
+export function shallowReadArray<T>(arr: T[]): T[] {
   track((arr = toRaw(arr)), TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
   return arr
 }

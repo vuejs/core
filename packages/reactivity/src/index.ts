@@ -73,5 +73,5 @@ export {
   getCurrentScope,
   onScopeDispose,
 } from './effectScope'
-export { reactiveReadArray } from './arrayInstrumentations'
+export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
