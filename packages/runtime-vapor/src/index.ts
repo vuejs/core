@@ -49,7 +49,6 @@ export {
 } from './component'
 export { render, unmountComponent } from './render'
 export { renderEffect, renderWatch } from './renderWatch'
-export { template, children } from './template'
 export {
   watch,
   watchEffect,
@@ -74,6 +73,7 @@ export {
   type DirectiveModifiers,
 } from './directives'
 
+export { template, children } from './dom/template'
 export { insert, prepend, append, remove, createTextNode } from './dom/dom'
 export { setStyle } from './dom/style'
 export {
