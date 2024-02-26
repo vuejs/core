@@ -37,7 +37,8 @@ export interface WritableComputedOptions<T> {
 }
 
 /**
- * @internal
+ * @private exported by @vue/reactivity for Vue core use, but not exported from
+ * the main vue package
  */
 export class ComputedRefImpl<T = any> implements Subscriber {
   // A computed is a ref
