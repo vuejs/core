@@ -4,7 +4,6 @@ import {
   type DebuggerOptions,
   EffectFlags,
   type Link,
-  type ReactiveEffect,
   type Subscriber,
   activeSub,
   refreshComputed,
@@ -25,7 +24,7 @@ export interface WritableComputedRef<T> extends Ref<T> {
   /**
    * @deprecated computed no longer uses effect
    */
-  effect: ReactiveEffect
+  effect: ComputedRefImpl
 }
 
 export type ComputedGetter<T> = (oldValue?: T) => T
@@ -41,18 +40,43 @@ export interface WritableComputedOptions<T> {
  * the main vue package
  */
 export class ComputedRefImpl<T = any> implements Subscriber {
-  // A computed is a ref
+  /**
+   * @internal
+   */
   _value: any = undefined
+  /**
+   * @internal
+   */
   readonly dep = new Dep(this)
+  /**
+   * @internal
+   */
   readonly __v_isRef = true;
+  /**
+   * @internal
+   */
   readonly [ReactiveFlags.IS_READONLY]: boolean
   // A computed is also a subscriber that tracks other deps
+  /**
+   * @internal
+   */
   deps?: Link = undefined
+  /**
+   * @internal
+   */
   depsTail?: Link = undefined
-  // track variaous states
+  /**
+   * @internal
+   */
   flags = EffectFlags.DIRTY
-  // last seen global version
+  /**
+   * @internal
+   */
   globalVersion = globalVersion - 1
+  /**
+   * @internal
+   */
+  isSSR: boolean
   // for backwards compat
   effect = this
 
@@ -63,17 +87,22 @@ export class ComputedRefImpl<T = any> implements Subscriber {
 
   /**
    * Dev only
+   * @internal
    */
   _warnRecursive?: boolean
 
   constructor(
     public fn: ComputedGetter<T>,
     private readonly setter: ComputedSetter<T> | undefined,
-    public isSSR: boolean,
+    isSSR: boolean,
   ) {
     this.__v_isReadonly = !setter
+    this.isSSR = isSSR
   }
 
+  /**
+   * @internal
+   */
   notify() {
     // avoid infinite self recursion
     if (activeSub !== this) {
