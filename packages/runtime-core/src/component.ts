@@ -1,86 +1,89 @@
-import { VNode, VNodeChild, isVNode } from './vnode'
+import { type VNode, type VNodeChild, isVNode } from './vnode'
 import {
+  EffectScope,
+  type ReactiveEffect,
+  TrackOpTypes,
   isRef,
+  markRaw,
   pauseTracking,
+  proxyRefs,
   resetTracking,
   shallowReadonly,
-  proxyRefs,
-  EffectScope,
-  markRaw,
   track,
-  TrackOpTypes,
-  ReactiveEffect
 } from '@vue/reactivity'
 import {
-  ComponentPublicInstance,
+  type ComponentPublicInstance,
+  type ComponentPublicInstanceConstructor,
   PublicInstanceProxyHandlers,
+  RuntimeCompiledPublicInstanceProxyHandlers,
   createDevRenderContext,
   exposePropsOnRenderContext,
   exposeSetupStateOnRenderContext,
-  ComponentPublicInstanceConstructor,
   publicPropertiesMap,
-  RuntimeCompiledPublicInstanceProxyHandlers
 } from './componentPublicInstance'
 import {
-  ComponentPropsOptions,
-  NormalizedPropsOptions,
+  type ComponentPropsOptions,
+  type NormalizedPropsOptions,
   initProps,
-  normalizePropsOptions
+  normalizePropsOptions,
 } from './componentProps'
 import {
+  type InternalSlots,
+  type Slots,
+  type SlotsType,
+  type UnwrapSlotsType,
   initSlots,
-  InternalSlots,
-  Slots,
-  SlotsType,
-  UnwrapSlotsType
 } from './componentSlots'
 import { warn } from './warning'
 import { ErrorCodes, callWithErrorHandling, handleError } from './errorHandling'
-import { AppContext, createAppContext, AppConfig } from './apiCreateApp'
-import { Directive, validateDirectiveName } from './directives'
 import {
+  type AppConfig,
+  type AppContext,
+  createAppContext,
+} from './apiCreateApp'
+import { type Directive, validateDirectiveName } from './directives'
+import {
+  type ComponentOptions,
+  type ComputedOptions,
+  type MethodOptions,
   applyOptions,
-  ComponentOptions,
-  ComputedOptions,
-  MethodOptions,
-  resolveMergedOptions
+  resolveMergedOptions,
 } from './componentOptions'
 import {
-  EmitsOptions,
-  ObjectEmitsOptions,
-  EmitFn,
+  type EmitFn,
+  type EmitsOptions,
+  type EmitsToProps,
+  type ObjectEmitsOptions,
+  type ShortEmitsToObject,
   emit,
   normalizeEmitsOptions,
-  EmitsToProps,
-  ShortEmitsToObject
 } from './componentEmits'
 import {
   EMPTY_OBJ,
-  isArray,
-  isFunction,
+  type IfAny,
   NOOP,
-  isObject,
-  NO,
-  makeMap,
-  isPromise,
   ShapeFlags,
   extend,
   getGlobalThis,
-  IfAny
+  isArray,
+  isFunction,
+  isObject,
+  isPromise,
+  makeMap,
 } from '@vue/shared'
-import { SuspenseBoundary } from './components/Suspense'
-import { CompilerOptions } from '@vue/compiler-core'
+import type { SuspenseBoundary } from './components/Suspense'
+import type { CompilerOptions } from '@vue/compiler-core'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
-import { startMeasure, endMeasure } from './profiling'
+import { endMeasure, startMeasure } from './profiling'
 import { convertLegacyRenderFn } from './compat/renderFn'
 import {
-  CompatConfig,
+  type CompatConfig,
   globalCompatConfig,
-  validateCompatConfig
+  validateCompatConfig,
 } from './compat/compatConfig'
-import { SchedulerJob } from './scheduler'
-import { LifecycleHooks } from './enums'
+import type { SchedulerJob } from './scheduler'
+import type { LifecycleHooks } from './enums'
 
 export type Data = Record<string, unknown>
 
@@ -163,12 +166,12 @@ export interface FunctionalComponent<
   P = {},
   E extends EmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
-  EE extends EmitsOptions = ShortEmitsToObject<E>
+  EE extends EmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
     props: P & EmitsToProps<EE>,
-    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>
+    ctx: Omit<SetupContext<EE, IfAny<S, {}, SlotsType<S>>>, 'expose'>,
   ): any
   props?: ComponentPropsOptions<P>
   emits?: EE | (keyof EE)[]
@@ -196,7 +199,7 @@ export type ConcreteComponent<
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
   E extends EmitsOptions | Record<string, any[]> = {},
-  S extends Record<string, any> = any
+  S extends Record<string, any> = any,
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
   | FunctionalComponent<Props, E, S>
@@ -212,7 +215,7 @@ export type Component<
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
   E extends EmitsOptions | Record<string, any[]> = {},
-  S extends Record<string, any> = any
+  S extends Record<string, any> = any,
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
   | ComponentPublicInstanceConstructor<Props>
@@ -224,7 +227,7 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
   E = EmitsOptions,
-  S extends SlotsType = {}
+  S extends SlotsType = {},
 > = E extends any
   ? {
       attrs: Data
@@ -245,7 +248,7 @@ export type InternalRenderFunction = {
     $props: ComponentInternalInstance['props'],
     $setup: ComponentInternalInstance['setupState'],
     $data: ComponentInternalInstance['data'],
-    $options: ComponentInternalInstance['ctx']
+    $options: ComponentInternalInstance['ctx'],
   ): VNodeChild
   _rc?: boolean // isRuntimeCompiled
 
@@ -282,9 +285,13 @@ export interface ComponentInternalInstance {
    */
   effect: ReactiveEffect
   /**
-   * Bound effect runner to be passed to schedulers
+   * Force update render effect
    */
-  update: SchedulerJob
+  update: () => void
+  /**
+   * Render effect job to be passed to scheduler (checks if dirty)
+   */
+  job: SchedulerJob
   /**
    * The render function that returns vdom tree.
    * @internal
@@ -515,6 +522,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
+
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 }
 
 const emptyAppContext = createAppContext()
@@ -524,7 +537,7 @@ let uid = 0
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
-  suspense: SuspenseBoundary | null
+  suspense: SuspenseBoundary | null,
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
@@ -542,6 +555,7 @@ export function createComponentInstance(
     subTree: null!, // will be set synchronously right after creation
     effect: null!,
     update: null!, // will be set synchronously right after creation
+    job: null!,
     scope: new EffectScope(true /* detached */),
     render: null,
     proxy: null,
@@ -607,7 +621,7 @@ export function createComponentInstance(
     rtg: null,
     rtc: null,
     ec: null,
-    sp: null
+    sp: null,
   }
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
@@ -630,13 +644,10 @@ export let currentInstance: ComponentInternalInstance | null = null
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
-type GlobalInstanceSetter = ((
-  instance: ComponentInternalInstance | null
-) => void) & { version?: string }
-
-let internalSetCurrentInstance: GlobalInstanceSetter
-let globalCurrentInstanceSetters: GlobalInstanceSetter[]
-let settersKey = '__VUE_INSTANCE_SETTERS__'
+let internalSetCurrentInstance: (
+  instance: ComponentInternalInstance | null,
+) => void
+let setInSSRSetupState: (state: boolean) => void
 
 /**
  * The following makes getCurrentInstance() usage across multiple copies of Vue
@@ -651,26 +662,46 @@ let settersKey = '__VUE_INSTANCE_SETTERS__'
  * found during browser execution.
  */
 if (__SSR__) {
-  if (!(globalCurrentInstanceSetters = getGlobalThis()[settersKey])) {
-    globalCurrentInstanceSetters = getGlobalThis()[settersKey] = []
-  }
-  globalCurrentInstanceSetters.push(i => (currentInstance = i))
-  internalSetCurrentInstance = instance => {
-    if (globalCurrentInstanceSetters.length > 1) {
-      globalCurrentInstanceSetters.forEach(s => s(instance))
-    } else {
-      globalCurrentInstanceSetters[0](instance)
+  type Setter = (v: any) => void
+  const g = getGlobalThis()
+  const registerGlobalSetter = (key: string, setter: Setter) => {
+    let setters: Setter[]
+    if (!(setters = g[key])) setters = g[key] = []
+    setters.push(setter)
+    return (v: any) => {
+      if (setters.length > 1) setters.forEach(set => set(v))
+      else setters[0](v)
     }
   }
+  internalSetCurrentInstance = registerGlobalSetter(
+    `__VUE_INSTANCE_SETTERS__`,
+    v => (currentInstance = v),
+  )
+  // also make `isInSSRComponentSetup` sharable across copies of Vue.
+  // this is needed in the SFC playground when SSRing async components, since
+  // we have to load both the runtime and the server-renderer from CDNs, they
+  // contain duplicated copies of Vue runtime code.
+  setInSSRSetupState = registerGlobalSetter(
+    `__VUE_SSR_SETTERS__`,
+    v => (isInSSRComponentSetup = v),
+  )
 } else {
   internalSetCurrentInstance = i => {
     currentInstance = i
   }
+  setInSSRSetupState = v => {
+    isInSSRComponentSetup = v
+  }
 }
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()
+  return () => {
+    instance.scope.off()
+    internalSetCurrentInstance(prev)
+  }
 }
 
 export const unsetCurrentInstance = () => {
@@ -680,11 +711,13 @@ export const unsetCurrentInstance = () => {
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
-export function validateComponentName(name: string, config: AppConfig) {
-  const appIsNativeTag = config.isNativeTag || NO
-  if (isBuiltInTag(name) || appIsNativeTag(name)) {
+export function validateComponentName(
+  name: string,
+  { isNativeTag }: AppConfig,
+) {
+  if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
-      'Do not use built-in or reserved HTML elements as component id: ' + name
+      'Do not use built-in or reserved HTML elements as component id: ' + name,
     )
   }
 }
@@ -697,9 +730,9 @@ export let isInSSRComponentSetup = false
 
 export function setupComponent(
   instance: ComponentInternalInstance,
-  isSSR = false
+  isSSR = false,
 ) {
-  isInSSRComponentSetup = isSSR
+  isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
   const isStateful = isStatefulComponent(instance)
@@ -709,13 +742,14 @@ export function setupComponent(
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
-  isInSSRComponentSetup = false
+
+  isSSR && setInSSRSetupState(false)
   return setupResult
 }
 
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
-  isSSR: boolean
+  isSSR: boolean,
 ) {
   const Component = instance.type as ComponentOptions
 
@@ -739,7 +773,7 @@ function setupStatefulComponent(
       warn(
         `"compilerOptions" is only supported when using a build of Vue that ` +
           `includes the runtime compiler. Since you are using a runtime-only ` +
-          `build, the options should be passed via your build tool config instead.`
+          `build, the options should be passed via your build tool config instead.`,
       )
     }
   }
@@ -757,16 +791,19 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
       instance,
       ErrorCodes.SETUP_FUNCTION,
-      [__DEV__ ? shallowReadonly(instance.props) : instance.props, setupContext]
+      [
+        __DEV__ ? shallowReadonly(instance.props) : instance.props,
+        setupContext,
+      ],
     )
     resetTracking()
-    unsetCurrentInstance()
+    reset()
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
@@ -789,13 +826,13 @@ function setupStatefulComponent(
             `Component <${name}>: setup function returned a promise, but no ` +
               `<Suspense> boundary was found in the parent component tree. ` +
               `A component with async setup() must be nested in a <Suspense> ` +
-              `in order to be rendered.`
+              `in order to be rendered.`,
           )
         }
       } else if (__DEV__) {
         warn(
           `setup() returned a Promise, but the version of Vue you are using ` +
-            `does not support it yet.`
+            `does not support it yet.`,
         )
       }
     } else {
@@ -809,7 +846,7 @@ function setupStatefulComponent(
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
-  isSSR: boolean
+  isSSR: boolean,
 ) {
   if (isFunction(setupResult)) {
     // setup returned an inline render function
@@ -824,7 +861,7 @@ export function handleSetupResult(
     if (__DEV__ && isVNode(setupResult)) {
       warn(
         `setup() should not return VNodes directly - ` +
-          `return a render function instead.`
+          `return a render function instead.`,
       )
     }
     // setup returned bindings.
@@ -840,7 +877,7 @@ export function handleSetupResult(
     warn(
       `setup() should return an object. Received: ${
         setupResult === null ? 'null' : typeof setupResult
-      }`
+      }`,
     )
   }
   finishComponentSetup(instance, isSSR)
@@ -848,7 +885,7 @@ export function handleSetupResult(
 
 type CompileFunction = (
   template: string | object,
-  options?: CompilerOptions
+  options?: CompilerOptions,
 ) => InternalRenderFunction
 
 let compile: CompileFunction | undefined
@@ -873,7 +910,7 @@ export const isRuntimeOnly = () => !compile
 export function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean,
-  skipOptions?: boolean
+  skipOptions?: boolean,
 ) {
   const Component = instance.type as ComponentOptions
 
@@ -908,11 +945,11 @@ export function finishComponentSetup(
           extend(
             {
               isCustomElement,
-              delimiters
+              delimiters,
             },
-            compilerOptions
+            compilerOptions,
           ),
-          componentCompilerOptions
+          componentCompilerOptions,
         )
         if (__COMPAT__) {
           // pass runtime compat config into the compiler
@@ -941,13 +978,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     try {
       applyOptions(instance)
     } finally {
       resetTracking()
-      unsetCurrentInstance()
+      reset()
     }
   }
 
@@ -965,7 +1002,7 @@ export function finishComponentSetup(
               ? ` Use "vue.esm-browser.js" instead.`
               : __GLOBAL__
                 ? ` Use "vue.global.js" instead.`
-                : ``) /* should not happen */
+                : ``) /* should not happen */,
       )
     } else {
       warn(`Component is missing template or render function.`)
@@ -992,14 +1029,14 @@ function getAttrsProxy(instance: ComponentInternalInstance): Data {
             deleteProperty() {
               warn(`setupContext.attrs is readonly.`)
               return false
-            }
+            },
           }
         : {
             get(target, key: string) {
               track(instance, TrackOpTypes.GET, '$attrs')
               return target[key]
-            }
-          }
+            },
+          },
     ))
   )
 }
@@ -1014,13 +1051,13 @@ function getSlotsProxy(instance: ComponentInternalInstance): Slots {
       get(target, key: string) {
         track(instance, TrackOpTypes.GET, '$slots')
         return target[key]
-      }
+      },
     }))
   )
 }
 
 export function createSetupContext(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ): SetupContext {
   const expose: SetupContext['expose'] = exposed => {
     if (__DEV__) {
@@ -1038,7 +1075,7 @@ export function createSetupContext(
         }
         if (exposedType !== 'object') {
           warn(
-            `expose() should be passed a plain object, received ${exposedType}.`
+            `expose() should be passed a plain object, received ${exposedType}.`,
           )
         }
       }
@@ -1059,7 +1096,7 @@ export function createSetupContext(
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
-      expose
+      expose,
     })
   } else {
     return {
@@ -1068,7 +1105,7 @@ export function createSetupContext(
       },
       slots: instance.slots,
       emit: instance.emit,
-      expose
+      expose,
     }
   }
 }
@@ -1087,7 +1124,7 @@ export function getExposeProxy(instance: ComponentInternalInstance) {
         },
         has(target, key: string) {
           return key in target || key in publicPropertiesMap
-        }
+        },
       }))
     )
   }
@@ -1099,7 +1136,7 @@ const classify = (str: string): string =>
 
 export function getComponentName(
   Component: ConcreteComponent,
-  includeInferred = true
+  includeInferred = true,
 ): string | false | undefined {
   return isFunction(Component)
     ? Component.displayName || Component.name
@@ -1110,7 +1147,7 @@ export function getComponentName(
 export function formatComponentName(
   instance: ComponentInternalInstance | null,
   Component: ConcreteComponent,
-  isRoot = false
+  isRoot = false,
 ): string {
   let name = getComponentName(Component)
   if (!name && Component.__file) {
@@ -1132,7 +1169,7 @@ export function formatComponentName(
     name =
       inferFromRegistry(
         instance.components ||
-          (instance.parent.type as ComponentOptions).components
+          (instance.parent.type as ComponentOptions).components,
       ) || inferFromRegistry(instance.appContext.components)
   }
 

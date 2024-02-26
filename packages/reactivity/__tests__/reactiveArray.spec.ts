@@ -1,6 +1,6 @@
-import { computed } from '../src/computed'
-import { reactive, shallowReactive, isReactive, toRaw } from '../src/reactive'
-import { ref, isRef } from '../src/ref'
+import { type ComputedRef, computed } from '../src/computed'
+import { isReactive, reactive, shallowReactive, toRaw } from '../src/reactive'
+import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
 
 describe('reactivity/reactive/Array', () => {
@@ -176,6 +176,15 @@ describe('reactivity/reactive/Array', () => {
     expect(length).toBe('01')
   })
 
+  // #9742
+  test('mutation on user proxy of reactive Array', () => {
+    const array = reactive<number[]>([])
+    const proxy = new Proxy(array, {})
+    proxy.push(1)
+    expect(array).toHaveLength(1)
+    expect(proxy).toHaveLength(1)
+  })
+
   describe('Array methods w/ refs', () => {
     let original: any[]
     beforeEach(() => {
@@ -299,20 +308,20 @@ describe('reactivity/reactive/Array', () => {
       const result1 = computed(() => Array.from(shallow.entries()))
       expect(result1.value).toStrictEqual([
         [0, 0],
-        [1, 1]
+        [1, 1],
       ])
 
       shallow[1] = 10
       expect(result1.value).toStrictEqual([
         [0, 0],
-        [1, 10]
+        [1, 10],
       ])
 
       const deep = reactive([{ val: 0 }, { val: 1 }])
       const result2 = computed(() => Array.from(deep.entries()))
       expect(result2.value).toStrictEqual([
         [0, { val: 0 }],
-        [1, { val: 1 }]
+        [1, { val: 1 }],
       ])
       expect(isReactive(result2.value[0][1])).toBe(true)
 
@@ -356,10 +365,12 @@ describe('reactivity/reactive/Array', () => {
     test('find and co.', () => {
       const shallow = shallowReactive([{ val: 1 }, { val: 2 }])
       let find = computed(() => shallow.find(x => x.val === 2))
+      // @ts-expect-error tests are not limited to es2016
       let findLast = computed(() => shallow.findLast(x => x.val === 2))
       let findIndex = computed(() => shallow.findIndex(x => x.val === 2))
       let findLastIndex = computed(() =>
-        shallow.findLastIndex(x => x.val === 2)
+        // @ts-expect-error tests are not limited to es2016
+        shallow.findLastIndex(x => x.val === 2),
       )
 
       expect(find.value).toBe(shallow[1])
@@ -385,8 +396,10 @@ describe('reactivity/reactive/Array', () => {
 
       const deep = reactive([{ val: 1 }, { val: 2 }])
       find = computed(() => deep.find(x => x.val === 2))
+      // @ts-expect-error tests are not limited to es2016
       findLast = computed(() => deep.findLast(x => x.val === 2))
       findIndex = computed(() => deep.findIndex(x => x.val === 2))
+      // @ts-expect-error tests are not limited to es2016
       findLastIndex = computed(() => deep.findLastIndex(x => x.val === 2))
 
       expect(find.value).toBe(deep[1])
@@ -434,7 +447,7 @@ describe('reactivity/reactive/Array', () => {
       }
       const shallow = shallowReactive([
         { val: 1, toString },
-        { val: 2, toString }
+        { val: 2, toString },
       ])
       let result = computed(() => shallow.join('+'))
       expect(result.value).toBe('1+2')
@@ -447,7 +460,7 @@ describe('reactivity/reactive/Array', () => {
 
       const deep = reactive([
         { val: 1, toString },
-        { val: 2, toString }
+        { val: 2, toString },
       ])
       result = computed(() => deep.join())
       expect(result.value).toBe('1,2')
@@ -478,16 +491,16 @@ describe('reactivity/reactive/Array', () => {
       }
       const shallow = shallowReactive([
         { val: 1, toString },
-        { val: 2, toString }
+        { val: 2, toString },
       ] as any[])
 
       expect(shallow.reduce((acc, x) => acc + '' + x.val, undefined)).toBe(
-        'undefined12'
+        'undefined12',
       )
 
       let left = computed(() => shallow.reduce((acc, x) => acc + '' + x.val))
       let right = computed(() =>
-        shallow.reduceRight((acc, x) => acc + '' + x.val)
+        shallow.reduceRight((acc, x) => acc + '' + x.val),
       )
       expect(left.value).toBe('1-2')
       expect(right.value).toBe('2-1')
@@ -528,9 +541,10 @@ describe('reactivity/reactive/Array', () => {
     })
 
     // Node 20+
+    // @ts-expect-error tests are not limited to es2016
     test.skipIf(!Array.prototype.toReversed)('toReversed', () => {
       const array = reactive([1, { val: 2 }])
-      const result = computed(() => array.toReversed())
+      const result = computed(() => (array as any).toReversed())
       expect(result.value).toStrictEqual([{ val: 2 }, 1])
       expect(isReactive(result.value[0])).toBe(true)
 
@@ -539,12 +553,16 @@ describe('reactivity/reactive/Array', () => {
     })
 
     // Node 20+
+    // @ts-expect-error tests are not limited to es2016
     test.skipIf(!Array.prototype.toSorted)('toSorted', () => {
       // No comparer
+      // @ts-expect-error
       expect(shallowReactive([2, 1, 3]).toSorted()).toStrictEqual([1, 2, 3])
 
       const shallow = shallowReactive([{ val: 2 }, { val: 1 }, { val: 3 }])
-      let result = computed(() => shallow.toSorted((a, b) => a.val - b.val))
+      let result: ComputedRef<{ val: number }[]>
+      // @ts-expect-error
+      result = computed(() => shallow.toSorted((a, b) => a.val - b.val))
       expect(result.value.map(x => x.val)).toStrictEqual([1, 2, 3])
       expect(isReactive(result.value[0])).toBe(false)
 
@@ -555,6 +573,7 @@ describe('reactivity/reactive/Array', () => {
       expect(result.value.map(x => x.val)).toStrictEqual([1, 4])
 
       const deep = reactive([{ val: 2 }, { val: 1 }, { val: 3 }])
+      // @ts-expect-error
       result = computed(() => deep.toSorted((a, b) => a.val - b.val))
       expect(result.value.map(x => x.val)).toStrictEqual([1, 2, 3])
       expect(isReactive(result.value[0])).toBe(true)
@@ -564,8 +583,10 @@ describe('reactivity/reactive/Array', () => {
     })
 
     // Node 20+
+    // @ts-expect-error tests are not limited to es2016
     test.skipIf(!Array.prototype.toSpliced)('toSpliced', () => {
       const array = reactive([1, 2, 3])
+      // @ts-expect-error
       const result = computed(() => array.toSpliced(1, 1, -2))
       expect(result.value).toStrictEqual([1, -2, 3])
 

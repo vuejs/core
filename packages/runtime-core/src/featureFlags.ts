@@ -34,7 +34,7 @@ export function initFeatureFlags() {
         `which expects these compile-time feature flags to be globally injected ` +
         `via the bundler config in order to get better tree-shaking in the ` +
         `production bundle.\n\n` +
-        `For more details, see https://link.vuejs.org/feature-flags.`
+        `For more details, see https://link.vuejs.org/feature-flags.`,
     )
   }
 }

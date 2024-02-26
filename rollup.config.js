@@ -47,33 +47,33 @@ const [enumPlugin, enumDefines] = inlineEnums()
 const outputConfigs = {
   'esm-bundler': {
     file: resolve(`dist/${name}.esm-bundler.js`),
-    format: 'es'
+    format: 'es',
   },
   'esm-browser': {
     file: resolve(`dist/${name}.esm-browser.js`),
-    format: 'es'
+    format: 'es',
   },
   cjs: {
     file: resolve(`dist/${name}.cjs.js`),
-    format: 'cjs'
+    format: 'cjs',
   },
   global: {
     file: resolve(`dist/${name}.global.js`),
-    format: 'iife'
+    format: 'iife',
   },
   // runtime-only builds, for main "vue" package only
   'esm-bundler-runtime': {
     file: resolve(`dist/${name}.runtime.esm-bundler.js`),
-    format: 'es'
+    format: 'es',
   },
   'esm-browser-runtime': {
     file: resolve(`dist/${name}.runtime.esm-browser.js`),
-    format: 'es'
+    format: 'es',
   },
   'global-runtime': {
     file: resolve(`dist/${name}.runtime.global.js`),
-    format: 'iife'
-  }
+    format: 'iife',
+  },
 }
 
 /** @type {ReadonlyArray<PackageFormat>} */
@@ -122,7 +122,7 @@ function createConfig(format, output, plugins = []) {
   const isBundlerESMBuild = /esm-bundler/.test(format)
   const isBrowserESMBuild = /esm-browser/.test(format)
   const isServerRenderer = name === 'server-renderer'
-  const isNodeBuild = format === 'cjs'
+  const isCJSBuild = format === 'cjs'
   const isGlobalBuild = /global/.test(format)
   const isCompatPackage =
     pkg.name === '@vue/compat' || pkg.name === '@vue/compat-canary'
@@ -131,12 +131,20 @@ function createConfig(format, output, plugins = []) {
     (isGlobalBuild || isBrowserESMBuild || isBundlerESMBuild) &&
     !packageOptions.enableNonBrowserBranches
 
+  output.banner = `/**
+* ${pkg.name} v${masterVersion}
+* (c) 2018-present Yuxi (Evan) You and Vue contributors
+* @license MIT
+**/`
+
   output.exports = isCompatPackage ? 'auto' : 'named'
-  if (isNodeBuild) {
+  if (isCJSBuild) {
     output.esModule = true
   }
   output.sourcemap = !!process.env.SOURCE_MAP
   output.externalLiveBindings = false
+  // https://github.com/rollup/rollup/pull/5380
+  output.reexportProtoFromExternal = false
 
   if (isGlobalBuild) {
     output.name = packageOptions.name
@@ -166,9 +174,9 @@ function createConfig(format, output, plugins = []) {
       __ESM_BUNDLER__: String(isBundlerESMBuild),
       __ESM_BROWSER__: String(isBrowserESMBuild),
       // is targeting Node (SSR)?
-      __NODE_JS__: String(isNodeBuild),
+      __CJS__: String(isCJSBuild),
       // need SSR-specific branches?
-      __SSR__: String(isNodeBuild || isBundlerESMBuild || isServerRenderer),
+      __SSR__: String(isCJSBuild || isBundlerESMBuild || isServerRenderer),
 
       // 2.x compat build
       __COMPAT__: String(isCompatBuild),
@@ -183,7 +191,7 @@ function createConfig(format, output, plugins = []) {
         : `false`,
       __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: isBundlerESMBuild
         ? `__VUE_PROD_HYDRATION_MISMATCH_DETAILS__`
-        : `false`
+        : `false`,
     }
 
     if (!isBundlerESMBuild) {
@@ -213,14 +221,14 @@ function createConfig(format, output, plugins = []) {
         'context.onError(': `/*#__PURE__*/ context.onError(`,
         'emitError(': `/*#__PURE__*/ emitError(`,
         'createCompilerError(': `/*#__PURE__*/ createCompilerError(`,
-        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`
+        'createDOMCompilerError(': `/*#__PURE__*/ createDOMCompilerError(`,
       })
     }
 
     if (isBundlerESMBuild) {
       Object.assign(replacements, {
         // preserve to be handled by bundlers
-        __DEV__: `!!(process.env.NODE_ENV !== 'production')`
+        __DEV__: `!!(process.env.NODE_ENV !== 'production')`,
       })
     }
 
@@ -229,7 +237,7 @@ function createConfig(format, output, plugins = []) {
       Object.assign(replacements, {
         'process.env': '({})',
         'process.platform': '""',
-        'process.stdout': 'null'
+        'process.stdout': 'null',
       })
     }
 
@@ -245,7 +253,7 @@ function createConfig(format, output, plugins = []) {
       'source-map-js',
       '@babel/parser',
       'estree-walker',
-      'entities/lib/decode.js'
+      'entities/lib/decode.js',
     ]
 
     if (isGlobalBuild || isBrowserESMBuild || isCompatPackage) {
@@ -263,7 +271,7 @@ function createConfig(format, output, plugins = []) {
         // for @vue/compiler-sfc / server-renderer
         ...['path', 'url', 'stream'],
         // somehow these throw warnings for runtime-* package builds
-        ...treeShakenDeps
+        ...treeShakenDeps,
       ]
     }
   }
@@ -285,7 +293,7 @@ function createConfig(format, output, plugins = []) {
         'teacup/lib/express',
         'arc-templates/dist/es5',
         'then-pug',
-        'then-jade'
+        'then-jade',
       ]
     }
 
@@ -295,10 +303,10 @@ function createConfig(format, output, plugins = []) {
         ? [
             commonJS({
               sourceMap: false,
-              ignore: cjsIgnores
+              ignore: cjsIgnores,
             }),
             ...(format === 'cjs' ? [] : [polyfillNode()]),
-            nodeResolve()
+            nodeResolve(),
           ]
         : []
 
@@ -312,10 +320,10 @@ function createConfig(format, output, plugins = []) {
     external: resolveExternal(),
     plugins: [
       json({
-        namedExports: false
+        namedExports: false,
       }),
       alias({
-        entries
+        entries,
       }),
       enumPlugin,
       ...resolveReplace(),
@@ -323,11 +331,11 @@ function createConfig(format, output, plugins = []) {
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
         sourceMap: output.sourcemap,
         minify: false,
-        target: isServerRenderer || isNodeBuild ? 'es2019' : 'es2015',
-        define: resolveDefine()
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2015',
+        define: resolveDefine(),
       }),
       ...resolveNodePlugins(),
-      ...plugins
+      ...plugins,
     ],
     output,
     onwarn: (msg, warn) => {
@@ -336,15 +344,15 @@ function createConfig(format, output, plugins = []) {
       }
     },
     treeshake: {
-      moduleSideEffects: false
-    }
+      moduleSideEffects: false,
+    },
   }
 }
 
 function createProductionConfig(/** @type {PackageFormat} */ format) {
   return createConfig(format, {
     file: resolve(`dist/${name}.${format}.prod.js`),
-    format: outputConfigs[format].format
+    format: outputConfigs[format].format,
   })
 }
 
@@ -353,17 +361,17 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
     format,
     {
       file: outputConfigs[format].file.replace(/\.js$/, '.prod.js'),
-      format: outputConfigs[format].format
+      format: outputConfigs[format].format,
     },
     [
       terser({
         module: /^esm/.test(format),
         compress: {
           ecma: 2015,
-          pure_getters: true
+          pure_getters: true,
         },
-        safari10: true
-      })
-    ]
+        safari10: true,
+      }),
+    ],
   )
 }

@@ -1,11 +1,11 @@
-import { SFCDescriptor } from '../parse'
+import type { SFCDescriptor } from '../parse'
 import {
+  type ExpressionNode,
   NodeTypes,
-  SimpleExpressionNode,
+  type SimpleExpressionNode,
+  type TemplateChildNode,
   parserOptions,
   walkIdentifiers,
-  TemplateChildNode,
-  ExpressionNode
 } from '@vue/compiler-dom'
 import { createCache } from '../cache'
 import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
@@ -16,12 +16,12 @@ import { camelize, capitalize, isBuiltInDirective } from '@vue/shared'
  * when not using inline mode.
  */
 export function isImportUsed(local: string, sfc: SFCDescriptor): boolean {
-  return resolveTemplateUsageCheckString(sfc).has(local)
+  return resolveTemplateUsedIdentifiers(sfc).has(local)
 }
 
 const templateUsageCheckCache = createCache<Set<string>>()
 
-function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
+function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
   const { content, ast } = sfc.template!
   const cached = templateUsageCheckCache.get(content)
   if (cached) {
@@ -35,12 +35,14 @@ function resolveTemplateUsageCheckString(sfc: SFCDescriptor) {
   function walk(node: TemplateChildNode) {
     switch (node.type) {
       case NodeTypes.ELEMENT:
+        let tag = node.tag
+        if (tag.includes('.')) tag = tag.split('.')[0].trim()
         if (
-          !parserOptions.isNativeTag!(node.tag) &&
-          !parserOptions.isBuiltInComponent!(node.tag)
+          !parserOptions.isNativeTag!(tag) &&
+          !parserOptions.isBuiltInComponent!(tag)
         ) {
-          ids.add(camelize(node.tag))
-          ids.add(capitalize(camelize(node.tag)))
+          ids.add(camelize(tag))
+          ids.add(capitalize(camelize(tag)))
         }
         for (let i = 0; i < node.props.length; i++) {
           const prop = node.props[i]

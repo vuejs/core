@@ -1,24 +1,23 @@
-import type { ComputedRef } from './computed'
 import {
-  activeEffect,
-  shouldTrack,
-  trackEffect,
-  triggerEffects
-} from './effect'
-import { DirtyLevels, TrackOpTypes, TriggerOpTypes } from './constants'
-import { isArray, hasChanged, IfAny, isFunction, isObject } from '@vue/shared'
+  type IfAny,
+  hasChanged,
+  isArray,
+  isFunction,
+  isObject,
+} from '@vue/shared'
+import { Dep, getDepFromReactive } from './dep'
 import {
+  type ShallowReactiveMarker,
   isProxy,
-  toRaw,
   isReactive,
-  toReactive,
   isReadonly,
-  isShallow
+  isShallow,
+  toRaw,
+  toReactive,
 } from './reactive'
-import type { ShallowReactiveMarker } from './reactive'
-import { createDep, Dep } from './dep'
-import { ComputedRefImpl } from './computed'
-import { getDepFromReactive } from './reactiveEffect'
+import type { ComputedRef } from './computed'
+import { TrackOpTypes, TriggerOpTypes } from './constants'
+import { warn } from './warning'
 
 declare const RefSymbol: unique symbol
 export declare const RawSymbol: unique symbol
@@ -33,55 +32,6 @@ export interface Ref<T = any> {
   [RefSymbol]: true
 }
 
-type RefBase<T> = {
-  dep?: Dep
-  value: T
-}
-
-export function trackRefValue(ref: RefBase<any>) {
-  if (shouldTrack && activeEffect) {
-    ref = toRaw(ref)
-    trackEffect(
-      activeEffect,
-      ref.dep ||
-        (ref.dep = createDep(
-          () => (ref.dep = undefined),
-          ref instanceof ComputedRefImpl ? ref : undefined
-        )),
-      __DEV__
-        ? {
-            target: ref,
-            type: TrackOpTypes.GET,
-            key: 'value'
-          }
-        : void 0
-    )
-  }
-}
-
-export function triggerRefValue(
-  ref: RefBase<any>,
-  dirtyLevel: DirtyLevels = DirtyLevels.Dirty,
-  newVal?: any
-) {
-  ref = toRaw(ref)
-  const dep = ref.dep
-  if (dep) {
-    triggerEffects(
-      dep,
-      dirtyLevel,
-      __DEV__
-        ? {
-            target: ref,
-            type: TriggerOpTypes.SET,
-            key: 'value',
-            newValue: newVal
-          }
-        : void 0
-    )
-  }
-}
-
 /**
  * Checks if a value is a ref object.
  *
@@ -90,7 +40,7 @@ export function triggerRefValue(
  */
 export function isRef<T>(r: Ref<T> | unknown): r is Ref<T>
 export function isRef(r: any): r is Ref {
-  return !!(r && r.__v_isRef === true)
+  return r ? r.__v_isRef === true : false
 }
 
 /**
@@ -100,7 +50,6 @@ export function isRef(r: any): r is Ref {
  * @param value - The object to wrap in the ref.
  * @see {@link https://vuejs.org/api/reactivity-core.html#ref}
  */
-export function ref<T extends Ref>(value: T): T
 export function ref<T>(value: T): Ref<UnwrapRef<T>>
 export function ref<T = any>(): Ref<T | undefined>
 export function ref(value?: unknown) {
@@ -128,9 +77,13 @@ export type ShallowRef<T = any> = Ref<T> & { [ShallowRefMarker]?: true }
  * @param value - The "inner value" for the shallow ref.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowref}
  */
-export function shallowRef<T>(value: MaybeRef<T>): Ref<T> | ShallowRef<T>
-export function shallowRef<T extends Ref>(value: T): T
-export function shallowRef<T>(value: T): ShallowRef<T>
+export function shallowRef<T>(
+  value: T,
+): Ref extends T
+  ? T extends Ref
+    ? IfAny<T, ShallowRef<T>, T>
+    : ShallowRef<T>
+  : ShallowRef<T>
 export function shallowRef<T = any>(): ShallowRef<T | undefined>
 export function shallowRef(value?: unknown) {
   return createRef(value, true)
@@ -143,34 +96,57 @@ function createRef(rawValue: unknown, shallow: boolean) {
   return new RefImpl(rawValue, shallow)
 }
 
-class RefImpl<T> {
-  private _value: T
+/**
+ * @internal
+ */
+class RefImpl<T = any> {
+  _value: T
   private _rawValue: T
 
-  public dep?: Dep = undefined
+  dep: Dep = new Dep()
+
   public readonly __v_isRef = true
 
   constructor(
     value: T,
-    public readonly __v_isShallow: boolean
+    public readonly __v_isShallow: boolean,
   ) {
     this._rawValue = __v_isShallow ? value : toRaw(value)
     this._value = __v_isShallow ? value : toReactive(value)
   }
 
   get value() {
-    trackRefValue(this)
+    if (__DEV__) {
+      this.dep.track({
+        target: this,
+        type: TrackOpTypes.GET,
+        key: 'value',
+      })
+    } else {
+      this.dep.track()
+    }
     return this._value
   }
 
-  set value(newVal) {
+  set value(newValue) {
+    const oldValue = this._rawValue
     const useDirectValue =
-      this.__v_isShallow || isShallow(newVal) || isReadonly(newVal)
-    newVal = useDirectValue ? newVal : toRaw(newVal)
-    if (hasChanged(newVal, this._rawValue)) {
-      this._rawValue = newVal
-      this._value = useDirectValue ? newVal : toReactive(newVal)
-      triggerRefValue(this, DirtyLevels.Dirty, newVal)
+      this.__v_isShallow || isShallow(newValue) || isReadonly(newValue)
+    newValue = useDirectValue ? newValue : toRaw(newValue)
+    if (hasChanged(newValue, oldValue)) {
+      this._rawValue = newValue
+      this._value = useDirectValue ? newValue : toReactive(newValue)
+      if (__DEV__) {
+        this.dep.trigger({
+          target: this,
+          type: TriggerOpTypes.SET,
+          key: 'value',
+          newValue,
+          oldValue,
+        })
+      } else {
+        this.dep.trigger()
+      }
     }
   }
 }
@@ -201,7 +177,16 @@ class RefImpl<T> {
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#triggerref}
  */
 export function triggerRef(ref: Ref) {
-  triggerRefValue(ref, DirtyLevels.Dirty, __DEV__ ? ref.value : void 0)
+  if (__DEV__) {
+    ;(ref as unknown as RefImpl).dep.trigger({
+      target: ref,
+      type: TriggerOpTypes.SET,
+      key: 'value',
+      newValue: (ref as unknown as RefImpl)._value,
+    })
+  } else {
+    ;(ref as unknown as RefImpl).dep.trigger()
+  }
 }
 
 export type MaybeRef<T = any> = T | Ref<T>
@@ -257,7 +242,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
     } else {
       return Reflect.set(target, key, value, receiver)
     }
-  }
+  },
 }
 
 /**
@@ -271,7 +256,7 @@ const shallowUnwrapHandlers: ProxyHandler<any> = {
  * that contains refs.
  */
 export function proxyRefs<T extends object>(
-  objectWithRefs: T
+  objectWithRefs: T,
 ): ShallowUnwrapRef<T> {
   return isReactive(objectWithRefs)
     ? objectWithRefs
@@ -280,14 +265,14 @@ export function proxyRefs<T extends object>(
 
 export type CustomRefFactory<T> = (
   track: () => void,
-  trigger: () => void
+  trigger: () => void,
 ) => {
   get: () => T
   set: (value: T) => void
 }
 
 class CustomRefImpl<T> {
-  public dep?: Dep = undefined
+  public dep: Dep
 
   private readonly _get: ReturnType<CustomRefFactory<T>>['get']
   private readonly _set: ReturnType<CustomRefFactory<T>>['set']
@@ -295,10 +280,8 @@ class CustomRefImpl<T> {
   public readonly __v_isRef = true
 
   constructor(factory: CustomRefFactory<T>) {
-    const { get, set } = factory(
-      () => trackRefValue(this),
-      () => triggerRefValue(this)
-    )
+    const dep = (this.dep = new Dep())
+    const { get, set } = factory(dep.track.bind(dep), dep.trigger.bind(dep))
     this._get = get
     this._set = set
   }
@@ -337,7 +320,7 @@ export type ToRefs<T = any> = {
  */
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
-    console.warn(`toRefs() expects a reactive object but received a plain one.`)
+    warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
@@ -352,7 +335,7 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
   constructor(
     private readonly _object: T,
     private readonly _key: K,
-    private readonly _defaultValue?: T[K]
+    private readonly _defaultValue?: T[K],
   ) {}
 
   get value() {
@@ -424,7 +407,7 @@ export type ToRef<T> = IfAny<T, Ref<T>, [T] extends [Ref] ? T : Ref<T>>
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#toref}
  */
 export function toRef<T>(
-  value: T
+  value: T,
 ): T extends () => infer R
   ? Readonly<Ref<R>>
   : T extends Ref
@@ -432,17 +415,17 @@ export function toRef<T>(
     : Ref<UnwrapRef<T>>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
-  key: K
+  key: K,
 ): ToRef<T[K]>
 export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K,
-  defaultValue: T[K]
+  defaultValue: T[K],
 ): ToRef<Exclude<T[K], undefined>>
 export function toRef(
   source: Record<string, any> | MaybeRef,
   key?: string,
-  defaultValue?: unknown
+  defaultValue?: unknown,
 ): Ref {
   if (isRef(source)) {
     return source
@@ -458,7 +441,7 @@ export function toRef(
 function propertyToRef(
   source: Record<string, any>,
   key: string,
-  defaultValue?: unknown
+  defaultValue?: unknown,
 ) {
   const val = source[key]
   return isRef(val)
@@ -487,20 +470,17 @@ type BaseTypes = string | number | boolean
 export interface RefUnwrapBailTypes {}
 
 export type ShallowUnwrapRef<T> = {
-  [K in keyof T]: T[K] extends Ref<infer V>
-    ? V // if `V` is `unknown` that means it does not extend `Ref` and is undefined
-    : T[K] extends Ref<infer V> | undefined
-      ? unknown extends V
-        ? undefined
-        : V | undefined
-      : T[K]
+  [K in keyof T]: DistrubuteRef<T[K]>
 }
 
-export type UnwrapRef<T> = T extends ShallowRef<infer V>
-  ? V
-  : T extends Ref<infer V>
-    ? UnwrapRefSimple<V>
-    : UnwrapRefSimple<T>
+type DistrubuteRef<T> = T extends Ref<infer V> ? V : T
+
+export type UnwrapRef<T> =
+  T extends ShallowRef<infer V>
+    ? V
+    : T extends Ref<infer V>
+      ? UnwrapRefSimple<V>
+      : UnwrapRefSimple<T>
 
 export type UnwrapRefSimple<T> = T extends
   | Function
@@ -510,13 +490,14 @@ export type UnwrapRefSimple<T> = T extends
   | { [RawSymbol]?: true }
   ? T
   : T extends Map<infer K, infer V>
-    ? Map<K, UnwrapRefSimple<V>>
+    ? Map<K, UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Map<any, any>>>
     : T extends WeakMap<infer K, infer V>
-      ? WeakMap<K, UnwrapRefSimple<V>>
+      ? WeakMap<K, UnwrapRefSimple<V>> &
+          UnwrapRef<Omit<T, keyof WeakMap<any, any>>>
       : T extends Set<infer V>
-        ? Set<UnwrapRefSimple<V>>
+        ? Set<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof Set<any>>>
         : T extends WeakSet<infer V>
-          ? WeakSet<UnwrapRefSimple<V>>
+          ? WeakSet<UnwrapRefSimple<V>> & UnwrapRef<Omit<T, keyof WeakSet<any>>>
           : T extends ReadonlyArray<any>
             ? { [K in keyof T]: UnwrapRefSimple<T[K]> }
             : T extends object & { [ShallowReactiveMarker]?: never }

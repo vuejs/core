@@ -1,5 +1,5 @@
 import { BindingTypes } from '@vue/compiler-core'
-import { compileSFCScript as compile, assertCode, mockId } from './utils'
+import { assertCode, compileSFCScript as compile, mockId } from './utils'
 
 describe('SFC compile <script setup>', () => {
   test('should compile JS syntax', () => {
@@ -34,7 +34,7 @@ describe('SFC compile <script setup>', () => {
     expect(content).toMatch(
       `return { get aa() { return aa }, set aa(v) { aa = v }, ` +
         `bb, cc, dd, get a() { return a }, set a(v) { a = v }, b, c, d, ` +
-        `get xx() { return xx }, get x() { return x } }`
+        `get xx() { return xx }, get x() { return x } }`,
     )
     expect(bindings).toStrictEqual({
       x: BindingTypes.SETUP_MAYBE_REF,
@@ -46,7 +46,7 @@ describe('SFC compile <script setup>', () => {
       aa: BindingTypes.SETUP_LET,
       bb: BindingTypes.LITERAL_CONST,
       cc: BindingTypes.SETUP_CONST,
-      dd: BindingTypes.SETUP_CONST
+      dd: BindingTypes.SETUP_CONST,
     })
     assertCode(content)
   })
@@ -63,7 +63,7 @@ describe('SFC compile <script setup>', () => {
       bar: BindingTypes.SETUP_MAYBE_REF,
       baz: BindingTypes.SETUP_MAYBE_REF,
       y: BindingTypes.SETUP_MAYBE_REF,
-      z: BindingTypes.SETUP_MAYBE_REF
+      z: BindingTypes.SETUP_MAYBE_REF,
     })
     assertCode(content)
   })
@@ -209,7 +209,7 @@ describe('SFC compile <script setup>', () => {
         compile(`<script setup>
           import { ref } from 'vue'
           import 'foo/css'
-        </script>`).content
+        </script>`).content,
       )
     })
 
@@ -220,7 +220,7 @@ describe('SFC compile <script setup>', () => {
         import a from 'a' // comment
         import b from 'b'
         </script>
-        `).content
+        `).content,
       )
     })
 
@@ -232,7 +232,7 @@ describe('SFC compile <script setup>', () => {
       defineProps(['foo'])
       defineEmits(['bar'])
       const r = ref(0)
-      </script>`).content
+      </script>`).content,
       )
     })
 
@@ -249,11 +249,11 @@ describe('SFC compile <script setup>', () => {
         color: v-bind(msg)
       }
       </style>
-      `
+      `,
       )
       assertCode(content)
       expect(content).toMatch(
-        `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`
+        `import { useCssVars as _useCssVars, unref as _unref } from 'vue'`,
       )
       expect(content).toMatch(`import { useCssVars, ref } from 'vue'`)
     })
@@ -270,7 +270,7 @@ describe('SFC compile <script setup>', () => {
         `)
       assertCode(content)
       expect(content.indexOf(`import { x }`)).toEqual(
-        content.lastIndexOf(`import { x }`)
+        content.lastIndexOf(`import { x }`),
       )
     })
 
@@ -288,7 +288,7 @@ describe('SFC compile <script setup>', () => {
           ref: BindingTypes.SETUP_MAYBE_REF,
           reactive: BindingTypes.SETUP_MAYBE_REF,
           foo: BindingTypes.SETUP_MAYBE_REF,
-          bar: BindingTypes.SETUP_MAYBE_REF
+          bar: BindingTypes.SETUP_MAYBE_REF,
         })
       })
 
@@ -305,7 +305,7 @@ describe('SFC compile <script setup>', () => {
           _reactive: BindingTypes.SETUP_MAYBE_REF,
           _ref: BindingTypes.SETUP_MAYBE_REF,
           foo: BindingTypes.SETUP_MAYBE_REF,
-          bar: BindingTypes.SETUP_MAYBE_REF
+          bar: BindingTypes.SETUP_MAYBE_REF,
         })
       })
 
@@ -318,7 +318,7 @@ describe('SFC compile <script setup>', () => {
       `)
         expect(bindings).toStrictEqual({
           bar: BindingTypes.SETUP_REACTIVE_CONST,
-          x: BindingTypes.SETUP_CONST
+          x: BindingTypes.SETUP_CONST,
         })
       })
     })
@@ -334,229 +334,8 @@ describe('SFC compile <script setup>', () => {
     `)
       assertCode(content)
       expect(bindings).toStrictEqual({
-        foo: BindingTypes.SETUP_MAYBE_REF
+        foo: BindingTypes.SETUP_MAYBE_REF,
       })
-    })
-  })
-
-  // in dev mode, declared bindings are returned as an object from setup()
-  // when using TS, users may import types which should not be returned as
-  // values, so we need to check import usage in the template to determine
-  // what to be returned.
-  describe('dev mode import usage check', () => {
-    test('components', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { FooBar, FooBaz, FooQux, foo } from './x'
-        const fooBar: FooBar = 1
-        </script>
-        <template>
-          <FooBaz></FooBaz>
-          <foo-qux/>
-          <foo/>
-          FooBar
-        </template>
-        `)
-      // FooBar: should not be matched by plain text or incorrect case
-      // FooBaz: used as PascalCase component
-      // FooQux: used as kebab-case component
-      // foo: lowercase component
-      expect(content).toMatch(
-        `return { fooBar, get FooBaz() { return FooBaz }, ` +
-          `get FooQux() { return FooQux }, get foo() { return foo } }`
-      )
-      assertCode(content)
-    })
-
-    test('directive', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { vMyDir } from './x'
-        </script>
-        <template>
-          <div v-my-dir></div>
-        </template>
-        `)
-      expect(content).toMatch(`return { get vMyDir() { return vMyDir } }`)
-      assertCode(content)
-    })
-
-    test('dynamic arguments', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { FooBar, foo, bar, unused, baz } from './x'
-        </script>
-        <template>
-          <FooBar #[foo.slotName] />
-          <FooBar #unused />
-          <div :[bar.attrName]="15"></div>
-          <div unused="unused"></div>
-          <div #[\`item:\${baz.key}\`]="{ value }"></div>
-        </template>
-        `)
-      expect(content).toMatch(
-        `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
-          `get bar() { return bar }, get baz() { return baz } }`
-      )
-      assertCode(content)
-    })
-
-    // https://github.com/vuejs/core/issues/4599
-    test('attribute expressions', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { bar, baz } from './x'
-        const cond = true
-        </script>
-        <template>
-          <div :class="[cond ? '' : bar(), 'default']" :style="baz"></div>
-        </template>
-        `)
-      expect(content).toMatch(
-        `return { cond, get bar() { return bar }, get baz() { return baz } }`
-      )
-      assertCode(content)
-    })
-
-    test('vue interpolations', () => {
-      const { content } = compile(`
-      <script setup lang="ts">
-      import { x, y, z, x$y } from './x'
-      </script>
-      <template>
-        <div :id="z + 'y'">{{ x }} {{ yy }} {{ x$y }}</div>
-      </template>
-      `)
-      // x: used in interpolation
-      // y: should not be matched by {{ yy }} or 'y' in binding exps
-      // x$y: #4274 should escape special chars when creating Regex
-      expect(content).toMatch(
-        `return { get x() { return x }, get z() { return z }, get x$y() { return x$y } }`
-      )
-      assertCode(content)
-    })
-
-    // #4340 interpolations in template strings
-    test('js template string interpolations', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { VAR, VAR2, VAR3 } from './x'
-        </script>
-        <template>
-          {{ \`\${VAR}VAR2\${VAR3}\` }}
-        </template>
-        `)
-      // VAR2 should not be matched
-      expect(content).toMatch(
-        `return { get VAR() { return VAR }, get VAR3() { return VAR3 } }`
-      )
-      assertCode(content)
-    })
-
-    // edge case: last tag in template
-    test('last tag', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { FooBaz, Last } from './x'
-        </script>
-        <template>
-          <FooBaz></FooBaz>
-          <Last/>
-        </template>
-        `)
-      expect(content).toMatch(
-        `return { get FooBaz() { return FooBaz }, get Last() { return Last } }`
-      )
-      assertCode(content)
-    })
-
-    test('TS annotations', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-        import { Foo, Bar, Baz, Qux, Fred } from './x'
-        const a = 1
-        function b() {}
-        </script>
-        <template>
-          {{ a as Foo }}
-          {{ b<Bar>() }}
-          {{ Baz }}
-          <Comp v-slot="{ data }: Qux">{{ data }}</Comp>
-          <div v-for="{ z = x as Qux } in list as Fred"/>
-        </template>
-        `)
-      expect(content).toMatch(`return { a, b, get Baz() { return Baz } }`)
-      assertCode(content)
-    })
-
-    // vuejs/vue#12591
-    test('v-on inline statement', () => {
-      // should not error
-      compile(`
-      <script setup lang="ts">
-        import { foo } from './foo'
-      </script>
-      <template>
-        <div @click="$emit('update:a');"></div>
-      </template>
-      `)
-    })
-
-    test('template ref', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-          import { foo, bar, Baz } from './foo'
-        </script>
-        <template>
-          <div ref="foo"></div>
-          <div ref=""></div>
-          <Baz ref="bar" />
-        </template>
-        `)
-      expect(content).toMatch(
-        'return { get foo() { return foo }, get bar() { return bar }, get Baz() { return Baz } }'
-      )
-      assertCode(content)
-    })
-
-    // https://github.com/nuxt/nuxt/issues/22416
-    test('property access', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-          import { Foo, Bar, Baz } from './foo'
-        </script>
-        <template>
-          <div>{{ Foo.Bar.Baz }}</div>
-        </template>
-        `)
-      expect(content).toMatch('return { get Foo() { return Foo } }')
-      assertCode(content)
-    })
-
-    test('spread operator', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-          import { Foo, Bar, Baz } from './foo'
-        </script>
-        <template>
-          <div v-bind="{ ...Foo.Bar.Baz }"></div>
-        </template>
-        `)
-      expect(content).toMatch('return { get Foo() { return Foo } }')
-      assertCode(content)
-    })
-
-    test('property access (whitespace)', () => {
-      const { content } = compile(`
-        <script setup lang="ts">
-          import { Foo, Bar, Baz } from './foo'
-        </script>
-        <template>
-          <div>{{ Foo . Bar . Baz }}</div>
-        </template>
-        `)
-      expect(content).toMatch('return { get Foo() { return Foo } }')
-      assertCode(content)
     })
   })
 
@@ -573,7 +352,7 @@ describe('SFC compile <script setup>', () => {
           <div>static</div>
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // check snapshot and make sure helper imports and
       // hoists are placed correctly.
@@ -591,7 +370,7 @@ describe('SFC compile <script setup>', () => {
         defineExpose({ count })
         </script>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       assertCode(content)
       expect(content).toMatch(`setup(__props, { expose: __expose })`)
@@ -612,7 +391,7 @@ describe('SFC compile <script setup>', () => {
           <some-other-comp/>
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       expect(content).toMatch('[_unref(vMyDir)]')
       expect(content).toMatch('_createVNode(ChildComp)')
@@ -641,7 +420,7 @@ describe('SFC compile <script setup>', () => {
           {{ tree.foo() }}
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // no need to unref vue component import
       expect(content).toMatch(`createVNode(Foo,`)
@@ -680,7 +459,7 @@ describe('SFC compile <script setup>', () => {
           <input v-model="lett">
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // known const ref: set value
       expect(content).toMatch(`(count).value = $event`)
@@ -688,7 +467,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`_isRef(maybe) ? (maybe).value = $event : null`)
       // let: handle both cases
       expect(content).toMatch(
-        `_isRef(lett) ? (lett).value = $event : lett = $event`
+        `_isRef(lett) ? (lett).value = $event : lett = $event`,
       )
       assertCode(content)
     })
@@ -708,7 +487,7 @@ describe('SFC compile <script setup>', () => {
           <input v-model="foo">
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       expect(content).not.toMatch(`_isRef(foo)`)
     })
@@ -746,7 +525,7 @@ describe('SFC compile <script setup>', () => {
            }"/>
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // known const ref: set value
       expect(content).toMatch(`count.value = 1`)
@@ -754,7 +533,7 @@ describe('SFC compile <script setup>', () => {
       expect(content).toMatch(`maybe.value = count.value`)
       // let: handle both cases
       expect(content).toMatch(
-        `_isRef(lett) ? lett.value = count.value : lett = count.value`
+        `_isRef(lett) ? lett.value = count.value : lett = count.value`,
       )
       expect(content).toMatch(`_isRef(v) ? v.value += 1 : v += 1`)
       expect(content).toMatch(`_isRef(v) ? v.value -= 1 : v -= 1`)
@@ -780,7 +559,7 @@ describe('SFC compile <script setup>', () => {
           <div @click="--lett"/>
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // known const ref: set value
       expect(content).toMatch(`count.value++`)
@@ -809,7 +588,7 @@ describe('SFC compile <script setup>', () => {
           <div @click="({ lett } = val)"/>
         </template>
         `,
-        { inlineTemplate: true }
+        { inlineTemplate: true },
       )
       // known const ref: set value
       expect(content).toMatch(`({ count: count.value } = val)`)
@@ -840,9 +619,9 @@ describe('SFC compile <script setup>', () => {
         {
           inlineTemplate: true,
           templateOptions: {
-            ssr: true
-          }
-        }
+            ssr: true,
+          },
+        },
       )
       expect(content).toMatch(`\n  __ssrInlineRender: true,\n`)
       expect(content).toMatch(`return (_ctx, _push`)
@@ -866,10 +645,28 @@ describe('SFC compile <script setup>', () => {
         </template>
         `,
           {
-            inlineTemplate: false
-          }
-        )
+            inlineTemplate: false,
+          },
+        ),
       ).not.toThrowError()
+    })
+
+    test('unref + new expression', () => {
+      const { content } = compile(
+        `
+        <script setup>
+        import Foo from './foo'
+        </script>
+        <template>
+          <div>{{ new Foo() }}</div>
+          <div>{{ new Foo.Bar() }}</div>
+        </template>
+        `,
+        { inlineTemplate: true },
+      )
+      expect(content).toMatch(`new (_unref(Foo))()`)
+      expect(content).toMatch(`new (_unref(Foo)).Bar()`)
+      assertCode(content)
     })
   })
 
@@ -887,11 +684,11 @@ describe('SFC compile <script setup>', () => {
       const { content, bindings } = compile(
         `<script setup lang="ts">
         enum Foo { A = 123 }
-        </script>`
+        </script>`,
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
-        Foo: BindingTypes.LITERAL_CONST
+        Foo: BindingTypes.LITERAL_CONST,
       })
     })
 
@@ -904,14 +701,14 @@ describe('SFC compile <script setup>', () => {
         </script>
         <script setup lang="ts">
         enum Foo { A = 123 }
-        </script>`
+        </script>`,
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
         D: BindingTypes.LITERAL_CONST,
         C: BindingTypes.LITERAL_CONST,
         B: BindingTypes.LITERAL_CONST,
-        Foo: BindingTypes.LITERAL_CONST
+        Foo: BindingTypes.LITERAL_CONST,
       })
     })
 
@@ -920,11 +717,11 @@ describe('SFC compile <script setup>', () => {
         `<script setup lang="ts">
         const enum Foo { A = 123 }
         </script>`,
-        { hoistStatic: true }
+        { hoistStatic: true },
       )
       assertCode(content)
       expect(bindings).toStrictEqual({
-        Foo: BindingTypes.LITERAL_CONST
+        Foo: BindingTypes.LITERAL_CONST,
       })
     })
 
@@ -933,9 +730,17 @@ describe('SFC compile <script setup>', () => {
         `<script setup lang="ts">
         import type { Foo } from './main.ts'
         import { type Bar, Baz } from './main.ts'
-        </script>`
+        </script>`,
       )
       expect(content).toMatch(`return { get Baz() { return Baz } }`)
+      assertCode(content)
+    })
+
+    test('with generic attribute', () => {
+      const { content } = compile(`
+      <script setup lang="ts" generic="T extends Record<string,string>">
+        type Bar = {}
+      </script>`)
       assertCode(content)
     })
   })
@@ -1049,7 +854,7 @@ describe('SFC compile <script setup>', () => {
       // class method
       assertAwaitDetection(
         `const cls = class Foo { async method() { await bar }}`,
-        false
+        false,
       )
     })
   })
@@ -1057,7 +862,7 @@ describe('SFC compile <script setup>', () => {
   describe('errors', () => {
     test('<script> and <script setup> must have same lang', () => {
       expect(() =>
-        compile(`<script>foo()</script><script setup lang="ts">bar()</script>`)
+        compile(`<script>foo()</script><script setup lang="ts">bar()</script>`),
       ).toThrow(`<script> and <script setup> must have the same language type`)
     })
 
@@ -1067,20 +872,20 @@ describe('SFC compile <script setup>', () => {
       expect(() =>
         compile(`<script setup>
         export const a = 1
-        </script>`)
+        </script>`),
       ).toThrow(moduleErrorMsg)
 
       expect(() =>
         compile(`<script setup>
         export * from './foo'
-        </script>`)
+        </script>`),
       ).toThrow(moduleErrorMsg)
 
       expect(() =>
         compile(`<script setup>
           const bar = 1
           export { bar as default }
-        </script>`)
+        </script>`),
       ).toThrow(moduleErrorMsg)
     })
 
@@ -1093,14 +898,14 @@ describe('SFC compile <script setup>', () => {
             default: () => bar
           }
         })
-        </script>`)
+        </script>`),
       ).toThrow(`cannot reference locally declared variables`)
 
       expect(() =>
         compile(`<script setup>
         let bar = 'hello'
         defineEmits([bar])
-        </script>`)
+        </script>`),
       ).toThrow(`cannot reference locally declared variables`)
 
       // #4644
@@ -1113,7 +918,7 @@ describe('SFC compile <script setup>', () => {
             default: () => bar
           }
         })
-        </script>`)
+        </script>`),
       ).not.toThrow(`cannot reference locally declared variables`)
     })
 
@@ -1129,7 +934,7 @@ describe('SFC compile <script setup>', () => {
           defineEmits({
             foo: bar => bar > 1
           })
-        </script>`).content
+        </script>`).content,
       )
     })
 
@@ -1145,8 +950,40 @@ describe('SFC compile <script setup>', () => {
         defineEmits({
           foo: () => bar > 1
         })
-        </script>`).content
+        </script>`).content,
       )
+    })
+
+    test('defineModel() referencing local var', () => {
+      expect(() =>
+        compile(`<script setup>
+        let bar = 1
+        defineModel({
+          default: () => bar
+        })
+        </script>`),
+      ).toThrow(`cannot reference locally declared variables`)
+
+      // allow const
+      expect(() =>
+        compile(`<script setup>
+        const bar = 1
+        defineModel({
+          default: () => bar
+        })
+        </script>`),
+      ).not.toThrow(`cannot reference locally declared variables`)
+
+      // allow in get/set
+      expect(() =>
+        compile(`<script setup>
+        let bar = 1
+        defineModel({
+          get: () => bar,
+          set: () => bar
+        })
+        </script>`),
+      ).not.toThrow(`cannot reference locally declared variables`)
     })
   })
 })
@@ -1179,7 +1016,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.PROPS,
-      bar: BindingTypes.PROPS
+      bar: BindingTypes.PROPS,
     })
     expect(bindings!.__isScriptSetup).toBe(false)
   })
@@ -1203,7 +1040,7 @@ describe('SFC analyze <script> bindings', () => {
       foo: BindingTypes.PROPS,
       bar: BindingTypes.PROPS,
       baz: BindingTypes.PROPS,
-      qux: BindingTypes.PROPS
+      qux: BindingTypes.PROPS,
     })
     expect(bindings!.__isScriptSetup).toBe(false)
   })
@@ -1224,7 +1061,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.SETUP_MAYBE_REF,
-      bar: BindingTypes.SETUP_MAYBE_REF
+      bar: BindingTypes.SETUP_MAYBE_REF,
     })
     expect(bindings!.__isScriptSetup).toBe(false)
   })
@@ -1239,7 +1076,7 @@ describe('SFC analyze <script> bindings', () => {
       </script>
     `)
     expect(bindings).toStrictEqual({
-      foo: BindingTypes.LITERAL_CONST
+      foo: BindingTypes.LITERAL_CONST,
     })
   })
 
@@ -1259,7 +1096,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.SETUP_MAYBE_REF,
-      bar: BindingTypes.SETUP_MAYBE_REF
+      bar: BindingTypes.SETUP_MAYBE_REF,
     })
     expect(bindings!.__isScriptSetup).toBe(false)
   })
@@ -1280,7 +1117,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.DATA,
-      bar: BindingTypes.DATA
+      bar: BindingTypes.DATA,
     })
   })
 
@@ -1313,7 +1150,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.OPTIONS,
-      bar: BindingTypes.OPTIONS
+      bar: BindingTypes.OPTIONS,
     })
   })
 
@@ -1327,7 +1164,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.OPTIONS,
-      bar: BindingTypes.OPTIONS
+      bar: BindingTypes.OPTIONS,
     })
   })
 
@@ -1344,7 +1181,7 @@ describe('SFC analyze <script> bindings', () => {
     `)
     expect(bindings).toStrictEqual({
       foo: BindingTypes.OPTIONS,
-      bar: BindingTypes.OPTIONS
+      bar: BindingTypes.OPTIONS,
     })
   })
 
@@ -1381,7 +1218,7 @@ describe('SFC analyze <script> bindings', () => {
       baz: BindingTypes.SETUP_MAYBE_REF,
       qux: BindingTypes.DATA,
       quux: BindingTypes.OPTIONS,
-      quuz: BindingTypes.OPTIONS
+      quuz: BindingTypes.OPTIONS,
     })
   })
 
@@ -1408,7 +1245,7 @@ describe('SFC analyze <script> bindings', () => {
       c: BindingTypes.LITERAL_CONST,
       d: BindingTypes.SETUP_MAYBE_REF,
       e: BindingTypes.SETUP_LET,
-      foo: BindingTypes.PROPS
+      foo: BindingTypes.PROPS,
     })
   })
 
@@ -1419,8 +1256,8 @@ describe('SFC analyze <script> bindings', () => {
         <template>{{ a }}</template>`,
         undefined,
         {
-          filename: 'FooBar.vue'
-        }
+          filename: 'FooBar.vue',
+        },
       )
       expect(content).toMatch(`export default {
   __name: 'FooBar'`)
@@ -1438,8 +1275,8 @@ describe('SFC analyze <script> bindings', () => {
         <template>{{ a }}</template>`,
         undefined,
         {
-          filename: 'FooBar.vue'
-        }
+          filename: 'FooBar.vue',
+        },
       )
       expect(content).not.toMatch(`name: 'FooBar'`)
       expect(content).toMatch(`name: 'Baz'`)
@@ -1458,8 +1295,8 @@ describe('SFC analyze <script> bindings', () => {
         <template>{{ a }}</template>`,
         undefined,
         {
-          filename: 'FooBar.vue'
-        }
+          filename: 'FooBar.vue',
+        },
       )
       expect(content).not.toMatch(`name: 'FooBar'`)
       expect(content).toMatch(`name: 'Baz'`)
@@ -1475,8 +1312,8 @@ describe('SFC genDefaultAs', () => {
       export default {}
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(`const _sfc_ = {}`)
@@ -1492,8 +1329,8 @@ describe('SFC genDefaultAs', () => {
       .foo { color: v-bind(x) }
       </style>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).not.toMatch('__default__')
@@ -1510,12 +1347,12 @@ describe('SFC genDefaultAs', () => {
       const a = 1
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`
+      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1529,12 +1366,12 @@ describe('SFC genDefaultAs', () => {
       const a = 1
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`
+      `const _sfc_ = /*#__PURE__*/Object.assign(__default__`,
     )
     assertCode(content)
   })
@@ -1545,8 +1382,8 @@ describe('SFC genDefaultAs', () => {
       const a = 1
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(`const _sfc_ = {\n  setup`)
@@ -1559,8 +1396,8 @@ describe('SFC genDefaultAs', () => {
       const a = 1
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(`const _sfc_ = /*#__PURE__*/_defineComponent(`)
@@ -1576,12 +1413,12 @@ describe('SFC genDefaultAs', () => {
       const a = 1
       </script>`,
       {
-        genDefaultAs: '_sfc_'
-      }
+        genDefaultAs: '_sfc_',
+      },
     )
     expect(content).not.toMatch('export default')
     expect(content).toMatch(
-      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`
+      `const _sfc_ = /*#__PURE__*/_defineComponent({\n  ...__default__`,
     )
     assertCode(content)
   })
@@ -1592,12 +1429,12 @@ describe('SFC genDefaultAs', () => {
       import { toRef } from 'vue'
       const props = defineProps<{foo: string}>()
       const foo = toRef(() => props.foo)
-      </script>`
+      </script>`,
     )
     expect(bindings).toStrictEqual({
       toRef: BindingTypes.SETUP_CONST,
       props: BindingTypes.SETUP_REACTIVE_CONST,
-      foo: BindingTypes.SETUP_REF
+      foo: BindingTypes.SETUP_REF,
     })
   })
 
@@ -1614,7 +1451,7 @@ describe('SFC genDefaultAs', () => {
         compile(`
       <script setup>
         import { foo } from './foo.js' assert { type: 'foobar' }
-        </script>`)
+        </script>`),
       ).toThrow()
     })
 
@@ -1627,9 +1464,9 @@ describe('SFC genDefaultAs', () => {
       `,
         {
           babelParserPlugins: [
-            ['importAttributes', { deprecatedAssertSyntax: true }]
-          ]
-        }
+            ['importAttributes', { deprecatedAssertSyntax: true }],
+          ],
+        },
       )
       assertCode(content)
     })

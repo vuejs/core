@@ -1,12 +1,13 @@
 import {
   isArray,
+  isFunction,
   isMap,
   isObject,
-  isFunction,
   isPlainObject,
   isSet,
+  isString,
+  isSymbol,
   objectToString,
-  isString
 } from './general'
 
 /**
@@ -31,17 +32,26 @@ const replacer = (_key: string, val: any): any => {
     return replacer(_key, val.value)
   } else if (isMap(val)) {
     return {
-      [`Map(${val.size})`]: [...val.entries()].reduce((entries, [key, val]) => {
-        ;(entries as any)[`${key} =>`] = val
-        return entries
-      }, {})
+      [`Map(${val.size})`]: [...val.entries()].reduce(
+        (entries, [key, val], i) => {
+          entries[stringifySymbol(key, i) + ' =>'] = val
+          return entries
+        },
+        {} as Record<string, any>,
+      ),
     }
   } else if (isSet(val)) {
     return {
-      [`Set(${val.size})`]: [...val.values()]
+      [`Set(${val.size})`]: [...val.values()].map(v => stringifySymbol(v)),
     }
+  } else if (isSymbol(val)) {
+    return stringifySymbol(val)
   } else if (isObject(val) && !isArray(val) && !isPlainObject(val)) {
+    // native elements
     return String(val)
   }
   return val
 }
+
+const stringifySymbol = (v: unknown, i: number | string = ''): any =>
+  isSymbol(v) ? `Symbol(${v.description ?? i})` : v

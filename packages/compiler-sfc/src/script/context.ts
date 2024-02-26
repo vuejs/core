@@ -1,17 +1,18 @@
-import { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
-import { SFCDescriptor } from '../parse'
+import type { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
+import type { SFCDescriptor } from '../parse'
 import { generateCodeFrame, isArray } from '@vue/shared'
-import { parse as babelParse, ParserPlugin } from '@babel/parser'
-import { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
-import { PropsDestructureBindings } from './defineProps'
-import { ModelDecl } from './defineModel'
-import { BindingMetadata } from '../../../compiler-core/src'
+import { type ParserPlugin, parse as babelParse } from '@babel/parser'
+import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
+import type { PropsDestructureBindings } from './defineProps'
+import type { ModelDecl } from './defineModel'
+import type { BindingMetadata } from '../../../compiler-core/src'
 import MagicString from 'magic-string'
-import { TypeScope } from './resolveType'
+import type { TypeScope } from './resolveType'
 
 export class ScriptCompileContext {
   isJS: boolean
   isTS: boolean
+  isCE = false
 
   scriptAst: Program | null
   scriptSetupAst: Program | null
@@ -78,7 +79,7 @@ export class ScriptCompileContext {
 
   constructor(
     public descriptor: SFCDescriptor,
-    public options: Partial<SFCScriptCompileOptions>
+    public options: Partial<SFCScriptCompileOptions>,
   ) {
     const { script, scriptSetup } = descriptor
     const scriptLang = script && script.lang
@@ -95,17 +96,25 @@ export class ScriptCompileContext {
       scriptSetupLang === 'ts' ||
       scriptSetupLang === 'tsx'
 
+    const customElement = options.customElement
+    const filename = this.descriptor.filename
+    if (customElement) {
+      this.isCE =
+        typeof customElement === 'boolean'
+          ? customElement
+          : customElement(filename)
+    }
     // resolve parser plugins
     const plugins: ParserPlugin[] = resolveParserPlugins(
       (scriptLang || scriptSetupLang)!,
-      options.babelParserPlugins
+      options.babelParserPlugins,
     )
 
     function parse(input: string, offset: number): Program {
       try {
         return babelParse(input, {
           plugins,
-          sourceType: 'module'
+          sourceType: 'module',
         }).program
       } catch (e: any) {
         e.message = `[vue/compiler-sfc] ${e.message}\n\n${
@@ -113,7 +122,7 @@ export class ScriptCompileContext {
         }\n${generateCodeFrame(
           descriptor.source,
           e.pos + offset,
-          e.pos + offset + 1
+          e.pos + offset + 1,
         )}`
         throw e
       }
@@ -143,8 +152,8 @@ export class ScriptCompileContext {
       }\n${generateCodeFrame(
         (scope || this.descriptor).source,
         node.start! + offset,
-        node.end! + offset
-      )}`
+        node.end! + offset,
+      )}`,
     )
   }
 }
@@ -152,7 +161,7 @@ export class ScriptCompileContext {
 export function resolveParserPlugins(
   lang: string,
   userPlugins?: ParserPlugin[],
-  dts = false
+  dts = false,
 ) {
   const plugins: ParserPlugin[] = []
   if (
@@ -161,7 +170,7 @@ export function resolveParserPlugins(
       p =>
         p === 'importAssertions' ||
         p === 'importAttributes' ||
-        (isArray(p) && p[0] === 'importAttributes')
+        (isArray(p) && p[0] === 'importAttributes'),
     )
   ) {
     plugins.push('importAttributes')

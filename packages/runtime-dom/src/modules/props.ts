@@ -2,7 +2,7 @@
 // Reason: potentially setting innerHTML.
 // This can come from explicit usage of v-html or innerHTML as a prop in render
 
-import { warn, DeprecationTypes, compatUtils } from '@vue/runtime-core'
+import { DeprecationTypes, compatUtils, warn } from '@vue/runtime-core'
 import { includeBooleanAttr } from '@vue/shared'
 
 // functions. The user is responsible for using them with only trusted content.
@@ -16,7 +16,7 @@ export function patchDOMProp(
   prevChildren: any,
   parentComponent: any,
   parentSuspense: any,
-  unmountChildren: any
+  unmountChildren: any,
 ) {
   if (key === 'innerHTML' || key === 'textContent') {
     if (prevChildren) {
@@ -39,7 +39,8 @@ export function patchDOMProp(
     el._value = value
     // #4956: <option> value will fallback to its text content so we need to
     // compare against its attribute value instead.
-    const oldValue = tag === 'OPTION' ? el.getAttribute('value') : el.value
+    const oldValue =
+      tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
     const newValue = value == null ? '' : value
     if (oldValue !== newValue) {
       el.value = newValue
@@ -71,7 +72,7 @@ export function patchDOMProp(
       value === false &&
       compatUtils.isCompatEnabled(
         DeprecationTypes.ATTR_FALSE_VALUE,
-        parentComponent
+        parentComponent,
       )
     ) {
       const type = typeof el[key]
@@ -80,7 +81,7 @@ export function patchDOMProp(
           compatUtils.warnDeprecation(
             DeprecationTypes.ATTR_FALSE_VALUE,
             parentComponent,
-            key
+            key,
           )
         value = type === 'number' ? 0 : ''
         needRemove = true
@@ -99,7 +100,7 @@ export function patchDOMProp(
       warn(
         `Failed setting prop "${key}" on <${tag.toLowerCase()}>: ` +
           `value ${value} is invalid.`,
-        e
+        e,
       )
     }
   }

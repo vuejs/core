@@ -1,20 +1,24 @@
 import { TrackOpTypes } from './constants'
-import {
-  pauseTracking,
-  resetTracking,
-  pauseScheduling,
-  resetScheduling
-} from './effect'
+import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
-import { track, ARRAY_ITERATE_KEY } from './reactiveEffect'
+import { ARRAY_ITERATE_KEY, track } from './dep'
 
-export function readArray<T>(array: T[], deep = false) {
+export function reactiveReadArray<T>(array: T[], forceClone = false) {
   const arr = toRaw(array)
   if (arr === array) {
     return arr
   }
   track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
-  return !deep || isShallow(array) ? arr : arr.map(toReactive)
+  return isShallow(array)
+    ? forceClone
+      ? arr.slice()
+      : arr
+    : arr.map(toReactive)
+}
+
+function shallowReadArray<T>(arr: T[]): T[] {
+  track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
+  return toRaw(arr)
 }
 
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
@@ -25,8 +29,9 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   concat(...args: unknown[][]) {
-    const arr = readArray(this, true)
-    return arr.concat(...args.map(x => readArray(x, true)))
+    return reactiveReadArray(this).concat(
+      ...args.map(x => reactiveReadArray(x)),
+    )
   },
 
   entries() {
@@ -38,14 +43,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   every(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'every', fn, thisArg)
   },
 
   filter(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     const result = callback(this, 'filter', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? result.map(toReactive) : result
@@ -53,7 +58,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   find(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     const result = callback(this, 'find', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? toReactive(result) : result
@@ -61,14 +66,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   findIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'findIndex', fn, thisArg)
   },
 
   findLast(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     const result = callback(this, 'findLast', fn, thisArg)
     return isProxy(this) && !isShallow(this) ? toReactive(result) : result
@@ -76,7 +81,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   findLastIndex(
     fn: (item: unknown, index: number, array: unknown[]) => boolean,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'findLastIndex', fn, thisArg)
   },
@@ -85,7 +90,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   forEach(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'forEach', fn, thisArg)
   },
@@ -99,7 +104,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   join(separator?: string) {
-    return readArray(this, true).join(separator)
+    return reactiveReadArray(this).join(separator)
   },
 
   // keys() iterator only reads `length`, no optimisation required
@@ -110,7 +115,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   map(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'map', fn, thisArg)
   },
@@ -128,7 +133,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
       acc: unknown,
       item: unknown,
       index: number,
-      array: unknown[]
+      array: unknown[],
     ) => unknown,
     ...args: unknown[]
   ) {
@@ -140,7 +145,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
       acc: unknown,
       item: unknown,
       index: number,
-      array: unknown[]
+      array: unknown[],
     ) => unknown,
     ...args: unknown[]
   ) {
@@ -155,7 +160,7 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   some(
     fn: (item: unknown, index: number, array: unknown[]) => unknown,
-    thisArg?: unknown
+    thisArg?: unknown,
   ) {
     return callback(this, 'some', fn, thisArg)
   },
@@ -165,15 +170,17 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   toReversed() {
-    return readArray(this, true).toReversed()
+    return reactiveReadArray(this, true /* forceClone */).reverse()
   },
 
-  toSorted(comparer?: Function) {
-    return readArray(this, true).toSorted(comparer as any)
+  toSorted(comparer?: (a: unknown, b: unknown) => number) {
+    return reactiveReadArray(this, true /* forceClone */).sort(comparer)
   },
 
   toSpliced(...args: unknown[]) {
-    return (readArray(this, true).toSpliced as any)(...args)
+    return (reactiveReadArray(this, true /* forceClone */).splice as any)(
+      ...args,
+    )
   },
 
   unshift(...args: unknown[]) {
@@ -182,14 +189,14 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
 
   values() {
     return iterator(this, 'values', toReactive)
-  }
+  },
 }
 
 // instrument iterators to take ARRAY_ITERATE dependency
 function iterator(
   self: unknown[],
   method: keyof Array<any>,
-  wrapValue: (value: any) => unknown
+  wrapValue: (value: any) => unknown,
 ) {
   // note that taking ARRAY_ITERATE dependency here is not strictly equivalent
   // to calling iterate on the proxified array.
@@ -199,7 +206,7 @@ function iterator(
   // partially iterated in another, then iterated more in yet another.
   // given that JS iterator can only be read once, this doesn't seem like
   // a plausible use-case, so this tracking simplification seems ok.
-  const arr = readArray(self)
+  const arr = shallowReadArray(self)
   const iter = (arr[method] as any)()
   if (arr !== self && !isShallow(self)) {
     ;(iter as any)._next = iter.next
@@ -214,15 +221,19 @@ function iterator(
   return iter
 }
 
+// in the codebase we enforce es2016, but user code may run in environments
+// higher than that
+type ArrayMethods = keyof Array<any> | 'findLast' | 'findLastIndex'
+
 // instrument functions that read (potentially) all items
 // to take ARRAY_ITERATE dependency
 function callback(
   self: unknown[],
-  method: keyof Array<any>,
+  method: ArrayMethods,
   fn: (item: unknown, index: number, array: unknown[]) => unknown,
-  thisArg?: unknown
+  thisArg?: unknown,
 ) {
-  const arr = readArray(self)
+  const arr = shallowReadArray(self)
   let fn2 = fn
   if (arr !== self) {
     if (!isShallow(self)) {
@@ -235,7 +246,8 @@ function callback(
       }
     }
   }
-  return (arr[method] as any)(fn2, thisArg)
+  // @ts-expect-error
+  return arr[method](fn2, thisArg)
 }
 
 // instrument reduce and reduceRight to take ARRAY_ITERATE dependency
@@ -243,9 +255,9 @@ function reduce(
   self: unknown[],
   method: keyof Array<any>,
   fn: (acc: unknown, item: unknown, index: number, array: unknown[]) => unknown,
-  args: unknown[]
+  args: unknown[],
 ) {
-  const arr = readArray(self)
+  const arr = shallowReadArray(self)
   let fn2 = fn
   if (arr !== self) {
     if (!isShallow(self)) {
@@ -265,7 +277,7 @@ function reduce(
 function searchProxy(
   self: unknown[],
   method: keyof Array<any>,
-  args: unknown[]
+  args: unknown[],
 ) {
   const arr = toRaw(self) as any
   track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
@@ -286,12 +298,12 @@ function searchProxy(
 function noTracking(
   self: unknown[],
   method: keyof Array<any>,
-  args: unknown[] = []
+  args: unknown[] = [],
 ) {
   pauseTracking()
-  pauseScheduling()
+  startBatch()
   const res = (toRaw(self) as any)[method].apply(self, args)
-  resetScheduling()
+  endBatch()
   resetTracking()
   return res
 }
