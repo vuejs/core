@@ -12,7 +12,7 @@
     "vue": "workspace:*"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "npm:@vue-vapor/vite-plugin-vue@latest",
+    "@vitejs/plugin-vue": "npm:@vue-vapor/vite-plugin-vue@0.0.0-alpha.4",
     "vite": "^5.0.12",
     "vite-hyper-config": "^0.2.1",
     "vite-plugin-inspect": "^0.7.42"

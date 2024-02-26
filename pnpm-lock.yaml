@@ -465,8 +465,8 @@ importers:
         version: link:../packages/vue
     devDependencies:
       '@vitejs/plugin-vue':
-        specifier: npm:@vue-vapor/vite-plugin-vue@latest
-        version: /@vue-vapor/vite-plugin-vue@0.0.0-alpha.1(vite@5.0.12)(vue@packages+vue)
+        specifier: npm:@vue-vapor/vite-plugin-vue@0.0.0-alpha.4
+        version: /@vue-vapor/vite-plugin-vue@0.0.0-alpha.4(vite@5.0.12)(vue@packages+vue)
       vite:
         specifier: ^5.0.12
         version: 5.0.12(@types/node@20.11.16)(terser@5.27.0)
@@ -1880,8 +1880,8 @@ packages:
       pretty-format: 29.7.0
     dev: true
 
-  /@vue-vapor/vite-plugin-vue@0.0.0-alpha.1(vite@5.0.12)(vue@packages+vue):
-    resolution: {integrity: sha512-wv64VLcd9dkVZTkjkLUDjr7CsP5Q7fNyN6Ar+AXJyVEXP+0vCRkXuH1HEmVUDJrOalutULRIV8PyehEmjxmG4A==}
+  /@vue-vapor/vite-plugin-vue@0.0.0-alpha.4(vite@5.0.12)(vue@packages+vue):
+    resolution: {integrity: sha512-18LGTnk07uKIWZtYjpyH71PZWIMrwBwiVqjG8bCS5Q7ebISdTUP2N3Lx1vfQNSoGeBV8rxfekfu7XGXRTjJ9gQ==}
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0
