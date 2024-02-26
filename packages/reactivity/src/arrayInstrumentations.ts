@@ -3,22 +3,16 @@ import { endBatch, pauseTracking, resetTracking, startBatch } from './effect'
 import { isProxy, isShallow, toRaw, toReactive } from './reactive'
 import { ARRAY_ITERATE_KEY, track } from './dep'
 
-export function reactiveReadArray<T>(array: T[], forceClone = false) {
-  const arr = toRaw(array)
-  if (arr === array) {
-    return arr
-  }
-  track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
-  return isShallow(array)
-    ? forceClone
-      ? arr.slice()
-      : arr
-    : arr.map(toReactive)
+export function reactiveReadArray<T>(array: T[]): T[] {
+  const raw = toRaw(array)
+  if (raw === array) return raw
+  track(raw, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
+  return isShallow(array) ? raw : raw.map(toReactive)
 }
 
 function shallowReadArray<T>(arr: T[]): T[] {
-  track(arr, TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
-  return toRaw(arr)
+  track((arr = toRaw(arr)), TrackOpTypes.ITERATE, ARRAY_ITERATE_KEY)
+  return arr
 }
 
 export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
@@ -170,17 +164,18 @@ export const arrayInstrumentations: Record<string | symbol, Function> = <any>{
   },
 
   toReversed() {
-    return reactiveReadArray(this, true /* forceClone */).reverse()
+    // @ts-expect-error user code may run in es2016+
+    return reactiveReadArray(this).toReversed()
   },
 
   toSorted(comparer?: (a: unknown, b: unknown) => number) {
-    return reactiveReadArray(this, true /* forceClone */).sort(comparer)
+    // @ts-expect-error user code may run in es2016+
+    return reactiveReadArray(this).toSorted(comparer)
   },
 
   toSpliced(...args: unknown[]) {
-    return (reactiveReadArray(this, true /* forceClone */).splice as any)(
-      ...args,
-    )
+    // @ts-expect-error user code may run in es2016+
+    return (reactiveReadArray(this).toSpliced as any)(...args)
   },
 
   unshift(...args: unknown[]) {
