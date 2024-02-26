@@ -48,8 +48,8 @@
     "@vue/compiler-ssr": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "^2.0.2",
-    "magic-string": "^0.30.6",
-    "postcss": "^8.4.33",
+    "magic-string": "^0.30.7",
+    "postcss": "^8.4.35",
     "source-map-js": "^1.0.2"
   },
   "devDependencies": {
