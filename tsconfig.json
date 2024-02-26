@@ -18,7 +18,7 @@
     "esModuleInterop": true,
     "removeComments": false,
     "jsx": "preserve",
-    "lib": ["esnext", "dom"],
+    "lib": ["es2016", "dom"],
     "types": ["vitest/globals", "puppeteer", "node"],
     "rootDir": ".",
     "paths": {
