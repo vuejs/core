@@ -78,7 +78,7 @@
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^4.1.0",
     "enquirer": "^2.4.1",
-    "esbuild": "^0.20.0",
+    "esbuild": "^0.20.1",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^8.56.0",
     "eslint-define-config": "^2.1.0",
@@ -107,12 +107,12 @@
     "semver": "^7.6.0",
     "serve": "^14.2.1",
     "simple-git-hooks": "^2.9.0",
-    "terser": "^5.27.0",
+    "terser": "^5.28.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
     "tsx": "^4.7.1",
     "typescript": "^5.2.2",
-    "vite": "^5.0.12",
+    "vite": "^5.1.4",
     "vitest": "^1.2.2"
   }
 }
