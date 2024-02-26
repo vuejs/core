@@ -17,6 +17,7 @@ import {
   type Prettify,
   type UnionToIntersection,
   extend,
+  getBlankObj,
   getKeys,
   hasOwn,
   isFunction,
@@ -262,7 +263,7 @@ const getPublicInstance = (
 export const publicPropertiesMap: PublicPropertiesMap =
   // Move PURE marker to new line to workaround compiler discarding it
   // due to type annotation
-  /*#__PURE__*/ extend(Object.create(null), {
+  /*#__PURE__*/ extend(getBlankObj(), {
     $: i => i,
     $el: i => i.vnode.el,
     $data: i => i.data,

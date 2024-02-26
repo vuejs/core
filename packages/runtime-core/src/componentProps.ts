@@ -14,6 +14,7 @@ import {
   capitalize,
   def,
   extend,
+  getBlankObj,
   hasOwn,
   hyphenate,
   isArray,
@@ -197,7 +198,7 @@ export function initProps(
   const attrs: Data = {}
   def(attrs, InternalObjectKey, 1)
 
-  instance.propsDefaults = Object.create(null)
+  instance.propsDefaults = getBlankObj()
 
   setFullProps(instance, rawProps, props, attrs)
 

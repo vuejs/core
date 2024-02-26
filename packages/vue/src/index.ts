@@ -17,6 +17,7 @@ import {
   NOOP,
   extend,
   generateCodeFrame,
+  getBlankObj,
   isString,
 } from '@vue/shared'
 import type { InternalRenderFunction } from 'packages/runtime-core/src/component'
@@ -33,7 +34,7 @@ const compileCache = new WeakMap<
 function getCache(options?: CompilerOptions) {
   let c = compileCache.get(options ?? EMPTY_OBJ)
   if (!c) {
-    c = Object.create(null) as Record<string, RenderFunction>
+    c = getBlankObj() as Record<string, RenderFunction>
     compileCache.set(options ?? EMPTY_OBJ, c)
   }
   return c

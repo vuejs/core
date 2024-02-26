@@ -8,6 +8,7 @@ import type {
   ObjectProperty,
   Program,
 } from '@babel/types'
+import { getBlankObj } from '@vue/shared'
 import { walk } from 'estree-walker'
 
 export function walkIdentifiers(
@@ -21,7 +22,7 @@ export function walkIdentifiers(
   ) => void,
   includeAll = false,
   parentStack: Node[] = [],
-  knownIds: Record<string, number> = Object.create(null),
+  knownIds: Record<string, number> = getBlankObj(),
 ) {
   if (__BROWSER__) {
     return

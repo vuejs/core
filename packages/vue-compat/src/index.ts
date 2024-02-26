@@ -11,7 +11,13 @@ import {
   registerRuntimeCompiler,
   warn,
 } from '@vue/runtime-dom'
-import { NOOP, extend, generateCodeFrame, isString } from '@vue/shared'
+import {
+  NOOP,
+  extend,
+  generateCodeFrame,
+  getBlankObj,
+  isString,
+} from '@vue/shared'
 import type { InternalRenderFunction } from 'packages/runtime-core/src/component'
 import * as runtimeDom from '@vue/runtime-dom'
 import {
@@ -19,7 +25,7 @@ import {
   warnDeprecation,
 } from '../../runtime-core/src/compat/compatConfig'
 
-const compileCache: Record<string, RenderFunction> = Object.create(null)
+const compileCache: Record<string, RenderFunction> = getBlankObj()
 
 function compileToFunction(
   template: string | HTMLElement,

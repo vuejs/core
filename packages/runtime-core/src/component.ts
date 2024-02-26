@@ -64,6 +64,7 @@ import {
   NOOP,
   ShapeFlags,
   extend,
+  getBlankObj,
   getGlobalThis,
   getKeys,
   isArray,
@@ -619,6 +620,7 @@ export function createComponentInstance(
     ec: null,
     sp: null,
   }
+
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
   } else {
@@ -774,7 +776,7 @@ function setupStatefulComponent(
     }
   }
   // 0. create render proxy property access cache
-  instance.accessCache = Object.create(null)
+  instance.accessCache = getBlankObj()
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))

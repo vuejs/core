@@ -1,4 +1,4 @@
-import { isArray } from '@vue/shared'
+import { getBlankObj, isArray } from '@vue/shared'
 import type { ComponentInternalInstance } from '../component'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { DeprecationTypes, assertCompatEnabled } from './compatConfig'
@@ -17,7 +17,7 @@ export function getRegistry(
 ): EventRegistry {
   let events = eventRegistryMap.get(instance)
   if (!events) {
-    eventRegistryMap.set(instance, (events = Object.create(null)))
+    eventRegistryMap.set(instance, (events = getBlankObj()))
   }
   return events!
 }
@@ -68,7 +68,7 @@ export function off(
   const vm = instance.proxy
   // all
   if (!event) {
-    eventRegistryMap.set(instance, Object.create(null))
+    eventRegistryMap.set(instance, getBlankObj())
     return vm
   }
   // array of events

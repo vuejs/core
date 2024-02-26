@@ -26,6 +26,7 @@ import {
 import {
   camelize,
   extend,
+  getBlankObj,
   getKeys,
   hyphenate,
   isArray,
@@ -266,9 +267,8 @@ export class VueElement extends BaseClass {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }
-            ;(numberProps || (numberProps = Object.create(null)))[
-              camelize(key)
-            ] = true
+            ;(numberProps || (numberProps = getBlankObj()))[camelize(key)] =
+              true
           }
         }
       }

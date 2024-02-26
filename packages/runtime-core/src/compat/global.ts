@@ -9,6 +9,7 @@ import {
 import {
   NOOP,
   extend,
+  getBlankObj,
   getKeys,
   invokeArrayFns,
   isArray,
@@ -255,7 +256,7 @@ export function createCompatVue(
       mergeBase[key] = isArray(superValue)
         ? superValue.slice()
         : isObject(superValue)
-          ? extend(Object.create(null), superValue)
+          ? extend(getBlankObj(), superValue)
           : superValue
     }
 
@@ -639,7 +640,7 @@ function defineReactive(obj: any, key: string, val: any) {
   if (i && obj === i.proxy) {
     // target is a Vue instance - define on instance.ctx
     defineReactiveSimple(i.ctx, key, val)
-    i.accessCache = Object.create(null)
+    i.accessCache = getBlankObj()
   } else if (isReactive(obj)) {
     obj[key] = val
   } else {

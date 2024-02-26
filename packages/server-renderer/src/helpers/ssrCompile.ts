@@ -4,7 +4,13 @@ import {
   warn,
 } from 'vue'
 import { compile } from '@vue/compiler-ssr'
-import { NO, extend, generateCodeFrame, isFunction } from '@vue/shared'
+import {
+  NO,
+  extend,
+  generateCodeFrame,
+  getBlankObj,
+  isFunction,
+} from '@vue/shared'
 import type { CompilerError, CompilerOptions } from '@vue/compiler-core'
 import type { PushFn } from '../render'
 
@@ -17,7 +23,7 @@ type SSRRenderFunction = (
   parentInstance: ComponentInternalInstance,
 ) => void
 
-const compileCache: Record<string, SSRRenderFunction> = Object.create(null)
+const compileCache: Record<string, SSRRenderFunction> = getBlankObj()
 
 export function ssrCompile(
   template: string,

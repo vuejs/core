@@ -1,13 +1,13 @@
 import type { AtRule, PluginCreator, Rule } from 'postcss'
 import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
-import { getKeys } from '@vue/shared'
+import { getBlankObj, getKeys } from '@vue/shared'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
 const animationRE = /^(-\w+-)?animation$/
 
 const scopedPlugin: PluginCreator<string> = (id = '') => {
-  const keyframes = Object.create(null)
+  const keyframes = getBlankObj()
   const shortId = id.replace(/^data-v-/, '')
 
   return {

@@ -27,6 +27,7 @@ import {
   PatchFlags,
   camelize,
   capitalize,
+  getBlankObj,
   isArray,
   isString,
 } from '@vue/shared'
@@ -185,7 +186,7 @@ export function createTransformContext(
     constantCache: new WeakMap(),
     temps: 0,
     cached: 0,
-    identifiers: Object.create(null),
+    identifiers: getBlankObj(),
     scopes: {
       vFor: 0,
       vSlot: 0,

@@ -18,7 +18,7 @@ import {
   unwrapTSNode,
   walkFunctionParams,
 } from '@vue/compiler-dom'
-import { genPropsAccessExp } from '@vue/shared'
+import { genPropsAccessExp, getBlankObj } from '@vue/shared'
 import { isCallOf, resolveObjectKey } from './utils'
 import type { ScriptCompileContext } from './context'
 import { DEFINE_PROPS } from './defineProps'
@@ -113,7 +113,7 @@ export function transformDestructuredProps(
   let currentScope: Scope = rootScope
   const excludedIds = new WeakSet<Identifier>()
   const parentStack: Node[] = []
-  const propsLocalToPublicMap: Record<string, string> = Object.create(null)
+  const propsLocalToPublicMap: Record<string, string> = getBlankObj()
 
   for (const key in ctx.propsDestructuredBindings) {
     const { local } = ctx.propsDestructuredBindings[key]

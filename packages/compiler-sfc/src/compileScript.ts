@@ -11,7 +11,7 @@ import {
   type SFCScriptBlock,
 } from './parse'
 import type { ParserPlugin } from '@babel/parser'
-import { generateCodeFrame, getKeys } from '@vue/shared'
+import { generateCodeFrame, getBlankObj, getKeys } from '@vue/shared'
 import type {
   ArrayPattern,
   CallExpression,
@@ -183,8 +183,8 @@ export function compileScript(
 
   // metadata that needs to be returned
   // const ctx.bindingMetadata: BindingMetadata = {}
-  const scriptBindings: Record<string, BindingTypes> = Object.create(null)
-  const setupBindings: Record<string, BindingTypes> = Object.create(null)
+  const scriptBindings: Record<string, BindingTypes> = getBlankObj()
+  const setupBindings: Record<string, BindingTypes> = getBlankObj()
 
   let defaultExport: Node | undefined
   let hasAwait = false

@@ -1,6 +1,6 @@
 import type { CallExpression, Node, ObjectPattern, Program } from '@babel/types'
 import type { SFCDescriptor } from '../parse'
-import { generateCodeFrame, isArray } from '@vue/shared'
+import { generateCodeFrame, getBlankObj, isArray } from '@vue/shared'
 import { type ParserPlugin, parse as babelParse } from '@babel/parser'
 import type { ImportBinding, SFCScriptCompileOptions } from '../compileScript'
 import type { PropsDestructureBindings } from './defineProps'
@@ -26,7 +26,7 @@ export class ScriptCompileContext {
   // import / type analysis
   scope?: TypeScope
   globalScopes?: TypeScope[]
-  userImports: Record<string, ImportBinding> = Object.create(null)
+  userImports: Record<string, ImportBinding> = getBlankObj()
 
   // macros presence check
   hasDefinePropsCall = false
@@ -44,7 +44,7 @@ export class ScriptCompileContext {
   propsRuntimeDecl: Node | undefined
   propsTypeDecl: Node | undefined
   propsDestructureDecl: ObjectPattern | undefined
-  propsDestructuredBindings: PropsDestructureBindings = Object.create(null)
+  propsDestructuredBindings: PropsDestructureBindings = getBlankObj()
   propsDestructureRestId: string | undefined
   propsRuntimeDefaults: Node | undefined
 
@@ -54,7 +54,7 @@ export class ScriptCompileContext {
   emitDecl: Node | undefined
 
   // defineModel
-  modelDecls: Record<string, ModelDecl> = Object.create(null)
+  modelDecls: Record<string, ModelDecl> = getBlankObj()
 
   // defineOptions
   optionsRuntimeDecl: Node | undefined

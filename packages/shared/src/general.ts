@@ -6,6 +6,7 @@ export const EMPTY_OBJ: { readonly [key: string]: any } = __DEV__
 export const EMPTY_ARR = __DEV__ ? Object.freeze([]) : []
 
 export const NOOP = () => {}
+export const getBlankObj = () => Object.create(null)
 
 /**
  * Always return false.
@@ -19,8 +20,6 @@ export const isOn = (key: string) =>
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
-
-export const extend = Object.assign
 
 export const remove = <T>(arr: T[], el: T) => {
   const i = arr.indexOf(el)
@@ -37,11 +36,12 @@ export const hasOwn = (
 
 export const getKeys = Object.keys
 export const isArray = Array.isArray
+export const extend = Object.assign
+
 export const isMap = (val: unknown): val is Map<any, any> =>
   toTypeString(val) === '[object Map]'
 export const isSet = (val: unknown): val is Set<any> =>
   toTypeString(val) === '[object Set]'
-
 export const isDate = (val: unknown): val is Date =>
   toTypeString(val) === '[object Date]'
 export const isRegExp = (val: unknown): val is RegExp =>
@@ -92,7 +92,7 @@ export const isBuiltInDirective = /*#__PURE__*/ makeMap(
 )
 
 const cacheStringFunction = <T extends (str: string) => string>(fn: T): T => {
-  const cache: Record<string, string> = Object.create(null)
+  const cache: Record<string, string> = getBlankObj()
   return ((str: string) => {
     const hit = cache[str]
     return hit || (cache[str] = fn(str))
