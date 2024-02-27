@@ -22,13 +22,11 @@ interface ModifierOptions {
   keys?: string[]
 }
 
-interface EventOptions extends AddEventListenerOptions, ModifierOptions {}
-
 export function on(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options: EventOptions = {},
+  options: AddEventListenerOptions & ModifierOptions = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   recordMetadata(el, 'events', event, handler)
@@ -53,7 +51,7 @@ export function delegate(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options: EventOptions = {},
+  options: ModifierOptions = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   handler.delegate = true

@@ -14,16 +14,16 @@ export function template(html: string) {
 export function children(node: Node, ...paths: number[]): Node {
   for (const idx of paths) {
     for (let i = 0; i <= idx; i++) {
-      node = (node as Node)[i === 0 ? 'firstChild' : 'nextSibling']!
+      node = node[i === 0 ? 'firstChild' : 'nextSibling']!
     }
   }
-  return node as Node
+  return node
 }
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function next(node: Node, offset: number): Node {
   for (let i = 0; i < offset; i++) {
-    node = (node as Node).nextSibling!
+    node = node.nextSibling!
   }
-  return node as Node
+  return node
 }
