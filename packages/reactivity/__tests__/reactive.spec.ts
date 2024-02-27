@@ -302,4 +302,19 @@ describe('reactivity/reactive', () => {
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
   })
+
+  test('should not check cache', () => {
+    const foo = {}
+    Object.freeze(foo)
+    const noObserved = reactive(foo)
+    expect(noObserved).toBe(foo)
+
+    const bar = {}
+    // put in cache
+    reactive(bar)
+    Object.freeze(bar)
+    // do not check cache
+    const observed = reactive(bar)
+    expect(observed).toBe(bar)
+  })
 })
