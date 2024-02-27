@@ -21,8 +21,8 @@ import {
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
-  isObject,
   isOn,
+  isRenderableAttrValue,
   isReservedProp,
   isString,
   normalizeClass,
@@ -449,7 +449,10 @@ export function createHydrationFunctions(
         ) {
           for (const key in props) {
             // check hydration mismatch
-            if (__DEV__ && propHasMismatch(el, key, props[key], vnode)) {
+            if (
+              __DEV__ &&
+              propHasMismatch(el, key, props[key], vnode, parentComponent)
+            ) {
               hasMismatch = true
             }
             if (
@@ -718,6 +721,7 @@ function propHasMismatch(
   key: string,
   clientValue: any,
   vnode: VNode,
+  instance: ComponentInternalInstance | null,
 ): boolean {
   let mismatchType: string | undefined
   let mismatchKey: string | undefined
@@ -748,6 +752,18 @@ function propHasMismatch(
         }
       }
     }
+
+    const root = instance?.subTree
+    if (
+      vnode === root ||
+      (root?.type === Fragment && (root.children as VNode[]).includes(vnode))
+    ) {
+      const cssVars = instance?.getCssVars?.()
+      for (const key in cssVars) {
+        expectedMap.set(`--${key}`, String(cssVars[key]))
+      }
+    }
+
     if (!isMapEqual(actualMap, expectedMap)) {
       mismatchType = mismatchKey = 'style'
     }
@@ -758,19 +774,21 @@ function propHasMismatch(
     if (isBooleanAttr(key)) {
       actual = el.hasAttribute(key)
       expected = includeBooleanAttr(clientValue)
+    } else if (clientValue == null) {
+      actual = el.hasAttribute(key)
+      expected = false
     } else {
-      // #10000 some attrs such as textarea.value can't be get by `hasAttribute`
       if (el.hasAttribute(key)) {
         actual = el.getAttribute(key)
-      } else if (key in el) {
-        const serverValue = el[key as keyof typeof el]
-        if (!isObject(serverValue)) {
-          actual = serverValue == null ? '' : String(serverValue)
-        }
+      } else if (key === 'value' && el.tagName === 'TEXTAREA') {
+        // #10000 textarea.value can't be retrieved by `hasAttribute`
+        actual = (el as HTMLTextAreaElement).value
+      } else {
+        actual = false
       }
-      if (!isObject(clientValue)) {
-        expected = clientValue == null ? '' : String(clientValue)
-      }
+      expected = isRenderableAttrValue(clientValue)
+        ? String(clientValue)
+        : false
     }
     if (actual !== expected) {
       mismatchType = `attribute`

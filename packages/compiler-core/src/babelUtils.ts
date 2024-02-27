@@ -50,7 +50,7 @@ export function walkIdentifiers(
         }
       } else if (
         node.type === 'ObjectProperty' &&
-        parent!.type === 'ObjectPattern'
+        parent?.type === 'ObjectPattern'
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true

@@ -10,14 +10,9 @@ import {
   shallowReadonlyMap,
   toRaw,
 } from './reactive'
+import { arrayInstrumentations } from './arrayInstrumentations'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
-import {
-  pauseScheduling,
-  pauseTracking,
-  resetScheduling,
-  resetTracking,
-} from './effect'
-import { ITERATE_KEY, track, trigger } from './reactiveEffect'
+import { ITERATE_KEY, track, trigger } from './dep'
 import {
   hasChanged,
   hasOwn,
@@ -43,43 +38,6 @@ const builtInSymbols = new Set(
     .filter(isSymbol),
 )
 
-const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
-
-function createArrayInstrumentations() {
-  const instrumentations: Record<string, Function> = {}
-  // instrument identity-sensitive Array methods to account for possible reactive
-  // values
-  ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      const arr = toRaw(this) as any
-      for (let i = 0, l = this.length; i < l; i++) {
-        track(arr, TrackOpTypes.GET, i + '')
-      }
-      // we run the method using the original args first (which may be reactive)
-      const res = arr[key](...args)
-      if (res === -1 || res === false) {
-        // if that didn't work, run it again using raw values.
-        return arr[key](...args.map(toRaw))
-      } else {
-        return res
-      }
-    }
-  })
-  // instrument length-altering mutation methods to avoid length being tracked
-  // which leads to infinite loops in some cases (#2137)
-  ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
-    instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
-      pauseTracking()
-      pauseScheduling()
-      const res = (toRaw(this) as any)[key].apply(this, args)
-      resetScheduling()
-      resetTracking()
-      return res
-    }
-  })
-  return instrumentations
-}
-
 function hasOwnProperty(this: object, key: string) {
   const obj = toRaw(this)
   track(obj, TrackOpTypes.HAS, key)
@@ -89,26 +47,26 @@ function hasOwnProperty(this: object, key: string) {
 class BaseReactiveHandler implements ProxyHandler<Target> {
   constructor(
     protected readonly _isReadonly = false,
-    protected readonly _shallow = false,
+    protected readonly _isShallow = false,
   ) {}
 
   get(target: Target, key: string | symbol, receiver: object) {
     const isReadonly = this._isReadonly,
-      shallow = this._shallow
+      isShallow = this._isShallow
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
       return isReadonly
     } else if (key === ReactiveFlags.IS_SHALLOW) {
-      return shallow
+      return isShallow
     } else if (key === ReactiveFlags.RAW) {
       if (
         receiver ===
           (isReadonly
-            ? shallow
+            ? isShallow
               ? shallowReadonlyMap
               : readonlyMap
-            : shallow
+            : isShallow
               ? shallowReactiveMap
               : reactiveMap
           ).get(target) ||
@@ -125,15 +83,23 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
-      if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
-        return Reflect.get(arrayInstrumentations, key, receiver)
+      let fn: Function | undefined
+      if (targetIsArray && (fn = arrayInstrumentations[key])) {
+        return fn
       }
       if (key === 'hasOwnProperty') {
         return hasOwnProperty
       }
     }
 
-    const res = Reflect.get(target, key, receiver)
+    const res = Reflect.get(
+      target,
+      key,
+      // if this is a proxy wrapping a ref, return methods using the raw ref
+      // as receiver so that we don't have to call `toRaw` on the ref in all
+      // its class methods
+      isRef(target) ? target : receiver,
+    )
 
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
@@ -143,7 +109,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       track(target, TrackOpTypes.GET, key)
     }
 
-    if (shallow) {
+    if (isShallow) {
       return res
     }
 
@@ -164,8 +130,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 }
 
 class MutableReactiveHandler extends BaseReactiveHandler {
-  constructor(shallow = false) {
-    super(false, shallow)
+  constructor(isShallow = false) {
+    super(false, isShallow)
   }
 
   set(
@@ -175,7 +141,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     receiver: object,
   ): boolean {
     let oldValue = (target as any)[key]
-    if (!this._shallow) {
+    if (!this._isShallow) {
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
@@ -237,8 +203,8 @@ class MutableReactiveHandler extends BaseReactiveHandler {
 }
 
 class ReadonlyReactiveHandler extends BaseReactiveHandler {
-  constructor(shallow = false) {
-    super(true, shallow)
+  constructor(isShallow = false) {
+    super(true, isShallow)
   }
 
   set(target: object, key: string | symbol) {

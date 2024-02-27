@@ -1,6 +1,12 @@
-import { type Ref, isReactive, isReadonly, isRef, toRaw } from '@vue/reactivity'
+import {
+  type Ref,
+  isReactive,
+  isReadonly,
+  isRef,
+  isShallow,
+  toRaw,
+} from '@vue/reactivity'
 import { EMPTY_OBJ, extend, isArray, isFunction, isObject } from '@vue/shared'
-import { isShallow } from '../../reactivity/src/reactive'
 import type { ComponentInternalInstance, ComponentOptions } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 
@@ -32,7 +38,8 @@ export function initCustomFormatter() {
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          formatValue(obj.value),
+          // avoid debugger accessing value affecting behavior
+          formatValue('_value' in obj ? obj._value : obj),
           `>`,
         ]
       } else if (isReactive(obj)) {
