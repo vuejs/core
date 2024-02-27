@@ -278,7 +278,7 @@ describe('runtime-dom: props patching', () => {
       ]),
       root,
     )
-    const el = root.children[0] as HTMLOptionElement
+    const el = root.children[0] as HTMLSelectElement
     expect(el.value).toBe('foo')
 
     render(
@@ -297,8 +297,10 @@ describe('runtime-dom: props patching', () => {
       h('select', { value: 'foo' }, [h('option', { value: '' }, 'foo')]),
       root,
     )
-    const el = root.children[0] as HTMLOptionElement
-    expect(el.value).toBe('')
+    const select = root.children[0] as HTMLSelectElement
+    const option = select.children[0] as HTMLOptionElement
+    expect(select.value).toBe('')
+    expect(option.value).toBe('')
   })
 
   // #8780
