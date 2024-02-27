@@ -1,5 +1,8 @@
 import { template } from '@vue/runtime-vapor'
 
-export default () => {
-  return template('<div>')()
+const comp = () => {
+  return template('<div><h1>Hello')()
 }
+comp.vapor = true
+
+export default comp
