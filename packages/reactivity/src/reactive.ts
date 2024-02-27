@@ -252,23 +252,15 @@ function createReactiveObject(
     }
     return target
   }
-  // target is already a Proxy, return it.
-  // exception: calling readonly() on a reactive object
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
+  const targetType = getTargetType(target)
+  const isBaseOnReactiveTarget = isReadonly && target[ReactiveFlags.IS_REACTIVE]
+  const isInvalid = targetType === TargetType.INVALID
+  if ((target[ReactiveFlags.RAW] && !isBaseOnReactiveTarget) || isInvalid) {
     return target
   }
-  // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
-  }
-  // only specific value types can be observed.
-  const targetType = getTargetType(target)
-  if (targetType === TargetType.INVALID) {
-    return target
   }
   const proxy = new Proxy(
     target,
