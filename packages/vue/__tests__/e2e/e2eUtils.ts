@@ -9,7 +9,7 @@ export const E2E_TIMEOUT = 30 * 1000
 
 const puppeteerOptions: PuppeteerLaunchOptions = {
   args: process.env.CI ? ['--no-sandbox', '--disable-setuid-sandbox'] : [],
-  headless: 'new',
+  headless: true,
 }
 
 const maxTries = 30
