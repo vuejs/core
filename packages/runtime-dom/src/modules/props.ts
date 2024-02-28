@@ -43,6 +43,12 @@ export function patchDOMProp(
     let oldValue = el.value
     if (tag === 'OPTION') {
       const attrValue = el.getAttribute('value')
+      // #10396
+      // avoid always resetting nullish option value
+      // use '' as oldValue when attrValue is falsy
+      // #10416
+      // but keep as the original attrValue when dom hasn't been mounted
+      // so that el.value can be initialized when option initial value is ''
       oldValue = mounted ? attrValue || '' : attrValue
     }
     const newValue = value == null ? '' : value
