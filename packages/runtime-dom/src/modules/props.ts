@@ -34,30 +34,20 @@ export function patchDOMProp(
     // custom elements may use _value internally
     !tag.includes('-')
   ) {
-    const mounted = '_value' in el
-    // store value as _value as well since
-    // non-string values will be stringified.
-    el._value = value
     // #4956: <option> value will fallback to its text content so we need to
     // compare against its attribute value instead.
-    let oldValue = el.value
-    if (tag === 'OPTION') {
-      const attrValue = el.getAttribute('value')
-      // #10396
-      // avoid always resetting nullish option value
-      // use '' as oldValue when attrValue is falsy
-      // #10416
-      // but keep as the original attrValue when dom hasn't been mounted
-      // so that el.value can be initialized when option initial value is ''
-      oldValue = mounted ? attrValue || '' : attrValue
-    }
+    const oldValue =
+      tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
     const newValue = value == null ? '' : value
-    if (oldValue !== newValue) {
+    if (oldValue !== newValue || !('_value' in el)) {
       el.value = newValue
     }
     if (value == null) {
       el.removeAttribute(key)
     }
+    // store value as _value as well since
+    // non-string values will be stringified.
+    el._value = value
     return
   }
 
