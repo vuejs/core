@@ -1,62 +1,186 @@
-import {
-  computed,
-  createFor,
-  createTextNode,
-  nextTick,
-  ref,
-  renderEffect,
-  setText,
-} from '../src'
+import { createFor, nextTick, ref, renderEffect } from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender()
 
 describe('createFor', () => {
-  test('basic', async () => {
+  test('array source', async () => {
     const list = ref([{ name: '1' }, { name: '2' }, { name: '3' }])
-    const sort = ref(false)
-    const sortedList = computed(() =>
-      sort.value ? Array.from(list.value).reverse() : list.value,
-    )
+    function reverse() {
+      list.value = list.value.reverse()
+    }
 
     const { host } = define(() => {
       const n1 = createFor(
-        () => sortedList.value,
+        () => list.value,
         block => {
-          const n3 = createTextNode()
+          const span = document.createElement('li')
           const update = () => {
-            const [item] = block.s
-            setText(n3, item.name)
+            const [item, key, index] = block.s
+            span.innerHTML = `${key}. ${item.name}`
+
+            // index should be undefined if source is not an object
+            expect(index).toBe(undefined)
           }
           renderEffect(update)
-          return [n3, update]
+          return [span, update]
         },
+        item => item.name,
       )
-      return [n1]
+      return n1
     }).render()
 
-    expect(host.innerHTML).toBe('123<!--for-->')
+    expect(host.innerHTML).toBe(
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><!--for-->',
+    )
 
     // add
     list.value.push({ name: '4' })
     await nextTick()
-    expect(host.innerHTML).toBe('1234<!--for-->')
+    expect(host.innerHTML).toBe(
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+    )
 
     // move
-    sort.value = true
+    reverse()
     await nextTick()
-    expect(host.innerHTML).toBe('4321<!--for-->')
-    sort.value = false
+    expect(host.innerHTML).toBe(
+      '<li>0. 4</li><li>1. 3</li><li>2. 2</li><li>3. 1</li><!--for-->',
+    )
+
+    reverse()
     await nextTick()
-    expect(host.innerHTML).toBe('1234<!--for-->')
+    expect(host.innerHTML).toBe(
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+    )
 
     // change
     list.value[0].name = 'a'
     await nextTick()
-    expect(host.innerHTML).toBe('a234<!--for-->')
+    expect(host.innerHTML).toBe(
+      '<li>0. a</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+    )
 
     // remove
+    list.value.splice(1, 1)
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>0. a</li><li>1. 3</li><li>2. 4</li><!--for-->',
+    )
+
+    // clear
     list.value = []
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('number source', async () => {
+    const count = ref(3)
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => count.value,
+        block => {
+          const span = document.createElement('li')
+          const update = () => {
+            const [item, key, index] = block.s
+            span.innerHTML = `${key}. ${item}`
+
+            // index should be undefined if source is not an object
+            expect(index).toBe(undefined)
+          }
+          renderEffect(update)
+          return [span, update]
+        },
+        item => item.name,
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><!--for-->',
+    )
+
+    // add
+    count.value = 4
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>0. 1</li><li>1. 2</li><li>2. 3</li><li>3. 4</li><!--for-->',
+    )
+
+    // remove
+    count.value = 2
+    await nextTick()
+    expect(host.innerHTML).toBe('<li>0. 1</li><li>1. 2</li><!--for-->')
+
+    // clear
+    count.value = 0
+    await nextTick()
+    expect(host.innerHTML).toBe('<!--for-->')
+  })
+
+  test('object source', async () => {
+    const initial = () => ({ a: 1, b: 2, c: 3 })
+    const data = ref<Record<string, number>>(initial())
+
+    const { host } = define(() => {
+      const n1 = createFor(
+        () => data.value,
+        block => {
+          const span = document.createElement('li')
+          const update = () => {
+            const [item, key, index] = block.s
+            span.innerHTML = `${key}${index}. ${item}`
+            expect(index).not.toBe(undefined)
+          }
+          renderEffect(update)
+          return [span, update]
+        },
+        item => {
+          return item
+        },
+      )
+      return n1
+    }).render()
+
+    expect(host.innerHTML).toBe(
+      '<li>a0. 1</li><li>b1. 2</li><li>c2. 3</li><!--for-->',
+    )
+
+    // move
+    data.value = {
+      c: 3,
+      b: 2,
+      a: 1,
+    }
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>c0. 3</li><li>b1. 2</li><li>a2. 1</li><!--for-->',
+    )
+
+    // add
+    data.value.d = 4
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>c0. 3</li><li>b1. 2</li><li>a2. 1</li><li>d3. 4</li><!--for-->',
+    )
+
+    // change
+    data.value.b = 100
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>c0. 3</li><li>b1. 100</li><li>a2. 1</li><li>d3. 4</li><!--for-->',
+    )
+
+    // remove
+    delete data.value.c
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<li>b0. 100</li><li>a1. 1</li><li>d2. 4</li><!--for-->',
+    )
+
+    // clear
+    data.value = {}
     await nextTick()
     expect(host.innerHTML).toBe('<!--for-->')
   })

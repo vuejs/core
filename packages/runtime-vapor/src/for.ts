@@ -1,13 +1,14 @@
 import { type EffectScope, effectScope, isReactive } from '@vue/reactivity'
-import { isArray } from '@vue/shared'
+import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode, insert, remove } from './dom/element'
 import { renderEffect } from './renderWatch'
 import { type Block, type Fragment, fragmentKey } from './render'
+import { warn } from './warning'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
   /** state, use short key since it's used a lot in generated code */
-  s: [item: any, index: number]
+  s: [item: any, key: any, index?: number]
   update: () => void
   key: any
   memo: any[] | undefined
@@ -15,10 +16,10 @@ interface ForBlock extends Fragment {
 
 /*! #__NO_SIDE_EFFECTS__ */
 export const createFor = (
-  src: () => any[] | Record<string, string> | Set<any> | Map<any, any>,
+  src: () => any[] | Record<any, any> | number | Set<any> | Map<any, any>,
   renderItem: (block: ForBlock) => [Block, () => void],
-  getKey?: (item: any, index: number) => any,
-  getMemo?: (item: any, index: number) => any[],
+  getKey?: (item: any, key: any, index?: number) => any,
+  getMemo?: (item: any, key: any, index?: number) => any[],
   hydrationNode?: Node,
 ): Fragment => {
   let isMounted = false
@@ -33,9 +34,8 @@ export const createFor = (
 
   const update = getMemo ? updateWithMemo : updateWithoutMemo
   renderEffect(() => {
-    // TODO support more than arrays
-    const source = src() as any[]
-    const newLength = source.length
+    const source = src()
+    const newLength = getLength(source)
     const oldLength = oldBlocks.length
     newBlocks = new Array(newLength)
 
@@ -56,7 +56,8 @@ export const createFor = (
         // unkeyed fast path
         const commonLength = Math.min(newLength, oldLength)
         for (let i = 0; i < commonLength; i++) {
-          update((newBlocks[i] = oldBlocks[i]), source[i])
+          const [item] = getItem(source, i)
+          update((newBlocks[i] = oldBlocks[i]), item)
         }
         mountList(source, oldLength)
         for (let i = newLength; i < oldLength; i++) {
@@ -105,7 +106,7 @@ export const createFor = (
                 ? normalizeAnchor(newBlocks[nextPos].nodes)
                 : parentAnchor
             while (i <= e2) {
-              mount(source[i], i, anchor)
+              mount(source, i, anchor)
               i++
             }
           }
@@ -136,7 +137,7 @@ export const createFor = (
           // 5.1 build key:index map for newChildren
           const keyToNewIndexMap = new Map()
           for (i = s2; i <= e2; i++) {
-            keyToNewIndexMap.set(getKey(source[i], i), i)
+            keyToNewIndexMap.set(getKey(...getItem(source, i)), i)
           }
 
           // 5.2 loop through old children left to be patched and try to patch
@@ -172,9 +173,7 @@ export const createFor = (
                 }
                 update(
                   (newBlocks[newIndex] = prevBlock),
-                  source[newIndex],
-                  i,
-                  newIndex,
+                  ...getItem(source, newIndex),
                 )
                 patched++
               }
@@ -196,7 +195,7 @@ export const createFor = (
                 : parentAnchor
             if (newIndexToOldIndexMap[i] === 0) {
               // mount new
-              mount(source[nextIndex], nextIndex, anchor)
+              mount(source, nextIndex, anchor)
             } else if (moved) {
               // move if:
               // There is no stable subsequence (e.g. a reverse)
@@ -218,19 +217,19 @@ export const createFor = (
   return ref
 
   function mount(
-    item: any,
-    index: number,
+    source: any,
+    idx: number,
     anchor: Node = parentAnchor,
   ): ForBlock {
     const scope = effectScope()
-    // TODO support object keys etc.
-    const block: ForBlock = (newBlocks[index] = {
+    const [item, key, index] = getItem(source, idx)
+    const block: ForBlock = (newBlocks[idx] = {
       nodes: null!, // set later
       update: null!, // set later
       scope,
-      s: [item, index],
-      key: getKey && getKey(item, index),
-      memo: getMemo && getMemo(item, index),
+      s: [item, key, index],
+      key: getKey && getKey(item, key, index),
+      memo: getMemo && getMemo(item, key, index),
       [fragmentKey]: true,
     })
     const res = scope.run(() => renderItem(block))!
@@ -241,18 +240,17 @@ export const createFor = (
     return block
   }
 
-  function mountList(source: any[], offset = 0) {
-    if (offset) source = source.slice(offset)
-    for (let i = 0, l = source.length; i < l; i++) {
-      mount(source[i], i + offset)
+  function mountList(source: any, offset = 0) {
+    for (let i = offset; i < getLength(source); i++) {
+      mount(source, i)
     }
   }
 
-  function tryPatchIndex(source: any[], i: number) {
-    const block = oldBlocks[i]
-    const item = source[i]
-    if (block.key === getKey!(item, i)) {
-      update((newBlocks[i] = block), item)
+  function tryPatchIndex(source: any, idx: number) {
+    const block = oldBlocks[idx]
+    const [item, key, index] = getItem(source, idx)
+    if (block.key === getKey!(item, key, index)) {
+      update((newBlocks[idx] = block), item)
       return true
     }
   }
@@ -260,13 +258,13 @@ export const createFor = (
   function updateWithMemo(
     block: ForBlock,
     newItem: any,
-    oldIndex = block.s[1],
-    newIndex = oldIndex,
+    newKey = block.s[1],
+    newIndex = block.s[2],
   ) {
-    let needsUpdate = newIndex !== oldIndex
+    let needsUpdate = newKey !== block.s[1] || newIndex !== block.s[2]
     if (!needsUpdate) {
       const oldMemo = block.memo!
-      const newMemo = (block.memo = getMemo!(newItem, newIndex))
+      const newMemo = (block.memo = getMemo!(newItem, newKey, newIndex))
       for (let i = 0; i < newMemo.length; i++) {
         if ((needsUpdate = newMemo[i] !== oldMemo[i])) {
           break
@@ -274,7 +272,7 @@ export const createFor = (
       }
     }
     if (needsUpdate) {
-      block.s = [newItem, newIndex]
+      block.s = [newItem, newKey, newIndex]
       block.update()
     }
   }
@@ -282,15 +280,16 @@ export const createFor = (
   function updateWithoutMemo(
     block: ForBlock,
     newItem: any,
-    oldIndex = block.s[1],
-    newIndex = oldIndex,
+    newKey = block.s[1],
+    newIndex = block.s[2],
   ) {
     if (
       newItem !== block.s[0] ||
-      newIndex !== oldIndex ||
+      newKey !== block.s[1] ||
+      newIndex !== block.s[2] ||
       !isReactive(newItem)
     ) {
-      block.s = [newItem, newIndex]
+      block.s = [newItem, newKey, newIndex]
       block.update()
     }
   }
@@ -298,6 +297,42 @@ export const createFor = (
   function unmount({ nodes, scope }: ForBlock) {
     remove(nodes, parent!)
     scope.stop()
+  }
+
+  function getLength(source: any): number {
+    if (isArray(source) || isString(source)) {
+      return source.length
+    } else if (typeof source === 'number') {
+      if (__DEV__ && !Number.isInteger(source)) {
+        warn(`The v-for range expect an integer value but got ${source}.`)
+      }
+      return source
+    } else if (isObject(source)) {
+      if (source[Symbol.iterator as any]) {
+        return Array.from(source as Iterable<any>).length
+      } else {
+        return Object.keys(source).length
+      }
+    }
+    return 0
+  }
+
+  function getItem(
+    source: any,
+    idx: number,
+  ): [item: any, key: any, index?: number] {
+    if (source && source[Symbol.iterator as any])
+      source = Array.from(source as Iterable<any>)
+
+    if (isArray(source) || isString(source)) {
+      return [source[idx], idx, undefined]
+    } else if (typeof source === 'number') {
+      return [idx + 1, idx, undefined]
+    } else if (isObject(source)) {
+      const key = Object.keys(source)[idx]
+      return [source[key], key, idx]
+    }
+    return null!
   }
 }
 

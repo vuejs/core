@@ -73,7 +73,7 @@ export interface ForIRNode extends BaseIRNode {
   value?: SimpleExpressionNode
   key?: SimpleExpressionNode
   index?: SimpleExpressionNode
-  keyProperty?: SimpleExpressionNode
+  keyProp?: SimpleExpressionNode
   render: BlockIRNode
 }
 

@@ -54,7 +54,7 @@ describe('compiler: v-for', () => {
             children: [{ template: 0 }],
           },
         },
-        keyProperty: {
+        keyProp: {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: 'item.id',
         },

@@ -73,7 +73,7 @@ export function processFor(
       value: value as SimpleExpressionNode | undefined,
       key: key as SimpleExpressionNode | undefined,
       index: index as SimpleExpressionNode | undefined,
-      keyProperty,
+      keyProp: keyProperty,
       render,
     })
   }

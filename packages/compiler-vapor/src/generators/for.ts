@@ -11,6 +11,7 @@ import {
   NEWLINE,
   buildCodeFragment,
   genCall,
+  genMulti,
 } from './utils'
 
 export function genFor(
@@ -18,10 +19,11 @@ export function genFor(
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper } = context
-  const { source, value, key, render, keyProperty } = oper
+  const { source, value, key, index, render, keyProp } = oper
 
   const rawValue = value && value.content
   const rawKey = key && key.content
+  const rawIndex = index && index.content
 
   const sourceExpr = ['() => (', ...genExpression(source, context), ')']
   let updateFn = '_updateEffect'
@@ -30,6 +32,7 @@ export function genFor(
   const idMap: Record<string, string> = {}
   if (rawValue) idMap[rawValue] = `_block.s[0]`
   if (rawKey) idMap[rawKey] = `_block.s[1]`
+  if (rawIndex) idMap[rawIndex] = `_block.s[2]`
 
   const blockReturns = (returns: CodeFragment[]): CodeFragment[] => [
     '[',
@@ -43,19 +46,20 @@ export function genFor(
   )
 
   let getKeyFn: CodeFragment[] | false = false
-  if (keyProperty) {
+  if (keyProp) {
     const idMap: Record<string, null> = {}
     if (rawValue) idMap[rawValue] = null
     if (rawKey) idMap[rawKey] = null
-    const expr = context.withId(
-      () => genExpression(keyProperty, context),
-      idMap,
-    )
+    if (rawIndex) idMap[rawIndex] = null
+    const expr = context.withId(() => genExpression(keyProp, context), idMap)
     getKeyFn = [
-      '(',
-      rawValue ? rawValue : rawKey ? '_' : '',
-      rawKey && `, ${rawKey}`,
-      ') => (',
+      ...genMulti(
+        ['(', ')', ', '],
+        rawValue ? rawValue : rawKey || rawIndex ? '_' : undefined,
+        rawKey ? rawKey : rawIndex ? '__' : undefined,
+        rawIndex,
+      ),
+      ' => (',
       ...expr,
       ')',
     ]
