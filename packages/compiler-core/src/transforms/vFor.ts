@@ -205,15 +205,20 @@ export const transformFor = createStructuralDirectiveTransform(
         if (memo) {
           const loop = createFunctionExpression(
             createForLoopParams(forNode.parseResult, [
+              createSimpleExpression(`_cachedListItem`),
               createSimpleExpression(`_cachedMap`),
             ]),
           )
           loop.body = createBlockStatement([
             createCompoundExpression([`const _memo = (`, memo.exp!, `)`]),
             createCompoundExpression([
-              `const _cached = _cachedMap && _cachedMap.get(`,
-              keyExp!,
-              `)`,
+              `const _cached = (`,
+              ...(keyExp
+                ? [`(_cachedMap && _cachedMap[`, keyExp!, `]) || `]
+                : []),
+              `(_cachedListItem`,
+              ...(keyExp ? [` && _cachedListItem.key === `, keyExp] : []),
+              `))`,
             ]),
             createCompoundExpression([
               `if (_cached`,
