@@ -2342,15 +2342,26 @@ function baseCreateRenderer(
     }
   }
 
-  const isSubNode = (vnode: VNode, node: RendererNode): boolean => {
-    if (node === vnode.targetAnchor) return true
+  const findSubTeleports = (vnode: VNode): VNode[] => {
+    const teleports: VNode[] = []
+    if (vnode.shapeFlag & ShapeFlags.TELEPORT) {
+      teleports.push(vnode)
+    }
     if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
-      return isSubNode(vnode.component.subTree, node)
+      teleports.push(...findSubTeleports(vnode.component.subTree))
     }
     if (isArray(vnode.children)) {
-      return (vnode.children as VNode[]).some(c => isSubNode(c, node))
+      ;(vnode.children as VNode[]).forEach(c => {
+        teleports.push(...findSubTeleports(c))
+      })
     }
-    return vnode.el === node
+    return teleports
+  }
+
+  const isSubTeleportNode = (vnode: VNode, node: RendererNode): boolean => {
+    const subTeleports = findSubTeleports(vnode)
+    if (subTeleports.length === 0) return false
+    return subTeleports.some(t => t === node.__teleportVNode)
   }
 
   const getNextHostNode: NextFn = vnode => {
@@ -2362,9 +2373,9 @@ function baseCreateRenderer(
     }
     let node = hostNextSibling((vnode.anchor || vnode.el)!)
 
-    // if node is teleported and in vnode's sub children
+    // if node is teleported and in vnode's sub teleport tree
     // it should be skipped
-    while (node && node.__teleported && isSubNode(vnode, node)) {
+    while (node && node.__teleportVNode && isSubTeleportNode(vnode, node)) {
       node = hostNextSibling(node)
     }
 

@@ -442,10 +442,9 @@ function markTeleportedNode(vnode: VNode) {
   if (!children.length) return
 
   let node = (vnode.children as VNode[])[0].el!
-  while (node && node !== vnode.targetAnchor) {
-    if (node.nodeType === 1) node.__teleported = true
+  while (node) {
+    if (node.nodeType === 1) node.__teleportVNode = vnode
     node = node.nextSibling
   }
-
-  if (vnode.targetAnchor) vnode.targetAnchor.__teleported = true
+  if (vnode.targetAnchor) vnode.targetAnchor.__teleportVNode = vnode
 }
