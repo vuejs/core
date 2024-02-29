@@ -217,7 +217,13 @@ export const transformFor = createStructuralDirectiveTransform(
                 ? [`(_cachedMap && _cachedMap[`, keyExp!, `]) || `]
                 : []),
               `(_cachedListItem`,
-              ...(keyExp ? [` && _cachedListItem.key === `, keyExp] : []),
+              ...(keyExp
+                ? [
+                    ` && _cachedListItem.key === `,
+                    keyExp,
+                    ` && _cachedListItem`,
+                  ]
+                : []),
               `))`,
             ]),
             createCompoundExpression([
