@@ -1,3 +1,14 @@
+## [3.4.21](https://github.com/vuejs/core/compare/v3.4.20...v3.4.21) (2024-02-28)
+
+
+### Bug Fixes
+
+* **runtime-dom:** avoid unset option's value ([#10416](https://github.com/vuejs/core/issues/10416)) ([b3f8b5a](https://github.com/vuejs/core/commit/b3f8b5a4e700d4c47a146b6040882287d180f6cb)), closes [#10412](https://github.com/vuejs/core/issues/10412) [#10396](https://github.com/vuejs/core/issues/10396)
+* **suspense:** ensure nested suspense patching if in fallback state ([#10417](https://github.com/vuejs/core/issues/10417)) ([7c97778](https://github.com/vuejs/core/commit/7c97778aec1e3513035e5df265e1b8a7801f6106)), closes [#10415](https://github.com/vuejs/core/issues/10415)
+* **warning:** stringify args in warn handler ([#10414](https://github.com/vuejs/core/issues/10414)) ([bc37258](https://github.com/vuejs/core/commit/bc37258caa2f6f67f4554ab8587aca3798d92124)), closes [#10409](https://github.com/vuejs/core/issues/10409)
+
+
+
 ## [3.4.20](https://github.com/vuejs/core/compare/v3.4.19...v3.4.20) (2024-02-26)
 
 
