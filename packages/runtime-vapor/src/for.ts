@@ -6,7 +6,8 @@ import { type Block, type Fragment, fragmentKey } from './render'
 
 interface ForBlock extends Fragment {
   scope: EffectScope
-  s: [any, number] // state, use short key since it's used a lot in generated code
+  /** state, use short key since it's used a lot in generated code */
+  s: [item: any, index: number]
   update: () => void
   key: any
   memo: any[] | undefined
@@ -17,7 +18,7 @@ export const createFor = (
   src: () => any[] | Record<string, string> | Set<any> | Map<any, any>,
   renderItem: (block: ForBlock) => [Block, () => void],
   getKey?: (item: any, index: number) => any,
-  getMemo?: (item: any) => any[],
+  getMemo?: (item: any, index: number) => any[],
   hydrationNode?: Node,
 ): Fragment => {
   let isMounted = false
@@ -30,89 +31,7 @@ export const createFor = (
     [fragmentKey]: true,
   }
 
-  const mount = (
-    item: any,
-    index: number,
-    anchor: Node = parentAnchor,
-  ): ForBlock => {
-    const scope = effectScope()
-    // TODO support object keys etc.
-    const block: ForBlock = (newBlocks[index] = {
-      nodes: null as any,
-      update: null as any,
-      scope,
-      s: [item, index],
-      key: getKey && getKey(item, index),
-      memo: getMemo && getMemo(item),
-      [fragmentKey]: true,
-    })
-    const res = scope.run(() => renderItem(block))!
-    block.nodes = res[0]
-    block.update = res[1]
-    if (getMemo) block.update()
-    if (parent) insert(block.nodes, parent, anchor)
-    return block
-  }
-
-  const mountList = (source: any[], offset = 0) => {
-    if (offset) source = source.slice(offset)
-    for (let i = 0, l = source.length; i < l; i++) {
-      mount(source[i], i + offset)
-    }
-  }
-
-  const tryPatchIndex = (source: any[], i: number) => {
-    const block = oldBlocks[i]
-    const item = source[i]
-    if (block.key === getKey!(item, i)) {
-      update((newBlocks[i] = block), item)
-      return true
-    }
-  }
-
-  const update = getMemo
-    ? (
-        block: ForBlock,
-        newItem: any,
-        oldIndex = block.s[1],
-        newIndex = oldIndex,
-      ) => {
-        let needsUpdate = newIndex !== oldIndex
-        if (!needsUpdate) {
-          const oldMemo = block.memo!
-          const newMemo = (block.memo = getMemo(newItem))
-          for (let i = 0; i < newMemo.length; i++) {
-            if ((needsUpdate = newMemo[i] !== oldMemo[i])) {
-              break
-            }
-          }
-        }
-        if (needsUpdate) {
-          block.s = [newItem, newIndex]
-          block.update()
-        }
-      }
-    : (
-        block: ForBlock,
-        newItem: any,
-        oldIndex = block.s[1],
-        newIndex = oldIndex,
-      ) => {
-        if (
-          newItem !== block.s[0] ||
-          newIndex !== oldIndex ||
-          !isReactive(newItem)
-        ) {
-          block.s = [newItem, newIndex]
-          block.update()
-        }
-      }
-
-  const unmount = ({ nodes, scope }: ForBlock) => {
-    remove(nodes, parent!)
-    scope.stop()
-  }
-
+  const update = getMemo ? updateWithMemo : updateWithoutMemo
   renderEffect(() => {
     // TODO support more than arrays
     const source = src() as any[]
@@ -297,9 +216,92 @@ export const createFor = (
   })
 
   return ref
+
+  function mount(
+    item: any,
+    index: number,
+    anchor: Node = parentAnchor,
+  ): ForBlock {
+    const scope = effectScope()
+    // TODO support object keys etc.
+    const block: ForBlock = (newBlocks[index] = {
+      nodes: null!, // set later
+      update: null!, // set later
+      scope,
+      s: [item, index],
+      key: getKey && getKey(item, index),
+      memo: getMemo && getMemo(item, index),
+      [fragmentKey]: true,
+    })
+    const res = scope.run(() => renderItem(block))!
+    block.nodes = res[0]
+    block.update = res[1]
+    if (getMemo) block.update()
+    if (parent) insert(block.nodes, parent, anchor)
+    return block
+  }
+
+  function mountList(source: any[], offset = 0) {
+    if (offset) source = source.slice(offset)
+    for (let i = 0, l = source.length; i < l; i++) {
+      mount(source[i], i + offset)
+    }
+  }
+
+  function tryPatchIndex(source: any[], i: number) {
+    const block = oldBlocks[i]
+    const item = source[i]
+    if (block.key === getKey!(item, i)) {
+      update((newBlocks[i] = block), item)
+      return true
+    }
+  }
+
+  function updateWithMemo(
+    block: ForBlock,
+    newItem: any,
+    oldIndex = block.s[1],
+    newIndex = oldIndex,
+  ) {
+    let needsUpdate = newIndex !== oldIndex
+    if (!needsUpdate) {
+      const oldMemo = block.memo!
+      const newMemo = (block.memo = getMemo!(newItem, newIndex))
+      for (let i = 0; i < newMemo.length; i++) {
+        if ((needsUpdate = newMemo[i] !== oldMemo[i])) {
+          break
+        }
+      }
+    }
+    if (needsUpdate) {
+      block.s = [newItem, newIndex]
+      block.update()
+    }
+  }
+
+  function updateWithoutMemo(
+    block: ForBlock,
+    newItem: any,
+    oldIndex = block.s[1],
+    newIndex = oldIndex,
+  ) {
+    if (
+      newItem !== block.s[0] ||
+      newIndex !== oldIndex ||
+      !isReactive(newItem)
+    ) {
+      block.s = [newItem, newIndex]
+      block.update()
+    }
+  }
+
+  function unmount({ nodes, scope }: ForBlock) {
+    remove(nodes, parent!)
+    scope.stop()
+  }
 }
 
-const normalizeAnchor = (node: Block): Node => {
+function normalizeAnchor(node: Block): Node {
   if (node instanceof Node) {
     return node
   } else if (isArray(node)) {
@@ -310,7 +312,7 @@ const normalizeAnchor = (node: Block): Node => {
 }
 
 // https://en.wikipedia.org/wiki/Longest_increasing_subsequence
-const getSequence = (arr: number[]): number[] => {
+function getSequence(arr: number[]): number[] {
   const p = arr.slice()
   const result = [0]
   let i, j, u, v, c
