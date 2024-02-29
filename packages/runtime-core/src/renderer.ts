@@ -56,11 +56,7 @@ import {
   type SuspenseImpl,
   queueEffectWithSuspense,
 } from './components/Suspense'
-import {
-  type TeleportImpl,
-  type TeleportVNode,
-  isTeleport,
-} from './components/Teleport'
+import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { type KeepAliveContext, isKeepAlive } from './components/KeepAlive'
 import { isHmrUpdating, registerHMR, unregisterHMR } from './hmr'
 import { type RootHydrateFunction, createHydrationFunctions } from './hydration'
@@ -2346,6 +2342,17 @@ function baseCreateRenderer(
     }
   }
 
+  const isSubNode = (vnode: VNode, node: RendererNode): boolean => {
+    if (node === vnode.targetAnchor) return true
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+      return isSubNode(vnode.component.subTree, node)
+    }
+    if (isArray(vnode.children)) {
+      return (vnode.children as VNode[]).some(c => isSubNode(c, node))
+    }
+    return vnode.el === node
+  }
+
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
@@ -2355,16 +2362,12 @@ function baseCreateRenderer(
     }
     let node = hostNextSibling((vnode.anchor || vnode.el)!)
 
-    // avoid using teleported node as anchor
-    while (
-      node &&
-      isTeleport(vnode.type) &&
-      ((isArray(vnode.children) &&
-        (vnode.children as VNode[]).some(c => c.el === node)) ||
-        node === vnode.targetAnchor)
-    ) {
+    // if node is teleported and in vnode's sub children
+    // it should be skipped
+    while (node && node.__teleported && isSubNode(vnode, node)) {
       node = hostNextSibling(node)
     }
+
     return node
   }
 

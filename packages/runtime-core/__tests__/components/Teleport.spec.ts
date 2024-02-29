@@ -6,6 +6,7 @@ import {
   Teleport,
   Text,
   createApp,
+  createCommentVNode,
   defineComponent,
   h,
   markRaw,
@@ -555,7 +556,7 @@ describe('renderer: teleport', () => {
   })
 
   //#9071
-  test('avoid using teleported node as anchor', async () => {
+  test('toggle sibling node inside target node', async () => {
     const root = document.createElement('div')
     const show = ref(false)
     const App = defineComponent({
@@ -582,5 +583,42 @@ describe('renderer: teleport', () => {
     await nextTick()
 
     expect(root.innerHTML).toMatchInlineSnapshot('"<div>foo</div>"')
+  })
+
+  test('unmount previous sibling node inside target node', async () => {
+    const root = document.createElement('div')
+    const parentShow = ref(false)
+    const childShow = ref(true)
+
+    const Comp = {
+      setup() {
+        return () => h(Teleport, { to: root }, [h('div', 'foo')])
+      },
+    }
+
+    const App = defineComponent({
+      setup() {
+        return () => {
+          return parentShow.value
+            ? h(Fragment, { key: 0 }, [
+                childShow.value ? h(Comp) : createCommentVNode('v-if'),
+              ])
+            : createCommentVNode('v-if')
+        }
+      },
+    })
+
+    domRender(h(App), root)
+    expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
+
+    parentShow.value = true
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot(
+      '"<!--teleport start--><!--teleport end--><div>foo</div>"',
+    )
+
+    parentShow.value = false
+    await nextTick()
+    expect(root.innerHTML).toMatchInlineSnapshot('"<!--v-if-->"')
   })
 })
