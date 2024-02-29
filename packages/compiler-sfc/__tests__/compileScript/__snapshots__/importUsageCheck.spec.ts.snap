@@ -79,21 +79,6 @@ return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { r
 })"
 `;
 
-exports[`import namespace 1`] = `
-"import { defineComponent as _defineComponent } from 'vue'
-import * as Foo from './foo'
-    
-export default /*#__PURE__*/_defineComponent({
-  setup(__props, { expose: __expose }) {
-  __expose();
-
-      
-return { get Foo() { return Foo } }
-}
-
-})"
-`;
-
 exports[`js template string interpolations 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 import { VAR, VAR2, VAR3 } from './x'
