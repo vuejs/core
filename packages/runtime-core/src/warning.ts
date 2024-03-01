@@ -44,7 +44,7 @@ export function warn(msg: string, ...args: any[]) {
       instance,
       ErrorCodes.APP_WARN_HANDLER,
       [
-        msg + args.join(''),
+        msg + args.map(a => a.toString?.() ?? JSON.stringify(a)).join(''),
         instance && instance.proxy,
         trace
           .map(
