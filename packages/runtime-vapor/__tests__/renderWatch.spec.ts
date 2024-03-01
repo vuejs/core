@@ -114,11 +114,7 @@ describe('renderWatch', () => {
     ).render()
     const { change, changeRender } = instance.setupState as any
 
-    expect(calls).toEqual(['pre 0', 'sync 0', 'renderEffect 0'])
-    calls.length = 0
-
-    await nextTick()
-    expect(calls).toEqual(['post 0'])
+    expect(calls).toEqual(['pre 0', 'sync 0', 'renderEffect 0', 'post 0'])
     calls.length = 0
 
     // Update

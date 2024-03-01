@@ -70,7 +70,7 @@ function queueFlush() {
   }
 }
 
-function flushPostFlushCbs() {
+export function flushPostFlushCbs() {
   if (!pendingPostFlushCbs.length) return
 
   const deduped = [...new Set(pendingPostFlushCbs)]

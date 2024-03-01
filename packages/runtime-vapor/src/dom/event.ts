@@ -6,6 +6,7 @@ import {
 } from '@vue/reactivity'
 import { MetadataKind, getMetadata, recordEventMetadata } from '../metadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
+import { queuePostRenderEffect } from '../scheduler'
 
 export function addEventListener(
   el: HTMLElement,
@@ -30,20 +31,22 @@ export function on(
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   const cleanupMetadata = recordEventMetadata(el, event, handler)
-  const cleanupEvent = addEventListener(el, event, handler, options)
+  queuePostRenderEffect(() => {
+    const cleanupEvent = addEventListener(el, event, handler, options)
 
-  function cleanup() {
-    cleanupMetadata()
-    cleanupEvent()
-  }
+    function cleanup() {
+      cleanupMetadata()
+      cleanupEvent()
+    }
 
-  const scope = getCurrentScope()
-  const effect = getCurrentEffect()
-  if (effect && effect.scope === scope) {
-    onEffectCleanup(cleanup)
-  } else if (scope) {
-    onScopeDispose(cleanup)
-  }
+    const scope = getCurrentScope()
+    const effect = getCurrentEffect()
+    if (effect && effect.scope === scope) {
+      onEffectCleanup(cleanup)
+    } else if (scope) {
+      onScopeDispose(cleanup)
+    }
+  })
 }
 
 export type DelegatedHandler = {

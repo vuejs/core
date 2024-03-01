@@ -50,7 +50,9 @@ export const vModelText: ObjectDirective<
     const assigner = getModelAssigner(el)
     assignFnMap.set(el, assigner)
 
-    const castToNumber = number // || (vnode.props && vnode.props.type === 'number')
+    const metadata = getMetadata(el)
+    const castToNumber = number || metadata[MetadataKind.prop].type === 'number'
+
     addEventListener(el, lazy ? 'change' : 'input', e => {
       if ((e.target as any).composing) return
       let domValue: string | number = el.value

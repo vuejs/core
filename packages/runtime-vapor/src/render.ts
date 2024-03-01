@@ -16,7 +16,7 @@ import {
 import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directives'
 import { insert, querySelector, remove } from './dom/element'
-import { queuePostRenderEffect } from './scheduler'
+import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -34,7 +34,12 @@ export function render(
 ): ComponentInternalInstance {
   const instance = createComponentInstance(comp, props)
   initProps(instance, props, !isFunction(instance.component))
-  return mountComponent(instance, (container = normalizeContainer(container)))
+  const component = mountComponent(
+    instance,
+    (container = normalizeContainer(container)),
+  )
+  flushPostFlushCbs()
+  return component
 }
 
 function normalizeContainer(container: string | ParentNode): ParentNode {
