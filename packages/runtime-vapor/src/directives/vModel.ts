@@ -15,12 +15,12 @@ import type {
 import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'
-import { getMetadata } from '../metadata'
+import { MetadataKind, getMetadata } from '../metadata'
 
 type AssignerFn = (value: any) => void
 function getModelAssigner(el: Element): AssignerFn {
   const metadata = getMetadata(el)
-  const fn: any = metadata.events['update:modelValue']
+  const fn: any = metadata[MetadataKind.event]['update:modelValue']
   return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
 }
 
@@ -204,13 +204,13 @@ function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
 // retrieve raw value set via :value bindings
 function getValue(el: HTMLOptionElement | HTMLInputElement) {
   const metadata = getMetadata(el)
-  return (metadata && metadata.props.value) || el.value
+  return (metadata && metadata[MetadataKind.prop].value) || el.value
 }
 
 // retrieve raw value for true-value and false-value set via :true-value or :false-value bindings
 function getCheckboxValue(el: HTMLInputElement, checked: boolean) {
   const metadata = getMetadata(el)
-  const props = metadata && metadata.props
+  const props = metadata && metadata[MetadataKind.prop]
   const key = checked ? 'true-value' : 'false-value'
   if (props && key in props) {
     return props[key]

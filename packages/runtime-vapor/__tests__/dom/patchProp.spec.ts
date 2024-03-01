@@ -13,7 +13,7 @@ import {
   createComponentInstance,
   setCurrentInstance,
 } from '../../src/component'
-import { getMetadata, recordMetadata } from '../../src/metadata'
+import { MetadataKind, getMetadata, recordMetadata } from '../../src/metadata'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -33,34 +33,28 @@ describe('patchProp', () => {
   describe('recordMetadata', () => {
     test('should record prop metadata', () => {
       const node = {} as Node // the node is just a key
-      let prev = recordMetadata(node, 'props', 'class', 'foo')
+      let prev = recordMetadata(node, MetadataKind.prop, 'class', 'foo')
       expect(prev).toBeUndefined()
-      prev = recordMetadata(node, 'props', 'class', 'bar')
+      prev = recordMetadata(node, MetadataKind.prop, 'class', 'bar')
       expect(prev).toBe('foo')
-      prev = recordMetadata(node, 'props', 'style', 'color: red')
+      prev = recordMetadata(node, MetadataKind.prop, 'style', 'color: red')
       expect(prev).toBeUndefined()
-      prev = recordMetadata(node, 'props', 'style', 'color: blue')
+      prev = recordMetadata(node, MetadataKind.prop, 'style', 'color: blue')
       expect(prev).toBe('color: red')
 
-      expect(getMetadata(node)).toEqual({
-        props: { class: 'bar', style: 'color: blue' },
-        events: {},
-      })
+      expect(getMetadata(node)).toEqual([
+        { class: 'bar', style: 'color: blue' },
+        {},
+      ])
     })
 
     test('should have different metadata for different nodes', () => {
       const node1 = {} as Node
       const node2 = {} as Node
-      recordMetadata(node1, 'props', 'class', 'foo')
-      recordMetadata(node2, 'props', 'class', 'bar')
-      expect(getMetadata(node1)).toEqual({
-        props: { class: 'foo' },
-        events: {},
-      })
-      expect(getMetadata(node2)).toEqual({
-        props: { class: 'bar' },
-        events: {},
-      })
+      recordMetadata(node1, MetadataKind.prop, 'class', 'foo')
+      recordMetadata(node2, MetadataKind.prop, 'class', 'bar')
+      expect(getMetadata(node1)).toEqual([{ class: 'foo' }, {}])
+      expect(getMetadata(node2)).toEqual([{ class: 'bar' }, {}])
     })
   })
 

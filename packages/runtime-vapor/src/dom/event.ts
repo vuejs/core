@@ -4,7 +4,7 @@ import {
   onEffectCleanup,
   onScopeDispose,
 } from '@vue/reactivity'
-import { getMetadata, recordMetadata } from '../metadata'
+import { MetadataKind, getMetadata, recordMetadata } from '../metadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
 
 export function addEventListener(
@@ -29,7 +29,7 @@ export function on(
   options: AddEventListenerOptions & ModifierOptions = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
-  recordMetadata(el, 'events', event, handler)
+  recordMetadata(el, MetadataKind.event, event, handler)
 
   const cleanup = addEventListener(el, event, handler, options)
   const scope = getCurrentScope()
@@ -55,7 +55,7 @@ export function delegate(
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   handler.delegate = true
-  recordMetadata(el, 'events', event, handler)
+  recordMetadata(el, MetadataKind.event, event, handler)
 }
 
 function eventHandler(
@@ -103,7 +103,7 @@ const delegatedEventHandler = (e: Event) => {
     },
   })
   while (node !== null) {
-    const handler = getMetadata(node).events[e.type]
+    const handler = getMetadata(node)[MetadataKind.event][e.type]
     if (handler && handler.delegate && !node.disabled) {
       handler(e)
       if (e.cancelBubble) return

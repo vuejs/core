@@ -11,12 +11,12 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { setStyle } from './style'
-import { getMetadata, recordMetadata } from '../metadata'
+import { MetadataKind, getMetadata, recordMetadata } from '../metadata'
 
 export function setClass(el: Element, value: any) {
   const prev = recordMetadata(
     el,
-    'props',
+    MetadataKind.prop,
     'class',
     (value = normalizeClass(value)),
   )
@@ -26,7 +26,7 @@ export function setClass(el: Element, value: any) {
 }
 
 export function setAttr(el: Element, key: string, value: any) {
-  const oldVal = recordMetadata(el, 'props', key, value)
+  const oldVal = recordMetadata(el, MetadataKind.prop, key, value)
   if (value !== oldVal) {
     if (value != null) {
       el.setAttribute(key, value)
@@ -37,7 +37,7 @@ export function setAttr(el: Element, key: string, value: any) {
 }
 
 export function setDOMProp(el: any, key: string, value: any) {
-  const oldVal = recordMetadata(el, 'props', key, value)
+  const oldVal = recordMetadata(el, MetadataKind.prop, key, value)
   if (value === oldVal) return
 
   if (key === 'innerHTML' || key === 'textContent') {
@@ -130,7 +130,7 @@ export function setDynamicProp(el: Element, key: string, value: any) {
 }
 
 export function setDynamicProps(el: Element, ...args: any) {
-  const oldProps = getMetadata(el).props
+  const oldProps = getMetadata(el)[MetadataKind.prop]
   const props = args.length > 1 ? mergeProps(...args) : args[0]
 
   for (const key in oldProps) {
@@ -184,14 +184,14 @@ function mergeProps(...args: Data[]) {
 
 export function setText(el: Node, ...values: any[]) {
   const text = values.map(v => toDisplayString(v)).join('')
-  const oldVal = recordMetadata(el, 'props', 'textContent', text)
+  const oldVal = recordMetadata(el, MetadataKind.prop, 'textContent', text)
   if (text !== oldVal) {
     el.textContent = text
   }
 }
 
 export function setHtml(el: Element, value: any) {
-  const oldVal = recordMetadata(el, 'props', 'innerHTML', value)
+  const oldVal = recordMetadata(el, MetadataKind.prop, 'innerHTML', value)
   if (value !== oldVal) {
     el.innerHTML = value
   }
