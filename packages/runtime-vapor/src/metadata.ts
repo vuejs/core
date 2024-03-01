@@ -1,4 +1,4 @@
-import type { Data } from '@vue/shared'
+import { type Data, remove } from '@vue/shared'
 import type { DelegatedHandler } from './dom/event'
 
 export enum MetadataKind {
@@ -8,7 +8,7 @@ export enum MetadataKind {
 
 export type ElementMetadata = [
   props: Data,
-  events: Record<string, DelegatedHandler>,
+  events: Record<string, DelegatedHandler[]>,
 ]
 
 export function getMetadata(
@@ -17,14 +17,16 @@ export function getMetadata(
   return el.$$metadata || (el.$$metadata = [{}, {}])
 }
 
-export function recordMetadata(
-  el: Node,
-  kind: MetadataKind,
-  key: string,
-  value: any,
-): any {
-  const metadata = getMetadata(el)[kind]
+export function recordPropMetadata(el: Node, key: string, value: any): any {
+  const metadata = getMetadata(el)[MetadataKind.prop]
   const prev = metadata[key]
   metadata[key] = value
   return prev
+}
+
+export function recordEventMetadata(el: Node, key: string, value: any) {
+  const metadata = getMetadata(el)[MetadataKind.event]
+  const handlers = (metadata[key] ||= [])
+  handlers.push(value)
+  return () => remove(handlers, value)
 }

@@ -11,22 +11,17 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { setStyle } from './style'
-import { MetadataKind, getMetadata, recordMetadata } from '../metadata'
+import { MetadataKind, getMetadata, recordPropMetadata } from '../metadata'
 
 export function setClass(el: Element, value: any) {
-  const prev = recordMetadata(
-    el,
-    MetadataKind.prop,
-    'class',
-    (value = normalizeClass(value)),
-  )
+  const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))
   if (value !== prev && (value || prev)) {
     el.className = value
   }
 }
 
 export function setAttr(el: Element, key: string, value: any) {
-  const oldVal = recordMetadata(el, MetadataKind.prop, key, value)
+  const oldVal = recordPropMetadata(el, key, value)
   if (value !== oldVal) {
     if (value != null) {
       el.setAttribute(key, value)
@@ -37,7 +32,7 @@ export function setAttr(el: Element, key: string, value: any) {
 }
 
 export function setDOMProp(el: any, key: string, value: any) {
-  const oldVal = recordMetadata(el, MetadataKind.prop, key, value)
+  const oldVal = recordPropMetadata(el, key, value)
   if (value === oldVal) return
 
   if (key === 'innerHTML' || key === 'textContent') {
@@ -184,14 +179,14 @@ function mergeProps(...args: Data[]) {
 
 export function setText(el: Node, ...values: any[]) {
   const text = values.map(v => toDisplayString(v)).join('')
-  const oldVal = recordMetadata(el, MetadataKind.prop, 'textContent', text)
+  const oldVal = recordPropMetadata(el, 'textContent', text)
   if (text !== oldVal) {
     el.textContent = text
   }
 }
 
 export function setHtml(el: Element, value: any) {
-  const oldVal = recordMetadata(el, MetadataKind.prop, 'innerHTML', value)
+  const oldVal = recordPropMetadata(el, 'innerHTML', value)
   if (value !== oldVal) {
     el.innerHTML = value
   }

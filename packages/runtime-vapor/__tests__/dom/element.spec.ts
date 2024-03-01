@@ -1,12 +1,12 @@
-import { insert, normalizeBlock, prepend, remove } from '../src/dom/element'
-import { fragmentKey } from '../src/render'
+import { insert, normalizeBlock, prepend, remove } from '../../src/dom/element'
+import { fragmentKey } from '../../src/render'
 
 const node1 = document.createTextNode('node1')
 const node2 = document.createTextNode('node2')
 const node3 = document.createTextNode('node3')
 const anchor = document.createTextNode('anchor')
 
-describe('dom', () => {
+describe('element', () => {
   test('normalizeBlock', () => {
     expect(normalizeBlock([node1, node2, node3])).toEqual([node1, node2, node3])
     expect(normalizeBlock([node1, [node2, [node3]]])).toEqual([

@@ -13,7 +13,7 @@ import {
   createComponentInstance,
   setCurrentInstance,
 } from '../../src/component'
-import { MetadataKind, getMetadata, recordMetadata } from '../../src/metadata'
+import { getMetadata, recordPropMetadata } from '../../src/metadata'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
@@ -30,16 +30,16 @@ afterEach(() => {
 })
 
 describe('patchProp', () => {
-  describe('recordMetadata', () => {
+  describe('recordPropMetadata', () => {
     test('should record prop metadata', () => {
       const node = {} as Node // the node is just a key
-      let prev = recordMetadata(node, MetadataKind.prop, 'class', 'foo')
+      let prev = recordPropMetadata(node, 'class', 'foo')
       expect(prev).toBeUndefined()
-      prev = recordMetadata(node, MetadataKind.prop, 'class', 'bar')
+      prev = recordPropMetadata(node, 'class', 'bar')
       expect(prev).toBe('foo')
-      prev = recordMetadata(node, MetadataKind.prop, 'style', 'color: red')
+      prev = recordPropMetadata(node, 'style', 'color: red')
       expect(prev).toBeUndefined()
-      prev = recordMetadata(node, MetadataKind.prop, 'style', 'color: blue')
+      prev = recordPropMetadata(node, 'style', 'color: blue')
       expect(prev).toBe('color: red')
 
       expect(getMetadata(node)).toEqual([
@@ -51,8 +51,8 @@ describe('patchProp', () => {
     test('should have different metadata for different nodes', () => {
       const node1 = {} as Node
       const node2 = {} as Node
-      recordMetadata(node1, MetadataKind.prop, 'class', 'foo')
-      recordMetadata(node2, MetadataKind.prop, 'class', 'bar')
+      recordPropMetadata(node1, 'class', 'foo')
+      recordPropMetadata(node2, 'class', 'bar')
       expect(getMetadata(node1)).toEqual([{ class: 'foo' }, {}])
       expect(getMetadata(node2)).toEqual([{ class: 'bar' }, {}])
     })
