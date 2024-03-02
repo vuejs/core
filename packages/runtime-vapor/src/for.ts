@@ -321,16 +321,18 @@ export const createFor = (
     source: any,
     idx: number,
   ): [item: any, key: any, index?: number] {
-    if (source && source[Symbol.iterator as any])
-      source = Array.from(source as Iterable<any>)
-
     if (isArray(source) || isString(source)) {
       return [source[idx], idx, undefined]
     } else if (typeof source === 'number') {
       return [idx + 1, idx, undefined]
     } else if (isObject(source)) {
-      const key = Object.keys(source)[idx]
-      return [source[key], key, idx]
+      if (source && source[Symbol.iterator as any]) {
+        source = Array.from(source as Iterable<any>)
+        return [source[idx], idx, undefined]
+      } else {
+        const key = Object.keys(source)[idx]
+        return [source[key], key, idx]
+      }
     }
     return null!
   }
