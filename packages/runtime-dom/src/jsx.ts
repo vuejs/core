@@ -1350,6 +1350,7 @@ export interface Events {
 
   // scroll events
   onScroll: Event
+  onScrollend: Event
 
   // touch events
   onTouchcancel: TouchEvent
