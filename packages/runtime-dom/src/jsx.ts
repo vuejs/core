@@ -1348,8 +1348,8 @@ export interface Events {
   // selection events
   onSelect: Event
 
-  // UI events
-  onScroll: UIEvent
+  // scroll events
+  onScroll: Event
 
   // touch events
   onTouchcancel: TouchEvent
