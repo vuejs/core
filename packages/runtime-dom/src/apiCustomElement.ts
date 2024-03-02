@@ -362,7 +362,7 @@ export class VueElement extends BaseClass {
   private _createVNode(): VNode<any, any> {
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
-      vnode.ce = instance => {
+      vnode.ce = async instance => {
         this._instance = instance
         instance.isCE = true
         // HMR
@@ -404,6 +404,11 @@ export class VueElement extends BaseClass {
             parent && (parent.parentNode || (parent as ShadowRoot).host))
         ) {
           if (parent instanceof VueElement) {
+            const _def = parent._def as ComponentOptions
+            if (_def.__asyncLoader && !_def.__asyncResolved) {
+              // eslint-disable-next-line no-restricted-syntax
+              await _def.__asyncLoader()
+            }
             instance.parent = parent._instance
             instance.provides = parent._instance!.provides
             break
