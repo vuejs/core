@@ -362,7 +362,7 @@ export class VueElement extends BaseClass {
   private _createVNode(): VNode<any, any> {
     const vnode = createVNode(this._def, extend({}, this._props))
     if (!this._instance) {
-      vnode.ce = async instance => {
+      vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
         // HMR
@@ -406,11 +406,15 @@ export class VueElement extends BaseClass {
           if (parent instanceof VueElement) {
             const _def = parent._def as ComponentOptions
             if (_def.__asyncLoader && !_def.__asyncResolved) {
-              // eslint-disable-next-line no-restricted-syntax
-              await _def.__asyncLoader()
+              const _parentNode = parent
+              _def.__asyncLoader().then(() => {
+                instance.parent = _parentNode._instance
+                instance.provides = _parentNode._instance!.provides
+              })
+            } else {
+              instance.parent = parent._instance
+              instance.provides = parent._instance!.provides
             }
-            instance.parent = parent._instance
-            instance.provides = parent._instance!.provides
             break
           }
         }
