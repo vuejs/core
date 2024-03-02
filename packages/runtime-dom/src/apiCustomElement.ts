@@ -405,7 +405,7 @@ export class VueElement extends BaseClass {
         ) {
           if (parent instanceof VueElement) {
             const _def = parent._def as ComponentOptions
-            if (_def.__asyncLoader && !_def.__asyncResolved) {
+            if (_def.__asyncLoader) {
               const _parentNode = parent
               _def.__asyncLoader().then(() => {
                 instance.parent = _parentNode._instance
