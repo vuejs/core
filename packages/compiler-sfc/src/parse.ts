@@ -3,6 +3,7 @@ import {
   type CompilerError,
   type ElementNode,
   NodeTypes,
+  type ParserOptions,
   type RootNode,
   type SourceLocation,
   createRoot,
@@ -24,6 +25,11 @@ export interface SFCParseOptions {
   pad?: boolean | 'line' | 'space'
   ignoreEmpty?: boolean
   compiler?: TemplateCompiler
+  templateParseOptions?: ParserOptions
+  /**
+   * TODO remove in 3.5
+   * @deprecated use `templateParseOptions: { prefixIdentifiers: false }` instead
+   */
   parseExpressions?: boolean
 }
 
@@ -97,24 +103,39 @@ export interface SFCParseResult {
 
 export const parseCache = createCache<SFCParseResult>()
 
+function genCacheKey(source: string, options: SFCParseOptions): string {
+  return (
+    source +
+    JSON.stringify(
+      {
+        ...options,
+        compiler: { parse: options.compiler?.parse },
+      },
+      (_, val) => (typeof val === 'function' ? val.toString() : val),
+    )
+  )
+}
+
 export function parse(
   source: string,
-  {
+  options: SFCParseOptions = {},
+): SFCParseResult {
+  const sourceKey = genCacheKey(source, options)
+  const cache = parseCache.get(sourceKey)
+  if (cache) {
+    return cache
+  }
+
+  const {
     sourceMap = true,
     filename = DEFAULT_FILENAME,
     sourceRoot = '',
     pad = false,
     ignoreEmpty = true,
     compiler = CompilerDOM,
+    templateParseOptions = {},
     parseExpressions = true,
-  }: SFCParseOptions = {},
-): SFCParseResult {
-  const sourceKey =
-    source + sourceMap + filename + sourceRoot + pad + compiler.parse
-  const cache = parseCache.get(sourceKey)
-  if (cache) {
-    return cache
-  }
+  } = options
 
   const descriptor: SFCDescriptor = {
     filename,
@@ -133,6 +154,7 @@ export function parse(
   const ast = compiler.parse(source, {
     parseMode: 'sfc',
     prefixIdentifiers: parseExpressions,
+    ...templateParseOptions,
     onError: e => {
       errors.push(e)
     },
