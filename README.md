@@ -45,8 +45,7 @@ PR are welcome!
   - [x] `v-model`
   - [x] `v-if` / `v-else` / `v-else-if`
   - [ ] `v-for`
-    - [x] basic
-    - [ ] object
+    - [ ] destructure
   - [x] `v-show`
 - [x] Fragment
 - [ ] Codegen
@@ -54,15 +53,15 @@ PR are welcome!
   - [x] indent
   - [x] Source map
   - [x] scope id
-  - [ ] Function mode
+  - [ ] Function mode [on hold]
   - [ ] SSR
+- [ ] [Component](https://github.com/vuejs/core-vapor/issues/4)
 - [ ] Built-in Components
   - [ ] Transition
   - [ ] TransitionGroup
   - [ ] KeepAlive
   - [ ] Teleport
   - [ ] Suspense
-- [ ] [Component](https://github.com/vuejs/core-vapor/issues/4)
 - [ ] Performance & Optimization
   - [ ] remove unnecessary close tag `</div>`
 
