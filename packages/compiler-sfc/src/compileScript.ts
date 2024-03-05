@@ -992,9 +992,13 @@ export function compileScript(
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
-        .join(
-          ', ',
-        )} } from ${JSON.stringify(options.templateOptions?.compilerOptions?.runtimeModuleName || 'vue')}\n`,
+        .join(', ')} } from ${
+        options.templateOptions?.compilerOptions?.runtimeModuleName
+          ? JSON.stringify(
+              options.templateOptions?.compilerOptions?.runtimeModuleName,
+            )
+          : "'vue'"
+      }\n`,
     )
   }
 
