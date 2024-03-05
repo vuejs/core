@@ -53,6 +53,7 @@ export {
   enableTracking,
   pauseTracking,
   resetTracking,
+  onEffectCleanup,
   ReactiveEffect,
   EffectFlags,
   type ReactiveEffectRunner,

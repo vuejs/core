@@ -23,6 +23,7 @@ import {
 } from '@vue/runtime-test'
 import {
   endBatch,
+  onEffectCleanup,
   pauseTracking,
   resetTracking,
   startBatch,
@@ -1129,6 +1130,44 @@ describe('reactivity/effect', () => {
       expect(getSubCount(getDepFromReactive(toRaw(obj), 'b'))).toBe(1)
       expect(getDepFromReactive(toRaw(obj), 'c')).toBe(depC)
       expect(getSubCount(depC)).toBe(1)
+    })
+  })
+
+  describe('onEffectCleanup', () => {
+    it('should get called correctly', async () => {
+      const count = ref(0)
+      const cleanupEffect = vi.fn()
+
+      const e = effect(() => {
+        onEffectCleanup(cleanupEffect)
+        count.value
+      })
+
+      count.value++
+      await nextTick()
+      expect(cleanupEffect).toHaveBeenCalledTimes(1)
+
+      count.value++
+      await nextTick()
+      expect(cleanupEffect).toHaveBeenCalledTimes(2)
+
+      // call it on stop
+      e.effect.stop()
+      expect(cleanupEffect).toHaveBeenCalledTimes(3)
+    })
+
+    it('should warn if called without active effect', () => {
+      onEffectCleanup(() => {})
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).toHaveBeenWarned()
+    })
+
+    it('should not warn without active effect when failSilently argument is passed', () => {
+      onEffectCleanup(() => {}, true)
+      expect(
+        `onEffectCleanup() was called when there was no active effect`,
+      ).not.toHaveBeenWarned()
     })
   })
 })
