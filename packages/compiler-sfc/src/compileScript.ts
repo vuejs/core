@@ -994,7 +994,7 @@ export function compileScript(
         .map(h => `${h} as _${h}`)
         .join(
           ', ',
-        )} } from '${options.templateOptions?.compilerOptions?.runtimeModuleName || 'vue'}'\n`,
+        )} } from ${JSON.stringify(options.templateOptions?.compilerOptions?.runtimeModuleName || 'vue')}\n`,
     )
   }
 
