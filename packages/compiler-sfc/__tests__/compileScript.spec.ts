@@ -1472,3 +1472,26 @@ describe('SFC genDefaultAs', () => {
     })
   })
 })
+
+describe('compileScript', () => {
+  test('should care about runtimeModuleName', () => {
+    const { content } = compile(
+      `
+      <script setup>
+        await Promise.resolve(1)
+      </script>
+      `,
+      {
+        templateOptions: {
+          compilerOptions: {
+            runtimeModuleName: 'npm:vue',
+          },
+        },
+      },
+    )
+    expect(content).toMatch(
+      `import { withAsyncContext as _withAsyncContext } from "npm:vue"\n`,
+    )
+    assertCode(content)
+  })
+})
