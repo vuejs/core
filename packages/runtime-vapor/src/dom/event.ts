@@ -31,22 +31,28 @@ export function on(
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   const cleanupMetadata = recordEventMetadata(el, event, handler)
+
+  let cleanupEvent: (() => void) | undefined
   queuePostRenderEffect(() => {
-    const cleanupEvent = addEventListener(el, event, handler, options)
-
-    function cleanup() {
-      cleanupMetadata()
-      cleanupEvent()
-    }
-
-    const scope = getCurrentScope()
-    const effect = getCurrentEffect()
-    if (effect && effect.scope === scope) {
-      onEffectCleanup(cleanup)
-    } else if (scope) {
-      onScopeDispose(cleanup)
-    }
+    cleanupEvent = addEventListener(el, event, handler, options)
   })
+
+  const scope = getCurrentScope()
+  const effect = getCurrentEffect()
+  // If we are in an effect and the effect has the same scope as
+  // the current scope, we can cleanup when the effect is disposed
+  // This solves the issue where createFor itself has an effect,
+  // but this effect is unrelated to its block.
+  if (effect && effect.scope === scope) {
+    onEffectCleanup(cleanup)
+  } else if (scope) {
+    onScopeDispose(cleanup)
+  }
+
+  function cleanup() {
+    cleanupMetadata()
+    cleanupEvent && cleanupEvent()
+  }
 }
 
 export type DelegatedHandler = {
