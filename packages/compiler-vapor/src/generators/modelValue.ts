@@ -25,6 +25,6 @@ export function genSetModelValue(
 
   return [
     NEWLINE,
-    ...genCall(vaporHelper('on'), `n${oper.element}`, name, handler),
+    ...genCall(vaporHelper('delegate'), `n${oper.element}`, name, handler),
   ]
 }

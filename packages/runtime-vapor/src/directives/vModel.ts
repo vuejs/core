@@ -20,8 +20,8 @@ import { MetadataKind, getMetadata } from '../metadata'
 type AssignerFn = (value: any) => void
 function getModelAssigner(el: Element): AssignerFn {
   const metadata = getMetadata(el)
-  const fn: any = metadata[MetadataKind.event]['update:modelValue']
-  return isArray(fn) ? value => invokeArrayFns(fn, value) : fn
+  const fn = metadata[MetadataKind.event]['update:modelValue'] || []
+  return value => invokeArrayFns(fn, value)
 }
 
 function onCompositionStart(e: Event) {
