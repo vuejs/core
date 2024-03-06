@@ -13,6 +13,7 @@ import {
 } from './collectionHandlers'
 import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
 import { ReactiveFlags } from './constants'
+import { warn } from './warning'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
@@ -247,7 +248,7 @@ function createReactiveObject(
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
+      warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }
@@ -385,7 +386,9 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  def(value, ReactiveFlags.SKIP, true)
+  if (Object.isExtensible(value)) {
+    def(value, ReactiveFlags.SKIP, true)
+  }
   return value
 }
 

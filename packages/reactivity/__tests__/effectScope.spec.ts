@@ -247,16 +247,15 @@ describe('reactivity/effect/scope', () => {
       watchEffect(() => {
         watchEffectSpy()
         r.value
+        c.value
       })
     })
 
-    c!.value // computed is lazy so trigger collection
     expect(computedSpy).toHaveBeenCalledTimes(1)
     expect(watchSpy).toHaveBeenCalledTimes(0)
     expect(watchEffectSpy).toHaveBeenCalledTimes(1)
 
     r.value++
-    c!.value
     await nextTick()
     expect(computedSpy).toHaveBeenCalledTimes(2)
     expect(watchSpy).toHaveBeenCalledTimes(1)
@@ -265,7 +264,6 @@ describe('reactivity/effect/scope', () => {
     scope.stop()
 
     r.value++
-    c!.value
     await nextTick()
     // should not trigger anymore
     expect(computedSpy).toHaveBeenCalledTimes(2)

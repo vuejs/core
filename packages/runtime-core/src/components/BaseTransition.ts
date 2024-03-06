@@ -19,6 +19,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
+import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -144,8 +145,6 @@ const BaseTransitionImpl: ComponentOptions = {
     const instance = getCurrentInstance()!
     const state = useTransitionState()
 
-    let prevTransitionKey: any
-
     return () => {
       const children =
         slots.default && getTransitionRawChildren(slots.default(), true)
@@ -211,23 +210,11 @@ const BaseTransitionImpl: ComponentOptions = {
       const oldChild = instance.subTree
       const oldInnerChild = oldChild && getKeepAliveChild(oldChild)
 
-      let transitionKeyChanged = false
-      const { getTransitionKey } = innerChild.type as any
-      if (getTransitionKey) {
-        const key = getTransitionKey()
-        if (prevTransitionKey === undefined) {
-          prevTransitionKey = key
-        } else if (key !== prevTransitionKey) {
-          prevTransitionKey = key
-          transitionKeyChanged = true
-        }
-      }
-
       // handle mode
       if (
         oldInnerChild &&
         oldInnerChild.type !== Comment &&
-        (!isSameVNodeType(innerChild, oldInnerChild) || transitionKeyChanged)
+        !isSameVNodeType(innerChild, oldInnerChild)
       ) {
         const leavingHooks = resolveTransitionHooks(
           oldInnerChild,
@@ -245,8 +232,7 @@ const BaseTransitionImpl: ComponentOptions = {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
-            if (instance.update.active !== false) {
-              instance.effect.dirty = true
+            if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
           }

@@ -1,12 +1,8 @@
 import { toRaw, toReactive, toReadonly } from './reactive'
-import {
-  ITERATE_KEY,
-  MAP_KEY_ITERATE_KEY,
-  track,
-  trigger,
-} from './reactiveEffect'
+import { ITERATE_KEY, MAP_KEY_ITERATE_KEY, track, trigger } from './dep'
 import { ReactiveFlags, TrackOpTypes, TriggerOpTypes } from './constants'
 import { capitalize, hasChanged, hasOwn, isMap, toRawType } from '@vue/shared'
+import { warn } from './warning'
 
 type CollectionTypes = IterableCollections | WeakCollections
 
@@ -223,7 +219,7 @@ function createReadonlyMethod(type: TriggerOpTypes): Function {
   return function (this: CollectionTypes, ...args: unknown[]) {
     if (__DEV__) {
       const key = args[0] ? `on key "${args[0]}" ` : ``
-      console.warn(
+      warn(
         `${capitalize(type)} operation ${key}failed: target is readonly.`,
         toRaw(this),
       )
@@ -397,7 +393,7 @@ function checkIdentityKeys(
   const rawKey = toRaw(key)
   if (rawKey !== key && has.call(target, rawKey)) {
     const type = toRawType(target)
-    console.warn(
+    warn(
       `Reactive ${type} contains both the raw and reactive ` +
         `versions of the same object${type === `Map` ? ` as keys` : ``}, ` +
         `which can lead to inconsistencies. ` +
