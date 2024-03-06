@@ -53,8 +53,5 @@
     "@vue/runtime-core": "workspace:*",
     "@vue/reactivity": "workspace:*",
     "csstype": "^3.1.3"
-  },
-  "peerDependencies": {
-    "@vue/reactivity": "workspace:*"
   }
 }
