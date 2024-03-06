@@ -32,6 +32,9 @@ export const MAP_KEY_ITERATE_KEY = Symbol(__DEV__ ? 'Map key iterate' : '')
  */
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (shouldTrack && activeEffect) {
+    if (isArray(target) && typeof key === 'number' && isIntegerKey(`${key}`)) {
+      key = `${key}`
+    }
     let depsMap = targetMap.get(target)
     if (!depsMap) {
       targetMap.set(target, (depsMap = new Map()))
