@@ -989,13 +989,15 @@ export function compileScript(
 
   // 11. finalize Vue helper imports
   if (ctx.helperImports.size > 0) {
-    const runtimeModule = JSON.stringify(
-      options.templateOptions?.compilerOptions?.runtimeModuleName || 'vue',
-    )
+    const runtimeModuleName =
+      options.templateOptions?.compilerOptions?.runtimeModuleName
+    const importSrc = runtimeModuleName
+      ? JSON.stringify(runtimeModuleName)
+      : `'vue'`
     ctx.s.prepend(
       `import { ${[...ctx.helperImports]
         .map(h => `${h} as _${h}`)
-        .join(', ')} } from ${runtimeModule}\n`,
+        .join(', ')} } from ${importSrc}\n`,
     )
   }
 
