@@ -291,7 +291,7 @@ describe('INSTANCE_SCOPED_SLOTS', () => {
       components: {
         child: {
           compatConfig: { RENDER_FUNCTION: false },
-          render() {
+          render(this: LegacyPublicInstance) {
             normalSlots = this.$slots
             scopedSlots = this.$scopedSlots
           },

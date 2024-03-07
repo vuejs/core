@@ -6,13 +6,17 @@ import type {
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
   ComponentOptionsWithoutProps,
+  ComponentProvideOptions,
   ComputedOptions,
   MethodOptions,
   RenderFunction,
 } from './componentOptions'
 import type {
   AllowedComponentProps,
+  Component,
   ComponentCustomProps,
+  GlobalComponents,
+  GlobalDirectives,
   SetupContext,
 } from './component'
 import type {
@@ -29,6 +33,7 @@ import type {
   CreateComponentPublicInstance,
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
+import type { Directive } from './directives'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -55,6 +60,10 @@ export type DefineComponent<
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -69,7 +78,10 @@ export type DefineComponent<
     Defaults,
     true,
     {},
-    S
+    S,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed
   >
 > &
   ComponentOptionsBase<
@@ -85,7 +97,11 @@ export type DefineComponent<
     Defaults,
     {},
     string,
-    S
+    S,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed,
+    Provide
   > &
   PP
 
@@ -166,9 +182,13 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -182,7 +202,11 @@ export function defineComponent<
     EE,
     I,
     II,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
   >,
 ): DefineComponent<
   Props,
@@ -197,7 +221,11 @@ export function defineComponent<
   PublicProps,
   ResolveProps<Props, E>,
   ExtractDefaultPropTypes<Props>,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 >
 
 // overload 3: object format with array props declaration
@@ -216,6 +244,10 @@ export function defineComponent<
   S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Readonly<{ [key in PropNames]?: any }>,
 >(
   options: ComponentOptionsWithArrayProps<
@@ -230,7 +262,11 @@ export function defineComponent<
     EE,
     I,
     II,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
   >,
 ): DefineComponent<
   Props,
@@ -245,7 +281,11 @@ export function defineComponent<
   PublicProps,
   ResolveProps<Props, E>,
   ExtractDefaultPropTypes<Props>,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 >
 
 // overload 4: object format with object props declaration
@@ -262,9 +302,13 @@ export function defineComponent<
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
   E extends EmitsOptions = {},
   EE extends string = string,
-  S extends SlotsType = {},
   I extends ComponentInjectOptions = {},
   II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 >(
   options: ComponentOptionsWithObjectProps<
     PropsOptions,
@@ -278,7 +322,11 @@ export function defineComponent<
     EE,
     I,
     II,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
   >,
 ): DefineComponent<
   PropsOptions,
@@ -293,7 +341,11 @@ export function defineComponent<
   PublicProps,
   ResolveProps<PropsOptions, E>,
   ExtractDefaultPropTypes<PropsOptions>,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 >
 
 // implementation, close to no-op
