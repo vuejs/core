@@ -279,8 +279,8 @@ export function findShorthandProp(
       isStaticArgOf(p.arg, name) &&
       p.arg.type === NodeTypes.SIMPLE_EXPRESSION
     ) {
-      const name = camelize(p.arg.content)
-      p.exp = createSimpleExpression(name, false, p.arg.loc)
+      const value = camelize(p.arg.content)
+      p.exp = createSimpleExpression(value, false, p.arg.loc)
       if (!__BROWSER__) {
         p.exp = processExpression(p.exp, context)
       }
