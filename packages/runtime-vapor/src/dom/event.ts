@@ -30,7 +30,6 @@ export function on(
     ModifierOptions & { effect?: boolean } = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
-  const cleanupMetadata = recordEventMetadata(el, event, handler)
   let cleanupEvent: (() => void) | undefined
   queuePostRenderEffect(() => {
     cleanupEvent = addEventListener(el, event, handler, options)
@@ -43,7 +42,6 @@ export function on(
   }
 
   function cleanup() {
-    cleanupMetadata()
     cleanupEvent && cleanupEvent()
   }
 }
