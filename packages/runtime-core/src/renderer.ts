@@ -1215,6 +1215,7 @@ function baseCreateRenderer(
         parentComponent,
         parentSuspense,
       ))
+    instance.isCE && (instance.container = container as ShadowRoot)
 
     if (__DEV__ && instance.type.__hmrId) {
       registerHMR(instance)
@@ -2272,6 +2273,8 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
+
+    instance.container = null
 
     if (
       __COMPAT__ &&
