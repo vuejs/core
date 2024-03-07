@@ -16,7 +16,7 @@ export function genSetEvent(
   context: CodegenContext,
 ): CodeFragment[] {
   const { vaporHelper, options } = context
-  const { element, key, keyOverride, value, modifiers, delegate } = oper
+  const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
   const handler = genEventHandler()
@@ -77,7 +77,7 @@ export function genSetEvent(
 
   function genEventOptions(): CodeFragment[] | undefined {
     let { options, keys, nonKeys } = modifiers
-    if (!options.length && !nonKeys.length && !keys.length) return
+    if (!options.length && !nonKeys.length && !keys.length && !effect) return
 
     return genMulti(
       [
@@ -87,6 +87,7 @@ export function genSetEvent(
       ],
       !!nonKeys.length && ['modifiers: ', genArrayExpression(nonKeys)],
       !!keys.length && ['keys: ', genArrayExpression(keys)],
+      effect && ['effect: true'],
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }

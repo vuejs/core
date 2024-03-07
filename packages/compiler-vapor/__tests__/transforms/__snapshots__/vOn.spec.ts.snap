@@ -18,7 +18,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _on(n0, _ctx.event, () => _ctx.handler))
+  _renderEffect(() => {
+    _on(n0, _ctx.event, () => _ctx.handler, {
+      effect: true
+    })
+  })
   return n0
 }"
 `;
@@ -29,7 +33,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _on(n0, _ctx.event(_ctx.foo), () => _ctx.handler))
+  _renderEffect(() => {
+    _on(n0, _ctx.event(_ctx.foo), () => _ctx.handler, {
+      effect: true
+    })
+  })
   return n0
 }"
 `;
@@ -40,7 +48,11 @@ const t0 = _template("<div></div>")
 
 export function render(_ctx) {
   const n0 = t0()
-  _renderEffect(() => _on(n0, _ctx.event, () => _ctx.handler))
+  _renderEffect(() => {
+    _on(n0, _ctx.event, () => _ctx.handler, {
+      effect: true
+    })
+  })
   return n0
 }"
 `;
@@ -366,7 +378,8 @@ export function render(_ctx) {
   const n0 = t0()
   _renderEffect(() => {
     _on(n0, (_ctx.event) === "click" ? "mouseup" : (_ctx.event), () => _ctx.test, {
-      modifiers: ["middle"]
+      modifiers: ["middle"], 
+      effect: true
     })
   })
   return n0
@@ -396,7 +409,8 @@ export function render(_ctx) {
   _renderEffect(() => {
     _on(n0, (_ctx.event) === "click" ? "contextmenu" : (_ctx.event), () => _ctx.test, {
       modifiers: ["right"], 
-      keys: ["right"]
+      keys: ["right"], 
+      effect: true
     })
   })
   return n0
@@ -424,7 +438,8 @@ export function render(_ctx) {
   _renderEffect(() => {
     _on(n0, _ctx.e, () => _ctx.test, {
       modifiers: ["left"], 
-      keys: ["left"]
+      keys: ["left"], 
+      effect: true
     })
   })
   return n0

@@ -72,7 +72,6 @@ export {
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
 export {
   baseWatch,
-  getCurrentEffect,
   onEffectCleanup,
   traverse,
   BaseWatchErrorCodes,

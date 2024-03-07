@@ -116,6 +116,8 @@ export interface SetEventIRNode extends BaseIRNode {
   }
   keyOverride?: KeyOverride
   delegate: boolean
+  /** Whether it's in effect */
+  effect: boolean
 }
 
 export interface SetHtmlIRNode extends BaseIRNode {

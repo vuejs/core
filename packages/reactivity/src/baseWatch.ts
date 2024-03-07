@@ -99,13 +99,6 @@ const cleanupMap: WeakMap<ReactiveEffect, (() => void)[]> = new WeakMap()
 let activeEffect: ReactiveEffect | undefined = undefined
 
 /**
- * Returns the current active effect if there is one.
- */
-export function getCurrentEffect() {
-  return activeEffect
-}
-
-/**
  * Registers a cleanup callback on the current active effect. This
  * registered cleanup callback will be invoked right before the
  * associated effect re-runs.

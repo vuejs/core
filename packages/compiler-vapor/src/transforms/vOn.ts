@@ -70,6 +70,7 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     },
     keyOverride,
     delegate,
+    effect: !arg.isStatic,
   }
 
   context.registerEffect([arg], [operation])

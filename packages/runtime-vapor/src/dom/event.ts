@@ -1,5 +1,4 @@
 import {
-  getCurrentEffect,
   getCurrentScope,
   onEffectCleanup,
   onScopeDispose,
@@ -27,25 +26,19 @@ export function on(
   el: HTMLElement,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
-  options: AddEventListenerOptions & ModifierOptions = {},
+  options: AddEventListenerOptions &
+    ModifierOptions & { effect?: boolean } = {},
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   const cleanupMetadata = recordEventMetadata(el, event, handler)
-
   let cleanupEvent: (() => void) | undefined
   queuePostRenderEffect(() => {
     cleanupEvent = addEventListener(el, event, handler, options)
   })
 
-  const scope = getCurrentScope()
-  const effect = getCurrentEffect()
-  // If we are in an effect and the effect has the same scope as
-  // the current scope, we can cleanup when the effect is disposed
-  // This solves the issue where createFor itself has an effect,
-  // but this effect is unrelated to its block.
-  if (effect && effect.scope === scope) {
+  if (options.effect) {
     onEffectCleanup(cleanup)
-  } else if (scope) {
+  } else if (getCurrentScope()) {
     onScopeDispose(cleanup)
   }
 
