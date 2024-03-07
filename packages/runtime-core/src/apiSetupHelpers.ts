@@ -20,6 +20,7 @@ import type {
   ComponentOptionsWithoutProps,
   ComputedOptions,
   MethodOptions,
+  RenderFunction,
 } from './componentOptions'
 import type {
   ComponentObjectPropsOptions,
@@ -30,6 +31,7 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
+import type { VNode } from './vnode'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -311,6 +313,28 @@ type PropsWithDefaults<
       ? boolean | undefined
       : boolean
     : boolean
+}
+
+/**
+ * (**Experimental**) Vue `<script setup>` compiler macro for declaring
+ * the render function.
+ *
+ * The first argument can be a JSX element or a render function.
+ *
+ * @example
+ * ```ts
+ * // JSX element
+ * defineRender(<div>hello</div>)
+ *
+ * // Render function
+ * defineRender(() => <div>hello</div>)
+ * defineRender(() => h('div', 'hello'))
+ * ```
+ */
+export function defineRender(renderFn: VNode | RenderFunction): void {
+  if (__DEV__) {
+    warnRuntimeUsage('defineRender')
+  }
 }
 
 /**

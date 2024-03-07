@@ -55,6 +55,7 @@ import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { DEFINE_RENDER, processDefineRender } from './script/defineRender'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -105,6 +106,11 @@ export interface SFCScriptCompileOptions {
    * @default true
    */
   hoistStatic?: boolean
+  /**
+   * (**Experimental**) Enable macro `defineRender`
+   * @default false
+   */
+  defineRender?: boolean
   /**
    * (**Experimental**) Enable reactive destructure for `defineProps`
    * @default false
@@ -491,7 +497,8 @@ export function compileScript(
         processDefineProps(ctx, expr) ||
         processDefineEmits(ctx, expr) ||
         processDefineOptions(ctx, expr) ||
-        processDefineSlots(ctx, expr)
+        processDefineSlots(ctx, expr) ||
+        processDefineRender(ctx, expr)
       ) {
         ctx.s.remove(node.start! + startOffset, node.end! + startOffset)
       } else if (processDefineExpose(ctx, expr)) {
@@ -529,7 +536,8 @@ export function compileScript(
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
             (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+              processDefineModel(ctx, init, decl.id) ||
+              processDefineRender(ctx, init))
 
           if (
             isDefineProps &&
@@ -797,8 +805,22 @@ export function compileScript(
   }
 
   // 9. generate return statement
-  let returned
-  if (
+  let returned = ''
+  if (ctx.renderFunction) {
+    if (sfc.template) {
+      ctx.error(
+        `${DEFINE_RENDER}() cannot be used with <template>.`,
+        ctx.renderFunction,
+      )
+    }
+    if (ctx.renderFunction.type === 'JSXElement') {
+      returned = '() => '
+    }
+    returned += scriptSetup.content.slice(
+      ctx.renderFunction.start!,
+      ctx.renderFunction.end!,
+    )
+  } else if (
     !options.inlineTemplate ||
     (!sfc.template && ctx.hasDefaultExportRender)
   ) {
@@ -837,66 +859,59 @@ export function compileScript(
       }
     }
     returned = returned.replace(/, $/, '') + ` }`
-  } else {
+  } else if (sfc.template && !sfc.template.src) {
     // inline mode
-    if (sfc.template && !sfc.template.src) {
-      if (options.templateOptions && options.templateOptions.ssr) {
-        hasInlinedSsrRenderFn = true
-      }
-      // inline render function mode - we are going to compile the template and
-      // inline it right here
-      const { code, ast, preamble, tips, errors } = compileTemplate({
-        filename,
-        ast: sfc.template.ast,
-        source: sfc.template.content,
-        inMap: sfc.template.map,
-        ...options.templateOptions,
-        id: scopeId,
-        scoped: sfc.styles.some(s => s.scoped),
-        isProd: options.isProd,
-        ssrCssVars: sfc.cssVars,
-        compilerOptions: {
-          ...(options.templateOptions &&
-            options.templateOptions.compilerOptions),
-          inline: true,
-          isTS: ctx.isTS,
-          bindingMetadata: ctx.bindingMetadata,
-        },
-      })
-      if (tips.length) {
-        tips.forEach(warnOnce)
-      }
-      const err = errors[0]
-      if (typeof err === 'string') {
-        throw new Error(err)
-      } else if (err) {
-        if (err.loc) {
-          err.message +=
-            `\n\n` +
-            sfc.filename +
-            '\n' +
-            generateCodeFrame(
-              source,
-              err.loc.start.offset,
-              err.loc.end.offset,
-            ) +
-            `\n`
-        }
-        throw err
-      }
-      if (preamble) {
-        ctx.s.prepend(preamble)
-      }
-      // avoid duplicated unref import
-      // as this may get injected by the render function preamble OR the
-      // css vars codegen
-      if (ast && ast.helpers.has(UNREF)) {
-        ctx.helperImports.delete('unref')
-      }
-      returned = code
-    } else {
-      returned = `() => {}`
+    if (options.templateOptions && options.templateOptions.ssr) {
+      hasInlinedSsrRenderFn = true
     }
+    // inline render function mode - we are going to compile the template and
+    // inline it right here
+    const { code, ast, preamble, tips, errors } = compileTemplate({
+      filename,
+      ast: sfc.template.ast,
+      source: sfc.template.content,
+      inMap: sfc.template.map,
+      ...options.templateOptions,
+      id: scopeId,
+      scoped: sfc.styles.some(s => s.scoped),
+      isProd: options.isProd,
+      ssrCssVars: sfc.cssVars,
+      compilerOptions: {
+        ...(options.templateOptions && options.templateOptions.compilerOptions),
+        inline: true,
+        isTS: ctx.isTS,
+        bindingMetadata: ctx.bindingMetadata,
+      },
+    })
+    if (tips.length) {
+      tips.forEach(warnOnce)
+    }
+    const err = errors[0]
+    if (typeof err === 'string') {
+      throw new Error(err)
+    } else if (err) {
+      if (err.loc) {
+        err.message +=
+          `\n\n` +
+          sfc.filename +
+          '\n' +
+          generateCodeFrame(source, err.loc.start.offset, err.loc.end.offset) +
+          `\n`
+      }
+      throw err
+    }
+    if (preamble) {
+      ctx.s.prepend(preamble)
+    }
+    // avoid duplicated unref import
+    // as this may get injected by the render function preamble OR the
+    // css vars codegen
+    if (ast && ast.helpers.has(UNREF)) {
+      ctx.helperImports.delete('unref')
+    }
+    returned = code
+  } else {
+    returned = `() => {}`
   }
 
   if (!options.inlineTemplate && !__TEST__) {
