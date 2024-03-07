@@ -1,7 +1,7 @@
 import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-let activeEffectScope: EffectScope | undefined
+export let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
   /**
@@ -118,15 +118,6 @@ export class EffectScope {
  */
 export function effectScope(detached?: boolean) {
   return new EffectScope(detached)
-}
-
-export function recordEffectScope(
-  effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope,
-) {
-  if (scope && scope.active) {
-    scope.effects.push(effect)
-  }
 }
 
 /**

@@ -2,7 +2,7 @@ import { extend, hasChanged } from '@vue/shared'
 import type { ComputedRefImpl } from './computed'
 import type { TrackOpTypes, TriggerOpTypes } from './constants'
 import { type Dep, globalVersion } from './dep'
-import { recordEffectScope } from './effectScope'
+import { activeEffectScope } from './effectScope'
 import { warn } from './warning'
 
 export type EffectScheduler = (...args: any[]) => any
@@ -137,7 +137,9 @@ export class ReactiveEffect<T = any>
   onTrigger?: (event: DebuggerEvent) => void
 
   constructor(public fn: () => T) {
-    recordEffectScope(this)
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(this)
+    }
   }
 
   /**
