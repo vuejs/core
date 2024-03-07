@@ -46,6 +46,7 @@ export enum EffectFlags {
   DIRTY = 1 << 4,
   ALLOW_RECURSE = 1 << 5,
   NO_BATCH = 1 << 6,
+  PAUSED = 1 << 7,
 }
 
 /**
@@ -107,6 +108,8 @@ export interface Link {
   prevActiveLink?: Link
 }
 
+const pausedQueueEffects = new WeakSet<ReactiveEffect>()
+
 export class ReactiveEffect<T = any>
   implements Subscriber, ReactiveEffectOptions
 {
@@ -126,10 +129,6 @@ export class ReactiveEffect<T = any>
    * @internal
    */
   nextEffect?: ReactiveEffect = undefined
-  /**
-   * @internal
-   */
-  cleanup?: () => void = undefined
 
   scheduler?: EffectScheduler = undefined
   onStop?: () => void
@@ -139,6 +138,22 @@ export class ReactiveEffect<T = any>
   constructor(public fn: () => T) {
     if (activeEffectScope && activeEffectScope.active) {
       activeEffectScope.effects.push(this)
+    }
+  }
+
+  pause() {
+    if (!(this.flags & EffectFlags.PAUSED)) {
+      this.flags |= EffectFlags.PAUSED
+    }
+  }
+
+  resume() {
+    if (this.flags & EffectFlags.PAUSED) {
+      this.flags &= ~EffectFlags.PAUSED
+      if (pausedQueueEffects.has(this)) {
+        pausedQueueEffects.delete(this)
+        this.trigger()
+      }
     }
   }
 
@@ -171,7 +186,6 @@ export class ReactiveEffect<T = any>
     }
 
     this.flags |= EffectFlags.RUNNING
-    cleanupEffect(this)
     prepareDeps(this)
     const prevEffect = activeSub
     const prevShouldTrack = shouldTrack
@@ -200,13 +214,16 @@ export class ReactiveEffect<T = any>
         removeSub(link)
       }
       this.deps = this.depsTail = undefined
-      cleanupEffect(this)
       this.onStop && this.onStop()
       this.flags &= ~EffectFlags.ACTIVE
     }
   }
 
   trigger() {
+    if (this.flags & EffectFlags.PAUSED) {
+      pausedQueueEffects.add(this)
+      return
+    }
     if (this.scheduler) {
       this.scheduler()
     } else {
@@ -486,42 +503,4 @@ export function enableTracking() {
 export function resetTracking() {
   const last = trackStack.pop()
   shouldTrack = last === undefined ? true : last
-}
-
-/**
- * Registers a cleanup function for the current active effect.
- * The cleanup function is called right before the next effect run, or when the
- * effect is stopped.
- *
- * Throws a warning iff there is no currenct active effect. The warning can be
- * suppressed by passing `true` to the second argument.
- *
- * @param fn - the cleanup function to be registered
- * @param failSilently - if `true`, will not throw warning when called without
- * an active effect.
- */
-export function onEffectCleanup(fn: () => void, failSilently = false) {
-  if (activeSub instanceof ReactiveEffect) {
-    activeSub.cleanup = fn
-  } else if (__DEV__ && !failSilently) {
-    warn(
-      `onEffectCleanup() was called when there was no active effect` +
-        ` to associate with.`,
-    )
-  }
-}
-
-function cleanupEffect(e: ReactiveEffect) {
-  const { cleanup } = e
-  e.cleanup = undefined
-  if (cleanup) {
-    // run cleanup without active effect
-    const prevSub = activeSub
-    activeSub = undefined
-    try {
-      cleanup()
-    } finally {
-      activeSub = prevSub
-    }
-  }
 }
