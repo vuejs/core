@@ -74,7 +74,7 @@ export interface WatchOptionsBase extends DebuggerOptions {
 
 export interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
   immediate?: Immediate
-  deep?: boolean
+  deep?: boolean | number
   once?: boolean
 }
 
@@ -229,11 +229,14 @@ function doWatch(
   }
 
   const instance = currentInstance
-  const reactiveGetter = (source: object) =>
-    deep === true
-      ? source // traverse will happen in wrapped getter below
-      : // for deep: false, only traverse root-level properties
-        traverse(source, deep === false ? 1 : undefined)
+  const reactiveGetter = (source: object) => {
+    // traverse will happen in wrapped getter below
+    if (deep) return source
+    // for `deep: false` or shallow reactive, only traverse root-level properties
+    if (isShallow(source) || deep === false) return traverse(source, 1)
+    // for `deep: undefined` on a reactive object, deeply traverse all properties
+    return traverse(source)
+  }
 
   let getter: () => any
   let forceTrigger = false
@@ -293,7 +296,7 @@ function doWatch(
         isArray(val) &&
         checkCompatEnabled(DeprecationTypes.WATCH_ARRAY, instance)
       ) {
-        traverse(val)
+        traverse(val, deep)
       }
       return val
     }
@@ -301,7 +304,7 @@ function doWatch(
 
   if (cb && deep) {
     const baseGetter = getter
-    getter = () => traverse(baseGetter())
+    getter = () => traverse(baseGetter(), deep)
   }
 
   let cleanup: (() => void) | undefined
@@ -472,7 +475,7 @@ export function createPathGetter(ctx: any, path: string) {
 
 export function traverse(
   value: unknown,
-  depth?: number,
+  depth?: number | boolean,
   currentDepth = 0,
   seen?: Set<unknown>,
 ) {
@@ -480,7 +483,7 @@ export function traverse(
     return value
   }
 
-  if (depth && depth > 0) {
+  if (typeof depth === 'number' && depth > 0) {
     if (currentDepth >= depth) {
       return value
     }
