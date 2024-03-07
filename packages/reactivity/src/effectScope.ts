@@ -136,10 +136,10 @@ export function getCurrentScope() {
  * @param fn - The callback function to attach to the scope's cleanup.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
-export function onScopeDispose(fn: () => void) {
+export function onScopeDispose(fn: () => void, failSilently = false) {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
-  } else if (__DEV__) {
+  } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
         ` to be associated with.`,
