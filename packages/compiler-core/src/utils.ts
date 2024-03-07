@@ -23,6 +23,7 @@ import {
   type VNodeCall,
   createCallExpression,
   createObjectExpression,
+  createSimpleExpression,
 } from './ast'
 import type { TransformContext } from './transform'
 import {
@@ -36,11 +37,12 @@ import {
   TO_HANDLERS,
   WITH_MEMO,
 } from './runtimeHelpers'
-import { NOOP, isObject, isString } from '@vue/shared'
+import { NOOP, camelize, isObject, isString } from '@vue/shared'
 import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
 import type { Expression } from '@babel/types'
 import { unwrapTSNode } from './babelUtils'
+import { processExpression } from './transforms/transformExpression'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
@@ -258,6 +260,30 @@ export function findProp(
       (p.exp || allowEmpty) &&
       isStaticArgOf(p.arg, name)
     ) {
+      return p
+    }
+  }
+}
+
+export function findShorthandProp(
+  node: ElementNode,
+  name: string,
+  context: TransformContext,
+): ElementNode['props'][0] | undefined {
+  for (let i = 0; i < node.props.length; i++) {
+    const p = node.props[i]
+    if (
+      p.type !== NodeTypes.ATTRIBUTE &&
+      p.name === 'bind' &&
+      p.arg &&
+      isStaticArgOf(p.arg, name) &&
+      p.arg.type === NodeTypes.SIMPLE_EXPRESSION
+    ) {
+      const name = camelize(p.arg.content)
+      p.exp = createSimpleExpression(name, false, p.arg.loc)
+      if (!__BROWSER__) {
+        p.exp = processExpression(p.exp, context)
+      }
       return p
     }
   }

@@ -51,6 +51,7 @@ import {
 } from '../runtimeHelpers'
 import {
   findProp,
+  findShorthandProp,
   isCoreComponent,
   isStaticArgOf,
   isStaticExp,
@@ -253,7 +254,7 @@ export function resolveComponentType(
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp = findProp(node, 'is')
+  const isProp = findProp(node, 'is') || findShorthandProp(node, 'is', context)
   if (isProp) {
     if (
       isExplicitDynamic ||
