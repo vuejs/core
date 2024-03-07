@@ -133,6 +133,7 @@ export {
   resolveComponent,
   resolveDirective,
   resolveDynamicComponent,
+  resolveSetupReturned,
 } from './helpers/resolveAssets'
 // For integration with runtime compiler
 export { registerRuntimeCompiler, isRuntimeOnly } from './component'
