@@ -4,9 +4,10 @@ import { currentRenderingInstance } from './componentRenderContext'
 import { currentApp } from './apiCreateApp'
 import { warn } from './warning'
 
-export interface InjectionKey<T> extends Symbol {}
+declare const InjectionKeySymbol: unique symbol
+export type InjectionKey<T> = symbol & { [InjectionKeySymbol]: T }
 
-export function provide<T, K = InjectionKey<T> | string | number>(
+export function provide<T, K = InjectionKey<T> | string | number | symbol>(
   key: K,
   value: K extends InjectionKey<infer V> ? V : T,
 ) {
@@ -31,19 +32,19 @@ export function provide<T, K = InjectionKey<T> | string | number>(
   }
 }
 
-export function inject<T>(key: InjectionKey<T> | string): T | undefined
+export function inject<T>(key: InjectionKey<T> | string | symbol): T | undefined
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | symbol,
   defaultValue: T,
   treatDefaultAsFactory?: false,
 ): T
 export function inject<T>(
-  key: InjectionKey<T> | string,
+  key: InjectionKey<T> | string | symbol,
   defaultValue: T | (() => T),
   treatDefaultAsFactory: true,
 ): T
 export function inject(
-  key: InjectionKey<any> | string,
+  key: InjectionKey<any> | string | symbol,
   defaultValue?: unknown,
   treatDefaultAsFactory = false,
 ) {
