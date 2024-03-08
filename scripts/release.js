@@ -239,7 +239,7 @@ async function main() {
   if (!skipTests) {
     step('\nRunning tests...')
     if (!isDryRun) {
-      await run('pnpm', ['run', 'test'])
+      await run('pnpm', ['run', 'test', '--run'])
     } else {
       console.log(`Skipped (dry run)`)
     }
