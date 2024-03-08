@@ -475,17 +475,6 @@ describe('Suspense', () => {
   // #10042
   test('unmount suspensible child before parent suspense resolve', async () => {
     const calls: string[] = []
-    const RouterView = {
-      setup(_: any, { slots }: any) {
-        const route = inject('route') as any
-        const depth = inject('depth', 0)
-        provide('depth', depth + 1)
-        return () => {
-          const current = route.value[depth]
-          return slots.default({ Component: current })[0]
-        }
-      },
-    }
 
     const OuterB = defineAsyncComponent(
       {
