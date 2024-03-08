@@ -1,7 +1,7 @@
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import { isFunction, isPromise } from '@vue/shared'
+import {isArray, isFunction, isPromise} from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -90,8 +90,10 @@ export function callWithAsyncErrorHandling(
   }
 
   const values = []
-  for (let i = 0; i < fn.length; i++) {
-    values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+  if (isArray(fn)) {
+    for (let i = 0; i < fn.length; i++) {
+      values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
+    }
   }
   return values
 }
