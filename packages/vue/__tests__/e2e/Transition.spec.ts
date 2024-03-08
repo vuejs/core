@@ -1512,16 +1512,16 @@ describe('e2e: Transition', () => {
                 h(
                   'div',
                   {
-                    onVnodeBeforeUnmount: () => unmountSpy()
+                    onVnodeBeforeUnmount: () => unmountSpy(),
                   },
-                  'one'
+                  'one',
                 )
-            }
+            },
           }
           const Two = {
             async setup() {
               return () => h('div', null, 'two')
-            }
+            },
           }
           createApp({
             template: `
@@ -1545,7 +1545,7 @@ describe('e2e: Transition', () => {
                 view.value = view.value === One ? Two : One
               }
               return { view, click }
-            }
+            },
           }).mount('#app')
         })
 
@@ -1555,7 +1555,7 @@ describe('e2e: Transition', () => {
         await classWhenTransitionStart()
         await nextFrame()
         expect(await html('#container')).toBe(
-          '<div class="v-enter-from v-enter-active">two</div>'
+          '<div class="v-enter-from v-enter-active">two</div>',
         )
 
         await transitionFinish()
@@ -1564,7 +1564,7 @@ describe('e2e: Transition', () => {
         // should only call unmount once
         expect(unmountSpy).toBeCalledTimes(1)
       },
-      E2E_TIMEOUT
+      E2E_TIMEOUT,
     )
 
     // #5844
