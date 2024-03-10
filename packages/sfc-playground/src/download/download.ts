@@ -15,7 +15,7 @@ export async function downloadProject(store: ReplStore) {
   const { default: JSZip } = await import('jszip')
   const zip = new JSZip()
 
-  const mainFile = store.state.mainFile.replace(/^.*\//, '')
+  const mainFile = store.mainFile.replace(/^.*\//, '')
   const isMainFileJs = mainFile.endsWith('.js') || mainFile.endsWith('.ts')
 
   const index = isMainFileJs

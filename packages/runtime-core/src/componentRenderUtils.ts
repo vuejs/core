@@ -266,10 +266,17 @@ export function renderComponentRoot(
 const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
   const rawChildren = vnode.children as VNodeArrayChildren
   const dynamicChildren = vnode.dynamicChildren
-  const childRoot = filterSingleRoot(rawChildren)
+  const childRoot = filterSingleRoot(rawChildren, false)
   if (!childRoot) {
     return [vnode, undefined]
+  } else if (
+    __DEV__ &&
+    childRoot.patchFlag > 0 &&
+    childRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+  ) {
+    return getChildRoot(childRoot)
   }
+
   const index = rawChildren.indexOf(childRoot)
   const dynamicIndex = dynamicChildren ? dynamicChildren.indexOf(childRoot) : -1
   const setRoot: SetRootFn = (updatedRoot: VNode) => {
@@ -287,6 +294,7 @@ const getChildRoot = (vnode: VNode): [VNode, SetRootFn] => {
 
 export function filterSingleRoot(
   children: VNodeArrayChildren,
+  recurse = true,
 ): VNode | undefined {
   let singleRoot
   for (let i = 0; i < children.length; i++) {
@@ -299,6 +307,14 @@ export function filterSingleRoot(
           return
         } else {
           singleRoot = child
+          if (
+            __DEV__ &&
+            recurse &&
+            singleRoot.patchFlag > 0 &&
+            singleRoot.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+          ) {
+            return filterSingleRoot(singleRoot.children as VNodeArrayChildren)
+          }
         }
       }
     } else {
@@ -428,7 +444,6 @@ export function updateHOCHostEl(
   { vnode, parent }: ComponentInternalInstance,
   el: typeof vnode.el, // HostNode
 ) {
-  if (!el) return
   while (parent) {
     const root = parent.subTree
     if (root.suspense && root.suspense.activeBranch === vnode) {

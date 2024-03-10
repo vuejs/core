@@ -3,7 +3,6 @@ import {
   currentInstance,
   isInSSRComponentSetup,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import type { ComponentPublicInstance } from './componentPublicInstance'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
@@ -41,9 +40,9 @@ export function injectHook(
         // Set currentInstance during hook invocation.
         // This assumes the hook does not synchronously trigger other hooks, which
         // can only be false when the user does something really funky.
-        setCurrentInstance(target)
+        const reset = setCurrentInstance(target)
         const res = callWithAsyncErrorHandling(hook, target, type, args)
-        unsetCurrentInstance()
+        reset()
         resetTracking()
         return res
       })

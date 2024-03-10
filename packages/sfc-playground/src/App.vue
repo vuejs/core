@@ -1,22 +1,8 @@
 <script setup lang="ts">
 import Header from './Header.vue'
-import { Repl, ReplStore, SFCOptions } from '@vue/repl'
-import type Monaco from '@vue/repl/monaco-editor'
-import type CodeMirror from '@vue/repl/codemirror-editor'
-import { ref, watchEffect, onMounted } from 'vue'
-import { shallowRef } from 'vue'
-
-const EditorComponent = shallowRef<typeof Monaco | typeof CodeMirror>()
-
-if (import.meta.env.DEV) {
-  import('@vue/repl/codemirror-editor').then(
-    mod => (EditorComponent.value = mod.default),
-  )
-} else {
-  import('@vue/repl/monaco-editor').then(
-    mod => (EditorComponent.value = mod.default),
-  )
-}
+import { Repl, useStore, SFCOptions, useVueImportMap } from '@vue/repl'
+import Monaco from '@vue/repl/monaco-editor'
+import { ref, watchEffect, onMounted, computed } from 'vue'
 
 const replRef = ref<InstanceType<typeof Repl>>()
 
@@ -26,38 +12,66 @@ const setVH = () => {
 window.addEventListener('resize', setVH)
 setVH()
 
-const useProdMode = ref(false)
 const useSSRMode = ref<boolean | null>(false)
+
+const { productionMode, vueVersion, importMap } = useVueImportMap({
+  runtimeDev: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.js`
+    : `${location.origin}/src/vue-dev-proxy`,
+  runtimeProd: import.meta.env.PROD
+    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
+    : `${location.origin}/src/vue-dev-proxy-prod`,
+  serverRenderer: import.meta.env.PROD
+    ? `${location.origin}/server-renderer.esm-browser.js`
+    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
+})
 
 let hash = location.hash.slice(1)
 if (hash.startsWith('__DEV__')) {
   hash = hash.slice(7)
-  useProdMode.value = false
+  productionMode.value = false
 }
 if (hash.startsWith('__PROD__')) {
   hash = hash.slice(8)
-  useProdMode.value = true
+  productionMode.value = true
 }
 if (hash.startsWith('__SSR__')) {
   hash = hash.slice(7)
   useSSRMode.value = true
 }
 
-const store = new ReplStore({
-  serializedState: hash,
-  productionMode: useProdMode.value,
-  defaultVueRuntimeURL: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.js`
-    : `${location.origin}/src/vue-dev-proxy`,
-  defaultVueRuntimeProdURL: import.meta.env.PROD
-    ? `${location.origin}/vue.runtime.esm-browser.prod.js`
-    : `${location.origin}/src/vue-dev-proxy-prod`,
-  defaultVueServerRendererURL: import.meta.env.PROD
-    ? `${location.origin}/server-renderer.esm-browser.js`
-    : `${location.origin}/src/vue-server-renderer-dev-proxy`,
-})
+// enable experimental features
+const sfcOptions = computed(
+  (): SFCOptions => ({
+    script: {
+      inlineTemplate: productionMode.value,
+      isProd: productionMode.value,
+      propsDestructure: true,
+    },
+    style: {
+      isProd: productionMode.value,
+    },
+    template: {
+      isProd: productionMode.value,
+      compilerOptions: {
+        isCustomElement: (tag: string) => tag === 'mjx-container',
+      },
+    },
+  }),
+)
 
-let { mainFile } = store.state
+const store = useStore(
+  {
+    builtinImportMap: importMap,
+    vueVersion,
+    sfcOptions,
+  },
+  hash,
+)
+// @ts-expect-error
+globalThis.store = store
+
+let { mainFile } = store
 
 if (mainFile === 'src/App.vue') {
   const firstFile = Object.keys(store.getFiles())[0]
@@ -71,44 +85,21 @@ if (!mainFile.endsWith('.vue')) {
   useSSRMode.value = null
 }
 
-// enable experimental features
-const sfcOptions: SFCOptions = {
-  script: {
-    inlineTemplate: useProdMode.value,
-    isProd: useProdMode.value,
-    propsDestructure: true,
-  },
-  style: {
-    isProd: useProdMode.value,
-  },
-  template: {
-    isProd: useProdMode.value,
-  },
-}
-
 // persist state
 watchEffect(() => {
   const newHash = store
     .serialize()
     .replace(/^#/, useSSRMode.value ? `#__SSR__` : `#`)
-    .replace(/^#/, useProdMode.value ? `#__PROD__` : `#`)
+    .replace(/^#/, productionMode.value ? `#__PROD__` : `#`)
   history.replaceState({}, '', newHash)
 })
 
 function toggleProdMode() {
-  const isProd = (useProdMode.value = !useProdMode.value)
-  sfcOptions.script!.inlineTemplate =
-    sfcOptions.script!.isProd =
-    sfcOptions.template!.isProd =
-    sfcOptions.style!.isProd =
-      isProd
-  store.toggleProduction()
-  store.setFiles(store.getFiles())
+  productionMode.value = !productionMode.value
 }
 
 function toggleSSR() {
   useSSRMode.value = !useSSRMode.value
-  store.setFiles(store.getFiles(), store.state.mainFile)
 }
 
 function reloadPage() {
@@ -122,13 +113,16 @@ function toggleTheme(isDark: boolean) {
 onMounted(() => {
   const cls = document.documentElement.classList
   toggleTheme(cls.contains('dark'))
+
+  // @ts-expect-error process shim for old versions of @vue/compiler-sfc dependency
+  window.process = { env: {} }
 })
 </script>
 
 <template>
   <Header
     :store="store"
-    :prod="useProdMode"
+    :prod="productionMode"
     :ssr="useSSRMode"
     @toggle-theme="toggleTheme"
     @toggle-prod="toggleProdMode"
@@ -136,18 +130,22 @@ onMounted(() => {
     @reload-page="reloadPage"
   />
   <Repl
-    v-if="EditorComponent"
     ref="replRef"
     :theme="theme"
-    :editor="EditorComponent"
+    :editor="Monaco"
     @keydown.ctrl.s.prevent
     @keydown.meta.s.prevent
     :ssr="useSSRMode === true"
     :store="store"
     :showCompileOutput="true"
     :autoResize="true"
-    :sfcOptions="sfcOptions"
     :clearConsole="false"
+    :preview-options="{
+      customCode: {
+        importCode: `import { initCustomFormatter } from 'vue'`,
+        useCode: `initCustomFormatter()`,
+      },
+    }"
   />
 </template>
 
