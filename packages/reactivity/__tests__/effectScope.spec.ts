@@ -222,7 +222,7 @@ describe('reactivity/effect/scope', () => {
 
   it('should dereference child scope from parent scope after stopping child scope (no memleaks)', () => {
     const parent = new EffectScope()
-    const child = parent.run(() => new EffectScope())!
+    const [child] = parent.run(() => [new EffectScope(), new EffectScope()])!
     expect(parent.scopes!.includes(child)).toBe(true)
     child.stop()
     expect(parent.scopes!.includes(child)).toBe(false)
