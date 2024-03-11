@@ -364,7 +364,7 @@ export function resolveTransitionHooks(
       if (
         leavingVNode &&
         isSameVNodeType(vnode, leavingVNode) &&
-        (leavingVNode.el as TransitionElement)[leaveCbKey]
+        (leavingVNode.el as TransitionElement)?.[leaveCbKey]
       ) {
         // force early removal (not cancelled)
         ;(leavingVNode.el as TransitionElement)[leaveCbKey]!()
