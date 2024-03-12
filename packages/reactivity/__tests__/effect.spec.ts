@@ -769,6 +769,32 @@ describe('reactivity/effect', () => {
     ])
   })
 
+  it('debug: the call sequence of onTrack', () => {
+    const seq: number[] = []
+    const s = ref(0)
+
+    const track1 = () => seq.push(1)
+    const track2 = () => seq.push(2)
+
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrack: track1,
+      },
+    )
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrack: track2,
+      },
+    )
+    expect(seq.toString()).toBe('1,2')
+  })
+
   it('events: onTrigger', () => {
     let events: DebuggerEvent[] = []
     let dummy
@@ -805,6 +831,51 @@ describe('reactivity/effect', () => {
       key: 'foo',
       oldValue: 2,
     })
+  })
+
+  it('debug: the call sequence of onTrigger', () => {
+    const seq: number[] = []
+    const s = ref(0)
+
+    const trigger1 = () => seq.push(1)
+    const trigger2 = () => seq.push(2)
+    const trigger3 = () => seq.push(3)
+    const trigger4 = () => seq.push(4)
+
+    effect(
+      () => {
+        s.value
+      },
+      {
+        onTrigger: trigger1,
+      },
+    )
+    effect(
+      () => {
+        s.value
+        effect(
+          () => {
+            s.value
+            effect(
+              () => {
+                s.value
+              },
+              {
+                onTrigger: trigger4,
+              },
+            )
+          },
+          {
+            onTrigger: trigger3,
+          },
+        )
+      },
+      {
+        onTrigger: trigger2,
+      },
+    )
+    s.value++
+    expect(seq.toString()).toBe('1,2,3,4')
   })
 
   it('stop', () => {

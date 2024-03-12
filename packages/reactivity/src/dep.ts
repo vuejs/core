@@ -27,6 +27,12 @@ export class Dep {
    * Link between this dep and the current active effect
    */
   activeLink?: Link = undefined
+
+  /**
+   * Doubly linked list representing the subscribing effects (head)
+   */
+  subsHead?: Link = undefined
+
   /**
    * Doubly linked list representing the subscribing effects (tail)
    */
@@ -113,16 +119,20 @@ export class Dep {
   notify(debugInfo?: DebuggerEventExtraInfo) {
     startBatch()
     try {
-      for (let link = this.subs; link; link = link.prevSub) {
+      for (
+        let link = this.subs, head = this.subsHead;
+        link && head;
+        link = link.prevSub, head = head.nextSub
+      ) {
         if (
           __DEV__ &&
-          link.sub.onTrigger &&
+          head.sub.onTrigger &&
           !(link.sub.flags & EffectFlags.NOTIFIED)
         ) {
-          link.sub.onTrigger(
+          head.sub.onTrigger(
             extend(
               {
-                effect: link.sub,
+                effect: head.sub,
               },
               debugInfo,
             ),
@@ -152,6 +162,11 @@ function addSub(link: Link) {
     link.prevSub = currentTail
     if (currentTail) currentTail.nextSub = link
   }
+
+  if (link.dep.subsHead === undefined) {
+    link.dep.subsHead = link
+  }
+
   link.dep.subs = link
 }
 
