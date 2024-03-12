@@ -19,13 +19,11 @@ export function genExpression(
   context: CodegenContext,
   assignment?: string,
 ): CodeFragment[] {
-  const {
-    options: { prefixIdentifiers },
-  } = context
+  const { prefixIdentifiers } = context.options
+  const { content, ast, isStatic, loc } = node
 
-  const { content: rawExpr, ast, isStatic, loc } = node
   if (isStatic) {
-    return [[JSON.stringify(rawExpr), NewlineType.None, loc]]
+    return [[JSON.stringify(content), NewlineType.None, loc]]
   }
 
   if (
@@ -36,16 +34,16 @@ export function genExpression(
     ast === false ||
     isConstantExpression(node)
   ) {
-    return [[rawExpr, NewlineType.None, loc], assignment && ` = ${assignment}`]
+    return [[content, NewlineType.None, loc], assignment && ` = ${assignment}`]
   }
 
   // the expression is a simple identifier
   if (ast === null) {
-    return genIdentifier(rawExpr, context, loc, assignment)
+    return genIdentifier(content, context, loc, assignment)
   }
 
   const ids: Identifier[] = []
-  const parentStackMap = new WeakMap<Identifier, Node[]>()
+  const parentStackMap = new Map<Identifier, Node[]>()
   const parentStack: Node[] = []
   walkIdentifiers(
     ast!,
@@ -56,55 +54,57 @@ export function genExpression(
     false,
     parentStack,
   )
+
   let hasMemberExpression = false
   if (ids.length) {
-    ids.sort((a, b) => a.start! - b.start!)
     const [frag, push] = buildCodeFragment()
-    ids.forEach((id, i) => {
-      // range is offset by -1 due to the wrapping parens when parsed
-      const start = id.start! - 1
-      const end = id.end! - 1
-      const last = ids[i - 1]
+    ids
+      .sort((a, b) => a.start! - b.start!)
+      .forEach((id, i) => {
+        // range is offset by -1 due to the wrapping parens when parsed
+        const start = id.start! - 1
+        const end = id.end! - 1
+        const last = ids[i - 1]
 
-      const leadingText = rawExpr.slice(last ? last.end! - 1 : 0, start)
-      if (leadingText.length) push([leadingText, NewlineType.Unknown])
+        const leadingText = content.slice(last ? last.end! - 1 : 0, start)
+        if (leadingText.length) push([leadingText, NewlineType.Unknown])
 
-      const source = rawExpr.slice(start, end)
-      const parentStack = parentStackMap.get(id)!
-      const parent = parentStack[parentStack.length - 1]
+        const source = content.slice(start, end)
+        const parentStack = parentStackMap.get(id)!
+        const parent = parentStack[parentStack.length - 1]
 
-      hasMemberExpression ||=
-        parent &&
-        (parent.type === 'MemberExpression' ||
-          parent.type === 'OptionalMemberExpression')
+        hasMemberExpression ||=
+          parent &&
+          (parent.type === 'MemberExpression' ||
+            parent.type === 'OptionalMemberExpression')
 
-      push(
-        ...genIdentifier(
-          source,
-          context,
-          {
-            start: advancePositionWithClone(node.loc.start, source, start),
-            end: advancePositionWithClone(node.loc.start, source, end),
+        push(
+          ...genIdentifier(
             source,
-          },
-          hasMemberExpression ? undefined : assignment,
-          id,
-          parent,
-          parentStack,
-        ),
-      )
+            context,
+            {
+              start: advancePositionWithClone(node.loc.start, source, start),
+              end: advancePositionWithClone(node.loc.start, source, end),
+              source,
+            },
+            hasMemberExpression ? undefined : assignment,
+            id,
+            parent,
+            parentStack,
+          ),
+        )
 
-      if (i === ids.length - 1 && end < rawExpr.length) {
-        push([rawExpr.slice(end), NewlineType.Unknown])
-      }
-    })
+        if (i === ids.length - 1 && end < content.length) {
+          push([content.slice(end), NewlineType.Unknown])
+        }
+      })
 
     if (assignment && hasMemberExpression) {
       push(` = ${assignment}`)
     }
     return frag
   } else {
-    return [[rawExpr, NewlineType.Unknown, loc]]
+    return [[content, NewlineType.Unknown, loc]]
   }
 }
 
