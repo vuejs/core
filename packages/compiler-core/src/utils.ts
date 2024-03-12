@@ -265,7 +265,7 @@ export function findProp(
   }
 }
 
-export function findShorthandProp(
+export function findAndProcessShorthandProp(
   node: ElementNode,
   name: string,
   context: TransformContext,
