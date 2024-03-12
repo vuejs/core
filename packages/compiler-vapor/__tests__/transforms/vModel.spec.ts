@@ -1,6 +1,6 @@
 import { makeCompile } from './_utils'
 import { transformChildren, transformElement, transformVModel } from '../../src'
-import { DOMErrorCodes } from '@vue/compiler-dom'
+import { BindingTypes, DOMErrorCodes } from '@vue/compiler-dom'
 
 const compileWithVModel = makeCompile({
   nodeTransforms: [transformElement, transformChildren],
@@ -170,5 +170,36 @@ describe('compiler: vModel transform', () => {
 
       expect(code).toMatchSnapshot()
     })
+  })
+
+  test('should support member expression', () => {
+    const { code } = compileWithVModel(
+      '<input v-model="setupRef.child" /><input v-model="setupLet.child" /><input v-model="setupMaybeRef.child" />',
+      {
+        bindingMetadata: {
+          setupRef: BindingTypes.SETUP_REF,
+          setupLet: BindingTypes.SETUP_LET,
+          setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+        },
+      },
+    )
+
+    expect(code).toMatchSnapshot()
+  })
+
+  test('should support member expression w/ inline', () => {
+    const { code } = compileWithVModel(
+      '<input v-model="setupRef.child" /><input v-model="setupLet.child" /><input v-model="setupMaybeRef.child" />',
+      {
+        bindingMetadata: {
+          setupRef: BindingTypes.SETUP_REF,
+          setupLet: BindingTypes.SETUP_LET,
+          setupMaybeRef: BindingTypes.SETUP_MAYBE_REF,
+        },
+        inline: true,
+      },
+    )
+
+    expect(code).toMatchSnapshot()
   })
 })

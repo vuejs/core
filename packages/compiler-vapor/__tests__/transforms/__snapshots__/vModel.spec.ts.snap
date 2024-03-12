@@ -84,6 +84,39 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: vModel transform > should support member expression 1`] = `
+"import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
+const t0 = _template("<input>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
+  _withDirectives(n1, [[_vModelText, () => _ctx.setupLet.child]])
+  _withDirectives(n2, [[_vModelText, () => _ctx.setupMaybeRef.child]])
+  _delegate(n0, "update:modelValue", () => $event => (_ctx.setupRef.child = $event))
+  _delegate(n1, "update:modelValue", () => $event => (_ctx.setupLet.child = $event))
+  _delegate(n2, "update:modelValue", () => $event => (_ctx.setupMaybeRef.child = $event))
+  return [n0, n1, n2]
+}"
+`;
+
+exports[`compiler: vModel transform > should support member expression w/ inline 1`] = `
+"(() => {
+  const n0 = t0()
+  const n1 = t0()
+  const n2 = t0()
+  _withDirectives(n0, [[_vModelText, () => setupRef.value.child]])
+  _withDirectives(n1, [[_vModelText, () => _unref(setupLet).child]])
+  _withDirectives(n2, [[_vModelText, () => _unref(setupMaybeRef).child]])
+  _delegate(n0, "update:modelValue", () => $event => (setupRef.value.child = $event))
+  _delegate(n1, "update:modelValue", () => $event => (_unref(setupLet).child = $event))
+  _delegate(n2, "update:modelValue", () => $event => (_unref(setupMaybeRef).child = $event))
+  return [n0, n1, n2]
+})()"
+`;
+
 exports[`compiler: vModel transform > should support select 1`] = `
 "import { vModelSelect as _vModelSelect, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
 const t0 = _template("<select></select>")

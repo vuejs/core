@@ -56,6 +56,7 @@ export function genExpression(
     false,
     parentStack,
   )
+  let hasMemberExpression = false
   if (ids.length) {
     ids.sort((a, b) => a.start! - b.start!)
     const [frag, push] = buildCodeFragment()
@@ -70,6 +71,13 @@ export function genExpression(
 
       const source = rawExpr.slice(start, end)
       const parentStack = parentStackMap.get(id)!
+      const parent = parentStack[parentStack.length - 1]
+
+      hasMemberExpression ||=
+        parent &&
+        (parent.type === 'MemberExpression' ||
+          parent.type === 'OptionalMemberExpression')
+
       push(
         ...genIdentifier(
           source,
@@ -79,9 +87,9 @@ export function genExpression(
             end: advancePositionWithClone(node.loc.start, source, end),
             source,
           },
-          assignment,
+          hasMemberExpression ? undefined : assignment,
           id,
-          parentStack[parentStack.length - 1],
+          parent,
           parentStack,
         ),
       )
@@ -90,6 +98,10 @@ export function genExpression(
         push([rawExpr.slice(end), NewlineType.Unknown])
       }
     })
+
+    if (assignment && hasMemberExpression) {
+      push(` = ${assignment}`)
+    }
     return frag
   } else {
     return [[rawExpr, NewlineType.Unknown, loc]]
