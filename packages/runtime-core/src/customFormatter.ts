@@ -24,7 +24,7 @@ export function initCustomFormatter() {
   // custom formatter for Chrome
   // https://www.mattzeunert.com/2016/02/19/custom-chrome-devtools-object-formatters.html
   const formatter = {
-    __formater_key: 'vue-custom-formatter',
+    __vue_custom_formatter: true,
     header(obj: unknown) {
       // TODO also format ComponentPublicInstance & ctx.slots/attrs in setup
       if (!isObject(obj)) {
@@ -199,12 +199,7 @@ export function initCustomFormatter() {
   }
 
   if ((window as any).devtoolsFormatters) {
-    const has = (window as any).devtoolsFormatters.some(
-      (v: typeof formatter) => {
-        return v.__formater_key && v.__formater_key === formatter.__formater_key
-      },
-    )
-    !has && (window as any).devtoolsFormatters.push(formatter)
+    ;(window as any).devtoolsFormatters.push(formatter)
   } else {
     ;(window as any).devtoolsFormatters = [formatter]
   }
