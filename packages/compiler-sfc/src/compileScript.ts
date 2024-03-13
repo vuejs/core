@@ -524,7 +524,7 @@ export function compileScript(
             )
           }
 
-          // defineProps / defineEmits
+          // defineProps / defineEmits / defineDirective
           const isDefineProps = processDefineProps(ctx, init, decl.id)
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
