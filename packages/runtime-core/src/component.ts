@@ -61,7 +61,6 @@ import {
 import {
   EMPTY_OBJ,
   type IfAny,
-  NO,
   NOOP,
   ShapeFlags,
   extend,
@@ -85,7 +84,6 @@ import {
 } from './compat/compatConfig'
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
-import { isInComputedGetter } from './apiComputed'
 
 export type Data = Record<string, unknown>
 
@@ -520,6 +518,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
+
+  /**
+   * dev only. For style v-bind hydration mismatch checks
+   * @internal
+   */
+  getCssVars?: () => Record<string, string>
 }
 
 const emptyAppContext = createAppContext()
@@ -632,18 +636,8 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInternalInstance | null = null
 
-export const getCurrentInstance: () => ComponentInternalInstance | null =
-  () => {
-    if (__DEV__ && isInComputedGetter) {
-      warn(
-        `getCurrentInstance() called inside a computed getter. ` +
-          `This is incorrect usage as computed getters are not guaranteed ` +
-          `to be executed with an active component instance. If you are using ` +
-          `a composable inside a computed getter, move it ouside to the setup scope.`,
-      )
-    }
-    return currentInstance || currentRenderingInstance
-  }
+export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
+  currentInstance || currentRenderingInstance
 
 let internalSetCurrentInstance: (
   instance: ComponentInternalInstance | null,
@@ -696,8 +690,13 @@ if (__SSR__) {
 }
 
 export const setCurrentInstance = (instance: ComponentInternalInstance) => {
+  const prev = currentInstance
   internalSetCurrentInstance(instance)
   instance.scope.on()
+  return () => {
+    instance.scope.off()
+    internalSetCurrentInstance(prev)
+  }
 }
 
 export const unsetCurrentInstance = () => {
@@ -707,9 +706,11 @@ export const unsetCurrentInstance = () => {
 
 const isBuiltInTag = /*#__PURE__*/ makeMap('slot,component')
 
-export function validateComponentName(name: string, config: AppConfig) {
-  const appIsNativeTag = config.isNativeTag || NO
-  if (isBuiltInTag(name) || appIsNativeTag(name)) {
+export function validateComponentName(
+  name: string,
+  { isNativeTag }: AppConfig,
+) {
+  if (isBuiltInTag(name) || isNativeTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component id: ' + name,
     )
@@ -785,7 +786,7 @@ function setupStatefulComponent(
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     const setupResult = callWithErrorHandling(
       setup,
@@ -797,7 +798,7 @@ function setupStatefulComponent(
       ],
     )
     resetTracking()
-    unsetCurrentInstance()
+    reset()
 
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
@@ -972,13 +973,13 @@ export function finishComponentSetup(
 
   // support for 2.x options
   if (__FEATURE_OPTIONS_API__ && !(__COMPAT__ && skipOptions)) {
-    setCurrentInstance(instance)
+    const reset = setCurrentInstance(instance)
     pauseTracking()
     try {
       applyOptions(instance)
     } finally {
       resetTracking()
-      unsetCurrentInstance()
+      reset()
     }
   }
 

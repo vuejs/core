@@ -19,13 +19,14 @@ import {
   onMounted,
   ref,
   renderSlot,
+  useCssVars,
   vModelCheckbox,
   vShow,
   withDirectives,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
-import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
+import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1080,13 +1081,11 @@ describe('SSR hydration', () => {
   })
 
   test('force hydrate prop with `.prop` modifier', () => {
-    const { container } = mountWithHydration(
-      '<input type="checkbox" :indeterminate.prop="true">',
-      () =>
-        h('input', {
-          type: 'checkbox',
-          '.indeterminate': true,
-        }),
+    const { container } = mountWithHydration('<input type="checkbox">', () =>
+      h('input', {
+        type: 'checkbox',
+        '.indeterminate': true,
+      }),
     )
     expect((container.firstChild! as any).indeterminate).toBe(true)
   })
@@ -1253,7 +1252,7 @@ describe('SSR hydration', () => {
         foo
       </div>
     `)
-    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect((container.firstChild as any)[vShowOriginalDisplay]).toBe('')
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
@@ -1475,6 +1474,16 @@ describe('SSR hydration', () => {
       mountWithHydration(`<select multiple></div>`, () =>
         h('select', { multiple: 'multiple' }),
       )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(1)
+
+      mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
+      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    })
+
+    test('attr special case: textarea value', () => {
       mountWithHydration(`<textarea>foo</textarea>`, () =>
         h('textarea', { value: 'foo' }),
       )
@@ -1483,11 +1492,84 @@ describe('SSR hydration', () => {
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
 
-      mountWithHydration(`<div></div>`, () => h('div', { id: 'foo' }))
+      mountWithHydration(`<textarea>foo</textarea>`, () =>
+        h('textarea', { value: 'bar' }),
+      )
       expect(`Hydration attribute mismatch`).toHaveBeenWarned()
+    })
 
-      mountWithHydration(`<div id="bar"></div>`, () => h('div', { id: 'foo' }))
-      expect(`Hydration attribute mismatch`).toHaveBeenWarnedTimes(2)
+    test('boolean attr handling', () => {
+      mountWithHydration(`<input />`, () => h('input', { readonly: false }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<input readonly />`, () =>
+        h('input', { readonly: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<input readonly="readonly" />`, () =>
+        h('input', { readonly: true }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('client value is null or undefined', () => {
+      mountWithHydration(`<div></div>`, () =>
+        h('div', { draggable: undefined }),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+
+      mountWithHydration(`<input />`, () => h('input', { type: null }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn against object values', () => {
+      mountWithHydration(`<input />`, () => h('input', { from: {} }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on falsy bindings of non-property keys', () => {
+      mountWithHydration(`<button />`, () => h('button', { href: undefined }))
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn on non-renderable option values', () => {
+      mountWithHydration(`<select><option>hello</option></select>`, () =>
+        h('select', [h('option', { value: ['foo'] }, 'hello')]),
+      )
+      expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn css v-bind', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h('div', { style: { color: 'var(--foo)' } })
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #10317 - test case from #10325
+    test('css vars should only be added to expected on component root dom', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () =>
+            h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
   })
 })

@@ -123,6 +123,13 @@ describe('api: createApp', () => {
 
     expect(app.runWithContext(() => inject('foo'))).toBe(1)
 
+    expect(
+      app.runWithContext(() => {
+        app.runWithContext(() => {})
+        return inject('foo')
+      }),
+    ).toBe(1)
+
     // ensure the context is restored
     inject('foo')
     expect('inject() can only be used inside setup').toHaveBeenWarned()
@@ -136,10 +143,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveComponent('foo-bar') as any
+        const FooBar = resolveComponent('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveComponent('bar-baz') as any
+          const BarBaz = resolveComponent('bar-baz')
           return h('div', [h(FooBar), h(BarBaz)])
         }
       },
@@ -175,10 +182,10 @@ describe('api: createApp', () => {
       },
       setup() {
         // resolve in setup
-        const FooBar = resolveDirective('foo-bar')!
+        const FooBar = resolveDirective('foo-bar')
         return () => {
           // resolve in render
-          const BarBaz = resolveDirective('bar-baz')!
+          const BarBaz = resolveDirective('bar-baz')
           return withDirectives(h('div'), [[FooBar], [BarBaz]])
         }
       },
@@ -343,7 +350,7 @@ describe('api: createApp', () => {
 
     const handler = vi.fn((err, instance, info) => {
       expect(err).toBe(error)
-      expect((instance as any).count).toBe(count.value)
+      expect(instance.count).toBe(count.value)
       expect(info).toBe(`render function`)
     })
 
@@ -443,11 +450,6 @@ describe('api: createApp', () => {
       }
 
       const app = createApp(Root)
-      Object.defineProperty(app.config, 'isNativeTag', {
-        value: isNativeTag,
-        writable: false,
-      })
-
       app.mount(nodeOps.createElement('div'))
       expect(
         `Do not use built-in directive ids as custom directive id: bind`,

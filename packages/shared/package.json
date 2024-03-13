@@ -1,6 +1,6 @@
 {
   "name": "@vue/shared",
-  "version": "3.4.5",
+  "version": "3.4.21",
   "description": "internal utils shared across @vue packages",
   "main": "index.js",
   "module": "dist/shared.esm-bundler.js",
@@ -17,6 +17,7 @@
         "development": "./dist/shared.cjs.js",
         "default": "./index.js"
       },
+      "module": "./dist/shared.esm-bundler.js",
       "import": "./dist/shared.esm-bundler.js",
       "require": "./index.js"
     },

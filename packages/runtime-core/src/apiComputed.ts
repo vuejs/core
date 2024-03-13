@@ -1,42 +1,17 @@
-import {
-  type ComputedGetter,
-  type WritableComputedOptions,
-  computed as _computed,
-} from '@vue/reactivity'
-import { isInSSRComponentSetup } from './component'
-import { isFunction } from '@vue/shared'
-
-/**
- * For dev warning only.
- * Context: https://github.com/vuejs/core/discussions/9974
- */
-export let isInComputedGetter = false
-
-function wrapComputedGetter(
-  getter: ComputedGetter<unknown>,
-): ComputedGetter<unknown> {
-  return () => {
-    isInComputedGetter = true
-    try {
-      return getter()
-    } finally {
-      isInComputedGetter = false
-    }
-  }
-}
+import { type ComputedRefImpl, computed as _computed } from '@vue/reactivity'
+import { getCurrentInstance, isInSSRComponentSetup } from './component'
 
 export const computed: typeof _computed = (
-  getterOrOptions: ComputedGetter<unknown> | WritableComputedOptions<unknown>,
+  getterOrOptions: any,
   debugOptions?: any,
 ) => {
+  // @ts-expect-error
+  const c = _computed(getterOrOptions, debugOptions, isInSSRComponentSetup)
   if (__DEV__) {
-    if (isFunction(getterOrOptions)) {
-      getterOrOptions = wrapComputedGetter(getterOrOptions)
-    } else {
-      getterOrOptions.get = wrapComputedGetter(getterOrOptions.get)
+    const i = getCurrentInstance()
+    if (i && i.appContext.config.warnRecursiveComputed) {
+      ;(c as unknown as ComputedRefImpl<any>)._warnRecursive = true
     }
   }
-
-  // @ts-expect-error the 3rd argument is hidden from public types
-  return _computed(getterOrOptions, debugOptions, isInSSRComponentSetup)
+  return c
 }

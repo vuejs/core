@@ -1,6 +1,6 @@
 {
   "name": "@vue/compiler-dom",
-  "version": "3.4.5",
+  "version": "3.4.21",
   "description": "@vue/compiler-dom",
   "main": "index.js",
   "module": "dist/compiler-dom.esm-bundler.js",
@@ -19,6 +19,7 @@
         "development": "./dist/compiler-dom.cjs.js",
         "default": "./index.js"
       },
+      "module": "./dist/compiler-dom.esm-bundler.js",
       "import": "./dist/compiler-dom.esm-bundler.js",
       "require": "./index.js"
     },
