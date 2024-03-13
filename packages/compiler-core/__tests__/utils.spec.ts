@@ -1,11 +1,10 @@
-import { TransformContext } from '../src'
-import { Position } from '../src/ast'
+import type { TransformContext } from '../src'
+import type { Position } from '../src/ast'
 import {
-  getInnerRange,
   advancePositionWithClone,
-  isMemberExpressionNode,
   isMemberExpressionBrowser,
-  toValidAssetId
+  isMemberExpressionNode,
+  toValidAssetId,
 } from '../src/utils'
 
 function p(line: number, column: number, offset: number): Position {
@@ -38,32 +37,6 @@ describe('advancePositionWithClone', () => {
     expect(newPos.column).toBe(3)
     expect(newPos.line).toBe(3)
     expect(newPos.offset).toBe(10)
-  })
-})
-
-describe('getInnerRange', () => {
-  const loc1 = {
-    source: 'foo\nbar\nbaz',
-    start: p(1, 1, 0),
-    end: p(3, 3, 11)
-  }
-
-  test('at start', () => {
-    const loc2 = getInnerRange(loc1, 0, 4)
-    expect(loc2.start).toEqual(loc1.start)
-    expect(loc2.end.column).toBe(1)
-    expect(loc2.end.line).toBe(2)
-    expect(loc2.end.offset).toBe(4)
-  })
-
-  test('in between', () => {
-    const loc2 = getInnerRange(loc1, 4, 3)
-    expect(loc2.start.column).toBe(1)
-    expect(loc2.start.line).toBe(2)
-    expect(loc2.start.offset).toBe(4)
-    expect(loc2.end.column).toBe(4)
-    expect(loc2.end.line).toBe(2)
-    expect(loc2.end.offset).toBe(7)
   })
 })
 
@@ -122,6 +95,10 @@ describe('isMemberExpression', () => {
     expect(fn(`123[a]`)).toBe(true)
     expect(fn(`foo() as string`)).toBe(false)
     expect(fn(`a + b as string`)).toBe(false)
+    // #9865
+    expect(fn('""')).toBe(false)
+    expect(fn('undefined')).toBe(false)
+    expect(fn('null')).toBe(false)
   })
 })
 
@@ -131,6 +108,6 @@ test('toValidAssetId', () => {
   expect(toValidAssetId('div', 'filter')).toBe('_filter_div')
   expect(toValidAssetId('foo-bar', 'component')).toBe('_component_foo_bar')
   expect(toValidAssetId('test-测试-1', 'component')).toBe(
-    '_component_test_2797935797_1'
+    '_component_test_2797935797_1',
   )
 })
