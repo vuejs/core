@@ -30,6 +30,7 @@ import type {
 import { warn } from './warning'
 import type { SlotsType, StrictUnwrapSlotsType } from './componentSlots'
 import type { Ref } from '@vue/reactivity'
+import type { Directive } from './directives'
 
 // dev only
 const warnRuntimeUsage = (method: string) =>
@@ -478,4 +479,14 @@ export function withAsyncContext(getAwaitable: () => any) {
     })
   }
   return [awaitable, () => setCurrentInstance(ctx)]
+}
+
+export function defineDirctive<T = any, V = any>(
+  options: Directive<T, V>,
+): Directive<T, V>
+export function defineDirctive() {
+  if (__DEV__) {
+    warnRuntimeUsage('defineDirective')
+  }
+  return null as any
 }
