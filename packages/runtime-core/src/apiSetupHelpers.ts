@@ -481,10 +481,10 @@ export function withAsyncContext(getAwaitable: () => any) {
   return [awaitable, () => setCurrentInstance(ctx)]
 }
 
-export function defineDirctive<T = any, V = any>(
+export function defineDirective<T = any, V = any>(
   options: Directive<T, V>,
 ): Directive<T, V>
-export function defineDirctive() {
+export function defineDirective() {
   if (__DEV__) {
     warnRuntimeUsage('defineDirective')
   }
