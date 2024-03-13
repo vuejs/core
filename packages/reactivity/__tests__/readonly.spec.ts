@@ -41,7 +41,11 @@ describe('reactivity/readonly', () => {
 
     it('should not allow mutation', () => {
       const qux = Symbol('qux')
-      const original = {
+      const original: {
+        foo?: number
+        bar: { baz?: number }
+        [qux]?: number
+      } = {
         foo: 1,
         bar: {
           baz: 2,
@@ -68,21 +72,18 @@ describe('reactivity/readonly', () => {
         `Set operation on key "Symbol(qux)" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-expect-error
       delete wrapped.foo
       expect(wrapped.foo).toBe(1)
       expect(
         `Delete operation on key "foo" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-expect-error
       delete wrapped.bar.baz
       expect(wrapped.bar.baz).toBe(2)
       expect(
         `Delete operation on key "baz" failed: target is readonly.`,
       ).toHaveBeenWarnedLast()
 
-      // @ts-expect-error
       delete wrapped[qux]
       expect(wrapped[qux]).toBe(3)
       expect(
@@ -91,12 +92,13 @@ describe('reactivity/readonly', () => {
     })
 
     it('should not trigger effects', () => {
-      const wrapped: any = readonly({ a: 1 })
+      const wrapped = readonly({ a: 1 })
       let dummy
       effect(() => {
         dummy = wrapped.a
       })
       expect(dummy).toBe(1)
+      // @ts-expect-error
       wrapped.a = 2
       expect(wrapped.a).toBe(1)
       expect(dummy).toBe(1)
@@ -173,7 +175,10 @@ describe('reactivity/readonly', () => {
   })
 
   const maps = [Map, WeakMap]
-  maps.forEach((Collection: any) => {
+  function isMap(v: MapConstructor | WeakMapConstructor): v is MapConstructor {
+    return v === Map
+  }
+  maps.forEach(Collection => {
     describe(Collection.name, () => {
       test('should make nested values readonly', () => {
         const key1 = {}
@@ -227,21 +232,21 @@ describe('reactivity/readonly', () => {
         expect(isReadonly(roItem)).toBe(true)
       })
 
-      if (Collection === Map) {
+      if (isMap(Collection)) {
         test('should retrieve readonly values on iteration', () => {
           const key1 = {}
           const key2 = {}
-          const original = new Map([
+          const original = new Collection([
             [key1, {}],
             [key2, {}],
           ])
-          const wrapped: any = readonly(original)
+          const wrapped = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
             expect(isReadonly(key)).toBe(true)
             expect(isReadonly(value)).toBe(true)
           }
-          wrapped.forEach((value: any) => {
+          wrapped.forEach(value => {
             expect(isReadonly(value)).toBe(true)
           })
           for (const value of wrapped.values()) {
@@ -253,12 +258,12 @@ describe('reactivity/readonly', () => {
           const key1 = {}
           const key2 = {}
           const original = reactive(
-            new Map([
+            new Collection([
               [key1, {}],
               [key2, {}],
             ]),
           )
-          const wrapped: any = readonly(original)
+          const wrapped = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const [key, value] of wrapped) {
             expect(isReadonly(key)).toBe(true)
@@ -266,7 +271,7 @@ describe('reactivity/readonly', () => {
             expect(isReactive(key)).toBe(true)
             expect(isReactive(value)).toBe(true)
           }
-          wrapped.forEach((value: any) => {
+          wrapped.forEach(value => {
             expect(isReadonly(value)).toBe(true)
             expect(isReactive(value)).toBe(true)
           })
@@ -278,6 +283,7 @@ describe('reactivity/readonly', () => {
 
         test('should return undefined from Map.clear() call', () => {
           const wrapped = readonly(new Collection())
+          // @ts-expect-error
           expect(wrapped.clear()).toBeUndefined()
           expect(
             `Clear operation failed: target is readonly.`,
@@ -288,7 +294,10 @@ describe('reactivity/readonly', () => {
   })
 
   const sets = [Set, WeakSet]
-  sets.forEach((Collection: any) => {
+  function isSet(v: SetConstructor | WeakSetConstructor): v is SetConstructor {
+    return v === Set
+  }
+  sets.forEach(Collection => {
     describe(Collection.name, () => {
       test('should make nested values readonly', () => {
         const key1 = {}
@@ -321,15 +330,15 @@ describe('reactivity/readonly', () => {
         ).toHaveBeenWarned()
       })
 
-      if (Collection === Set) {
+      if (isSet(Collection)) {
         test('should retrieve readonly values on iteration', () => {
           const original = new Collection([{}, {}])
-          const wrapped: any = readonly(original)
+          const wrapped = readonly(original)
           expect(wrapped.size).toBe(2)
           for (const value of wrapped) {
             expect(isReadonly(value)).toBe(true)
           }
-          wrapped.forEach((value: any) => {
+          wrapped.forEach(value => {
             expect(isReadonly(value)).toBe(true)
           })
           for (const value of wrapped.values()) {
@@ -343,6 +352,7 @@ describe('reactivity/readonly', () => {
 
         test('should return undefined from Set.clear() call', () => {
           const wrapped = readonly(new Collection())
+          // @ts-expect-error
           expect(wrapped.clear()).toBeUndefined()
           expect(
             `Clear operation failed: target is readonly.`,
@@ -465,7 +475,7 @@ describe('reactivity/readonly', () => {
 
   // https://github.com/vuejs/core/issues/3376
   test('calling readonly on computed should allow computed to set its private properties', () => {
-    const r = ref<boolean>(false)
+    const r = ref(false)
     const c = computed(() => r.value)
     const rC = readonly(c)
 
@@ -486,7 +496,7 @@ describe('reactivity/readonly', () => {
   // #4986
   test('setting a readonly object as a property of a reactive object should retain readonly proxy', () => {
     const r = readonly({})
-    const rr = reactive({}) as any
+    const rr = reactive<{ foo?: {} }>({})
     rr.foo = r
     expect(rr.foo).toBe(r)
     expect(isReadonly(rr.foo)).toBe(true)
@@ -512,7 +522,7 @@ describe('reactivity/readonly', () => {
   })
 
   test('setting readonly object to writable nested ref', () => {
-    const r = ref<any>()
+    const r = ref()
     const obj = reactive({ r })
     const ro = readonly({})
     obj.r = ro

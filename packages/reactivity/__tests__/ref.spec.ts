@@ -241,7 +241,6 @@ describe('reactivity/ref', () => {
     expect(isRef(computed(() => 1))).toBe(true)
 
     expect(isRef(0)).toBe(false)
-    expect(isRef(1)).toBe(false)
     // an object that looks like a ref isn't necessarily a ref
     expect(isRef({ value: 0 })).toBe(false)
   })

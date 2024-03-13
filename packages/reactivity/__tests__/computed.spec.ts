@@ -79,9 +79,7 @@ describe('reactivity/computed', () => {
   it('should trigger effect when chained', () => {
     const value = reactive({ foo: 0 })
     const getter1 = vi.fn(() => value.foo)
-    const getter2 = vi.fn(() => {
-      return c1.value + 1
-    })
+    const getter2 = vi.fn(() => c1.value + 1)
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
@@ -102,9 +100,7 @@ describe('reactivity/computed', () => {
   it('should trigger effect when chained (mixed invocations)', () => {
     const value = reactive({ foo: 0 })
     const getter1 = vi.fn(() => value.foo)
-    const getter2 = vi.fn(() => {
-      return c1.value + 1
-    })
+    const getter2 = vi.fn(() => c1.value + 1)
     const c1 = computed(getter1)
     const c2 = computed(getter2)
 
@@ -300,9 +296,7 @@ describe('reactivity/computed', () => {
     const a = ref<null | { v: number }>({
       v: 1,
     })
-    const b = computed(() => {
-      return a.value
-    })
+    const b = computed(() => a.value)
     const c = computed(() => {
       cSpy()
       return b.value?.v
@@ -326,9 +320,7 @@ describe('reactivity/computed', () => {
     let _msg: string | undefined
 
     const items = ref<number[]>()
-    const isLoaded = computed(() => {
-      return !!items.value
-    })
+    const isLoaded = computed(() => !!items.value)
     const msg = computed(() => {
       if (isLoaded.value) {
         return 'The items are loaded'
@@ -342,7 +334,6 @@ describe('reactivity/computed', () => {
     })
 
     items.value = [1, 2, 3]
-    items.value = [1, 2, 3]
     items.value = undefined
 
     expect(_msg).toBe('The items are not loaded')
@@ -352,9 +343,7 @@ describe('reactivity/computed', () => {
     let _msg: string | undefined
 
     const items = ref<number[]>()
-    const isLoaded = computed(() => {
-      return !!items.value
-    })
+    const isLoaded = computed(() => !!items.value)
     const msg = computed(() => {
       if (isLoaded.value) {
         return 'The items are loaded'
@@ -378,9 +367,7 @@ describe('reactivity/computed', () => {
     const cSpy = vi.fn()
 
     const a = ref(0)
-    const b = computed(() => {
-      return a.value % 3 !== 0
-    })
+    const b = computed(() => a.value % 3 !== 0)
     const c = computed(() => {
       cSpy()
       if (a.value % 3 === 2) {

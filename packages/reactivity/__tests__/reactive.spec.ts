@@ -101,7 +101,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('observed value should proxy mutations to original (Object)', () => {
-    const original: any = { foo: 1 }
+    const original: { foo?: number; bar?: number } = { foo: 1 }
     const observed = reactive(original)
     // set
     observed.bar = 1
@@ -114,7 +114,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('original value change should reflect in observed value (Object)', () => {
-    const original: any = { foo: 1 }
+    const original: { foo?: number; bar?: number } = { foo: 1 }
     const observed = reactive(original)
     // set
     original.bar = 1
@@ -149,7 +149,7 @@ describe('reactivity/reactive', () => {
   })
 
   test('should not pollute original object with Proxies', () => {
-    const original: any = { foo: 1 }
+    const original: { foo: number; bar?: { bar: number } } = { foo: 1 }
     const original2 = { bar: 2 }
     const observed = reactive(original)
     const observed2 = reactive(original2)

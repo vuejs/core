@@ -637,7 +637,7 @@ describe('reactivity/effect', () => {
 
   it('should allow nested effects', () => {
     const nums = reactive({ num1: 0, num2: 1, num3: 2 })
-    const dummy: any = {}
+    const dummy: Record<string, number> = {}
 
     const childSpy = vi.fn(() => (dummy.num1 = nums.num1))
     const childeffect = effect(childSpy)
@@ -890,7 +890,7 @@ describe('reactivity/effect', () => {
   })
 
   it('should trigger all effects when array length is set to 0', () => {
-    const observed: any = reactive([1])
+    const observed = reactive([1])
     let dummy, record
     effect(() => {
       dummy = observed.length
@@ -915,7 +915,7 @@ describe('reactivity/effect', () => {
 
   it('should not be triggered when set with the same proxy', () => {
     const obj = reactive({ foo: 1 })
-    const observed: any = reactive({ obj })
+    const observed = reactive({ obj })
     const fnSpy = vi.fn(() => observed.obj)
 
     effect(fnSpy)
@@ -925,7 +925,7 @@ describe('reactivity/effect', () => {
     expect(fnSpy).toHaveBeenCalledTimes(1)
 
     const obj2 = reactive({ foo: 1 })
-    const observed2: any = shallowReactive({ obj2 })
+    const observed2 = shallowReactive({ obj2 })
     const fnSpy2 = vi.fn(() => observed2.obj2)
 
     effect(fnSpy2)
@@ -979,7 +979,7 @@ describe('reactivity/effect', () => {
     })
 
     test('should track hasOwnProperty', () => {
-      const obj: any = reactive({})
+      const obj = reactive<{ foo?: number; bar?: number }>({})
       let has = false
       const fnSpy = vi.fn()
 
