@@ -71,6 +71,11 @@ export interface KeepAliveContext extends ComponentRenderContext {
   deactivate: (vnode: VNode) => void
 }
 
+/**
+ * Check if a vnode is a KeepAlive component.
+ * @param {VNode} vnode - The vnode to check.
+ * @returns {boolean} - Whether the vnode is a KeepAlive component.
+ */
 export const isKeepAlive = (vnode: VNode): boolean =>
   (vnode.type as any).__isKeepAlive
 
@@ -88,6 +93,11 @@ const KeepAliveImpl: ComponentOptions = {
     max: [String, Number],
   },
 
+  /**
+   * Setup function for the KeepAlive component.
+   * @param {KeepAliveProps} props - Props for the component.
+   * @param {SetupContext} context - Setup context.
+   */
   setup(props: KeepAliveProps, { slots }: SetupContext) {
     const instance = getCurrentInstance()!
     // KeepAlive communicates with the instantiated renderer via the
@@ -357,6 +367,12 @@ export const KeepAlive = KeepAliveImpl as any as {
   }
 }
 
+/**
+ * Matches a pattern against a name.
+ * @param {MatchPattern} pattern - The pattern to match against.
+ * @param {string} name - The name to match.
+ * @returns {boolean} - Whether the name matches the pattern.
+ */
 function matches(pattern: MatchPattern, name: string): boolean {
   if (isArray(pattern)) {
     return pattern.some((p: string | RegExp) => matches(p, name))
@@ -369,6 +385,15 @@ function matches(pattern: MatchPattern, name: string): boolean {
   return false
 }
 
+/**
+ * Registers a hook on the KeepAlive component for when it is activated.
+ * @param {Function} hook - The hook function.
+ * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
+ *//**
+ * Registers a hook on the KeepAlive component for when it is activated.
+ * @param {Function} hook - The hook function.
+ * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
+ */
 export function onActivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
@@ -376,6 +401,11 @@ export function onActivated(
   registerKeepAliveHook(hook, LifecycleHooks.ACTIVATED, target)
 }
 
+/**
+ * Registers a hook on the KeepAlive component for when it is deactivated.
+ * @param {Function} hook - The hook function.
+ * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
+ */
 export function onDeactivated(
   hook: Function,
   target?: ComponentInternalInstance | null,
@@ -383,6 +413,12 @@ export function onDeactivated(
   registerKeepAliveHook(hook, LifecycleHooks.DEACTIVATED, target)
 }
 
+/**
+ * Registers a hook on the KeepAlive component.
+ * @param {Function & { __wdc?: Function }} hook - The hook function.
+ * @param {LifecycleHooks} type - The type of hook.
+ * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
+ */
 function registerKeepAliveHook(
   hook: Function & { __wdc?: Function },
   type: LifecycleHooks,
@@ -421,6 +457,13 @@ function registerKeepAliveHook(
   }
 }
 
+/**
+ * Injects a hook into the parent KeepAlive root component.
+ * @param {Function & { __weh?: Function }} hook - The hook function.
+ * @param {LifecycleHooks} type - The type of hook.
+ * @param {ComponentInternalInstance} target - The target instance to register the hook on.
+ * @param {ComponentInternalInstance} keepAliveRoot - The KeepAlive root instance.
+ */
 function injectToKeepAliveRoot(
   hook: Function & { __weh?: Function },
   type: LifecycleHooks,
@@ -435,12 +478,21 @@ function injectToKeepAliveRoot(
   }, target)
 }
 
+/**
+ * Resets the shape flag of a vnode.
+ * @param {VNode} vnode - The vnode to reset the shape flag of.
+ */
 function resetShapeFlag(vnode: VNode) {
   // bitwise operations to remove keep alive flags
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE
   vnode.shapeFlag &= ~ShapeFlags.COMPONENT_KEPT_ALIVE
 }
 
+/**
+ * Gets the inner child of a vnode.
+ * @param {VNode} vnode - The vnode.
+ * @returns {VNode} - The inner child vnode.
+ */
 function getInnerChild(vnode: VNode) {
   return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
 }
