@@ -1,5 +1,5 @@
 import type { AtRule, PluginCreator, Rule } from 'postcss'
-import selectorParser from 'postcss-selector-parser'
+import selectorParser, { Selector } from 'postcss-selector-parser'
 import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
@@ -172,7 +172,9 @@ function rewriteSelector(
 
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
-      (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
+      (n.type === 'pseudo' &&
+        (n.value === ':is' || n.value === ':where') &&
+        !node)
     ) {
       node = n
     }
