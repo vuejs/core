@@ -75,3 +75,14 @@ export function render(_ctx) {
   return n0
 }"
 `;
+
+exports[`compiler: element transform > v-on="obj" 1`] = `
+"import { renderEffect as _renderEffect, setDynamicEvents as _setDynamicEvents, template as _template } from 'vue/vapor';
+const t0 = _template("<div></div>")
+
+export function render(_ctx) {
+  const n0 = t0()
+  _renderEffect(() => _setDynamicEvents(n0, _ctx.obj))
+  return n0
+}"
+`;

@@ -344,4 +344,32 @@ describe('compiler: element transform', () => {
       },
     ])
   })
+
+  test('v-on="obj"', () => {
+    const { code, ir } = compileWithElementTransform(`<div v-on="obj" />`)
+    expect(code).toMatchSnapshot()
+    expect(ir.block.effect).toMatchObject([
+      {
+        expressions: [
+          {
+            type: NodeTypes.SIMPLE_EXPRESSION,
+            content: 'obj',
+            isStatic: false,
+          },
+        ],
+        operations: [
+          {
+            type: IRNodeTypes.SET_DYNAMIC_EVENTS,
+            element: 0,
+            event: {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'obj',
+              isStatic: false,
+            },
+          },
+        ],
+      },
+    ])
+    expect(code).contains('_setDynamicEvents(n0, _ctx.obj)')
+  })
 })

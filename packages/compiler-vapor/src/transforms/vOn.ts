@@ -14,14 +14,26 @@ const delegatedEvents = /*#__PURE__*/ makeMap(
 
 export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
-  if (!exp && !modifiers.length) {
+  if (!exp && (!modifiers.length || !arg)) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
     )
   }
 
   if (!arg) {
-    // TODO support v-on="{}"
+    // v-on="obj"
+    if (exp) {
+      context.registerEffect(
+        [exp],
+        [
+          {
+            type: IRNodeTypes.SET_DYNAMIC_EVENTS,
+            element: context.reference(),
+            event: exp,
+          },
+        ],
+      )
+    }
     return
   }
 

@@ -21,6 +21,7 @@ export enum IRNodeTypes {
   SET_DYNAMIC_PROPS,
   SET_TEXT,
   SET_EVENT,
+  SET_DYNAMIC_EVENTS,
   SET_HTML,
   SET_REF,
   SET_MODEL_VALUE,
@@ -92,6 +93,12 @@ export interface SetDynamicPropsIRNode extends BaseIRNode {
   type: IRNodeTypes.SET_DYNAMIC_PROPS
   element: number
   props: IRProps[]
+}
+
+export interface SetDynamicEventsIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_DYNAMIC_EVENTS
+  element: number
+  event: SimpleExpressionNode
 }
 
 export interface SetTextIRNode extends BaseIRNode {
@@ -172,6 +179,7 @@ export type OperationNode =
   | SetDynamicPropsIRNode
   | SetTextIRNode
   | SetEventIRNode
+  | SetDynamicEventsIRNode
   | SetHtmlIRNode
   | SetRefIRNode
   | SetModelValueIRNode

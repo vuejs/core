@@ -1,6 +1,6 @@
 import { fnExpRE, isMemberExpression } from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
-import type { SetEventIRNode } from '../ir'
+import type { SetDynamicEventsIRNode, SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
@@ -91,6 +91,21 @@ export function genSetEvent(
       ...options.map((option): CodeFragment[] => [`${option}: true`]),
     )
   }
+}
+
+export function genSetDynamicEvents(
+  oper: SetDynamicEventsIRNode,
+  context: CodegenContext,
+): CodeFragment[] {
+  const { vaporHelper } = context
+  return [
+    NEWLINE,
+    ...genCall(
+      vaporHelper('setDynamicEvents'),
+      `n${oper.element}`,
+      genExpression(oper.event, context),
+    ),
+  ]
 }
 
 function genArrayExpression(elements: string[]) {
