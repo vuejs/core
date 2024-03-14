@@ -18,6 +18,13 @@ export const isOn = (key: string) =>
   // uppercase letter
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
+export const isNativeOn = (key: string) =>
+  key.charCodeAt(0) === 111 /* o */ &&
+  key.charCodeAt(1) === 110 /* n */ &&
+  // lowercase letter
+  key.charCodeAt(2) > 96 &&
+  key.charCodeAt(2) < 123
+
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
 
 export const extend = Object.assign

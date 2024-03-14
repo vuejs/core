@@ -3,6 +3,7 @@ import {
   includeBooleanAttr,
   isArray,
   isFunction,
+  isNativeOn,
   isOn,
   isString,
   normalizeClass,
@@ -12,6 +13,7 @@ import {
 import { warn } from '../warning'
 import { setStyle } from './style'
 import { MetadataKind, getMetadata, recordPropMetadata } from '../metadata'
+import { on } from './event'
 
 export function setClass(el: Element, value: any) {
   const prev = recordPropMetadata(el, 'class', (value = normalizeClass(value)))
@@ -110,6 +112,8 @@ export function setDynamicProp(el: Element, key: string, value: any) {
     setClass(el, value)
   } else if (key === 'style') {
     setStyle(el as HTMLElement, value)
+  } else if (isOn(key)) {
+    on(el, key[2].toLowerCase() + key.slice(3), () => value, { effect: true })
   } else if (
     key[0] === '.'
       ? ((key = key.slice(1)), true)
@@ -193,13 +197,6 @@ export function setHtml(el: Element, value: any) {
 }
 
 // TODO copied from runtime-dom
-const isNativeOn = (key: string) =>
-  key.charCodeAt(0) === 111 /* o */ &&
-  key.charCodeAt(1) === 110 /* n */ &&
-  // lowercase letter
-  key.charCodeAt(2) > 96 &&
-  key.charCodeAt(2) < 123
-
 function shouldSetAsProp(
   el: Element,
   key: string,

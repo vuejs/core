@@ -8,7 +8,7 @@ import { withKeys, withModifiers } from '@vue/runtime-dom'
 import { queuePostRenderEffect } from '../scheduler'
 
 export function addEventListener(
-  el: HTMLElement,
+  el: Element,
   event: string,
   handler: (...args: any) => any,
   options?: AddEventListenerOptions,
@@ -23,7 +23,7 @@ interface ModifierOptions {
 }
 
 export function on(
-  el: HTMLElement,
+  el: Element,
   event: string,
   handlerGetter: () => undefined | ((...args: any[]) => any),
   options: AddEventListenerOptions &

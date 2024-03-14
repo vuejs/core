@@ -3,15 +3,14 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import {
+  isFunction,
+  isModelListener,
+  isNativeOn,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
-
-const isNativeOn = (key: string) =>
-  key.charCodeAt(0) === 111 /* o */ &&
-  key.charCodeAt(1) === 110 /* n */ &&
-  // lowercase letter
-  key.charCodeAt(2) > 96 &&
-  key.charCodeAt(2) < 123
 
 type DOMRendererOptions = RendererOptions<Node, Element>
 
