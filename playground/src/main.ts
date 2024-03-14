@@ -1,4 +1,4 @@
-import { render, unmountComponent } from 'vue/vapor'
+import { createComponentInstance, render, unmountComponent } from 'vue/vapor'
 import { createApp } from 'vue'
 import './style.css'
 
@@ -7,7 +7,8 @@ const mod = (modules['.' + location.pathname] || modules['./App.vue'])()
 
 mod.then(({ default: mod }) => {
   if (mod.vapor) {
-    const instance = render(mod, {}, '#app')
+    const instance = createComponentInstance(mod, {})
+    render(instance, '#app')
     // @ts-expect-error
     globalThis.unmount = () => {
       unmountComponent(instance)

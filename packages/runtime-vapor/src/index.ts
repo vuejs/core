@@ -88,6 +88,7 @@ export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { setRef } from './dom/templateRef'
 
 export { defineComponent } from './apiDefineComponent'
+export { createComponentInstance } from './component'
 export {
   onBeforeMount,
   onMounted,

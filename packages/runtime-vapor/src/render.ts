@@ -1,19 +1,10 @@
 import { proxyRefs } from '@vue/reactivity'
+import { invokeArrayFns, isArray, isFunction, isObject } from '@vue/shared'
 import {
-  type Data,
-  invokeArrayFns,
-  isArray,
-  isFunction,
-  isObject,
-} from '@vue/shared'
-import {
-  type Component,
   type ComponentInternalInstance,
-  createComponentInstance,
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-import { initProps } from './componentProps'
 import { invokeDirectiveHook } from './directives'
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
@@ -28,18 +19,11 @@ export type Fragment = {
 }
 
 export function render(
-  comp: Component,
-  props: Data,
+  instance: ComponentInternalInstance,
   container: string | ParentNode,
-): ComponentInternalInstance {
-  const instance = createComponentInstance(comp, props)
-  initProps(instance, props, !isFunction(instance.component))
-  const component = mountComponent(
-    instance,
-    (container = normalizeContainer(container)),
-  )
+): void {
+  mountComponent(instance, (container = normalizeContainer(container)))
   flushPostFlushCbs()
-  return component
 }
 
 function normalizeContainer(container: string | ParentNode): ParentNode {

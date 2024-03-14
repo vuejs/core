@@ -4,6 +4,7 @@ import {
   type ObjectComponent,
   type SetupFn,
   render as _render,
+  createComponentInstance,
   defineComponent,
 } from '../src'
 
@@ -30,7 +31,8 @@ export function makeRender<Component = ObjectComponent | SetupFn>(
       props: Data = {},
       container: string | ParentNode = '#host',
     ) => {
-      instance = _render(component, props, container)
+      instance = createComponentInstance(component, props)
+      _render(instance, container)
       return res()
     }
     const res = () => ({

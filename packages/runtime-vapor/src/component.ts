@@ -1,11 +1,12 @@
 import { EffectScope } from '@vue/reactivity'
 
-import { EMPTY_OBJ } from '@vue/shared'
+import { EMPTY_OBJ, isFunction } from '@vue/shared'
 import type { Block } from './render'
 import type { DirectiveBinding } from './directives'
 import {
   type ComponentPropsOptions,
   type NormalizedPropsOptions,
+  initProps,
   normalizePropsOptions,
 } from './componentProps'
 import {
@@ -243,6 +244,8 @@ export const createComponentInstance = (
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
 
+  // TODO init first
+  initProps(instance, rawProps, !isFunction(component))
   instance.emit = emit.bind(null, instance)
 
   return instance
