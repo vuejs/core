@@ -6,7 +6,7 @@
 import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
-import { VaporLifecycleHooks } from './enums'
+import { VaporLifecycleHooks } from './apiLifecycle'
 import { BaseWatchErrorCodes } from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to

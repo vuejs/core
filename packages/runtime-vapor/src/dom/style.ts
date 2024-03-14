@@ -7,7 +7,7 @@ import {
   normalizeStyle,
 } from '@vue/shared'
 import { warn } from '../warning'
-import { recordPropMetadata } from '../metadata'
+import { recordPropMetadata } from '../componentMetadata'
 
 export function setStyle(el: HTMLElement, value: any) {
   const prev = recordPropMetadata(el, 'style', (value = normalizeStyle(value)))

@@ -7,9 +7,25 @@ import { warn } from './warning'
 import { pauseTracking, resetTracking } from '@vue/reactivity'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { toHandlerKey } from '@vue/shared'
-import { VaporLifecycleHooks } from './enums'
 
-export const injectHook = (
+export enum VaporLifecycleHooks {
+  BEFORE_CREATE = 'bc',
+  CREATED = 'c',
+  BEFORE_MOUNT = 'bm',
+  MOUNTED = 'm',
+  BEFORE_UPDATE = 'bu',
+  UPDATED = 'u',
+  BEFORE_UNMOUNT = 'bum',
+  UNMOUNTED = 'um',
+  DEACTIVATED = 'da',
+  ACTIVATED = 'a',
+  RENDER_TRIGGERED = 'rtg',
+  RENDER_TRACKED = 'rtc',
+  ERROR_CAPTURED = 'ec',
+  // SERVER_PREFETCH = 'sp',
+}
+
+const injectHook = (
   type: VaporLifecycleHooks,
   hook: Function & { __weh?: Function },
   target: ComponentInternalInstance | null = currentInstance,
@@ -49,7 +65,7 @@ export const injectHook = (
     )
   }
 }
-export const createHook =
+const createHook =
   <T extends Function = () => any>(lifecycle: VaporLifecycleHooks) =>
   (hook: T, target: ComponentInternalInstance | null = currentInstance) =>
     injectHook(lifecycle, (...args: unknown[]) => hook(...args), target)

@@ -102,8 +102,8 @@ export {
   onErrorCaptured,
   // onServerPrefetch,
 } from './apiLifecycle'
-export { createIf } from './if'
-export { createFor } from './for'
+export { createIf } from './apiCreateIf'
+export { createFor } from './apiCreateFor'
 
 // **Internal** DOM-only runtime directive helpers
 export {

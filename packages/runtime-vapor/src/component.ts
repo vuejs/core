@@ -15,9 +15,9 @@ import {
   emit,
   normalizeEmitsOptions,
 } from './componentEmits'
+import { VaporLifecycleHooks } from './apiLifecycle'
 
 import type { Data } from '@vue/shared'
-import { VaporLifecycleHooks } from './enums'
 
 export type Component = FunctionalComponent | ObjectComponent
 

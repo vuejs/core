@@ -12,7 +12,11 @@ import {
 } from '@vue/shared'
 import { warn } from '../warning'
 import { setStyle } from './style'
-import { MetadataKind, getMetadata, recordPropMetadata } from '../metadata'
+import {
+  MetadataKind,
+  getMetadata,
+  recordPropMetadata,
+} from '../componentMetadata'
 import { on } from './event'
 
 export function setClass(el: Element, value: any) {

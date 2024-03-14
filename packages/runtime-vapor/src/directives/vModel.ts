@@ -15,7 +15,7 @@ import type {
 import { addEventListener } from '../dom/event'
 import { nextTick } from '../scheduler'
 import { warn } from '../warning'
-import { MetadataKind, getMetadata } from '../metadata'
+import { MetadataKind, getMetadata } from '../componentMetadata'
 
 type AssignerFn = (value: any) => void
 function getModelAssigner(el: Element): AssignerFn {

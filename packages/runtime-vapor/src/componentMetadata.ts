@@ -6,14 +6,14 @@ export enum MetadataKind {
   event,
 }
 
-export type ElementMetadata = [
+export type ComponentMetadata = [
   props: Data,
   events: Record<string, DelegatedHandler[]>,
 ]
 
 export function getMetadata(
-  el: Node & { $$metadata?: ElementMetadata },
-): ElementMetadata {
+  el: Node & { $$metadata?: ComponentMetadata },
+): ComponentMetadata {
   return el.$$metadata || (el.$$metadata = [{}, {}])
 }
 

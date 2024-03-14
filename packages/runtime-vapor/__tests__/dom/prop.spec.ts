@@ -13,7 +13,7 @@ import {
   createComponentInstance,
   setCurrentInstance,
 } from '../../src/component'
-import { getMetadata, recordPropMetadata } from '../../src/metadata'
+import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
