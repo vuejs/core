@@ -164,37 +164,39 @@ describe('SFC scoped CSS', () => {
   // #10511
   test(':is and :where with same pre-selector should have right priority', () => {
     expect(
-      compileScoped(`.div { color: red }; .div:where(:hover) { color: blue }`),
+      compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red
-    };
-    .div[data-v-test]:where(:hover) { color: blue
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:where(:hover) { color: blue;
     }"`)
 
     expect(
-      compileScoped(`.div { color: red }; .div:is(:hover) { color: blue }`),
+      compileScoped(`.div { color: red; } .div:is(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red
-    };
-    .div[data-v-test]:is(:hover) { color: blue
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:is(:hover) { color: blue;
     }"`)
 
     expect(
       compileScoped(
-        `.div { color: red }; .div:where(.foo:hover) { color: blue }`,
+        `.div { color: red; } .div:where(.foo:hover) { color: blue; }`,
       ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red
-    };
-    .div[data-v-test]:where(.foo:hover) { color: blue
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:where(.foo:hover) { color: blue;
     }"`)
 
     expect(
-      compileScoped(`.div { color: red }; .div:is(.foo:hover) { color: blue }`),
+      compileScoped(
+        `.div { color: red; } .div:is(.foo:hover) { color: blue; }`,
+      ),
     ).toMatchInlineSnapshot(`
-    ".div[data-v-test] { color: red
-    };
-    .div[data-v-test]:is(.foo:hover) { color: blue
+    ".div[data-v-test] { color: red;
+    }
+    .div[data-v-test]:is(.foo:hover) { color: blue;
     }"`)
   })
 
