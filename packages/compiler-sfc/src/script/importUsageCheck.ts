@@ -60,6 +60,9 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
               extractIdentifiers(ids, prop.forParseResult!.source)
             } else if (prop.exp) {
               extractIdentifiers(ids, prop.exp)
+            } else if (prop.name === 'bind' && !prop.exp) {
+              // v-bind shorthand rawName as identifier
+              ids.add(prop.rawName!.slice(1))
             }
           }
           if (
