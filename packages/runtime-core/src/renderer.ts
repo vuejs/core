@@ -38,8 +38,8 @@ import {
   isReservedProp,
 } from '@vue/shared'
 import {
+  type SchedulerFactory,
   type SchedulerJob,
-  SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
@@ -49,6 +49,7 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
+  SchedulerJobFlags,
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'
@@ -286,6 +287,18 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
         queueEffectWithSuspense(fn, suspense)
     : queueEffectWithSuspense
   : queuePostFlushCb
+
+export const createPostRenderScheduler: SchedulerFactory =
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (!immediateFirstRun) {
+      queuePostRenderEffect(job, instance && instance.suspense)
+    } else if (!hasCb) {
+      queuePostRenderEffect(
+        effect.run.bind(effect),
+        instance && instance.suspense,
+      )
+    }
+  }
 
 /**
  * The createRenderer function accepts two generic arguments:
