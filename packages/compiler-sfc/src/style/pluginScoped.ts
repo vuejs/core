@@ -1,5 +1,5 @@
 import type { AtRule, PluginCreator, Rule } from 'postcss'
-import selectorParser, { Selector } from 'postcss-selector-parser'
+import selectorParser from 'postcss-selector-parser'
 import { warn } from '../warn'
 
 const animationNameRE = /^(-\w+-)?animation-name$/
