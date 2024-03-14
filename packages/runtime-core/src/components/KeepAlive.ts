@@ -389,10 +389,6 @@ function matches(pattern: MatchPattern, name: string): boolean {
  * Registers a hook on the KeepAlive component for when it is activated.
  * @param {Function} hook - The hook function.
  * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
- *//**
- * Registers a hook on the KeepAlive component for when it is activated.
- * @param {Function} hook - The hook function.
- * @param {ComponentInternalInstance} [target=currentInstance] - The target instance to register the hook on.
  */
 export function onActivated(
   hook: Function,
