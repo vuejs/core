@@ -50,7 +50,7 @@ export function walkIdentifiers(
         }
       } else if (
         node.type === 'ObjectProperty' &&
-        parent!.type === 'ObjectPattern'
+        parent?.type === 'ObjectPattern'
       ) {
         // mark property in destructure pattern
         ;(node as any).inPattern = true
@@ -141,6 +141,19 @@ export function isInDestructureAssignment(
       } else if (p.type !== 'ObjectProperty' && !p.type.endsWith('Pattern')) {
         break
       }
+    }
+  }
+  return false
+}
+
+export function isInNewExpression(parentStack: Node[]): boolean {
+  let i = parentStack.length
+  while (i--) {
+    const p = parentStack[i]
+    if (p.type === 'NewExpression') {
+      return true
+    } else if (p.type !== 'MemberExpression') {
+      break
     }
   }
   return false
