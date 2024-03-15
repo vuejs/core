@@ -61,7 +61,7 @@ function resolveTemplateUsedIdentifiers(sfc: SFCDescriptor): Set<string> {
             } else if (prop.exp) {
               extractIdentifiers(ids, prop.exp)
             } else if (prop.name === 'bind' && !prop.exp) {
-              // v-bind shorthand rawName as identifier
+              // v-bind shorthand name as identifier
               ids.add((prop.arg as SimpleExpressionNode).content)
             }
           }
