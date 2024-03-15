@@ -179,6 +179,9 @@ importers:
       '@babel/parser':
         specifier: ^7.24.0
         version: 7.24.0
+      '@babel/types':
+        specifier: ^7.24.0
+        version: 7.24.0
       '@vue/shared':
         specifier: workspace:*
         version: link:../shared
@@ -191,10 +194,6 @@ importers:
       source-map-js:
         specifier: ^1.0.2
         version: 1.0.2
-    devDependencies:
-      '@babel/types':
-        specifier: ^7.24.0
-        version: 7.24.0
 
   packages/compiler-dom:
     dependencies:
