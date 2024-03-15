@@ -72,14 +72,6 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
-  [VaporLifecycleHooks.BEFORE_CREATE]: LifecycleHook
-  /**
-   * @internal
-   */
-  [VaporLifecycleHooks.CREATED]: LifecycleHook
-  /**
-   * @internal
-   */
   [VaporLifecycleHooks.BEFORE_MOUNT]: LifecycleHook
   /**
    * @internal
@@ -186,14 +178,6 @@ export const createComponentInstance = (
     isUnmounted: false,
     isUpdating: false,
     // TODO: registory of provides, appContext, lifecycles, ...
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.BEFORE_CREATE]: null,
-    /**
-     * @internal
-     */
-    [VaporLifecycleHooks.CREATED]: null,
     /**
      * @internal
      */

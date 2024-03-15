@@ -39,8 +39,6 @@ export type ErrorTypes =
 
 export const ErrorTypeStrings: Record<ErrorTypes, string> = {
   // [VaporLifecycleHooks.SERVER_PREFETCH]: 'serverPrefetch hook',
-  [VaporLifecycleHooks.BEFORE_CREATE]: 'beforeCreate hook',
-  [VaporLifecycleHooks.CREATED]: 'created hook',
   [VaporLifecycleHooks.BEFORE_MOUNT]: 'beforeMount hook',
   [VaporLifecycleHooks.MOUNTED]: 'mounted hook',
   [VaporLifecycleHooks.BEFORE_UPDATE]: 'beforeUpdate hook',

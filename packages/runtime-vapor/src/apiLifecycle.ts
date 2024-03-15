@@ -9,8 +9,6 @@ import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { toHandlerKey } from '@vue/shared'
 
 export enum VaporLifecycleHooks {
-  BEFORE_CREATE = 'bc',
-  CREATED = 'c',
   BEFORE_MOUNT = 'bm',
   MOUNTED = 'm',
   BEFORE_UPDATE = 'bu',
