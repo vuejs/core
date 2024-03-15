@@ -10,7 +10,6 @@ import {
   hyphenate,
   isArray,
   isFunction,
-  isVaporReservedProp,
 } from '@vue/shared'
 import { shallowReactive, shallowReadonly, toRaw } from '@vue/reactivity'
 import { warn } from './warning'
@@ -85,11 +84,6 @@ export function initProps(
   let rawCastValues: Data | undefined
   if (rawProps) {
     for (let key in rawProps) {
-      // key, ref are reserved and never passed down
-      if (isVaporReservedProp(key)) {
-        continue
-      }
-
       const valueGetter = () => rawProps[key]
       let camelKey
       if (options && hasOwn(options, (camelKey = camelize(key)))) {

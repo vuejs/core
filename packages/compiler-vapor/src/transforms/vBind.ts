@@ -5,9 +5,10 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { camelize, isVaporReservedProp } from '@vue/shared'
+import { camelize } from '@vue/shared'
 import type { DirectiveTransform, TransformContext } from '../transform'
 import { resolveExpression } from '../utils'
+import { isReservedProp } from './transformElement'
 
 // same-name shorthand - :arg is expanded to :arg="arg"
 export function normalizeBindShorthand(
@@ -52,7 +53,8 @@ export const transformVBind: DirectiveTransform = (dir, node, context) => {
   exp = resolveExpression(exp)
   arg = resolveExpression(arg)
 
-  if (arg.isStatic && isVaporReservedProp(arg.content)) return
+  if (arg.isStatic && isReservedProp(arg.content)) return
+
   let camel = false
   if (modifiers.includes('camel')) {
     if (arg.isStatic) {

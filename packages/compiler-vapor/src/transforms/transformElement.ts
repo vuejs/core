@@ -8,12 +8,7 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import {
-  extend,
-  isBuiltInDirective,
-  isVaporReservedProp,
-  isVoidTag,
-} from '@vue/shared'
+import { extend, isBuiltInDirective, isVoidTag, makeMap } from '@vue/shared'
 import type {
   DirectiveTransformResult,
   NodeTransform,
@@ -26,6 +21,11 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { EMPTY_EXPRESSION } from './utils'
+
+export const isReservedProp = /*#__PURE__*/ makeMap(
+  // the leading comma is intentional so empty string "" is also included
+  ',key,ref,ref_for,ref_key,',
+)
 
 export const transformElement: NodeTransform = (node, context) => {
   return function postTransformElement() {
@@ -145,9 +145,9 @@ function transformProp(
   context: TransformContext<ElementNode>,
 ): DirectiveTransformResult | void {
   const { name } = prop
-  if (isVaporReservedProp(name)) return
 
   if (prop.type === NodeTypes.ATTRIBUTE) {
+    if (isReservedProp(name)) return
     return {
       key: createSimpleExpression(prop.name, true, prop.nameLoc),
       value: prop.value
