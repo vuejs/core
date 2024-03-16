@@ -46,7 +46,6 @@ export {
   type FunctionalComponent,
   type SetupFn,
 } from './component'
-export { render, unmountComponent } from './render'
 export { renderEffect, renderWatch } from './renderWatch'
 export {
   watch,
@@ -62,7 +61,6 @@ export {
 } from './apiWatch'
 export {
   withDirectives,
-  resolveDirective,
   type Directive,
   type DirectiveBinding,
   type DirectiveHook,
@@ -88,7 +86,6 @@ export { on, delegate, delegateEvents, setDynamicEvents } from './dom/event'
 export { setRef } from './dom/templateRef'
 
 export { defineComponent } from './apiDefineComponent'
-export { createComponentInstance } from './component'
 export {
   onBeforeMount,
   onMounted,
@@ -103,8 +100,17 @@ export {
   onErrorCaptured,
   // onServerPrefetch,
 } from './apiLifecycle'
+export {
+  createVaporApp,
+  type App,
+  type AppConfig,
+  type AppContext,
+} from './apiCreateVaporApp'
 export { createIf } from './apiCreateIf'
 export { createFor } from './apiCreateFor'
+export { createComponent } from './apiCreateComponent'
+
+export { resolveComponent, resolveDirective } from './helpers/resolveAssets'
 
 // **Internal** DOM-only runtime directive helpers
 export {

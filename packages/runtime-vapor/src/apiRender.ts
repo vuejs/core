@@ -1,13 +1,10 @@
-import { proxyRefs } from '@vue/reactivity'
-import { invokeArrayFns, isArray, isFunction, isObject } from '@vue/shared'
-import {
-  type ComponentInternalInstance,
-  setCurrentInstance,
-  unsetCurrentInstance,
-} from './component'
-import { invokeDirectiveHook } from './directives'
+import { isArray, isFunction, isObject } from '@vue/shared'
+import { type ComponentInternalInstance, setCurrentInstance } from './component'
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
+import { proxyRefs } from '@vue/reactivity'
+import { invokeLifecycle } from './componentLifecycle'
+import { VaporLifecycleHooks } from './apiLifecycle'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -18,28 +15,9 @@ export type Fragment = {
   [fragmentKey]: true
 }
 
-export function render(
-  instance: ComponentInternalInstance,
-  container: string | ParentNode,
-): void {
-  mountComponent(instance, (container = normalizeContainer(container)))
-  flushPostFlushCbs()
-}
-
-function normalizeContainer(container: string | ParentNode): ParentNode {
-  return typeof container === 'string'
-    ? (querySelector(container) as ParentNode)
-    : container
-}
-
-function mountComponent(
-  instance: ComponentInternalInstance,
-  container: ParentNode,
-) {
-  instance.container = container
-
+export function setupComponent(instance: ComponentInternalInstance): void {
   const reset = setCurrentInstance(instance)
-  const block = instance.scope.run(() => {
+  instance.scope.run(() => {
     const { component, props, emit, attrs } = instance
     const ctx = { expose: () => {}, emit, attrs }
 
@@ -70,40 +48,52 @@ function mountComponent(
       block = []
     }
     return (instance.block = block)
-  })!
-  const { bm, m } = instance
+  })
+  reset()
+}
+
+export function render(
+  instance: ComponentInternalInstance,
+  container: string | ParentNode,
+): void {
+  mountComponent(instance, (container = normalizeContainer(container)))
+  flushPostFlushCbs()
+}
+
+function normalizeContainer(container: string | ParentNode): ParentNode {
+  return typeof container === 'string'
+    ? (querySelector(container) as ParentNode)
+    : container
+}
+
+function mountComponent(
+  instance: ComponentInternalInstance,
+  container: ParentNode,
+) {
+  instance.container = container
 
   // hook: beforeMount
-  bm && invokeArrayFns(bm)
-  invokeDirectiveHook(instance, 'beforeMount')
+  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_MOUNT, 'beforeMount')
 
-  insert(block, instance.container)
+  insert(instance.block!, instance.container)
   instance.isMounted = true
 
   // hook: mounted
-  queuePostRenderEffect(() => {
-    invokeDirectiveHook(instance, 'mounted')
-    m && invokeArrayFns(m)
-  })
-  reset()
+  invokeLifecycle(instance, VaporLifecycleHooks.MOUNTED, 'mounted', true)
 
   return instance
 }
 
 export function unmountComponent(instance: ComponentInternalInstance) {
-  const { container, block, scope, um, bum } = instance
+  const { container, block, scope } = instance
 
   // hook: beforeUnmount
-  bum && invokeArrayFns(bum)
-  invokeDirectiveHook(instance, 'beforeUnmount')
+  invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_UNMOUNT, 'beforeUnmount')
 
   scope.stop()
   block && remove(block, container)
-  instance.isMounted = false
-  instance.isUnmounted = true
 
   // hook: unmounted
-  invokeDirectiveHook(instance, 'unmounted')
-  um && invokeArrayFns(um)
-  unsetCurrentInstance()
+  invokeLifecycle(instance, VaporLifecycleHooks.UNMOUNTED, 'unmounted', true)
+  queuePostRenderEffect(() => (instance.isUnmounted = true))
 }

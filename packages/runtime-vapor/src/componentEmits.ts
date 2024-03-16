@@ -1,5 +1,8 @@
 // NOTE: runtime-core/src/componentEmits.ts
 
+// TODO WIP
+// @ts-nocheck
+
 import {
   EMPTY_OBJ,
   type UnionToIntersection,
@@ -45,6 +48,8 @@ export function emit(
   ...rawArgs: any[]
 ) {
   if (instance.isUnmounted) return
+  // TODO
+  // @ts-expect-error
   const { rawProps } = instance
 
   let args = rawArgs

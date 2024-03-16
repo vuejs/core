@@ -78,14 +78,14 @@ function genLiteralObjectProps(
   return genMulti(
     ['{ ', ' }', ', '],
     ...props.map(prop => [
-      ...genPropertyKey(prop, context),
+      ...genPropKey(prop, context),
       `: `,
       ...genPropValue(prop.values, context),
     ]),
   )
 }
 
-function genPropertyKey(
+export function genPropKey(
   { key: node, runtimeCamelize, modifier }: IRProp,
   context: CodegenContext,
 ): CodeFragment[] {

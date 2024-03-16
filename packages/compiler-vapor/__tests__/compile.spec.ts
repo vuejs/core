@@ -72,7 +72,6 @@ describe('compile', () => {
         expect(code).not.contains('effect')
       })
 
-      // TODO: support multiple root nodes and components
       test('should not affect siblings after it', () => {
         const code = compile(
           `<div v-pre :id="foo"><Comp/>{{ bar }}</div>\n` +

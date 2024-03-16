@@ -1,69 +1,53 @@
 // @ts-check
 import {
-  children,
+  createComponent,
   defineComponent,
   on,
+  reactive,
   ref,
-  render as renderComponent,
+  renderEffect,
   setText,
   template,
-  watch,
-  watchEffect,
 } from '@vue/vapor'
 
 const t0 = template('<button></button>')
 
 export default defineComponent({
   vapor: true,
-  props: undefined,
-
-  setup(_, {}) {
+  setup() {
     const count = ref(1)
+    const props = reactive({
+      a: 'b',
+      'foo-bar': 100,
+    })
     const handleClick = () => {
       count.value++
+      props['foo-bar']++
+      // @ts-expect-error
+      props.boolean = true
+      console.log(count)
     }
 
-    const __returned__ = { count, handleClick }
-
-    Object.defineProperty(__returned__, '__isScriptSetup', {
-      enumerable: false,
-      value: true,
-    })
-
-    return __returned__
-  },
-
-  render(_ctx) {
-    const n0 = t0()
-    const n1 = /** @type {HTMLButtonElement} */ (children(n0, 0))
-    on(n1, 'click', () => _ctx.handleClick)
-    watchEffect(() => {
-      setText(n1, _ctx.count)
-    })
-
-    // TODO: create component fn?
-    // const c0 = createComponent(...)
-    // insert(n0, c0)
-    renderComponent(
-      /** @type {any} */ (child),
-
-      // TODO: proxy??
-      {
-        /* <Comp :count="count" /> */
-        get count() {
-          return _ctx.count
+    return (() => {
+      const n0 = /** @type {HTMLButtonElement} */ (t0())
+      on(n0, 'click', () => handleClick)
+      renderEffect(() => setText(n0, count.value))
+      /** @type {any} */
+      const n1 = createComponent(child, [
+        {
+          /* <Comp :count="count" /> */
+          count: () => {
+            // console.trace('access')
+            return count.value
+          },
+          /* <Comp :inline-double="count * 2" /> */
+          inlineDouble: () => count.value * 2,
+          id: () => 'hello',
         },
-
-        /* <Comp :inline-double="count * 2" /> */
-        get inlineDouble() {
-          return _ctx.count * 2
-        },
-      },
-      // @ts-expect-error TODO
-      n0[0],
-    )
-
-    return n0
+        () => props,
+      ])
+      return [n0, n1]
+    })()
   },
 })
 
@@ -74,25 +58,22 @@ const child = defineComponent({
   props: {
     count: { type: Number, default: 1 },
     inlineDouble: { type: Number, default: 2 },
+    fooBar: { type: Number, required: true },
+    boolean: { type: Boolean },
   },
 
-  setup(props) {
-    watch(
-      () => props.count,
-      v => console.log('count changed', v),
-    )
-    watch(
-      () => props.inlineDouble,
-      v => console.log('inlineDouble changed', v),
-    )
-  },
+  setup(props, { attrs }) {
+    console.log(props, { ...props })
+    console.log(attrs, { ...attrs })
 
-  render(_ctx) {
-    const n0 = t1()
-    const n1 = children(n0, 0)
-    watchEffect(() => {
-      setText(n1, void 0, _ctx.count + ' * 2 = ' + _ctx.inlineDouble)
-    })
-    return n0
+    return (() => {
+      const n0 = /** @type {HTMLParagraphElement} */ (t1())
+      renderEffect(() =>
+        setText(n0, props.count + ' * 2 = ' + props.inlineDouble),
+      )
+      const n1 = /** @type {HTMLParagraphElement} */ (t1())
+      renderEffect(() => setText(n1, props.fooBar, ', ', props.boolean))
+      return [n0, n1]
+    })()
   },
 })

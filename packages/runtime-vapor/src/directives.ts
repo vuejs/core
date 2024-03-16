@@ -145,7 +145,3 @@ function callDirectiveHook(
   ])
   resetTracking()
 }
-
-export function resolveDirective() {
-  // TODO
-}

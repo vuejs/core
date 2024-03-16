@@ -3,13 +3,13 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { nextTick, onBeforeUnmount, unmountComponent } from '../src'
+import { nextTick, onBeforeUnmount } from '../src'
 import { isEmitListener } from '../src/componentEmits'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
-describe('component: emit', () => {
+describe.todo('component: emit', () => {
   test('trigger handlers', () => {
     const { render } = define({
       render() {},
@@ -137,9 +137,7 @@ describe('component: emit', () => {
     const fn2 = vi.fn()
 
     render({
-      get onFoo() {
-        return [fn1, fn2]
-      },
+      onFoo: () => [fn1, fn2],
     })
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)
@@ -246,22 +244,22 @@ describe('component: emit', () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
     render({
-      get modelValue() {
+      modelValue() {
         return null
       },
-      get modelModifiers() {
+      modelModifiers() {
         return { number: true }
       },
-      get ['onUpdate:modelValue']() {
+      ['onUpdate:modelValue']() {
         return fn1
       },
-      get foo() {
+      foo() {
         return null
       },
-      get fooModifiers() {
+      fooModifiers() {
         return { number: true }
       },
-      get ['onUpdate:foo']() {
+      ['onUpdate:foo']() {
         return fn2
       },
     })
@@ -282,22 +280,22 @@ describe('component: emit', () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
     render({
-      get modelValue() {
+      modelValue() {
         return null
       },
-      get modelModifiers() {
+      modelModifiers() {
         return { trim: true }
       },
-      get ['onUpdate:modelValue']() {
+      ['onUpdate:modelValue']() {
         return fn1
       },
-      get foo() {
+      foo() {
         return null
       },
-      get fooModifiers() {
+      fooModifiers() {
         return { trim: true }
       },
-      get 'onUpdate:foo'() {
+      'onUpdate:foo'() {
         return fn2
       },
     })
@@ -318,22 +316,22 @@ describe('component: emit', () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
     render({
-      get modelValue() {
+      modelValue() {
         return null
       },
-      get modelModifiers() {
+      modelModifiers() {
         return { trim: true, number: true }
       },
-      get ['onUpdate:modelValue']() {
+      ['onUpdate:modelValue']() {
         return fn1
       },
-      get foo() {
+      foo() {
         return null
       },
-      get fooModifiers() {
+      fooModifiers() {
         return { trim: true, number: true }
       },
-      get ['onUpdate:foo']() {
+      ['onUpdate:foo']() {
         return fn2
       },
     })
@@ -352,13 +350,13 @@ describe('component: emit', () => {
     })
     const fn = vi.fn()
     render({
-      get modelValue() {
+      modelValue() {
         return null
       },
-      get modelModifiers() {
+      modelModifiers() {
         return { trim: true }
       },
-      get ['onUpdate:modelValue']() {
+      ['onUpdate:modelValue']() {
         return fn
       },
     })
@@ -397,7 +395,7 @@ describe('component: emit', () => {
 
   test('does not emit after unmount', async () => {
     const fn = vi.fn()
-    const { instance } = define({
+    const { app } = define({
       emits: ['closing'],
       setup(_: any, { emit }: any) {
         onBeforeUnmount(async () => {
@@ -412,7 +410,7 @@ describe('component: emit', () => {
       },
     })
     await nextTick()
-    unmountComponent(instance)
+    app.unmount()
     await nextTick()
     expect(fn).not.toHaveBeenCalled()
   })

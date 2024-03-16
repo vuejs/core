@@ -29,6 +29,7 @@ export enum IRNodeTypes {
   INSERT_NODE,
   PREPEND_NODE,
   CREATE_TEXT_NODE,
+  CREATE_COMPONENT_NODE,
 
   WITH_DIRECTIVE,
 
@@ -173,6 +174,16 @@ export interface WithDirectiveIRNode extends BaseIRNode {
   builtin?: VaporHelper
 }
 
+export interface CreateComponentIRNode extends BaseIRNode {
+  type: IRNodeTypes.CREATE_COMPONENT_NODE
+  id: number
+  tag: string
+  props: IRProps[]
+  // TODO slots
+
+  resolve: boolean
+}
+
 export type IRNode = OperationNode | RootIRNode
 export type OperationNode =
   | SetPropIRNode
@@ -189,6 +200,7 @@ export type OperationNode =
   | WithDirectiveIRNode
   | IfIRNode
   | ForIRNode
+  | CreateComponentIRNode
 
 export enum DynamicFlag {
   NONE = 0,

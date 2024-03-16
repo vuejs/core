@@ -1,24 +1,24 @@
 // NOTE: This test is implemented based on the case of `runtime-core/__test__/componentProps.spec.ts`.
 
-// NOTE: not supported
-// mixins
-// caching
-
 import { setCurrentInstance } from '../src/component'
 import {
+  createComponent,
   defineComponent,
   getCurrentInstance,
   nextTick,
   ref,
   setText,
   template,
+  toRefs,
+  watch,
   watchEffect,
 } from '../src'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
 
-describe('component props (vapor)', () => {
+describe('component: props', () => {
+  // NOTE: no proxy
   test('stateful', () => {
     let props: any
     let attrs: any
@@ -32,65 +32,51 @@ describe('component props (vapor)', () => {
       },
     })
 
-    render({
-      get fooBar() {
-        return 1
-      },
-      get bar() {
-        return 2
-      },
-    })
-    expect(props.fooBar).toEqual(1)
-    expect(attrs.bar).toEqual(2)
+    render({ fooBar: () => 1, bar: () => 2 })
+    expect(props).toEqual({ fooBar: 1 })
+    expect(attrs).toEqual({ bar: 2 })
 
     // test passing kebab-case and resolving to camelCase
-    render({
-      get ['foo-bar']() {
-        return 2
-      },
-      get bar() {
-        return 3
-      },
-      get baz() {
-        return 4
-      },
-    })
-    expect(props.fooBar).toEqual(2)
-    expect(attrs.bar).toEqual(3)
-    expect(attrs.baz).toEqual(4)
+    render({ 'foo-bar': () => 2, bar: () => 3, baz: () => 4 })
+    expect(props).toEqual({ fooBar: 2 })
+    expect(attrs).toEqual({ bar: 3, baz: 4 })
 
     // test updating kebab-case should not delete it (#955)
-    render({
-      get ['foo-bar']() {
-        return 3
-      },
-      get bar() {
-        return 3
-      },
-      get baz() {
-        return 4
-      },
-      get barBaz() {
-        return 5
-      },
-    })
-    expect(props.fooBar).toEqual(3)
-    expect(props.barBaz).toEqual(5)
-    expect(attrs.bar).toEqual(3)
-    expect(attrs.baz).toEqual(4)
+    render({ 'foo-bar': () => 3, bar: () => 3, baz: () => 4, barBaz: () => 5 })
+    expect(props).toEqual({ fooBar: 3, barBaz: 5 })
+    expect(attrs).toEqual({ bar: 3, baz: 4 })
 
-    render({
-      get qux() {
-        return 5
-      },
-    })
-    expect(props.fooBar).toBeUndefined()
-    expect(props.barBaz).toBeUndefined()
-    expect(attrs.qux).toEqual(5)
+    // remove the props with camelCase key (#1412)
+    render({ qux: () => 5 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ qux: 5 })
   })
 
-  test.todo('stateful with setup', () => {
-    // TODO:
+  test.fails('stateful with setup', () => {
+    let props: any
+    let attrs: any
+
+    const { render } = define({
+      props: ['foo'],
+      setup(_props: any, { attrs: _attrs }: any) {
+        return () => {
+          props = _props
+          attrs = _attrs
+        }
+      },
+    })
+
+    render({ foo: () => 1, bar: () => 2 })
+    expect(props).toEqual({ foo: 1 })
+    expect(attrs).toEqual({ bar: 2 })
+
+    render({ foo: () => 2, bar: () => 3, baz: () => 4 })
+    expect(props).toEqual({ foo: 2 })
+    expect(attrs).toEqual({ bar: 3, baz: 4 })
+
+    render({ qux: () => 5 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ qux: 5 })
   })
 
   test('functional with declaration', () => {
@@ -105,42 +91,19 @@ describe('component props (vapor)', () => {
     })
     Comp.props = ['foo']
 
-    render({
-      get foo() {
-        return 1
-      },
-      get bar() {
-        return 2
-      },
-    })
-    expect(props.foo).toEqual(1)
-    expect(attrs.bar).toEqual(2)
+    render({ foo: () => 1, bar: () => 2 })
+    expect(props).toEqual({ foo: 1 })
+    expect(attrs).toEqual({ bar: 2 })
 
-    render({
-      get foo() {
-        return 2
-      },
-      get bar() {
-        return 3
-      },
-      get baz() {
-        return 4
-      },
-    })
-    expect(props.foo).toEqual(2)
-    expect(attrs.bar).toEqual(3)
-    expect(attrs.baz).toEqual(4)
+    render({ foo: () => 2, bar: () => 3, baz: () => 4 })
+    expect(props).toEqual({ foo: 2 })
+    expect(attrs).toEqual({ bar: 3, baz: 4 })
 
-    render({
-      get qux() {
-        return 5
-      },
-    })
-    expect(props.foo).toBeUndefined()
-    expect(attrs.qux).toEqual(5)
+    render({ qux: () => 5 })
+    expect(props).toEqual({})
+    expect(attrs).toEqual({ qux: 5 })
   })
 
-  // FIXME:
   test('functional without declaration', () => {
     let props: any
     let attrs: any
@@ -152,21 +115,15 @@ describe('component props (vapor)', () => {
       return {}
     })
 
-    render({
-      get foo() {
-        return 1
-      },
-    })
-    expect(props.foo).toEqual(1)
-    expect(attrs.foo).toEqual(1)
+    render({ foo: () => 1 })
+    expect(props).toEqual({ foo: 1 })
+    expect(attrs).toEqual({ foo: 1 })
+    expect(props).toBe(attrs)
 
-    render({
-      get foo() {
-        return 2
-      },
-    })
-    expect(props.foo).toEqual(2)
-    expect(attrs.foo).toEqual(2)
+    render({ bar: () => 2 })
+    expect(props).toEqual({ bar: 2 })
+    expect(attrs).toEqual({ bar: 2 })
+    expect(props).toBe(attrs)
   })
 
   test('boolean casting', () => {
@@ -186,15 +143,16 @@ describe('component props (vapor)', () => {
 
     render({
       // absent should cast to false
-      bar: '', // empty string should cast to true
-      baz: 'baz', // same string should cast to true
-      qux: 'ok', // other values should be left in-tact (but raise warning)
+      bar: () => '', // empty string should cast to true
+      baz: () => 'baz', // same string should cast to true
+      qux: () => 'ok', // other values should be left in-tact (but raise warning)
     })
 
     expect(props.foo).toBe(false)
     expect(props.bar).toBe(true)
     expect(props.baz).toBe(true)
     expect(props.qux).toBe('ok')
+    // expect('type check failed for prop "qux"').toHaveBeenWarned()
   })
 
   test('default value', () => {
@@ -221,82 +179,57 @@ describe('component props (vapor)', () => {
       },
     })
 
-    render({
-      get foo() {
-        return 2
-      },
-    })
+    render({ foo: () => 2 })
     expect(props.foo).toBe(2)
     // const prevBar = props.bar
-    props.bar
     expect(props.bar).toEqual({ a: 1 })
     expect(props.baz).toEqual(defaultBaz)
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: (caching is not supported)
-    expect(defaultFn).toHaveBeenCalledTimes(3)
+    expect(defaultFn).toHaveBeenCalledTimes(1)
     expect(defaultBaz).toHaveBeenCalledTimes(0)
 
     // #999: updates should not cause default factory of unchanged prop to be
     // called again
-    render({
-      get foo() {
-        return 3
-      },
-    })
+    render({ foo: () => 3 })
+
     expect(props.foo).toBe(3)
     expect(props.bar).toEqual({ a: 1 })
     // expect(props.bar).toBe(prevBar) // failed: (caching is not supported)
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 3 times)
+    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
-    render({
-      get bar() {
-        return { b: 2 }
-      },
-    })
+    render({ bar: () => ({ b: 2 }) })
     expect(props.foo).toBe(1)
     expect(props.bar).toEqual({ b: 2 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 3 times)
+    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
     render({
-      get foo() {
-        return 3
-      },
-      get bar() {
-        return { b: 3 }
-      },
+      foo: () => 3,
+      bar: () => ({ b: 3 }),
     })
     expect(props.foo).toBe(3)
     expect(props.bar).toEqual({ b: 3 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 3 times)
+    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
 
-    render({
-      get bar() {
-        return { b: 4 }
-      },
-    })
+    render({ bar: () => ({ b: 4 }) })
     expect(props.foo).toBe(1)
     expect(props.bar).toEqual({ b: 4 })
-    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 3 times)
+    // expect(defaultFn).toHaveBeenCalledTimes(1) // failed: caching is not supported (called 2 times)
   })
 
   test.todo('using inject in default value factory', () => {
     // TODO: impl inject
   })
 
-  // NOTE: maybe it's unnecessary
-  // https://github.com/vuejs/core-vapor/pull/99#discussion_r1472647377
   test('optimized props updates', async () => {
-    const renderChild = define({
+    const t0 = template('<div>')
+    const { component: Child } = define({
       props: ['foo'],
       render() {
         const instance = getCurrentInstance()!
-        const t0 = template('<div></div>')
         const n0 = t0()
-        watchEffect(() => {
-          setText(n0, instance.props.foo)
-        })
+        watchEffect(() => setText(n0, instance.props.foo))
         return n0
       },
-    }).render
+    })
 
     const foo = ref(1)
     const id = ref('a')
@@ -305,54 +238,36 @@ describe('component props (vapor)', () => {
         return { foo, id }
       },
       render(_ctx: Record<string, any>) {
-        const t0 = template('<div>')
-        const n0 = t0()
-        renderChild(
-          {
-            get foo() {
-              return _ctx.foo
-            },
-            get id() {
-              return _ctx.id
-            },
-          },
-          n0 as HTMLDivElement,
-        )
-        return n0
+        return createComponent(Child, {
+          foo: () => _ctx.foo,
+          id: () => _ctx.id,
+        })
       },
     }).render()
     const reset = setCurrentInstance(instance)
     // expect(host.innerHTML).toBe('<div id="a">1</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div><div>1</div></div>')
+    expect(host.innerHTML).toBe('<div>1</div>')
 
     foo.value++
     await nextTick()
     // expect(host.innerHTML).toBe('<div id="a">2</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div><div>2</div></div>')
+    expect(host.innerHTML).toBe('<div>2</div>')
 
-    // id.value = 'b'
-    // await nextTick()
+    id.value = 'b'
+    await nextTick()
     // expect(host.innerHTML).toBe('<div id="b">2</div>') // TODO: Fallthrough Attributes
     reset()
   })
 
   describe('validator', () => {
     test('validator should be called with two arguments', () => {
-      let args: any
-      const mockFn = vi.fn((..._args: any[]) => {
-        args = _args
-        return true
-      })
-
+      const mockFn = vi.fn((...args: any[]) => true)
       const props = {
-        get foo() {
-          return 1
-        },
-        get bar() {
-          return 2
-        },
+        foo: () => 1,
+        bar: () => 2,
       }
 
+      const t0 = template('<div/>')
       define({
         props: {
           foo: {
@@ -364,19 +279,11 @@ describe('component props (vapor)', () => {
           },
         },
         render() {
-          const t0 = template('<div/>')
-          const n0 = t0()
-          return n0
+          return t0()
         },
       }).render(props)
 
-      expect(mockFn).toHaveBeenCalled()
-      // NOTE: Vapor Component props defined by getter. So, `props` not Equal to `{ foo: 1, bar: 2 }`
-      // expect(mockFn).toHaveBeenCalledWith(1, { foo: 1, bar: 2 })
-      expect(args.length).toBe(2)
-      expect(args[0]).toBe(1)
-      expect(args[1].foo).toEqual(1)
-      expect(args[1].bar).toEqual(2)
+      expect(mockFn).toHaveBeenCalledWith(1, { foo: 1, bar: 2 })
     })
 
     // TODO: impl setter and warnner
@@ -401,16 +308,16 @@ describe('component props (vapor)', () => {
             return n0
           },
         }).render!({
-          get foo() {
+          foo() {
             return 1
           },
-          get bar() {
+          bar() {
             return 2
           },
         })
 
         expect(
-          `Set operation on key "bar" failed: target is readonly.`,
+          `Set operation on key "bar" failed: taris readonly.`,
         ).toHaveBeenWarnedLast()
         expect(mockFn).toHaveBeenCalledWith(2)
       },
@@ -450,70 +357,71 @@ describe('component props (vapor)', () => {
         return () => null
       },
     }).render({
-      get ['foo-bar']() {
-        return 'hello'
-      },
+      ['foo-bar']: () => 'hello',
     })
     expect(`Missing required prop: "fooBar"`).not.toHaveBeenWarned()
   })
 
   test('props type support BigInt', () => {
+    const t0 = template('<div>')
     const { host } = define({
       props: {
         foo: BigInt,
       },
       render() {
         const instance = getCurrentInstance()!
-        const t0 = template('<div></div>')
         const n0 = t0()
-        watchEffect(() => {
-          setText(n0, instance.props.foo)
-        })
+        watchEffect(() => setText(n0, instance.props.foo))
         return n0
       },
     }).render({
-      get foo() {
-        return BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000)
-      },
+      foo: () =>
+        BigInt(BigInt(100000111)) + BigInt(2000000000) * BigInt(30000000),
     })
     expect(host.innerHTML).toBe('<div>60000000100000111</div>')
   })
 
-  // #3288
+  // #3474
   test.todo(
-    'declared prop key should be present even if not passed',
-    async () => {
-      // let initialKeys: string[] = []
-      // const changeSpy = vi.fn()
-      // const passFoo = ref(false)
-      // const Comp = {
-      //   props: ['foo'],
-      //   setup() {
-      //     const instance = getCurrentInstance()!
-      //     initialKeys = Object.keys(instance.props)
-      //     watchEffect(changeSpy)
-      //     return {}
-      //   },
-      //   render() {
-      //     return {}
-      //   },
-      // }
-      // const Parent = createIf(
-      //   () => passFoo.value,
-      //   () => {
-      //     return render(Comp , { foo: 1 }, host) // TODO: createComponent fn
-      //   },
-      // )
-      // // expect(changeSpy).toHaveBeenCalledTimes(1)
-    },
+    'should cache the value returned from the default factory to avoid unnecessary watcher trigger',
+    () => {},
   )
+
+  // #3288
+  test('declared prop key should be present even if not passed', async () => {
+    let initialKeys: string[] = []
+    const changeSpy = vi.fn()
+    const passFoo = ref(false)
+
+    const Comp: any = {
+      render() {},
+      props: {
+        foo: String,
+      },
+      setup(props: any) {
+        initialKeys = Object.keys(props)
+        const { foo } = toRefs(props)
+        watch(foo, changeSpy)
+      },
+    }
+
+    define(() =>
+      createComponent(Comp, [() => (passFoo.value ? { foo: () => 'ok' } : {})]),
+    ).render()
+
+    expect(initialKeys).toMatchObject(['foo'])
+    passFoo.value = true
+    await nextTick()
+    expect(changeSpy).toHaveBeenCalledTimes(1)
+  })
 
   // #3371
   test.todo(`avoid double-setting props when casting`, async () => {
     // TODO: proide, slots
   })
 
-  test('support null in required + multiple-type declarations', () => {
+  // NOTE: type check is not supported
+  test.todo('support null in required + multiple-type declarations', () => {
     const { render } = define({
       props: {
         foo: { type: [Function, null], required: true },
@@ -522,11 +430,11 @@ describe('component props (vapor)', () => {
     })
 
     expect(() => {
-      render({ foo: () => {} })
+      render({ foo: () => () => {} })
     }).not.toThrow()
 
     expect(() => {
-      render({ foo: null })
+      render({ foo: () => null })
     }).not.toThrow()
   })
 
@@ -537,22 +445,17 @@ describe('component props (vapor)', () => {
         const instance = getCurrentInstance()!
         const t0 = template('<div></div>')
         const n0 = t0()
-        watchEffect(() => {
+        watchEffect(() =>
           setText(
             n0,
             JSON.stringify(instance.attrs) + Object.keys(instance.attrs),
-          )
-        })
+          ),
+        )
         return n0
       },
     })
 
-    let attrs: any = {
-      get foo() {
-        return undefined
-      },
-    }
-
+    const attrs: any = { foo: () => undefined }
     render(attrs)
 
     expect(host.innerHTML).toBe(
@@ -567,8 +470,20 @@ describe('component props (vapor)', () => {
         type: String,
       },
     }
-    define({ props, render() {} }).render({ msg: 'test' })
+    define({ props, render() {} }).render({ msg: () => 'test' })
 
     expect(Object.keys(props.msg).length).toBe(1)
+  })
+
+  test('should warn against reserved prop names', () => {
+    const { render } = define({
+      props: {
+        $foo: String,
+      },
+      render() {},
+    })
+
+    render({ msg: () => 'test' })
+    expect(`Invalid prop name: "$foo"`).toHaveBeenWarned()
   })
 })

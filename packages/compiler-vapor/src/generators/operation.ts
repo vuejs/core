@@ -16,6 +16,7 @@ import {
   NEWLINE,
   buildCodeFragment,
 } from './utils'
+import { genCreateComponent } from './component'
 
 export function genOperations(opers: OperationNode[], context: CodegenContext) {
   const [frag, push] = buildCodeFragment()
@@ -56,6 +57,8 @@ export function genOperation(
       return genIf(oper, context)
     case IRNodeTypes.FOR:
       return genFor(oper, context)
+    case IRNodeTypes.CREATE_COMPONENT_NODE:
+      return genCreateComponent(oper, context)
   }
 
   return []

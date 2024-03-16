@@ -1,11 +1,12 @@
 import { EffectScope } from '@vue/reactivity'
-
 import { EMPTY_OBJ, isFunction } from '@vue/shared'
-import type { Block } from './render'
+import type { Block } from './apiRender'
 import type { DirectiveBinding } from './directives'
 import {
   type ComponentPropsOptions,
   type NormalizedPropsOptions,
+  type NormalizedRawProps,
+  type RawProps,
   initProps,
   normalizePropsOptions,
 } from './componentProps'
@@ -37,32 +38,28 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 
 export interface ComponentInternalInstance {
   uid: number
-  container: ParentNode
+  vapor: true
+
   block: Block | null
+  container: ParentNode
+  parent: ComponentInternalInstance | null
+
   scope: EffectScope
   component: FunctionalComponent | ObjectComponent
+  comps: Set<ComponentInternalInstance>
+  dirs: Map<Node, DirectiveBinding[]>
 
-  // TODO: ExtraProps: key, ref, ...
-  rawProps: { [key: string]: any }
-
-  // normalized options
+  rawProps: NormalizedRawProps
   propsOptions: NormalizedPropsOptions
   emitsOptions: ObjectEmitsOptions | null
 
-  parent: ComponentInternalInstance | null
-
   // state
-  props: Data
-  attrs: Data
   setupState: Data
+  props: Data
   emit: EmitFn
   emitted: Record<string, boolean> | null
+  attrs: Data
   refs: Data
-
-  vapor: true
-
-  /** directives */
-  dirs: Map<Node, DirectiveBinding[]>
 
   // lifecycle
   isMounted: boolean
@@ -141,37 +138,37 @@ export const unsetCurrentInstance = () => {
 }
 
 let uid = 0
-export const createComponentInstance = (
+export function createComponentInstance(
   component: ObjectComponent | FunctionalComponent,
-  rawProps: Data,
-): ComponentInternalInstance => {
+  rawProps: RawProps | null,
+): ComponentInternalInstance {
   const instance: ComponentInternalInstance = {
     uid: uid++,
-    block: null,
-    container: null!, // set on mountComponent
-    scope: new EffectScope(true /* detached */)!,
-    component,
-    rawProps,
+    vapor: true,
 
-    // TODO: registory of parent
+    block: null,
+    container: null!,
+
+    // TODO
     parent: null,
 
+    scope: new EffectScope(true /* detached */)!,
+    component,
+    comps: new Set(),
+    dirs: new Map(),
+
     // resolved props and emits options
+    rawProps: null!, // set later
     propsOptions: normalizePropsOptions(component),
     emitsOptions: normalizeEmitsOptions(component),
 
-    // emit
-    emit: null!, // to be set immediately
-    emitted: null,
-
     // state
-    props: EMPTY_OBJ,
-    attrs: EMPTY_OBJ,
     setupState: EMPTY_OBJ,
+    props: EMPTY_OBJ,
+    emit: null!,
+    emitted: null,
+    attrs: EMPTY_OBJ,
     refs: EMPTY_OBJ,
-    vapor: true,
-
-    dirs: new Map(),
 
     // lifecycle
     isMounted: false,
@@ -227,8 +224,6 @@ export const createComponentInstance = (
      */
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
-
-  // TODO init first
   initProps(instance, rawProps, !isFunction(component))
   instance.emit = emit.bind(null, instance)
 
