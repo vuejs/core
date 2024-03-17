@@ -313,7 +313,7 @@ export class VueElement extends BaseClass {
   }
 
   protected _setAttr(key: string) {
-    let value = this.getAttribute(key)
+    let value = this.hasAttribute(key) ? this.getAttribute(key) : undefined
     const camelKey = camelize(key)
     if (this._numberProps && this._numberProps[camelKey]) {
       value = toNumber(value)
