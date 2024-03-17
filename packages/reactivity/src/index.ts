@@ -80,11 +80,12 @@ export { reactiveReadArray, shallowReadArray } from './arrayInstrumentations'
 export { TrackOpTypes, TriggerOpTypes, ReactiveFlags } from './constants'
 export {
   baseWatch,
-  onEffectCleanup,
+  getCurrentWatcher,
   traverse,
+  onWatcherCleanup,
   BaseWatchErrorCodes,
   type BaseWatchOptions,
   type BaseWatchMiddleware,
-  type Scheduler,
-  type SchedulerJob,
+  type WatchScheduler,
 } from './baseWatch'
+export { type SchedulerJob, SchedulerJobFlags } from './scheduler'

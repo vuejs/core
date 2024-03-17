@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  onEffectCleanup,
+  onWatcherCleanup,
   ref,
   watch,
   watchEffect,
@@ -14,30 +14,30 @@ const add = () => source.value++
 watchPostEffect(() => {
   const current = source.value
   console.log('post', current)
-  onEffectCleanup(() => console.log('cleanup post', current))
+  onWatcherCleanup(() => console.log('cleanup post', current))
 })
 
 watchEffect(() => {
   const current = source.value
   console.log('pre', current)
-  onEffectCleanup(() => console.log('cleanup pre', current))
+  onWatcherCleanup(() => console.log('cleanup pre', current))
 })
 
 watchSyncEffect(() => {
   const current = source.value
   console.log('sync', current)
-  onEffectCleanup(() => console.log('cleanup sync', current))
+  onWatcherCleanup(() => console.log('cleanup sync', current))
 })
 
 watch(source, (value, oldValue) => {
-  console.log('sync watch', value, 'oldValue:', oldValue)
-  onEffectCleanup(() => console.log('cleanup sync watch', value))
+  console.log('watch', value, 'oldValue:', oldValue)
+  onWatcherCleanup(() => console.log('cleanup watch', value))
 })
 
 const onUpdate = (arg: any) => {
   const current = source.value
   console.log('render', current)
-  onEffectCleanup(() => console.log('cleanup render', current))
+  onWatcherCleanup(() => console.log('cleanup render', current))
   return arg
 }
 </script>

@@ -5,7 +5,7 @@ import {
   type SchedulerJob,
   type WatchScheduler,
   baseWatch,
-  onEffectCleanup,
+  onWatcherCleanup,
   ref,
 } from '../src'
 
@@ -72,7 +72,7 @@ describe('baseWatch', () => {
     const effect = baseWatch(
       source,
       () => {
-        onEffectCleanup(() => {
+        onWatcherCleanup(() => {
           throw 'oops in cleanup'
         })
         throw 'oops in watch'
@@ -102,7 +102,7 @@ describe('baseWatch', () => {
     ])
   })
 
-  test('baseWatch with onEffectCleanup', async () => {
+  test('baseWatch with onWatcherCleanup', async () => {
     let dummy = 0
     let source: Ref<number>
     const scope = new EffectScope()
@@ -113,8 +113,8 @@ describe('baseWatch', () => {
         source.value
 
         onCleanup(() => (dummy += 2))
-        onEffectCleanup(() => (dummy += 3))
-        onEffectCleanup(() => (dummy += 5))
+        onWatcherCleanup(() => (dummy += 3))
+        onWatcherCleanup(() => (dummy += 5))
       })
     })
     expect(dummy).toBe(0)
@@ -133,7 +133,7 @@ describe('baseWatch', () => {
     expect(dummy).toBe(30)
   })
 
-  test('nested calls to baseWatch and onEffectCleanup', async () => {
+  test('nested calls to baseWatch and onWatcherCleanup', async () => {
     let calls: string[] = []
     let source: Ref<number>
     let copyist: Ref<number>
@@ -146,7 +146,7 @@ describe('baseWatch', () => {
       baseWatch(
         () => {
           const current = (copyist.value = source.value)
-          onEffectCleanup(() => calls.push(`sync ${current}`))
+          onWatcherCleanup(() => calls.push(`sync ${current}`))
         },
         null,
         {},
@@ -155,7 +155,7 @@ describe('baseWatch', () => {
       baseWatch(
         () => {
           const current = copyist.value
-          onEffectCleanup(() => calls.push(`post ${current}`))
+          onWatcherCleanup(() => calls.push(`post ${current}`))
         },
         null,
         { scheduler },
@@ -180,6 +180,7 @@ describe('baseWatch', () => {
     scope.stop()
     expect(calls).toEqual(['sync 2', 'post 2'])
   })
+
   test('baseWatch with middleware', async () => {
     let effectCalls: string[] = []
     let watchCalls: string[] = []
@@ -190,7 +191,7 @@ describe('baseWatch', () => {
       () => {
         source.value
         effectCalls.push('effect')
-        onEffectCleanup(() => effectCalls.push('effect cleanup'))
+        onWatcherCleanup(() => effectCalls.push('effect cleanup'))
       },
       null,
       {
@@ -207,7 +208,7 @@ describe('baseWatch', () => {
       () => source.value,
       () => {
         watchCalls.push('watch')
-        onEffectCleanup(() => watchCalls.push('watch cleanup'))
+        onWatcherCleanup(() => watchCalls.push('watch cleanup'))
       },
       {
         scheduler,

@@ -1,8 +1,8 @@
 import {
   nextTick,
   onBeforeUpdate,
-  onEffectCleanup,
   onUpdated,
+  onWatcherCleanup,
   ref,
   renderEffect,
   renderWatch,
@@ -101,17 +101,17 @@ describe('renderWatch', () => {
         watchPostEffect(() => {
           const current = source.value
           calls.push(`post ${current}`)
-          onEffectCleanup(() => calls.push(`post cleanup ${current}`))
+          onWatcherCleanup(() => calls.push(`post cleanup ${current}`))
         })
         watchEffect(() => {
           const current = source.value
           calls.push(`pre ${current}`)
-          onEffectCleanup(() => calls.push(`pre cleanup ${current}`))
+          onWatcherCleanup(() => calls.push(`pre cleanup ${current}`))
         })
         watchSyncEffect(() => {
           const current = source.value
           calls.push(`sync ${current}`)
-          onEffectCleanup(() => calls.push(`sync cleanup ${current}`))
+          onWatcherCleanup(() => calls.push(`sync cleanup ${current}`))
         })
         return { source, change, renderSource, changeRender }
       },
@@ -121,13 +121,13 @@ describe('renderWatch', () => {
         renderEffect(() => {
           const current = _ctx.renderSource
           calls.push(`renderEffect ${current}`)
-          onEffectCleanup(() => calls.push(`renderEffect cleanup ${current}`))
+          onWatcherCleanup(() => calls.push(`renderEffect cleanup ${current}`))
         })
         renderWatch(
           () => _ctx.renderSource,
           value => {
             calls.push(`renderWatch ${value}`)
-            onEffectCleanup(() => calls.push(`renderWatch cleanup ${value}`))
+            onWatcherCleanup(() => calls.push(`renderWatch cleanup ${value}`))
           },
         )
       },

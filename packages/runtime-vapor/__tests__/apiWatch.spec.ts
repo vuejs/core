@@ -2,13 +2,13 @@ import type { Ref } from '@vue/reactivity'
 import {
   EffectScope,
   nextTick,
-  onEffectCleanup,
+  onWatcherCleanup,
   ref,
   watchEffect,
   watchSyncEffect,
 } from '../src'
 
-describe('watchEffect and onEffectCleanup', () => {
+describe('watchEffect and onWatcherCleanup', () => {
   test('basic', async () => {
     let dummy = 0
     let source: Ref<number>
@@ -20,8 +20,8 @@ describe('watchEffect and onEffectCleanup', () => {
         source.value
 
         onCleanup(() => (dummy += 2))
-        onEffectCleanup(() => (dummy += 3))
-        onEffectCleanup(() => (dummy += 5))
+        onWatcherCleanup(() => (dummy += 3))
+        onWatcherCleanup(() => (dummy += 5))
       })
     })
     await nextTick()
@@ -55,11 +55,11 @@ describe('watchEffect and onEffectCleanup', () => {
       double = ref(0)
       watchEffect(() => {
         double.value = source.value * 2
-        onEffectCleanup(() => (dummy += 2))
+        onWatcherCleanup(() => (dummy += 2))
       })
       watchSyncEffect(() => {
         double.value
-        onEffectCleanup(() => (dummy += 3))
+        onWatcherCleanup(() => (dummy += 3))
       })
     })
     await nextTick()

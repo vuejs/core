@@ -5,7 +5,7 @@ import {
   defineComponent,
   getCurrentInstance,
   nextTick,
-  onEffectCleanup,
+  onWatcherCleanup,
   reactive,
   ref,
   watch,
@@ -395,17 +395,17 @@ describe('api: watch', () => {
     expect(cleanup).toHaveBeenCalledTimes(2)
   })
 
-  it('onEffectCleanup', async () => {
+  it('onWatcherCleanup', async () => {
     const count = ref(0)
     const cleanupEffect = vi.fn()
     const cleanupWatch = vi.fn()
 
     const stopEffect = watchEffect(() => {
-      onEffectCleanup(cleanupEffect)
+      onWatcherCleanup(cleanupEffect)
       count.value
     })
     const stopWatch = watch(count, () => {
-      onEffectCleanup(cleanupWatch)
+      onWatcherCleanup(cleanupWatch)
     })
 
     count.value++
