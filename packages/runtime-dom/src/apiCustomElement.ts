@@ -23,7 +23,14 @@ import {
   nextTick,
   warn,
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hasOwn,
+  hyphenate,
+  isArray,
+  toNumber,
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -300,13 +307,22 @@ export class VueElement extends BaseClass {
     }
 
     // defining getter/setters on prototype
-    for (const key of declaredPropKeys.map(camelize)) {
-      Object.defineProperty(this, key, {
+    for (const key of declaredPropKeys) {
+      const camelKey = camelize(key)
+      if (
+        this._props[camelKey] === undefined &&
+        !isArray(props) &&
+        hasOwn(props[key], 'default')
+      ) {
+        this._setProp(camelKey, props[key].default)
+      }
+
+      Object.defineProperty(this, camelKey, {
         get() {
-          return this._getProp(key)
+          return this._getProp(camelKey)
         },
         set(val) {
-          this._setProp(key, val)
+          this._setProp(camelKey, val)
         },
       })
     }
