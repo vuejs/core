@@ -276,7 +276,6 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $forceUpdate: i =>
       i.f ||
       (i.f = () => {
-        i.effect.dirty = true
         queueJob(i.update)
       }),
     $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),

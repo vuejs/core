@@ -38,7 +38,8 @@ export function initCustomFormatter() {
           {},
           ['span', vueStyle, genRefFlag(obj)],
           '<',
-          formatValue(obj.value),
+          // avoid debugger accessing value affecting behavior
+          formatValue('_value' in obj ? obj._value : obj),
           `>`,
         ]
       } else if (isReactive(obj)) {

@@ -19,6 +19,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
+import { SchedulerJobFlags } from '../scheduler'
 
 type Hook<T = () => void> = T | T[]
 
@@ -231,8 +232,7 @@ const BaseTransitionImpl: ComponentOptions = {
             state.isLeaving = false
             // #6835
             // it also needs to be updated when active is undefined
-            if (instance.update.active !== false) {
-              instance.effect.dirty = true
+            if (!(instance.job.flags! & SchedulerJobFlags.DISPOSED)) {
               instance.update()
             }
           }

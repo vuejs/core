@@ -1,7 +1,7 @@
 import type { ReactiveEffect } from './effect'
 import { warn } from './warning'
 
-let activeEffectScope: EffectScope | undefined
+export let activeEffectScope: EffectScope | undefined
 
 export class EffectScope {
   /**
@@ -122,15 +122,6 @@ export function effectScope(detached?: boolean) {
   return new EffectScope(detached)
 }
 
-export function recordEffectScope(
-  effect: ReactiveEffect,
-  scope: EffectScope | undefined = activeEffectScope,
-) {
-  if (scope && scope.active) {
-    scope.effects.push(effect)
-  }
-}
-
 /**
  * Returns the current active effect scope if there is one.
  *
@@ -147,10 +138,10 @@ export function getCurrentScope() {
  * @param fn - The callback function to attach to the scope's cleanup.
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#onscopedispose}
  */
-export function onScopeDispose(fn: () => void) {
+export function onScopeDispose(fn: () => void, failSilently = false) {
   if (activeEffectScope) {
     activeEffectScope.cleanups.push(fn)
-  } else if (__DEV__) {
+  } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
         ` to be associated with.`,
