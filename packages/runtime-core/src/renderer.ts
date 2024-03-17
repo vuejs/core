@@ -40,7 +40,6 @@ import {
 import {
   type SchedulerFactory,
   type SchedulerJob,
-  SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
@@ -50,6 +49,7 @@ import {
 import {
   EffectFlags,
   ReactiveEffect,
+  SchedulerJobFlags,
   pauseTracking,
   resetTracking,
 } from '@vue/reactivity'
@@ -289,14 +289,14 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
   : queuePostFlushCb
 
 export const createPostRenderScheduler: SchedulerFactory =
-  instance => (job, effect, isInit) => {
-    if (isInit) {
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (!immediateFirstRun) {
+      queuePostRenderEffect(job, instance && instance.suspense)
+    } else if (!hasCb) {
       queuePostRenderEffect(
         effect.run.bind(effect),
         instance && instance.suspense,
       )
-    } else {
-      queuePostRenderEffect(job, instance && instance.suspense)
     }
   }
 

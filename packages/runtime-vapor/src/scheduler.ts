@@ -1,4 +1,9 @@
-import type { Scheduler, SchedulerJob } from '@vue/reactivity'
+import {
+  EffectFlags,
+  type SchedulerJob,
+  SchedulerJobFlags,
+  type WatchScheduler,
+} from '@vue/reactivity'
 import type { ComponentInternalInstance } from './component'
 import { isArray } from '@vue/shared'
 
@@ -28,19 +33,21 @@ const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
 function queueJob(job: SchedulerJob) {
-  if (!job.queued) {
+  if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
-    } else {
+    } else if (
       // fast path when the job id is larger than the tail
-      if (!job.pre && job.id >= (queue[queue.length - 1]?.id || 0)) {
-        queue.push(job)
-      } else {
-        queue.splice(findInsertionIndex(job.id), 0, job)
-      }
+      !(job.flags! & SchedulerJobFlags.PRE) &&
+      job.id >= (queue[queue.length - 1]?.id || 0)
+    ) {
+      queue.push(job)
+    } else {
+      queue.splice(findInsertionIndex(job.id), 0, job)
     }
-    if (!job.allowRecurse) {
-      job.queued = true
+
+    if (!(job.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+      job.flags! |= SchedulerJobFlags.QUEUED
     }
     queueFlush()
   }
@@ -48,10 +55,10 @@ function queueJob(job: SchedulerJob) {
 
 export function queuePostRenderEffect(cb: SchedulerJobs) {
   if (!isArray(cb)) {
-    if (!cb.queued) {
+    if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
-      if (!cb.allowRecurse) {
-        cb.queued = true
+      if (!(cb.flags! & SchedulerJobFlags.ALLOW_RECURSE)) {
+        cb.flags! |= SchedulerJobFlags.QUEUED
       }
     }
   } else {
@@ -92,7 +99,7 @@ export function flushPostFlushCbs() {
     postFlushIndex++
   ) {
     activePostFlushCbs[postFlushIndex]()
-    activePostFlushCbs[postFlushIndex].queued = false
+    activePostFlushCbs[postFlushIndex].flags! &= ~SchedulerJobFlags.QUEUED
   }
   activePostFlushCbs = null
   postFlushIndex = 0
@@ -114,8 +121,8 @@ function flushJobs() {
 
   try {
     for (let i = 0; i < queue!.length; i++) {
-      queue![i]()
-      queue![i].queued = false
+      queue[i]()
+      queue[i].flags! &= ~SchedulerJobFlags.QUEUED
     }
   } finally {
     flushIndex = 0
@@ -154,7 +161,10 @@ function findInsertionIndex(id: number) {
     const middle = (start + end) >>> 1
     const middleJob = queue[middle]
     const middleJobId = getId(middleJob)
-    if (middleJobId < id || (middleJobId === id && middleJob.pre)) {
+    if (
+      middleJobId < id ||
+      (middleJobId === id && middleJob.flags! & SchedulerJobFlags.PRE)
+    ) {
       start = middle + 1
     } else {
       end = middle
@@ -170,52 +180,54 @@ const getId = (job: SchedulerJob): number =>
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   const diff = getId(a) - getId(b)
   if (diff === 0) {
-    if (a.pre && !b.pre) return -1
-    if (b.pre && !a.pre) return 1
+    const isAPre = a.flags! & SchedulerJobFlags.PRE
+    const isBPre = b.flags! & SchedulerJobFlags.PRE
+    if (isAPre && !isBPre) return -1
+    if (isBPre && !isAPre) return 1
   }
   return diff
 }
 
 export type SchedulerFactory = (
   instance: ComponentInternalInstance | null,
-) => Scheduler
+) => WatchScheduler
 
 export const createVaporSyncScheduler: SchedulerFactory =
-  () => (job, effect, isInit) => {
-    if (isInit) {
-      effect.run()
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (immediateFirstRun) {
+      effect.flags |= EffectFlags.NO_BATCH
+      if (!hasCb) effect.run()
     } else {
       job()
     }
   }
 
 export const createVaporPreScheduler: SchedulerFactory =
-  instance => (job, effect, isInit) => {
-    if (isInit) {
-      effect.run()
-    } else {
-      job.pre = true
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (!immediateFirstRun) {
+      job.flags! |= SchedulerJobFlags.PRE
       if (instance) job.id = instance.uid
       queueJob(job)
+    } else if (!hasCb) {
+      effect.run()
     }
   }
 
 export const createVaporRenderingScheduler: SchedulerFactory =
-  instance => (job, effect, isInit) => {
-    if (isInit) {
-      effect.run()
-    } else {
-      job.pre = false
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (!immediateFirstRun) {
       if (instance) job.id = instance.uid
       queueJob(job)
+    } else if (!hasCb) {
+      effect.run()
     }
   }
 
 export const createVaporPostScheduler: SchedulerFactory =
-  () => (job, effect, isInit) => {
-    if (isInit) {
-      queuePostRenderEffect(effect.run.bind(effect))
-    } else {
+  instance => (job, effect, immediateFirstRun, hasCb) => {
+    if (!immediateFirstRun) {
       queuePostRenderEffect(job)
+    } else if (!hasCb) {
+      queuePostRenderEffect(effect.run.bind(effect))
     }
   }

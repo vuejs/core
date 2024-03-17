@@ -22,7 +22,7 @@ import {
 } from './effect'
 import { isReactive, isShallow } from './reactive'
 import { type Ref, isRef } from './ref'
-import { getCurrentScope } from './effectScope'
+import { type SchedulerJob, SchedulerJobFlags } from './scheduler'
 
 // These errors were transferred from `packages/runtime-core/src/errorHandling.ts`
 // along with baseWatch to maintain code compatibility. Hence,
@@ -31,32 +31,6 @@ export enum BaseWatchErrorCodes {
   WATCH_GETTER = 2,
   WATCH_CALLBACK,
   WATCH_CLEANUP,
-}
-
-// TODO move to a scheduler package
-export interface SchedulerJob extends Function {
-  id?: number
-  // TODO refactor these boolean flags to a single bitwise flag
-  pre?: boolean
-  active?: boolean
-  computed?: boolean
-  queued?: boolean
-  /**
-   * Indicates whether the effect is allowed to recursively trigger itself
-   * when managed by the scheduler.
-   *
-   * By default, a job cannot trigger itself because some built-in method calls,
-   * e.g. Array.prototype.push actually performs reads as well (#1740) which
-   * can lead to confusing infinite loops.
-   * The allowed cases are component update functions and watch callbacks.
-   * Component update functions may update child component props, which in turn
-   * trigger flush: "pre" watch callbacks that mutates state that the parent
-   * relies on (#1801). Watch callbacks doesn't track its dependencies so if it
-   * triggers itself again, it's likely intentional and it is the user's
-   * responsibility to perform recursive state mutation that eventually
-   * stabilizes (#1727).
-   */
-  allowRecurse?: boolean
 }
 
 type WatchEffect = (onCleanup: OnCleanup) => void
@@ -254,8 +228,11 @@ export function baseWatch(
   let oldValue: any = isMultiSource
     ? new Array((source as []).length).fill(INITIAL_WATCHER_VALUE)
     : INITIAL_WATCHER_VALUE
-  const job: SchedulerJob = () => {
-    if (!effect.active || !effect.dirty) {
+  const job: SchedulerJob = (immediateFirstRun?: boolean) => {
+    if (
+      !(effect.flags & EffectFlags.ACTIVE) ||
+      (!effect.dirty && !immediateFirstRun)
+    ) {
       return
     }
     if (cb) {
@@ -310,11 +287,10 @@ export function baseWatch(
 
   // important: mark the job as a watcher callback so that scheduler knows
   // it is allowed to self-trigger (#1727)
-  job.allowRecurse = !!cb
+  if (cb) job.flags! |= SchedulerJobFlags.ALLOW_RECURSE
 
-  let effectScheduler: EffectScheduler = () => scheduler(job, effect, false)
-
-  effect = new ReactiveEffect(getter, NOOP, effectScheduler, scope)
+  effect = new ReactiveEffect(getter)
+  effect.scheduler = () => scheduler(job, effect, false, !!cb)
 
   cleanup = effect.onStop = () => {
     const cleanups = cleanupMap.get(effect)
@@ -337,13 +313,14 @@ export function baseWatch(
 
   // initial run
   if (cb) {
+    scheduler(job, effect, true, !!cb)
     if (immediate) {
-      job()
+      job(true)
     } else {
       oldValue = effect.run()
     }
   } else {
-    scheduler(job, effect, true)
+    scheduler(job, effect, true, !!cb)
   }
 
   return effect
