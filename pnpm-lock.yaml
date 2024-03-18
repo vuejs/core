@@ -15,8 +15,8 @@ importers:
         specifier: ^7.24.0
         version: 7.24.0
       '@codspeed/vitest-plugin':
-        specifier: ^2.3.1
-        version: 2.3.1(vite@5.1.6)(vitest@1.3.1)
+        specifier: ^3.1.0
+        version: 3.1.0(vite@5.1.6)(vitest@1.3.1)
       '@rollup/plugin-alias':
         specifier: ^5.1.0
         version: 5.1.0(rollup@4.13.0)
@@ -617,22 +617,28 @@ packages:
       '@babel/helper-validator-identifier': 7.22.20
       to-fast-properties: 2.0.0
 
-  /@codspeed/core@2.3.1:
-    resolution: {integrity: sha512-7KRwBX4iXK33gEQwh8jPWBF9srGIjewm3oc+A/66caiG/aOyHmxJCapjAZxT2f2vIVYqR7CghzqlxY2ik0DNBg==}
+  /@codspeed/core@3.1.0:
+    resolution: {integrity: sha512-oYd7X46QhnRkgRbZkqAoX9i3Fwm17FpunK4Ee5RdrvRYR0Xr93ewH8/O5g6uyTPDOOqDEv1v2KRYtWhVgN+2VQ==}
     dependencies:
+      axios: 1.6.8
       find-up: 6.3.0
+      form-data: 4.0.0
       node-gyp-build: 4.7.1
+    transitivePeerDependencies:
+      - debug
     dev: true
 
-  /@codspeed/vitest-plugin@2.3.1(vite@5.1.6)(vitest@1.3.1):
-    resolution: {integrity: sha512-/e4G2B/onX/hG/EjUU/NpDxnIryeTDamVRTBeWfgQDoex3g7GDzTwoQktaU5l/Asw3ZjEErQg+oQVToQ6jYZlA==}
+  /@codspeed/vitest-plugin@3.1.0(vite@5.1.6)(vitest@1.3.1):
+    resolution: {integrity: sha512-ms11tUytiQTgB+idxZRUuCUQfgz4LaKTDJCLYm5VTSpOCUU7D5+QWvJnA8X8B9glPfR5siIK8RxrnZP4yuysKQ==}
     peerDependencies:
       vite: ^4.2.0 || ^5.0.0
-      vitest: '>=1.0.0-beta.4 || >=1'
+      vitest: '>=1.2.2'
     dependencies:
-      '@codspeed/core': 2.3.1
+      '@codspeed/core': 3.1.0
       vite: 5.1.6(@types/node@20.11.28)(terser@5.29.2)
       vitest: 1.3.1(@types/node@20.11.28)(jsdom@24.0.0)(terser@5.29.2)
+    transitivePeerDependencies:
+      - debug
     dev: true
 
   /@esbuild/aix-ppc64@0.19.10:
@@ -1956,6 +1962,16 @@ packages:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
     dev: true
 
+  /axios@1.6.8:
+    resolution: {integrity: sha512-v/ZHtJDU39mDpyBoFVkETcd/uNdxrWRrg3bKpOKzXFA6Bvqopts6ALSMU3y6ijYxbw2B+wPrIv46egTzJXCLGQ==}
+    dependencies:
+      follow-redirects: 1.15.6
+      form-data: 4.0.0
+      proxy-from-env: 1.1.0
+    transitivePeerDependencies:
+      - debug
+    dev: true
+
   /b4a@1.6.4:
     resolution: {integrity: sha512-fpWrvyVHEKyeEvbKZTVOeZF3VSKKWtJxFIxX/jaVPf+cLbGUSitjb49pHLqPV2BUNNZ0LcoeEGfE/YCpyDYHIw==}
     dev: true
@@ -3148,6 +3164,16 @@ packages:
 
   /flatted@3.2.9:
     resolution: {integrity: sha512-36yxDn5H7OFZQla0/jFJmbIKTdZAQHngCedGxiMmpNfEZM0sdEeT+WczLQrjK6D7o2aiyLYDnkw0R3JK0Qv1RQ==}
+    dev: true
+
+  /follow-redirects@1.15.6:
+    resolution: {integrity: sha512-wWN62YITEaOpSK584EZXJafH1AGpO8RVgElfkuXbTOrPX4fIfOyEpW/CsiNd8JdYrAoOvafRTOEnvsO++qCqFA==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
     dev: true
 
   /foreground-child@3.1.1:
