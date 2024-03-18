@@ -5,15 +5,14 @@ This repository is a fork of [vuejs/core](https://github.com/vuejs/core) and is 
 - [Vapor Playground](https://vapor-repl.netlify.app/)
 - [Vapor Template Explorer](https://vapor-template-explorer.netlify.app/)
 
+## Vue Vapor Team
+
+- [Evan You](https://github.com/yyx990803) - Creator and designer of Vue.js and Vue Vapor.
+- [Kevin Deng 三咲智子](https://github.com/sxzz) - Lead contributor and developer for Vue Vapor.
+- [Rizumu Ayaka](https://github.com/LittleSound) - Key contributor to compiler and reactivity.
+- [Ubugeeei](https://github.com/Ubugeeei) - Key contributor to components.
+
 ## TODO
-
-PR are welcome!
-
-- [Issues with `todo` tag](https://github.com/vuejs/core-vapor/labels/todo)
-- To-do list below (**create an issue** for discussion before a big feat/bug PR is required)
-- `// TODO` comments in code (`compiler-vapor` and `runtime-vapor` packages)
-
----
 
 - [x] Counter App
   - [x] simple bindings
@@ -56,6 +55,7 @@ PR are welcome!
   - [ ] Function mode [on hold]
   - [ ] SSR
 - [ ] [Component](https://github.com/vuejs/core-vapor/issues/4)
+  - WIP
 - [ ] Built-in Components
   - [ ] Transition
   - [ ] TransitionGroup
@@ -64,21 +64,6 @@ PR are welcome!
   - [ ] Suspense
 - [ ] Performance & Optimization
   - [ ] remove unnecessary close tag `</div>`
-
-## Codes Copied From `runtime-core`
-
-The code provided here is a duplicate from `runtime-core` as Vapor cannot import it directly. For the time being, we copy any necessary logic from runtime-core into runtime-vapor and document it accordingly. Once the experimental development phase concludes, we will consolidate these elements into a separate software package.
-
-- packages/runtime-vapor/src/apiWatch.ts
-- packages/runtime-vapor/src/component.ts
-- packages/runtime-vapor/src/componentEmits.ts
-- packages/runtime-vapor/src/componentProps.ts
-- packages/runtime-vapor/src/enums.ts
-- packages/runtime-vapor/src/errorHandling.ts
-- packages/runtime-vapor/src/scheduler.ts
-- packages/runtime-vapor/src/warning.ts
-
-If there are more, please feel free to add.
 
 ## Sponsors
 
