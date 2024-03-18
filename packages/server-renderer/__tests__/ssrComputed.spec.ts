@@ -1,4 +1,4 @@
-import { createSSRApp, defineComponent, h, computed, reactive } from 'vue'
+import { computed, createSSRApp, defineComponent, h, reactive } from 'vue'
 import { renderToString } from '../src/renderToString'
 
 // #5208 reported memory leak of keeping computed alive during SSR
@@ -17,7 +17,7 @@ test('computed reactivity during SSR', async () => {
     // pretend to fetch some data from an api
     async fetchData() {
       this.state.items = ['hello', 'world']
-    }
+    },
   }
 
   const getterSpy = vi.fn()

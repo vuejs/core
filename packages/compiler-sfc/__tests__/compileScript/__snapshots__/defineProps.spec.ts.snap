@@ -18,6 +18,47 @@ return { props, bar }
 }"
 `;
 
+exports[`defineProps > custom element retains the props type & default value & production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+interface Props { 
+          foo?: number;
+      }
+      
+export default /*#__PURE__*/_defineComponent({
+  __name: 'app.ce',
+  props: {
+    foo: { default: 5.5, type: Number }
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props;
+      
+return { props }
+}
+
+})"
+`;
+
+exports[`defineProps > custom element retains the props type & production mode 1`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  __name: 'app.ce',
+  props: {
+    foo: {type: Number}
+  },
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      const props = __props
+      
+return { props }
+}
+
+})"
+`;
+
 exports[`defineProps > defineProps w/ runtime options 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
 
@@ -57,34 +98,34 @@ exports[`defineProps > should escape names w/ special symbols 1`] = `
 
 export default /*#__PURE__*/_defineComponent({
   props: {
-    \\"spa ce\\": { type: null, required: true },
-    \\"exclamation!mark\\": { type: null, required: true },
-    \\"double\\\\\\"quote\\": { type: null, required: true },
-    \\"hash#tag\\": { type: null, required: true },
-    \\"dollar$sign\\": { type: null, required: true },
-    \\"percentage%sign\\": { type: null, required: true },
-    \\"amper&sand\\": { type: null, required: true },
-    \\"single'quote\\": { type: null, required: true },
-    \\"round(brack)ets\\": { type: null, required: true },
-    \\"aste*risk\\": { type: null, required: true },
-    \\"pl+us\\": { type: null, required: true },
-    \\"com,ma\\": { type: null, required: true },
-    \\"do.t\\": { type: null, required: true },
-    \\"sla/sh\\": { type: null, required: true },
-    \\"co:lon\\": { type: null, required: true },
-    \\"semi;colon\\": { type: null, required: true },
-    \\"angle<brack>ets\\": { type: null, required: true },
-    \\"equal=sign\\": { type: null, required: true },
-    \\"question?mark\\": { type: null, required: true },
-    \\"at@sign\\": { type: null, required: true },
-    \\"square[brack]ets\\": { type: null, required: true },
-    \\"back\\\\\\\\slash\\": { type: null, required: true },
-    \\"ca^ret\\": { type: null, required: true },
-    \\"back\`tick\\": { type: null, required: true },
-    \\"curly{bra}ces\\": { type: null, required: true },
-    \\"pi|pe\\": { type: null, required: true },
-    \\"til~de\\": { type: null, required: true },
-    \\"da-sh\\": { type: null, required: true }
+    "spa ce": { type: null, required: true },
+    "exclamation!mark": { type: null, required: true },
+    "double\\"quote": { type: null, required: true },
+    "hash#tag": { type: null, required: true },
+    "dollar$sign": { type: null, required: true },
+    "percentage%sign": { type: null, required: true },
+    "amper&sand": { type: null, required: true },
+    "single'quote": { type: null, required: true },
+    "round(brack)ets": { type: null, required: true },
+    "aste*risk": { type: null, required: true },
+    "pl+us": { type: null, required: true },
+    "com,ma": { type: null, required: true },
+    "do.t": { type: null, required: true },
+    "sla/sh": { type: null, required: true },
+    "co:lon": { type: null, required: true },
+    "semi;colon": { type: null, required: true },
+    "angle<brack>ets": { type: null, required: true },
+    "equal=sign": { type: null, required: true },
+    "question?mark": { type: null, required: true },
+    "at@sign": { type: null, required: true },
+    "square[brack]ets": { type: null, required: true },
+    "back\\\\slash": { type: null, required: true },
+    "ca^ret": { type: null, required: true },
+    "back\`tick": { type: null, required: true },
+    "curly{bra}ces": { type: null, required: true },
+    "pi|pe": { type: null, required: true },
+    "til~de": { type: null, required: true },
+    "da-sh": { type: null, required: true }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
@@ -400,7 +441,7 @@ exports[`defineProps > withDefaults (static) + normal script 1`] = `
     
 export default /*#__PURE__*/_defineComponent({
   props: {
-    a: { type: String, required: false, default: \\"a\\" }
+    a: { type: String, required: false, default: "a" }
   },
   setup(__props: any, { expose: __expose }) {
   __expose();
