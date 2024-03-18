@@ -1,7 +1,7 @@
-import { onEffectCleanup } from '@vue/reactivity'
 import {
   nextTick,
   onBeforeUpdate,
+  onEffectCleanup,
   onUpdated,
   ref,
   renderEffect,

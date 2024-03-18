@@ -213,16 +213,6 @@ export const createVaporPreScheduler: SchedulerFactory =
     }
   }
 
-export const createVaporRenderingScheduler: SchedulerFactory =
-  instance => (job, effect, immediateFirstRun, hasCb) => {
-    if (!immediateFirstRun) {
-      if (instance) job.id = instance.uid
-      queueJob(job)
-    } else if (!hasCb) {
-      effect.run()
-    }
-  }
-
 export const createVaporPostScheduler: SchedulerFactory =
   instance => (job, effect, immediateFirstRun, hasCb) => {
     if (!immediateFirstRun) {

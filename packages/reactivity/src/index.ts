@@ -85,7 +85,6 @@ export {
   onWatcherCleanup,
   BaseWatchErrorCodes,
   type BaseWatchOptions,
-  type BaseWatchMiddleware,
   type WatchScheduler,
 } from './baseWatch'
 export { type SchedulerJob, SchedulerJobFlags } from './scheduler'

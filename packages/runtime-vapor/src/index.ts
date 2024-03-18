@@ -29,12 +29,15 @@ export {
   // effect
   stop,
   ReactiveEffect,
-  onWatcherCleanup,
+  onEffectCleanup,
   // effect scope
   effectScope,
   EffectScope,
   getCurrentScope,
   onScopeDispose,
+  // baseWatch
+  onWatcherCleanup,
+  getCurrentWatcher,
 } from '@vue/reactivity'
 
 export { nextTick } from './scheduler'
