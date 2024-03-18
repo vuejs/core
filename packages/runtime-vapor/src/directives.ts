@@ -1,8 +1,8 @@
-import { NOOP, isFunction } from '@vue/shared'
+import { isFunction } from '@vue/shared'
 import { type ComponentInternalInstance, currentInstance } from './component'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
-import { renderWatch } from './renderWatch'
+import { renderEffect } from './renderEffect'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
@@ -100,8 +100,12 @@ export function withDirectives<T extends Node>(
 
     // register source
     if (source) {
-      // callback will be overridden by middleware
-      renderWatch(source, NOOP, { deep: dir.deep })
+      if (dir.deep) {
+        const deep = dir.deep === true ? undefined : dir.deep
+        const baseSource = source
+        source = () => traverse(baseSource(), deep)
+      }
+      renderEffect(source)
     }
   }
 

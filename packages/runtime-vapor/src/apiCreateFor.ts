@@ -1,7 +1,7 @@
 import { type EffectScope, effectScope, isReactive } from '@vue/reactivity'
 import { isArray, isObject, isString } from '@vue/shared'
 import { createComment, createTextNode, insert, remove } from './dom/element'
-import { renderEffect } from './renderWatch'
+import { renderEffect } from './renderEffect'
 import { type Block, type Fragment, fragmentKey } from './apiRender'
 import { warn } from './warning'
 

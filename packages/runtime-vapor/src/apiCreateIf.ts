@@ -1,4 +1,4 @@
-import { renderWatch } from './renderWatch'
+import { renderEffect } from './renderEffect'
 import { type Block, type Fragment, fragmentKey } from './apiRender'
 import { type EffectScope, effectScope } from '@vue/reactivity'
 import { createComment, createTextNode, insert, remove } from './dom/element'
@@ -12,6 +12,8 @@ export const createIf = (
   b2?: BlockFn,
   // hydrationNode?: Node,
 ): Fragment => {
+  let newValue: any
+  let oldValue: any
   let branch: BlockFn | undefined
   let parent: ParentNode | undefined | null
   let block: Block | undefined
@@ -29,15 +31,14 @@ export const createIf = (
   //   setCurrentHydrationNode(hydrationNode!)
   // }
 
-  renderWatch(
-    () => !!condition(),
-    value => {
+  renderEffect(() => {
+    if ((newValue = !!condition()) !== oldValue) {
       parent ||= anchor.parentNode
       if (block) {
         scope!.stop()
         remove(block, parent!)
       }
-      if ((branch = value ? b1 : b2)) {
+      if ((branch = (oldValue = newValue) ? b1 : b2)) {
         scope = effectScope()
         fragment.nodes = block = scope.run(branch)!
         parent && insert(block, parent, anchor)
@@ -45,9 +46,8 @@ export const createIf = (
         scope = block = undefined
         fragment.nodes = []
       }
-    },
-    { immediate: true },
-  )
+    }
+  })
 
   // TODO: SSR
   // if (isHydrating) {

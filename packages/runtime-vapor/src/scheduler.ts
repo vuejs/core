@@ -32,7 +32,7 @@ let postFlushIndex = 0
 const resolvedPromise = /*#__PURE__*/ Promise.resolve() as Promise<any>
 let currentFlushPromise: Promise<void> | null = null
 
-function queueJob(job: SchedulerJob) {
+export function queueJob(job: SchedulerJob) {
   if (!(job.flags! & SchedulerJobFlags.QUEUED)) {
     if (job.id == null) {
       queue.push(job)
