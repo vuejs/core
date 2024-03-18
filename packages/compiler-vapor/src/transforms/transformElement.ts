@@ -64,6 +64,8 @@ function transformComponentElement(
   const { bindingMetadata } = context.options
   const resolve = !bindingMetadata[tag]
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
+  const root =
+    context.root === context.parent && context.parent.node.children.length === 1
 
   context.registerOperation({
     type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -71,6 +73,7 @@ function transformComponentElement(
     tag,
     props: propsResult[0] ? propsResult[1] : [propsResult[1]],
     resolve,
+    root,
   })
 }
 

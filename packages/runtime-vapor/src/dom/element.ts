@@ -1,5 +1,6 @@
 import { isArray, toDisplayString } from '@vue/shared'
 import type { Block } from '../apiRender'
+import { componentKey } from '../component'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function normalizeBlock(block: Block): Node[] {
@@ -8,6 +9,8 @@ export function normalizeBlock(block: Block): Node[] {
     nodes.push(block)
   } else if (isArray(block)) {
     block.forEach(child => nodes.push(...normalizeBlock(child)))
+  } else if (componentKey in block) {
+    nodes.push(...normalizeBlock(block.block!))
   } else if (block) {
     nodes.push(...normalizeBlock(block.nodes))
     block.anchor && nodes.push(block.anchor)

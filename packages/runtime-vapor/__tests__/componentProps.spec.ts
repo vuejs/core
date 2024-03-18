@@ -238,24 +238,26 @@ describe('component: props', () => {
         return { foo, id }
       },
       render(_ctx: Record<string, any>) {
-        return createComponent(Child, {
-          foo: () => _ctx.foo,
-          id: () => _ctx.id,
-        })
+        return createComponent(
+          Child,
+          {
+            foo: () => _ctx.foo,
+            id: () => _ctx.id,
+          },
+          true,
+        )
       },
     }).render()
     const reset = setCurrentInstance(instance)
-    // expect(host.innerHTML).toBe('<div id="a">1</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div>1</div>')
+    expect(host.innerHTML).toBe('<div id="a">1</div>')
 
     foo.value++
     await nextTick()
-    // expect(host.innerHTML).toBe('<div id="a">2</div>') // TODO: Fallthrough Attributes
-    expect(host.innerHTML).toBe('<div>2</div>')
+    expect(host.innerHTML).toBe('<div id="a">2</div>')
 
     id.value = 'b'
     await nextTick()
-    // expect(host.innerHTML).toBe('<div id="b">2</div>') // TODO: Fallthrough Attributes
+    expect(host.innerHTML).toBe('<div id="b">2</div>')
     reset()
   })
 
@@ -441,6 +443,7 @@ describe('component: props', () => {
   // #5016
   test('handling attr with undefined value', () => {
     const { render, host } = define({
+      inheritAttrs: false,
       render() {
         const instance = getCurrentInstance()!
         const t0 = template('<div></div>')

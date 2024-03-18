@@ -22,10 +22,18 @@ export function genCreateComponent(
     ? genCall(vaporHelper('resolveComponent'), JSON.stringify(oper.tag))
     : [oper.tag]
 
+  const isRoot = oper.root
+  const props = genProps()
+
   return [
     NEWLINE,
     `const n${oper.id} = `,
-    ...genCall(vaporHelper('createComponent'), tag, genProps()),
+    ...genCall(
+      vaporHelper('createComponent'),
+      tag,
+      props || (isRoot ? 'null' : false),
+      isRoot && 'true',
+    ),
   ]
 
   function genProps() {

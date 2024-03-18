@@ -1,21 +1,29 @@
 import { isArray, isFunction, isObject } from '@vue/shared'
-import { type ComponentInternalInstance, setCurrentInstance } from './component'
+import {
+  type ComponentInternalInstance,
+  componentKey,
+  setCurrentInstance,
+} from './component'
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
 import { proxyRefs } from '@vue/reactivity'
 import { invokeLifecycle } from './componentLifecycle'
 import { VaporLifecycleHooks } from './apiLifecycle'
+import { fallThroughAttrs } from './componentAttrs'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
-export type Block = Node | Fragment | Block[]
+export type Block = Node | Fragment | ComponentInternalInstance | Block[]
 export type Fragment = {
   nodes: Block
   anchor?: Node
   [fragmentKey]: true
 }
 
-export function setupComponent(instance: ComponentInternalInstance): void {
+export function setupComponent(
+  instance: ComponentInternalInstance,
+  singleRoot: boolean = false,
+): void {
   const reset = setCurrentInstance(instance)
   instance.scope.run(() => {
     const { component, props, emit, attrs } = instance
@@ -30,9 +38,10 @@ export function setupComponent(instance: ComponentInternalInstance): void {
       stateOrNode &&
       (stateOrNode instanceof Node ||
         isArray(stateOrNode) ||
-        (stateOrNode as any)[fragmentKey])
+        fragmentKey in stateOrNode ||
+        componentKey in stateOrNode)
     ) {
-      block = stateOrNode as Block
+      block = stateOrNode
     } else if (isObject(stateOrNode)) {
       instance.setupState = proxyRefs(stateOrNode)
     }
@@ -47,7 +56,9 @@ export function setupComponent(instance: ComponentInternalInstance): void {
       // TODO: warn no template
       block = []
     }
-    return (instance.block = block)
+    instance.block = block
+    if (singleRoot) fallThroughAttrs(instance)
+    return block
   })
   reset()
 }

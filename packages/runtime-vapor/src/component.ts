@@ -28,6 +28,7 @@ export type FunctionalComponent = SetupFn & Omit<ObjectComponent, 'setup'>
 
 export interface ObjectComponent {
   props?: ComponentPropsOptions
+  inheritAttrs?: boolean
   emits?: EmitsOptions
   setup?: SetupFn
   render?(ctx: any): Block
@@ -36,7 +37,10 @@ export interface ObjectComponent {
 
 type LifecycleHook<TFn = Function> = TFn[] | null
 
+export const componentKey = Symbol(__DEV__ ? `componentKey` : ``)
+
 export interface ComponentInternalInstance {
+  [componentKey]: true
   uid: number
   vapor: true
 
@@ -143,6 +147,7 @@ export function createComponentInstance(
   rawProps: RawProps | null,
 ): ComponentInternalInstance {
   const instance: ComponentInternalInstance = {
+    [componentKey]: true,
     uid: uid++,
     vapor: true,
 
