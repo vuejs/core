@@ -61,7 +61,7 @@
   "devDependencies": {
     "@babel/parser": "^7.24.0",
     "@babel/types": "^7.24.0",
-    "@codspeed/vitest-plugin": "^2.3.1",
+    "@codspeed/vitest-plugin": "^3.1.0",
     "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-commonjs": "^25.0.7",
     "@rollup/plugin-json": "^6.1.0",
