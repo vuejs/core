@@ -6,8 +6,8 @@ import {
   type VNodeArrayChildren,
   type VNodeProps,
   createVNode,
-  setBlockTracking,
   isVNode,
+  setBlockTracking,
 } from './vnode'
 import type { Teleport, TeleportProps } from './components/Teleport'
 import type { Suspense, SuspenseProps } from './components/Suspense'
