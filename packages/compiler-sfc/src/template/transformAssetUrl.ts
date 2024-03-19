@@ -38,6 +38,7 @@ export const defaultAssetUrlOptions: Required<AssetURLOptions> = {
   base: null,
   includeAbsolute: false,
   tags: {
+    audio: ['src'],
     video: ['src', 'poster'],
     source: ['src'],
     img: ['src'],

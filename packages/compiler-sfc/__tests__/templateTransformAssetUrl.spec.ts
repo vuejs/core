@@ -87,6 +87,21 @@ describe('compiler sfc: transform asset url', () => {
     expect(code).toMatchSnapshot()
   })
 
+  test('transform tag asset url', () => {
+    const { code } = compileWithAssetUrls(
+      `<audio src="@/assets/bar.wav"></audio>` +
+        `<video src="@/assets/bar.mp4"></video>` +
+        `<source src="@/assets/bar.mp4"></source>` +
+        `<img src="@/assets/bar.png"></img>` +
+        `<image xlink:href="@/assets/bar.png"></image>` +
+        `<use xlink:href="@/assets/bar.png"></use>`
+    )
+    expect(code).toMatch(`import _imports_0 from '@/assets/bar.wav'`)
+    expect(code).toMatch(`import _imports_1 from '@/assets/bar.mp4'`)
+    expect(code).toMatch(`import _imports_2 from '@/assets/bar.png'`)
+    expect(code).toMatchSnapshot()
+  })
+
   test('with includeAbsolute: true', () => {
     const { code } = compileWithAssetUrls(
       `<img src="./bar.png"/>` +
