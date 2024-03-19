@@ -252,4 +252,19 @@ describe('compat: render function', () => {
     expect(vm.$el).toBeInstanceOf(HTMLDivElement)
     expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)
   })
+  test('convert extends render Fn', () => {
+    const BaseComponent = {
+      render: (h: any) => h('div', null, ['hello'])
+    }
+    const ExtendComponent = {
+      extends: BaseComponent
+    }
+    const vm = new Vue({
+      components: { ExtendComponent },
+      render(h: any) {
+        return h('extend-component', null, [])
+      }
+    }).$mount()
+    expect(vm.$el.outerHTML).toBe(`<div>hello</div>`)
+  })
 })
