@@ -2,10 +2,14 @@ import { ElementTypes, type NodeTransform, NodeTypes } from '@vue/compiler-core'
 import { DOMErrorCodes, createDOMCompilerError } from '../errors'
 
 export const ignoreSideEffectTags: NodeTransform = (node, context) => {
+  const inSvg = context.parent
+    ? context.parent.type === NodeTypes.ELEMENT &&
+      (context.parent.tag === 'svg' || context.parent.tag === 'defs')
+    : false
   if (
     node.type === NodeTypes.ELEMENT &&
     node.tagType === ElementTypes.ELEMENT &&
-    (node.tag === 'script' || node.tag === 'style')
+    (node.tag === 'script' || (node.tag === 'style' && !inSvg))
   ) {
     __DEV__ &&
       context.onError(
