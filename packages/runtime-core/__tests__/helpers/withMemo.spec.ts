@@ -148,6 +148,17 @@ describe('v-memo', () => {
     // should update
     await nextTick()
     expect(el.innerHTML).toBe(`<div>3 3</div>`)
+
+    vm.ok = true
+    await nextTick()
+    vm.ok = false
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>3 3</div>`)
+
+    vm.y++
+    // should update
+    await nextTick()
+    expect(el.innerHTML).toBe(`<div>4 3</div>`)
   })
 
   test('on v-for', async () => {
