@@ -1,67 +1,64 @@
 import {
-  SourceLocation,
-  Position,
-  ElementNode,
-  NodeTypes,
-  CallExpression,
-  createCallExpression,
-  DirectiveNode,
+  type BlockCodegenNode,
+  type CallExpression,
+  type DirectiveNode,
+  type ElementNode,
   ElementTypes,
-  TemplateChildNode,
-  RootNode,
-  ObjectExpression,
-  Property,
-  JSChildNode,
+  type ExpressionNode,
+  type IfBranchNode,
+  type InterpolationNode,
+  type JSChildNode,
+  type MemoExpression,
+  NodeTypes,
+  type ObjectExpression,
+  type Position,
+  type Property,
+  type RenderSlotCall,
+  type RootNode,
+  type SimpleExpressionNode,
+  type SlotOutletNode,
+  type TemplateChildNode,
+  type TemplateNode,
+  type TextNode,
+  type VNodeCall,
+  createCallExpression,
   createObjectExpression,
-  SlotOutletNode,
-  TemplateNode,
-  RenderSlotCall,
-  ExpressionNode,
-  IfBranchNode,
-  TextNode,
-  InterpolationNode,
-  VNodeCall,
-  SimpleExpressionNode,
-  BlockCodegenNode,
-  MemoExpression
 } from './ast'
-import { TransformContext } from './transform'
+import type { TransformContext } from './transform'
 import {
-  MERGE_PROPS,
-  TELEPORT,
-  SUSPENSE,
-  KEEP_ALIVE,
   BASE_TRANSITION,
-  TO_HANDLERS,
-  NORMALIZE_PROPS,
   GUARD_REACTIVE_PROPS,
-  CREATE_BLOCK,
-  CREATE_ELEMENT_BLOCK,
-  CREATE_VNODE,
-  CREATE_ELEMENT_VNODE,
+  KEEP_ALIVE,
+  MERGE_PROPS,
+  NORMALIZE_PROPS,
+  SUSPENSE,
+  TELEPORT,
+  TO_HANDLERS,
   WITH_MEMO,
-  OPEN_BLOCK
 } from './runtimeHelpers'
-import { isString, isObject, hyphenate, extend, NOOP } from '@vue/shared'
-import { PropsExpression } from './transforms/transformElement'
+import { NOOP, isObject, isString } from '@vue/shared'
+import type { PropsExpression } from './transforms/transformElement'
 import { parseExpression } from '@babel/parser'
-import { Expression } from '@babel/types'
+import type { Expression } from '@babel/types'
+import { unwrapTSNode } from './babelUtils'
 
 export const isStaticExp = (p: JSChildNode): p is SimpleExpressionNode =>
   p.type === NodeTypes.SIMPLE_EXPRESSION && p.isStatic
 
-export const isBuiltInType = (tag: string, expected: string): boolean =>
-  tag === expected || tag === hyphenate(expected)
-
 export function isCoreComponent(tag: string): symbol | void {
-  if (isBuiltInType(tag, 'Teleport')) {
-    return TELEPORT
-  } else if (isBuiltInType(tag, 'Suspense')) {
-    return SUSPENSE
-  } else if (isBuiltInType(tag, 'KeepAlive')) {
-    return KEEP_ALIVE
-  } else if (isBuiltInType(tag, 'BaseTransition')) {
-    return BASE_TRANSITION
+  switch (tag) {
+    case 'Teleport':
+    case 'teleport':
+      return TELEPORT
+    case 'Suspense':
+    case 'suspense':
+      return SUSPENSE
+    case 'KeepAlive':
+    case 'keep-alive':
+      return KEEP_ALIVE
+    case 'BaseTransition':
+    case 'base-transition':
+      return BASE_TRANSITION
   }
 }
 
@@ -69,11 +66,11 @@ const nonIdentifierRE = /^\d|[^\$\w]/
 export const isSimpleIdentifier = (name: string): boolean =>
   !nonIdentifierRE.test(name)
 
-const enum MemberExpLexState {
+enum MemberExpLexState {
   inMemberExp,
   inBrackets,
   inParens,
-  inString
+  inString,
 }
 
 const validFirstIdentCharRE = /[A-Za-z_$\xA0-\uFFFF]/
@@ -160,15 +157,13 @@ export const isMemberExpressionNode = __BROWSER__
   : (path: string, context: TransformContext): boolean => {
       try {
         let ret: Expression = parseExpression(path, {
-          plugins: context.expressionPlugins
+          plugins: context.expressionPlugins,
         })
-        if (ret.type === 'TSAsExpression' || ret.type === 'TSTypeAssertion') {
-          ret = ret.expression
-        }
+        ret = unwrapTSNode(ret) as Expression
         return (
           ret.type === 'MemberExpression' ||
           ret.type === 'OptionalMemberExpression' ||
-          ret.type === 'Identifier'
+          (ret.type === 'Identifier' && ret.name !== 'undefined')
         )
       } catch (e) {
         return false
@@ -179,40 +174,19 @@ export const isMemberExpression = __BROWSER__
   ? isMemberExpressionBrowser
   : isMemberExpressionNode
 
-export function getInnerRange(
-  loc: SourceLocation,
-  offset: number,
-  length: number
-): SourceLocation {
-  __TEST__ && assert(offset <= loc.source.length)
-  const source = loc.source.slice(offset, offset + length)
-  const newLoc: SourceLocation = {
-    source,
-    start: advancePositionWithClone(loc.start, loc.source, offset),
-    end: loc.end
-  }
-
-  if (length != null) {
-    __TEST__ && assert(offset + length <= loc.source.length)
-    newLoc.end = advancePositionWithClone(
-      loc.start,
-      loc.source,
-      offset + length
-    )
-  }
-
-  return newLoc
-}
-
 export function advancePositionWithClone(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   return advancePositionWithMutation(
-    extend({}, pos),
+    {
+      offset: pos.offset,
+      line: pos.line,
+      column: pos.column,
+    },
     source,
-    numberOfCharacters
+    numberOfCharacters,
   )
 }
 
@@ -221,7 +195,7 @@ export function advancePositionWithClone(
 export function advancePositionWithMutation(
   pos: Position,
   source: string,
-  numberOfCharacters: number = source.length
+  numberOfCharacters: number = source.length,
 ): Position {
   let linesCount = 0
   let lastNewLinePos = -1
@@ -252,7 +226,7 @@ export function assert(condition: boolean, msg?: string) {
 export function findDir(
   node: ElementNode,
   name: string | RegExp,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): DirectiveNode | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -270,7 +244,7 @@ export function findProp(
   node: ElementNode,
   name: string,
   dynamicOnly: boolean = false,
-  allowEmpty: boolean = false
+  allowEmpty: boolean = false,
 ): ElementNode['props'][0] | undefined {
   for (let i = 0; i < node.props.length; i++) {
     const p = node.props[i]
@@ -291,7 +265,7 @@ export function findProp(
 
 export function isStaticArgOf(
   arg: DirectiveNode['arg'],
-  name: string
+  name: string,
 ): boolean {
   return !!(arg && isStaticExp(arg) && arg.content === name)
 }
@@ -303,12 +277,12 @@ export function hasDynamicKeyVBind(node: ElementNode): boolean {
       p.name === 'bind' &&
       (!p.arg || // v-bind="obj"
         p.arg.type !== NodeTypes.SIMPLE_EXPRESSION || // v-bind:[_ctx.foo]
-        !p.arg.isStatic) // v-bind:[foo]
+        !p.arg.isStatic), // v-bind:[foo]
   )
 }
 
 export function isText(
-  node: TemplateChildNode
+  node: TemplateChildNode,
 ): node is TextNode | InterpolationNode {
   return node.type === NodeTypes.INTERPOLATION || node.type === NodeTypes.TEXT
 }
@@ -318,7 +292,7 @@ export function isVSlot(p: ElementNode['props'][0]): p is DirectiveNode {
 }
 
 export function isTemplateNode(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is TemplateNode {
   return (
     node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.TEMPLATE
@@ -326,24 +300,16 @@ export function isTemplateNode(
 }
 
 export function isSlotOutlet(
-  node: RootNode | TemplateChildNode
+  node: RootNode | TemplateChildNode,
 ): node is SlotOutletNode {
   return node.type === NodeTypes.ELEMENT && node.tagType === ElementTypes.SLOT
-}
-
-export function getVNodeHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_VNODE : CREATE_ELEMENT_VNODE
-}
-
-export function getVNodeBlockHelper(ssr: boolean, isComponent: boolean) {
-  return ssr || isComponent ? CREATE_BLOCK : CREATE_ELEMENT_BLOCK
 }
 
 const propsHelperSet = new Set([NORMALIZE_PROPS, GUARD_REACTIVE_PROPS])
 
 function getUnnormalizedProps(
   props: PropsExpression | '{}',
-  callPath: CallExpression[] = []
+  callPath: CallExpression[] = [],
 ): [PropsExpression | '{}', CallExpression[]] {
   if (
     props &&
@@ -354,7 +320,7 @@ function getUnnormalizedProps(
     if (!isString(callee) && propsHelperSet.has(callee)) {
       return getUnnormalizedProps(
         props.arguments[0] as PropsExpression,
-        callPath.concat(props)
+        callPath.concat(props),
       )
     }
   }
@@ -363,7 +329,7 @@ function getUnnormalizedProps(
 export function injectProp(
   node: VNodeCall | RenderSlotCall,
   prop: Property,
-  context: TransformContext
+  context: TransformContext,
 ) {
   let propsWithInjection: ObjectExpression | CallExpression | undefined
   /**
@@ -406,7 +372,7 @@ export function injectProp(
         // #2366
         propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
           createObjectExpression([prop]),
-          props
+          props,
         ])
       } else {
         props.arguments.unshift(createObjectExpression([prop]))
@@ -422,7 +388,7 @@ export function injectProp(
     // single v-bind with expression, return a merged replacement
     propsWithInjection = createCallExpression(context.helper(MERGE_PROPS), [
       createObjectExpression([prop]),
-      props
+      props,
     ])
     // in the case of nested helper call, e.g. `normalizeProps(guardReactiveProps(props))`,
     // it will be rewritten as `normalizeProps(mergeProps({ key: 0 }, props))`,
@@ -454,7 +420,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
     result = props.properties.some(
       p =>
         p.key.type === NodeTypes.SIMPLE_EXPRESSION &&
-        p.key.content === propKeyName
+        p.key.content === propKeyName,
     )
   }
   return result
@@ -462,7 +428,7 @@ function hasProp(prop: Property, props: ObjectExpression) {
 
 export function toValidAssetId(
   name: string,
-  type: 'component' | 'directive' | 'filter'
+  type: 'component' | 'directive' | 'filter',
 ): string {
   // see issue#4422, we need adding identifier on validAssetId if variable `name` has specific character
   return `_${type}_${name.replace(/[^\w]/g, (searchValue, replaceValue) => {
@@ -473,7 +439,7 @@ export function toValidAssetId(
 // Check if a node contains expressions that reference current context scope ids
 export function hasScopeRef(
   node: TemplateChildNode | IfBranchNode | ExpressionNode | undefined,
-  ids: TransformContext['identifiers']
+  ids: TransformContext['identifiers'],
 ): boolean {
   if (!node || Object.keys(ids).length === 0) {
     return false
@@ -533,14 +499,4 @@ export function getMemoedVNodeCall(node: BlockCodegenNode | MemoExpression) {
   }
 }
 
-export function makeBlock(
-  node: VNodeCall,
-  { helper, removeHelper, inSSR }: TransformContext
-) {
-  if (!node.isBlock) {
-    node.isBlock = true
-    removeHelper(getVNodeHelper(inSSR, node.isComponent))
-    helper(OPEN_BLOCK)
-    helper(getVNodeBlockHelper(inSSR, node.isComponent))
-  }
-}
+export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/

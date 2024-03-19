@@ -2,7 +2,7 @@ import { initDirectivesForSSR } from 'vue'
 initDirectivesForSSR()
 
 // public
-export { SSRContext } from './render'
+export type { SSRContext } from './render'
 export { renderToString } from './renderToString'
 export {
   renderToSimpleStream,
@@ -10,9 +10,9 @@ export {
   pipeToNodeWritable,
   renderToWebStream,
   pipeToWebWritable,
-  SimpleReadable,
+  type SimpleReadable,
   // deprecated
-  renderToStream
+  renderToStream,
 } from './renderToStream'
 
 // internal runtime helpers

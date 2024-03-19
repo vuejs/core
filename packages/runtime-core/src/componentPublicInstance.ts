@@ -1,45 +1,51 @@
 import {
-  ComponentInternalInstance,
-  Data,
+  type ComponentInternalInstance,
+  type Data,
   getExposeProxy,
-  isStatefulComponent
+  isStatefulComponent,
 } from './component'
 import { nextTick, queueJob } from './scheduler'
-import { instanceWatch, WatchOptions, WatchStopHandle } from './apiWatch'
+import {
+  type WatchOptions,
+  type WatchStopHandle,
+  instanceWatch,
+} from './apiWatch'
 import {
   EMPTY_OBJ,
-  hasOwn,
-  isGloballyWhitelisted,
+  type IfAny,
   NOOP,
+  type Prettify,
+  type UnionToIntersection,
   extend,
-  isString,
+  hasOwn,
   isFunction,
-  UnionToIntersection
+  isGloballyAllowed,
+  isString,
 } from '@vue/shared'
 import {
-  toRaw,
-  shallowReadonly,
-  track,
+  type ShallowUnwrapRef,
   TrackOpTypes,
-  ShallowUnwrapRef,
-  UnwrapNestedRefs
+  type UnwrapNestedRefs,
+  shallowReadonly,
+  toRaw,
+  track,
 } from '@vue/reactivity'
 import {
-  ExtractComputedReturns,
-  ComponentOptionsBase,
-  ComputedOptions,
-  MethodOptions,
-  ComponentOptionsMixin,
-  OptionTypesType,
-  OptionTypesKeys,
+  type ComponentInjectOptions,
+  type ComponentOptionsBase,
+  type ComponentOptionsMixin,
+  type ComputedOptions,
+  type ExtractComputedReturns,
+  type InjectToObject,
+  type MergedComponentOptionsOverride,
+  type MethodOptions,
+  type OptionTypesKeys,
+  type OptionTypesType,
   resolveMergedOptions,
   shouldCacheAccess,
-  MergedComponentOptionsOverride,
-  InjectToObject,
-  ComponentInjectOptions
 } from './componentOptions'
-import { EmitsOptions, EmitFn } from './componentEmits'
-import { Slots } from './componentSlots'
+import type { EmitFn, EmitsOptions } from './componentEmits'
+import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
@@ -78,35 +84,40 @@ type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
     : false
   : false
 
-type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
-  infer P,
-  infer B,
-  infer D,
-  infer C,
-  infer M,
-  infer Mixin,
-  infer Extends,
-  any,
-  any,
-  infer Defaults
->
-  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
-      IntersectionMixin<Mixin> &
-      IntersectionMixin<Extends>
-  : never
+type MixinToOptionTypes<T> =
+  T extends ComponentOptionsBase<
+    infer P,
+    infer B,
+    infer D,
+    infer C,
+    infer M,
+    infer Mixin,
+    infer Extends,
+    any,
+    any,
+    infer Defaults,
+    any,
+    any,
+    any
+  >
+    ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+        IntersectionMixin<Mixin> &
+        IntersectionMixin<Extends>
+    : never
 
 // ExtractMixin(map type) is used to resolve circularly references
 type ExtractMixin<T> = {
   Mixin: MixinToOptionTypes<T>
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
-type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType<{}, {}, {}, {}, {}>
-  : UnionToIntersection<ExtractMixin<T>>
+export type IntersectionMixin<T> =
+  IsDefaultMixinComponent<T> extends true
+    ? OptionTypesType
+    : UnionToIntersection<ExtractMixin<T>>
 
-type UnwrapMixinsType<
+export type UnwrapMixinsType<
   T,
-  Type extends OptionTypesKeys
+  Type extends OptionTypesKeys,
 > = T extends OptionTypesType ? T[Type] : never
 
 type EnsureNonVoid<T> = T extends void ? {} : T
@@ -123,7 +134,7 @@ export type ComponentPublicInstanceConstructor<
   RawBindings = any,
   D = any,
   C extends ComputedOptions = ComputedOptions,
-  M extends MethodOptions = MethodOptions
+  M extends MethodOptions = MethodOptions,
 > = {
   __isFragment?: never
   __isTeleport?: never
@@ -144,6 +155,7 @@ export type CreateComponentPublicInstance<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -153,7 +165,7 @@ export type CreateComponentPublicInstance<
   PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> &
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
-    EnsureNonVoid<Defaults>
+    EnsureNonVoid<Defaults>,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -164,10 +176,24 @@ export type CreateComponentPublicInstance<
   PublicProps,
   PublicDefaults,
   MakeDefaultsOptional,
-  ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults>,
-  I
+  ComponentOptionsBase<
+    P,
+    B,
+    D,
+    C,
+    M,
+    Mixin,
+    Extends,
+    E,
+    string,
+    Defaults,
+    {},
+    string,
+    S
+  >,
+  I,
+  S
 >
-
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -181,16 +207,17 @@ export type ComponentPublicInstance<
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
-  I extends ComponentInjectOptions = {}
+  I extends ComponentInjectOptions = {},
+  S extends SlotsType = {},
 > = {
   $: ComponentInternalInstance
   $data: D
   $props: MakeDefaultsOptional extends true
-    ? Partial<Defaults> & Omit<P & PublicProps, keyof Defaults>
-    : P & PublicProps
+    ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults>
+    : Prettify<P> & PublicProps
   $attrs: Data
   $refs: Data
-  $slots: Slots
+  $slots: UnwrapSlotsType<S>
   $root: ComponentPublicInstance | null
   $parent: ComponentPublicInstance | null
   $emit: EmitFn<E>
@@ -203,9 +230,9 @@ export type ComponentPublicInstance<
     cb: T extends (...args: any) => infer R
       ? (...args: [R, R]) => any
       : (...args: any) => any,
-    options?: WatchOptions
+    options?: WatchOptions,
   ): WatchStopHandle
-} & P &
+} & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
   ShallowUnwrapRef<B> &
   UnwrapNestedRefs<D> &
   ExtractComputedReturns<C> &
@@ -224,7 +251,7 @@ export type PublicPropertiesMap = Record<
  * public $parent chains, skip functional ones and go to the parent instead.
  */
 const getPublicInstance = (
-  i: ComponentInternalInstance | null
+  i: ComponentInternalInstance | null,
 ): ComponentPublicInstance | ComponentInternalInstance['exposed'] | null => {
   if (!i) return null
   if (isStatefulComponent(i)) return getExposeProxy(i) || i.proxy
@@ -246,21 +273,26 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $root: i => getPublicInstance(i.root),
     $emit: i => i.emit,
     $options: i => (__FEATURE_OPTIONS_API__ ? resolveMergedOptions(i) : i.type),
-    $forceUpdate: i => i.f || (i.f = () => queueJob(i.update)),
+    $forceUpdate: i =>
+      i.f ||
+      (i.f = () => {
+        i.effect.dirty = true
+        queueJob(i.update)
+      }),
     $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
-    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP)
+    $watch: i => (__FEATURE_OPTIONS_API__ ? instanceWatch.bind(i) : NOOP),
   } as PublicPropertiesMap)
 
 if (__COMPAT__) {
   installCompatInstanceProperties(publicPropertiesMap)
 }
 
-const enum AccessTypes {
+enum AccessTypes {
   OTHER,
   SETUP,
   DATA,
   PROPS,
-  CONTEXT
+  CONTEXT,
 }
 
 export interface ComponentRenderContext {
@@ -333,6 +365,8 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
+      } else if (__DEV__ && key === '$slots') {
+        track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
     } else if (
@@ -374,14 +408,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       if (data !== EMPTY_OBJ && isReservedPrefix(key[0]) && hasOwn(data, key)) {
         warn(
           `Property ${JSON.stringify(
-            key
+            key,
           )} must be accessed via $data because it starts with a reserved ` +
-            `character ("$" or "_") and is not proxied on the render context.`
+            `character ("$" or "_") and is not proxied on the render context.`,
         )
       } else if (instance === currentRenderingInstance) {
         warn(
           `Property ${JSON.stringify(key)} was accessed during render ` +
-            `but is not defined on instance.`
+            `but is not defined on instance.`,
         )
       }
     }
@@ -390,7 +424,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   set(
     { _: instance }: ComponentRenderContext,
     key: string,
-    value: any
+    value: any,
   ): boolean {
     const { data, setupState, ctx } = instance
     if (hasSetupBinding(setupState, key)) {
@@ -414,7 +448,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       __DEV__ &&
         warn(
           `Attempting to mutate public property "${key}". ` +
-            `Properties starting with $ are reserved and readonly.`
+            `Properties starting with $ are reserved and readonly.`,
         )
       return false
     } else {
@@ -422,7 +456,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
         Object.defineProperty(ctx, key, {
           enumerable: true,
           configurable: true,
-          value
+          value,
         })
       } else {
         ctx[key] = value
@@ -433,9 +467,9 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
 
   has(
     {
-      _: { data, setupState, accessCache, ctx, appContext, propsOptions }
+      _: { data, setupState, accessCache, ctx, appContext, propsOptions },
     }: ComponentRenderContext,
-    key: string
+    key: string,
   ) {
     let normalizedProps
     return (
@@ -452,7 +486,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   defineProperty(
     target: ComponentRenderContext,
     key: string,
-    descriptor: PropertyDescriptor
+    descriptor: PropertyDescriptor,
   ) {
     if (descriptor.get != null) {
       // invalidate key cache of a getter based property #5417
@@ -461,14 +495,14 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       this.set!(target, key, descriptor.value, null)
     }
     return Reflect.defineProperty(target, key, descriptor)
-  }
+  },
 }
 
 if (__DEV__ && !__TEST__) {
   PublicInstanceProxyHandlers.ownKeys = (target: ComponentRenderContext) => {
     warn(
       `Avoid app logic that relies on enumerating keys on a component instance. ` +
-        `The keys will be empty in production mode to avoid performance overhead.`
+        `The keys will be empty in production mode to avoid performance overhead.`,
     )
     return Reflect.ownKeys(target)
   }
@@ -486,17 +520,17 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = /*#__PURE__*/ extend(
       return PublicInstanceProxyHandlers.get!(target, key, target)
     },
     has(_: ComponentRenderContext, key: string) {
-      const has = key[0] !== '_' && !isGloballyWhitelisted(key)
+      const has = key[0] !== '_' && !isGloballyAllowed(key)
       if (__DEV__ && !has && PublicInstanceProxyHandlers.has!(_, key)) {
         warn(
           `Property ${JSON.stringify(
-            key
-          )} should not start with _ which is a reserved prefix for Vue internals.`
+            key,
+          )} should not start with _ which is a reserved prefix for Vue internals.`,
         )
       }
       return has
-    }
-  }
+    },
+  },
 )
 
 // dev only
@@ -510,7 +544,7 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
   Object.defineProperty(target, `_`, {
     configurable: true,
     enumerable: false,
-    get: () => instance
+    get: () => instance,
   })
 
   // expose public properties
@@ -521,7 +555,7 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
       get: () => publicPropertiesMap[key](instance),
       // intercepted by the proxy so no need for implementation,
       // but needed to prevent set errors
-      set: NOOP
+      set: NOOP,
     })
   })
 
@@ -530,11 +564,11 @@ export function createDevRenderContext(instance: ComponentInternalInstance) {
 
 // dev only
 export function exposePropsOnRenderContext(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ) {
   const {
     ctx,
-    propsOptions: [propsOptions]
+    propsOptions: [propsOptions],
   } = instance
   if (propsOptions) {
     Object.keys(propsOptions).forEach(key => {
@@ -542,7 +576,7 @@ export function exposePropsOnRenderContext(
         enumerable: true,
         configurable: true,
         get: () => instance.props[key],
-        set: NOOP
+        set: NOOP,
       })
     })
   }
@@ -550,7 +584,7 @@ export function exposePropsOnRenderContext(
 
 // dev only
 export function exposeSetupStateOnRenderContext(
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ) {
   const { ctx, setupState } = instance
   Object.keys(toRaw(setupState)).forEach(key => {
@@ -558,9 +592,9 @@ export function exposeSetupStateOnRenderContext(
       if (isReservedPrefix(key[0])) {
         warn(
           `setup() return property ${JSON.stringify(
-            key
+            key,
           )} should not start with "$" or "_" ` +
-            `which are reserved prefixes for Vue internals.`
+            `which are reserved prefixes for Vue internals.`,
         )
         return
       }
@@ -568,7 +602,7 @@ export function exposeSetupStateOnRenderContext(
         enumerable: true,
         configurable: true,
         get: () => setupState[key],
-        set: NOOP
+        set: NOOP,
       })
     }
   })

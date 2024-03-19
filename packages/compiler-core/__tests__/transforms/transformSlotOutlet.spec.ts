@@ -1,11 +1,10 @@
-import { vi } from 'vitest'
 import {
-  CompilerOptions,
+  type CompilerOptions,
+  type ElementNode,
+  ErrorCodes,
+  NodeTypes,
   baseParse as parse,
   transform,
-  ElementNode,
-  NodeTypes,
-  ErrorCodes
 } from '../../src'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformOn } from '../../src/transforms/vOn'
@@ -20,13 +19,13 @@ function parseWithSlots(template: string, options: CompilerOptions = {}) {
     nodeTransforms: [
       ...(options.prefixIdentifiers ? [transformExpression] : []),
       transformSlotOutlet,
-      transformElement
+      transformElement,
     ],
     directiveTransforms: {
       on: transformOn,
-      bind: transformBind
+      bind: transformBind,
     },
-    ...options
+    ...options,
   })
   return ast
 }
@@ -37,7 +36,7 @@ describe('compiler: transform <slot> outlets', () => {
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: RENDER_SLOT,
-      arguments: [`$slots`, `"default"`]
+      arguments: [`$slots`, `"default"`],
     })
   })
 
@@ -46,7 +45,7 @@ describe('compiler: transform <slot> outlets', () => {
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: RENDER_SLOT,
-      arguments: [`$slots`, `"foo"`]
+      arguments: [`$slots`, `"foo"`],
     })
   })
 
@@ -60,15 +59,15 @@ describe('compiler: transform <slot> outlets', () => {
         {
           type: NodeTypes.SIMPLE_EXPRESSION,
           content: `foo`,
-          isStatic: false
-        }
-      ]
+          isStatic: false,
+        },
+      ],
     })
   })
 
   test('dynamically named slot outlet w/ prefixIdentifiers: true', () => {
     const ast = parseWithSlots(`<slot :name="foo + bar" />`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -81,23 +80,23 @@ describe('compiler: transform <slot> outlets', () => {
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `_ctx.foo`,
-              isStatic: false
+              isStatic: false,
             },
             ` + `,
             {
               type: NodeTypes.SIMPLE_EXPRESSION,
               content: `_ctx.bar`,
-              isStatic: false
-            }
-          ]
-        }
-      ]
+              isStatic: false,
+            },
+          ],
+        },
+      ],
     })
   })
 
   test('default slot outlet with props', () => {
     const ast = parseWithSlots(
-      `<slot foo="bar" :baz="qux" :foo-bar="foo-bar" />`
+      `<slot foo="bar" :baz="qux" :foo-bar="foo-bar" />`,
     )
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
@@ -111,36 +110,36 @@ describe('compiler: transform <slot> outlets', () => {
             {
               key: {
                 content: `foo`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `bar`,
-                isStatic: true
-              }
+                isStatic: true,
+              },
             },
             {
               key: {
                 content: `baz`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `qux`,
-                isStatic: false
-              }
+                isStatic: false,
+              },
             },
             {
               key: {
                 content: `fooBar`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `foo-bar`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -159,26 +158,26 @@ describe('compiler: transform <slot> outlets', () => {
             {
               key: {
                 content: `foo`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `bar`,
-                isStatic: true
-              }
+                isStatic: true,
+              },
             },
             {
               key: {
                 content: `baz`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `qux`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -197,26 +196,26 @@ describe('compiler: transform <slot> outlets', () => {
             {
               key: {
                 content: `foo`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `bar`,
-                isStatic: true
-              }
+                isStatic: true,
+              },
             },
             {
               key: {
                 content: `baz`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `qux`,
-                isStatic: false
-              }
-            }
-          ]
-        }
-      ]
+                isStatic: false,
+              },
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -235,11 +234,11 @@ describe('compiler: transform <slot> outlets', () => {
           returns: [
             {
               type: NodeTypes.ELEMENT,
-              tag: `div`
-            }
-          ]
-        }
-      ]
+              tag: `div`,
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -258,11 +257,11 @@ describe('compiler: transform <slot> outlets', () => {
           returns: [
             {
               type: NodeTypes.ELEMENT,
-              tag: `div`
-            }
-          ]
-        }
-      ]
+              tag: `div`,
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -280,14 +279,14 @@ describe('compiler: transform <slot> outlets', () => {
             {
               key: {
                 content: `foo`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `bar`,
-                isStatic: false
-              }
-            }
-          ]
+                isStatic: false,
+              },
+            },
+          ],
         },
         {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
@@ -295,11 +294,11 @@ describe('compiler: transform <slot> outlets', () => {
           returns: [
             {
               type: NodeTypes.ELEMENT,
-              tag: `div`
-            }
-          ]
-        }
-      ]
+              tag: `div`,
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -317,14 +316,14 @@ describe('compiler: transform <slot> outlets', () => {
             {
               key: {
                 content: `foo`,
-                isStatic: true
+                isStatic: true,
               },
               value: {
                 content: `bar`,
-                isStatic: false
-              }
-            }
-          ]
+                isStatic: false,
+              },
+            },
+          ],
         },
         {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
@@ -332,11 +331,11 @@ describe('compiler: transform <slot> outlets', () => {
           returns: [
             {
               type: NodeTypes.ELEMENT,
-              tag: `div`
-            }
-          ]
-        }
-      ]
+              tag: `div`,
+            },
+          ],
+        },
+      ],
     })
   })
 
@@ -345,11 +344,11 @@ describe('compiler: transform <slot> outlets', () => {
     expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: RENDER_SLOT,
-      arguments: [`$slots`, `"default"`, `{}`, `undefined`, `true`]
+      arguments: [`$slots`, `"default"`, `{}`, `undefined`, `true`],
     })
     const fallback = parseWithSlots(`<slot>fallback</slot>`, {
       slotted: false,
-      scopeId: 'foo'
+      scopeId: 'foo',
     })
 
     const child = {
@@ -358,14 +357,14 @@ describe('compiler: transform <slot> outlets', () => {
       returns: [
         {
           type: NodeTypes.TEXT,
-          content: `fallback`
-        }
-      ]
+          content: `fallback`,
+        },
+      ],
     }
     expect((fallback.children[0] as ElementNode).codegenNode).toMatchObject({
       type: NodeTypes.JS_CALL_EXPRESSION,
       callee: RENDER_SLOT,
-      arguments: [`$slots`, `"default"`, `{}`, child, `true`]
+      arguments: [`$slots`, `"default"`, `{}`, child, `true`],
     })
   })
 
@@ -377,18 +376,33 @@ describe('compiler: transform <slot> outlets', () => {
     expect(onError.mock.calls[0][0]).toMatchObject({
       code: ErrorCodes.X_V_SLOT_UNEXPECTED_DIRECTIVE_ON_SLOT_OUTLET,
       loc: {
-        source: `v-foo`,
         start: {
           offset: index,
           line: 1,
-          column: index + 1
+          column: index + 1,
         },
         end: {
           offset: index + 5,
           line: 1,
-          column: index + 6
-        }
-      }
+          column: index + 6,
+        },
+      },
+    })
+  })
+
+  test('dynamically named slot outlet with v-bind shorthand', () => {
+    const ast = parseWithSlots(`<slot :name />`)
+    expect((ast.children[0] as ElementNode).codegenNode).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: RENDER_SLOT,
+      arguments: [
+        `$slots`,
+        {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: `name`,
+          isStatic: false,
+        },
+      ],
     })
   })
 })

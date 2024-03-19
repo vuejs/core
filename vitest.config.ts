@@ -1,25 +1,6 @@
-import { configDefaults, defineConfig, UserConfig } from 'vitest/config'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { readdirSync } from 'node:fs'
-
-const resolve = p =>
-  path.resolve(fileURLToPath(import.meta.url), `../packages/${p}/src/index.ts`)
-const dirs = readdirSync(new URL('./packages', import.meta.url))
-
-const alias = {
-  vue: resolve('vue'),
-  'vue/compiler-sfc': resolve('compiler-sfc'),
-  'vue/server-renderer': resolve('server-renderer'),
-  '@vue/compat': resolve('vue-compat')
-}
-
-for (const dir of dirs) {
-  const key = `@vue/${dir}`
-  if (dir !== 'vue' && !(key in alias)) {
-    alias[key] = resolve(dir)
-  }
-}
+import { configDefaults, defineConfig } from 'vitest/config'
+import { entries } from './scripts/aliases.js'
+import codspeedPlugin from '@codspeed/vitest-plugin'
 
 export default defineConfig({
   define: {
@@ -30,24 +11,26 @@ export default defineConfig({
     __GLOBAL__: false,
     __ESM_BUNDLER__: true,
     __ESM_BROWSER__: false,
-    __NODE_JS__: true,
+    __CJS__: true,
     __SSR__: true,
     __FEATURE_OPTIONS_API__: true,
     __FEATURE_SUSPENSE__: true,
     __FEATURE_PROD_DEVTOOLS__: false,
-    __COMPAT__: true
+    __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+    __COMPAT__: true,
   },
   resolve: {
-    alias
+    alias: entries,
   },
+  plugins: [codspeedPlugin()],
   test: {
     globals: true,
-    setupFiles: 'scripts/setupVitest.ts',
+    setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
-      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom']
+      ['packages/{vue,vue-compat,runtime-dom}/**', 'jsdom'],
     ],
     sequence: {
-      hooks: 'list'
+      hooks: 'list',
     },
     coverage: {
       provider: 'istanbul',
@@ -57,8 +40,8 @@ export default defineConfig({
         // DOM transitions are tested via e2e so no coverage is collected
         'packages/runtime-dom/src/components/Transition*',
         // mostly entries
-        'packages/vue-compat/**'
-      ]
-    }
-  }
-}) as UserConfig
+        'packages/vue-compat/**',
+      ],
+    },
+  },
+})

@@ -1,4 +1,3 @@
-import { vi } from 'vitest'
 import { patchProp } from '../src/patchProp'
 
 const timeout = () => new Promise(r => setTimeout(r))
@@ -160,9 +159,10 @@ describe(`runtime-dom: events patching`, () => {
       childFn()
       patchProp(el, 'onClick', null, parentFn)
     })
-    child.dispatchEvent(new Event('click', { bubbles: true }))
 
     await timeout()
+    child.dispatchEvent(new Event('click', { bubbles: true }))
+
     expect(childFn).toHaveBeenCalled()
     expect(parentFn).not.toHaveBeenCalled()
   })
@@ -176,7 +176,7 @@ describe(`runtime-dom: events patching`, () => {
     }
     window.customElements.define('test-element', TestElement)
     const testElement = document.createElement('test-element', {
-      is: 'test-element'
+      is: 'test-element',
     })
     const fn1 = vi.fn()
     const fn2 = vi.fn()
