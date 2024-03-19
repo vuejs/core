@@ -253,9 +253,9 @@ export function defineComponent<
 export function defineComponent<
   // the Readonly constraint allows TS to treat the type of { required: true }
   // as constant instead of boolean.
-  PropsOptions extends Readonly<ComponentPropsOptions>,
-  RawBindings,
-  D,
+  PropsOptions extends Readonly<ComponentPropsOptions> = {},
+  RawBindings = {},
+  D = {},
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
