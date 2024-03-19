@@ -42,6 +42,7 @@ import {
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
+  invalidatePostJob,
   queueJob,
   queuePostFlushCb,
 } from './scheduler'
@@ -2265,7 +2266,11 @@ function baseCreateRenderer(
       unregisterHMR(instance)
     }
 
-    const { bum, scope, update, subTree, um } = instance
+    const { bum, scope, update, subTree, um, m, u } = instance
+
+    // #9264 invalidate queued lifecycle hooks
+    if (m) m.forEach(invalidatePostJob)
+    if (u) u.forEach(invalidatePostJob)
 
     // beforeUnmount hook
     if (bum) {

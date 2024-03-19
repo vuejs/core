@@ -117,6 +117,16 @@ export function invalidateJob(job: SchedulerJob) {
   }
 }
 
+export function invalidatePostJob(job: SchedulerJob) {
+  const i = pendingPostFlushCbs.indexOf(job)
+  // the job might be the first item in the pendingPostFlushCbs.
+  // so index should from -1 if not in flushing
+  const index = activePostFlushCbs ? postFlushIndex : -1
+  if (i > index) {
+    pendingPostFlushCbs.splice(i, 1)
+  }
+}
+
 export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
     if (
