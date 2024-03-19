@@ -430,6 +430,10 @@ export function resolveTransitionHooks(
           delete leavingVNodesCache[key]
         }
       })
+      if (!vnode.el) {
+        vnode = cloneVNode(vnode)
+        vnode.el = el
+      }
       leavingVNodesCache[key] = vnode
       if (onLeave) {
         callAsyncHook(onLeave, [el, done])
