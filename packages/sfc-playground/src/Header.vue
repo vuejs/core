@@ -1,35 +1,44 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import type { ReplStore } from '@vue/repl'
 import { downloadProject } from './download/download'
-import { ref } from 'vue'
 import Sun from './icons/Sun.vue'
 import Moon from './icons/Moon.vue'
 import Share from './icons/Share.vue'
 import Download from './icons/Download.vue'
 import GitHub from './icons/GitHub.vue'
-import type { ReplStore } from '@vue/repl'
+import Reload from './icons/Reload.vue'
 import VersionSelect from './VersionSelect.vue'
 
 const props = defineProps<{
   store: ReplStore
-  dev: boolean
+  prod: boolean
   ssr: boolean
 }>()
-const emit = defineEmits(['toggle-theme', 'toggle-ssr', 'toggle-dev'])
+const emit = defineEmits([
+  'toggle-theme',
+  'toggle-ssr',
+  'toggle-prod',
+  'reload-page',
+])
 
 const { store } = props
 
 const currentCommit = __COMMIT__
-const vueVersion = ref(`@${currentCommit}`)
+
+const vueVersion = computed(() => {
+  if (store.loading) {
+    return 'loading...'
+  }
+  return store.vueVersion || `@${__COMMIT__}`
+})
 
 async function setVueVersion(v: string) {
-  vueVersion.value = `loading...`
-  await store.setVueVersion(v)
-  vueVersion.value = `v${v}`
+  store.vueVersion = v
 }
 
 function resetVueVersion() {
-  store.resetVueVersion()
-  vueVersion.value = `@${currentCommit}`
+  store.vueVersion = null
 }
 
 async function copyLink(e: MouseEvent) {
@@ -47,7 +56,7 @@ function toggleDark() {
   cls.toggle('dark')
   localStorage.setItem(
     'vue-sfc-playground-prefer-dark',
-    String(cls.contains('dark'))
+    String(cls.contains('dark')),
   )
   emit('toggle-theme', cls.contains('dark'))
 }
@@ -61,7 +70,7 @@ function toggleDark() {
     </h1>
     <div class="links">
       <VersionSelect
-        v-model="store.state.typescriptVersion"
+        v-model="store.typescriptVersion"
         pkg="typescript"
         label="TypeScript Version"
       />
@@ -84,11 +93,11 @@ function toggleDark() {
       </VersionSelect>
       <button
         title="Toggle development production mode"
-        class="toggle-dev"
-        :class="{ dev }"
-        @click="$emit('toggle-dev')"
+        class="toggle-prod"
+        :class="{ prod }"
+        @click="$emit('toggle-prod')"
       >
-        <span>{{ dev ? 'DEV' : 'PROD' }}</span>
+        <span>{{ prod ? 'PROD' : 'DEV' }}</span>
       </button>
       <button
         title="Toggle server rendering mode"
@@ -104,6 +113,9 @@ function toggleDark() {
       </button>
       <button title="Copy sharable URL" class="share" @click="copyLink">
         <Share />
+      </button>
+      <button title="Reload page" class="reload" @click="$emit('reload-page')">
+        <Reload />
       </button>
       <button
         title="Download project files"
@@ -186,20 +198,20 @@ h1 img {
   display: flex;
 }
 
-.toggle-dev span,
+.toggle-prod span,
 .toggle-ssr span {
   font-size: 12px;
   border-radius: 4px;
   padding: 4px 6px;
 }
 
-.toggle-dev span {
-  background: var(--purple);
+.toggle-prod span {
+  background: var(--green);
   color: #fff;
 }
 
-.toggle-dev.dev span {
-  background: var(--green);
+.toggle-prod.prod span {
+  background: var(--purple);
 }
 
 .toggle-ssr span {
