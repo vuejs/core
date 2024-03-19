@@ -508,4 +508,45 @@ describe('e2e: TransitionGroup', () => {
 
     expect(`<TransitionGroup> children must be keyed`).toHaveBeenWarned()
   })
+
+  test(
+    'works when child component has single root + comments',
+    async () => {
+      const onErrorSpy = vi.fn()
+      await page().exposeFunction('onErrorSpy', onErrorSpy)
+
+      await page().evaluate(() => {
+        const { onErrorSpy } = window as any
+        const { createApp, ref, onErrorCaptured } = (window as any).Vue
+
+        const app = createApp({
+          template: `
+          <div id="container">
+            <transition-group>
+              <a-component v-if="show"></a-component>
+            </transition-group>
+          </div>
+          <button id="toggleBtn" @click="click">button</button>
+          `,
+          setup: () => {
+            onErrorCaptured(() => onErrorSpy())
+            const show = ref(true)
+            const click = () => (show.value = false)
+            return { show, click }
+          },
+        })
+        app.component('a-component', { template: `<!----><div></div>` })
+        app.mount('#app')
+      })
+
+      expect(await html('#container')).toBe('<!----><div></div>')
+
+      await htmlWhenTransitionStart()
+      await transitionFinish()
+
+      expect(onErrorSpy).not.toBeCalled()
+      expect(await html('#container')).toBe('')
+    },
+    E2E_TIMEOUT,
+  )
 })

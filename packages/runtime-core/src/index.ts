@@ -354,6 +354,8 @@ export {
   normalizeStyle,
 } from '@vue/shared'
 
+export { filterSingleRoot } from './componentRenderUtils'
+
 // For test-utils
 export { transformVNodeArgs } from './vnode'
 

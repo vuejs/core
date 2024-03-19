@@ -15,8 +15,10 @@ import {
   Fragment,
   type SetupContext,
   type VNode,
+  type VNodeArrayChildren,
   compatUtils,
   createVNode,
+  filterSingleRoot,
   getCurrentInstance,
   getTransitionRawChildren,
   onUpdated,
@@ -26,7 +28,7 @@ import {
   useTransitionState,
   warn,
 } from '@vue/runtime-core'
-import { extend } from '@vue/shared'
+import { PatchFlags, ShapeFlags, extend } from '@vue/shared'
 
 const positionMap = new WeakMap<VNode, DOMRect>()
 const newPositionMap = new WeakMap<VNode, DOMRect>()
@@ -113,6 +115,28 @@ const TransitionGroupImpl: ComponentOptions = {
       }
 
       prevChildren = children
+
+      // In dev mode, comments are preserved, and it's possible for a template
+      // to have comments alongside the root element which makes it a fragment.
+      // In that case we re-assign `el` so DOM operations access the actual
+      // root element instead of the fragment root. (#6745)
+      if (__DEV__ && prevChildren) {
+        prevChildren.forEach(child => {
+          if (
+            child.shapeFlag & ShapeFlags.COMPONENT &&
+            child.component &&
+            child.component.subTree.patchFlag & PatchFlags.DEV_ROOT_FRAGMENT
+          ) {
+            const elementRoot = filterSingleRoot(
+              child.component.subTree.children as VNodeArrayChildren,
+            )
+            if (elementRoot) {
+              child.el = elementRoot.el
+            }
+          }
+        })
+      }
+
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
