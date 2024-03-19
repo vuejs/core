@@ -219,6 +219,7 @@ function normalizeContainer(
 export {
   defineCustomElement,
   defineSSRCustomElement,
+  defineStandardCustomElement,
   VueElement,
   type VueElementConstructor,
 } from './apiCustomElement'
