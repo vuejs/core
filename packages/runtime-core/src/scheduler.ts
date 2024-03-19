@@ -94,10 +94,11 @@ export function queueJob(job: SchedulerJob) {
       isFlushing && job.allowRecurse ? flushIndex + 1 : flushIndex,
     )
   ) {
-    if (job.id == null) {
+    const jobId = getId(job)
+    if (jobId === Infinity) {
       queue.push(job)
     } else {
-      queue.splice(findInsertionIndex(job.id), 0, job)
+      queue.splice(findInsertionIndex(jobId), 0, job)
     }
     queueFlush()
   }
@@ -199,7 +200,7 @@ export function flushPostFlushCbs(seen?: CountMap) {
 }
 
 const getId = (job: SchedulerJob): number =>
-  job.id == null ? Infinity : job.id
+  job.id == null ? (job.pre ? -1 : Infinity) : job.id
 
 const comparator = (a: SchedulerJob, b: SchedulerJob): number => {
   const diff = getId(a) - getId(b)
