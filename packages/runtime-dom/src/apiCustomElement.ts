@@ -314,7 +314,7 @@ export class VueElement extends BaseClass {
         !isArray(props) &&
         hasOwn(props[key], 'default')
       ) {
-        this._setProp(camelKey, props[key].default)
+        this._setProp(camelKey, props[key].default, true, false)
       }
 
       Object.defineProperty(this, camelKey, {
