@@ -15,9 +15,8 @@ export const vShow: ObjectDirective<VShowElement> & { name?: 'show' } = {
       el.style.display === 'none' ? '' : el.style.display
     if (transition && value) {
       transition.beforeEnter(el)
-    } else {
-      setDisplay(el, value)
     }
+    setDisplay(el, value)
   },
   mounted(el, { value }, { transition }) {
     if (transition && value) {
