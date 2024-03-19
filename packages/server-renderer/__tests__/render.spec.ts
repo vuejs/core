@@ -909,6 +909,49 @@ function testRender(type: string, render: typeof renderToString) {
       expect(fn2).toBeCalledWith('async child error')
     })
 
+    test('error handling w/ async setup, multiple component instances and template rendering error', async () => {
+      const fn = vi.fn()
+      const fn2 = vi.fn()
+
+      const asyncChildren = defineComponent({
+        async setup() {},
+        template: `<div>asyncChildren{{notDefined.value}}</div>`
+      })
+      const app = createApp({
+        name: 'App',
+        components: {
+          asyncChildren
+        },
+        template: `<div class="app"><async-children /><async-children /></div>`,
+        errorCaptured(error) {
+          fn(error)
+        }
+      })
+
+      app.config.errorHandler = error => {
+        fn2(error)
+      }
+
+      let caughtError: any = null
+      try {
+        await renderToString(app)
+      } catch (error) {
+        caughtError = error
+      }
+
+      expect(caughtError).not.toBe(null)
+      expect(caughtError.message).toBe(
+        "Cannot read properties of undefined (reading 'value')"
+      )
+
+      expect(fn).toHaveBeenCalledTimes(0)
+      expect(fn2).toHaveBeenCalledTimes(0)
+
+      expect(
+        `Property "notDefined" was accessed during render but is not defined on instance`
+      ).toHaveBeenWarnedTimes(2)
+    })
+
     // https://github.com/vuejs/core/issues/3322
     test('effect onInvalidate does not error', async () => {
       const noop = () => {}
