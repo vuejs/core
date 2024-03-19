@@ -536,7 +536,7 @@ export function normalizePropsOptions(
     }
   }
 
-  if (!raw && !hasExtends) {
+  if (!raw && !hasExtends && !asMixin) {
     if (isObject(comp)) {
       cache.set(comp, EMPTY_ARR as any)
     }
@@ -579,7 +579,7 @@ export function normalizePropsOptions(
   }
 
   const res: NormalizedPropsOptions = [normalized, needCastKeys]
-  if (isObject(comp)) {
+  if (isObject(comp) && !asMixin) {
     cache.set(comp, res)
   }
   return res
