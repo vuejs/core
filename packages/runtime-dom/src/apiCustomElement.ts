@@ -257,18 +257,24 @@ export class VueElement extends BaseClass {
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
 
-      // cast Number-type props set before resolve
       let numberProps
       if (props && !isArray(props)) {
         for (const key in props) {
+          const camelKey = camelize(key)
           const opt = props[key]
+
+          // reflect default value
+          if (this._props[camelKey] === undefined && hasOwn(opt, 'default')) {
+            this._setProp(camelKey, opt.default, true, false)
+          }
+
+          // cast Number-type props set before resolve
           if (opt === Number || (opt && opt.type === Number)) {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }
-            ;(numberProps || (numberProps = Object.create(null)))[
-              camelize(key)
-            ] = true
+            ;(numberProps || (numberProps = Object.create(null)))[camelKey] =
+              true
           }
         }
       }
@@ -307,22 +313,13 @@ export class VueElement extends BaseClass {
     }
 
     // defining getter/setters on prototype
-    for (const key of declaredPropKeys) {
-      const camelKey = camelize(key)
-      if (
-        this._props[camelKey] === undefined &&
-        !isArray(props) &&
-        hasOwn(props[key], 'default')
-      ) {
-        this._setProp(camelKey, props[key].default, true, false)
-      }
-
-      Object.defineProperty(this, camelKey, {
+    for (const key of declaredPropKeys.map(camelize)) {
+      Object.defineProperty(this, key, {
         get() {
-          return this._getProp(camelKey)
+          return this._getProp(key)
         },
         set(val) {
-          this._setProp(camelKey, val)
+          this._setProp(key, val)
         },
       })
     }
