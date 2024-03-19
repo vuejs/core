@@ -829,7 +829,7 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
-    if (dynamicChildren) {
+    if (optimized && dynamicChildren) {
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,
@@ -1062,11 +1062,14 @@ function baseCreateRenderer(
     let { patchFlag, dynamicChildren, slotScopeIds: fragmentSlotScopeIds } = n2
 
     if (
-      __DEV__ &&
-      // #5523 dev root fragment may inherit directives
-      (isHmrUpdating || patchFlag & PatchFlags.DEV_ROOT_FRAGMENT)
+      (__DEV__ &&
+        // #5523 dev root fragment may inherit directives
+        // HMR updated / Dev root fragment (w/ comments), force full diff
+        (isHmrUpdating ||
+          (patchFlag > 0 && patchFlag & PatchFlags.DEV_ROOT_FRAGMENT))) ||
+      // #9200 slot and fallback node has different patchFlag, force full diff
+      (n1 && n1.patchFlag !== n2.patchFlag)
     ) {
-      // HMR updated / Dev root fragment (w/ comments), force full diff
       patchFlag = 0
       optimized = false
       dynamicChildren = null
@@ -1101,6 +1104,7 @@ function baseCreateRenderer(
       )
     } else {
       if (
+        optimized &&
         patchFlag > 0 &&
         patchFlag & PatchFlags.STABLE_FRAGMENT &&
         dynamicChildren &&
