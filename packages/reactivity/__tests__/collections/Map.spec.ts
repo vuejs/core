@@ -471,5 +471,17 @@ describe('reactivity/collections', () => {
       const result = map.set('a', 'a')
       expect(result).toBe(map)
     })
+    it('should not trigger Map.size when setting existing keys', () => {
+      const map = reactive(new Map())
+      map.set('a', 'a')
+      const fn = jest.fn(() => map.size)
+      effect(fn)
+      expect(fn).toBeCalledTimes(1)
+      map.set('a', 'b')
+      expect(fn).toBeCalledTimes(1)
+
+      map.set('b', 'b')
+      expect(fn).toBeCalledTimes(2)
+    })
   })
 })
