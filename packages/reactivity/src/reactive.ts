@@ -252,6 +252,7 @@ function createReactiveObject(
     }
     return target
   }
+
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (

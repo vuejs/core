@@ -121,7 +121,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       // early return undefined
       return
     }
-
+    const rawTarget = toRaw(target)
     const targetIsArray = isArray(target)
 
     if (!isReadonly) {
@@ -139,7 +139,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return res
     }
 
-    if (!isReadonly) {
+    if (!isReadonly && !isRef(rawTarget)) {
       track(target, TrackOpTypes.GET, key)
     }
 
