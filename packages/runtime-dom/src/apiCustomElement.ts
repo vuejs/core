@@ -260,12 +260,11 @@ export class VueElement extends BaseClass {
       let numberProps
       if (props && !isArray(props)) {
         for (const key in props) {
-          const camelKey = camelize(key)
           const opt = props[key]
 
           // reflect default value
-          if (this._props[camelKey] === undefined && hasOwn(opt, 'default')) {
-            this._setProp(camelKey, opt.default, true, false)
+          if (this._props[key] === undefined && hasOwn(opt, 'default')) {
+            this._setProp(key, opt.default, true, false)
           }
 
           // cast Number-type props set before resolve
@@ -273,8 +272,9 @@ export class VueElement extends BaseClass {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
             }
-            ;(numberProps || (numberProps = Object.create(null)))[camelKey] =
-              true
+            ;(numberProps || (numberProps = Object.create(null)))[
+              camelize(key)
+            ] = true
           }
         }
       }
