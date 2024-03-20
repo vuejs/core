@@ -50,7 +50,7 @@
     "estree-walker": "^2.0.2",
     "magic-string": "^0.30.8",
     "postcss": "^8.4.35",
-    "source-map-js": "^1.0.2"
+    "source-map-js": "^1.1.0"
   },
   "devDependencies": {
     "@babel/types": "^7.24.0",
@@ -62,6 +62,6 @@
     "postcss-modules": "^6.0.0",
     "postcss-selector-parser": "^6.0.15",
     "pug": "^3.0.2",
-    "sass": "^1.71.1"
+    "sass": "^1.72.0"
   }
 }
