@@ -170,10 +170,23 @@ function rewriteSelector(
       }
     }
 
+    if (n.type === 'universal') {
+      const prev = selector.at(selector.index(n) - 1)
+      const next = selector.at(selector.index(n) + 1)
+      if (!prev && !next) {
+        node = selectorParser.combinator({
+          value: '',
+        })
+        selector.insertBefore(n, node)
+        selector.removeChild(n)
+      }
+    }
+
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
     ) {
+      if (n.type === 'universal' && node) return
       node = n
     }
   })
