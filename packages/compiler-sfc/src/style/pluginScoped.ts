@@ -172,13 +172,13 @@ function rewriteSelector(
 
     if (n.type === 'universal') {
       const prev = selector.at(selector.index(n) - 1)
-      const next = selector.at(selector.index(n) + 1)
-      if (!prev && !next) {
+      if (!prev) {
         node = selectorParser.combinator({
           value: '',
         })
         selector.insertBefore(n, node)
         selector.removeChild(n)
+        return false
       }
     }
 
