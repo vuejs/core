@@ -170,10 +170,7 @@ function rewriteSelector(
       }
     }
 
-    if (
-      (n.type !== 'pseudo' && n.type !== 'combinator') ||
-      (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
-    ) {
+    if (n.type !== 'combinator') {
       node = n
     }
   })
