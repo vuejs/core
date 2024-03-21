@@ -1,3 +1,4 @@
+import { effectScope } from '@vue/reactivity'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -212,6 +213,7 @@ export function createAppAPI<HostElement>(
       rootProps = null
     }
 
+    const scope = effectScope(true)
     const context = createAppContext()
     const installedPlugins = new WeakSet()
 
@@ -368,6 +370,7 @@ export function createAppAPI<HostElement>(
 
       unmount() {
         if (isMounted) {
+          scope.stop()
           render(null, app._container)
           if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
             app._instance = null
@@ -396,7 +399,7 @@ export function createAppAPI<HostElement>(
         const lastApp = currentApp
         currentApp = app
         try {
-          return fn()
+          return scope.run(fn)!
         } finally {
           currentApp = lastApp
         }
