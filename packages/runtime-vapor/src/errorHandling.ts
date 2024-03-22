@@ -7,7 +7,11 @@ import type { ComponentInternalInstance } from './component'
 import { isFunction, isPromise } from '@vue/shared'
 import { warn } from './warning'
 import { VaporLifecycleHooks } from './apiLifecycle'
-import { BaseWatchErrorCodes } from '@vue/reactivity'
+import {
+  BaseWatchErrorCodes,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 
 // contexts where user provided function may be executed, in addition to
 // lifecycle hooks.
@@ -131,18 +135,19 @@ export function handleError(
       cur = cur.parent
     }
 
-    // TODO: need appContext interface
     // app-level handling
-    // const appErrorHandler = instance.appContext?.config.errorHandler
-    // if (appErrorHandler) {
-    //   callWithErrorHandling(
-    //     appErrorHandler,
-    //     null,
-    //     ErrorCodes.APP_ERROR_HANDLER,
-    //     [err, exposedInstance, errorInfo],
-    //   )
-    //   return
-    // }
+    const appErrorHandler = instance.appContext.config.errorHandler
+    if (appErrorHandler) {
+      pauseTracking()
+      callWithErrorHandling(
+        appErrorHandler,
+        null,
+        VaporErrorCodes.APP_ERROR_HANDLER,
+        [err, instance, errorInfo],
+      )
+      resetTracking()
+      return
+    }
   }
   logError(err, type, throwInDev)
 }
