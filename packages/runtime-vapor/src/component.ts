@@ -18,9 +18,9 @@ import {
   normalizeEmitsOptions,
 } from './componentEmits'
 import { VaporLifecycleHooks } from './apiLifecycle'
-
-import type { Data } from '@vue/shared'
 import { warn } from './warning'
+import { type AppContext, createAppContext } from './apiCreateVaporApp'
+import type { Data } from '@vue/shared'
 
 export type Component = FunctionalComponent | ObjectComponent
 
@@ -79,11 +79,13 @@ export interface ComponentInternalInstance {
   [componentKey]: true
   uid: number
   vapor: true
+  appContext: AppContext
 
   block: Block | null
   container: ParentNode
   parent: ComponentInternalInstance | null
 
+  provides: Data
   scope: EffectScope
   component: FunctionalComponent | ObjectComponent
   comps: Set<ComponentInternalInstance>
@@ -180,23 +182,32 @@ export const unsetCurrentInstance = () => {
   currentInstance = null
 }
 
+const emptyAppContext = createAppContext()
+
 let uid = 0
 export function createComponentInstance(
   component: ObjectComponent | FunctionalComponent,
   rawProps: RawProps | null,
+  // application root node only
+  appContext: AppContext | null = null,
 ): ComponentInternalInstance {
+  const parent = getCurrentInstance()
+  const _appContext =
+    (parent ? parent.appContext : appContext) || emptyAppContext
+
   const instance: ComponentInternalInstance = {
     [componentKey]: true,
     uid: uid++,
     vapor: true,
+    appContext: _appContext,
 
     block: null,
     container: null!,
 
-    // TODO
-    parent: null,
+    parent,
 
     scope: new EffectScope(true /* detached */)!,
+    provides: parent ? parent.provides : Object.create(_appContext.provides),
     component,
     comps: new Set(),
     dirs: new Map(),

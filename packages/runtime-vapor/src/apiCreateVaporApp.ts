@@ -7,6 +7,7 @@ import {
 import { warn } from './warning'
 import { version } from '.'
 import { render, setupComponent, unmountComponent } from './apiRender'
+import type { InjectionKey } from './apiInject'
 import type { RawProps } from './componentProps'
 
 export function createVaporApp(
@@ -22,6 +23,8 @@ export function createVaporApp(
   let instance: ComponentInternalInstance
 
   const app: App = {
+    _context: context,
+
     version,
 
     get config() {
@@ -38,7 +41,7 @@ export function createVaporApp(
 
     mount(rootContainer): any {
       if (!instance) {
-        instance = createComponentInstance(rootComponent, rootProps)
+        instance = createComponentInstance(rootComponent, rootProps, context)
         setupComponent(instance)
         render(instance, rootContainer)
         return instance
@@ -58,18 +61,40 @@ export function createVaporApp(
         warn(`Cannot unmount an app that is not mounted.`)
       }
     },
+    provide(key, value) {
+      if (__DEV__ && (key as string | symbol) in context.provides) {
+        warn(
+          `App already provides property with key "${String(key)}". ` +
+            `It will be overwritten with the new value.`,
+        )
+      }
+
+      context.provides[key as string | symbol] = value
+
+      return app
+    },
+    runWithContext(fn) {
+      const lastApp = currentApp
+      currentApp = app
+      try {
+        return fn()
+      } finally {
+        currentApp = lastApp
+      }
+    },
   }
 
   return app
 }
 
-function createAppContext(): AppContext {
+export function createAppContext(): AppContext {
   return {
     app: null as any,
     config: {
       errorHandler: undefined,
       warnHandler: undefined,
     },
+    provides: Object.create(null),
   }
 }
 
@@ -82,6 +107,10 @@ export interface App {
     isHydrate?: boolean,
   ): ComponentInternalInstance
   unmount(): void
+  provide<T>(key: string | InjectionKey<T>, value: T): App
+  runWithContext<T>(fn: () => T): T
+
+  _context: AppContext
 }
 
 export interface AppConfig {
@@ -100,4 +129,11 @@ export interface AppConfig {
 export interface AppContext {
   app: App // for devtools
   config: AppConfig
+  provides: Record<string | symbol, any>
 }
+
+/**
+ * @internal Used to identify the current app when using `inject()` within
+ * `app.runWithContext()`.
+ */
+export let currentApp: App | null = null
