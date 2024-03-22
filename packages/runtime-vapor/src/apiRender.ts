@@ -1,15 +1,22 @@
-import { isArray, isFunction, isObject } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   componentKey,
+  createSetupContext,
   setCurrentInstance,
 } from './component'
 import { insert, querySelector, remove } from './dom/element'
 import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
-import { proxyRefs } from '@vue/reactivity'
 import { invokeLifecycle } from './componentLifecycle'
 import { VaporLifecycleHooks } from './apiLifecycle'
+import {
+  pauseTracking,
+  proxyRefs,
+  resetTracking,
+  shallowReadonly,
+} from '@vue/reactivity'
+import { isArray, isFunction, isObject } from '@vue/shared'
 import { fallThroughAttrs } from './componentAttrs'
+import { VaporErrorCodes, callWithErrorHandling } from './errorHandling'
 
 export const fragmentKey = Symbol(__DEV__ ? `fragmentKey` : ``)
 
@@ -26,11 +33,22 @@ export function setupComponent(
 ): void {
   const reset = setCurrentInstance(instance)
   instance.scope.run(() => {
-    const { component, props, emit, attrs } = instance
-    const ctx = { expose: () => {}, emit, attrs }
+    const { component, props } = instance
 
     const setupFn = isFunction(component) ? component : component.setup
-    const stateOrNode = setupFn && setupFn(props, ctx)
+    let stateOrNode: Block | undefined
+    if (setupFn) {
+      const setupContext = (instance.setupContext =
+        setupFn && setupFn.length > 1 ? createSetupContext(instance) : null)
+      pauseTracking()
+      stateOrNode = callWithErrorHandling(
+        setupFn,
+        instance,
+        VaporErrorCodes.SETUP_FUNCTION,
+        [__DEV__ ? shallowReadonly(props) : props, setupContext],
+      )
+      resetTracking()
+    }
 
     let block: Block | undefined
 
