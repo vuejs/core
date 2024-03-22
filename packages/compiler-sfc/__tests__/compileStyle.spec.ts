@@ -162,7 +162,7 @@ describe('SFC scoped CSS', () => {
   })
 
   // #10511
-  test(':is and :where with same pre-selector should have right priority', () => {
+  test(':is() and :where() in compound selectors', () => {
     expect(
       compileScoped(`.div { color: red; } .div:where(:hover) { color: blue; }`),
     ).toMatchInlineSnapshot(`
