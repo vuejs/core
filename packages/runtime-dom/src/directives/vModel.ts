@@ -242,9 +242,13 @@ function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
         const optionType = typeof optionValue
         // fast path for string / number values
         if (optionType === 'string' || optionType === 'number') {
-          option.selected = value.includes(
-            number ? looseToNumber(optionValue) : optionValue,
-          )
+          option.selected = !!value.find(v => {
+            let value = optionValue
+            if (number) {
+              value = looseToNumber(optionValue)
+            }
+            return looseEqual(value, v)
+          })
         } else {
           option.selected = looseIndexOf(value, optionValue) > -1
         }
