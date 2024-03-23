@@ -73,13 +73,16 @@ function size(target: IterableCollections, isReadonly = false) {
 }
 
 function add(this: SetTypes, value: unknown) {
-  value = toRaw(value)
+  const rawValue = toRaw(value)
   const target = toRaw(this)
   const proto = getProto(target)
-  const hadKey = proto.has.call(target, value)
+  const hadKey =
+    value === rawValue
+      ? proto.has.call(target, rawValue)
+      : proto.has.call(target, rawValue) || proto.has.call(target, value)
   if (!hadKey) {
-    target.add(value)
-    trigger(target, TriggerOpTypes.ADD, value, value)
+    target.add(rawValue)
+    trigger(target, TriggerOpTypes.ADD, rawValue, rawValue)
   }
   return this
 }
