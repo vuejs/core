@@ -112,7 +112,10 @@ const TransitionGroupImpl: ComponentOptions = {
         tag = 'span'
       }
 
-      prevChildren = children
+      // filter out comment nodes and text nodes
+      prevChildren =
+        children &&
+        children.filter(child => child.el && child.el instanceof Element)
       children = slots.default ? getTransitionRawChildren(slots.default()) : []
 
       for (let i = 0; i < children.length; i++) {
