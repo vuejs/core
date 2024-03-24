@@ -6,7 +6,6 @@ import {
   createComponent,
   createTextNode,
   createVaporApp,
-  getCurrentInstance,
   hasInjectionContext,
   inject,
   nextTick,

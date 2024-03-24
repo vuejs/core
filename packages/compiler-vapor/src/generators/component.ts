@@ -12,6 +12,7 @@ import {
 import { genExpression } from './expression'
 import { genPropKey } from './prop'
 
+// TODO: generate component slots
 export function genCreateComponent(
   oper: CreateComponentIRNode,
   context: CodegenContext,

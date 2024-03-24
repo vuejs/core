@@ -17,6 +17,12 @@ import {
   emit,
   normalizeEmitsOptions,
 } from './componentEmits'
+import {
+  type DynamicSlots,
+  type InternalSlots,
+  type Slots,
+  initSlots,
+} from './componentSlots'
 import { VaporLifecycleHooks } from './apiLifecycle'
 import { warn } from './warning'
 import { type AppContext, createAppContext } from './apiCreateVaporApp'
@@ -32,7 +38,7 @@ export type SetupContext<E = EmitsOptions> = E extends any
       attrs: Data
       emit: EmitFn<E>
       expose: (exposed?: Record<string, any>) => void
-      // TODO slots
+      slots: Readonly<InternalSlots>
     }
   : never
 
@@ -46,6 +52,9 @@ export function createSetupContext(
       get attrs() {
         return getAttrsProxy(instance)
       },
+      get slots() {
+        return getSlotsProxy(instance)
+      },
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
@@ -57,6 +66,7 @@ export function createSetupContext(
         return getAttrsProxy(instance)
       },
       emit: instance.emit,
+      slots: instance.slots,
       expose: NOOP,
     }
   }
@@ -102,9 +112,11 @@ export interface ComponentInternalInstance {
   emit: EmitFn
   emitted: Record<string, boolean> | null
   attrs: Data
+  slots: InternalSlots
   refs: Data
 
-  attrsProxy: Data | null
+  attrsProxy?: Data
+  slotsProxy?: Slots
 
   // lifecycle
   isMounted: boolean
@@ -188,6 +200,8 @@ let uid = 0
 export function createComponentInstance(
   component: ObjectComponent | FunctionalComponent,
   rawProps: RawProps | null,
+  slots: Slots | null = null,
+  dynamicSlots: DynamicSlots | null = null,
   // application root node only
   appContext: AppContext | null = null,
 ): ComponentInternalInstance {
@@ -224,9 +238,8 @@ export function createComponentInstance(
     emit: null!,
     emitted: null,
     attrs: EMPTY_OBJ,
+    slots: EMPTY_OBJ,
     refs: EMPTY_OBJ,
-
-    attrsProxy: null,
 
     // lifecycle
     isMounted: false,
@@ -283,6 +296,7 @@ export function createComponentInstance(
     // [VaporLifecycleHooks.SERVER_PREFETCH]: null,
   }
   initProps(instance, rawProps, !isFunction(component))
+  initSlots(instance, slots, dynamicSlots)
   instance.emit = emit.bind(null, instance)
 
   return instance
@@ -313,5 +327,19 @@ function getAttrsProxy(instance: ComponentInternalInstance): Data {
             },
           },
     ))
+  )
+}
+
+/**
+ * Dev-only
+ */
+function getSlotsProxy(instance: ComponentInternalInstance): Slots {
+  return (
+    instance.slotsProxy ||
+    (instance.slotsProxy = new Proxy(instance.slots, {
+      get(target, key: string) {
+        return target[key]
+      },
+    }))
   )
 }
