@@ -2342,6 +2342,28 @@ function baseCreateRenderer(
     }
   }
 
+  const findSubTeleports = (vnode: VNode): VNode[] => {
+    const teleports: VNode[] = []
+    if (vnode.shapeFlag & ShapeFlags.TELEPORT) {
+      teleports.push(vnode)
+    }
+    if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+      teleports.push(...findSubTeleports(vnode.component.subTree))
+    }
+    if (isArray(vnode.children)) {
+      ;(vnode.children as VNode[]).forEach(c => {
+        teleports.push(...findSubTeleports(c))
+      })
+    }
+    return teleports
+  }
+
+  const isSubTeleportNode = (vnode: VNode, node: RendererNode): boolean => {
+    const subTeleports = findSubTeleports(vnode)
+    if (subTeleports.length === 0) return false
+    return subTeleports.some(t => t === node.__teleportVNode)
+  }
+
   const getNextHostNode: NextFn = vnode => {
     if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
       return getNextHostNode(vnode.component!.subTree)
@@ -2349,7 +2371,15 @@ function baseCreateRenderer(
     if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
       return vnode.suspense!.next()
     }
-    return hostNextSibling((vnode.anchor || vnode.el)!)
+    let node = hostNextSibling((vnode.anchor || vnode.el)!)
+
+    // if node is teleported and in vnode's sub teleport tree
+    // it should be skipped
+    while (node && node.__teleportVNode && isSubTeleportNode(vnode, node)) {
+      node = hostNextSibling(node)
+    }
+
+    return node
   }
 
   let isFlushing = false
