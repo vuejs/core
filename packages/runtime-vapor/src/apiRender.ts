@@ -106,6 +106,9 @@ function mountComponent(
 
   insert(instance.block!, instance.container)
   instance.isMounted = true
+  instance.comps.forEach(comp => {
+    comp.isMounted = true
+  })
 
   // hook: mounted
   invokeLifecycle(instance, VaporLifecycleHooks.MOUNTED, 'mounted', true)
