@@ -23,13 +23,16 @@ import {
   createCallExpression,
   createCompilerError,
   createConditionalExpression,
+  createFunctionExpression,
   createInterpolation,
   createSequenceExpression,
   createSimpleExpression,
   createTemplateLiteral,
+  findDir,
   hasDynamicKeyVBind,
   isStaticArgOf,
   isStaticExp,
+  transformScopeExpression,
 } from '@vue/compiler-dom'
 import {
   NO,
@@ -54,6 +57,7 @@ import {
 import {
   type SSRTransformContext,
   processChildren,
+  processChildrenAsStatement,
 } from '../ssrCodegenTransform'
 
 // for directives with children overwrite (e.g. v-html & v-text), we need to
@@ -432,7 +436,17 @@ export function ssrProcessElement(
   if (rawChildren) {
     context.pushStringPart(rawChildren)
   } else if (node.children.length) {
-    processChildren(node, context)
+    // process v-scope
+    const dir = findDir(node, 'scope')
+    if (dir) {
+      const scopeFn = createFunctionExpression(
+        transformScopeExpression(dir.exp!),
+      )
+      scopeFn.body = processChildrenAsStatement(node, context)
+      context.pushStatement(createCallExpression(scopeFn))
+    } else {
+      processChildren(node, context)
+    }
   }
 
   if (!isVoidTag(node.tag)) {

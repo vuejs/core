@@ -22,6 +22,7 @@ import { transformModel } from './transforms/vModel'
 import { transformFilter } from './compat/transformFilter'
 import { ErrorCodes, createCompilerError, defaultOnError } from './errors'
 import { transformMemo } from './transforms/vMemo'
+import { trackVScopeScopes, transformScope } from './transforms/vScope'
 
 export type TransformPreset = [
   NodeTransform[],
@@ -36,6 +37,7 @@ export function getBaseTransformPreset(
       transformOnce,
       transformIf,
       transformMemo,
+      transformScope,
       transformFor,
       ...(__COMPAT__ ? [transformFilter] : []),
       ...(!__BROWSER__ && prefixIdentifiers
@@ -50,6 +52,7 @@ export function getBaseTransformPreset(
       transformSlotOutlet,
       transformElement,
       trackSlotScopes,
+      trackVScopeScopes,
       transformText,
     ],
     {

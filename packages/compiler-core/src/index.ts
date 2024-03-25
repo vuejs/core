@@ -54,6 +54,11 @@ export {
   trackSlotScopes,
 } from './transforms/vSlot'
 export {
+  transformScope,
+  trackVScopeScopes,
+  transformScopeExpression,
+} from './transforms/vScope'
+export {
   transformElement,
   resolveComponentType,
   buildProps,
