@@ -13,11 +13,12 @@ import {
 import { transformOn } from '../../src/transforms/vOn'
 import { transformElement } from '../../src/transforms/transformElement'
 import { transformExpression } from '../../src/transforms/transformExpression'
+import { transformFor } from 'packages/compiler-core/src/transforms/vFor'
 
 function parseWithVOn(template: string, options: CompilerOptions = {}) {
   const ast = parse(template, options)
   transform(ast, {
-    nodeTransforms: [transformExpression, transformElement],
+    nodeTransforms: [transformExpression, transformElement, transformFor],
     directiveTransforms: {
       on: transformOn,
     },
@@ -682,6 +683,18 @@ describe('compiler: transform v-on', () => {
           ],
         },
       })
+    })
+
+    test('should not be cached with Chinese identifiers', () => {
+      const { root } = parseWithVOn(
+        `<button v-for="中文 in list" @click="cur = 中文">{{ 中文 }}</button>`,
+        {
+          prefixIdentifiers: true,
+          cacheHandlers: true,
+        },
+      )
+
+      expect(root.cached).toBe(0)
     })
   })
 })
