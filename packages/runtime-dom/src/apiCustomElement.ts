@@ -179,6 +179,8 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
+  private _childStylesAnchor?: HTMLStyleElement
+  private _childStylesSet: Set<string> = new Set<string>()
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -365,14 +367,21 @@ export class VueElement extends BaseClass {
       vnode.ce = instance => {
         this._instance = instance
         instance.isCE = true
+
+        instance.ceContext = {
+          addCEChildStyle: this._addChildStyles.bind(this),
+          removeCEChildStyles: this._removeChildStyles.bind(this),
+          setStyleAttrs: this._setStyleAttrs.bind(this),
+        }
         // HMR
         if (__DEV__) {
-          instance.ceReload = newStyles => {
+          instance.ceReload = (newStyles?: string[] | undefined) => {
             // always reset styles
             if (this._styles) {
               this._styles.forEach(s => this.shadowRoot!.removeChild(s))
               this._styles.length = 0
             }
+            this._childStylesSet.clear()
             this._applyStyles(newStyles)
             this._instance = null
             this._update()
@@ -416,15 +425,105 @@ export class VueElement extends BaseClass {
 
   private _applyStyles(styles: string[] | undefined) {
     if (styles) {
-      styles.forEach(css => {
+      styles.forEach((css, index) => {
         const s = document.createElement('style')
         s.textContent = css
+        s.setAttribute(`data-v-ce-root`, '')
         this.shadowRoot!.appendChild(s)
+        this._childStylesAnchor = s
         // record for HMR
         if (__DEV__) {
           ;(this._styles || (this._styles = [])).push(s)
         }
       })
+    }
+  }
+
+  // The method used by custom element child components
+  // to add styles to the shadow dom
+  protected _addChildStyles(
+    styles: string[] | undefined,
+    uid: number,
+    hasAttr: boolean,
+  ) {
+    if (styles) {
+      // record style
+      const isRepeated = this.isHasChildStyle(styles)
+      if (isRepeated && !hasAttr) return
+
+      styles.forEach((css, index) => {
+        const s = document.createElement('style')
+        s.textContent = css
+
+        // set id for useCEStyleAttrs
+        s.setAttribute(`data-v-ce-${uid}`, '')
+
+        if (this._childStylesAnchor) {
+          this.shadowRoot!.insertBefore(s, this._childStylesAnchor as Node)
+        } else {
+          this.shadowRoot!.appendChild(s)
+        }
+        // update anchor
+        this._childStylesAnchor = s
+
+        // record for HMR
+        if (__DEV__) {
+          ;(this._styles || (this._styles = [])).push(s)
+        }
+      })
+    }
+  }
+
+  protected _setStyleAttrs(
+    uid: number | 'root',
+    nAttrs: Array<Record<string, string | number>>,
+    oAttrs?: Array<Record<string, string | number>>,
+  ) {
+    const styleEls = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+    styleEls.forEach((s, index) => {
+      if (oAttrs && oAttrs[index]) {
+        for (const key in oAttrs[index]) {
+          if (
+            nAttrs[index] &&
+            !nAttrs[index].hasOwnProperty(nAttrs[index][key])
+          ) {
+            s.removeAttribute((oAttrs[index][key] || '').toString())
+          }
+        }
+      }
+
+      for (const key in nAttrs[index]) {
+        s.setAttribute(key, (nAttrs[index][key] || '').toString())
+      }
+    })
+  }
+
+  protected _removeChildStyles(uid: number) {
+    // remove style tag and _childStylesSet(for HMR)
+    if (__DEV__) {
+      const styleList = this.shadowRoot!.querySelectorAll(`[data-v-ce-${uid}]`)
+      let oldStyleContentList: string[] = []
+      styleList.length > 0 &&
+        styleList.forEach(s => {
+          oldStyleContentList.unshift(s.innerHTML as string)
+          this.shadowRoot!.removeChild(s)
+          // update anchor
+          const anchor = this.shadowRoot!.querySelectorAll('style')
+          this._childStylesAnchor =
+            anchor.length > 0 ? anchor[anchor.length - 1] : undefined
+        })
+      this._childStylesSet.delete(oldStyleContentList.join())
+    }
+  }
+
+  protected isHasChildStyle(styles: string[] | undefined) {
+    if (styles) {
+      const styleContent = styles.join()
+      if (this._childStylesSet.has(styleContent)) {
+        return true
+      }
+      this._childStylesSet.add(styleContent)
+      return false
     }
   }
 }

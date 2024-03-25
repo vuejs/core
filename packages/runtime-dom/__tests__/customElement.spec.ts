@@ -1,4 +1,5 @@
 import {
+  type ComponentOptions,
   type Ref,
   type VueElement,
   defineAsyncComponent,
@@ -9,7 +10,9 @@ import {
   nextTick,
   ref,
   renderSlot,
+  useCEStyleAttrs,
 } from '../src'
+import { expect } from 'vitest'
 
 describe('defineCustomElement', () => {
   const container = document.createElement('div')
@@ -552,6 +555,31 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
     })
+
+    test('child components in shadow dom should have styles', async () => {
+      const Child = {
+        styles: [`.Child { color: blue; }`],
+        render() {
+          return h('div', { class: 'Child' }, 'hello')
+        },
+      }
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', {}, ['hello', h(Child)])
+        },
+      })
+      customElements.define('my-el-with-child-styles', Foo)
+      container.innerHTML = `<my-el-with-child-styles></my-el-with-child-styles>`
+      await nextTick()
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[1].textContent).toBe(`div { color: red; }`)
+    })
   })
 
   describe('async', () => {
@@ -584,10 +612,10 @@ describe('defineCustomElement', () => {
 
       // should inject styles
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>hello</div>`,
+        `<style data-v-ce-root="">div { color: red }</style><div>hello</div>`,
       )
       expect(e2.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>world</div>`,
+        `<style data-v-ce-root="">div { color: red }</style><div>world</div>`,
       )
 
       // attr
@@ -595,7 +623,7 @@ describe('defineCustomElement', () => {
       await nextTick()
       expect((e1 as any).msg).toBe('attr')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>attr</div>`,
+        `<style data-v-ce-root="">div { color: red }</style><div>attr</div>`,
       )
 
       // props
@@ -603,8 +631,78 @@ describe('defineCustomElement', () => {
       ;(e1 as any).msg = 'prop'
       expect(e1.getAttribute('msg')).toBe('prop')
       expect(e1.shadowRoot!.innerHTML).toBe(
-        `<style>div { color: red }</style><div>prop</div>`,
+        `<style data-v-ce-root="">div { color: red }</style><div>prop</div>`,
       )
+    })
+
+    test('child components in shadow dom should have styles & async', async () => {
+      const Child = {
+        styles: [`.Child { color: blue; }`],
+        render() {
+          return h('div', { class: 'Child' }, 'hello')
+        },
+      }
+      const Foo = defineCustomElement(
+        defineAsyncComponent(() => {
+          return Promise.resolve({
+            components: { Child },
+            styles: [`div { color: red; }`],
+            render() {
+              return h('div', {}, ['hello', h(Child)])
+            },
+          })
+        }),
+      )
+
+      customElements.define('my-el-with-child-styles-async', Foo)
+      container.innerHTML = `<my-el-with-child-styles-async></my-el-with-child-styles-async>`
+      await new Promise(r => setTimeout(r))
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[1].textContent).toBe(`div { color: red; }`)
+    })
+
+    test('child components in shadow dom should have styles & async & descendants', async () => {
+      const Child2 = defineAsyncComponent(() => {
+        return Promise.resolve({
+          styles: [`.Child2 { color: pink; }`],
+          render() {
+            return h('div', { class: 'Child2' }, 'pink')
+          },
+        } as ComponentOptions)
+      })
+
+      const Child = defineAsyncComponent(() => {
+        return Promise.resolve({
+          components: { Child2 },
+          styles: [`.Child { color: blue; }`],
+          render() {
+            return h('div', { class: 'Child' }, ['hello', h(Child2)])
+          },
+        } as ComponentOptions)
+      })
+      const Parent = {
+        components: { Child },
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', {}, ['hello', h(Child)])
+        },
+      }
+      const Foo = defineCustomElement(Parent)
+
+      customElements.define('my-el-with-child-styles-async-descendants', Foo)
+      container.innerHTML = `<my-el-with-child-styles-async-descendants></my-el-with-child-styles-async-descendants>`
+      await new Promise(r => setTimeout(r))
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(3)
+      expect(style[0].textContent).toBe(`.Child2 { color: pink; }`)
+      expect(style[1].textContent).toBe(`.Child { color: blue; }`)
+      expect(style[2].textContent).toBe(`div { color: red; }`)
     })
 
     test('set DOM property before resolve', async () => {
@@ -697,6 +795,179 @@ describe('defineCustomElement', () => {
       expect(e.shadowRoot!.innerHTML).toBe(
         `<div><slot><div>fallback</div></slot></div><div><slot name="named"></slot></div>`,
       )
+    })
+  })
+
+  describe('child components styles', () => {
+    test('Components are used multiple times without adding duplicate styles', async () => {
+      const Child = {
+        styles: [`.my-green { color: green; }`],
+        render() {
+          return h('p', { class: 'my-green' }, 'This should be green')
+        },
+      }
+
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [
+            h('p', { class: 'my-red' }, 'This should be red'),
+            h(Child),
+            h(Child),
+            h(Child),
+          ]
+        },
+      })
+      customElements.define('my-el-with-multiple-child', Foo)
+      container.innerHTML = `<my-el-with-multiple-child></my-el-with-multiple-child><my-el-with-multiple-child></my-el-with-multiple-child>`
+      await nextTick()
+
+      const el1 = container.childNodes[0] as VueElement
+      const style = el1.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(2)
+      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[1].textContent).toBe(`.my-red { color: red; }`)
+
+      const el2 = container.childNodes[1] as VueElement
+      const style2 = el2.shadowRoot?.querySelectorAll('style')!
+      expect(style2.length).toBe(2)
+      expect(style2[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[1].textContent).toBe(`.my-red { color: red; }`)
+    })
+
+    test('Component with style attribute used multiple times', async () => {
+      const Child = {
+        styles: [`.my-green { color: green; }`],
+        setup() {
+          const id = 'foo'
+          useCEStyleAttrs(() => {
+            return [
+              {
+                id: id,
+              },
+            ] as Record<string, string | number>[]
+          })
+        },
+        render() {
+          return h('p', { class: 'my-green' }, 'This should be green')
+        },
+      }
+
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [
+            h('p', { class: 'my-red' }, 'This should be red'),
+            h(Child),
+            h(Child),
+            h(Child),
+          ]
+        },
+      })
+      customElements.define('my-el-with-multiple-attr', Foo)
+      container.innerHTML = `<my-el-with-multiple-attr></my-el-with-multiple-attr><my-el-with-multiple-attr></my-el-with-multiple-attr>`
+      await nextTick()
+
+      const el1 = container.childNodes[0] as VueElement
+      const style = el1.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(4)
+      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[2].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[3].textContent).toBe(`.my-red { color: red; }`)
+
+      const el2 = container.childNodes[1] as VueElement
+      const style2 = el2.shadowRoot?.querySelectorAll('style')!
+      expect(style2.length).toBe(4)
+      expect(style2[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[1].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[2].textContent).toBe(`.my-green { color: green; }`)
+      expect(style2[3].textContent).toBe(`.my-red { color: red; }`)
+    })
+
+    test('nested child components w/ fragments in shadow dom should have styles', async () => {
+      const GrandChild = {
+        styles: [`.my-green { color: green; }`],
+        render() {
+          return h('p', { class: 'my-green' }, 'This should be green')
+        },
+      }
+      const Child = {
+        components: { GrandChild },
+        styles: [`.my-blue { color: blue; }`],
+        render() {
+          return h('div', {}, [
+            h('p', { class: 'my-blue' }, 'This should be blue'),
+            h('div', {}, h(GrandChild)),
+          ])
+        },
+      }
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
+        },
+      })
+      customElements.define('my-el-with-grandchild-styles', Foo)
+      container.innerHTML = `<my-el-with-grandchild-styles></my-el-with-grandchild-styles>`
+      await nextTick()
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(3)
+      expect(style[0].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[1].textContent).toBe(`.my-blue { color: blue; }`)
+      expect(style[2].textContent).toBe(`.my-red { color: red; }`)
+    })
+
+    test('deeply nested child components w/ fragments in shadow dom should have styles', async () => {
+      const GreatGrandChild = {
+        styles: [`.my-grey { color: grey; }`],
+        render() {
+          return h('p', { class: 'my-grey' }, 'This should be grey')
+        },
+      }
+      const GrandChild = {
+        components: { GreatGrandChild },
+        styles: [`.my-green { color: green; }`],
+        render() {
+          return [
+            h('p', { class: 'my-green' }, 'This should be green'),
+            h('span', {}, h(GreatGrandChild)),
+          ]
+        },
+      }
+      const Child = {
+        components: { GrandChild },
+        styles: [`.my-blue { color: blue; }`],
+        render() {
+          return h('div', {}, [
+            h('p', { class: 'my-blue' }, 'This should be blue'),
+            h('div', {}, h(GrandChild)),
+          ])
+        },
+      }
+      const Foo = defineCustomElement({
+        components: { Child },
+        styles: [`.my-red { color: red; }`],
+        render() {
+          return [h('p', { class: 'my-red' }, 'This should be red'), h(Child)]
+        },
+      })
+      customElements.define('my-el-with-greatgrandchild-styles', Foo)
+      container.innerHTML = `<my-el-with-greatgrandchild-styles></my-el-with-greatgrandchild-styles>`
+      await nextTick()
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelectorAll('style')!
+      expect(style.length).toBe(4)
+      expect(style[0].textContent).toBe(`.my-grey { color: grey; }`)
+      expect(style[1].textContent).toBe(`.my-green { color: green; }`)
+      expect(style[2].textContent).toBe(`.my-blue { color: blue; }`)
+      expect(style[3].textContent).toBe(`.my-red { color: red; }`)
     })
   })
 })

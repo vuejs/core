@@ -55,6 +55,7 @@ import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { CE_STYLE_ATTRS_HELPER, genCEStyleAttrs } from './style/ceStyleAttrs'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -741,6 +742,22 @@ export function compileScript(
         ctx.bindingMetadata,
         scopeId,
         !!options.isProd,
+      )}\n`,
+    )
+  }
+
+  if (
+    ctx.descriptor.ceStyleAttrs.length &&
+    // no need to do this when targeting SSR
+    !options.templateOptions?.ssr
+  ) {
+    ctx.helperImports.add(CE_STYLE_ATTRS_HELPER)
+    ctx.helperImports.add('unref')
+    ctx.s.prependLeft(
+      startOffset,
+      `\n${genCEStyleAttrs(
+        ctx.descriptor.ceStyleAttrs,
+        ctx.bindingMetadata,
       )}\n`,
     )
   }
