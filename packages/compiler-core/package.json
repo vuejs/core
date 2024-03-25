@@ -50,7 +50,7 @@
     "@vue/shared": "workspace:*",
     "entities": "^4.5.0",
     "estree-walker": "^2.0.2",
-    "source-map-js": "^1.1.0"
+    "source-map-js": "^1.2.0"
   },
   "devDependencies": {
     "@babel/types": "^7.24.0"
