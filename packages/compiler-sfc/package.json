@@ -42,15 +42,15 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/compiler-sfc#readme",
   "dependencies": {
-    "@babel/parser": "^7.24.0",
+    "@babel/parser": "^7.24.1",
     "@vue/compiler-core": "workspace:*",
     "@vue/compiler-dom": "workspace:*",
     "@vue/compiler-ssr": "workspace:*",
     "@vue/shared": "workspace:*",
     "estree-walker": "^2.0.2",
     "magic-string": "^0.30.8",
-    "postcss": "^8.4.35",
-    "source-map-js": "^1.0.2"
+    "postcss": "^8.4.38",
+    "source-map-js": "^1.2.0"
   },
   "devDependencies": {
     "@babel/types": "^7.24.0",
@@ -60,8 +60,8 @@
     "merge-source-map": "^1.1.0",
     "minimatch": "^9.0.3",
     "postcss-modules": "^6.0.0",
-    "postcss-selector-parser": "^6.0.15",
+    "postcss-selector-parser": "^6.0.16",
     "pug": "^3.0.2",
-    "sass": "^1.71.1"
+    "sass": "^1.72.0"
   }
 }
