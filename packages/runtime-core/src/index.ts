@@ -59,7 +59,7 @@ export {
 export { provide, inject, hasInjectionContext } from './apiInject'
 export { nextTick } from './scheduler'
 export { defineComponent } from './apiDefineComponent'
-export { defineAsyncComponent } from './apiAsyncComponent'
+export { defineAsyncComponent, isAsyncWrapper } from './apiAsyncComponent'
 export { useAttrs, useSlots } from './apiSetupHelpers'
 export { useModel } from './helpers/useModel'
 
