@@ -1,5 +1,6 @@
 import {
   Comment,
+  Fragment,
   type VNode,
   type VNodeProps,
   closeBlock,
@@ -356,7 +357,13 @@ function patchSuspense(
       }
     }
   } else {
-    if (activeBranch && isSameVNodeType(newBranch, activeBranch)) {
+    if (
+      activeBranch &&
+      isSameVNodeType(newBranch, activeBranch) &&
+      // #5247 In the nested slot, the slot will be compiled into a fragment,
+      // and the suspense should return to the pending state at this time
+      !(newBranch.type === Fragment && activeBranch.type === Fragment)
+    ) {
       // root did not change, just normal patch
       patch(
         activeBranch,
