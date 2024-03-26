@@ -365,7 +365,12 @@ export function createHydrationFunctions(
     const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
+    if (
+      __DEV__ ||
+      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
+      forcePatch ||
+      patchFlag !== PatchFlags.HOISTED
+    ) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
@@ -443,6 +448,7 @@ export function createHydrationFunctions(
       if (props) {
         if (
           __DEV__ ||
+          __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
           forcePatch ||
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
@@ -450,7 +456,7 @@ export function createHydrationFunctions(
           for (const key in props) {
             // check hydration mismatch
             if (
-              __DEV__ &&
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
               hasMismatch = true
