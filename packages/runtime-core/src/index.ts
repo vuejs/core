@@ -214,6 +214,7 @@ export type {
   Raw,
 } from '@vue/reactivity'
 export type {
+  MultiWatchSources,
   WatchEffect,
   WatchOptions,
   WatchOptionsBase,

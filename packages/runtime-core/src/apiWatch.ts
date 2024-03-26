@@ -112,7 +112,7 @@ export function watchSyncEffect(
 // initial value for watchers to trigger on undefined initial values
 const INITIAL_WATCHER_VALUE = {}
 
-type MultiWatchSources = (WatchSource<unknown> | object)[]
+export type MultiWatchSources = (WatchSource<unknown> | object)[]
 
 // overload: single source + cb
 export function watch<T, Immediate extends Readonly<boolean> = false>(
