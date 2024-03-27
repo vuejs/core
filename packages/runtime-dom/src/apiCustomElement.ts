@@ -179,6 +179,8 @@ export class VueElement extends BaseClass {
   private _numberProps: Record<string, true> | null = null
   private _styles?: HTMLStyleElement[]
   private _ob?: MutationObserver | null = null
+  private _ce_parent?: VueElement | null = null
+  private _ce_children?: VueElement[] | null = null
   constructor(
     private _def: InnerComponentDef,
     private _props: Record<string, any> = {},
@@ -208,7 +210,35 @@ export class VueElement extends BaseClass {
       if (this._resolved) {
         this._update()
       } else {
-        this._resolveDef()
+        let parent: Node | null = this
+        let isParentResolved = true
+        let isAncestors = false
+        while (
+          (parent =
+            parent && (parent.parentNode || (parent as ShadowRoot).host))
+        ) {
+          if (parent instanceof VueElement) {
+            // Find the first custom element in the ancestor and set it to `_ce_parent`
+            !isAncestors && (this._ce_parent = parent as VueElement)
+            if (
+              !parent._resolved &&
+              (parent._def as ComponentOptions).__asyncLoader
+            ) {
+              ;(
+                this._ce_parent!._ce_children ||
+                (this._ce_parent!._ce_children = [])
+              ).push(this)
+              isParentResolved = false
+            } else {
+              isAncestors = true
+              continue
+            }
+            break
+          }
+        }
+        if (isParentResolved) {
+          this._resolveDef()
+        }
       }
     }
   }
@@ -231,8 +261,6 @@ export class VueElement extends BaseClass {
    * resolve inner component definition (handle possible async component)
    */
   private _resolveDef() {
-    this._resolved = true
-
     // set initial attrs
     for (let i = 0; i < this.attributes.length; i++) {
       this._setAttr(this.attributes[i].name)
@@ -248,6 +276,7 @@ export class VueElement extends BaseClass {
     this._ob.observe(this, { attributes: true })
 
     const resolve = (def: InnerComponentDef, isAsync = false) => {
+      this._resolved = true
       const { props, styles } = def
 
       // cast Number-type props set before resolve
@@ -278,6 +307,12 @@ export class VueElement extends BaseClass {
 
       // initial render
       this._update()
+
+      // The asynchronous custom element needs to call
+      // the resolveDef function of the descendant custom element at the end.
+      if (this._ce_children) {
+        this._ce_children.forEach(child => child._resolveDef())
+      }
     }
 
     const asyncDef = (this._def as ComponentOptions).__asyncLoader
@@ -397,17 +432,9 @@ export class VueElement extends BaseClass {
           }
         }
 
-        // locate nearest Vue custom element parent for provide/inject
-        let parent: Node | null = this
-        while (
-          (parent =
-            parent && (parent.parentNode || (parent as ShadowRoot).host))
-        ) {
-          if (parent instanceof VueElement) {
-            instance.parent = parent._instance
-            instance.provides = parent._instance!.provides
-            break
-          }
+        if (this._ce_parent) {
+          instance.parent = this._ce_parent._instance
+          instance.provides = this._ce_parent._instance!.provides
         }
       }
     }
