@@ -31,6 +31,10 @@ export function renderSlot(
   fallback?: () => VNodeArrayChildren,
   noSlotted?: boolean,
 ): VNode {
+  // #7713 v-bind can cause props to not be object/undefined
+  if (!props) {
+    props = {}
+  }
   if (
     currentRenderingInstance!.isCE ||
     (currentRenderingInstance!.parent &&
