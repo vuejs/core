@@ -43,6 +43,7 @@ export {
   watchSyncEffect,
 } from './apiWatch'
 export {
+  createHook,
   onBeforeMount,
   onMounted,
   onBeforeUpdate,
@@ -92,7 +93,12 @@ export {
 
 // For getting a hold of the internal instance in setup() - useful for advanced
 // plugins
-export { getCurrentInstance } from './component'
+export {
+  currentInstance,
+  getCurrentInstance,
+  setCurrentInstance,
+  unsetCurrentInstance
+} from './component'
 
 // For raw render function users
 export { h } from './h'
