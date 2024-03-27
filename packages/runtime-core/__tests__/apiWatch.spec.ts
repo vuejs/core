@@ -187,7 +187,7 @@ describe('api: watch', () => {
   })
 
   // #9916
-  it('directly watching shallow reactive array', async () => {
+  it('watching shallow reactive array with deep: false', async () => {
     class foo {
       prop1: ShallowRef<string> = shallowRef('')
       prop2: string = ''
@@ -198,7 +198,7 @@ describe('api: watch', () => {
 
     const collection = shallowReactive([obj1, obj2])
     const cb = vi.fn()
-    watch(collection, cb)
+    watch(collection, cb, { deep: false })
 
     collection[0].prop1.value = 'foo'
     await nextTick()
@@ -1442,5 +1442,36 @@ describe('api: watch', () => {
     // would not be calld when value>1
     expect(spy1).toHaveBeenCalledTimes(1)
     expect(spy2).toHaveBeenCalledTimes(1)
+  })
+
+  test("effect should be removed from scope's effects after it is stopped", () => {
+    const num = ref(0)
+    let unwatch: () => void
+
+    let instance: ComponentInternalInstance
+    const Comp = {
+      setup() {
+        instance = getCurrentInstance()!
+        unwatch = watch(num, () => {
+          console.log(num.value)
+        })
+        return () => null
+      },
+    }
+    const root = nodeOps.createElement('div')
+    createApp(Comp).mount(root)
+    expect(instance!.scope.effects.length).toBe(2)
+    unwatch!()
+    expect(instance!.scope.effects.length).toBe(1)
+
+    const scope = effectScope()
+    scope.run(() => {
+      unwatch = watch(num, () => {
+        console.log(num.value)
+      })
+    })
+    expect(scope.effects.length).toBe(1)
+    unwatch!()
+    expect(scope.effects.length).toBe(0)
   })
 })
