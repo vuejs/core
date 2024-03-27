@@ -425,6 +425,20 @@ describe('compiler: v-if', () => {
       expect(generate(root).code).toMatchSnapshot()
     })
 
+    test('template v-if w/ v-once', () => {
+      const {
+        root,
+        node: { codegenNode },
+      } = parseWithIfTransform(
+        `<template v-if="true"><p v-once>foo</p></template>`,
+      )
+      expect(codegenNode.consequent).toMatchObject({
+        type: NodeTypes.VNODE_CALL,
+        tag: `"p"`,
+      })
+      expect(generate(root).code).toMatchSnapshot()
+    })
+
     test('v-if on <slot/>', () => {
       const {
         root,

@@ -30,7 +30,12 @@ import { ErrorCodes, createCompilerError } from '../errors'
 import { processExpression } from './transformExpression'
 import { validateBrowserExpression } from '../validateExpression'
 import { CREATE_COMMENT, FRAGMENT } from '../runtimeHelpers'
-import { findDir, findProp, getMemoedVNodeCall, injectProp } from '../utils'
+import {
+  findDir,
+  findProp,
+  getMemoedOrOnceVNodeCall,
+  injectProp,
+} from '../utils'
 import { PatchFlagNames, PatchFlags } from '@vue/shared'
 
 export const transformIf = createStructuralDirectiveTransform(
@@ -293,7 +298,7 @@ function createChildrenCodegenNode(
     const ret = (firstChild as ElementNode).codegenNode as
       | BlockCodegenNode
       | MemoExpression
-    const vnodeCall = getMemoedVNodeCall(ret)
+    const vnodeCall = getMemoedOrOnceVNodeCall(ret)
     // Change createVNode to createBlock.
     if (vnodeCall.type === NodeTypes.VNODE_CALL) {
       convertToBlock(vnodeCall, context)
