@@ -19,6 +19,8 @@ export const isOn = (key: string) =>
   (key.charCodeAt(2) > 122 || key.charCodeAt(2) < 97)
 
 export const isModelListener = (key: string) => key.startsWith('onUpdate:')
+export const isCEModifiers = (el: Element, key: string) =>
+  key.endsWith('Modifiers') && !isOn(key) && (el as any)._isCE
 
 export const extend = Object.assign
 

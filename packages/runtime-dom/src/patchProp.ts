@@ -3,9 +3,15 @@ import { patchStyle } from './modules/style'
 import { patchAttr } from './modules/attrs'
 import { patchDOMProp } from './modules/props'
 import { patchEvent } from './modules/events'
-import { isFunction, isModelListener, isOn, isString } from '@vue/shared'
+import {
+  isCEModifiers,
+  isFunction,
+  isModelListener,
+  isOn,
+  isString,
+} from '@vue/shared'
 import type { RendererOptions } from '@vue/runtime-core'
-
+import type { VueElement } from './apiCustomElement'
 const isNativeOn = (key: string) =>
   key.charCodeAt(0) === 111 /* o */ &&
   key.charCodeAt(1) === 110 /* n */ &&
@@ -31,10 +37,18 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
+  } else if (isCEModifiers(el, key)) {
+    // custom element v-model modifiers
+    ;(el as VueElement)._VModelEmits[key] = nextValue
   } else if (isOn(key)) {
     // ignore v-model listeners
     if (!isModelListener(key)) {
       patchEvent(el, key, prevValue, nextValue, parentComponent)
+    }
+
+    // custom element v-model listeners
+    if (isModelListener(key) && (el as VueElement)._isCE) {
+      ;(el as VueElement)._VModelEmits[key] = nextValue
     }
   } else if (
     key[0] === '.'
