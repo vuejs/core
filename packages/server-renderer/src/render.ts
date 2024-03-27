@@ -28,7 +28,7 @@ import {
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
 import { ssrCompile } from './helpers/ssrCompile'
 import { ssrRenderTeleport } from './helpers/ssrRenderTeleport'
-
+import { getExposeProxy } from '../../runtime-core/src/component'
 const {
   createComponentInstance,
   setCurrentRenderingInstance,
@@ -188,7 +188,7 @@ function renderComponentSubTree(
       const prev = setCurrentRenderingInstance(instance)
       try {
         ssrRender(
-          instance.proxy,
+          getExposeProxy(instance) || instance.proxy,
           push,
           instance,
           attrs,
