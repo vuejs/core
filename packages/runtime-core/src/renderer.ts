@@ -829,7 +829,7 @@ function baseCreateRenderer(
       dynamicChildren = null
     }
 
-    if (dynamicChildren) {
+    if (dynamicChildren && dynamicChildren.length > 0) {
       patchBlockChildren(
         n1.dynamicChildren!,
         dynamicChildren,

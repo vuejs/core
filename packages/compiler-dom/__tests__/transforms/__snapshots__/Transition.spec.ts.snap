@@ -41,7 +41,7 @@ return function render(_ctx, _cache) {
                     ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
               ]))
       ]),
-      _: 1 /* STABLE */
+      _: 3 /* FORWARDED */
     }))
   }
 }"
