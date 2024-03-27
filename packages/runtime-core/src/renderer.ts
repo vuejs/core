@@ -105,6 +105,7 @@ export interface RendererOptions<
     parentComponent?: ComponentInternalInstance | null,
     parentSuspense?: SuspenseBoundary | null,
     unmountChildren?: UnmountChildrenFn,
+    isVPre?: boolean,
   ): void
   insert(el: HostNode, parent: HostElement, anchor?: HostNode | null): void
   remove(el: HostNode): void
@@ -662,6 +663,7 @@ function baseCreateRenderer(
     setScopeId(el, vnode, vnode.scopeId, slotScopeIds, parentComponent)
     // props
     if (props) {
+      const isVPre = isVPreProps(props)
       for (const key in props) {
         if (key !== 'value' && !isReservedProp(key)) {
           hostPatchProp(
@@ -674,6 +676,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             unmountChildren,
+            isVPre,
           )
         }
       }
@@ -1003,6 +1006,7 @@ function baseCreateRenderer(
   ) => {
     if (oldProps !== newProps) {
       if (oldProps !== EMPTY_OBJ) {
+        const isVPreInOldProps = isVPreProps(oldProps)
         for (const key in oldProps) {
           if (!isReservedProp(key) && !(key in newProps)) {
             hostPatchProp(
@@ -1015,10 +1019,13 @@ function baseCreateRenderer(
               parentComponent,
               parentSuspense,
               unmountChildren,
+              isVPreInOldProps,
             )
           }
         }
       }
+
+      const isVPreInNewProps = isVPreProps(newProps)
       for (const key in newProps) {
         // empty string is not valid prop
         if (isReservedProp(key)) continue
@@ -1036,6 +1043,7 @@ function baseCreateRenderer(
             parentComponent,
             parentSuspense,
             unmountChildren,
+            isVPreInNewProps,
           )
         }
       }
@@ -2531,4 +2539,8 @@ function locateNonHydratedAsyncRoot(
       return locateNonHydratedAsyncRoot(subComponent)
     }
   }
+}
+
+function isVPreProps(props: Data) {
+  return props.hasOwnProperty('v-pre')
 }

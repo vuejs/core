@@ -25,12 +25,18 @@ export const patchProp: DOMRendererOptions['patchProp'] = (
   parentComponent,
   parentSuspense,
   unmountChildren,
+  isVPre: boolean,
 ) => {
   const isSVG = namespace === 'svg'
+  if (key === 'v-pre') {
+    return
+  }
   if (key === 'class') {
     patchClass(el, nextValue, isSVG)
   } else if (key === 'style') {
     patchStyle(el, prevValue, nextValue)
+  } else if (isVPre) {
+    patchAttr(el, key, nextValue, isSVG, parentComponent)
   } else if (isOn(key)) {
     // ignore v-model listeners
     if (!isModelListener(key)) {
