@@ -7,6 +7,7 @@ import {
   type RendererInternals,
   type RendererNode,
   type RendererOptions,
+  queuePostRenderEffect,
   traverseStaticChildren,
 } from '../renderer'
 import type { VNode, VNodeArrayChildren, VNodeProps } from '../vnode'
@@ -142,7 +143,13 @@ export const TeleportImpl = {
       if (disabled) {
         mount(container, mainAnchor)
       } else if (target) {
-        mount(target, targetAnchor)
+        if (parentSuspense && parentSuspense.pendingBranch) {
+          queuePostRenderEffect(() => {
+            mount(target, targetAnchor)
+          }, parentSuspense)
+        } else {
+          mount(target, targetAnchor)
+        }
       }
     } else {
       // update content
