@@ -17,8 +17,8 @@ export default {
   __expose();
 
       const modelValue = _useModel(__props, "modelValue")
-      const c = _useModel(__props, "count")
-      const toString = _useModel(__props, "toString")
+      const c = _useModel(__props, 'count')
+      const toString = _useModel(__props, 'toString')
       
 return { modelValue, c, toString }
 }
@@ -40,7 +40,10 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
-      const modelValue = _useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })
+      const modelValue = _useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+        })
       
 return { modelValue }
 }
@@ -63,7 +66,36 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
-      const modelValue = _useModel(__props, "modelValue", { get(v) { return v - 1 }, set: (v) => { return v + 1 },  })
+      const modelValue = _useModel(__props, "modelValue", {
+        get(v) { return v - 1 },
+        set: (v) => { return v + 1 },
+      })
+      
+return { modelValue }
+}
+
+})"
+`;
+
+exports[`defineModel() > usage w/ props destructure 1`] = `
+"import { useModel as _useModel, mergeModels as _mergeModels, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: /*#__PURE__*/_mergeModels({
+    x: { type: Number, required: true }
+  }, {
+    "modelValue": {
+        },
+    "modelModifiers": {},
+  }),
+  emits: ["update:modelValue"],
+  setup(__props: any, { expose: __expose }) {
+  __expose();
+
+      
+      const modelValue = _useModel(__props, "modelValue", {
+        set: (v) => { return v + __props.x }
+      })
       
 return { modelValue }
 }
@@ -84,7 +116,7 @@ export default {
   __expose();
 
       
-      const count = _useModel(__props, "count")
+      const count = _useModel(__props, 'count')
       
 return { count }
 }
@@ -132,10 +164,10 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
-      const modelValue = _useModel(__props, "modelValue")
-      const count = _useModel(__props, "count")
-      const disabled = _useModel(__props, "disabled")
-      const any = _useModel(__props, "any")
+      const modelValue = _useModel<boolean | string>(__props, "modelValue")
+      const count = _useModel<number>(__props, 'count')
+      const disabled = _useModel<number>(__props, 'disabled')
+      const any = _useModel<any | boolean>(__props, 'any')
       
 return { modelValue, count, disabled, any }
 }
@@ -163,11 +195,11 @@ export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
-      const modelValue = _useModel(__props, "modelValue")
-      const fn = _useModel(__props, "fn")
-      const fnWithDefault = _useModel(__props, "fnWithDefault")
-      const str = _useModel(__props, "str")
-      const optional = _useModel(__props, "optional")
+      const modelValue = _useModel<boolean>(__props, "modelValue")
+      const fn = _useModel<() => void>(__props, 'fn')
+      const fnWithDefault = _useModel<() => void>(__props, 'fnWithDefault')
+      const str = _useModel<string>(__props, 'str')
+      const optional = _useModel<string>(__props, 'optional')
       
 return { modelValue, fn, fnWithDefault, str, optional }
 }

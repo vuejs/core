@@ -107,7 +107,7 @@ export function renderComponentVNode(
           ),
         )
         // Note: error display is already done by the wrapped lifecycle hook function.
-        .catch(() => {})
+        .catch(NOOP)
     }
     return p.then(() => renderComponentSubTree(instance, slotScopeId))
   } else {

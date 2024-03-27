@@ -6,7 +6,10 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 
 export const targets = fs.readdirSync('packages').filter(f => {
-  if (!fs.statSync(`packages/${f}`).isDirectory()) {
+  if (
+    !fs.statSync(`packages/${f}`).isDirectory() ||
+    !fs.existsSync(`packages/${f}/package.json`)
+  ) {
     return false
   }
   const pkg = require(`../packages/${f}/package.json`)
