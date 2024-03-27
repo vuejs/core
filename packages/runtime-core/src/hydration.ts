@@ -18,6 +18,7 @@ import {
   PatchFlags,
   ShapeFlags,
   includeBooleanAttr,
+  invokeArrayFns,
   isBooleanAttr,
   isKnownHtmlAttr,
   isKnownSvgAttr,
@@ -38,6 +39,7 @@ import {
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
 import { isAsyncWrapper } from './apiAsyncComponent'
+import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 
 export type RootHydrateFunction = (
   vnode: VNode<Node, Element>,
@@ -179,6 +181,7 @@ export function createHydrationFunctions(
                 )}` +
                   `\n  - expected on client: ${JSON.stringify(vnode.children)}`,
               )
+            handleMismatchHook(vnode, parentComponent, node)
             ;(node as Text).data = vnode.children as string
           }
           nextNode = nextSibling(node)
@@ -418,6 +421,7 @@ export function createHydrationFunctions(
               el,
               `\nServer rendered element contains more child nodes than client vdom.`,
             )
+            handleMismatchHook(vnode, parentComponent, null)
             hasWarned = true
           }
           // The SSRed DOM contains more nodes than it should. Remove them.
@@ -435,6 +439,7 @@ export function createHydrationFunctions(
               `\n  - rendered on server: ${el.textContent}` +
                 `\n  - expected on client: ${vnode.children as string}`,
             )
+          handleMismatchHook(vnode, parentComponent, el)
           el.textContent = vnode.children as string
         }
       }
@@ -551,6 +556,7 @@ export function createHydrationFunctions(
             container,
             `\nServer rendered element contains fewer child nodes than client vdom.`,
           )
+          handleMismatchHook(vnode, parentComponent, null)
           hasWarned = true
         }
         // the SSRed DOM didn't contain enough nodes. Mount the missing ones.
@@ -627,6 +633,7 @@ export function createHydrationFunctions(
         `\n- expected on client:`,
         vnode.type,
       )
+    handleMismatchHook(vnode, parentComponent, node)
     vnode.el = null
 
     if (isFragment) {
@@ -708,6 +715,29 @@ export function createHydrationFunctions(
       node.nodeType === DOMNodeTypes.ELEMENT &&
       (node as Element).tagName.toLowerCase() === 'template'
     )
+  }
+
+  const handleMismatchHook = (
+    vnode: VNode,
+    parentComponent: ComponentInternalInstance | null,
+    node: Node | null,
+  ) => {
+    const mm = parentComponent ? parentComponent.mm : null
+    if (__DEV__ && mm) {
+      invokeArrayFns(mm, {
+        parentComponent,
+        vnode,
+        node,
+      })
+    }
+    if (
+      parentComponent &&
+      __DEV__ &&
+      __COMPAT__ &&
+      isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, parentComponent)
+    ) {
+      parentComponent.emit('hook:mismatched')
+    }
   }
 
   return [hydrate, hydrateNode] as const

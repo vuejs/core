@@ -40,6 +40,7 @@ export const ErrorTypeStrings: Record<LifecycleHooks | ErrorCodes, string> = {
   [LifecycleHooks.ERROR_CAPTURED]: 'errorCaptured hook',
   [LifecycleHooks.RENDER_TRACKED]: 'renderTracked hook',
   [LifecycleHooks.RENDER_TRIGGERED]: 'renderTriggered hook',
+  [LifecycleHooks.MIS_MATCHED]: 'mismatched hook',
   [ErrorCodes.SETUP_FUNCTION]: 'setup function',
   [ErrorCodes.RENDER_FUNCTION]: 'render function',
   [ErrorCodes.WATCH_GETTER]: 'watcher getter',

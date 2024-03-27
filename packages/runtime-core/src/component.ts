@@ -480,6 +480,10 @@ export interface ComponentInternalInstance {
   /**
    * @internal
    */
+  [LifecycleHooks.MIS_MATCHED]: LifecycleHook
+  /**
+   * @internal
+   */
   [LifecycleHooks.RENDER_TRACKED]: LifecycleHook
   /**
    * @internal
@@ -617,6 +621,7 @@ export function createComponentInstance(
     rtc: null,
     ec: null,
     sp: null,
+    mm: null,
   }
   if (__DEV__) {
     instance.ctx = createDevRenderContext(instance)
