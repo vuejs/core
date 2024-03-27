@@ -7,6 +7,7 @@ expectType<JSX.Element>(<div />)
 expectType<JSX.Element>(<div id="foo" />)
 expectType<JSX.Element>(<div>hello</div>)
 expectType<JSX.Element>(<input value="foo" />)
+expectType<JSX.Element>(<textarea value={null} />)
 
 // @ts-expect-error style css property validation
 ;<div style={{ unknown: 123 }} />

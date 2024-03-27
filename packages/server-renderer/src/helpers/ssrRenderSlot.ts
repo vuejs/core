@@ -82,7 +82,23 @@ export function ssrRenderSlotInner(
           fallbackRenderFn()
         }
       } else {
-        for (let i = 0; i < slotBuffer.length; i++) {
+        // #9933
+        // Although we handle Transition/TransitionGroup in the transform stage
+        // without rendering it as a fragment, the content passed into the slot
+        // may still be a fragment.
+        // Therefore, here we need to avoid rendering it as a fragment again.
+        let start = 0
+        let end = slotBuffer.length
+        if (
+          transition &&
+          slotBuffer[0] === '<!--[-->' &&
+          slotBuffer[end - 1] === '<!--]-->'
+        ) {
+          start++
+          end--
+        }
+
+        for (let i = start; i < end; i++) {
           push(slotBuffer[i])
         }
       }
