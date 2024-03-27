@@ -583,5 +583,31 @@ describe('error handling', () => {
     expect(handler).toHaveBeenCalledTimes(4)
   })
 
+  // #9574
+  test('should pause tracking in error handler', async () => {
+    const error = new Error('error')
+    const x = ref(Math.random())
+
+    const handler = vi.fn(() => {
+      x.value
+      x.value = Math.random()
+    })
+
+    const app = createApp({
+      setup() {
+        return () => {
+          throw error
+        }
+      },
+    })
+
+    app.config.errorHandler = handler
+    app.mount(nodeOps.createElement('div'))
+
+    await nextTick()
+    expect(handler).toHaveBeenCalledWith(error, {}, 'render function')
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
   // native event handler handling should be tested in respective renderers
 })
