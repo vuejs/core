@@ -102,7 +102,10 @@ describe('sfc hoist static', () => {
       regex: BindingTypes.SETUP_CONST,
       undef: BindingTypes.SETUP_MAYBE_REF,
     })
-    expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {
+  __expose();
+
+    ${code}`)
     assertCode(content)
   })
 
@@ -133,7 +136,10 @@ describe('sfc hoist static', () => {
       KEY6: BindingTypes.SETUP_CONST,
       i: BindingTypes.SETUP_LET,
     })
-    expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {
+  __expose();
+
+    ${code}`)
     assertCode(content)
   })
 
@@ -151,7 +157,10 @@ describe('sfc hoist static', () => {
       arr: BindingTypes.SETUP_CONST,
       obj: BindingTypes.SETUP_CONST,
     })
-    expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {
+  __expose();
+
+    ${code}`)
     assertCode(content)
   })
 
@@ -171,7 +180,10 @@ describe('sfc hoist static', () => {
       fn: BindingTypes.SETUP_CONST,
       fn2: BindingTypes.SETUP_CONST,
     })
-    expect(content).toMatch(`setup(__props) {\n\n    ${code}`)
+    expect(content).toMatch(`setup(__props, { expose: __expose }) {
+  __expose();
+
+    ${code}`)
     assertCode(content)
   })
 
