@@ -62,7 +62,7 @@ export function ssrRenderSlotInner(
     )
     if (isArray(ret)) {
       // normal slot
-      renderVNodeChildren(push, ret, parentComponent, slotScopeId)
+      renderVNodeChildren(push, ret, parentComponent, null, slotScopeId)
     } else {
       // ssr slot.
       // check if the slot renders all comments, in which case use the fallback
