@@ -1,4 +1,5 @@
 import {
+  createApp,
   getCurrentInstance,
   h,
   nextTick,
@@ -239,5 +240,33 @@ describe('component: slots', () => {
     flag2.value++
     await nextTick()
     expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  test('should not warn when mounting another app in setup', () => {
+    const Comp = {
+      setup(_: any, { slots }: any) {
+        return () => slots.default?.()
+      },
+    }
+
+    const mountComp = () => {
+      createApp({
+        setup() {
+          return () => h(Comp, () => 'msg')
+        },
+      }).mount(nodeOps.createElement('div'))
+    }
+
+    const App = {
+      setup() {
+        mountComp()
+        return () => null
+      },
+    }
+
+    createApp(App).mount(nodeOps.createElement('div'))
+    expect(
+      'Slot "default" invoked outside of the render function',
+    ).not.toHaveBeenWarned()
   })
 })

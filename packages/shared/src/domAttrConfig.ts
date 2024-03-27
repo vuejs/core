@@ -121,3 +121,14 @@ export const isKnownSvgAttr = /*#__PURE__*/ makeMap(
     `xlink:href,xlink:role,xlink:show,xlink:title,xlink:type,xmlns:xlink,xml:base,xml:lang,` +
     `xml:space,y,y1,y2,yChannelSelector,z,zoomAndPan`,
 )
+
+/**
+ * Shared between server-renderer and runtime-core hydration logic
+ */
+export function isRenderableAttrValue(value: unknown): boolean {
+  if (value == null) {
+    return false
+  }
+  const type = typeof value
+  return type === 'string' || type === 'number' || type === 'boolean'
+}

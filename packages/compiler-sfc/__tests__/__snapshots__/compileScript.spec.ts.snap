@@ -1028,6 +1028,26 @@ return (_ctx, _cache) => {
 }"
 `;
 
+exports[`SFC compile <script setup> > inlineTemplate mode > unref + new expression 1`] = `
+"import { unref as _unref, toDisplayString as _toDisplayString, createElementVNode as _createElementVNode, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+import Foo from './foo'
+        
+export default {
+  setup(__props) {
+
+        
+return (_ctx, _cache) => {
+  return (_openBlock(), _createElementBlock(_Fragment, null, [
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo))()), 1 /* TEXT */),
+    _createElementVNode("div", null, _toDisplayString(new (_unref(Foo)).Bar()), 1 /* TEXT */)
+  ], 64 /* STABLE_FRAGMENT */))
+}
+}
+
+}"
+`;
+
 exports[`SFC compile <script setup> > inlineTemplate mode > v-model codegen 1`] = `
 "import { vModelText as _vModelText, createElementVNode as _createElementVNode, withDirectives as _withDirectives, unref as _unref, isRef as _isRef, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
 
@@ -1338,6 +1358,27 @@ export default {
 
         
 return { get foo() { return foo } }
+}
+
+}"
+`;
+
+exports[`compileScript > should care about runtimeModuleName 1`] = `
+"import { withAsyncContext as _withAsyncContext } from "npm:vue"
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => Promise.resolve(1))),
+  await __temp,
+  __restore()
+)
+      
+return {  }
 }
 
 }"
