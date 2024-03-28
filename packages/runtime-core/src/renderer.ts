@@ -1316,25 +1316,6 @@ function baseCreateRenderer(
         const isAsyncWrapperVNode = isAsyncWrapper(initialVNode)
 
         toggleRecurse(instance, false)
-        // beforeMount hook
-        if (bm) {
-          invokeArrayFns(bm)
-        }
-        // onVnodeBeforeMount
-        if (
-          !isAsyncWrapperVNode &&
-          (vnodeHook = props && props.onVnodeBeforeMount)
-        ) {
-          invokeVNodeHook(vnodeHook, parent, initialVNode)
-        }
-        if (
-          __COMPAT__ &&
-          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
-        ) {
-          instance.emit('hook:beforeMount')
-        }
-        toggleRecurse(instance, true)
-
         if (el && hydrateNode) {
           // vnode has adopted host node - perform hydration instead of mount.
           const hydrateSubTree = () => {
@@ -1371,7 +1352,27 @@ function baseCreateRenderer(
           } else {
             hydrateSubTree()
           }
-        } else {
+        }
+        // beforeMount hook
+        if (bm) {
+          invokeArrayFns(bm)
+        }
+        // onVnodeBeforeMount
+        if (
+          !isAsyncWrapperVNode &&
+          (vnodeHook = props && props.onVnodeBeforeMount)
+        ) {
+          invokeVNodeHook(vnodeHook, parent, initialVNode)
+        }
+        if (
+          __COMPAT__ &&
+          isCompatEnabled(DeprecationTypes.INSTANCE_EVENT_HOOKS, instance)
+        ) {
+          instance.emit('hook:beforeMount')
+        }
+        toggleRecurse(instance, true)
+
+        if (!el || !hydrate) {
           if (__DEV__) {
             startMeasure(instance, `render`)
           }
