@@ -61,4 +61,13 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'foo', null, symbol)
     expect(el.getAttribute('foo')).toBe(symbol.toString())
   })
+
+  // #10598
+  test('should allow setting value to symbol', () => {
+    const el = document.createElement('input')
+    const symbol = Symbol('foo')
+    patchProp(el, 'value', null, symbol)
+    expect(el.value).toBe(symbol.toString())
+  })
+  
 })
