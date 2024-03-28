@@ -1,9 +1,10 @@
 import {
-  ShapeFlags,
   extend,
   hyphenate,
   isArray,
+  isComponentVNode,
   isObject,
+  isStatefulComponentVNode,
   isString,
   makeMap,
   normalizeClass,
@@ -263,7 +264,7 @@ function convertLegacySlots(vnode: VNode): VNode {
 
   let slots: Record<string, any> | undefined
 
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT && isArray(children)) {
+  if (isComponentVNode(vnode.shapeFlag) && isArray(children)) {
     slots = {}
     // check "slot" property on vnodes and turn them into v3 function slots
     for (let i = 0; i < children.length; i++) {
@@ -330,7 +331,7 @@ export function defineLegacyVNodeProperties(vnode: VNode) {
       context: { get: () => context && context.proxy },
       componentOptions: {
         get: () => {
-          if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+          if (isStatefulComponentVNode(vnode.shapeFlag)) {
             if (componentOptions) {
               return componentOptions
             }

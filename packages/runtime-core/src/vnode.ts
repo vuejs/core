@@ -5,10 +5,15 @@ import {
   SlotFlags,
   extend,
   isArray,
+  isComponentVNode,
+  isCustomTypeVNode,
   isFunction,
   isObject,
   isOn,
+  isStatefulComponentVNode,
   isString,
+  isSuspenseVNode,
+  isTeleportVNode,
   normalizeClass,
   normalizeStyle,
 } from '@vue/shared'
@@ -364,7 +369,7 @@ export function isVNode(value: any): value is VNode {
 export function isSameVNodeType(n1: VNode, n2: VNode): boolean {
   if (
     __DEV__ &&
-    n2.shapeFlag & ShapeFlags.COMPONENT &&
+    isComponentVNode(n2.shapeFlag) &&
     hmrDirtyComponents.has(n2.type as ConcreteComponent)
   ) {
     // #7042, ensure the vnode being unmounted during HMR
@@ -468,7 +473,7 @@ function createBaseVNode(
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
-    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseVNode(shapeFlag)) {
       ;(type as typeof SuspenseImpl).normalize(vnode)
     }
   } else if (children) {
@@ -495,7 +500,7 @@ function createBaseVNode(
     // component nodes also should always be patched, because even if the
     // component doesn't need to update, it needs to persist the instance on to
     // the next vnode so that it can be properly unmounted later.
-    (vnode.patchFlag > 0 || shapeFlag & ShapeFlags.COMPONENT) &&
+    (vnode.patchFlag > 0 || isComponentVNode(shapeFlag)) &&
     // the EVENTS flag is only for hydration and if it is the only flag, the
     // vnode should not be considered dynamic due to handler caching.
     vnode.patchFlag !== PatchFlags.NEED_HYDRATION
@@ -541,7 +546,7 @@ function _createVNode(
       normalizeChildren(cloned, children)
     }
     if (isBlockTreeEnabled > 0 && !isBlockNode && currentBlock) {
-      if (cloned.shapeFlag & ShapeFlags.COMPONENT) {
+      if (isComponentVNode(cloned.shapeFlag)) {
         currentBlock[currentBlock.indexOf(type)] = cloned
       } else {
         currentBlock.push(cloned)
@@ -592,7 +597,7 @@ function _createVNode(
             ? ShapeFlags.FUNCTIONAL_COMPONENT
             : 0
 
-  if (__DEV__ && shapeFlag & ShapeFlags.STATEFUL_COMPONENT && isProxy(type)) {
+  if (__DEV__ && isStatefulComponentVNode(shapeFlag) && isProxy(type)) {
     type = toRaw(type)
     warn(
       `Vue received a Component that was made a reactive object. This can ` +
@@ -779,7 +784,9 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else if (isArray(children)) {
     type = ShapeFlags.ARRAY_CHILDREN
   } else if (typeof children === 'object') {
-    if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)) {
+    if (
+      isCustomTypeVNode(shapeFlag, ShapeFlags.ELEMENT | ShapeFlags.TELEPORT)
+    ) {
       // Normalize slot to plain children for plain element and Teleport
       const slot = (children as any).default
       if (slot) {
@@ -815,7 +822,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
   } else {
     children = String(children)
     // force teleport children to array so it can be moved around
-    if (shapeFlag & ShapeFlags.TELEPORT) {
+    if (isTeleportVNode(shapeFlag)) {
       type = ShapeFlags.ARRAY_CHILDREN
       children = [createTextVNode(children as string)]
     } else {

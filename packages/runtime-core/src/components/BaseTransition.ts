@@ -16,7 +16,12 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
+import {
+  PatchFlags,
+  isArray,
+  isComponentVNode,
+  isSuspenseVNode,
+} from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
 
@@ -471,9 +476,9 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
-  if (vnode.shapeFlag & ShapeFlags.COMPONENT && vnode.component) {
+  if (isComponentVNode(vnode.shapeFlag) && vnode.component) {
     setTransitionHooks(vnode.component.subTree, hooks)
-  } else if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+  } else if (__FEATURE_SUSPENSE__ && isSuspenseVNode(vnode.shapeFlag)) {
     vnode.ssContent!.transition = hooks.clone(vnode.ssContent!)
     vnode.ssFallback!.transition = hooks.clone(vnode.ssFallback!)
   } else {

@@ -8,7 +8,7 @@ import {
   warn,
   watchPostEffect,
 } from '@vue/runtime-core'
-import { ShapeFlags } from '@vue/shared'
+import { isElementVNode, isSuspenseVNode } from '@vue/shared'
 
 export const CSS_VAR_TEXT = Symbol(__DEV__ ? 'CSS_VAR_TEXT' : '')
 /**
@@ -52,7 +52,7 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
 }
 
 function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
-  if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+  if (__FEATURE_SUSPENSE__ && isSuspenseVNode(vnode.shapeFlag)) {
     const suspense = vnode.suspense!
     vnode = suspense.activeBranch!
     if (suspense.pendingBranch && !suspense.isHydrating) {
@@ -67,7 +67,7 @@ function setVarsOnVNode(vnode: VNode, vars: Record<string, string>) {
     vnode = vnode.component.subTree
   }
 
-  if (vnode.shapeFlag & ShapeFlags.ELEMENT && vnode.el) {
+  if (isElementVNode(vnode.shapeFlag) && vnode.el) {
     setVarsOnNode(vnode.el as Node, vars)
   } else if (vnode.type === Fragment) {
     ;(vnode.children as VNode[]).forEach(c => setVarsOnVNode(c, vars))

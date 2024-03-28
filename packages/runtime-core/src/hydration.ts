@@ -16,15 +16,20 @@ import { invokeDirectiveHook } from './directives'
 import { warn } from './warning'
 import {
   PatchFlags,
-  ShapeFlags,
   includeBooleanAttr,
+  isArrayChildrenVNode,
   isBooleanAttr,
+  isComponentVNode,
+  isElementVNode,
   isKnownHtmlAttr,
   isKnownSvgAttr,
   isOn,
   isRenderableAttrValue,
   isReservedProp,
   isString,
+  isSuspenseVNode,
+  isTeleportVNode,
+  isTextChildrenVNode,
   normalizeClass,
   normalizeStyle,
   stringifyStyle,
@@ -243,7 +248,7 @@ export function createHydrationFunctions(
         }
         break
       default:
-        if (shapeFlag & ShapeFlags.ELEMENT) {
+        if (isElementVNode(shapeFlag)) {
           if (
             (domType !== DOMNodeTypes.ELEMENT ||
               (vnode.type as string).toLowerCase() !==
@@ -261,7 +266,7 @@ export function createHydrationFunctions(
               optimized,
             )
           }
-        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+        } else if (isComponentVNode(shapeFlag)) {
           // when setting up the render effect, if the initial vnode already
           // has .el set, the component will perform hydration instead of mount
           // on its sub-tree.
@@ -310,7 +315,7 @@ export function createHydrationFunctions(
             subTree.el = node
             vnode.component!.subTree = subTree
           }
-        } else if (shapeFlag & ShapeFlags.TELEPORT) {
+        } else if (isTeleportVNode(shapeFlag)) {
           if (domType !== DOMNodeTypes.COMMENT) {
             nextNode = onMismatch()
           } else {
@@ -325,7 +330,7 @@ export function createHydrationFunctions(
               hydrateChildren,
             )
           }
-        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+        } else if (__FEATURE_SUSPENSE__ && isSuspenseVNode(shapeFlag)) {
           nextNode = (vnode.type as typeof SuspenseImpl).hydrate(
             node,
             vnode,
@@ -393,7 +398,7 @@ export function createHydrationFunctions(
 
       // children
       if (
-        shapeFlag & ShapeFlags.ARRAY_CHILDREN &&
+        isArrayChildrenVNode(shapeFlag) &&
         // skip if element has innerHTML / textContent
         !(props && (props.innerHTML || props.textContent))
       ) {
@@ -425,7 +430,7 @@ export function createHydrationFunctions(
           next = next.nextSibling
           remove(cur)
         }
-      } else if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      } else if (isTextChildrenVNode(shapeFlag)) {
         if (el.textContent !== vnode.children) {
           hasMismatch = true
           ;(__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&

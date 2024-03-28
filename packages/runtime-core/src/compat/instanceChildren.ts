@@ -1,4 +1,4 @@
-import { ShapeFlags } from '@vue/shared'
+import { isArrayChildrenVNode } from '@vue/shared'
 import type { ComponentInternalInstance } from '../component'
 import type { ComponentPublicInstance } from '../componentPublicInstance'
 import type { VNode } from '../vnode'
@@ -19,7 +19,7 @@ export function getCompatChildren(
 function walk(vnode: VNode, children: ComponentPublicInstance[]) {
   if (vnode.component) {
     children.push(vnode.component.proxy!)
-  } else if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+  } else if (isArrayChildrenVNode(vnode.shapeFlag)) {
     const vnodes = vnode.children as VNode[]
     for (let i = 0; i < vnodes.length; i++) {
       walk(vnodes[i], children)

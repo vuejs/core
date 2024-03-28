@@ -35,7 +35,16 @@ import {
   getGlobalThis,
   invokeArrayFns,
   isArray,
+  isArrayChildrenVNode,
+  isComponentKeptAliveVNode,
+  isComponentShouldKeepAliveVNode,
+  isComponentVNode,
+  isCustomTypeVNode,
+  isElementVNode,
   isReservedProp,
+  isSuspenseVNode,
+  isTeleportVNode,
+  isTextChildrenVNode,
 } from '@vue/shared'
 import {
   type SchedulerJob,
@@ -413,7 +422,7 @@ function baseCreateRenderer(
         )
         break
       default:
-        if (shapeFlag & ShapeFlags.ELEMENT) {
+        if (isElementVNode(shapeFlag)) {
           processElement(
             n1,
             n2,
@@ -425,7 +434,7 @@ function baseCreateRenderer(
             slotScopeIds,
             optimized,
           )
-        } else if (shapeFlag & ShapeFlags.COMPONENT) {
+        } else if (isComponentVNode(shapeFlag)) {
           processComponent(
             n1,
             n2,
@@ -437,7 +446,7 @@ function baseCreateRenderer(
             slotScopeIds,
             optimized,
           )
-        } else if (shapeFlag & ShapeFlags.TELEPORT) {
+        } else if (isTeleportVNode(shapeFlag)) {
           ;(type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
             n2 as TeleportVNode,
@@ -450,7 +459,7 @@ function baseCreateRenderer(
             optimized,
             internals,
           )
-        } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+        } else if (__FEATURE_SUSPENSE__ && isSuspenseVNode(shapeFlag)) {
           ;(type as typeof SuspenseImpl).process(
             n1,
             n2,
@@ -640,9 +649,9 @@ function baseCreateRenderer(
 
     // mount children first, since some props may rely on child content
     // being already rendered, e.g. `<select value>`
-    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+    if (isTextChildrenVNode(shapeFlag)) {
       hostSetElementText(el, vnode.children as string)
-    } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    } else if (isArrayChildrenVNode(shapeFlag)) {
       mountChildren(
         vnode.children as VNodeArrayChildren,
         el,
@@ -973,7 +982,10 @@ function baseCreateRenderer(
           // which also requires the correct parent container
           !isSameVNodeType(oldVNode, newVNode) ||
           // - In the case of a component, it could contain anything.
-          oldVNode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.TELEPORT))
+          isCustomTypeVNode(
+            oldVNode.shapeFlag,
+            ShapeFlags.COMPONENT | ShapeFlags.TELEPORT,
+          ))
           ? hostParentNode(oldVNode.el)!
           : // In other cases, the parent container is not actually used so we
             // just pass the block element here to avoid a DOM parentNode call.
@@ -1165,7 +1177,7 @@ function baseCreateRenderer(
   ) => {
     n2.slotScopeIds = slotScopeIds
     if (n1 == null) {
-      if (n2.shapeFlag & ShapeFlags.COMPONENT_KEPT_ALIVE) {
+      if (isComponentKeptAliveVNode(n2.shapeFlag)) {
         ;(parentComponent!.ctx as KeepAliveContext).activate(
           n2,
           container,
@@ -1425,10 +1437,10 @@ function baseCreateRenderer(
         // #1742 activated hook must be accessed after first render
         // since the hook may be injected by a child keep-alive
         if (
-          initialVNode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE ||
+          isComponentShouldKeepAliveVNode(initialVNode.shapeFlag) ||
           (parent &&
             isAsyncWrapper(parent.vnode) &&
-            parent.vnode.shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE)
+            isComponentShouldKeepAliveVNode(parent.vnode.shapeFlag))
         ) {
           instance.a && queuePostRenderEffect(instance.a, parentSuspense)
           if (
@@ -1674,18 +1686,18 @@ function baseCreateRenderer(
     }
 
     // children has 3 possibilities: text, array or no children.
-    if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+    if (isTextChildrenVNode(shapeFlag)) {
       // text children fast path
-      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      if (isArrayChildrenVNode(prevShapeFlag)) {
         unmountChildren(c1 as VNode[], parentComponent, parentSuspense)
       }
       if (c2 !== c1) {
         hostSetElementText(container, c2 as string)
       }
     } else {
-      if (prevShapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      if (isArrayChildrenVNode(prevShapeFlag)) {
         // prev children was array
-        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (isArrayChildrenVNode(shapeFlag)) {
           // two arrays, cannot assume anything, do full diff
           patchKeyedChildren(
             c1 as VNode[],
@@ -1705,11 +1717,11 @@ function baseCreateRenderer(
       } else {
         // prev children was text OR null
         // new children is array OR null
-        if (prevShapeFlag & ShapeFlags.TEXT_CHILDREN) {
+        if (isTextChildrenVNode(prevShapeFlag)) {
           hostSetElementText(container, '')
         }
         // mount new if array
-        if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        if (isArrayChildrenVNode(shapeFlag)) {
           mountChildren(
             c2 as VNodeArrayChildren,
             container,
@@ -2033,17 +2045,17 @@ function baseCreateRenderer(
     parentSuspense = null,
   ) => {
     const { el, type, transition, children, shapeFlag } = vnode
-    if (shapeFlag & ShapeFlags.COMPONENT) {
+    if (isComponentVNode(shapeFlag)) {
       move(vnode.component!.subTree, container, anchor, moveType)
       return
     }
 
-    if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseVNode(shapeFlag)) {
       vnode.suspense!.move(container, anchor, moveType)
       return
     }
 
-    if (shapeFlag & ShapeFlags.TELEPORT) {
+    if (isTeleportVNode(shapeFlag)) {
       ;(type as typeof TeleportImpl).move(vnode, container, anchor, internals)
       return
     }
@@ -2064,9 +2076,7 @@ function baseCreateRenderer(
 
     // single nodes
     const needTransition =
-      moveType !== MoveType.REORDER &&
-      shapeFlag & ShapeFlags.ELEMENT &&
-      transition
+      moveType !== MoveType.REORDER && isElementVNode(shapeFlag) && transition
     if (needTransition) {
       if (moveType === MoveType.ENTER) {
         transition!.beforeEnter(el!)
@@ -2114,12 +2124,12 @@ function baseCreateRenderer(
       setRef(ref, null, parentSuspense, vnode, true)
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT_SHOULD_KEEP_ALIVE) {
+    if (isComponentShouldKeepAliveVNode(shapeFlag)) {
       ;(parentComponent!.ctx as KeepAliveContext).deactivate(vnode)
       return
     }
 
-    const shouldInvokeDirs = shapeFlag & ShapeFlags.ELEMENT && dirs
+    const shouldInvokeDirs = isElementVNode(shapeFlag) && dirs
     const shouldInvokeVnodeHook = !isAsyncWrapper(vnode)
 
     let vnodeHook: VNodeHook | undefined | null
@@ -2130,10 +2140,10 @@ function baseCreateRenderer(
       invokeVNodeHook(vnodeHook, parentComponent, vnode)
     }
 
-    if (shapeFlag & ShapeFlags.COMPONENT) {
+    if (isComponentVNode(shapeFlag)) {
       unmountComponent(vnode.component!, parentSuspense, doRemove)
     } else {
-      if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+      if (__FEATURE_SUSPENSE__ && isSuspenseVNode(shapeFlag)) {
         vnode.suspense!.unmount(parentSuspense, doRemove)
         return
       }
@@ -2142,7 +2152,7 @@ function baseCreateRenderer(
         invokeDirectiveHook(vnode, null, parentComponent, 'beforeUnmount')
       }
 
-      if (shapeFlag & ShapeFlags.TELEPORT) {
+      if (isTeleportVNode(shapeFlag)) {
         ;(vnode.type as typeof TeleportImpl).remove(
           vnode,
           parentComponent,
@@ -2169,7 +2179,7 @@ function baseCreateRenderer(
         (type === Fragment &&
           patchFlag &
             (PatchFlags.KEYED_FRAGMENT | PatchFlags.UNKEYED_FRAGMENT)) ||
-        (!optimized && shapeFlag & ShapeFlags.ARRAY_CHILDREN)
+        (!optimized && isArrayChildrenVNode(shapeFlag))
       ) {
         unmountChildren(children as VNode[], parentComponent, parentSuspense)
       }
@@ -2228,7 +2238,7 @@ function baseCreateRenderer(
     }
 
     if (
-      vnode.shapeFlag & ShapeFlags.ELEMENT &&
+      isElementVNode(vnode.shapeFlag) &&
       transition &&
       !transition.persisted
     ) {
@@ -2343,10 +2353,10 @@ function baseCreateRenderer(
   }
 
   const getNextHostNode: NextFn = vnode => {
-    if (vnode.shapeFlag & ShapeFlags.COMPONENT) {
+    if (isComponentVNode(vnode.shapeFlag)) {
       return getNextHostNode(vnode.component!.subTree)
     }
-    if (__FEATURE_SUSPENSE__ && vnode.shapeFlag & ShapeFlags.SUSPENSE) {
+    if (__FEATURE_SUSPENSE__ && isSuspenseVNode(vnode.shapeFlag)) {
       return vnode.suspense!.next()
     }
     return hostNextSibling((vnode.anchor || vnode.el)!)
@@ -2458,7 +2468,7 @@ export function traverseStaticChildren(n1: VNode, n2: VNode, shallow = false) {
       // guaranteed to be vnodes
       const c1 = ch1[i] as VNode
       let c2 = ch2[i] as VNode
-      if (c2.shapeFlag & ShapeFlags.ELEMENT && !c2.dynamicChildren) {
+      if (isElementVNode(c2.shapeFlag) && !c2.dynamicChildren) {
         if (c2.patchFlag <= 0 || c2.patchFlag === PatchFlags.NEED_HYDRATION) {
           c2 = ch2[i] = cloneIfMounted(ch2[i] as VNode)
           c2.el = c1.el

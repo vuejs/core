@@ -62,13 +62,13 @@ import {
   EMPTY_OBJ,
   type IfAny,
   NOOP,
-  ShapeFlags,
   extend,
   getGlobalThis,
   isArray,
   isFunction,
   isObject,
   isPromise,
+  isStatefulComponentVNode,
   makeMap,
 } from '@vue/shared'
 import type { SuspenseBoundary } from './components/Suspense'
@@ -717,10 +717,6 @@ export function validateComponentName(
   }
 }
 
-export function isStatefulComponent(instance: ComponentInternalInstance) {
-  return instance.vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT
-}
-
 export let isInSSRComponentSetup = false
 
 export function setupComponent(
@@ -730,7 +726,7 @@ export function setupComponent(
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
-  const isStateful = isStatefulComponent(instance)
+  const isStateful = isStatefulComponentVNode(instance.vnode.shapeFlag)
   initProps(instance, props, isStateful, isSSR)
   initSlots(instance, children)
 

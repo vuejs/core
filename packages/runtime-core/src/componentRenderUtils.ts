@@ -15,7 +15,14 @@ import {
   normalizeVNode,
 } from './vnode'
 import { ErrorCodes, handleError } from './errorHandling'
-import { PatchFlags, ShapeFlags, isModelListener, isOn } from '@vue/shared'
+import {
+  PatchFlags,
+  ShapeFlags,
+  isCustomTypeVNode,
+  isModelListener,
+  isOn,
+  isStatefulComponentVNode,
+} from '@vue/shared'
 import { warn } from './warning'
 import { isHmrUpdating } from './hmr'
 import type { NormalizedProps } from './componentProps'
@@ -69,7 +76,7 @@ export function renderComponentRoot(
   }
 
   try {
-    if (vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+    if (isStatefulComponentVNode(vnode.shapeFlag)) {
       // withProxy is a proxy with a different `has` trap only for
       // runtime-compiled render functions using `with` block.
       const proxyToUse = withProxy || proxy
@@ -151,7 +158,9 @@ export function renderComponentRoot(
     const keys = Object.keys(fallthroughAttrs)
     const { shapeFlag } = root
     if (keys.length) {
-      if (shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)) {
+      if (
+        isCustomTypeVNode(shapeFlag, ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+      ) {
         if (propsOptions && keys.some(isModelListener)) {
           // If a v-model listener (onUpdate:xxx) has a corresponding declared
           // prop, it indicates this component expects to handle v-model and
@@ -205,8 +214,8 @@ export function renderComponentRoot(
   if (
     __COMPAT__ &&
     isCompatEnabled(DeprecationTypes.INSTANCE_ATTRS_CLASS_STYLE, instance) &&
-    vnode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT &&
-    root.shapeFlag & (ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
+    isStatefulComponentVNode(vnode.shapeFlag) &&
+    isCustomTypeVNode(root.shapeFlag, ShapeFlags.ELEMENT | ShapeFlags.COMPONENT)
   ) {
     const { class: cls, style } = vnode.props || {}
     if (cls || style) {
@@ -346,8 +355,10 @@ const filterModelListeners = (attrs: Data, props: NormalizedProps): Data => {
 
 const isElementRoot = (vnode: VNode) => {
   return (
-    vnode.shapeFlag & (ShapeFlags.COMPONENT | ShapeFlags.ELEMENT) ||
-    vnode.type === Comment // potential v-if branch switch
+    isCustomTypeVNode(
+      vnode.shapeFlag,
+      ShapeFlags.COMPONENT | ShapeFlags.ELEMENT,
+    ) || vnode.type === Comment // potential v-if branch switch
   )
 }
 

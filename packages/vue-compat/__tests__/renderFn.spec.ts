@@ -1,4 +1,3 @@
-import { ShapeFlags } from '@vue/shared'
 import Vue from '@vue/compat'
 import { createComponentInstance } from '../../runtime-core/src/component'
 import { setCurrentRenderingInstance } from '../../runtime-core/src/componentRenderContext'
@@ -10,6 +9,7 @@ import {
   toggleDeprecationWarning,
 } from '../../runtime-core/src/compat/compatConfig'
 import { compatH as h } from '../../runtime-core/src/compat/renderFn'
+import { isSlotsChildrenVNode } from '@vue/shared'
 
 beforeEach(() => {
   toggleDeprecationWarning(false)
@@ -192,7 +192,7 @@ describe('compat: render function', () => {
       children: scopedSlots,
     })
     expect('scopedSlots' in vnode.props!).toBe(false)
-    expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
+    expect(isSlotsChildrenVNode(vnode.shapeFlag)).toBeTruthy()
   })
 
   test('legacy named slot', () => {
@@ -203,7 +203,7 @@ describe('compat: render function', () => {
       h('div', { slot: 'foo' }, 'three'),
       h('div', 'four'),
     ])
-    expect(vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN).toBeTruthy()
+    expect(isSlotsChildrenVNode(vnode.shapeFlag)).toBeTruthy()
     const slots = vnode.children as any
 
     // default

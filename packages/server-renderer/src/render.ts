@@ -16,13 +16,18 @@ import {
 } from 'vue'
 import {
   NOOP,
-  ShapeFlags,
   escapeHtml,
   escapeHtmlComment,
   isArray,
+  isArrayChildrenVNode,
+  isComponentVNode,
+  isElementVNode,
   isFunction,
   isPromise,
   isString,
+  isSuspenseVNode,
+  isTeleportVNode,
+  isTextChildrenVNode,
   isVoidTag,
 } from '@vue/shared'
 import { ssrRenderAttrs } from './helpers/ssrRenderAttrs'
@@ -253,13 +258,13 @@ export function renderVNode(
       push(`<!--]-->`) // close
       break
     default:
-      if (shapeFlag & ShapeFlags.ELEMENT) {
+      if (isElementVNode(shapeFlag)) {
         renderElementVNode(push, vnode, parentComponent, slotScopeId)
-      } else if (shapeFlag & ShapeFlags.COMPONENT) {
+      } else if (isComponentVNode(shapeFlag)) {
         push(renderComponentVNode(vnode, parentComponent, slotScopeId))
-      } else if (shapeFlag & ShapeFlags.TELEPORT) {
+      } else if (isTeleportVNode(shapeFlag)) {
         renderTeleportVNode(push, vnode, parentComponent, slotScopeId)
-      } else if (shapeFlag & ShapeFlags.SUSPENSE) {
+      } else if (isSuspenseVNode(shapeFlag)) {
         renderVNode(push, vnode.ssContent!, parentComponent, slotScopeId)
       } else {
         warn(
@@ -333,9 +338,9 @@ function renderElementVNode(
       }
     }
     if (!hasChildrenOverride) {
-      if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
+      if (isTextChildrenVNode(shapeFlag)) {
         push(escapeHtml(children as string))
-      } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      } else if (isArrayChildrenVNode(shapeFlag)) {
         renderVNodeChildren(
           push,
           children as VNodeArrayChildren,

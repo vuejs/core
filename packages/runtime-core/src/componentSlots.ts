@@ -10,12 +10,12 @@ import {
   EMPTY_OBJ,
   type IfAny,
   type Prettify,
-  ShapeFlags,
   SlotFlags,
   def,
   extend,
   isArray,
   isFunction,
+  isSlotsChildrenVNode,
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
@@ -167,7 +167,7 @@ export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
 ) => {
-  if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+  if (isSlotsChildrenVNode(instance.vnode.shapeFlag)) {
     const type = (children as RawSlots)._
     if (type) {
       // users can get the shallow readonly version of the slots object through `this.$slots`,
@@ -199,7 +199,7 @@ export const updateSlots = (
   const { vnode, slots } = instance
   let needDeletionCheck = true
   let deletionComparisonTarget = EMPTY_OBJ
-  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+  if (isSlotsChildrenVNode(vnode.shapeFlag)) {
     const type = (children as RawSlots)._
     if (type) {
       // compiled slots.

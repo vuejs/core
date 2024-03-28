@@ -28,7 +28,9 @@ import {
   invokeArrayFns,
   isArray,
   isRegExp,
+  isStatefulComponentVNode,
   isString,
+  isSuspenseVNode,
   remove,
 } from '@vue/shared'
 import { watch } from '../apiWatch'
@@ -267,8 +269,8 @@ const KeepAliveImpl: ComponentOptions = {
         return children
       } else if (
         !isVNode(rawVNode) ||
-        (!(rawVNode.shapeFlag & ShapeFlags.STATEFUL_COMPONENT) &&
-          !(rawVNode.shapeFlag & ShapeFlags.SUSPENSE))
+        (!isStatefulComponentVNode(rawVNode.shapeFlag) &&
+          !isSuspenseVNode(rawVNode.shapeFlag))
       ) {
         current = null
         return rawVNode
@@ -301,7 +303,7 @@ const KeepAliveImpl: ComponentOptions = {
       // clone vnode if it's reused because we are going to mutate it
       if (vnode.el) {
         vnode = cloneVNode(vnode)
-        if (rawVNode.shapeFlag & ShapeFlags.SUSPENSE) {
+        if (isSuspenseVNode(rawVNode.shapeFlag)) {
           rawVNode.ssContent = vnode
         }
       }
@@ -442,5 +444,5 @@ function resetShapeFlag(vnode: VNode) {
 }
 
 function getInnerChild(vnode: VNode) {
-  return vnode.shapeFlag & ShapeFlags.SUSPENSE ? vnode.ssContent! : vnode
+  return isSuspenseVNode(vnode.shapeFlag) ? vnode.ssContent! : vnode
 }
