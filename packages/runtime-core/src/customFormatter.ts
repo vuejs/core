@@ -24,6 +24,7 @@ export function initCustomFormatter() {
   // custom formatter for Chrome
   // https://www.mattzeunert.com/2016/02/19/custom-chrome-devtools-object-formatters.html
   const formatter = {
+    __vue_custom_formatter: true,
     header(obj: unknown) {
       // TODO also format ComponentPublicInstance & ctx.slots/attrs in setup
       if (!isObject(obj)) {
