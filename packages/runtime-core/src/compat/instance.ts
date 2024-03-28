@@ -43,8 +43,15 @@ export type LegacyPublicInstance = ComponentPublicInstance &
   LegacyPublicProperties
 
 export interface LegacyPublicProperties {
-  $set(target: object, key: string, value: any): void
-  $delete(target: object, key: string): void
+  $set<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K,
+    value: T[K]
+  ): void
+  $delete<T extends Record<keyof any, any>, K extends keyof T>(
+    target: T,
+    key: K
+  ): void
   $mount(el?: string | Element): this
   $destroy(): void
   $scopedSlots: Slots
