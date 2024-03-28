@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`defineProps > basic usage 2`] = `
+"
+export default {
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const vTest = { created(){} }
+    
+return { vTest }
+}
+
+}"
+`;
+
+exports[`defineProps > use of multiple define micro 2`] = `
+"
+export default {
+  props: {
+        bar: String
+      },
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const vTest = { created(){} }
+      const props = __props
+      const vFoo = { mounted(){} }
+    
+return { vTest, props, vFoo }
+}
+
+}"
+`;
+
+exports[`defineProps > use with other micro 2`] = `
+"
+export default {
+  props: {
+        bar: String
+      },
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const vTest = { created(){} }
+      const props = __props
+    
+return { vTest, props }
+}
+
+}"
+`;
+
+exports[`defineProps > with typescript 2`] = `
+"import { defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const vTest = { created(){} }
+    
+return { vTest }
+}
+
+})"
+`;

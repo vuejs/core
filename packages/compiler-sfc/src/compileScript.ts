@@ -55,6 +55,7 @@ import { getImportedName, isCallOf, isLiteralNode } from './script/utils'
 import { analyzeScriptBindings } from './script/analyzeScriptBindings'
 import { isImportUsed } from './script/importUsageCheck'
 import { processAwait } from './script/topLevelAwait'
+import { processDefineDirective } from './script/defineDirective'
 
 export interface SFCScriptCompileOptions {
   /**
@@ -523,13 +524,14 @@ export function compileScript(
             )
           }
 
-          // defineProps / defineEmits
+          // defineProps / defineEmits / defineDirective
           const isDefineProps = processDefineProps(ctx, init, decl.id)
           const isDefineEmits =
             !isDefineProps && processDefineEmits(ctx, init, decl.id)
           !isDefineEmits &&
             (processDefineSlots(ctx, init, decl.id) ||
-              processDefineModel(ctx, init, decl.id))
+              processDefineModel(ctx, init, decl.id) ||
+              processDefineDirective(ctx, init, decl.id))
 
           if (
             isDefineProps &&
