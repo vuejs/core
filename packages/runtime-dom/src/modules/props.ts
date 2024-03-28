@@ -40,7 +40,12 @@ export function patchDOMProp(
       tag === 'OPTION' ? el.getAttribute('value') || '' : el.value
     const newValue = value == null ? '' : value
     if (oldValue !== newValue || !('_value' in el)) {
-      el.value = newValue
+      if (typeof newValue === 'symbol') {
+        el.value = newValue.toString()
+      }
+      else {
+        el.value = newValue
+      }
     }
     if (value == null) {
       el.removeAttribute(key)
