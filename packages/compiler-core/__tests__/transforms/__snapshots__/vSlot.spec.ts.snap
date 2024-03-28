@@ -4,7 +4,7 @@ exports[`compiler: transform component slots > dynamically named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     [_ctx.one]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
@@ -18,11 +18,11 @@ exports[`compiler: transform component slots > implicit default slot 1`] = `
 "const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(() => [
-      _createElementVNode(\\"div\\")
+      _createElementVNode("div")
     ]),
     _: 1 /* STABLE */
   }))
@@ -48,7 +48,7 @@ exports[`compiler: transform component slots > named slot with v-for w/ prefixId
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, renderList: _renderList, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
     _renderList(_ctx.list, (name) => {
@@ -65,14 +65,14 @@ exports[`compiler: transform component slots > named slot with v-if + prefixIden
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
     (_ctx.ok)
       ? {
-          name: \\"one\\",
+          name: "one",
           fn: _withCtx((props) => [_toDisplayString(props)]),
-          key: \\"0\\"
+          key: "0"
         }
       : undefined
   ]), 1024 /* DYNAMIC_SLOTS */))
@@ -86,25 +86,25 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
-    const _component_Comp = _resolveComponent(\\"Comp\\")
+    const _component_Comp = _resolveComponent("Comp")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
       ok
         ? {
-            name: \\"one\\",
-            fn: _withCtx(() => [\\"foo\\"]),
-            key: \\"0\\"
+            name: "one",
+            fn: _withCtx(() => ["foo"]),
+            key: "0"
           }
         : orNot
           ? {
-              name: \\"two\\",
-              fn: _withCtx((props) => [\\"bar\\"]),
-              key: \\"1\\"
+              name: "two",
+              fn: _withCtx((props) => ["bar"]),
+              key: "1"
             }
           : {
-              name: \\"one\\",
-              fn: _withCtx(() => [\\"baz\\"]),
-              key: \\"2\\"
+              name: "one",
+              fn: _withCtx(() => ["baz"]),
+              key: "2"
             }
     ]), 1024 /* DYNAMIC_SLOTS */))
   }
@@ -118,14 +118,14 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { resolveComponent: _resolveComponent, withCtx: _withCtx, createSlots: _createSlots, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
-    const _component_Comp = _resolveComponent(\\"Comp\\")
+    const _component_Comp = _resolveComponent("Comp")
 
     return (_openBlock(), _createBlock(_component_Comp, null, _createSlots({ _: 2 /* DYNAMIC */ }, [
       ok
         ? {
-            name: \\"one\\",
-            fn: _withCtx(() => [\\"hello\\"]),
-            key: \\"0\\"
+            name: "one",
+            fn: _withCtx(() => ["hello"]),
+            key: "0"
           }
         : undefined
     ]), 1024 /* DYNAMIC_SLOTS */))
@@ -140,13 +140,13 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
-    const _component_Comp = _resolveComponent(\\"Comp\\")
+    const _component_Comp = _resolveComponent("Comp")
 
     return (_openBlock(), _createBlock(_component_Comp, null, {
-      one: _withCtx(() => [\\"foo\\"]),
+      one: _withCtx(() => ["foo"]),
       default: _withCtx(() => [
-        \\"bar\\",
-        _createElementVNode(\\"span\\")
+        "bar",
+        _createElementVNode("span")
       ]),
       _: 1 /* STABLE */
     }))
@@ -158,8 +158,8 @@ exports[`compiler: transform component slots > nested slots scoping 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, createVNode: _createVNode, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Inner = _resolveComponent(\\"Inner\\")
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Inner = _resolveComponent("Inner")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(({ foo }) => [
@@ -167,7 +167,7 @@ return function render(_ctx, _cache) {
         default: _withCtx(({ bar }) => [_toDisplayString(foo), _toDisplayString(bar), _toDisplayString(_ctx.baz)]),
         _: 2 /* DYNAMIC */
       }, 1024 /* DYNAMIC_SLOTS */),
-      \\" \\",
+      " ",
       _toDisplayString(foo),
       _toDisplayString(_ctx.bar),
       _toDisplayString(_ctx.baz)
@@ -181,7 +181,7 @@ exports[`compiler: transform component slots > on component dynamically named sl
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     [_ctx.named]: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
@@ -194,7 +194,7 @@ exports[`compiler: transform component slots > on component named slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     named: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
@@ -207,7 +207,7 @@ exports[`compiler: transform component slots > on-component default slot 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     default: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
@@ -220,7 +220,7 @@ exports[`compiler: transform component slots > template named slots 1`] = `
 "const { toDisplayString: _toDisplayString, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
     one: _withCtx(({ foo }) => [_toDisplayString(foo), _toDisplayString(_ctx.bar)]),
@@ -250,13 +250,13 @@ exports[`compiler: transform component slots > with whitespace: 'preserve' > imp
 "const { createElementVNode: _createElementVNode, resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    header: _withCtx(() => [\\" Header \\"]),
+    header: _withCtx(() => [" Header "]),
     default: _withCtx(() => [
-      \\" \\",
-      _createElementVNode(\\"p\\")
+      " ",
+      _createElementVNode("p")
     ]),
     _: 1 /* STABLE */
   }))
@@ -267,11 +267,11 @@ exports[`compiler: transform component slots > with whitespace: 'preserve' > nam
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    header: _withCtx(() => [\\" Header \\"]),
-    default: _withCtx(() => [\\" Default \\"]),
+    header: _withCtx(() => [" Header "]),
+    default: _withCtx(() => [" Default "]),
     _: 1 /* STABLE */
   }))
 }"
@@ -281,11 +281,11 @@ exports[`compiler: transform component slots > with whitespace: 'preserve' > sho
 "const { resolveComponent: _resolveComponent, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = Vue
 
 return function render(_ctx, _cache) {
-  const _component_Comp = _resolveComponent(\\"Comp\\")
+  const _component_Comp = _resolveComponent("Comp")
 
   return (_openBlock(), _createBlock(_component_Comp, null, {
-    header: _withCtx(() => [\\" Header \\"]),
-    footer: _withCtx(() => [\\" Footer \\"]),
+    header: _withCtx(() => [" Header "]),
+    footer: _withCtx(() => [" Footer "]),
     _: 1 /* STABLE */
   }))
 }"

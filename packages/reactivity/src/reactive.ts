@@ -1,25 +1,19 @@
-import { isObject, toRawType, def } from '@vue/shared'
+import { def, isObject, toRawType } from '@vue/shared'
 import {
   mutableHandlers,
   readonlyHandlers,
   shallowReactiveHandlers,
-  shallowReadonlyHandlers
+  shallowReadonlyHandlers,
 } from './baseHandlers'
 import {
   mutableCollectionHandlers,
   readonlyCollectionHandlers,
   shallowCollectionHandlers,
-  shallowReadonlyCollectionHandlers
+  shallowReadonlyCollectionHandlers,
 } from './collectionHandlers'
-import type { UnwrapRefSimple, Ref, RawSymbol } from './ref'
-
-export const enum ReactiveFlags {
-  SKIP = '__v_skip',
-  IS_REACTIVE = '__v_isReactive',
-  IS_READONLY = '__v_isReadonly',
-  IS_SHALLOW = '__v_isShallow',
-  RAW = '__v_raw'
-}
+import type { RawSymbol, Ref, UnwrapRefSimple } from './ref'
+import { ReactiveFlags } from './constants'
+import { warn } from './warning'
 
 export interface Target {
   [ReactiveFlags.SKIP]?: boolean
@@ -34,10 +28,10 @@ export const shallowReactiveMap = new WeakMap<Target, any>()
 export const readonlyMap = new WeakMap<Target, any>()
 export const shallowReadonlyMap = new WeakMap<Target, any>()
 
-const enum TargetType {
+enum TargetType {
   INVALID = 0,
   COMMON = 1,
-  COLLECTION = 2
+  COLLECTION = 2,
 }
 
 function targetTypeMap(rawType: string) {
@@ -90,7 +84,7 @@ export function reactive(target: object) {
     false,
     mutableHandlers,
     mutableCollectionHandlers,
-    reactiveMap
+    reactiveMap,
   )
 }
 
@@ -129,14 +123,14 @@ export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#shallowreactive}
  */
 export function shallowReactive<T extends object>(
-  target: T
+  target: T,
 ): ShallowReactive<T> {
   return createReactiveObject(
     target,
     false,
     shallowReactiveHandlers,
     shallowCollectionHandlers,
-    shallowReactiveMap
+    shallowReactiveMap,
   )
 }
 
@@ -194,14 +188,14 @@ export type DeepReadonly<T> = T extends Builtin
  * @see {@link https://vuejs.org/api/reactivity-core.html#readonly}
  */
 export function readonly<T extends object>(
-  target: T
+  target: T,
 ): DeepReadonly<UnwrapNestedRefs<T>> {
   return createReactiveObject(
     target,
     true,
     readonlyHandlers,
     readonlyCollectionHandlers,
-    readonlyMap
+    readonlyMap,
   )
 }
 
@@ -241,7 +235,7 @@ export function shallowReadonly<T extends object>(target: T): Readonly<T> {
     true,
     shallowReadonlyHandlers,
     shallowReadonlyCollectionHandlers,
-    shallowReadonlyMap
+    shallowReadonlyMap,
   )
 }
 
@@ -250,11 +244,11 @@ function createReactiveObject(
   isReadonly: boolean,
   baseHandlers: ProxyHandler<any>,
   collectionHandlers: ProxyHandler<any>,
-  proxyMap: WeakMap<Target, any>
+  proxyMap: WeakMap<Target, any>,
 ) {
   if (!isObject(target)) {
     if (__DEV__) {
-      console.warn(`value cannot be made reactive: ${String(target)}`)
+      warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }
@@ -278,7 +272,7 @@ function createReactiveObject(
   }
   const proxy = new Proxy(
     target,
-    targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
+    targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers,
   )
   proxyMap.set(target, proxy)
   return proxy
@@ -392,7 +386,9 @@ export type Raw<T> = T & { [RawSymbol]?: true }
  * @see {@link https://vuejs.org/api/reactivity-advanced.html#markraw}
  */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  def(value, ReactiveFlags.SKIP, true)
+  if (Object.isExtensible(value)) {
+    def(value, ReactiveFlags.SKIP, true)
+  }
   return value
 }
 

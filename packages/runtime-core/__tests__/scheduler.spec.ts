@@ -1,10 +1,10 @@
 import {
-  queueJob,
-  nextTick,
-  queuePostFlushCb,
-  invalidateJob,
   flushPostFlushCbs,
-  flushPreFlushCbs
+  flushPreFlushCbs,
+  invalidateJob,
+  nextTick,
+  queueJob,
+  queuePostFlushCb,
 } from '../src/scheduler'
 
 describe('scheduler', () => {
@@ -497,7 +497,7 @@ describe('scheduler', () => {
       expect(e).toBe(err)
     }
     expect(
-      `Unhandled error during execution of scheduler flush`
+      `Unhandled error during execution of scheduler flush`,
     ).toHaveBeenWarned()
 
     // this one should no longer error
@@ -571,7 +571,7 @@ describe('scheduler', () => {
 
     // simulate parent component that toggles child
     const job1 = () => {
-      // @ts-ignore
+      // @ts-expect-error
       job2.active = false
     }
     // simulate child that's triggered by the same reactive change that
@@ -609,5 +609,26 @@ describe('scheduler', () => {
     expect(p).toBeInstanceOf(Promise)
     expect(await p).toBe(1)
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  // #10003
+  test('nested flushPostFlushCbs', async () => {
+    const calls: string[] = []
+    const cb1 = () => calls.push('cb1')
+    // cb1 has no id
+    const cb2 = () => calls.push('cb2')
+    cb2.id = -1
+    const queueAndFlush = (hook: Function) => {
+      queuePostFlushCb(hook)
+      flushPostFlushCbs()
+    }
+
+    queueAndFlush(() => {
+      queuePostFlushCb([cb1, cb2])
+      flushPostFlushCbs()
+    })
+
+    await nextTick()
+    expect(calls).toEqual(['cb2', 'cb1'])
   })
 })
