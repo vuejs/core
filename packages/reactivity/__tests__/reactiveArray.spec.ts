@@ -1,6 +1,7 @@
 import { isReactive, reactive, toRaw } from '../src/reactive'
 import { isRef, ref } from '../src/ref'
 import { effect } from '../src/effect'
+import { watchSyncEffect } from 'vue'
 
 describe('reactivity/reactive/Array', () => {
   test('should make Array reactive', () => {
@@ -97,6 +98,23 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     delete arr[1]
     expect(fn).toHaveBeenCalledTimes(1)
+  })
+
+  test("should reactive when mutate array's index", () => {
+    const original = [1, 2, 3]
+    const observed = reactive(original)
+    const fn = vitest.fn(() => {
+      observed[0]
+    })
+    watchSyncEffect(fn)
+
+    delete observed[0]
+    expect(0 in observed).toBe(false)
+    expect(fn).toHaveBeenCalledTimes(2)
+
+    observed[0] = 2
+    expect(0 in observed).toBe(true)
+    expect(fn).toHaveBeenCalledTimes(3)
   })
 
   test('shift on Array should trigger dependency once', () => {
