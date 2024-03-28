@@ -9,7 +9,7 @@ export function processDefineSlots(
   node: Node,
   declId?: LVal,
 ): boolean {
-  if (!isCallOf(node, DEFINE_SLOTS)) {
+  if (!isCallOf(node, ctx.macrosAliases[DEFINE_SLOTS])) {
     return false
   }
   if (ctx.hasDefineSlotsCall) {

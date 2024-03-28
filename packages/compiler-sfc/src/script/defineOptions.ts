@@ -13,7 +13,7 @@ export function processDefineOptions(
   ctx: ScriptCompileContext,
   node: Node,
 ): boolean {
-  if (!isCallOf(node, DEFINE_OPTIONS)) {
+  if (!isCallOf(node, ctx.macrosAliases[DEFINE_OPTIONS])) {
     return false
   }
   if (ctx.hasDefineOptionsCall) {

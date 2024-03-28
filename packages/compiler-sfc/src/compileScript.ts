@@ -47,7 +47,7 @@ import {
   genRuntimeEmits,
   processDefineEmits,
 } from './script/defineEmits'
-import { DEFINE_EXPOSE, processDefineExpose } from './script/defineExpose'
+import { processDefineExpose } from './script/defineExpose'
 import { DEFINE_OPTIONS, processDefineOptions } from './script/defineOptions'
 import { processDefineSlots } from './script/defineSlots'
 import { DEFINE_MODEL, processDefineModel } from './script/defineModel'
@@ -236,6 +236,10 @@ export function compileScript(
       isUsedInTemplate = isImportUsed(local, sfc)
     }
 
+    if (Object.keys(ctx.macrosAliases).includes(imported)) {
+      ctx.macrosAliases[imported] = undefined
+    }
+
     ctx.userImports[local] = {
       isType,
       imported,
@@ -311,21 +315,22 @@ export function compileScript(
         )
       }
 
-      for (let i = 0; i < node.specifiers.length; i++) {
-        const specifier = node.specifiers[i]
+      const source = node.source.value
+      for (const [i, specifier] of node.specifiers.entries()) {
         const local = specifier.local.name
         const imported = getImportedName(specifier)
-        const source = node.source.value
         const existing = ctx.userImports[local]
         if (
           source === 'vue' &&
-          (imported === DEFINE_PROPS ||
-            imported === DEFINE_EMITS ||
-            imported === DEFINE_EXPOSE)
+          Object.keys(ctx.macrosAliases).includes(imported)
         ) {
-          warnOnce(
-            `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
-          )
+          if (local === imported)
+            warnOnce(
+              `\`${imported}\` is a compiler macro and no longer needs to be imported.`,
+            )
+          else {
+            ctx.macrosAliases[imported] = local
+          }
           removeSpecifier(i)
         } else if (existing) {
           if (existing.source === source && existing.imported === imported) {
@@ -450,6 +455,7 @@ export function compileScript(
             node.declaration,
             scriptBindings,
             vueImportAliases,
+            ctx.macrosAliases,
             hoistStatic,
           )
         }
@@ -465,6 +471,7 @@ export function compileScript(
           node,
           scriptBindings,
           vueImportAliases,
+          ctx.macrosAliases,
           hoistStatic,
         )
       }
@@ -580,6 +587,7 @@ export function compileScript(
         node,
         setupBindings,
         vueImportAliases,
+        ctx.macrosAliases,
         hoistStatic,
       )
     }
@@ -1033,6 +1041,7 @@ function walkDeclaration(
   node: Declaration,
   bindings: Record<string, BindingTypes>,
   userImportAliases: Record<string, string>,
+  macrosAliases: Record<string, string | undefined>,
   hoistStatic: boolean,
 ): boolean {
   let isAllLiteral = false
@@ -1052,7 +1061,10 @@ function walkDeclaration(
         isConst &&
         isCallOf(
           init,
-          c => c === DEFINE_PROPS || c === DEFINE_EMITS || c === WITH_DEFAULTS,
+          c =>
+            c === macrosAliases[DEFINE_PROPS] ||
+            c === macrosAliases[DEFINE_EMITS] ||
+            c === macrosAliases[WITH_DEFAULTS],
         )
       )
       if (id.type === 'Identifier') {
@@ -1087,7 +1099,7 @@ function walkDeclaration(
                 m === userImportAliases['shallowRef'] ||
                 m === userImportAliases['customRef'] ||
                 m === userImportAliases['toRef'] ||
-                m === DEFINE_MODEL,
+                m === macrosAliases[DEFINE_MODEL],
             )
           ) {
             bindingType = BindingTypes.SETUP_REF
