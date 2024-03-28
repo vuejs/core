@@ -183,7 +183,16 @@ function applyTranslation(c: VNode): VNode | undefined {
   const dy = oldPos.top - newPos.top
   if (dx || dy) {
     const s = (c.el as HTMLElement).style
-    s.transform = s.webkitTransform = `translate(${dx}px,${dy}px)`
+    const p = (c.el as HTMLElement).offsetParent as HTMLElement
+    let scaleX = 1
+    let scaleY = 1
+    if (p) {
+      scaleX = p.getBoundingClientRect().width / p.offsetWidth
+      scaleY = p.getBoundingClientRect().height / p.offsetHeight
+    }
+    s.transform = s.webkitTransform = `translate(${dx / scaleX}px,${
+      dy / scaleY
+    }px)`
     s.transitionDuration = '0s'
     return c
   }
