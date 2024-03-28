@@ -102,6 +102,41 @@ describe('defineProps w/ union type declaration + withDefaults', () => {
   )
 })
 
+describe('defineProps w/ object union + withDefaults', () => {
+  const props = withDefaults(
+    defineProps<
+      {
+        foo: string
+      } & (
+        | {
+            type: 'hello'
+            bar: string
+          }
+        | {
+            type: 'world'
+            bar: number
+          }
+      )
+    >(),
+    {
+      foo: 'default value!',
+    },
+  )
+
+  expectType<
+    | {
+        readonly type: 'hello'
+        readonly bar: string
+        readonly foo: string
+      }
+    | {
+        readonly type: 'world'
+        readonly bar: number
+        readonly foo: string
+      }
+  >(props)
+})
+
 describe('defineProps w/ generic type declaration + withDefaults', <T extends
   number, TA extends {
   a: string
