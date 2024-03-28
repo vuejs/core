@@ -21,13 +21,7 @@ import {
   isClassComponent,
 } from './component'
 import type { RawSlots } from './componentSlots'
-import {
-  type ReactiveFlags,
-  type Ref,
-  isProxy,
-  isRef,
-  toRaw,
-} from '@vue/reactivity'
+import { ReactiveFlags, type Ref, isProxy, isRef, toRaw } from '@vue/reactivity'
 import type { AppContext } from './apiCreateApp'
 import {
   type Suspense,
@@ -438,7 +432,7 @@ function createBaseVNode(
 ) {
   const vnode = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type,
     props,
     key: props && normalizeKey(props),
@@ -634,7 +628,7 @@ export function cloneVNode<T, U>(
   const mergedProps = extraProps ? mergeProps(props || {}, extraProps) : props
   const cloned: VNode<T, U> = {
     __v_isVNode: true,
-    __v_skip: true,
+    [ReactiveFlags.SKIP]: true,
     type: vnode.type,
     props: mergedProps,
     key: mergedProps && normalizeKey(mergedProps),
