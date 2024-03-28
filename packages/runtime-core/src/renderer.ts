@@ -54,6 +54,7 @@ import { setRef } from './rendererTemplateRef'
 import {
   type SuspenseBoundary,
   type SuspenseImpl,
+  hasSuspensibleChild,
   queueEffectWithSuspense,
 } from './components/Suspense'
 import type { TeleportImpl, TeleportVNode } from './components/Teleport'
@@ -1582,8 +1583,22 @@ function baseCreateRenderer(
     ))
 
     const update: SchedulerJob = (instance.update = () => {
-      if (effect.dirty) {
-        effect.run()
+      const job = () => {
+        if (effect.dirty) {
+          effect.run()
+        }
+      }
+
+      if (
+        __FEATURE_SUSPENSE__ &&
+        parentSuspense &&
+        parentSuspense.deps > 0 &&
+        instance.subTree &&
+        hasSuspensibleChild(instance.subTree)
+      ) {
+        parentSuspense.preEffects.push(job)
+      } else {
+        job()
       }
     })
     update.id = instance.uid
