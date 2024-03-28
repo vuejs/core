@@ -23,7 +23,14 @@ import {
   nextTick,
   warn,
 } from '@vue/runtime-core'
-import { camelize, extend, hyphenate, isArray, toNumber } from '@vue/shared'
+import {
+  camelize,
+  extend,
+  hasOwn,
+  hyphenate,
+  isArray,
+  toNumber,
+} from '@vue/shared'
 import { hydrate, render } from '.'
 
 export type VueElementConstructor<P = {}> = {
@@ -250,11 +257,17 @@ export class VueElement extends BaseClass {
     const resolve = (def: InnerComponentDef, isAsync = false) => {
       const { props, styles } = def
 
-      // cast Number-type props set before resolve
       let numberProps
       if (props && !isArray(props)) {
         for (const key in props) {
           const opt = props[key]
+
+          // reflect default value
+          if (this._props[key] === undefined && hasOwn(opt, 'default')) {
+            this._setProp(key, opt.default, true, false)
+          }
+
+          // cast Number-type props set before resolve
           if (opt === Number || (opt && opt.type === Number)) {
             if (key in this._props) {
               this._props[key] = toNumber(this._props[key])
