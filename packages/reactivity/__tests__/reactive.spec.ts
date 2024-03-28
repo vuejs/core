@@ -1,5 +1,14 @@
 import { isRef, ref } from '../src/ref'
-import { isReactive, markRaw, reactive, toRaw } from '../src/reactive'
+import {
+  isProxy,
+  isReactive,
+  markRaw,
+  reactive,
+  readonly,
+  shallowReactive,
+  shallowReadonly,
+  toRaw,
+} from '../src/reactive'
 import { computed } from '../src/computed'
 import { effect } from '../src/effect'
 
@@ -301,5 +310,25 @@ describe('reactivity/reactive', () => {
     }
     const observed = reactive(original)
     expect(isReactive(observed)).toBe(false)
+  })
+
+  test('isProxy', () => {
+    const foo = {}
+    expect(isProxy(foo)).toBe(false)
+
+    const fooRe = reactive(foo)
+    expect(isProxy(fooRe)).toBe(true)
+
+    const fooSRe = shallowReactive(foo)
+    expect(isProxy(fooSRe)).toBe(true)
+
+    const barRl = readonly(foo)
+    expect(isProxy(barRl)).toBe(true)
+
+    const barSRl = shallowReadonly(foo)
+    expect(isProxy(barSRl)).toBe(true)
+
+    const c = computed(() => {})
+    expect(isProxy(c)).toBe(false)
   })
 })
