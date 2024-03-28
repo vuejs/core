@@ -429,4 +429,23 @@ describe('SFC style preprocessors', () => {
 
     expect(res.errors.length).toBe(0)
   })
+
+  test('should mount scope on correct selector when have universal selector', () => {
+    expect(compileScoped(`* { color: red; }`)).toMatchInlineSnapshot(`
+      "[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped('* .foo { color: red; }')).toMatchInlineSnapshot(`
+      ".foo[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`*.foo { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo[data-v-test] { color: red;
+      }"
+    `)
+    expect(compileScoped(`.foo * { color: red; }`)).toMatchInlineSnapshot(`
+      ".foo[data-v-test] * { color: red;
+      }"
+    `)
+  })
 })

@@ -170,12 +170,38 @@ function rewriteSelector(
       }
     }
 
+    if (n.type === 'universal') {
+      const prev = selector.at(selector.index(n) - 1)
+      const next = selector.at(selector.index(n) + 1)
+      // * ... {}
+      if (!prev) {
+        // * .foo {} -> .foo[xxxxxxx] {}
+        if (next) {
+          if (next.type === 'combinator' && next.value === ' ') {
+            selector.removeChild(next)
+          }
+          selector.removeChild(n)
+          return true
+        } else {
+          // * {} -> [xxxxxxx] {}
+          node = selectorParser.combinator({
+            value: '',
+          })
+          selector.insertBefore(n, node)
+          selector.removeChild(n)
+          return false
+        }
+      }
+    }
+
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' &&
         (n.value === ':is' || n.value === ':where') &&
         !node)
     ) {
+      // .foo * -> .foo[xxxxxxx] *
+      if (n.type === 'universal' && node) return
       node = n
     }
   })
