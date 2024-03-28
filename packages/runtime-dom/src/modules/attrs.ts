@@ -36,7 +36,8 @@ export function patchAttr(
     if (value == null || (isBoolean && !includeBooleanAttr(value))) {
       el.removeAttribute(key)
     } else {
-      el.setAttribute(key, isBoolean ? '' : value)
+      // attribute value is a string https://html.spec.whatwg.org/multipage/dom.html#attributes
+      el.setAttribute(key, isBoolean ? '' : String(value))
     }
   }
 }

@@ -53,4 +53,12 @@ describe('runtime-dom: attrs patching', () => {
     patchProp(el, 'onwards', 'a', null)
     expect(el.getAttribute('onwards')).toBe(null)
   })
+
+  // #10597
+  test('should allow setting attribute to symbol', () => {
+    const el = document.createElement('div')
+    const symbol = Symbol('foo')
+    patchProp(el, 'foo', null, symbol)
+    expect(el.getAttribute('foo')).toBe(symbol.toString())
+  })
 })
