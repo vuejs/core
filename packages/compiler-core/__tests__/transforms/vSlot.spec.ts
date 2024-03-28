@@ -109,7 +109,7 @@ describe('compiler: transform component slots', () => {
 
   test('implicit default slot for comments', () => {
     const { root, slots } = parseWithSlots(`<Comp><!--foo--></Comp>`, {
-      prefixIdentifiers: true
+      prefixIdentifiers: true,
     })
     expect(slots).toMatchObject(
       createSlotMatcher({
@@ -119,11 +119,11 @@ describe('compiler: transform component slots', () => {
           returns: [
             {
               type: NodeTypes.COMMENT,
-              content: `foo`
-            }
-          ]
-        }
-      })
+              content: `foo`,
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
@@ -261,14 +261,14 @@ describe('compiler: transform component slots', () => {
         <!--foo-->
         <template #one></template>
       </Comp>`,
-      { prefixIdentifiers: true }
+      { prefixIdentifiers: true },
     )
     expect(slots).toMatchObject(
       createSlotMatcher({
         one: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
           params: undefined,
-          returns: []
+          returns: [],
         },
         default: {
           type: NodeTypes.JS_FUNCTION_EXPRESSION,
@@ -276,11 +276,11 @@ describe('compiler: transform component slots', () => {
           returns: [
             {
               type: NodeTypes.COMMENT,
-              content: `foo`
-            }
-          ]
-        }
-      })
+              content: `foo`,
+            },
+          ],
+        },
+      }),
     )
     expect(generate(root, { prefixIdentifiers: true }).code).toMatchSnapshot()
   })
