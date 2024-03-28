@@ -1231,6 +1231,24 @@ describe('compiler: element transform', () => {
       })
     })
 
+    test('dynamic binding shorthand', () => {
+      const { node, root } = parseWithBind(`<component :is />`)
+      expect(root.helpers).toContain(RESOLVE_DYNAMIC_COMPONENT)
+      expect(node).toMatchObject({
+        isBlock: true,
+        tag: {
+          callee: RESOLVE_DYNAMIC_COMPONENT,
+          arguments: [
+            {
+              type: NodeTypes.SIMPLE_EXPRESSION,
+              content: 'is',
+              isStatic: false,
+            },
+          ],
+        },
+      })
+    })
+
     test('is casting', () => {
       const { node, root } = parseWithBind(`<div is="vue:foo" />`)
       expect(root.helpers).toContain(RESOLVE_COMPONENT)

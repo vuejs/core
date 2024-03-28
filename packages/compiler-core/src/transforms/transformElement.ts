@@ -50,6 +50,7 @@ import {
   UNREF,
 } from '../runtimeHelpers'
 import {
+  findAndProcessShorthandProp,
   findProp,
   isCoreComponent,
   isStaticArgOf,
@@ -253,7 +254,8 @@ export function resolveComponentType(
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp = findProp(node, 'is')
+  const isProp =
+    findProp(node, 'is') || findAndProcessShorthandProp(node, 'is', context)
   if (isProp) {
     if (
       isExplicitDynamic ||
