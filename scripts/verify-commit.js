@@ -1,9 +1,20 @@
 // @ts-check
 import pico from 'picocolors'
-import { readFileSync } from 'node:fs'
+import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
-const msgPath = path.resolve('.git/COMMIT_EDITMSG')
+const gitPath = path.resolve('.git')
+const gitStat = statSync(gitPath)
+
+let msgPath
+const commitMsgFile = 'COMMIT_EDITMSG'
+if (gitStat.isDirectory()) {
+  msgPath = path.resolve(gitPath, commitMsgFile)
+} else {
+  const gitDir = readFileSync(gitPath, 'utf-8').replace('gitdir:', '').trim()
+  msgPath = path.resolve(gitDir, commitMsgFile)
+}
+
 const msg = readFileSync(msgPath, 'utf-8').trim()
 
 const commitRE =
