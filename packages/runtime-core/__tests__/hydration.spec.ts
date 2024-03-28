@@ -8,6 +8,8 @@ import {
   Transition,
   type VNode,
   createCommentVNode,
+  createElementBlock,
+  createElementVNode,
   createSSRApp,
   createStaticVNode,
   createTextVNode,
@@ -17,6 +19,7 @@ import {
   h,
   nextTick,
   onMounted,
+  openBlock,
   ref,
   renderSlot,
   useCssVars,
@@ -1570,6 +1573,31 @@ describe('SSR hydration', () => {
       })
       app.mount(container)
       expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #9033
+    test('force patch dynamic props when hydrating', () => {
+      const timestamp = Date.now()
+      let timestampCur = 0
+      const { container } = mountWithHydration(
+        `<div><div>${timestamp}</div></div>`,
+        () => {
+          timestampCur = Date.now()
+          return (
+            openBlock(),
+            createElementBlock('div', null, [
+              createElementVNode(
+                'div',
+                { innerHTML: timestampCur },
+                null,
+                8 /* PROPS */,
+                ['innerHTML'],
+              ),
+            ])
+          )
+        },
+      )
+      expect(container.innerHTML).toBe(`<div><div>${timestampCur}</div></div>`)
     })
   })
 })
