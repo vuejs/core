@@ -68,7 +68,7 @@ window.init = () => {
     // to debug with custom nodeTransforms
     delete persistedState.options?.nodeTransforms
     ssrMode.value = persistedState.ssr
-    Object.assign(compilerOptions, persistedState.options)
+    Object.assign({}, defaultOptions)
   }
 
   let lastSuccessfulCode: string
