@@ -1,4 +1,5 @@
 import type { VNode, VNodeChild } from '../vnode'
+import { isVNode } from '../vnode'
 import { isArray, isObject, isString } from '@vue/shared'
 import { warn } from '../warning'
 
@@ -53,16 +54,33 @@ export function renderList<T>(
 export function renderList(
   source: any,
   renderItem: (...args: any[]) => VNodeChild,
-  cache?: any[],
+  cache?: {
+    list: any[]
+    map: Record<string | number | symbol, VNode>
+  }[],
   index?: number,
 ): VNodeChild[] {
   let ret: VNodeChild[]
-  const cached = (cache && cache[index!]) as VNode[] | undefined
+  const retMap: Record<string | number | symbol, VNode> = {}
+  const cachedList = (cache && cache[index!]?.list) as VNode[] | undefined
+  const cachedMap = (cache && cache[index!]?.map) as
+    | Record<string | number | symbol, VNode>
+    | undefined
 
   if (isArray(source) || isString(source)) {
     ret = new Array(source.length)
     for (let i = 0, l = source.length; i < l; i++) {
-      ret[i] = renderItem(source[i], i, undefined, cached && cached[i])
+      const item = renderItem(
+        source[i],
+        i,
+        undefined,
+        cachedList?.[i],
+        cachedMap,
+      )
+      if (isVNode(item) && item.key != null) {
+        retMap[item.key] = item
+      }
+      ret[i] = item
     }
   } else if (typeof source === 'number') {
     if (__DEV__ && !Number.isInteger(source)) {
@@ -70,19 +88,37 @@ export function renderList(
     }
     ret = new Array(source)
     for (let i = 0; i < source; i++) {
-      ret[i] = renderItem(i + 1, i, undefined, cached && cached[i])
+      const item = renderItem(i + 1, i, undefined, cachedList?.[i], cachedMap)
+      if (isVNode(item) && item.key != null) {
+        retMap[item.key] = item
+      }
+      ret[i] = item
     }
   } else if (isObject(source)) {
     if (source[Symbol.iterator as any]) {
-      ret = Array.from(source as Iterable<any>, (item, i) =>
-        renderItem(item, i, undefined, cached && cached[i]),
-      )
+      ret = Array.from(source as Iterable<any>, (sourceItem, i) => {
+        const item = renderItem(
+          sourceItem,
+          i,
+          undefined,
+          cachedList?.[i],
+          cachedMap,
+        )
+        if (isVNode(item) && item.key != null) {
+          retMap[item.key] = item
+        }
+        return item
+      })
     } else {
       const keys = Object.keys(source)
       ret = new Array(keys.length)
       for (let i = 0, l = keys.length; i < l; i++) {
         const key = keys[i]
-        ret[i] = renderItem(source[key], key, i, cached && cached[i])
+        const item = renderItem(source[key], key, i, cachedList?.[i], cachedMap)
+        if (isVNode(item) && item.key != null) {
+          retMap[item.key] = item
+        }
+        ret[i] = item
       }
     }
   } else {
@@ -90,7 +126,10 @@ export function renderList(
   }
 
   if (cache) {
-    cache[index!] = ret
+    cache[index!] = {
+      list: ret,
+      map: retMap,
+    }
   }
   return ret
 }
