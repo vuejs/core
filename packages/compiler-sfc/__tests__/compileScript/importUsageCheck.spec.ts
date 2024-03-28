@@ -45,7 +45,7 @@ test('directive', () => {
 test('dynamic arguments', () => {
   const { content } = compile(`
     <script setup lang="ts">
-    import { FooBar, foo, bar, unused, baz } from './x'
+    import { FooBar, foo, bar, unused, baz, msg } from './x'
     </script>
     <template>
       <FooBar #[foo.slotName] />
@@ -53,11 +53,12 @@ test('dynamic arguments', () => {
       <div :[bar.attrName]="15"></div>
       <div unused="unused"></div>
       <div #[\`item:\${baz.key}\`]="{ value }"></div>
+      <FooBar :msg />
     </template>
     `)
   expect(content).toMatch(
     `return { get FooBar() { return FooBar }, get foo() { return foo }, ` +
-      `get bar() { return bar }, get baz() { return baz } }`,
+      `get bar() { return bar }, get baz() { return baz }, get msg() { return msg } }`,
   )
   assertCode(content)
 })

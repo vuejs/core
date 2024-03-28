@@ -66,14 +66,14 @@ return { get vMyDir() { return vMyDir } }
 
 exports[`dynamic arguments 1`] = `
 "import { defineComponent as _defineComponent } from 'vue'
-import { FooBar, foo, bar, unused, baz } from './x'
+import { FooBar, foo, bar, unused, baz, msg } from './x'
     
 export default /*#__PURE__*/_defineComponent({
   setup(__props, { expose: __expose }) {
   __expose();
 
     
-return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar }, get baz() { return baz } }
+return { get FooBar() { return FooBar }, get foo() { return foo }, get bar() { return bar }, get baz() { return baz }, get msg() { return msg } }
 }
 
 })"
