@@ -365,12 +365,7 @@ export function createHydrationFunctions(
     const forcePatch = type === 'input' || type === 'option'
     // skip props & children if this is hoisted static nodes
     // #5405 in dev, always hydrate children for HMR
-    if (
-      __DEV__ ||
-      __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
-      forcePatch ||
-      patchFlag !== PatchFlags.HOISTED
-    ) {
+    if (__DEV__ || forcePatch || patchFlag !== PatchFlags.HOISTED) {
       if (dirs) {
         invokeDirectiveHook(vnode, null, parentComponent, 'created')
       }
