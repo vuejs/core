@@ -41,6 +41,11 @@ export class CodegenContext {
   delegates = new Set<string>()
 
   identifiers: Record<string, string[]> = Object.create(null)
+
+  genEffects: Array<
+    (effects: IREffect[], context: CodegenContext) => CodeFragment[]
+  > = []
+
   withId = <T>(fn: () => T, map: Record<string, string | null>): T => {
     const { identifiers } = this
     const ids = Object.keys(map)
@@ -55,7 +60,6 @@ export class CodegenContext {
 
     return ret
   }
-  genEffect?: (effects: IREffect[]) => CodeFragment[]
 
   constructor(
     public ir: RootIRNode,
