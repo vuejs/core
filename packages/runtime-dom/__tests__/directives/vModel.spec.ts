@@ -1037,15 +1037,25 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toMatchObject([fooValue, barValue])
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [fooValue, barValue]
     await nextTick()
     expect(foo.selected).toEqual(true)
     expect(bar.selected).toEqual(true)
 
+    // reset
     foo.selected = false
     bar.selected = false
+    triggerEvent('change', input)
+    await nextTick()
+    expect(data.value).toMatchObject([])
+
     data.value = [{ foo: 1 }, { bar: 1 }]
     await nextTick()
     // looseEqual
@@ -1226,5 +1236,37 @@ describe('vModel', () => {
     triggerEvent('compositionend', input)
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
+  })
+
+  it('multiple select (model is number, option value is string)', async () => {
+    const component = defineComponent({
+      data() {
+        return {
+          value: [1, 2],
+        }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const [foo, bar] = root.querySelectorAll('option')
+
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
   })
 })

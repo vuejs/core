@@ -172,7 +172,9 @@ function rewriteSelector(
 
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
-      (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
+      (n.type === 'pseudo' &&
+        (n.value === ':is' || n.value === ':where') &&
+        !node)
     ) {
       node = n
     }

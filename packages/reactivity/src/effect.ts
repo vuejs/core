@@ -60,7 +60,7 @@ export class ReactiveEffect<T = any> {
   /**
    * @internal
    */
-  _queryings = 0
+  _shouldSchedule = false
   /**
    * @internal
    */
@@ -76,22 +76,27 @@ export class ReactiveEffect<T = any> {
   }
 
   public get dirty() {
-    if (this._dirtyLevel === DirtyLevels.ComputedValueMaybeDirty) {
-      this._dirtyLevel = DirtyLevels.NotDirty
-      this._queryings++
+    if (
+      this._dirtyLevel === DirtyLevels.MaybeDirty_ComputedSideEffect ||
+      this._dirtyLevel === DirtyLevels.MaybeDirty
+    ) {
+      this._dirtyLevel = DirtyLevels.QueryingDirty
       pauseTracking()
-      for (const dep of this.deps) {
+      for (let i = 0; i < this._depsLength; i++) {
+        const dep = this.deps[i]
         if (dep.computed) {
           triggerComputed(dep.computed)
-          if (this._dirtyLevel >= DirtyLevels.ComputedValueDirty) {
+          if (this._dirtyLevel >= DirtyLevels.Dirty) {
             break
           }
         }
       }
+      if (this._dirtyLevel === DirtyLevels.QueryingDirty) {
+        this._dirtyLevel = DirtyLevels.NotDirty
+      }
       resetTracking()
-      this._queryings--
     }
-    return this._dirtyLevel >= DirtyLevels.ComputedValueDirty
+    return this._dirtyLevel >= DirtyLevels.Dirty
   }
 
   public set dirty(v) {
@@ -139,7 +144,7 @@ function preCleanupEffect(effect: ReactiveEffect) {
 }
 
 function postCleanupEffect(effect: ReactiveEffect) {
-  if (effect.deps && effect.deps.length > effect._depsLength) {
+  if (effect.deps.length > effect._depsLength) {
     for (let i = effect._depsLength; i < effect.deps.length; i++) {
       cleanupDepEffect(effect.deps[i], effect)
     }
@@ -281,7 +286,7 @@ export function trackEffect(
   }
 }
 
-const queueEffectSchedulers: (() => void)[] = []
+const queueEffectSchedulers: EffectScheduler[] = []
 
 export function triggerEffects(
   dep: Dep,
@@ -290,23 +295,28 @@ export function triggerEffects(
 ) {
   pauseScheduling()
   for (const effect of dep.keys()) {
-    if (!effect.allowRecurse && effect._runnings) {
-      continue
-    }
+    // dep.get(effect) is very expensive, we need to calculate it lazily and reuse the result
+    let tracking: boolean | undefined
     if (
       effect._dirtyLevel < dirtyLevel &&
-      (!effect._runnings || dirtyLevel !== DirtyLevels.ComputedValueDirty)
+      (tracking ??= dep.get(effect) === effect._trackId)
     ) {
-      const lastDirtyLevel = effect._dirtyLevel
+      effect._shouldSchedule ||= effect._dirtyLevel === DirtyLevels.NotDirty
       effect._dirtyLevel = dirtyLevel
+    }
+    if (
+      effect._shouldSchedule &&
+      (tracking ??= dep.get(effect) === effect._trackId)
+    ) {
+      if (__DEV__) {
+        effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
+      }
+      effect.trigger()
       if (
-        lastDirtyLevel === DirtyLevels.NotDirty &&
-        (!effect._queryings || dirtyLevel !== DirtyLevels.ComputedValueDirty)
+        (!effect._runnings || effect.allowRecurse) &&
+        effect._dirtyLevel !== DirtyLevels.MaybeDirty_ComputedSideEffect
       ) {
-        if (__DEV__) {
-          effect.onTrigger?.(extend({ effect }, debuggerEventExtraInfo))
-        }
-        effect.trigger()
+        effect._shouldSchedule = false
         if (effect.scheduler) {
           queueEffectSchedulers.push(effect.scheduler)
         }
