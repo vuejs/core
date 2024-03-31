@@ -110,6 +110,7 @@ export {
   onErrorCaptured,
   // onServerPrefetch,
 } from './apiLifecycle'
+export { useAttrs, useSlots } from './apiSetupHelpers'
 export {
   createVaporApp,
   type App,

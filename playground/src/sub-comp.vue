@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-  getCurrentInstance,
   onBeforeMount,
   onBeforeUnmount,
   onMounted,
   onUnmounted,
+  useAttrs,
   watchEffect,
 } from 'vue/vapor'
 
@@ -14,7 +14,7 @@ const props = defineProps<{
   baz: string
 }>()
 
-const attrs = getCurrentInstance()?.attrs
+const attrs = useAttrs()
 
 watchEffect(() => {
   console.log({ ...attrs })
@@ -29,8 +29,12 @@ onUnmounted(() => console.log('sub: unmounted'))
 </script>
 
 <template>
-  <div>sub-comp</div>
-  {{ props }}
-  {{ attrs }}
-  {{ keys(attrs) }}
+  <h2>sub-comp</h2>
+  <p>
+    props: {{ props }}
+    <br />
+    attrs: {{ attrs }}
+    <br />
+    keys(attrs): {{ keys(attrs) }}
+  </p>
 </template>
