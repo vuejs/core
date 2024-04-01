@@ -181,7 +181,7 @@ function rewriteSelector(
             selector.removeChild(next)
           }
           selector.removeChild(n)
-          return true
+          return
         } else {
           // * {} -> [xxxxxxx] {}
           node = selectorParser.combinator({
@@ -192,14 +192,14 @@ function rewriteSelector(
           return false
         }
       }
+      // .foo * -> .foo[xxxxxxx] *
+      if (node) return
     }
 
     if (
       (n.type !== 'pseudo' && n.type !== 'combinator') ||
       (n.type === 'pseudo' && (n.value === ':is' || n.value === ':where'))
     ) {
-      // .foo * -> .foo[xxxxxxx] *
-      if (n.type === 'universal' && node) return
       node = n
     }
   })
