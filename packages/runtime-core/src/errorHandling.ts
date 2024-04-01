@@ -1,3 +1,4 @@
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
@@ -66,13 +67,11 @@ export function callWithErrorHandling(
   type: ErrorTypes,
   args?: unknown[],
 ) {
-  let res
   try {
-    res = args ? fn(...args) : fn()
+    return args ? fn(...args) : fn()
   } catch (err) {
     handleError(err, instance, type)
   }
-  return res
 }
 
 export function callWithAsyncErrorHandling(
@@ -129,12 +128,14 @@ export function handleError(
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
+      pauseTracking()
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo],
       )
+      resetTracking()
       return
     }
   }
