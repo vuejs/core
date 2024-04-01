@@ -12,7 +12,7 @@ beforeEach(() => {
   Vue.configureCompat({
     MODE: 2,
     GLOBAL_MOUNT: 'suppress-warning',
-    GLOBAL_EXTEND: 'suppress-warning'
+    GLOBAL_EXTEND: 'suppress-warning',
   })
 })
 
