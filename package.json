@@ -100,19 +100,19 @@
     "pug": "^3.0.2",
     "puppeteer": "~22.6.1",
     "rimraf": "^5.0.5",
-    "rollup": "^4.13.0",
+    "rollup": "^4.13.2",
     "rollup-plugin-dts": "^6.1.0",
     "rollup-plugin-esbuild": "^6.1.1",
     "rollup-plugin-polyfill-node": "^0.13.0",
     "semver": "^7.6.0",
     "serve": "^14.2.1",
     "simple-git-hooks": "^2.11.1",
-    "terser": "^5.29.2",
+    "terser": "^5.30.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
     "tsx": "^4.7.1",
     "typescript": "^5.2.2",
-    "vite": "^5.2.6",
+    "vite": "^5.2.7",
     "vitest": "^1.4.0"
   }
 }
