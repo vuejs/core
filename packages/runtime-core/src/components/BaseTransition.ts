@@ -13,12 +13,13 @@ import {
   isSameVNodeType,
 } from '../vnode'
 import { warn } from '../warning'
-import { isKeepAlive } from './KeepAlive'
+import { KeepAlive, isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
+import { h } from '../h'
 
 type Hook<T = () => void> = T | T[]
 
@@ -452,9 +453,7 @@ export function resolveTransitionHooks(
 // unmounted.
 function emptyPlaceholder(vnode: VNode): VNode | undefined {
   if (isKeepAlive(vnode)) {
-    vnode = cloneVNode(vnode)
-    vnode.children = null
-    return vnode
+    return h(KeepAlive, vnode.props, () => null)
   }
 }
 
