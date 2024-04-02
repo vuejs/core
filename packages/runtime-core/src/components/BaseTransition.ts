@@ -16,7 +16,7 @@ import { warn } from '../warning'
 import { KeepAlive, isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
+import { PatchFlags, ShapeFlags, extend, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
 import { h } from '../h'
@@ -453,7 +453,9 @@ export function resolveTransitionHooks(
 // unmounted.
 function emptyPlaceholder(vnode: VNode): VNode | undefined {
   if (isKeepAlive(vnode)) {
-    return h(KeepAlive, vnode.props, () => null)
+    vnode = cloneVNode(vnode)
+    extend(vnode, h(KeepAlive, vnode.props, { default: () => null }))
+    return vnode
   }
 }
 
