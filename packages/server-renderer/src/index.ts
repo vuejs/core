@@ -14,6 +14,14 @@ export {
   // deprecated
   renderToStream,
 } from './renderToStream'
+export class MultipleErrors extends Error {
+  constructor(
+    message: string,
+    public errors: unknown[],
+  ) {
+    super(message)
+  }
+}
 
 // internal runtime helpers
 export * from './internal'
