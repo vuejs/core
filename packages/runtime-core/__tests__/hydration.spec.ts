@@ -1365,6 +1365,11 @@ describe('SSR hydration', () => {
       clicked.value = true
       await nextTick()
     }).not.toThrow("Cannot read properties of null (reading 'insertBefore')")
+
+    await nextTick()
+    expect(container.innerHTML).toBe(
+      `<div show="true"><!--[--><div><div><div>foo</div></div></div><div>1</div><!--]--></div>`,
+    )
     __DEV__ = true
   })
 
