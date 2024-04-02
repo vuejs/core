@@ -132,7 +132,7 @@ export function installCompatInstanceProperties(map: PublicPropertiesMap) {
       // inject additional properties into $options for compat
       // e.g. vuex needs this.$options.parent
       $options: i => {
-        const res = extend({}, resolveMergedOptions(i))
+        const res = resolveMergedOptions(i)
         res.parent = i.proxy!.$parent
         res.propsData = i.vnode.props
         return res
