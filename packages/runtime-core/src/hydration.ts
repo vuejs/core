@@ -118,7 +118,7 @@ export function createHydrationFunctions(
     parentComponent: ComponentInternalInstance | null,
     parentSuspense: SuspenseBoundary | null,
     slotScopeIds: string[] | null,
-    optimized = false,
+    optimized = !!vnode.dynamicChildren,
   ): Node | null => {
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
