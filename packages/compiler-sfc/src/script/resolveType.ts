@@ -957,8 +957,10 @@ function resolveExt(filename: string, fs: FS) {
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
     tryResolve(filename + `.d.ts`) ||
+    tryResolve(filename + `.tsx`) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
-    tryResolve(joinPaths(filename, `index.d.ts`))
+    tryResolve(joinPaths(filename, `index.d.ts`)) ||
+    tryResolve(joinPaths(filename, `index.tsx`))
   )
 }
 
