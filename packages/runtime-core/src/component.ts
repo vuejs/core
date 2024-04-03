@@ -730,10 +730,14 @@ export function setupComponent(
   isSSR && setInSSRSetupState(isSSR)
 
   const { props, children } = instance.vnode
+  // 判断是否是一个有状态的组件
   const isStateful = isStatefulComponent(instance)
+  // 初始化 props
   initProps(instance, props, isStateful, isSSR)
+  // 初始化插槽
   initSlots(instance, children)
 
+  // 设置有状态的组件实例
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -772,22 +776,24 @@ function setupStatefulComponent(
       )
     }
   }
-  // 0. create render proxy property access cache
+  // 0. create render proxy property access cache 创建渲染代理缓存
   instance.accessCache = Object.create(null)
-  // 1. create public instance / render proxy
+  // 1. create public instance / render proxy 创建渲染上下文代理
   // also mark it raw so it's never observed
   instance.proxy = markRaw(new Proxy(instance.ctx, PublicInstanceProxyHandlers))
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
-  // 2. call setup()
+  // 2. call setup() 运行step函数
   const { setup } = Component
   if (setup) {
+    // 如果setup带多个参数，则创建一个setupContext上下文
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
     const reset = setCurrentInstance(instance)
     pauseTracking()
+    // 执行setup函数，并返回结果
     const setupResult = callWithErrorHandling(
       setup,
       instance,
@@ -800,6 +806,7 @@ function setupStatefulComponent(
     resetTracking()
     reset()
 
+    // 处理setup函数返回值
     if (isPromise(setupResult)) {
       setupResult.then(unsetCurrentInstance, unsetCurrentInstance)
       if (isSSR) {
@@ -843,6 +850,7 @@ export function handleSetupResult(
   setupResult: unknown,
   isSSR: boolean,
 ) {
+  // 如果setup函数返回的是一个函数，则将setupResult作为render函数
   if (isFunction(setupResult)) {
     // setup returned an inline render function
     if (__SSR__ && (instance.type as ComponentOptions).__ssrInlineRender) {
@@ -864,6 +872,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // 将setupResult变成响应式对象，赋值给setupState
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -875,6 +884,7 @@ export function handleSetupResult(
       }`,
     )
   }
+  // 完成组件实例的设置
   finishComponentSetup(instance, isSSR)
 }
 

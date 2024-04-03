@@ -465,6 +465,7 @@ function createBaseVNode(
     ctx: currentRenderingInstance,
   } as VNode
 
+  // 标准化子节点，把不同类型的子节点合并为一个数组
   if (needFullChildrenNormalization) {
     normalizeChildren(vnode, children)
     // normalize suspense children
@@ -561,7 +562,7 @@ function _createVNode(
     type = convertLegacyComponent(type, currentRenderingInstance)
   }
 
-  // class & style normalization.
+  // 处理props相关逻辑，标准化class和style class & style normalization.
   if (props) {
     // for reactive or proxy objects, we need to clone it to enable mutation.
     props = guardReactiveProps(props)!
@@ -579,7 +580,7 @@ function _createVNode(
     }
   }
 
-  // encode the vnode type information into a bitmap
+  // 对vnode类型信息编码 encode the vnode type information into a bitmap
   const shapeFlag = isString(type)
     ? ShapeFlags.ELEMENT
     : __FEATURE_SUSPENSE__ && isSuspense(type)

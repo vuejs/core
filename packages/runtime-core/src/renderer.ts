@@ -357,6 +357,18 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+  /**
+   *
+   * @param n1 老的vnode
+   * @param n2 新的vnode
+   * @param container 容器
+   * @param anchor 锚点
+   * @param parentComponent 父组件
+   * @param parentSuspense  父Suspense
+   * @param namespace 命名空间
+   * @param slotScopeIds 作用域id
+   * @param optimized 优化模式
+   */
   const patch: PatchFn = (
     n1,
     n2,
@@ -372,7 +384,7 @@ function baseCreateRenderer(
       return
     }
 
-    // patching & not same type, unmount old tree
+    // 存在旧节点且新旧节点类型不同，直接销毁旧节点 patching & not same type, unmount old tree
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
@@ -386,12 +398,15 @@ function baseCreateRenderer(
 
     const { type, ref, shapeFlag } = n2
     switch (type) {
+      // 处理文本节点
       case Text:
         processText(n1, n2, container, anchor)
         break
+      // 处理注释节点
       case Comment:
         processCommentNode(n1, n2, container, anchor)
         break
+      // 处理静态节点
       case Static:
         if (n1 == null) {
           mountStaticNode(n2, container, anchor, namespace)
@@ -399,6 +414,7 @@ function baseCreateRenderer(
           patchStaticNode(n1, n2, container, namespace)
         }
         break
+      // 处理Fragment，包含多个根节点的模版
       case Fragment:
         processFragment(
           n1,
@@ -414,6 +430,7 @@ function baseCreateRenderer(
         break
       default:
         if (shapeFlag & ShapeFlags.ELEMENT) {
+          // 处理元素节点
           processElement(
             n1,
             n2,
@@ -426,6 +443,7 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // 处理组件节点
           processComponent(
             n1,
             n2,
@@ -438,6 +456,7 @@ function baseCreateRenderer(
             optimized,
           )
         } else if (shapeFlag & ShapeFlags.TELEPORT) {
+          // 处理Teleport
           ;(type as typeof TeleportImpl).process(
             n1 as TeleportVNode,
             n2 as TeleportVNode,
@@ -451,6 +470,7 @@ function baseCreateRenderer(
             internals,
           )
         } else if (__FEATURE_SUSPENSE__ && shapeFlag & ShapeFlags.SUSPENSE) {
+          // 处理Suspense
           ;(type as typeof SuspenseImpl).process(
             n1,
             n2,
@@ -1202,6 +1222,7 @@ function baseCreateRenderer(
     // mounting
     const compatMountInstance =
       __COMPAT__ && initialVNode.isCompatRoot && initialVNode.component
+    // 创建组件实例
     const instance: ComponentInternalInstance =
       compatMountInstance ||
       (initialVNode.component = createComponentInstance(
@@ -1229,6 +1250,7 @@ function baseCreateRenderer(
       if (__DEV__) {
         startMeasure(instance, `init`)
       }
+      // 设置组件实例
       setupComponent(instance)
       if (__DEV__) {
         endMeasure(instance, `init`)
@@ -1247,6 +1269,7 @@ function baseCreateRenderer(
         processCommentNode(null, placeholder, container!, anchor)
       }
     } else {
+      // 设置并运行带副作用的渲染函数
       setupRenderEffect(
         instance,
         initialVNode,
@@ -2355,10 +2378,12 @@ function baseCreateRenderer(
   let isFlushing = false
   const render: RootRenderFunction = (vnode, container, namespace) => {
     if (vnode == null) {
+      // 销毁组件
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 创建或更新组件
       patch(
         container._vnode || null,
         vnode,
@@ -2375,6 +2400,7 @@ function baseCreateRenderer(
       flushPostFlushCbs()
       isFlushing = false
     }
+    // 缓存vnode节点，表示已经渲染
     container._vnode = vnode
   }
 

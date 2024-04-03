@@ -83,10 +83,12 @@ export const createApp = ((...args) => {
    * @param containerOrSelector
    */
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {
+    // 标准化container
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
 
     const component = app._component
+    // 如果组建没有render方法，并且没有template属性，则取innerHTML作为template
     if (!isFunction(component) && !component.render && !component.template) {
       // __UNSAFE__
       // Reason: potential execution of JS expressions in in-DOM template.
@@ -108,8 +110,9 @@ export const createApp = ((...args) => {
       }
     }
 
-    // clear content before mounting
+    // clear content before mounting 挂载前清空内容
     container.innerHTML = ''
+    // 执行标准的挂载逻辑
     const proxy = mount(container, false, resolveRootNamespace(container))
     if (container instanceof Element) {
       container.removeAttribute('v-cloak')
