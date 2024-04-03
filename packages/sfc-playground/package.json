@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
-    "vite": "^5.2.6"
+    "vite": "^5.2.7"
   },
   "dependencies": {
     "@vue/repl": "^4.1.1",
