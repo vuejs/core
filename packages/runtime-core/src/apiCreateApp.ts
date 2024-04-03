@@ -499,6 +499,7 @@ export function createAppAPI<HostElement>(
 }
 
 /**
+ * 用于在 `app.runWithContext()` 内部使用 `inject()` 时，识别当前应用。
  * @internal Used to identify the current app when using `inject()` within
  * `app.runWithContext()`.
  */

@@ -86,15 +86,31 @@ function hasOwnProperty(this: object, key: string) {
   return obj.hasOwnProperty(key)
 }
 
+/**
+ * 基础响应式处理器类，实现了 ProxyHandler 接口。
+ * 用于处理对象的获取操作，并根据对象是否只读、是否浅响应式来决定具体的行为。
+ *
+ * @param _isReadonly 表示处理器处理的对象是否为只读模式，默认为 false。
+ * @param _isShallow 表示处理器处理的对象是否为浅响应式，默认为 false。
+ */
 class BaseReactiveHandler implements ProxyHandler<Target> {
   constructor(
     protected readonly _isReadonly = false,
     protected readonly _isShallow = false,
   ) {}
 
+  /**
+   * 处理对象的获取操作。
+   *
+   * @param target 被代理的目标对象。
+   * @param key 访问的属性键，可以是字符串或符号。
+   * @param receiver 接收者对象，在处理属性访问时用到。
+   * @returns 返回获取的属性值，具体返回值取决于处理逻辑。
+   */
   get(target: Target, key: string | symbol, receiver: object) {
     const isReadonly = this._isReadonly,
       isShallow = this._isShallow
+    // 特殊标志位处理，判断是否为只读、浅响应式等。
     if (key === ReactiveFlags.IS_REACTIVE) {
       return !isReadonly
     } else if (key === ReactiveFlags.IS_READONLY) {
@@ -102,6 +118,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
     } else if (key === ReactiveFlags.IS_SHALLOW) {
       return isShallow
     } else if (key === ReactiveFlags.RAW) {
+      // 判断是否为原始对象的访问。
       if (
         receiver ===
           (isReadonly
@@ -113,7 +130,8 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
               : reactiveMap
           ).get(target) ||
         // receiver is not the reactive proxy, but has the same prototype
-        // this means the reciever is a user proxy of the reactive proxy
+        // this means the receiver is a user proxy of the reactive proxy
+        // 接收者不是响应式代理，但具有相同的原型，意味着接收者是响应式代理的用户代理。
         Object.getPrototypeOf(target) === Object.getPrototypeOf(receiver)
       ) {
         return target
@@ -124,34 +142,41 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
 
     const targetIsArray = isArray(target)
 
+    // 非只读模式下的特定处理。
     if (!isReadonly) {
+      // 数组且具有特殊Instrumentations的属性访问处理。
       if (targetIsArray && hasOwn(arrayInstrumentations, key)) {
         return Reflect.get(arrayInstrumentations, key, receiver)
       }
+      // 'hasOwnProperty的特殊处理。
       if (key === 'hasOwnProperty') {
         return hasOwnProperty
       }
     }
 
+    // 普通属性访问处理。
     const res = Reflect.get(target, key, receiver)
 
+    // 对于Symbol类型键或非追踪键的特殊处理，直接返回结果。
     if (isSymbol(key) ? builtInSymbols.has(key) : isNonTrackableKeys(key)) {
       return res
     }
 
+    // 非只读模式下的追踪处理。
     if (!isReadonly) {
       track(target, TrackOpTypes.GET, key)
     }
-
+    // 浅响应式下的处理，直接返回结果。
     if (isShallow) {
       return res
     }
-
+    // 对返回结果是 Ref 的特殊处理，避免在数组和整数键的情况下自动解包。
     if (isRef(res)) {
       // ref unwrapping - skip unwrap for Array + integer key.
       return targetIsArray && isIntegerKey(key) ? res : res.value
     }
 
+    // 对返回结果是对象的处理，根据是否只读将其转为只读或响应式对象。
     if (isObject(res)) {
       // Convert returned value into a proxy as well. we do the isObject check
       // here to avoid invalid value warning. Also need to lazy access readonly
@@ -159,6 +184,7 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
       return isReadonly ? readonly(res) : reactive(res)
     }
 
+    // 返回最终处理后的结果。
     return res
   }
 }

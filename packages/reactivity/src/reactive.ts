@@ -239,6 +239,15 @@ export function shallowReadonly<T extends object>(target: T): Readonly<T> {
   )
 }
 
+/**
+ * 创建一个响应式对象，可以选择将其标记为只读。
+ * @param target 要被观察的目标对象。
+ * @param isReadonly 指示目标对象是否应该被标记为只读。
+ * @param baseHandlers 基础代理处理器，用于处理普通对象的拦截操作。
+ * @param collectionHandlers 集合代理处理器，用于处理数组或Map等集合的拦截操作。
+ * @param proxyMap 用于存储目标对象与其对应代理对象的映射关系的弱映射。
+ * @returns 返回目标对象的代理实例。
+ */
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
@@ -246,12 +255,14 @@ function createReactiveObject(
   collectionHandlers: ProxyHandler<any>,
   proxyMap: WeakMap<Target, any>,
 ) {
+  // 非对象在开发环境提示警告，返回原值
   if (!isObject(target)) {
     if (__DEV__) {
       warn(`value cannot be made reactive: ${String(target)}`)
     }
     return target
   }
+  // 如果目标已经是代理，且不是在将只读对象转换为更深层次的只读对象，则直接返回
   // target is already a Proxy, return it.
   // exception: calling readonly() on a reactive object
   if (
@@ -260,16 +271,19 @@ function createReactiveObject(
   ) {
     return target
   }
+  // 检查目标对象是否有对应的代理存在，如果有，则直接返回该代理
   // target already has corresponding Proxy
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {
     return existingProxy
   }
+  // 确定目标对象是否可以被观察
   // only specific value types can be observed.
   const targetType = getTargetType(target)
   if (targetType === TargetType.INVALID) {
     return target
   }
+  // 创建代理对象
   const proxy = new Proxy(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers,
