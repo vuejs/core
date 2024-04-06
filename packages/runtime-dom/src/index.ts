@@ -34,12 +34,14 @@ declare module '@vue/reactivity' {
 
 const rendererOptions = /*#__PURE__*/ extend({ patchProp }, nodeOps)
 
-// lazy create the renderer - this makes core renderer logic tree-shakable
-// in case the user only imports reactivity utilities from Vue.
+// 延迟创建渲染器 - 这样做使得在用户仅从Vue导入响应式工具的情况下，核心渲染器逻辑可进行摇树优化（tree-shaking）。
 let renderer: Renderer<Element | ShadowRoot> | HydrationRenderer
 
 let enabledHydration = false
 
+/**
+ * @returns 渲染器实例
+ */
 function ensureRenderer() {
   return (
     renderer ||
@@ -64,13 +66,12 @@ export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
 }) as RootHydrateFunction
 
+/**
+ * createApp 入口
+ * 创建一个Vue应用实例
+ */
 export const createApp = ((...args) => {
   const app = ensureRenderer().createApp(...args)
-
-  if (__DEV__) {
-    injectNativeTagCheck(app)
-    injectCompilerOptionsCheck(app)
-  }
 
   const { mount } = app
   app.mount = (containerOrSelector: Element | ShadowRoot | string): any => {

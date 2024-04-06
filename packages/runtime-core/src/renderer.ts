@@ -91,6 +91,10 @@ export type RootRenderFunction<HostElement = RendererElement> = (
   namespace?: ElementNamespace,
 ) => void
 
+/**
+ * 渲染器选项接口
+ * 定义了 patchProp 和一系列 DOM 操作
+ */
 export interface RendererOptions<
   HostNode = RendererNode,
   HostElement = RendererElement,
@@ -282,19 +286,20 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
   : queuePostFlushCb
 
 /**
- * The createRenderer function accepts two generic arguments:
- * HostNode and HostElement, corresponding to Node and Element types in the
- * host environment. For example, for runtime-dom, HostNode would be the DOM
- * `Node` interface and HostElement would be the DOM `Element` interface.
+ * createRenderer 函数接受两个泛型参数:
+ * HostNode 和 HostElement，它们分别对应宿主环境中的 Node 类型和 Element 类型。
+ * 例如，在运行时环境下（runtime-dom，即Vue.js用于浏览器环境的标准实现），
+ * HostNode 将代表DOM标准中的 Node 接口，
+ * 而 HostElement 则对应于 Element 接口。
  *
- * Custom renderers can pass in the platform specific types like this:
- *
+ * 自定义渲染器可以像这样传递特定平台的类型：
  * ``` js
  * const { render, createApp } = createRenderer<Node, Element>({
  *   patchProp,
  *   ...nodeOps
  * })
  * ```
+ * @returns 基于 baseCreateRenderer 创建的渲染器
  */
 export function createRenderer<
   HostNode = RendererNode,
@@ -312,19 +317,52 @@ export function createHydrationRenderer(
   return baseCreateRenderer(options, createHydrationFunctions)
 }
 
-// overload 1: no hydration
+// 重载1：无 hydration
+/**
+ * 创建渲染器，应该是 vue 源码中最长的一个函数
+ * @returns
+ * ``` js
+ *   return {
+ *     render,
+ *     hydrate,
+ *     createApp: createAppAPI(render, hydrate),
+ *   }
+ * ```
+ */
 function baseCreateRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement,
 >(options: RendererOptions<HostNode, HostElement>): Renderer<HostElement>
 
-// overload 2: with hydration
+// 重载2：带有hydration
+/**
+ * 创建渲染器，应该是 vue 源码中最长的一个函数
+ * @returns
+ * ``` js
+ *   return {
+ *     render,
+ *     hydrate,
+ *     createApp: createAppAPI(render, hydrate),
+ *   }
+ * ```
+ */
 function baseCreateRenderer(
   options: RendererOptions<Node, Element>,
   createHydrationFns: typeof createHydrationFunctions,
 ): HydrationRenderer
 
-// implementation
+// 实现
+/**
+ * 创建渲染器，应该是 vue 源码中最长的一个函数
+ * @returns
+ * ``` js
+ *   return {
+ *     render,
+ *     hydrate,
+ *     createApp: createAppAPI(render, hydrate),
+ *   }
+ * ```
+ */
 function baseCreateRenderer(
   options: RendererOptions,
   createHydrationFns?: typeof createHydrationFunctions,
@@ -336,9 +374,6 @@ function baseCreateRenderer(
 
   const target = getGlobalThis()
   target.__VUE__ = true
-  if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
-    setDevtoolsHook(target.__VUE_DEVTOOLS_GLOBAL_HOOK__, target)
-  }
 
   const {
     insert: hostInsert,
