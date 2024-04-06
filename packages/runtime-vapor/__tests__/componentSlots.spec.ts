@@ -35,21 +35,6 @@ function renderWithSlots(slots: any): any {
 
 describe('component: slots', () => {
   test('initSlots: instance.slots should be set correctly', () => {
-    const { slots } = renderWithSlots({ _: 1 })
-    expect(slots).toMatchObject({ _: 1 })
-  })
-
-  // NOTE: slot normalization is not supported
-  test.todo(
-    'initSlots: should normalize object slots (when value is null, string, array)',
-    () => {},
-  )
-  test.todo(
-    'initSlots: should normalize object slots (when value is function)',
-    () => {},
-  )
-
-  test('initSlots: instance.slots should be set correctly', () => {
     let instance: any
     const Comp = defineComponent({
       render() {
@@ -72,6 +57,16 @@ describe('component: slots', () => {
       document.createTextNode('header'),
     )
   })
+
+  // NOTE: slot normalization is not supported
+  test.todo(
+    'initSlots: should normalize object slots (when value is null, string, array)',
+    () => {},
+  )
+  test.todo(
+    'initSlots: should normalize object slots (when value is function)',
+    () => {},
+  )
 
   // runtime-core's "initSlots: instance.slots should be set correctly (when vnode.shapeFlag is not SLOTS_CHILDREN)"
   test('initSlots: instance.slots should be set correctly', () => {
@@ -150,6 +145,60 @@ describe('component: slots', () => {
     // ).toHaveBeenWarned()
 
     expect(instance.slots).toHaveProperty('footer')
+  })
+
+  test('the current instance should be kept in the slot', async () => {
+    let instanceInDefaultSlot: any
+    let instanceInVForSlot: any
+    let instanceInVIfSlot: any
+
+    const Comp = defineComponent({
+      render() {
+        const instance = getCurrentInstance()
+        instance!.slots.default!()
+        instance!.slots.inVFor!()
+        instance!.slots.inVIf!()
+        return template('<div></div>')()
+      },
+    })
+
+    const { instance } = define({
+      render() {
+        return createComponent(
+          Comp,
+          {},
+          {
+            default: () => {
+              instanceInDefaultSlot = getCurrentInstance()
+              return template('content')()
+            },
+          },
+          () => [
+            [
+              {
+                name: 'inVFor',
+                fn: () => {
+                  instanceInVForSlot = getCurrentInstance()
+                  return template('content')()
+                },
+              },
+            ],
+            {
+              name: 'inVIf',
+              key: '1',
+              fn: () => {
+                instanceInVIfSlot = getCurrentInstance()
+                return template('content')()
+              },
+            },
+          ],
+        )
+      },
+    }).render()
+
+    expect(instanceInDefaultSlot).toBe(instance)
+    expect(instanceInVForSlot).toBe(instance)
+    expect(instanceInVIfSlot).toBe(instance)
   })
 
   test.todo('should respect $stable flag', async () => {
