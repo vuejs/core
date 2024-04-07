@@ -43,20 +43,30 @@ const builtInSymbols = new Set(
     .filter(isSymbol),
 )
 
+/**
+ * 创建并返回一个包含数组操作Instrumentations的对象。
+ * 这些Instrumentations用于对可能包含响应式值的数组方法进行拦截和处理，
+ * 以实现对这些方法的追踪和优化。
+ *
+ * @returns {Record<string, Function>} 一个包含各种数组方法拦截器的对象。
+ */
 const arrayInstrumentations = /*#__PURE__*/ createArrayInstrumentations()
 
 function createArrayInstrumentations() {
   const instrumentations: Record<string, Function> = {}
   // instrument identity-sensitive Array methods to account for possible reactive
   // values
+  // 为身份敏感的数组方法（如includes、indexOf、lastIndexOf）添加拦截器，以处理可能的响应式值。
   ;(['includes', 'indexOf', 'lastIndexOf'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       const arr = toRaw(this) as any
       for (let i = 0, l = this.length; i < l; i++) {
         track(arr, TrackOpTypes.GET, i + '')
       }
+      // 首先使用原始参数运行方法（可能包含响应式值）。
       // we run the method using the original args first (which may be reactive)
       const res = arr[key](...args)
+      // 如果没有找到匹配项或方法返回false，使用原始值再次运行方法。
       if (res === -1 || res === false) {
         // if that didn't work, run it again using raw values.
         return arr[key](...args.map(toRaw))
@@ -65,15 +75,18 @@ function createArrayInstrumentations() {
       }
     }
   })
+  // 为改变数组长度的突变方法（如push、pop、shift、unshift、splice）添加拦截器，以避免长度被追踪而导致的潜在无限循环问题。
   // instrument length-altering mutation methods to avoid length being tracked
   // which leads to infinite loops in some cases (#2137)
   ;(['push', 'pop', 'shift', 'unshift', 'splice'] as const).forEach(key => {
     instrumentations[key] = function (this: unknown[], ...args: unknown[]) {
       pauseTracking()
       pauseScheduling()
+      // 暂停追踪和调度，然后使用原始值应用突变方法。
       const res = (toRaw(this) as any)[key].apply(this, args)
       resetScheduling()
       resetTracking()
+      // 恢复追踪和调度，然后返回结果。
       return res
     }
   })
@@ -189,24 +202,43 @@ class BaseReactiveHandler implements ProxyHandler<Target> {
   }
 }
 
+/**
+ * 可变响应式处理器类，继承于BaseReactiveHandler。
+ * 提供设置、删除属性和检查属性存在性等操作的处理逻辑。
+ */
 class MutableReactiveHandler extends BaseReactiveHandler {
+  /**
+   * 构造函数
+   * @param isShallow 是否为浅响应式，默认为false
+   */
   constructor(isShallow = false) {
     super(false, isShallow)
   }
 
+  /**
+   * 设置对象属性值。
+   * @param target 目标对象
+   * @param key 属性名或符号
+   * @param value 新的属性值
+   * @param receiver 接收者对象，通常为target本身
+   * @returns 操作是否成功的布尔值
+   */
   set(
     target: object,
     key: string | symbol,
     value: unknown,
     receiver: object,
   ): boolean {
+    // 判断是否为浅响应式，进行相应处理
     let oldValue = (target as any)[key]
     if (!this._isShallow) {
+      // 对旧值和新值进行判断和转换，确保操作的正确性
       const isOldValueReadonly = isReadonly(oldValue)
       if (!isShallow(value) && !isReadonly(value)) {
         oldValue = toRaw(oldValue)
         value = toRaw(value)
       }
+      // 对特定情况下的引用类型值进行特殊处理
       if (!isArray(target) && isRef(oldValue) && !isRef(value)) {
         if (isOldValueReadonly) {
           return false
@@ -219,6 +251,7 @@ class MutableReactiveHandler extends BaseReactiveHandler {
       // in shallow mode, objects are set as-is regardless of reactive or not
     }
 
+    // 触发相应的响应式操作
     const hadKey =
       isArray(target) && isIntegerKey(key)
         ? Number(key) < target.length
@@ -235,7 +268,14 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
+  /**
+   * 删除对象属性。
+   * @param target 目标对象
+   * @param key 属性名或符号
+   * @returns 操作是否成功的布尔值
+   */
   deleteProperty(target: object, key: string | symbol): boolean {
+    // 判断是否曾存在该属性，存在则触发相应响应式操作
     const hadKey = hasOwn(target, key)
     const oldValue = (target as any)[key]
     const result = Reflect.deleteProperty(target, key)
@@ -245,14 +285,27 @@ class MutableReactiveHandler extends BaseReactiveHandler {
     return result
   }
 
+  /**
+   * 检查对象是否包含属性。
+   * @param target 目标对象
+   * @param key 属性名或符号
+   * @returns 对象是否包含该属性的布尔值
+   */
   has(target: object, key: string | symbol): boolean {
+    // 进行存在性追踪
     const result = Reflect.has(target, key)
     if (!isSymbol(key) || !builtInSymbols.has(key)) {
       track(target, TrackOpTypes.HAS, key)
     }
     return result
   }
+  /**
+   * 获取对象自身的所有键。
+   * @param target 目标对象
+   * @returns 对象自身的所有键的数组
+   */
   ownKeys(target: object): (string | symbol)[] {
+    // 在迭代时进行追踪
     track(
       target,
       TrackOpTypes.ITERATE,
@@ -262,11 +315,21 @@ class MutableReactiveHandler extends BaseReactiveHandler {
   }
 }
 
+/**
+ * 只读响应式处理器类，继承于BaseReactiveHandler。
+ * 对设置和删除操作进行拦截，防止修改只读对象。
+ */
 class ReadonlyReactiveHandler extends BaseReactiveHandler {
   constructor(isShallow = false) {
     super(true, isShallow)
   }
 
+  /**
+   * 设置对象属性值（被拦截，防止修改）。
+   * @param target 目标对象
+   * @param key 属性名或符号
+   * @returns 总是返回true，但实际不执行设置操作
+   */
   set(target: object, key: string | symbol) {
     if (__DEV__) {
       warn(
@@ -277,7 +340,14 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
     return true
   }
 
+  /**
+   * 删除对象属性（被拦截，防止删除）。
+   * @param target 目标对象
+   * @param key 属性名或符号
+   * @returns 总是返回true，但实际不执行删除操作
+   */
   deleteProperty(target: object, key: string | symbol) {
+    // 开发环境下的警告信息
     if (__DEV__) {
       warn(
         `Delete operation on key "${String(key)}" failed: target is readonly.`,
@@ -288,6 +358,7 @@ class ReadonlyReactiveHandler extends BaseReactiveHandler {
   }
 }
 
+// 导出相应的处理器实例，用于创建响应式对象
 export const mutableHandlers: ProxyHandler<object> =
   /*#__PURE__*/ new MutableReactiveHandler()
 
@@ -298,6 +369,7 @@ export const shallowReactiveHandlers = /*#__PURE__*/ new MutableReactiveHandler(
   true,
 )
 
+// 浅只读处理器，特殊处理保持只读性和引用的不变性
 // Props handlers are special in the sense that it should not unwrap top-level
 // refs (in order to allow refs to be explicitly passed down), but should
 // retain the reactivity of the normal readonly object.
