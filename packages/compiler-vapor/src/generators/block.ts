@@ -1,4 +1,9 @@
-import { type BlockIRNode, IRNodeTypes, type WithDirectiveIRNode } from '../ir'
+import {
+  type BlockIRNode,
+  IRNodeTypes,
+  type OperationNode,
+  type WithDirectiveIRNode,
+} from '../ir'
 import {
   type CodeFragment,
   INDENT_END,
@@ -41,11 +46,7 @@ export function genBlockContent(
     push(...genChildren(child, context, child.id!))
   }
 
-  const directiveOps = operation.filter(
-    (oper): oper is WithDirectiveIRNode =>
-      oper.type === IRNodeTypes.WITH_DIRECTIVE,
-  )
-  for (const directives of groupDirective(directiveOps)) {
+  for (const directives of groupDirective(operation)) {
     push(...genWithDirective(directives, context))
   }
 
@@ -67,9 +68,14 @@ export function genBlockContent(
   return frag
 }
 
-function groupDirective(ops: WithDirectiveIRNode[]): WithDirectiveIRNode[][] {
+function groupDirective(operation: OperationNode[]): WithDirectiveIRNode[][] {
+  const directiveOps = operation.filter(
+    (oper): oper is WithDirectiveIRNode =>
+      oper.type === IRNodeTypes.WITH_DIRECTIVE,
+  )
+
   const directiveMap: Record<number, WithDirectiveIRNode[]> = {}
-  for (const oper of ops) {
+  for (const oper of directiveOps) {
     if (!directiveMap[oper.element]) directiveMap[oper.element] = []
     directiveMap[oper.element].push(oper)
   }
