@@ -5,6 +5,7 @@ function looseCompareArrays(a: any[], b: any[]) {
   let equal = true
   for (let i = 0; equal && i < a.length; i++) {
     equal = looseEqual(a[i], b[i])
+    if (!equal) break;
   }
   return equal
 }
