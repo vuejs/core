@@ -104,10 +104,19 @@ export const onUnmounted = createHook(LifecycleHooks.UNMOUNTED)
 export const onServerPrefetch = createHook(LifecycleHooks.SERVER_PREFETCH)
 
 export type DebuggerHook = (e: DebuggerEvent) => void
+
+/**
+ * 创建一个钩子，用于监听渲染触发的生命周期事件。
+ * @returns 返回一个DebuggerHook类型的钩子。
+ */
 export const onRenderTriggered = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRIGGERED,
 )
 
+/**
+ * 创建一个钩子，用于监听渲染追踪的生命周期事件。
+ * @returns 返回一个DebuggerHook类型的钩子。
+ */
 export const onRenderTracked = createHook<DebuggerHook>(
   LifecycleHooks.RENDER_TRACKED,
 )

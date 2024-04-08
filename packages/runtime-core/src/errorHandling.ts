@@ -97,25 +97,38 @@ export function callWithAsyncErrorHandling(
   return values
 }
 
+/**
+ * 处理错误的函数。
+ *
+ * @param err 未知错误对象。
+ * @param instance 组件的内部实例或null。
+ * @param type 错误类型。
+ * @param throwInDev 是否在开发环境中抛出错误，默认为true。
+ */
 export function handleError(
   err: unknown,
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   throwInDev = true,
 ) {
+  // 获取实例的上下文VNode
   const contextVNode = instance ? instance.vnode : null
   if (instance) {
     let cur = instance.parent
+    // 暴露的实例是渲染代理，以保持与2.x的一致性
     // the exposed instance is the render proxy to keep it consistent with 2.x
     const exposedInstance = instance.proxy
+    // 在生产环境中，钩子仅接收错误代码
     // in production the hook receives only the error code
     const errorInfo = __DEV__
       ? ErrorTypeStrings[type]
       : `https://vuejs.org/error-reference/#runtime-${type}`
     while (cur) {
+      // 遍历父组件，寻找错误捕获钩子
       const errorCapturedHooks = cur.ec
       if (errorCapturedHooks) {
         for (let i = 0; i < errorCapturedHooks.length; i++) {
+          // 如果错误捕获钩子返回false，则停止错误处理
           if (
             errorCapturedHooks[i](err, exposedInstance, errorInfo) === false
           ) {
@@ -125,20 +138,23 @@ export function handleError(
       }
       cur = cur.parent
     }
+    // 应用级别的错误处理
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
-      pauseTracking()
+      pauseTracking() // 暂停追踪
+      // 调用应用错误处理器
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo],
       )
-      resetTracking()
+      resetTracking() // 重置追踪
       return
     }
   }
+  // 无实例时或所有错误处理钩子都未处理错误时，记录错误
   logError(err, type, contextVNode, throwInDev)
 }
 
