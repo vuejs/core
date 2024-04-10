@@ -19,13 +19,14 @@ import {
   onMounted,
   ref,
   renderSlot,
+  useCssVars,
   vModelCheckbox,
   vShow,
   withDirectives,
 } from '@vue/runtime-dom'
 import { type SSRContext, renderToString } from '@vue/server-renderer'
 import { PatchFlags } from '@vue/shared'
-import { vShowOldKey } from '../../runtime-dom/src/directives/vShow'
+import { vShowOriginalDisplay } from '../../runtime-dom/src/directives/vShow'
 
 function mountWithHydration(html: string, render: () => any) {
   const container = document.createElement('div')
@@ -1251,7 +1252,7 @@ describe('SSR hydration', () => {
         foo
       </div>
     `)
-    expect((container.firstChild as any)[vShowOldKey]).toBe('')
+    expect((container.firstChild as any)[vShowOriginalDisplay]).toBe('')
     expect(vnode.el).toBe(container.firstChild)
     expect(`mismatch`).not.toHaveBeenWarned()
   })
@@ -1537,6 +1538,38 @@ describe('SSR hydration', () => {
         h('select', [h('option', { value: ['foo'] }, 'hello')]),
       )
       expect(`Hydration attribute mismatch`).not.toHaveBeenWarned()
+    })
+
+    test('should not warn css v-bind', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;color:var(--foo);" />`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () => h('div', { style: { color: 'var(--foo)' } })
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
+    })
+
+    // #10317 - test case from #10325
+    test('css vars should only be added to expected on component root dom', () => {
+      const container = document.createElement('div')
+      container.innerHTML = `<div style="--foo:red;"><div style="color:var(--foo);" /></div>`
+      const app = createSSRApp({
+        setup() {
+          useCssVars(() => ({
+            foo: 'red',
+          }))
+          return () =>
+            h('div', null, [h('div', { style: { color: 'var(--foo)' } })])
+        },
+      })
+      app.mount(container)
+      expect(`Hydration style mismatch`).not.toHaveBeenWarned()
     })
   })
 })

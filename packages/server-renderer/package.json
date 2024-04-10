@@ -1,6 +1,6 @@
 {
   "name": "@vue/server-renderer",
-  "version": "3.4.15",
+  "version": "3.4.21",
   "description": "@vue/server-renderer",
   "main": "index.js",
   "module": "dist/server-renderer.esm-bundler.js",
