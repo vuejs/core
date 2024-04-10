@@ -285,7 +285,7 @@ export const TeleportImpl = {
   hydrate: hydrateTeleport,
 }
 
-function hasNotDisabledTeleport(vnodes: VNode[]): Boolean {
+function hasNotDisabledTeleport(vnodes: VNode[]): boolean {
   for (let i = 0; i < vnodes.length; i++) {
     const { shapeFlag, props, children } = vnodes[i]
     if (shapeFlag & ShapeFlags.TELEPORT && !isTeleportDisabled(props)) {
