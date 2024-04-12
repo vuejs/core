@@ -1,7 +1,19 @@
-import { type Ref, type SchedulerJob, isRef } from '@vue/reactivity'
+import {
+  type Ref,
+  type SchedulerJob,
+  isRef,
+  onScopeDispose,
+} from '@vue/reactivity'
 import { currentInstance } from '../component'
 import { VaporErrorCodes, callWithErrorHandling } from '../errorHandling'
-import { EMPTY_OBJ, hasOwn, isFunction, isString } from '@vue/shared'
+import {
+  EMPTY_OBJ,
+  hasOwn,
+  isArray,
+  isFunction,
+  isString,
+  remove,
+} from '@vue/shared'
 import { warn } from '../warning'
 import { queuePostRenderEffect } from '../scheduler'
 
@@ -10,48 +22,90 @@ export type NodeRef = string | Ref | ((ref: Element) => void)
 /**
  * Function for handling a template ref
  */
-export function setRef(el: Element, ref: NodeRef) {
+export function setRef(el: Element, ref: NodeRef, refFor = false) {
   if (!currentInstance) return
   const { setupState, isUnmounted } = currentInstance
 
-  const value = isUnmounted ? null : el
+  if (isUnmounted) {
+    return
+  }
+
   const refs =
     currentInstance.refs === EMPTY_OBJ
       ? (currentInstance.refs = {})
       : currentInstance.refs
 
   if (isFunction(ref)) {
-    callWithErrorHandling(ref, currentInstance, VaporErrorCodes.FUNCTION_REF, [
-      value,
-      refs,
-    ])
+    const invokeRefSetter = (value: Element | null) => {
+      callWithErrorHandling(
+        ref,
+        currentInstance,
+        VaporErrorCodes.FUNCTION_REF,
+        [value, refs],
+      )
+    }
+
+    invokeRefSetter(el)
+    onScopeDispose(() => invokeRefSetter(null))
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
+    let existing: unknown
 
     if (_isString || _isRef) {
-      const doSet = () => {
-        if (_isString) {
-          refs[ref] = value
+      const doSet: SchedulerJob = () => {
+        if (refFor) {
+          existing = _isString
+            ? hasOwn(setupState, ref)
+              ? setupState[ref]
+              : refs[ref]
+            : ref.value
+
+          if (!isArray(existing)) {
+            existing = [el]
+            if (_isString) {
+              refs[ref] = existing
+              if (hasOwn(setupState, ref)) {
+                setupState[ref] = refs[ref]
+                // if setupState[ref] is a reactivity ref,
+                // the existing will also become reactivity too
+                // need to get the Proxy object by resetting
+                existing = setupState[ref]
+              }
+            } else {
+              ref.value = existing
+            }
+          } else if (!existing.includes(el)) {
+            existing.push(el)
+          }
+        } else if (_isString) {
+          refs[ref] = el
           if (hasOwn(setupState, ref)) {
-            setupState[ref] = value
+            setupState[ref] = el
           }
         } else if (_isRef) {
-          ref.value = value
+          ref.value = el
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
       }
-      // #9908 ref on v-for mutates the same array for both mount and unmount
-      // and should be done together
-      if (isUnmounted /* || isVFor */) {
-        doSet()
-      } else {
-        // #1789: set new refs in a post job so that they don't get overwritten
-        // by unmounting ones.
-        ;(doSet as SchedulerJob).id = -1
-        queuePostRenderEffect(doSet)
-      }
+      doSet.id = -1
+      queuePostRenderEffect(doSet)
+
+      onScopeDispose(() => {
+        queuePostRenderEffect(() => {
+          if (isArray(existing)) {
+            remove(existing, el)
+          } else if (_isString) {
+            refs[ref] = null
+            if (hasOwn(setupState, ref)) {
+              setupState[ref] = null
+            }
+          } else if (_isRef) {
+            ref.value = null
+          }
+        })
+      })
     } else if (__DEV__) {
       warn('Invalid template ref type:', ref, `(${typeof ref})`)
     }

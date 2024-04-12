@@ -36,6 +36,7 @@ export {
 
 export { transformElement } from './transforms/transformElement'
 export { transformChildren } from './transforms/transformChildren'
+export { transformRef } from './transforms/transformRef'
 export { transformText } from './transforms/transformText'
 export { transformVBind } from './transforms/vBind'
 export { transformVHtml } from './transforms/vHtml'

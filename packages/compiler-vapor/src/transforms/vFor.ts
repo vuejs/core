@@ -60,7 +60,7 @@ export function processFor(
     operation: [],
     returns: [],
   }
-  const exitBlock = context.enterBlock(render)
+  const exitBlock = context.enterBlock(render, true)
   context.reference()
 
   return () => {

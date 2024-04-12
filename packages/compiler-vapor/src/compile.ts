@@ -102,9 +102,9 @@ export function getBaseTransformPreset(
   return [
     [
       transformOnce,
-      transformRef,
       transformVIf,
       transformVFor,
+      transformRef,
       transformText,
       transformElement,
       transformComment,
