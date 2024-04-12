@@ -300,7 +300,9 @@ type PropsWithDefaults<
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
 > = Readonly<Omit<T, keyof Defaults>> & {
-  readonly [K in keyof Defaults]-?: K extends keyof T
+  readonly [K in keyof Defaults as K extends keyof T
+    ? K
+    : never]-?: K extends keyof T
     ? Defaults[K] extends undefined
       ? T[K]
       : NotUndefined<T[K]>
