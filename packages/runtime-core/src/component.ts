@@ -1004,36 +1004,28 @@ export function finishComponentSetup(
   }
 }
 
-function getAttrsProxy(instance: ComponentInternalInstance): Data {
-  return (
-    instance.attrsProxy ||
-    (instance.attrsProxy = new Proxy(
-      instance.attrs,
-      __DEV__
-        ? {
-            get(target, key: string) {
-              markAttrsAccessed()
-              track(instance, TrackOpTypes.GET, '$attrs')
-              return target[key]
-            },
-            set() {
-              warn(`setupContext.attrs is readonly.`)
-              return false
-            },
-            deleteProperty() {
-              warn(`setupContext.attrs is readonly.`)
-              return false
-            },
-          }
-        : {
-            get(target, key: string) {
-              track(instance, TrackOpTypes.GET, '$attrs')
-              return target[key]
-            },
-          },
-    ))
-  )
-}
+const attrsProxyHandlers = __DEV__
+  ? {
+      get(target: Data, key: string) {
+        markAttrsAccessed()
+        track(target, TrackOpTypes.GET, '')
+        return target[key]
+      },
+      set() {
+        warn(`setupContext.attrs is readonly.`)
+        return false
+      },
+      deleteProperty() {
+        warn(`setupContext.attrs is readonly.`)
+        return false
+      },
+    }
+  : {
+      get(target: Data, key: string) {
+        track(target, TrackOpTypes.GET, '')
+        return target[key]
+      },
+    }
 
 /**
  * Dev-only
@@ -1080,9 +1072,13 @@ export function createSetupContext(
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
+    let attrsProxy: Data
     return Object.freeze({
       get attrs() {
-        return getAttrsProxy(instance)
+        return (
+          attrsProxy ||
+          (attrsProxy = new Proxy(instance.attrs, attrsProxyHandlers))
+        )
       },
       get slots() {
         return getSlotsProxy(instance)
@@ -1094,9 +1090,7 @@ export function createSetupContext(
     })
   } else {
     return {
-      get attrs() {
-        return getAttrsProxy(instance)
-      },
+      attrs: new Proxy(instance.attrs, attrsProxyHandlers),
       slots: instance.slots,
       emit: instance.emit,
       expose,
