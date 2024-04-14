@@ -9,7 +9,7 @@ import {
   isArray,
   isFunction,
 } from '@vue/shared'
-import { baseWatch, shallowReactive } from '@vue/reactivity'
+import { shallowReactive } from '@vue/reactivity'
 import { warn } from './warning'
 import {
   type Component,
@@ -17,7 +17,7 @@ import {
   setCurrentInstance,
 } from './component'
 import { patchAttrs } from './componentAttrs'
-import { createVaporPreScheduler } from './scheduler'
+import { firstEffect } from './renderEffect'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -82,16 +82,16 @@ export function initProps(
   rawProps: RawProps,
   isStateful: boolean,
 ) {
-  const props: Data = {}
-  const attrs = (instance.attrs = shallowReactive<Data>({}))
-
   if (!rawProps) rawProps = []
   else if (!isArray(rawProps)) rawProps = [rawProps]
   instance.rawProps = rawProps
 
+  const props: Data = {}
+  const attrs = (instance.attrs = shallowReactive<Data>({}))
   const [options] = instance.propsOptions
-
+  // has v-bind or :[eventName]
   const hasDynamicProps = rawProps.some(isFunction)
+
   if (options) {
     if (hasDynamicProps) {
       for (const key in options) {
@@ -100,15 +100,11 @@ export function initProps(
         registerProp(instance, props, key, getter, true)
       }
     } else {
+      const staticProps = rawProps[0] as StaticProps
       for (const key in options) {
-        const rawKey = rawProps[0] && getRawKey(rawProps[0] as StaticProps, key)
+        const rawKey = staticProps && getRawKey(staticProps, key)
         if (rawKey) {
-          registerProp(
-            instance,
-            props,
-            key,
-            (rawProps[0] as StaticProps)[rawKey],
-          )
+          registerProp(instance, props, key, staticProps[rawKey])
         } else {
           registerProp(instance, props, key, undefined, false, true)
         }
@@ -122,15 +118,13 @@ export function initProps(
   }
 
   if (hasDynamicProps) {
-    baseWatch(() => patchAttrs(instance), undefined, {
-      scheduler: createVaporPreScheduler(instance),
-    })
+    firstEffect(instance, () => patchAttrs(instance))
   } else {
     patchAttrs(instance)
   }
 
   if (isStateful) {
-    instance.props = /* isSSR ? props :  */ shallowReactive(props)
+    instance.props = /* TODO isSSR ? props :  */ shallowReactive(props)
   } else {
     // functional w/ optional props, props === attrs
     instance.props = instance.propsOptions === EMPTY_ARR ? attrs : props

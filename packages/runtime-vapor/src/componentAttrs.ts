@@ -6,12 +6,15 @@ import type { RawProps } from './componentProps'
 import { renderEffect } from './renderEffect'
 
 export function patchAttrs(instance: ComponentInternalInstance) {
-  const attrs = instance.attrs
-  const options = instance.propsOptions[0]
+  const {
+    attrs,
+    rawProps,
+    propsOptions: [options],
+  } = instance
 
   const keys = new Set<string>()
-  if (instance.rawProps.length)
-    for (const props of Array.from(instance.rawProps).reverse()) {
+  if (rawProps.length)
+    for (const props of Array.from(rawProps).reverse()) {
       if (isFunction(props)) {
         const resolved = props()
         for (const rawKey in resolved) {

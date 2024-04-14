@@ -1,9 +1,6 @@
 import { type IfAny, isArray, isFunction } from '@vue/shared'
 import {
   type EffectScope,
-  ReactiveEffect,
-  type SchedulerJob,
-  SchedulerJobFlags,
   effectScope,
   isReactive,
   shallowReactive,
@@ -14,9 +11,8 @@ import {
   setCurrentInstance,
 } from './component'
 import { type Block, type Fragment, fragmentKey } from './apiRender'
-import { renderEffect } from './renderEffect'
+import { firstEffect, renderEffect } from './renderEffect'
 import { createComment, createTextNode, insert, remove } from './dom/element'
-import { queueJob } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 
 // TODO: SSR
@@ -56,8 +52,7 @@ export function initSlots(
   if (dynamicSlots) {
     slots = shallowReactive(slots)
     const dynamicSlotKeys: Record<string, true> = {}
-
-    const effect = new ReactiveEffect(() => {
+    firstEffect(instance, () => {
       const _dynamicSlots = callWithAsyncErrorHandling(
         dynamicSlots,
         instance,
@@ -98,12 +93,6 @@ export function initSlots(
         }
       }
     })
-
-    const job: SchedulerJob = () => effect.run()
-    job.flags! |= SchedulerJobFlags.PRE
-    job.id = instance.uid
-    effect.scheduler = () => queueJob(job)
-    effect.run()
   }
 
   instance.slots = slots

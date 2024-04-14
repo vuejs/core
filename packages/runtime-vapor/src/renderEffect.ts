@@ -1,6 +1,15 @@
-import { EffectFlags, ReactiveEffect, type SchedulerJob } from '@vue/reactivity'
+import {
+  EffectFlags,
+  ReactiveEffect,
+  type SchedulerJob,
+  SchedulerJobFlags,
+} from '@vue/reactivity'
 import { invokeArrayFns } from '@vue/shared'
-import { getCurrentInstance, setCurrentInstance } from './component'
+import {
+  type ComponentInternalInstance,
+  getCurrentInstance,
+  setCurrentInstance,
+} from './component'
 import { queueJob, queuePostRenderEffect } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { invokeDirectiveHook } from './directives'
@@ -55,5 +64,17 @@ export function renderEffect(cb: () => void) {
     queueJob(job)
   }
 
+  effect.run()
+}
+
+export function firstEffect(
+  instance: ComponentInternalInstance,
+  fn: () => void,
+) {
+  const effect = new ReactiveEffect(fn)
+  const job: SchedulerJob = () => effect.run()
+  job.flags! |= SchedulerJobFlags.PRE
+  job.id = instance.uid
+  effect.scheduler = () => queueJob(job)
   effect.run()
 }
