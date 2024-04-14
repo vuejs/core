@@ -99,7 +99,7 @@ describe('reactivity/reactive/Array', () => {
     expect(fn).toHaveBeenCalledTimes(1)
   })
 
-  test("should reactive when mutate array's index", () => {
+  test('should track hasOwnProperty call with index', () => {
     const original = [1, 2, 3]
     const observed = reactive(original)
 
