@@ -8,7 +8,14 @@ import {
   createCompilerError,
   createSimpleExpression,
 } from '@vue/compiler-dom'
-import { extend, isBuiltInDirective, isVoidTag, makeMap } from '@vue/shared'
+import {
+  camelize,
+  capitalize,
+  extend,
+  isBuiltInDirective,
+  isVoidTag,
+  makeMap,
+} from '@vue/shared'
 import type {
   DirectiveTransformResult,
   NodeTransform,
@@ -61,8 +68,24 @@ function transformComponentElement(
   propsResult: PropsResult,
   context: TransformContext,
 ) {
-  const { bindingMetadata } = context.options
-  const resolve = !bindingMetadata[tag]
+  let resolve = true
+
+  if (!__BROWSER__) {
+    const fromSetup = resolveSetupReference(tag, context)
+    if (fromSetup) {
+      tag = fromSetup
+      resolve = false
+    }
+    const dotIndex = tag.indexOf('.')
+    if (dotIndex > 0) {
+      const ns = resolveSetupReference(tag.slice(0, dotIndex), context)
+      if (ns) {
+        tag = ns + tag.slice(dotIndex)
+        resolve = false
+      }
+    }
+  }
+
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const root =
     context.root === context.parent && context.parent.node.children.length === 1
@@ -75,6 +98,23 @@ function transformComponentElement(
     resolve,
     root,
   })
+}
+
+function resolveSetupReference(name: string, context: TransformContext) {
+  const bindings = context.options.bindingMetadata
+  if (!bindings || bindings.__isScriptSetup === false) {
+    return
+  }
+
+  const camelName = camelize(name)
+  const PascalName = capitalize(camelName)
+  return bindings[name]
+    ? name
+    : bindings[camelName]
+      ? camelName
+      : bindings[PascalName]
+        ? PascalName
+        : undefined
 }
 
 function transformNativeElement(
