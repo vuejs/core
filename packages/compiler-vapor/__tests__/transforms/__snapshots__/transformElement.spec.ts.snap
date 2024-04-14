@@ -36,17 +36,6 @@ export function render(_ctx) {
 }"
 `;
 
-exports[`compiler: element transform > component > props merging: event handlers 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
-
-export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [{
-    onClick: () => (_ctx.a)
-  }], true)
-  return n0
-}"
-`;
-
 exports[`compiler: element transform > component > resolve component from setup bindings (inline const) 1`] = `
 "(() => {
   const n0 = _createComponent(Example, null, true)
@@ -154,6 +143,16 @@ export function render(_ctx) {
   }, () => (_ctx.obj), {
     class: () => ("bar")
   }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-on="obj" 1`] = `
+"import { toHandlers as _toHandlers } from 'vue';
+import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_toHandlers(_ctx.obj))], true)
   return n0
 }"
 `;

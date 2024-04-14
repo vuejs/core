@@ -14,71 +14,68 @@ describe('compiler: vModel transform', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<input v-model="model" />',
     )
-
-    expect(vaporHelpers).toContain('vModelText')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelText')
   })
 
   test('should support input (text)', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<input type="text" v-model="model" />',
     )
-    expect(vaporHelpers).toContain('vModelText')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelText')
   })
 
   test('should support input (radio)', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<input type="radio" v-model="model" />',
     )
-    expect(vaporHelpers).toContain('vModelRadio')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelRadio')
   })
 
   test('should support input (checkbox)', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<input type="checkbox" v-model="model" />',
     )
-    expect(vaporHelpers).toContain('vModelCheckbox')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelCheckbox')
   })
 
   test('should support select', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<select v-model="model" />',
     )
-
-    expect(vaporHelpers).toContain('vModelSelect')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelSelect')
   })
 
   test('should support textarea', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<textarea v-model="model" />',
     )
-
-    expect(vaporHelpers).toContain('vModelText')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelText')
   })
 
   test('should support input (dynamic type)', () => {
     const { code, vaporHelpers } = compileWithVModel(
       '<input :type="foo" v-model="model" />',
     )
-    expect(vaporHelpers).toContain('vModelDynamic')
     expect(code).toMatchSnapshot()
+    expect(vaporHelpers).toContain('vModelDynamic')
   })
 
   test('should support w/ dynamic v-bind', () => {
     const root1 = compileWithVModel('<input v-bind="obj" v-model="model" />')
-    expect(root1.vaporHelpers).toContain('vModelDynamic')
     expect(root1.code).toMatchSnapshot()
+    expect(root1.vaporHelpers).toContain('vModelDynamic')
 
     const root2 = compileWithVModel(
       '<input v-bind:[key]="val" v-model="model" />',
     )
-    expect(root2.vaporHelpers).toContain('vModelDynamic')
     expect(root2.code).toMatchSnapshot()
+    expect(root2.vaporHelpers).toContain('vModelDynamic')
   })
 
   describe('errors', () => {

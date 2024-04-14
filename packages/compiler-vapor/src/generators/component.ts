@@ -18,7 +18,7 @@ export function genCreateComponent(
   oper: CreateComponentIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper } = context
+  const { helper, vaporHelper } = context
 
   const tag = genTag()
   const isRoot = oper.root
@@ -53,7 +53,9 @@ export function genCreateComponent(
           if (!props.length) return undefined
           return genStaticProps(props)
         } else {
-          return ['() => (', ...genExpression(props, context), ')']
+          let expr = genExpression(props.value, context)
+          if (props.handler) expr = genCall(helper('toHandlers'), expr)
+          return ['() => (', ...expr, ')']
         }
       })
       .filter(Boolean)

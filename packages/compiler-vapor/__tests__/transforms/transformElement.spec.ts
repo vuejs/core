@@ -252,7 +252,7 @@ describe('compiler: element transform', () => {
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
-          props: [{ content: 'obj', isStatic: false }],
+          props: [{ value: { content: 'obj', isStatic: false } }],
         },
       ])
     })
@@ -270,7 +270,7 @@ describe('compiler: element transform', () => {
           tag: 'Foo',
           props: [
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            { content: 'obj' },
+            { value: { content: 'obj' } },
           ],
         },
       ])
@@ -288,7 +288,7 @@ describe('compiler: element transform', () => {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
           tag: 'Foo',
           props: [
-            { content: 'obj' },
+            { value: { content: 'obj' } },
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
           ],
         },
@@ -309,19 +309,19 @@ describe('compiler: element transform', () => {
           tag: 'Foo',
           props: [
             [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
-            { content: 'obj' },
+            { value: { content: 'obj' } },
             [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
           ],
         },
       ])
     })
 
-    test('props merging: event handlers', () => {
+    test.todo('props merging: event handlers', () => {
       const { code, ir } = compileWithElementTransform(
         `<Foo @click.foo="a" @click.bar="b" />`,
       )
       expect(code).toMatchSnapshot()
-      expect(code).contains('onClick: () => (_ctx.a)')
+      expect(code).contains('onClick: () => [_ctx.a, _ctx.b]')
       expect(ir.block.operation).toMatchObject([
         {
           type: IRNodeTypes.CREATE_COMPONENT_NODE,
@@ -330,7 +330,7 @@ describe('compiler: element transform', () => {
             [
               {
                 key: { content: 'onClick', isStatic: true },
-                values: [{ content: 'a' }],
+                values: [{ content: 'a' }, { content: 'b' }],
               },
             ],
           ],
@@ -352,9 +352,17 @@ describe('compiler: element transform', () => {
       expect(code).toMatchSnapshot()
     })
 
-    test.todo('v-on="obj"', () => {
-      const { code } = compileWithElementTransform(`<Foo v-on="obj" />`)
+    test('v-on="obj"', () => {
+      const { code, ir } = compileWithElementTransform(`<Foo v-on="obj" />`)
       expect(code).toMatchSnapshot()
+      expect(code).contains('[() => (_toHandlers(_ctx.obj))]')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [{ value: { content: 'obj' }, handler: true }],
+        },
+      ])
     })
   })
 
@@ -400,9 +408,11 @@ describe('compiler: element transform', () => {
             element: 0,
             props: [
               {
-                type: 4,
-                content: 'obj',
-                isStatic: false,
+                value: {
+                  type: NodeTypes.SIMPLE_EXPRESSION,
+                  content: 'obj',
+                  isStatic: false,
+                },
               },
             ],
           },
@@ -431,26 +441,13 @@ describe('compiler: element transform', () => {
             type: IRNodeTypes.SET_DYNAMIC_PROPS,
             element: 0,
             props: [
-              [
-                {
-                  key: {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'id',
-                    isStatic: true,
-                  },
-                  values: [
-                    {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: 'foo',
-                      isStatic: true,
-                    },
-                  ],
-                },
-              ],
+              [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
               {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: 'obj',
-                isStatic: false,
+                value: {
+                  type: NodeTypes.SIMPLE_EXPRESSION,
+                  content: 'obj',
+                  isStatic: false,
+                },
               },
             ],
           },
@@ -467,39 +464,14 @@ describe('compiler: element transform', () => {
     expect(code).toMatchSnapshot()
     expect(ir.block.effect).toMatchObject([
       {
-        expressions: [
-          {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'obj',
-            isStatic: false,
-          },
-        ],
+        expressions: [{ content: 'obj' }],
         operations: [
           {
             type: IRNodeTypes.SET_DYNAMIC_PROPS,
             element: 0,
             props: [
-              {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: 'obj',
-                isStatic: false,
-              },
-              [
-                {
-                  key: {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'id',
-                    isStatic: true,
-                  },
-                  values: [
-                    {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: 'foo',
-                      isStatic: true,
-                    },
-                  ],
-                },
-              ],
+              { value: { content: 'obj' } },
+              [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
             ],
           },
         ],
@@ -515,55 +487,15 @@ describe('compiler: element transform', () => {
     expect(code).toMatchSnapshot()
     expect(ir.block.effect).toMatchObject([
       {
-        expressions: [
-          {
-            type: NodeTypes.SIMPLE_EXPRESSION,
-            content: 'obj',
-            isStatic: false,
-          },
-        ],
+        expressions: [{ content: 'obj' }],
         operations: [
           {
             type: IRNodeTypes.SET_DYNAMIC_PROPS,
             element: 0,
             props: [
-              [
-                {
-                  key: {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'id',
-                    isStatic: true,
-                  },
-                  values: [
-                    {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: 'foo',
-                      isStatic: true,
-                    },
-                  ],
-                },
-              ],
-              {
-                type: NodeTypes.SIMPLE_EXPRESSION,
-                content: 'obj',
-                isStatic: false,
-              },
-              [
-                {
-                  key: {
-                    type: NodeTypes.SIMPLE_EXPRESSION,
-                    content: 'class',
-                    isStatic: true,
-                  },
-                  values: [
-                    {
-                      type: NodeTypes.SIMPLE_EXPRESSION,
-                      content: 'bar',
-                      isStatic: true,
-                    },
-                  ],
-                },
-              ],
+              [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+              { value: { content: 'obj' } },
+              [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
             ],
           },
         ],

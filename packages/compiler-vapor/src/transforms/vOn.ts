@@ -21,30 +21,13 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
   let { arg, exp, loc, modifiers } = dir
   const isComponent = node.tagType === ElementTypes.COMPONENT
 
-  if (!exp && (!modifiers.length || !arg)) {
+  if (!exp && !modifiers.length) {
     context.options.onError(
       createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, loc),
     )
   }
+  arg = resolveExpression(arg!)
 
-  if (!arg) {
-    // v-on="obj"
-    if (exp) {
-      context.registerEffect(
-        [exp],
-        [
-          {
-            type: IRNodeTypes.SET_DYNAMIC_EVENTS,
-            element: context.reference(),
-            event: exp,
-          },
-        ],
-      )
-    }
-    return
-  }
-
-  arg = resolveExpression(arg)
   const { keyModifiers, nonKeyModifiers, eventOptionModifiers } =
     resolveModifiers(
       arg.isStatic ? `on${arg.content}` : arg,

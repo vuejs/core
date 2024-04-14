@@ -53,6 +53,7 @@ export const transformElement: NodeTransform = (node, context) => {
     const propsResult = buildProps(
       node,
       context as TransformContext<ElementNode>,
+      isComponent,
     )
 
     ;(isComponent ? transformComponentElement : transformNativeElement)(
@@ -168,6 +169,7 @@ export type PropsResult =
 function buildProps(
   node: ElementNode,
   context: TransformContext<ElementNode>,
+  isComponent: boolean,
 ): PropsResult {
   const props = node.props as (VaporDirectiveNode | AttributeNode)[]
   if (props.length === 0) return [false, []]
@@ -184,21 +186,45 @@ function buildProps(
   }
 
   for (const prop of props) {
-    if (
-      prop.type === NodeTypes.DIRECTIVE &&
-      prop.name === 'bind' &&
-      !prop.arg
-    ) {
-      if (prop.exp) {
-        dynamicExpr.push(prop.exp)
-        pushMergeArg()
-        dynamicArgs.push(prop.exp)
-      } else {
-        context.options.onError(
-          createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
-        )
+    if (prop.type === NodeTypes.DIRECTIVE && !prop.arg) {
+      if (prop.name === 'bind') {
+        // v-bind="obj"
+        if (prop.exp) {
+          dynamicExpr.push(prop.exp)
+          pushMergeArg()
+          dynamicArgs.push({ value: prop.exp })
+        } else {
+          context.options.onError(
+            createCompilerError(ErrorCodes.X_V_BIND_NO_EXPRESSION, prop.loc),
+          )
+        }
+        continue
+      } else if (prop.name === 'on') {
+        // v-on="obj"
+        if (prop.exp) {
+          if (isComponent) {
+            dynamicExpr.push(prop.exp)
+            pushMergeArg()
+            dynamicArgs.push({ value: prop.exp, handler: true })
+          } else {
+            context.registerEffect(
+              [prop.exp],
+              [
+                {
+                  type: IRNodeTypes.SET_DYNAMIC_EVENTS,
+                  element: context.reference(),
+                  event: prop.exp,
+                },
+              ],
+            )
+          }
+        } else {
+          context.options.onError(
+            createCompilerError(ErrorCodes.X_V_ON_NO_EXPRESSION, prop.loc),
+          )
+        }
+        continue
       }
-      continue
     }
 
     const result = transformProp(prop, node, context)
