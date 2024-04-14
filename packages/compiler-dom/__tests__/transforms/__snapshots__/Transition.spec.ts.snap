@@ -7,9 +7,9 @@ return function render(_ctx, _cache) {
   with (_ctx) {
     const { vShow: _vShow, createElementVNode: _createElementVNode, withDirectives: _withDirectives, Transition: _Transition, withCtx: _withCtx, openBlock: _openBlock, createBlock: _createBlock } = _Vue
 
-    return (_openBlock(), _createBlock(_Transition, { persisted: \\"\\" }, {
+    return (_openBlock(), _createBlock(_Transition, { persisted: "" }, {
       default: _withCtx(() => [
-        _withDirectives(_createElementVNode(\\"div\\", null, null, 512 /* NEED_PATCH */), [
+        _withDirectives(_createElementVNode("div", null, null, 512 /* NEED_PATCH */), [
           [_vShow, ok]
         ])
       ]),
@@ -29,15 +29,15 @@ return function render(_ctx, _cache) {
     return (_openBlock(), _createBlock(_Transition, null, {
       default: _withCtx(() => [
         a
-          ? (_openBlock(), _createElementBlock(\\"div\\", { key: 0 }, \\"hey\\"))
+          ? (_openBlock(), _createElementBlock("div", { key: 0 }, "hey"))
           : b
-            ? (_openBlock(), _createElementBlock(\\"div\\", { key: 1 }, \\"hey\\"))
-            : (_openBlock(), _createElementBlock(\\"div\\", { key: 2 }, [
+            ? (_openBlock(), _createElementBlock("div", { key: 1 }, "hey"))
+            : (_openBlock(), _createElementBlock("div", { key: 2 }, [
                 c
-                  ? (_openBlock(), _createElementBlock(\\"p\\", { key: 0 }))
+                  ? (_openBlock(), _createElementBlock("p", { key: 0 }))
                   : (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
-                      _createCommentVNode(\\" this should not be ignored \\"),
-                      _createElementVNode(\\"p\\")
+                      _createCommentVNode(" this should not be ignored "),
+                      _createElementVNode("p")
                     ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
               ]))
       ]),

@@ -1,25 +1,24 @@
-import { ComponentInternalInstance, currentInstance } from './component'
+import { type ComponentInternalInstance, currentInstance } from './component'
 import {
-  VNode,
-  VNodeNormalizedChildren,
+  type VNode,
+  type VNodeChild,
+  type VNodeNormalizedChildren,
   normalizeVNode,
-  VNodeChild,
-  InternalObjectKey
 } from './vnode'
 import {
+  EMPTY_OBJ,
+  type IfAny,
+  type Prettify,
+  ShapeFlags,
+  SlotFlags,
+  def,
+  extend,
   isArray,
   isFunction,
-  EMPTY_OBJ,
-  ShapeFlags,
-  extend,
-  def,
-  SlotFlags,
-  Prettify,
-  IfAny
 } from '@vue/shared'
 import { warn } from './warning'
 import { isKeepAlive } from './components/KeepAlive'
-import { ContextualRenderFn, withCtx } from './componentRenderContext'
+import { type ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
@@ -43,12 +42,12 @@ export type SlotsType<T extends Record<string, any> = Record<string, any>> = {
 
 export type StrictUnwrapSlotsType<
   S extends SlotsType,
-  T = NonNullable<S[typeof SlotSymbol]>
-> = [keyof S] extends [never] ? Slots : Readonly<T>
+  T = NonNullable<S[typeof SlotSymbol]>,
+> = [keyof S] extends [never] ? Slots : Readonly<T> & T
 
 export type UnwrapSlotsType<
   S extends SlotsType,
-  T = NonNullable<S[typeof SlotSymbol]>
+  T = NonNullable<S[typeof SlotSymbol]>,
 > = [keyof S] extends [never]
   ? Slots
   : Readonly<
@@ -90,18 +89,22 @@ const normalizeSlotValue = (value: unknown): VNode[] =>
 const normalizeSlot = (
   key: string,
   rawSlot: Function,
-  ctx: ComponentInternalInstance | null | undefined
+  ctx: ComponentInternalInstance | null | undefined,
 ): Slot => {
   if ((rawSlot as any)._n) {
     // already normalized - #5353
     return rawSlot as Slot
   }
   const normalized = withCtx((...args: any[]) => {
-    if (__DEV__ && currentInstance) {
+    if (
+      __DEV__ &&
+      currentInstance &&
+      (!ctx || ctx.root === currentInstance.root)
+    ) {
       warn(
         `Slot "${key}" invoked outside of the render function: ` +
           `this will not track dependencies used in the slot. ` +
-          `Invoke the slot function inside the render function instead.`
+          `Invoke the slot function inside the render function instead.`,
       )
     }
     return normalizeSlotValue(rawSlot(...args))
@@ -114,7 +117,7 @@ const normalizeSlot = (
 const normalizeObjectSlots = (
   rawSlots: RawSlots,
   slots: InternalSlots,
-  instance: ComponentInternalInstance
+  instance: ComponentInternalInstance,
 ) => {
   const ctx = rawSlots._ctx
   for (const key in rawSlots) {
@@ -132,7 +135,7 @@ const normalizeObjectSlots = (
       ) {
         warn(
           `Non-function value encountered for slot "${key}". ` +
-            `Prefer function slots for better performance.`
+            `Prefer function slots for better performance.`,
         )
       }
       const normalized = normalizeSlotValue(value)
@@ -143,7 +146,7 @@ const normalizeObjectSlots = (
 
 const normalizeVNodeSlots = (
   instance: ComponentInternalInstance,
-  children: VNodeNormalizedChildren
+  children: VNodeNormalizedChildren,
 ) => {
   if (
     __DEV__ &&
@@ -152,7 +155,7 @@ const normalizeVNodeSlots = (
   ) {
     warn(
       `Non-function value encountered for default slot. ` +
-        `Prefer function slots for better performance.`
+        `Prefer function slots for better performance.`,
     )
   }
   const normalized = normalizeSlotValue(children)
@@ -161,7 +164,7 @@ const normalizeVNodeSlots = (
 
 export const initSlots = (
   instance: ComponentInternalInstance,
-  children: VNodeNormalizedChildren
+  children: VNodeNormalizedChildren,
 ) => {
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
@@ -170,12 +173,12 @@ export const initSlots = (
       // we should avoid the proxy object polluting the slots of the internal instance
       instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
-      def(children as InternalSlots, '_', type)
+      def(instance.slots, '_', type)
     } else {
       normalizeObjectSlots(
         children as RawSlots,
         (instance.slots = {}),
-        instance
+        instance,
       )
     }
   } else {
@@ -184,13 +187,12 @@ export const initSlots = (
       normalizeVNodeSlots(instance, children)
     }
   }
-  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
-  optimized: boolean
+  optimized: boolean,
 ) => {
   const { vnode, slots } = instance
   let needDeletionCheck = true
