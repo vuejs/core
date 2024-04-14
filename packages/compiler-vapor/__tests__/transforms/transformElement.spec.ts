@@ -174,6 +174,188 @@ describe('compiler: element transform', () => {
         },
       ])
     })
+
+    test('generate single root component', () => {
+      const { code } = compileWithElementTransform(`<Comp/>`, {
+        bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+      })
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_ctx.Comp, null, true)')
+    })
+
+    test('generate multi root component', () => {
+      const { code } = compileWithElementTransform(`<Comp/>123`, {
+        bindingMetadata: { Comp: BindingTypes.SETUP_CONST },
+      })
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_ctx.Comp)')
+    })
+
+    test('static props', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo id="foo" class="bar" />`,
+      )
+
+      expect(code).toMatchSnapshot()
+      expect(code).contains('_createComponent(_resolveComponent("Foo"), [{')
+      expect(code).contains('  id: () => ("foo")')
+      expect(code).contains('  class: () => ("bar")')
+      expect(code).contains('}], true)')
+
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          resolve: true,
+          root: true,
+          props: [
+            [
+              {
+                key: {
+                  type: NodeTypes.SIMPLE_EXPRESSION,
+                  content: 'id',
+                  isStatic: true,
+                },
+                values: [
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: 'foo',
+                    isStatic: true,
+                  },
+                ],
+              },
+              {
+                key: {
+                  type: NodeTypes.SIMPLE_EXPRESSION,
+                  content: 'class',
+                  isStatic: true,
+                },
+                values: [
+                  {
+                    type: NodeTypes.SIMPLE_EXPRESSION,
+                    content: 'bar',
+                    isStatic: true,
+                  },
+                ],
+              },
+            ],
+          ],
+        },
+      ])
+    })
+
+    test('v-bind="obj"', () => {
+      const { code, ir } = compileWithElementTransform(`<Foo v-bind="obj" />`)
+      expect(code).toMatchSnapshot()
+      expect(code).contains('[() => (_ctx.obj)]')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [{ content: 'obj', isStatic: false }],
+        },
+      ])
+    })
+
+    test('v-bind="obj" after static prop', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo id="foo" v-bind="obj" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('id: () => ("foo")')
+      expect(code).contains('}, () => (_ctx.obj)]')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+            { content: 'obj' },
+          ],
+        },
+      ])
+    })
+
+    test('v-bind="obj" before static prop', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo v-bind="obj" id="foo" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('[() => (_ctx.obj), {')
+      expect(code).contains('id: () => ("foo")')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            { content: 'obj' },
+            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+          ],
+        },
+      ])
+    })
+
+    test('v-bind="obj" between static props', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo id="foo" v-bind="obj" class="bar" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('id: () => ("foo")')
+      expect(code).contains('}, () => (_ctx.obj), {')
+      expect(code).contains('class: () => ("bar")')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [{ key: { content: 'id' }, values: [{ content: 'foo' }] }],
+            { content: 'obj' },
+            [{ key: { content: 'class' }, values: [{ content: 'bar' }] }],
+          ],
+        },
+      ])
+    })
+
+    test('props merging: event handlers', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo @click.foo="a" @click.bar="b" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains('onClick: () => (_ctx.a)')
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [
+              {
+                key: { content: 'onClick', isStatic: true },
+                values: [{ content: 'a' }],
+              },
+            ],
+          ],
+        },
+      ])
+    })
+
+    test.todo('props merging: style', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo style="color: green" :style="{ color: 'red' }" />`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test.todo('props merging: class', () => {
+      const { code } = compileWithElementTransform(
+        `<Foo class="foo" :class="{ bar: isBar }" />`,
+      )
+      expect(code).toMatchSnapshot()
+    })
+
+    test.todo('v-on="obj"', () => {
+      const { code } = compileWithElementTransform(`<Foo v-on="obj" />`)
+      expect(code).toMatchSnapshot()
+    })
   })
 
   test('static props', () => {

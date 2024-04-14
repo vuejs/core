@@ -9,11 +9,40 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > generate multi root component 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Comp)
+  return [n0, n1]
+}"
+`;
+
+exports[`compiler: element transform > component > generate single root component 1`] = `
+"import { createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_ctx.Comp, null, true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > import + resolve component 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
   const n0 = _createComponent(_resolveComponent("Foo"), null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > props merging: event handlers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [{
+    onClick: () => (_ctx.a)
+  }], true)
   return n0
 }"
 `;
@@ -69,6 +98,62 @@ exports[`compiler: element transform > component > resolve namespaced component 
 
 export function render(_ctx) {
   const n0 = _createComponent(_ctx.Foo.Example, null, true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > static props 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [{
+    id: () => ("foo"), 
+    class: () => ("bar")
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_ctx.obj)], true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" after static prop 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [{
+    id: () => ("foo")
+  }, () => (_ctx.obj)], true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" before static prop 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_ctx.obj), {
+    id: () => ("foo")
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: element transform > component > v-bind="obj" between static props 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [{
+    id: () => ("foo")
+  }, () => (_ctx.obj), {
+    class: () => ("bar")
+  }], true)
   return n0
 }"
 `;
