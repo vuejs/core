@@ -152,7 +152,8 @@ const tokenizer = new Tokenizer(stack, {
   },
 
   onclosetag(start, end) {
-    const name = getSlice(start, end)
+    // trimming end because the tag can get formatted with newlines
+    const name = getSlice(start, end).trimEnd()
     if (!currentOptions.isVoidTag(name)) {
       let found = false
       for (let i = 0; i < stack.length; i++) {

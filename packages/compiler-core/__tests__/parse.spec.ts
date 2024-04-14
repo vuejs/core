@@ -2070,6 +2070,16 @@ describe('compiler: parse', () => {
       baseParse(`<Foo>`, { parseMode: 'sfc', onError() {} })
       expect(() => baseParse(`{ foo }`)).not.toThrow()
     })
+
+    test('correct loc when the closing > is foarmatted', () => {
+      const [span] = baseParse(`<span></span
+      
+      >`).children
+
+      expect(span.loc.source).toBe('<span></span\n      \n      >')
+      expect(span.loc.start.offset).toBe(0)
+      expect(span.loc.end.offset).toBe(27)
+    })
   })
 
   describe('decodeEntities option', () => {

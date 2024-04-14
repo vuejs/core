@@ -607,7 +607,7 @@ export default class Tokenizer {
     }
   }
   private stateInClosingTagName(c: number): void {
-    if (c === CharCodes.Gt || isWhitespace(c)) {
+    if (c === CharCodes.Gt) {
       this.cbs.onclosetag(this.sectionStart, this.index)
       this.sectionStart = -1
       this.state = State.AfterClosingTagName
