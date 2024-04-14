@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "3.4.21",
-  "packageManager": "pnpm@8.15.5",
+  "packageManager": "pnpm@8.15.6",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
@@ -70,7 +70,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@types/hash-sum": "^1.0.2",
     "@types/minimist": "^1.2.5",
-    "@types/node": "^20.12.2",
+    "@types/node": "^20.12.5",
     "@types/semver": "^7.5.8",
     "@typescript-eslint/eslint-plugin": "^7.4.0",
     "@typescript-eslint/parser": "^7.4.0",
@@ -98,7 +98,7 @@
     "prettier": "^3.2.5",
     "pretty-bytes": "^6.1.1",
     "pug": "^3.0.2",
-    "puppeteer": "~22.6.1",
+    "puppeteer": "~22.6.3",
     "rimraf": "^5.0.5",
     "rollup": "^4.13.2",
     "rollup-plugin-dts": "^6.1.0",
@@ -110,7 +110,7 @@
     "terser": "^5.30.1",
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
-    "tsx": "^4.7.1",
+    "tsx": "^4.7.2",
     "typescript": "^5.2.2",
     "vite": "^5.2.7",
     "vitest": "^1.4.0"
