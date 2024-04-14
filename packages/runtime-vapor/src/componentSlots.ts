@@ -39,11 +39,11 @@ export interface DynamicSlot {
 
 export type DynamicSlots = () => (DynamicSlot | DynamicSlot[])[]
 
-export const initSlots = (
+export function initSlots(
   instance: ComponentInternalInstance,
   rawSlots: InternalSlots | null = null,
   dynamicSlots: DynamicSlots | null = null,
-) => {
+) {
   let slots: InternalSlots = {}
 
   for (const key in rawSlots) {
