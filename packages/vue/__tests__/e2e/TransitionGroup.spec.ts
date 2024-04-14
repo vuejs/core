@@ -534,8 +534,8 @@ describe('e2e: TransitionGroup', () => {
                   show.value
                     ? h('div', { class: 'test' }, 'child')
                     : createCommentVNode('v-if', true)
-              }
-            }
+              },
+            },
           },
           setup: () => {
             const items = ref([])
@@ -546,7 +546,7 @@ describe('e2e: TransitionGroup', () => {
               }, duration)
             }
             return { click, items }
-          }
+          },
         }).mount('#app')
       }, duration)
 
@@ -556,7 +556,7 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test test-enter-from test-enter-active">a</div>` +
           `<div class="test test-enter-from test-enter-active">b</div>` +
           `<div class="test test-enter-from test-enter-active">c</div>` +
-          `<!--v-if-->`
+          `<!--v-if-->`,
       )
 
       await transitionFinish(duration)
@@ -565,7 +565,7 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test test-enter-active test-enter-to">child</div>`
+          `<div class="test test-enter-active test-enter-to">child</div>`,
       )
 
       await transitionFinish(duration)
@@ -573,10 +573,10 @@ describe('e2e: TransitionGroup', () => {
         `<div class="test">a</div>` +
           `<div class="test">b</div>` +
           `<div class="test">c</div>` +
-          `<div class="test">child</div>`
+          `<div class="test">child</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 
   // #4621, #4622, #5153
@@ -601,7 +601,7 @@ describe('e2e: TransitionGroup', () => {
               show.value = true
             }
             return { show, click }
-          }
+          },
         })
 
         app.config.compilerOptions.whitespace = 'preserve'
@@ -613,21 +613,21 @@ describe('e2e: TransitionGroup', () => {
       expect(await htmlWhenTransitionStart()).toBe(
         `<div class="test">foo</div>` +
           ` ` +
-          `<div class="test test-enter-from test-enter-active">bar</div>`
+          `<div class="test test-enter-from test-enter-active">bar</div>`,
       )
 
       await nextFrame()
       expect(await html('#container')).toBe(
         `<div class="test">foo</div>` +
           ` ` +
-          `<div class="test test-enter-active test-enter-to">bar</div>`
+          `<div class="test test-enter-active test-enter-to">bar</div>`,
       )
 
       await transitionFinish(duration)
       expect(await html('#container')).toBe(
-        `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`
+        `<div class="test">foo</div>` + ` ` + `<div class="test">bar</div>`,
       )
     },
-    E2E_TIMEOUT
+    E2E_TIMEOUT,
   )
 })
