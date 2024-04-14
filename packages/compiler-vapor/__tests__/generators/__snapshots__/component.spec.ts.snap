@@ -1,5 +1,20 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`generate component > generate component with emits 1`] = `
+"import { toHandlerKey as _toHandlerKey } from 'vue';
+import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    onClick: () => (fn)
+  }])
+  const n1 = _createComponent(_resolveComponent("Comp"), [{
+    [_toHandlerKey(eventName)]: () => (fn)
+  }])
+  return [n0, n1]
+}"
+`;
+
 exports[`generate component > generate multi root component 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent, template as _template } from 'vue/vapor';
 const t0 = _template("123")

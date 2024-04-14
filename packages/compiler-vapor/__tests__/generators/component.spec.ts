@@ -20,4 +20,12 @@ describe('generate component', () => {
     const { code } = compile(`<div><Comp/></div>`)
     expect(code).toMatchSnapshot()
   })
+
+  test('generate component with emits', () => {
+    const { code } = compile(`
+    <Comp @click="fn" />
+    <Comp @[eventName]="fn" />
+    `)
+    expect(code).toMatchSnapshot()
+  })
 })
