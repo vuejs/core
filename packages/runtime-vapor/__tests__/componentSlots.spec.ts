@@ -2,11 +2,16 @@
 
 import {
   createComponent,
+  createSlot,
   createVaporApp,
   defineComponent,
   getCurrentInstance,
+  insert,
   nextTick,
+  prepend,
   ref,
+  renderEffect,
+  setText,
   template,
 } from '../src'
 import { makeRender } from './_utils'
@@ -236,5 +241,191 @@ describe('component: slots', () => {
     expect(
       'Slot "default" invoked outside of the render function',
     ).not.toHaveBeenWarned()
+  })
+
+  describe('createSlot', () => {
+    test('slot should be render correctly', () => {
+      const Comp = defineComponent(() => {
+        const n0 = template('<div></div>')()
+        insert(createSlot('header'), n0 as any as ParentNode)
+        return n0
+      })
+
+      const { host } = define(() => {
+        return createComponent(Comp, {}, { header: () => template('header')() })
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>header</div>')
+    })
+
+    test('slot should be render correctly with binds', async () => {
+      const Comp = defineComponent(() => {
+        const n0 = template('<div></div>')()
+        insert(
+          createSlot('header', { title: () => 'header' }),
+          n0 as any as ParentNode,
+        )
+        return n0
+      })
+
+      const { host } = define(() => {
+        return createComponent(
+          Comp,
+          {},
+          {
+            header: ({ title }) => {
+              const el = template('<h1></h1>')()
+              renderEffect(() => {
+                setText(el, title())
+              })
+              return el
+            },
+          },
+        )
+      }).render()
+
+      expect(host.innerHTML).toBe('<div><h1>header</h1></div>')
+    })
+
+    test('dynamic slot should be render correctly with binds', async () => {
+      const Comp = defineComponent(() => {
+        const n0 = template('<div></div>')()
+        prepend(
+          n0 as any as ParentNode,
+          createSlot('header', { title: () => 'header' }),
+        )
+        return n0
+      })
+
+      const { host } = define(() => {
+        // dynamic slot
+        return createComponent(Comp, {}, {}, () => [
+          { name: 'header', fn: ({ title }) => template(`${title()}`)() },
+        ])
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+    })
+
+    test('dynamic slot outlet should be render correctly with binds', async () => {
+      const Comp = defineComponent(() => {
+        const n0 = template('<div></div>')()
+        prepend(
+          n0 as any as ParentNode,
+          createSlot(
+            () => 'header', // dynamic slot outlet name
+            { title: () => 'header' },
+          ),
+        )
+        return n0
+      })
+
+      const { host } = define(() => {
+        return createComponent(
+          Comp,
+          {},
+          { header: ({ title }) => template(`${title()}`)() },
+        )
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>header<!--slot--></div>')
+    })
+
+    test('fallback should be render correctly', () => {
+      const Comp = defineComponent(() => {
+        const n0 = template('<div></div>')()
+        insert(
+          createSlot('header', {}, () => template('fallback')()),
+          n0 as any as ParentNode,
+        )
+        return n0
+      })
+
+      const { host } = define(() => {
+        return createComponent(Comp, {}, {})
+      }).render()
+
+      expect(host.innerHTML).toBe('<div>fallback</div>')
+    })
+
+    test('dynamic slot should be updated correctly', async () => {
+      const flag1 = ref(true)
+
+      const Child = defineComponent(() => {
+        const temp0 = template('<p></p>')
+        const el0 = temp0()
+        const el1 = temp0()
+        const slot1 = createSlot('one', {}, () => template('one fallback')())
+        const slot2 = createSlot('two', {}, () => template('two fallback')())
+        insert(slot1, el0 as any as ParentNode)
+        insert(slot2, el1 as any as ParentNode)
+        return [el0, el1]
+      })
+
+      const { host } = define(() => {
+        return createComponent(Child, {}, {}, () => [
+          flag1.value
+            ? { name: 'one', fn: () => template('one content')() }
+            : { name: 'two', fn: () => template('two content')() },
+        ])
+      }).render()
+
+      expect(host.innerHTML).toBe(
+        '<p>one content<!--slot--></p><p>two fallback<!--slot--></p>',
+      )
+
+      flag1.value = false
+      await nextTick()
+
+      expect(host.innerHTML).toBe(
+        '<p>one fallback<!--slot--></p><p>two content<!--slot--></p>',
+      )
+
+      flag1.value = true
+      await nextTick()
+
+      expect(host.innerHTML).toBe(
+        '<p>one content<!--slot--></p><p>two fallback<!--slot--></p>',
+      )
+    })
+
+    test('dynamic slot outlet should be updated correctly', async () => {
+      const slotOutletName = ref('one')
+
+      const Child = defineComponent(() => {
+        const temp0 = template('<p></p>')
+        const el0 = temp0()
+        const slot1 = createSlot(
+          () => slotOutletName.value,
+          {},
+          () => template('fallback')(),
+        )
+        insert(slot1, el0 as any as ParentNode)
+        return el0
+      })
+
+      const { host } = define(() => {
+        return createComponent(
+          Child,
+          {},
+          {
+            one: () => template('one content')(),
+            two: () => template('two content')(),
+          },
+        )
+      }).render()
+
+      expect(host.innerHTML).toBe('<p>one content<!--slot--></p>')
+
+      slotOutletName.value = 'two'
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<p>two content<!--slot--></p>')
+
+      slotOutletName.value = 'none'
+      await nextTick()
+
+      expect(host.innerHTML).toBe('<p>fallback<!--slot--></p>')
+    })
   })
 })

@@ -50,6 +50,7 @@ export {
   type FunctionalComponent,
   type SetupFn,
 } from './component'
+export { createSlot } from './componentSlots'
 export { renderEffect } from './renderEffect'
 export {
   watch,
