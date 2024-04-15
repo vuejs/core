@@ -192,4 +192,15 @@ describe(`runtime-dom: events patching`, () => {
     testElement.dispatchEvent(new CustomEvent('foobar'))
     expect(fn2).toHaveBeenCalledTimes(1)
   })
+
+  it('handles an unknown type', () => {
+    const el = document.createElement('div')
+    patchProp(el, 'onClick', null, 'test')
+    el.dispatchEvent(new Event('click'))
+    expect(
+      '[Vue warn]: Wrong type passed to the event invoker, ' +
+        'did you maybe forget @ or : in front of your prop?' +
+        '\nReceived onClick="test"',
+    ).toHaveBeenWarned()
+  })
 })
