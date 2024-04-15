@@ -42,7 +42,7 @@ export function renderSlot(
       'slot',
       props,
       fallback && fallback(),
-      !!fallback ? PatchFlags.BAIL : undefined,
+      fallback ? PatchFlags.BAIL : undefined,
     )
   }
 
