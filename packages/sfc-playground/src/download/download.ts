@@ -27,7 +27,7 @@ export async function downloadProject(store: ReplStore) {
 
   const files = store.getFiles()
   for (const file in files) {
-    if (file !== 'import-map.json') {
+    if (file !== 'import-map.json' && file !== 'tsconfig.json') {
       src.file(file, files[file])
     } else {
       zip.file(file, files[file])

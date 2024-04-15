@@ -23,6 +23,7 @@ import {
   isString,
 } from '@vue/shared'
 import {
+  ReactiveFlags,
   type ShallowUnwrapRef,
   TrackOpTypes,
   type UnwrapNestedRefs,
@@ -307,6 +308,10 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 

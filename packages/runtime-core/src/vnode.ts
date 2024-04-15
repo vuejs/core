@@ -55,6 +55,7 @@ import { convertLegacyVModelProps } from './compat/componentVModel'
 import { defineLegacyVNodeProperties } from './compat/renderFn'
 import { ErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import type { ComponentPublicInstance } from './componentPublicInstance'
+import { attrsProto } from './componentProps'
 
 export const Fragment = Symbol.for('v-fgt') as any as {
   __isFragment: true
@@ -404,8 +405,6 @@ const createVNodeWithArgsTransform = (
   )
 }
 
-export const InternalObjectKey = `__vInternal`
-
 const normalizeKey = ({ key }: VNodeProps): VNode['key'] =>
   key != null ? key : null
 
@@ -618,7 +617,7 @@ function _createVNode(
 
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
-  return isProxy(props) || InternalObjectKey in props
+  return isProxy(props) || Object.getPrototypeOf(props) === attrsProto
     ? extend({}, props)
     : props
 }
@@ -792,7 +791,7 @@ export function normalizeChildren(vnode: VNode, children: unknown) {
     } else {
       type = ShapeFlags.SLOTS_CHILDREN
       const slotFlag = (children as RawSlots)._
-      if (!slotFlag && !(InternalObjectKey in children!)) {
+      if (!slotFlag) {
         // if slots are not normalized, attach context instance
         // (compiled / normalized slots already have context)
         ;(children as RawSlots)._ctx = currentRenderingInstance

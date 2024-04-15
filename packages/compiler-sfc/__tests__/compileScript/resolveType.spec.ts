@@ -561,6 +561,27 @@ describe('resolveType', () => {
       expect(deps && [...deps]).toStrictEqual(Object.keys(files))
     })
 
+    // #10635
+    test('relative tsx', () => {
+      const files = {
+        '/foo.tsx': 'export type P = { foo: number }',
+        '/bar/index.tsx': 'export type PP = { bar: string }',
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        import { PP } from './bar'
+        defineProps<P & PP>()
+        `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
     test.runIf(process.platform === 'win32')('relative ts on Windows', () => {
       const files = {
         'C:\\Test\\FolderA\\foo.ts': 'export type P = { foo: number }',
