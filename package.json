@@ -82,7 +82,7 @@
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "eslint": "^9.0.0",
     "eslint-define-config": "^2.1.0",
-    "eslint-plugin-import": "npm:eslint-plugin-i@^2.29.1",
+    "eslint-plugin-import-x": "^0.5.0",
     "eslint-plugin-jest": "^27.9.0",
     "estree-walker": "^2.0.2",
     "execa": "^8.0.1",

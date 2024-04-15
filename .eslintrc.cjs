@@ -16,7 +16,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module',
   },
-  plugins: ['jest', 'import', '@typescript-eslint'],
+  plugins: ['jest', 'import-x', '@typescript-eslint'],
   rules: {
     'no-debugger': 'error',
     'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
@@ -46,7 +46,7 @@ module.exports = {
     ],
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
-    'import/no-nodejs-modules': [
+    'import-x/no-nodejs-modules': [
       'error',
       { allow: builtinModules.map(mod => `node:${mod}`) },
     ],
@@ -133,7 +133,7 @@ module.exports = {
     {
       files: ['packages/compiler-sfc/src/**'],
       rules: {
-        'import/no-nodejs-modules': ['error', { allow: builtinModules }],
+        'import-x/no-nodejs-modules': ['error', { allow: builtinModules }],
       },
     },
   ],
