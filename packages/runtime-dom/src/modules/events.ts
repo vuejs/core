@@ -1,4 +1,4 @@
-import { hyphenate, isArray, isFunction, isString } from '@vue/shared'
+import { NOOP, hyphenate, isArray, isFunction, isString } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   ErrorCodes,
@@ -45,13 +45,17 @@ export function patchEvent(
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
-    existingInvoker.value = sanitizeEventValue(nextValue, rawName)
+    existingInvoker.value = __DEV__
+      ? sanitizeEventValue(nextValue, rawName)
+      : (nextValue as EventValue)
   } else {
     const [name, options] = parseName(rawName)
     if (nextValue) {
       // add
       const invoker = (invokers[rawName] = createInvoker(
-        sanitizeEventValue(nextValue, rawName),
+        __DEV__
+          ? sanitizeEventValue(nextValue, rawName)
+          : (nextValue as EventValue),
         instance,
       ))
       addEventListener(el, name, invoker, options)
@@ -124,16 +128,12 @@ function sanitizeEventValue(value: unknown, propName: string): EventValue {
   if (isFunction(value) || isArray(value)) {
     return value as EventValue
   }
-
-  if (__DEV__) {
-    warn(
-      'Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' +
-        propName +
-        '=' +
-        (isString(value) ? value : typeof value),
-    )
-  }
-  return () => {}
+  warn(
+    `Wrong type passed to the event invoker, did you maybe forget @ or : ` +
+      `in front of your prop?\nReceived ` +
+      `${propName}=${isString(value) ? JSON.stringify(value) : `[${typeof value}]`}`,
+  )
+  return NOOP
 }
 
 function patchStopImmediatePropagation(
