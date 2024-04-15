@@ -2166,7 +2166,7 @@ describe('compiler: parse', () => {
     })
 
     test('should remove leading newline character immediately following the pre element start tag', () => {
-      const ast = baseParse(`<pre>\n  foo  bar  </pre>`, {
+      const ast = parse(`<pre>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
       })
       expect(ast.children).toHaveLength(1)
@@ -2176,7 +2176,7 @@ describe('compiler: parse', () => {
     })
 
     test('should NOT remove leading newline character immediately following child-tag of pre element', () => {
-      const ast = baseParse(`<pre><span></span>\n  foo  bar  </pre>`, {
+      const ast = parse(`<pre><span></span>\n  foo  bar  </pre>`, {
         isPreTag: tag => tag === 'pre',
       })
       const preElement = ast.children[0] as ElementNode
@@ -2187,7 +2187,7 @@ describe('compiler: parse', () => {
     })
 
     test('self-closing pre tag', () => {
-      const ast = baseParse(`<pre/><span>\n  foo   bar</span>`, {
+      const ast = parse(`<pre/><span>\n  foo   bar</span>`, {
         isPreTag: tag => tag === 'pre',
       })
       const elementAfterPre = ast.children[1] as ElementNode
@@ -2196,7 +2196,7 @@ describe('compiler: parse', () => {
     })
 
     test('should NOT condense whitespaces in RCDATA text mode', () => {
-      const ast = baseParse(`<textarea>Text:\n   foo</textarea>`, {
+      const ast = parse(`<textarea>Text:\n   foo</textarea>`, {
         parseMode: 'html',
       })
       const preElement = ast.children[0] as ElementNode
