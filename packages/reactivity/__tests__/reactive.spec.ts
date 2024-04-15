@@ -312,6 +312,35 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed)).toBe(false)
   })
 
+
+  test('hasOwnProperty edge case: Symbol values', () => {
+    const key = Symbol()
+    const obj = reactive({ [key]: 1 }) as { [key]?: 1 }
+    let dummy
+    effect(() => {
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+
+  test('hasOwnProperty edge case: non-string values', () => {
+    const key = {}
+    const obj = reactive({ '[object Object]': 1 }) as { '[object Object]'?: 1 }
+    let dummy
+    effect(() => {
+      // @ts-expect-error
+      dummy = obj.hasOwnProperty(key)
+    })
+    expect(dummy).toBe(true)
+
+    // @ts-expect-error
+    delete obj[key]
+    expect(dummy).toBe(false)
+  })
+  
   test('isProxy', () => {
     const foo = {}
     expect(isProxy(foo)).toBe(false)

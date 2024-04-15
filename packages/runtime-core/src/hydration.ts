@@ -120,6 +120,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
+    optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
       handleMismatch(
@@ -443,6 +444,7 @@ export function createHydrationFunctions(
       if (props) {
         if (
           __DEV__ ||
+          __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__ ||
           forcePatch ||
           !optimized ||
           patchFlag & (PatchFlags.FULL_PROPS | PatchFlags.NEED_HYDRATION)
@@ -450,7 +452,7 @@ export function createHydrationFunctions(
           for (const key in props) {
             // check hydration mismatch
             if (
-              __DEV__ &&
+              (__DEV__ || __FEATURE_PROD_HYDRATION_MISMATCH_DETAILS__) &&
               propHasMismatch(el, key, props[key], vnode, parentComponent)
             ) {
               hasMismatch = true
