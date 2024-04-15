@@ -1,9 +1,9 @@
-import { hyphenate, isArray, isString, isFunction } from '@vue/shared'
+import { hyphenate, isArray, isFunction, isString } from '@vue/shared'
 import {
+  type ComponentInternalInstance,
   ErrorCodes,
-  ComponentInternalInstance,
   callWithAsyncErrorHandling,
-  warn
+  warn,
 } from '@vue/runtime-core'
 
 interface Invoker extends EventListener {
@@ -17,7 +17,7 @@ export function addEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
+  options?: EventListenerOptions,
 ) {
   el.addEventListener(event, handler, options)
 }
@@ -26,20 +26,22 @@ export function removeEventListener(
   el: Element,
   event: string,
   handler: EventListener,
-  options?: EventListenerOptions
+  options?: EventListenerOptions,
 ) {
   el.removeEventListener(event, handler, options)
 }
 
+const veiKey = Symbol('_vei')
+
 export function patchEvent(
-  el: Element & { _vei?: Record<string, Invoker | undefined> },
+  el: Element & { [veiKey]?: Record<string, Invoker | undefined> },
   rawName: string,
   prevValue: EventValue | null,
   nextValue: EventValue | unknown,
-  instance: ComponentInternalInstance | null = null
+  instance: ComponentInternalInstance | null = null,
 ) {
   // vei = vue event invokers
-  const invokers = el._vei || (el._vei = {})
+  const invokers = el[veiKey] || (el[veiKey] = {})
   const existingInvoker = invokers[rawName]
   if (nextValue && existingInvoker) {
     // patch
@@ -50,7 +52,7 @@ export function patchEvent(
       // add
       const invoker = (invokers[rawName] = createInvoker(
         sanitizeEventValue(nextValue, rawName),
-        instance
+        instance,
       ))
       addEventListener(el, name, invoker, options)
     } else if (existingInvoker) {
@@ -86,7 +88,7 @@ const getNow = () =>
 
 function createInvoker(
   initialValue: EventValue,
-  instance: ComponentInternalInstance | null
+  instance: ComponentInternalInstance | null,
 ) {
   const invoker: Invoker = (e: Event & { _vts?: number }) => {
     // async edge case vuejs/vue#6566
@@ -110,7 +112,7 @@ function createInvoker(
       patchStopImmediatePropagation(e, invoker.value),
       instance,
       ErrorCodes.NATIVE_EVENT_HANDLER,
-      [e]
+      [e],
     )
   }
   invoker.value = initialValue
@@ -128,7 +130,7 @@ function sanitizeEventValue(value: unknown, propName: string): EventValue {
       'Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received ' +
         propName +
         '=' +
-        (isString(value) ? value : typeof value)
+        (isString(value) ? value : typeof value),
     )
   }
   return () => {}
@@ -136,7 +138,7 @@ function sanitizeEventValue(value: unknown, propName: string): EventValue {
 
 function patchStopImmediatePropagation(
   e: Event,
-  value: EventValue
+  value: EventValue,
 ): EventValue {
   if (isArray(value)) {
     const originalStop = e.stopImmediatePropagation
@@ -145,7 +147,7 @@ function patchStopImmediatePropagation(
       ;(e as any)._stopped = true
     }
     return (value as Function[]).map(
-      fn => (e: Event) => !(e as any)._stopped && fn && fn(e)
+      fn => (e: Event) => !(e as any)._stopped && fn && fn(e),
     )
   } else {
     return value

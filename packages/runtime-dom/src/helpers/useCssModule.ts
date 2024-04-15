@@ -1,4 +1,4 @@
-import { warn, getCurrentInstance } from '@vue/runtime-core'
+import { getCurrentInstance, warn } from '@vue/runtime-core'
 import { EMPTY_OBJ } from '@vue/shared'
 
 export function useCssModule(name = '$style'): Record<string, string> {

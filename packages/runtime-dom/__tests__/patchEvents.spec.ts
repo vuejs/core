@@ -176,7 +176,7 @@ describe(`runtime-dom: events patching`, () => {
     }
     window.customElements.define('test-element', TestElement)
     const testElement = document.createElement('test-element', {
-      is: 'test-element'
+      is: 'test-element',
     })
     const fn1 = vi.fn()
     const fn2 = vi.fn()
@@ -198,7 +198,7 @@ describe(`runtime-dom: events patching`, () => {
     patchProp(el, 'onClick', null, 'test')
     el.dispatchEvent(new Event('click'))
     expect(
-      '[Vue warn]: Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received onClick=test'
+      '[Vue warn]: Wrong type passed to the event invoker, did you maybe forget @ or : in front of your prop? Received onClick=test',
     ).toHaveBeenWarned()
   })
 })
