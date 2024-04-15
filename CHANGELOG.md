@@ -1,3 +1,28 @@
+## [3.4.21](https://github.com/vuejs/core/compare/v3.4.20...v3.4.21) (2024-02-28)
+
+
+### Bug Fixes
+
+* **runtime-dom:** avoid unset option's value ([#10416](https://github.com/vuejs/core/issues/10416)) ([b3f8b5a](https://github.com/vuejs/core/commit/b3f8b5a4e700d4c47a146b6040882287d180f6cb)), closes [#10412](https://github.com/vuejs/core/issues/10412) [#10396](https://github.com/vuejs/core/issues/10396)
+* **suspense:** ensure nested suspense patching if in fallback state ([#10417](https://github.com/vuejs/core/issues/10417)) ([7c97778](https://github.com/vuejs/core/commit/7c97778aec1e3513035e5df265e1b8a7801f6106)), closes [#10415](https://github.com/vuejs/core/issues/10415)
+* **warning:** stringify args in warn handler ([#10414](https://github.com/vuejs/core/issues/10414)) ([bc37258](https://github.com/vuejs/core/commit/bc37258caa2f6f67f4554ab8587aca3798d92124)), closes [#10409](https://github.com/vuejs/core/issues/10409)
+
+
+
+## [3.4.20](https://github.com/vuejs/core/compare/v3.4.19...v3.4.20) (2024-02-26)
+
+
+### Bug Fixes
+
+* **parser:** should not treat uppercase components as special tags ([e0e0253](https://github.com/vuejs/core/commit/e0e02535cdea1aeb1cfaff0d61d4b2555e555c36)), closes [#10395](https://github.com/vuejs/core/issues/10395)
+* **runtime-dom:** avoid always resetting nullish option value ([ff130c4](https://github.com/vuejs/core/commit/ff130c470204086edaa093fb8fdc1247c69cba69)), closes [#10396](https://github.com/vuejs/core/issues/10396)
+* **runtime-dom:** fix nested v-show priority regression ([364f890](https://github.com/vuejs/core/commit/364f8902c8657faec7c3a4d70a5b2c856567e92d)), closes [#10338](https://github.com/vuejs/core/issues/10338)
+* **runtime-dom:** v-bind style should clear previous css string value ([#10373](https://github.com/vuejs/core/issues/10373)) ([e2d3235](https://github.com/vuejs/core/commit/e2d323538e71d404e729148fd19a08bbc2e3da9b)), closes [#10352](https://github.com/vuejs/core/issues/10352)
+* **suspense:** handle suspense switching with nested suspense  ([#10184](https://github.com/vuejs/core/issues/10184)) ([0f3da05](https://github.com/vuejs/core/commit/0f3da05ea201761529bb95594df1e2cee20b7107)), closes [#10098](https://github.com/vuejs/core/issues/10098)
+* **types:** better typing for direct setup signature of defineComponent ([#10357](https://github.com/vuejs/core/issues/10357)) ([eadce5b](https://github.com/vuejs/core/commit/eadce5b75356656fd2209ebdb406d34823c961b7)), closes [#8604](https://github.com/vuejs/core/issues/8604) [#8855](https://github.com/vuejs/core/issues/8855)
+
+
+
 ## [3.4.19](https://github.com/vuejs/core/compare/v3.4.18...v3.4.19) (2024-02-13)
 
 

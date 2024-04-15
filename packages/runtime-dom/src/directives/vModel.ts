@@ -86,9 +86,10 @@ export const vModelText: ModelDirective<
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {
@@ -209,25 +210,20 @@ export const vModelSelect: ModelDirective<HTMLSelectElement> = {
   },
   // set value in mounted & updated because <select> relies on its children
   // <option>s.
-  mounted(el, { value, oldValue, modifiers: { number } }) {
-    setSelected(el, value, oldValue, number)
+  mounted(el, { value, modifiers: { number } }) {
+    setSelected(el, value, number)
   },
   beforeUpdate(el, _binding, vnode) {
     el[assignKey] = getModelAssigner(vnode)
   },
-  updated(el, { value, oldValue, modifiers: { number } }) {
+  updated(el, { value, modifiers: { number } }) {
     if (!el._assigning) {
-      setSelected(el, value, oldValue, number)
+      setSelected(el, value, number)
     }
   },
 }
 
-function setSelected(
-  el: HTMLSelectElement,
-  value: any,
-  oldValue: any,
-  number: boolean,
-) {
+function setSelected(el: HTMLSelectElement, value: any, number: boolean) {
   const isMultiple = el.multiple
   const isArrayValue = isArray(value)
   if (isMultiple && !isArrayValue && !isSet(value)) {
@@ -247,20 +243,16 @@ function setSelected(
         const optionType = typeof optionValue
         // fast path for string / number values
         if (optionType === 'string' || optionType === 'number') {
-          option.selected = value.includes(
-            number ? looseToNumber(optionValue) : optionValue,
-          )
+          option.selected = value.some(v => String(v) === String(optionValue))
         } else {
           option.selected = looseIndexOf(value, optionValue) > -1
         }
       } else {
         option.selected = value.has(optionValue)
       }
-    } else {
-      if (looseEqual(getValue(option), value)) {
-        if (el.selectedIndex !== i) el.selectedIndex = i
-        return
-      }
+    } else if (looseEqual(getValue(option), value)) {
+      if (el.selectedIndex !== i) el.selectedIndex = i
+      return
     }
   }
   if (!isMultiple && el.selectedIndex !== -1) {
