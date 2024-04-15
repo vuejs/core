@@ -1,7 +1,8 @@
+import { pauseTracking, resetTracking } from '@vue/reactivity'
 import type { VNode } from './vnode'
 import type { ComponentInternalInstance } from './component'
 import { popWarningContext, pushWarningContext, warn } from './warning'
-import {isArray, isFunction, isPromise} from '@vue/shared'
+import { isArray, isFunction, isPromise } from '@vue/shared'
 import { LifecycleHooks } from './enums'
 
 // contexts where user provided function may be executed, in addition to
@@ -133,12 +134,14 @@ export function handleError(
     // app-level handling
     const appErrorHandler = instance.appContext.config.errorHandler
     if (appErrorHandler) {
+      pauseTracking()
       callWithErrorHandling(
         appErrorHandler,
         null,
         ErrorCodes.APP_ERROR_HANDLER,
         [err, exposedInstance, errorInfo],
       )
+      resetTracking()
       return
     }
   }
