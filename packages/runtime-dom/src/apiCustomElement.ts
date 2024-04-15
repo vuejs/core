@@ -166,7 +166,10 @@ const BaseClass = (
   typeof HTMLElement !== 'undefined' ? HTMLElement : class {}
 ) as typeof HTMLElement
 
-type InnerComponentDef = ConcreteComponent & { styles?: string[] }
+type InnerComponentDef = ConcreteComponent & {
+  styles?: string[]
+  nonce?: string
+}
 
 export class VueElement extends BaseClass {
   /**
@@ -419,6 +422,9 @@ export class VueElement extends BaseClass {
       styles.forEach(css => {
         const s = document.createElement('style')
         s.textContent = css
+        // nonce string for content security policy
+        // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/nonce
+        this._def.nonce && s.setAttribute('nonce', this._def.nonce)
         this.shadowRoot!.appendChild(s)
         // record for HMR
         if (__DEV__) {

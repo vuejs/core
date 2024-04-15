@@ -552,6 +552,24 @@ describe('defineCustomElement', () => {
       const style = el.shadowRoot?.querySelector('style')!
       expect(style.textContent).toBe(`div { color: red; }`)
     })
+
+    // #6530
+    test('style with nonce for content security policies (CSP)', () => {
+      const Foo = defineCustomElement({
+        nonce: 'noce-string-for-csp-policy',
+        styles: [`div { color: red; }`],
+        render() {
+          return h('div', 'hello')
+        }
+      })
+
+      customElements.define('my-styles-nonce', Foo)
+      container.innerHTML = `<my-styles-nonce></my-styles-nonce>`
+
+      const el = container.childNodes[0] as VueElement
+      const style = el.shadowRoot?.querySelector('style')!
+      expect(style.getAttribute('nonce')).toBe('noce-string-for-csp-policy')
+    })
   })
 
   describe('async', () => {
