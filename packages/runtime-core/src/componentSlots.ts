@@ -1,6 +1,5 @@
 import { type ComponentInternalInstance, currentInstance } from './component'
 import {
-  InternalObjectKey,
   type VNode,
   type VNodeChild,
   type VNodeNormalizedChildren,
@@ -174,7 +173,7 @@ export const initSlots = (
       // we should avoid the proxy object polluting the slots of the internal instance
       instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
-      def(children as InternalSlots, '_', type)
+      def(instance.slots, '_', type)
     } else {
       normalizeObjectSlots(
         children as RawSlots,
@@ -188,7 +187,6 @@ export const initSlots = (
       normalizeVNodeSlots(instance, children)
     }
   }
-  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (
