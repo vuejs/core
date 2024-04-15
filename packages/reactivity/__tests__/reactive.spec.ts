@@ -312,7 +312,6 @@ describe('reactivity/reactive', () => {
     expect(isReactive(observed)).toBe(false)
   })
 
-
   test('hasOwnProperty edge case: Symbol values', () => {
     const key = Symbol()
     const obj = reactive({ [key]: 1 }) as { [key]?: 1 }
@@ -340,7 +339,7 @@ describe('reactivity/reactive', () => {
     delete obj[key]
     expect(dummy).toBe(false)
   })
-  
+
   test('isProxy', () => {
     const foo = {}
     expect(isProxy(foo)).toBe(false)
