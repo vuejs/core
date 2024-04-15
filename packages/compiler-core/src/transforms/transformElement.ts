@@ -64,6 +64,7 @@ import {
   checkCompatEnabled,
   isCompatEnabled,
 } from '../compat/compatConfig'
+import { processExpression } from './transformExpression'
 
 // some directive transforms (e.g. v-model) may return a symbol for runtime
 // import, which should be used instead of a resolveDirective call.
@@ -253,7 +254,7 @@ export function resolveComponentType(
 
   // 1. dynamic component
   const isExplicitDynamic = isComponentTag(tag)
-  const isProp = findProp(node, 'is')
+  const isProp = findProp(node, 'is', false, true /* allow empty */)
   if (isProp) {
     if (
       isExplicitDynamic ||
@@ -263,10 +264,19 @@ export function resolveComponentType(
           context,
         ))
     ) {
-      const exp =
-        isProp.type === NodeTypes.ATTRIBUTE
-          ? isProp.value && createSimpleExpression(isProp.value.content, true)
-          : isProp.exp
+      let exp: ExpressionNode | undefined
+      if (isProp.type === NodeTypes.ATTRIBUTE) {
+        exp = isProp.value && createSimpleExpression(isProp.value.content, true)
+      } else {
+        exp = isProp.exp
+        if (!exp) {
+          // #10469 handle :is shorthand
+          exp = createSimpleExpression(`is`, false, isProp.loc)
+          if (!__BROWSER__) {
+            exp = isProp.exp = processExpression(exp, context)
+          }
+        }
+      }
       if (exp) {
         return createCallExpression(context.helper(RESOLVE_DYNAMIC_COMPONENT), [
           exp,
