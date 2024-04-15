@@ -78,7 +78,7 @@ export function callWithAsyncErrorHandling(
   instance: ComponentInternalInstance | null,
   type: ErrorTypes,
   args?: unknown[],
-): any[] {
+): any {
   if (isFunction(fn)) {
     const res = callWithErrorHandling(fn, instance, type, args)
     if (res && isPromise(res)) {
@@ -89,13 +89,17 @@ export function callWithAsyncErrorHandling(
     return res
   }
 
-  const values = []
   if (isArray(fn)) {
+    const values = []
     for (let i = 0; i < fn.length; i++) {
       values.push(callWithAsyncErrorHandling(fn[i], instance, type, args))
     }
+    return values
+  } else if (__DEV__) {
+    warn(
+      `Invalid value type passed to callWithAsyncErrorHandling(): ${typeof fn}`,
+    )
   }
-  return values
 }
 
 export function handleError(
