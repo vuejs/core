@@ -1237,7 +1237,7 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
   })
-  
+
   it('multiple select (model is number, option value is string)', async () => {
     const component = defineComponent({
       data() {
