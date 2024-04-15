@@ -313,6 +313,9 @@ importers:
 
   packages/runtime-dom:
     dependencies:
+      '@vue/reactivity':
+        specifier: workspace:*
+        version: link:../reactivity
       '@vue/runtime-core':
         specifier: workspace:*
         version: link:../runtime-core
