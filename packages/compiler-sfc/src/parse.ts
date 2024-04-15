@@ -1,15 +1,17 @@
 import {
   type BindingMetadata,
+  type CodegenSourceMapGenerator,
   type CompilerError,
   type ElementNode,
   NodeTypes,
   type ParserOptions,
+  type RawSourceMap,
   type RootNode,
   type SourceLocation,
   createRoot,
 } from '@vue/compiler-core'
 import * as CompilerDOM from '@vue/compiler-dom'
-import { type RawSourceMap, SourceMapGenerator } from 'source-map-js'
+import { SourceMapGenerator } from 'source-map-js'
 import type { TemplateCompiler } from './compileTemplate'
 import { parseCssVars } from './style/cssVars'
 import { createCache } from './cache'
@@ -375,7 +377,7 @@ function generateSourceMap(
   const map = new SourceMapGenerator({
     file: filename.replace(/\\/g, '/'),
     sourceRoot: sourceRoot.replace(/\\/g, '/'),
-  })
+  }) as unknown as CodegenSourceMapGenerator
   map.setSourceContent(filename, source)
   map._sources.add(filename)
   generated.split(splitRE).forEach((line, index) => {
@@ -390,7 +392,6 @@ function generateSourceMap(
             generatedLine,
             generatedColumn: i,
             source: filename,
-            // @ts-expect-error
             name: null,
           })
         }
