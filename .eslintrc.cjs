@@ -16,7 +16,7 @@ module.exports = {
   parserOptions: {
     sourceType: 'module',
   },
-  plugins: ['jest', 'import-x', '@typescript-eslint'],
+  plugins: ['vitest', 'import-x', '@typescript-eslint'],
   rules: {
     'no-debugger': 'error',
     'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
@@ -65,15 +65,15 @@ module.exports = {
     '@typescript-eslint/no-import-type-side-effects': 'error',
   },
   overrides: [
-    // tests, no restrictions (runs in Node / jest with jsdom)
+    // tests, no restrictions (runs in Node / Vitest with jsdom)
     {
       files: ['**/__tests__/**', 'packages/dts-test/**'],
       rules: {
         'no-console': 'off',
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off',
-        'jest/no-disabled-tests': 'error',
-        'jest/no-focused-tests': 'error',
+        'vitest/no-disabled-tests': 'error',
+        'vitest/no-focused-tests': 'error',
       },
     },
     // shared, may be used in any env
