@@ -87,7 +87,7 @@ export const vModelText: ModelDirective<
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
     const elValue =
-      number || (el.type === 'number' && el.value[0] !== '0')
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
         ? looseToNumber(el.value)
         : el.value
     const newValue = value == null ? '' : value
