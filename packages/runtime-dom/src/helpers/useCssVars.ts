@@ -26,6 +26,10 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     return
   }
 
+  if (__DEV__) {
+    instance.getCssVars = () => getter(instance.proxy)
+  }
+
   const updateTeleports = (instance.ut = (vars = getter(instance.proxy)) => {
     Array.from(
       document.querySelectorAll(`[data-v-owner="${instance.uid}"]`),
@@ -33,21 +37,13 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
   })
 
   const setVars = () => {
-    // #8520
-    if (!instance.asyncResolved && instance.asyncDep && __FEATURE_SUSPENSE__) {
-      instance.asyncDep.then(() => {
-        watchPostEffect(setVars)
-      })
-    } else {
-      const vars = getter(instance.proxy)
-      setVarsOnVNode(instance.subTree, vars)
-      updateTeleports(vars)
-    }
+    const vars = getter(instance.proxy)
+    setVarsOnVNode(instance.subTree, vars)
+    updateTeleports(vars)
   }
 
-  watchPostEffect(setVars)
-
   onMounted(() => {
+    watchPostEffect(setVars)
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
