@@ -1,4 +1,4 @@
-import { NOOP, hyphenate, isArray, isFunction, isString } from '@vue/shared'
+import { NOOP, hyphenate, isArray, isFunction } from '@vue/shared'
 import {
   type ComponentInternalInstance,
   ErrorCodes,
@@ -129,9 +129,8 @@ function sanitizeEventValue(value: unknown, propName: string): EventValue {
     return value as EventValue
   }
   warn(
-    `Wrong type passed to the event invoker, did you maybe forget @ or : ` +
-      `in front of your prop?\nReceived ` +
-      `${propName}=${isString(value) ? JSON.stringify(value) : `[${typeof value}]`}`,
+    `Wrong type passed as event handler to ${propName} - did you forget @ or : ` +
+      `in front of your prop?\nExpected function or array of functions, received type ${typeof value}.`,
   )
   return NOOP
 }

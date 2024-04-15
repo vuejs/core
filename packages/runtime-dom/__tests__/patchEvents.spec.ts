@@ -198,9 +198,8 @@ describe(`runtime-dom: events patching`, () => {
     patchProp(el, 'onClick', null, 'test')
     el.dispatchEvent(new Event('click'))
     expect(
-      '[Vue warn]: Wrong type passed to the event invoker, ' +
-        'did you maybe forget @ or : in front of your prop?' +
-        '\nReceived onClick="test"',
+      `Wrong type passed as event handler to onClick - did you forget @ or : ` +
+        `in front of your prop?\nExpected function or array of functions, received type string.`,
     ).toHaveBeenWarned()
   })
 })
