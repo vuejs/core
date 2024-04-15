@@ -141,6 +141,7 @@ export function processChildren(
   context: SSRTransformContext,
   asFragment = false,
   disableNestedFragments = false,
+  disableCommentAsIfAlternate = false,
 ) {
   if (asFragment) {
     context.pushStringPart(`<!--[-->`)
@@ -191,7 +192,12 @@ export function processChildren(
         )
         break
       case NodeTypes.IF:
-        ssrProcessIf(child, context, disableNestedFragments)
+        ssrProcessIf(
+          child,
+          context,
+          disableNestedFragments,
+          disableCommentAsIfAlternate,
+        )
         break
       case NodeTypes.FOR:
         ssrProcessFor(child, context, disableNestedFragments)

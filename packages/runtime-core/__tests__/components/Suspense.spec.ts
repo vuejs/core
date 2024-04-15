@@ -54,6 +54,18 @@ describe('Suspense', () => {
     }
   }
 
+  const RouterView = {
+    setup(_: any, { slots }: any) {
+      const route = inject('route') as any
+      const depth = inject('depth', 0)
+      provide('depth', depth + 1)
+      return () => {
+        const current = route.value[depth]
+        return slots.default({ Component: current })[0]
+      }
+    },
+  }
+
   test('fallback content', async () => {
     const Async = defineAsyncComponent({
       render() {
@@ -1041,18 +1053,6 @@ describe('Suspense', () => {
 
   // #10098
   test('switching branches w/ nested suspense', async () => {
-    const RouterView = {
-      setup(_: any, { slots }: any) {
-        const route = inject('route') as any
-        const depth = inject('depth', 0)
-        provide('depth', depth + 1)
-        return () => {
-          const current = route.value[depth]
-          return slots.default({ Component: current })[0]
-        }
-      },
-    }
-
     const OuterB = defineAsyncComponent({
       setup: () => {
         return () =>
@@ -1130,6 +1130,121 @@ describe('Suspense', () => {
     await Promise.all(deps)
     await nextTick()
     expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+  })
+
+  // #10415
+  test('nested suspense (w/ suspensible) switch several times before parent suspense resolve', async () => {
+    const OuterA = defineAsyncComponent({
+      setup: () => {
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    })
+
+    const InnerA = defineAsyncComponent({
+      setup: () => {
+        return () => h('div', 'innerA')
+      },
+    })
+
+    const route = shallowRef([OuterA, InnerA])
+    const InnerB = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB')
+        },
+      },
+      5,
+    )
+
+    const InnerB1 = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB1')
+        },
+      },
+      5,
+    )
+
+    const InnerB2 = defineAsyncComponent(
+      {
+        setup: () => {
+          return () => h('div', 'innerB2')
+        },
+      },
+      5,
+    )
+
+    const OuterB = defineAsyncComponent(
+      {
+        setup() {
+          nextTick(async () => {
+            await new Promise(resolve => setTimeout(resolve, 1))
+            route.value = [OuterB, InnerB1]
+          })
+
+          nextTick(async () => {
+            await new Promise(resolve => setTimeout(resolve, 1))
+            route.value = [OuterB, InnerB2]
+          })
+
+          return () =>
+            h(RouterView, null, {
+              default: ({ Component }: any) => [
+                h(
+                  Suspense,
+                  { suspensible: true },
+                  {
+                    default: () => h(Component),
+                  },
+                ),
+              ],
+            })
+        },
+      },
+      5,
+    )
+
+    const Comp = {
+      setup() {
+        provide('route', route)
+        return () =>
+          h(RouterView, null, {
+            default: ({ Component }: any) => [
+              h(Suspense, null, {
+                default: () => h(Component),
+              }),
+            ],
+          })
+      },
+    }
+
+    const root = nodeOps.createElement('div')
+    render(h(Comp), root)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<!---->`)
+
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerA</div>`)
+
+    deps.length = 0
+
+    route.value = [OuterB, InnerB]
+    await nextTick()
+
+    await Promise.all(deps)
+    await Promise.all(deps)
+    await Promise.all(deps)
+    await nextTick()
+    expect(serializeInner(root)).toBe(`<div>innerB2</div>`)
   })
 
   test('branch switch to 3rd branch before resolve', async () => {
