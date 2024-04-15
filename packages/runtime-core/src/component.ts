@@ -45,6 +45,7 @@ import { type Directive, validateDirectiveName } from './directives'
 import {
   type ComponentOptions,
   type ComputedOptions,
+  type MergedComponentOptions,
   type MethodOptions,
   applyOptions,
   resolveMergedOptions,
@@ -524,6 +525,12 @@ export interface ComponentInternalInstance {
    * @internal
    */
   getCssVars?: () => Record<string, string>
+
+  /**
+   * v2 compat only, for caching mutated $options
+   * @internal
+   */
+  resolvedOptions?: MergedComponentOptions
 }
 
 const emptyAppContext = createAppContext()
