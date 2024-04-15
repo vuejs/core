@@ -615,6 +615,14 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
+            // if in v-bind object will have a ref we should set ref_for to true
+            // otherwise the ref will be set to a random element in the list
+            if (context.scopes.vFor > 0) properties.push(
+              createObjectProperty(
+                createSimpleExpression('ref_for', true),
+                createSimpleExpression('true'),
+              ),
+            )
             // have to merge early for compat build check
             pushMergeArg()
             if (__COMPAT__) {
