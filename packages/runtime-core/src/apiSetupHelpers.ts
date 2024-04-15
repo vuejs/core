@@ -233,7 +233,7 @@ export type DefineModelOptions<T = any> = {
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * The the returned ref behaves differently depending on whether the parent
+ * The returned ref behaves differently depending on whether the parent
  * provided the corresponding v-model props or not:
  * - If yes, the returned ref's value will always be in sync with the parent
  *   prop.

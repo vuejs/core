@@ -221,4 +221,24 @@ describe('defineModel()', () => {
     assertCode(content)
     expect(content).toMatch(`set: (v) => { return v + __props.x }`)
   })
+
+  test('w/ Boolean And Function types, production mode', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<boolean | string>()
+      </script>
+      `,
+      { isProd: true },
+    )
+    assertCode(content)
+    expect(content).toMatch('"modelValue": { type: [Boolean, String] }')
+    expect(content).toMatch('emits: ["update:modelValue"]')
+    expect(content).toMatch(
+      `const modelValue = _useModel<boolean | string>(__props, "modelValue")`,
+    )
+    expect(bindings).toStrictEqual({
+      modelValue: BindingTypes.SETUP_REF,
+    })
+  })
 })

@@ -1237,4 +1237,36 @@ describe('vModel', () => {
     await nextTick()
     expect(data.value).toEqual('使用拼音输入')
   })
+
+  it('multiple select (model is number, option value is string)', async () => {
+    const component = defineComponent({
+      data() {
+        return {
+          value: [1, 2],
+        }
+      },
+      render() {
+        return [
+          withVModel(
+            h(
+              'select',
+              {
+                multiple: true,
+                'onUpdate:modelValue': setValue.bind(this),
+              },
+              [h('option', { value: '1' }), h('option', { value: '2' })],
+            ),
+            this.value,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+
+    await nextTick()
+    const [foo, bar] = root.querySelectorAll('option')
+
+    expect(foo.selected).toEqual(true)
+    expect(bar.selected).toEqual(true)
+  })
 })
