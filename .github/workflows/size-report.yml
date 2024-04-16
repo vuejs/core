@@ -24,19 +24,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3.0.0
 
-      - name: Set node version to LTS
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: '.node-version'
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Download PR number
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           name: pr-number
           run_id: ${{ github.event.workflow_run.id }}
@@ -48,14 +48,14 @@ jobs:
           path: ./pr.txt
 
       - name: Download Size Data
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           name: size-data
           run_id: ${{ github.event.workflow_run.id }}
           path: temp/size
 
       - name: Download Previous Size Data
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           branch: main
           workflow: size-data.yml
