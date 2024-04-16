@@ -519,7 +519,7 @@ export interface ComponentInternalInstance {
    * @internal
    */
   ut?: (vars?: Record<string, string>) => void
-  
+
   /**
    * hoisted vnodes
    * @internal
