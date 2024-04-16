@@ -24,6 +24,7 @@ import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 import { trigger } from '@vue/reactivity'
 import { TriggerOpTypes } from '@vue/reactivity'
+import { createInternalObject } from './internalObject'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
@@ -177,12 +178,12 @@ export const initSlots = (
     } else {
       normalizeObjectSlots(
         children as RawSlots,
-        (instance.slots = {}),
+        (instance.slots = createInternalObject()),
         instance,
       )
     }
   } else {
-    instance.slots = {}
+    instance.slots = createInternalObject()
     if (children) {
       normalizeVNodeSlots(instance, children)
     }

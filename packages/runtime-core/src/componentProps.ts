@@ -38,6 +38,7 @@ import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -185,13 +186,6 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
-/**
- * Used during vnode props normalization to check if the vnode props is the
- * attrs object of a component via `Object.getPrototypeOf`. This is more
- * performant than defining a non-enumerable property.
- */
-export const attrsProto = {}
-
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -199,7 +193,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = Object.create(attrsProto)
+  const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
 
