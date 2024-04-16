@@ -42,9 +42,8 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     updateTeleports(vars)
   }
 
-  watchPostEffect(setVars)
-
   onMounted(() => {
+    watchPostEffect(setVars)
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())
