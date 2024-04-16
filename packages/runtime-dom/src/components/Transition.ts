@@ -193,7 +193,7 @@ export function resolveTransitionProps(
   const makeEnterHook = (isAppear: boolean) => {
     return (
       el: Element & { _isAppeared?: boolean; _endId?: number },
-      done: () => void
+      done: () => void,
     ) => {
       const hook = isAppear ? onAppear : onEnter
       const resolve = () => {
@@ -219,7 +219,7 @@ export function resolveTransitionProps(
             enterDuration,
             resolve,
             // onEnter and onAppear callbacks use the same endId if el has not appeared
-            el._isAppeared ? undefined : el._endId
+            el._isAppeared ? undefined : el._endId,
           )
         }
       })

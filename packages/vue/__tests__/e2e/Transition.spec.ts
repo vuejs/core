@@ -2068,11 +2068,11 @@ describe('e2e: Transition', () => {
 
           const Comp = {
             props: {
-              show: Boolean
+              show: Boolean,
             },
             render(this: any) {
               return withDirectives(h('div', 'content'), [[vShow, this.show]])
-            }
+            },
           }
 
           createApp({
@@ -2092,9 +2092,9 @@ describe('e2e: Transition', () => {
                 show.value = true
               })
               return {
-                show
+                show,
               }
-            }
+            },
           }).mount('#app')
           return document.querySelector('.test')!.className.split(/\s+/g)
         })
@@ -2103,7 +2103,7 @@ describe('e2e: Transition', () => {
         expect(appearClass).toStrictEqual([
           'test',
           'test-enter-from',
-          'test-appear-active'
+          'test-appear-active',
         ])
 
         // enter
@@ -2113,15 +2113,15 @@ describe('e2e: Transition', () => {
           'test-appear-active',
           'test-enter-active',
           'test-appear-to',
-          'test-enter-to'
+          'test-enter-to',
         ])
 
         await transitionFinish()
         expect(await html('#container')).toBe(
-          '<div class="test" style="">content</div>'
+          '<div class="test" style="">content</div>',
         )
       },
-      E2E_TIMEOUT
+      E2E_TIMEOUT,
     )
 
     // #4845
