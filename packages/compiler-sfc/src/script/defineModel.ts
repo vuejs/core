@@ -15,6 +15,7 @@ export interface ModelDecl {
   type: TSType | undefined
   options: string | undefined
   identifier: string | undefined
+  runtimeOptionNodes: Node[]
 }
 
 export function processDefineModel(
@@ -48,6 +49,7 @@ export function processDefineModel(
 
   let optionsString = options && ctx.getString(options)
   let optionsRemoved = !options
+  const runtimeOptionNodes: Node[] = []
 
   if (
     options &&
@@ -75,6 +77,8 @@ export function processDefineModel(
         // remove prop options from runtime options
         removed++
         ctx.s.remove(ctx.startOffset! + start, ctx.startOffset! + end)
+        // record prop options for invalid scope var reference check
+        runtimeOptionNodes.push(p)
       }
     }
     if (removed === options.properties.length) {
@@ -89,6 +93,7 @@ export function processDefineModel(
   ctx.modelDecls[modelName] = {
     type,
     options: optionsString,
+    runtimeOptionNodes,
     identifier:
       declId && declId.type === 'Identifier' ? declId.name : undefined,
   }
@@ -124,15 +129,19 @@ export function genModelProps(ctx: ScriptCompileContext) {
 
     let runtimeTypes = type && inferRuntimeType(ctx, type)
     if (runtimeTypes) {
+      const hasBoolean = runtimeTypes.includes('Boolean')
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
-      runtimeTypes = runtimeTypes.filter(el => {
-        if (el === UNKNOWN_TYPE) return false
-        return isProd
-          ? el === 'Boolean' || (el === 'Function' && options)
-          : true
-      })
-      skipCheck = !isProd && hasUnknownType && runtimeTypes.length > 0
+      if (isProd || hasUnknownType) {
+        runtimeTypes = runtimeTypes.filter(
+          t =>
+            t === 'Boolean' ||
+            (hasBoolean && t === 'String') ||
+            (t === 'Function' && options),
+        )
+
+        skipCheck = !isProd && hasUnknownType && runtimeTypes.length > 0
+      }
     }
 
     let runtimeType =

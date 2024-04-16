@@ -165,6 +165,9 @@ export const toNumber = (val: any): any => {
   return isNaN(n) ? val : n
 }
 
+// for typeof global checks without @types/node
+declare var global: {}
+
 let _globalThis: any
 export const getGlobalThis = (): any => {
   return (

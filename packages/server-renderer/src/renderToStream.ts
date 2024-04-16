@@ -108,7 +108,7 @@ export function renderToNodeStream(
   input: App | VNode,
   context: SSRContext = {},
 ): Readable {
-  const stream: Readable = __NODE_JS__
+  const stream: Readable = __CJS__
     ? new (require('node:stream').Readable)({ read() {} })
     : null
 
