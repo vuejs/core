@@ -1,5 +1,6 @@
 import { type ComponentInternalInstance, currentInstance } from './component'
 import {
+  InternalObjectKey,
   type VNode,
   type VNodeChild,
   type VNodeNormalizedChildren,
@@ -187,6 +188,8 @@ export const initSlots = (
       normalizeVNodeSlots(instance, children)
     }
   }
+
+  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (
