@@ -91,6 +91,17 @@ export function render(_ctx) {
 }"
 `;
 
+exports[`compiler: element transform > component > should wrap as function if v-on expression is inline statement 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Foo"), [{
+    onBar: () => $event => (_ctx.handleBar($event))
+  }], true)
+  return n0
+}"
+`;
+
 exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 

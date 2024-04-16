@@ -364,6 +364,29 @@ describe('compiler: element transform', () => {
         },
       ])
     })
+
+    test('should wrap as function if v-on expression is inline statement', () => {
+      const { code, ir } = compileWithElementTransform(
+        `<Foo v-on:bar="handleBar($event)" />`,
+      )
+      expect(code).toMatchSnapshot()
+      expect(code).contains(`onBar: () => $event => (_ctx.handleBar($event))`)
+      expect(ir.block.operation).toMatchObject([
+        {
+          type: IRNodeTypes.CREATE_COMPONENT_NODE,
+          tag: 'Foo',
+          props: [
+            [
+              {
+                key: { content: 'bar' },
+                handler: true,
+                values: [{ content: 'handleBar($event)' }],
+              },
+            ],
+          ],
+        },
+      ])
+    })
   })
 
   test('static props', () => {

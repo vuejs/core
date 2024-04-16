@@ -1,4 +1,8 @@
-import { fnExpRE, isMemberExpression } from '@vue/compiler-dom'
+import {
+  type SimpleExpressionNode,
+  fnExpRE,
+  isMemberExpression,
+} from '@vue/compiler-dom'
 import type { CodegenContext } from '../generate'
 import type { SetDynamicEventsIRNode, SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
@@ -15,11 +19,11 @@ export function genSetEvent(
   oper: SetEventIRNode,
   context: CodegenContext,
 ): CodeFragment[] {
-  const { vaporHelper, options } = context
+  const { vaporHelper } = context
   const { element, key, keyOverride, value, modifiers, delegate, effect } = oper
 
   const name = genName()
-  const handler = genEventHandler()
+  const handler = genEventHandler(context, value)
   const eventOptions = genEventOptions()
 
   if (delegate) {
@@ -49,30 +53,6 @@ export function genSetEvent(
     } else {
       return genExpression(key, context)
     }
-  }
-
-  function genEventHandler() {
-    if (value && value.content.trim()) {
-      const isMemberExp = isMemberExpression(value.content, options)
-      const isInlineStatement = !(isMemberExp || fnExpRE.test(value.content))
-
-      if (isInlineStatement) {
-        const expr = context.withId(() => genExpression(value, context), {
-          $event: null,
-        })
-        const hasMultipleStatements = value.content.includes(`;`)
-        return [
-          '() => $event => ',
-          hasMultipleStatements ? '{' : '(',
-          ...expr,
-          hasMultipleStatements ? '}' : ')',
-        ]
-      } else {
-        return ['() => ', ...genExpression(value, context)]
-      }
-    }
-
-    return ['() => {}']
   }
 
   function genEventOptions(): CodeFragment[] | undefined {
@@ -110,4 +90,31 @@ export function genSetDynamicEvents(
 
 function genArrayExpression(elements: string[]) {
   return `[${elements.map(it => JSON.stringify(it)).join(', ')}]`
+}
+
+export function genEventHandler(
+  context: CodegenContext,
+  value: SimpleExpressionNode | undefined,
+) {
+  if (value && value.content.trim()) {
+    const isMemberExp = isMemberExpression(value.content, context.options)
+    const isInlineStatement = !(isMemberExp || fnExpRE.test(value.content))
+
+    if (isInlineStatement) {
+      const expr = context.withId(() => genExpression(value, context), {
+        $event: null,
+      })
+      const hasMultipleStatements = value.content.includes(`;`)
+      return [
+        '() => $event => ',
+        hasMultipleStatements ? '{' : '(',
+        ...expr,
+        hasMultipleStatements ? '}' : ')',
+      ]
+    } else {
+      return ['() => ', ...genExpression(value, context)]
+    }
+  }
+
+  return ['() => {}']
 }

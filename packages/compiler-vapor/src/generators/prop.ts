@@ -12,6 +12,7 @@ import type {
 } from '../ir'
 import { genExpression } from './expression'
 import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
+import { toHandlerKey } from '@vue/shared'
 
 // only the static key prop will reach here
 export function genSetProp(
@@ -86,7 +87,7 @@ function genLiteralObjectProps(
 }
 
 export function genPropKey(
-  { key: node, modifier, runtimeCamelize, runtimeHandler }: IRProp,
+  { key: node, modifier, runtimeCamelize, handler }: IRProp,
   context: CodegenContext,
 ): CodeFragment[] {
   const { helper } = context
@@ -94,7 +95,7 @@ export function genPropKey(
   // static arg was transformed by v-bind transformer
   if (node.isStatic) {
     // only quote keys if necessary
-    const keyName = node.content
+    const keyName = handler ? toHandlerKey(node.content) : node.content
     return [
       [
         isSimpleIdentifier(keyName) ? keyName : JSON.stringify(keyName),
@@ -108,7 +109,7 @@ export function genPropKey(
   if (runtimeCamelize) {
     key = genCall(helper('camelize'), key)
   }
-  if (runtimeHandler) {
+  if (handler) {
     key = genCall(helper('toHandlerKey'), key)
   }
   return ['[', modifier && `${JSON.stringify(modifier)} + `, ...key, ']']
