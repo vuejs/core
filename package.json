@@ -75,7 +75,6 @@
     "@vitest/coverage-istanbul": "^1.4.0",
     "@vue/consolidate": "1.0.0",
     "conventional-changelog-cli": "^4.1.0",
-    "cross-env": "^7.0.3",
     "enquirer": "^2.4.1",
     "esbuild": "^0.20.2",
     "esbuild-plugin-polyfill-node": "^0.3.0",

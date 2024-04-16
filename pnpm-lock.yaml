@@ -56,9 +56,6 @@ importers:
       conventional-changelog-cli:
         specifier: ^4.1.0
         version: 4.1.0
-      cross-env:
-        specifier: ^7.0.3
-        version: 7.0.3
       enquirer:
         specifier: ^2.4.1
         version: 2.4.1
@@ -2439,14 +2436,6 @@ packages:
       js-yaml: 4.1.0
       parse-json: 5.2.0
       typescript: 5.4.5
-    dev: true
-
-  /cross-env@7.0.3:
-    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
-    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
-    hasBin: true
-    dependencies:
-      cross-spawn: 7.0.3
     dev: true
 
   /cross-spawn@7.0.3:
