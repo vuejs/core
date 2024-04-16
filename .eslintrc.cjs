@@ -19,19 +19,30 @@ module.exports = {
   plugins: ['jest', 'import', '@typescript-eslint'],
   rules: {
     'no-debugger': 'error',
+    'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     // most of the codebase are expected to be env agnostic
     'no-restricted-globals': ['error', ...DOMGlobals, ...NodeGlobals],
 
     'no-restricted-syntax': [
       'error',
       banConstEnum,
-      // since we target ES2015 for baseline support, we need to forbid object
-      // rest spread usage in destructure as it compiles into a verbose helper.
-      'ObjectPattern > RestElement',
-      // tsc compiles assignment spread into Object.assign() calls, but esbuild
-      // still generates verbose helpers, so spread assignment is also prohiboted
-      'ObjectExpression > SpreadElement',
-      'AwaitExpression',
+      {
+        selector: 'ObjectPattern > RestElement',
+        message:
+          'Our output target is ES2016, and object rest spread results in ' +
+          'verbose helpers and should be avoided.',
+      },
+      {
+        selector: 'ObjectExpression > SpreadElement',
+        message:
+          'esbuild transpiles object spread into very verbose inline helpers.\n' +
+          'Please use the `extend` helper from @vue/shared instead.',
+      },
+      {
+        selector: 'AwaitExpression',
+        message:
+          'Our output target is ES2016, so async/await syntax should be avoided.',
+      },
     ],
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
 
@@ -58,6 +69,7 @@ module.exports = {
     {
       files: ['**/__tests__/**', 'packages/dts-test/**'],
       rules: {
+        'no-console': 'off',
         'no-restricted-globals': 'off',
         'no-restricted-syntax': 'off',
         'jest/no-disabled-tests': 'error',
@@ -92,6 +104,7 @@ module.exports = {
       rules: {
         'no-restricted-globals': ['error', ...NodeGlobals],
         'no-restricted-syntax': ['error', banConstEnum],
+        'no-console': 'off',
       },
     },
     // JavaScript files
@@ -113,6 +126,7 @@ module.exports = {
       rules: {
         'no-restricted-globals': 'off',
         'no-restricted-syntax': ['error', banConstEnum],
+        'no-console': 'off',
       },
     },
     // Import nodejs modules in compiler-sfc

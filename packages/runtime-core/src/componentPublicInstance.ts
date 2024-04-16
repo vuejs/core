@@ -23,6 +23,7 @@ import {
   isString,
 } from '@vue/shared'
 import {
+  ReactiveFlags,
   type ShallowUnwrapRef,
   TrackOpTypes,
   type UnwrapNestedRefs,
@@ -84,34 +85,36 @@ type IsDefaultMixinComponent<T> = T extends ComponentOptionsMixin
     : false
   : false
 
-type MixinToOptionTypes<T> = T extends ComponentOptionsBase<
-  infer P,
-  infer B,
-  infer D,
-  infer C,
-  infer M,
-  infer Mixin,
-  infer Extends,
-  any,
-  any,
-  infer Defaults,
-  any,
-  any,
-  any
->
-  ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
-      IntersectionMixin<Mixin> &
-      IntersectionMixin<Extends>
-  : never
+type MixinToOptionTypes<T> =
+  T extends ComponentOptionsBase<
+    infer P,
+    infer B,
+    infer D,
+    infer C,
+    infer M,
+    infer Mixin,
+    infer Extends,
+    any,
+    any,
+    infer Defaults,
+    any,
+    any,
+    any
+  >
+    ? OptionTypesType<P & {}, B & {}, D & {}, C & {}, M & {}, Defaults & {}> &
+        IntersectionMixin<Mixin> &
+        IntersectionMixin<Extends>
+    : never
 
 // ExtractMixin(map type) is used to resolve circularly references
 type ExtractMixin<T> = {
   Mixin: MixinToOptionTypes<T>
 }[T extends ComponentOptionsMixin ? 'Mixin' : never]
 
-export type IntersectionMixin<T> = IsDefaultMixinComponent<T> extends true
-  ? OptionTypesType
-  : UnionToIntersection<ExtractMixin<T>>
+export type IntersectionMixin<T> =
+  IsDefaultMixinComponent<T> extends true
+    ? OptionTypesType
+    : UnionToIntersection<ExtractMixin<T>>
 
 export type UnwrapMixinsType<
   T,
@@ -305,6 +308,10 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 

@@ -32,15 +32,18 @@ export function useCssVars(getter: (ctx: any) => Record<string, string>) {
     ).forEach(node => setVarsOnNode(node, vars))
   })
 
+  if (__DEV__) {
+    instance.getCssVars = () => getter(instance.proxy)
+  }
+
   const setVars = () => {
     const vars = getter(instance.proxy)
     setVarsOnVNode(instance.subTree, vars)
     updateTeleports(vars)
   }
 
-  watchPostEffect(setVars)
-
   onMounted(() => {
+    watchPostEffect(setVars)
     const ob = new MutationObserver(setVars)
     ob.observe(instance.subTree.el!.parentNode, { childList: true })
     onUnmounted(() => ob.disconnect())

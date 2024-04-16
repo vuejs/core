@@ -12,7 +12,6 @@ import {
   PatchFlags,
   camelize,
   capitalize,
-  def,
   extend,
   hasOwn,
   hyphenate,
@@ -32,10 +31,8 @@ import {
   type ConcreteComponent,
   type Data,
   setCurrentInstance,
-  unsetCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
@@ -188,6 +185,13 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
+/**
+ * Used during vnode props normalization to check if the vnode props is the
+ * attrs object of a component via `Object.getPrototypeOf`. This is more
+ * performant than defining a non-enumerable property.
+ */
+export const attrsProto = {}
+
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -195,8 +199,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = {}
-  def(attrs, InternalObjectKey, 1)
+  const attrs: Data = Object.create(attrsProto)
 
   instance.propsDefaults = Object.create(null)
 
@@ -362,7 +365,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance.attrs, TriggerOpTypes.SET, '')
   }
 
   if (__DEV__) {
@@ -470,7 +473,7 @@ function resolvePropValue(
         if (key in propsDefaults) {
           value = propsDefaults[key]
         } else {
-          setCurrentInstance(instance)
+          const reset = setCurrentInstance(instance)
           value = propsDefaults[key] = defaultValue.call(
             __COMPAT__ &&
               isCompatEnabled(DeprecationTypes.PROPS_DEFAULT_THIS, instance)
@@ -478,7 +481,7 @@ function resolvePropValue(
               : null,
             props,
           )
-          unsetCurrentInstance()
+          reset()
         }
       } else {
         value = defaultValue
@@ -587,7 +590,7 @@ export function normalizePropsOptions(
 }
 
 function validatePropName(key: string) {
-  if (key[0] !== '$') {
+  if (key[0] !== '$' && !isReservedProp(key)) {
     return true
   } else if (__DEV__) {
     warn(`Invalid prop name: "${key}" is a reserved property.`)
@@ -598,8 +601,23 @@ function validatePropName(key: string) {
 // use function string name to check type constructors
 // so that it works across vms / iframes.
 function getType(ctor: Prop<any>): string {
-  const match = ctor && ctor.toString().match(/^\s*(function|class) (\w+)/)
-  return match ? match[2] : ctor === null ? 'null' : ''
+  // Early return for null to avoid unnecessary computations
+  if (ctor === null) {
+    return 'null'
+  }
+
+  // Avoid using regex for common cases by checking the type directly
+  if (typeof ctor === 'function') {
+    // Using name property to avoid converting function to string
+    return ctor.name || ''
+  } else if (typeof ctor === 'object') {
+    // Attempting to directly access constructor name if possible
+    const name = ctor.constructor && ctor.constructor.name
+    return name || ''
+  }
+
+  // Fallback for other types (though they're less likely to have meaningful names here)
+  return ''
 }
 
 function isSameType(a: Prop<any>, b: Prop<any>): boolean {
