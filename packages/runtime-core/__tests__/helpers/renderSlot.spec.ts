@@ -1,13 +1,13 @@
 import { renderSlot } from '../../src/helpers/renderSlot'
 import {
-  h,
-  withCtx,
-  createVNode,
-  openBlock,
-  createBlock,
   Fragment,
+  type Slot,
+  createBlock,
   createCommentVNode,
-  Slot
+  createVNode,
+  h,
+  openBlock,
+  withCtx,
 } from '../../src'
 import { PatchFlags } from '@vue/shared'
 import { setCurrentRenderingInstance } from '../../src/componentRenderContext'
@@ -25,7 +25,7 @@ describe('renderSlot', () => {
     let child
     const vnode = renderSlot(
       { default: () => [(child = h('child'))] },
-      'default'
+      'default',
     )
     expect(vnode.children).toEqual([child])
   })
@@ -47,7 +47,7 @@ describe('renderSlot', () => {
         return [createVNode('div', null, 'foo', PatchFlags.TEXT)]
       },
       // mock instance
-      { type: {}, appContext: {} } as any
+      { type: {}, appContext: {} } as any,
     ) as Slot
 
     // manual invocation should not track
@@ -67,7 +67,7 @@ describe('renderSlot', () => {
         { default: () => [createCommentVNode('foo')] },
         'default',
         undefined,
-        () => [(fallback = h('fallback'))]
+        () => [(fallback = h('fallback'))],
       )
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)
@@ -79,7 +79,7 @@ describe('renderSlot', () => {
         { default: () => [renderSlot({}, 'foo')] },
         'default',
         undefined,
-        () => [(fallback = h('fallback'))]
+        () => [(fallback = h('fallback'))],
       )
       expect(vnode.children).toEqual([fallback])
       expect(vnode.patchFlag).toBe(PatchFlags.BAIL)

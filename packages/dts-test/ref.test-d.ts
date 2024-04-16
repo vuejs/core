@@ -1,23 +1,24 @@
 import {
-  Ref,
-  ref,
-  shallowRef,
+  type ComputedRef,
+  type MaybeRef,
+  type MaybeRefOrGetter,
+  type Ref,
+  type ShallowRef,
+  type ToRefs,
+  computed,
   isRef,
-  unref,
-  reactive,
   proxyRefs,
-  toRef,
-  toValue,
-  toRefs,
-  ToRefs,
-  shallowReactive,
+  reactive,
   readonly,
-  MaybeRef,
-  MaybeRefOrGetter,
-  ComputedRef,
-  computed
+  ref,
+  shallowReactive,
+  shallowRef,
+  toRef,
+  toRefs,
+  toValue,
+  unref,
 } from 'vue'
-import { expectType, describe } from './utils'
+import { type IsAny, type IsUnion, describe, expectType } from './utils'
 
 function plainType(arg: number | Ref<number>) {
   // ref coercing
@@ -36,7 +37,7 @@ function plainType(arg: number | Ref<number>) {
 
   // ref inner type should be unwrapped
   const nestedRef = ref({
-    foo: ref(1)
+    foo: ref(1),
   })
   expectType<{ foo: number }>(nestedRef.value)
 
@@ -59,7 +60,7 @@ function plainType(arg: number | Ref<number>) {
 
   // with symbol
   expectType<Ref<IteratorFoo | null | undefined>>(
-    ref<IteratorFoo | null | undefined>()
+    ref<IteratorFoo | null | undefined>(),
   )
 
   // should not unwrap ref inside arrays
@@ -78,6 +79,10 @@ function plainType(arg: number | Ref<number>) {
   // should still unwrap in objects nested in arrays
   const arr2 = ref([{ a: ref(1) }]).value
   expectType<number>(arr2[0].a)
+
+  // any value should return Ref<any>, not any
+  const a = ref(1 as any)
+  expectType<IsAny<typeof a>>(false)
 }
 
 plainType(1)
@@ -96,13 +101,11 @@ function bailType(arg: HTMLElement | Ref<HTMLElement>) {
   expectType<HTMLElement>(unref(arg))
 
   // ref inner type should be unwrapped
-  // eslint-disable-next-line no-restricted-globals
   const nestedRef = ref({ foo: ref(document.createElement('DIV')) })
 
   expectType<Ref<{ foo: HTMLElement }>>(nestedRef)
   expectType<{ foo: HTMLElement }>(nestedRef.value)
 }
-// eslint-disable-next-line no-restricted-globals
 const el = document.createElement('DIV')
 bailType(el)
 
@@ -122,7 +125,7 @@ function withSymbol() {
     [Symbol.toPrimitive]: new WeakMap<Ref<boolean>, string>(),
     [Symbol.toStringTag]: { weakSet: new WeakSet<Ref<boolean>>() },
     [Symbol.unscopables]: { weakMap: new WeakMap<Ref<boolean>, string>() },
-    [customSymbol]: { arr: [ref(1)] }
+    [customSymbol]: { arr: [ref(1)] },
   }
 
   const objRef = ref(obj)
@@ -139,10 +142,10 @@ function withSymbol() {
   expectType<WeakSet<Ref<boolean>>>(objRef.value[Symbol.split])
   expectType<WeakMap<Ref<boolean>, string>>(objRef.value[Symbol.toPrimitive])
   expectType<{ weakSet: WeakSet<Ref<boolean>> }>(
-    objRef.value[Symbol.toStringTag]
+    objRef.value[Symbol.toStringTag],
   )
   expectType<{ weakMap: WeakMap<Ref<boolean>, string> }>(
-    objRef.value[Symbol.unscopables]
+    objRef.value[Symbol.unscopables],
   )
   expectType<{ arr: Ref<number>[] }>(objRef.value[customSymbol])
 }
@@ -152,11 +155,22 @@ withSymbol()
 const state = reactive({
   foo: {
     value: 1,
-    label: 'bar'
-  }
+    label: 'bar',
+  },
 })
 
 expectType<string>(state.foo.label)
+
+describe('ref with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = ref(r)
+  expectType<string>(s.value.name)
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = ref(rr) as Ref<T>
+  expectType<string>(ss.value.name)
+})
 
 // shallowRef
 type Status = 'initial' | 'ready' | 'invalidating'
@@ -174,9 +188,53 @@ if (refStatus.value === 'initial') {
   refStatus.value = 'invalidating'
 }
 
+{
+  const shallow = shallowRef(1)
+  expectType<Ref<number>>(shallow)
+  expectType<ShallowRef<number>>(shallow)
+}
+
+{
+  //#7852
+  type Steps = { step: '1' } | { step: '2' }
+  const shallowUnionGenParam = shallowRef<Steps>({ step: '1' })
+  const shallowUnionAsCast = shallowRef({ step: '1' } as Steps)
+
+  expectType<IsUnion<typeof shallowUnionGenParam>>(false)
+  expectType<IsUnion<typeof shallowUnionAsCast>>(false)
+}
+
+{
+  // any value should return Ref<any>, not any
+  const a = shallowRef(1 as any)
+  expectType<IsAny<typeof a>>(false)
+}
+
+describe('shallowRef with generic', <T extends { name: string }>() => {
+  const r = {} as T
+  const s = shallowRef(r)
+  expectType<string>(s.value.name)
+  expectType<ShallowRef<T>>(shallowRef(r))
+
+  const rr = {} as MaybeRef<T>
+  // should at least allow casting
+  const ss = shallowRef(rr) as Ref<T> | ShallowRef<T>
+  expectType<string>(ss.value.name)
+})
+
+{
+  // should return ShallowRef<T> | Ref<T>, not ShallowRef<T | Ref<T>>
+  expectType<ShallowRef<{ name: string }> | Ref<{ name: string }>>(
+    shallowRef({} as MaybeRef<{ name: string }>),
+  )
+  expectType<ShallowRef<number> | Ref<string[]> | ShallowRef<string>>(
+    shallowRef('' as Ref<string[]> | string | number),
+  )
+}
+
 // proxyRefs: should return `reactive` directly
 const r1 = reactive({
-  k: 'v'
+  k: 'v',
 })
 const p1 = proxyRefs(r1)
 expectType<typeof r1>(p1)
@@ -184,13 +242,19 @@ expectType<typeof r1>(p1)
 // proxyRefs: `ShallowUnwrapRef`
 const r2 = {
   a: ref(1),
+  c: computed(() => 1),
+  u: undefined,
   obj: {
-    k: ref('foo')
-  }
+    k: ref('foo'),
+  },
+  union: Math.random() > 0 - 5 ? ref({ name: 'yo' }) : null,
 }
 const p2 = proxyRefs(r2)
 expectType<number>(p2.a)
+expectType<number>(p2.c)
+expectType<undefined>(p2.u)
 expectType<Ref<string>>(p2.obj.k)
+expectType<{ name: string } | null>(p2.union)
 
 // toRef and toRefs
 {
@@ -201,7 +265,7 @@ expectType<Ref<string>>(p2.obj.k)
   } = {
     a: 1,
     b: ref(1),
-    c: 1
+    c: 1,
   }
 
   // toRef
@@ -228,8 +292,8 @@ expectType<Ref<string>>(p2.obj.k)
   // Both should not do any unwrapping
   const someReactive = shallowReactive({
     a: {
-      b: ref(42)
-    }
+      b: ref(42),
+    },
   })
 
   const toRefResult = toRef(someReactive, 'a')
@@ -261,8 +325,8 @@ interface AppData {
 
 const data: ToRefs<AppData> = toRefs(
   reactive({
-    state: 'state1'
-  })
+    state: 'state1',
+  }),
 )
 
 switch (data.state.value) {
@@ -289,9 +353,9 @@ describe('shallow reactive in reactive', () => {
   const baz = reactive({
     foo: shallowReactive({
       a: {
-        b: ref(42)
-      }
-    })
+        b: ref(42),
+      },
+    }),
   })
 
   const foo = toRef(baz, 'foo')
@@ -306,10 +370,10 @@ describe('shallow ref in reactive', () => {
       bar: {
         baz: ref(123),
         qux: reactive({
-          z: ref(123)
-        })
-      }
-    })
+          z: ref(123),
+        }),
+      },
+    }),
   })
 
   expectType<Ref<number>>(x.foo.bar.baz)
@@ -318,7 +382,7 @@ describe('shallow ref in reactive', () => {
 
 describe('ref in shallow ref', () => {
   const x = shallowRef({
-    a: ref(123)
+    a: ref(123),
   })
 
   expectType<Ref<number>>(x.value.a)
@@ -327,8 +391,8 @@ describe('ref in shallow ref', () => {
 describe('reactive in shallow ref', () => {
   const x = shallowRef({
     a: reactive({
-      b: ref(0)
-    })
+      b: ref(0),
+    }),
   })
 
   expectType<number>(x.value.a.b)
@@ -339,7 +403,7 @@ describe('toRef <-> toValue', () => {
     a: MaybeRef<string>,
     b: () => string,
     c: MaybeRefOrGetter<string>,
-    d: ComputedRef<string>
+    d: ComputedRef<string>,
   ) {
     const r = toRef(a)
     expectType<Ref<string>>(r)
@@ -370,7 +434,7 @@ describe('toRef <-> toValue', () => {
       r: toValue(r),
       rb: toValue(rb),
       rc: toValue(rc),
-      rd: toValue(rd)
+      rd: toValue(rd),
     }
   }
 
@@ -384,7 +448,7 @@ describe('toRef <-> toValue', () => {
       'foo',
       () => 'bar',
       ref('baz'),
-      computed(() => 'hi')
-    )
+      computed(() => 'hi'),
+    ),
   )
 })

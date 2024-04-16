@@ -1,10 +1,10 @@
-import {
+import type {
   ArrayExpression,
   Node,
   ObjectExpression,
-  Statement
+  Statement,
 } from '@babel/types'
-import { BindingMetadata, BindingTypes } from '@vue/compiler-dom'
+import { type BindingMetadata, BindingTypes } from '@vue/compiler-dom'
 import { resolveObjectKey } from './utils'
 
 /**
@@ -30,7 +30,7 @@ function analyzeBindingsFromOptions(node: ObjectExpression): BindingMetadata {
   // mark non-script-setup so we don't resolve components/directives from these
   Object.defineProperty(bindings, '__isScriptSetup', {
     enumerable: false,
-    value: false
+    value: false,
   })
   for (const property of node.properties) {
     if (
