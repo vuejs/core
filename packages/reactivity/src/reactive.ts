@@ -329,8 +329,8 @@ export function isShallow(value: unknown): boolean {
  * @param value - The value to check.
  * @see {@link https://vuejs.org/api/reactivity-utilities.html#isproxy}
  */
-export function isProxy(value: unknown): boolean {
-  return isReactive(value) || isReadonly(value)
+export function isProxy(value: any): boolean {
+  return value ? !!value[ReactiveFlags.RAW] : false
 }
 
 /**
