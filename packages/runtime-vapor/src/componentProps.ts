@@ -212,7 +212,7 @@ function resolvePropValue(
         //   value = propsDefaults[key]
         // } else {
         const reset = setCurrentInstance(instance)
-        value = defaultValue.call(null, props)
+        instance.scope.run(() => (value = defaultValue.call(null, props)))
         reset()
         // }
       } else {

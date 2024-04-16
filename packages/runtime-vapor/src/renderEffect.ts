@@ -3,6 +3,7 @@ import {
   ReactiveEffect,
   type SchedulerJob,
   SchedulerJobFlags,
+  getCurrentScope,
 } from '@vue/reactivity'
 import { invokeArrayFns } from '@vue/shared'
 import {
@@ -16,6 +17,7 @@ import { invokeDirectiveHook } from './directives'
 
 export function renderEffect(cb: () => void) {
   const instance = getCurrentInstance()
+  const scope = getCurrentScope()
 
   let effect: ReactiveEffect
 
@@ -53,11 +55,23 @@ export function renderEffect(cb: () => void) {
     }
   }
 
-  effect = new ReactiveEffect(() => {
-    const reset = instance && setCurrentInstance(instance)
-    callWithAsyncErrorHandling(cb, instance, VaporErrorCodes.RENDER_FUNCTION)
-    reset?.()
-  })
+  if (scope) {
+    const baseCb = cb
+    cb = () => scope.run(baseCb)
+  }
+
+  if (instance) {
+    const baseCb = cb
+    cb = () => {
+      const reset = setCurrentInstance(instance)
+      baseCb()
+      reset()
+    }
+  }
+
+  effect = new ReactiveEffect(() =>
+    callWithAsyncErrorHandling(cb, instance, VaporErrorCodes.RENDER_FUNCTION),
+  )
 
   effect.scheduler = () => {
     if (instance) job.id = instance.uid

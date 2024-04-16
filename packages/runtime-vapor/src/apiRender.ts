@@ -64,7 +64,9 @@ export function setupComponent(
       instance.setupState = proxyRefs(stateOrNode)
     }
     if (!block && component.render) {
+      pauseTracking()
       block = component.render(instance.setupState)
+      resetTracking()
     }
 
     if (block instanceof DocumentFragment) {

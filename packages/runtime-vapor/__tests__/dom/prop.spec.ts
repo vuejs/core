@@ -14,13 +14,17 @@ import {
   setCurrentInstance,
 } from '../../src/component'
 import { getMetadata, recordPropMetadata } from '../../src/componentMetadata'
+import { getCurrentScope } from '@vue/reactivity'
 
 let removeComponentInstance = NOOP
 beforeEach(() => {
-  const reset = setCurrentInstance(
-    createComponentInstance((() => {}) as any, {}),
-  )
+  const instance = createComponentInstance((() => {}) as any, {})
+  const reset = setCurrentInstance(instance)
+  const prev = getCurrentScope()
+  instance.scope.on()
   removeComponentInstance = () => {
+    instance.scope.prevScope = prev
+    instance.scope.off()
     reset()
     removeComponentInstance = NOOP
   }

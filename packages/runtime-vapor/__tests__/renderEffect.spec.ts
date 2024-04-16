@@ -1,4 +1,6 @@
 import {
+  EffectScope,
+  getCurrentScope,
   nextTick,
   onBeforeUpdate,
   onEffectCleanup,
@@ -10,6 +12,10 @@ import {
   watchPostEffect,
   watchSyncEffect,
 } from '../src'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+} from '../src/component'
 import { makeRender } from './_utils'
 
 const define = makeRender<any>()
@@ -206,5 +212,28 @@ describe('renderEffect', () => {
     expect(
       '[Vue warn] Unhandled error during execution of updated',
     ).toHaveBeenWarned()
+  })
+
+  test('should be called with the current instance and current scope', async () => {
+    const source = ref(0)
+    const scope = new EffectScope()
+    let instanceSnap: ComponentInternalInstance | null = null
+    let scopeSnap: EffectScope | undefined = undefined
+    const { instance } = define(() => {
+      scope.run(() => {
+        renderEffect(() => {
+          instanceSnap = currentInstance
+          scopeSnap = getCurrentScope()
+        })
+      })
+    }).render()
+
+    expect(instanceSnap).toBe(instance)
+    expect(scopeSnap).toBe(scope)
+
+    source.value++
+    await nextTick()
+    expect(instanceSnap).toBe(instance)
+    expect(scopeSnap).toBe(scope)
   })
 })

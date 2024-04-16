@@ -39,7 +39,9 @@ const injectHook = (
         }
         pauseTracking()
         const reset = setCurrentInstance(target)
-        const res = callWithAsyncErrorHandling(hook, target, type, args)
+        const res = target.scope.run(() =>
+          callWithAsyncErrorHandling(hook, target, type, args),
+        )
         reset()
         resetTracking()
         return res
