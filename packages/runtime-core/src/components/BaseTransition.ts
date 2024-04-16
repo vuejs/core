@@ -19,6 +19,7 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
+import type { RawSlots, Slot } from '../componentSlots'
 
 type Hook<T = () => void> = T | T[]
 
@@ -465,7 +466,8 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
       __DEV__ && vnode.component
       ? vnode.component.subTree
       : vnode.children
-        ? ((vnode.children as VNodeArrayChildren)[0] as VNode)
+        ? ((vnode.children as VNodeArrayChildren)[0] as VNode) ||
+          ((vnode.children as RawSlots).default as Slot)()
         : undefined
     : vnode
 }
