@@ -669,12 +669,12 @@ function innerResolveTypeReference(
         )
       }
     } else {
-      let imoprtType: Import
+      let importType: Import
       if (
-        (imoprtType = scope.imports[name[0]]) &&
-        imoprtType.imported === '*'
+        (importType = scope.imports[name[0]]) &&
+        importType.imported === '*'
       ) {
-        const importPath = scope.resolvedImportSources[imoprtType.source]
+        const importPath = scope.resolvedImportSources[importType.source]
         return innerResolveTypeReference(
           ctx,
           fileToScope(ctx, normalizePath(importPath)),
