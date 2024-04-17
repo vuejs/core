@@ -1,3 +1,4 @@
+import { isValidHTMLNesting } from 'validate-html-nesting'
 import {
   type AttributeNode,
   type ElementNode,
@@ -44,9 +45,8 @@ export const transformElement: NodeTransform = (node, context) => {
         (node.tagType === ElementTypes.ELEMENT ||
           node.tagType === ElementTypes.COMPONENT)
       )
-    ) {
+    )
       return
-    }
 
     const { tag, tagType } = node
     const isComponent = tagType === ElementTypes.COMPONENT
@@ -59,7 +59,7 @@ export const transformElement: NodeTransform = (node, context) => {
     ;(isComponent ? transformComponentElement : transformNativeElement)(
       tag,
       propsResult,
-      context,
+      context as TransformContext<ElementNode>,
     )
   }
 }
@@ -121,12 +121,14 @@ function resolveSetupReference(name: string, context: TransformContext) {
 function transformNativeElement(
   tag: string,
   propsResult: ReturnType<typeof buildProps>,
-  context: TransformContext,
+  context: TransformContext<ElementNode>,
 ) {
   const { scopeId } = context.options
 
-  context.template += `<${tag}`
-  if (scopeId) context.template += ` ${scopeId}`
+  let template = ''
+
+  template += `<${tag}`
+  if (scopeId) template += ` ${scopeId}`
 
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
@@ -141,8 +143,8 @@ function transformNativeElement(
     for (const prop of propsResult[1]) {
       const { key, values } = prop
       if (key.isStatic && values.length === 1 && values[0].isStatic) {
-        context.template += ` ${key.content}`
-        if (values[0].content) context.template += `="${values[0].content}"`
+        template += ` ${key.content}`
+        if (values[0].content) template += `="${values[0].content}"`
       } else {
         context.registerEffect(values, [
           {
@@ -155,10 +157,22 @@ function transformNativeElement(
     }
   }
 
-  context.template += `>` + context.childrenTemplate.join('')
+  template += `>` + context.childrenTemplate.join('')
   // TODO remove unnecessary close tag, e.g. if it's the last element of the template
   if (!isVoidTag(tag)) {
-    context.template += `</${tag}>`
+    template += `</${tag}>`
+  }
+
+  if (
+    context.parent &&
+    context.parent.node.type === NodeTypes.ELEMENT &&
+    !isValidHTMLNesting(context.parent.node.tag, tag)
+  ) {
+    context.reference()
+    context.dynamic.template = context.pushTemplate(template)
+    context.dynamic.flags |= DynamicFlag.INSERT | DynamicFlag.NON_TEMPLATE
+  } else {
+    context.template += template
   }
 }
 

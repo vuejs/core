@@ -64,7 +64,6 @@ export function processFor(
   context.reference()
 
   return () => {
-    context.registerTemplate()
     exitBlock()
     context.registerOperation({
       type: IRNodeTypes.FOR,

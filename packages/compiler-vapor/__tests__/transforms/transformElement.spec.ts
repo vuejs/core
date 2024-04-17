@@ -3,6 +3,7 @@ import {
   IRNodeTypes,
   transformChildren,
   transformElement,
+  transformText,
   transformVBind,
   transformVOn,
 } from '../../src'
@@ -13,7 +14,7 @@ import {
 } from '@vue/compiler-core'
 
 const compileWithElementTransform = makeCompile({
-  nodeTransforms: [transformElement, transformChildren],
+  nodeTransforms: [transformElement, transformChildren, transformText],
   directiveTransforms: {
     bind: transformVBind,
     on: transformVOn,
@@ -688,5 +689,25 @@ describe('compiler: element transform', () => {
       },
     ])
     expect(code).contains('_setDynamicEvents(n0, _ctx.obj)')
+  })
+
+  test('invalid html nesting', () => {
+    const { code, ir } = compileWithElementTransform(
+      `<p><div>123</div></p>
+      <form><form/></form>`,
+    )
+    expect(code).toMatchSnapshot()
+    expect(ir.template).toEqual(['<div>123</div>', '<p></p>', '<form></form>'])
+    expect(ir.block.dynamic).toMatchObject({
+      children: [
+        { id: 1, template: 1, children: [{ id: 0, template: 0 }] },
+        { id: 3, template: 2, children: [{ id: 2, template: 2 }] },
+      ],
+    })
+
+    expect(ir.block.operation).toMatchObject([
+      { type: IRNodeTypes.INSERT_NODE, parent: 1, elements: [0] },
+      { type: IRNodeTypes.INSERT_NODE, parent: 3, elements: [2] },
+    ])
   })
 })

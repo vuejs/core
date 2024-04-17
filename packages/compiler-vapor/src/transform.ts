@@ -78,7 +78,8 @@ export interface TransformContext<T extends AllNode = AllNode> {
   enterBlock(ir: TransformContext['block'], isVFor?: boolean): () => void
   reference(): number
   increaseId(): number
-  registerTemplate(): number
+  pushTemplate(template: string): number
+  registerTemplate(customTemplate?: string): number
   registerEffect(
     expressions: SimpleExpressionNode[],
     operation: OperationNode[],
@@ -133,6 +134,7 @@ function createRootContext(
       inVFor && this.inVFor++
       return () => {
         // exit
+        this.registerTemplate()
         this.block = block
         this.template = template
         this.dynamic = dynamic
@@ -180,20 +182,16 @@ function createRootContext(
 
     template: '',
     childrenTemplate: [],
+    pushTemplate(content) {
+      const existing = root.template.findIndex(template => template === content)
+      if (existing !== -1) return existing
+      root.template.push(content)
+      return root.template.length - 1
+    },
     registerTemplate() {
-      if (!this.template) {
-        return -1
-      }
-
-      const existing = root.template.findIndex(
-        template => template === this.template,
-      )
-      if (existing !== -1) {
-        return (this.dynamic.template = existing)
-      }
-
-      root.template.push(this.template)
-      return (this.dynamic.template = root.template.length - 1)
+      if (!this.template) return -1
+      const id = this.pushTemplate(this.template)
+      return (this.dynamic.template = id)
     },
     registerOperation(...node) {
       this.block.operation.push(...node)

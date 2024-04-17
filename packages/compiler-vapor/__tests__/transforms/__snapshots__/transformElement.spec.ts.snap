@@ -10,9 +10,11 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: element transform > component > generate multi root component 1`] = `
-"import { createComponent as _createComponent } from 'vue/vapor';
+"import { createComponent as _createComponent, template as _template } from 'vue/vapor';
+const t0 = _template("123")
 
 export function render(_ctx) {
+  const n1 = t0()
   const n0 = _createComponent(_ctx.Comp)
   return [n0, n1]
 }"
@@ -165,6 +167,23 @@ import { resolveComponent as _resolveComponent, createComponent as _createCompon
 export function render(_ctx) {
   const n0 = _createComponent(_resolveComponent("Foo"), [() => (_toHandlers(_ctx.obj))], true)
   return n0
+}"
+`;
+
+exports[`compiler: element transform > invalid html nesting 1`] = `
+"import { insert as _insert, template as _template } from 'vue/vapor';
+const t0 = _template("<div>123</div>")
+const t1 = _template("<p></p>")
+const t2 = _template("<form></form>")
+
+export function render(_ctx) {
+  const n1 = t1()
+  const n0 = t0()
+  const n3 = t2()
+  const n2 = t2()
+  _insert(n0, n1)
+  _insert(n2, n3)
+  return [n1, n3]
 }"
 `;
 

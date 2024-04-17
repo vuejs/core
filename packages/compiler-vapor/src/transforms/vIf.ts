@@ -128,9 +128,5 @@ export function createIfBranch(
 
   const exitBlock = context.enterBlock(branch)
   context.reference()
-  const onExit = () => {
-    context.registerTemplate()
-    exitBlock()
-  }
-  return [branch, onExit]
+  return [branch, exitBlock]
 }

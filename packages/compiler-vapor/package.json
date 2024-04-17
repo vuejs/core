@@ -39,6 +39,7 @@
   "dependencies": {
     "@vue/compiler-dom": "workspace:*",
     "@vue/shared": "workspace:*",
-    "source-map-js": "^1.0.2"
+    "source-map-js": "^1.0.2",
+    "validate-html-nesting": "^1.2.2"
   }
 }
