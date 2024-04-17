@@ -42,7 +42,7 @@ importers:
         specifier: ^1.2.5
         version: 1.2.5
       '@types/node':
-        specifier: ^20.12.5
+        specifier: ^20.12.7
         version: 20.12.7
       '@types/semver':
         specifier: ^7.5.8
@@ -257,7 +257,7 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       sass:
-        specifier: ^1.74.1
+        specifier: ^1.75.0
         version: 1.75.0
 
   packages/compiler-ssr:
