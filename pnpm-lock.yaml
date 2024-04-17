@@ -9,7 +9,7 @@ importers:
   .:
     devDependencies:
       '@babel/parser':
-        specifier: ^7.24.1
+        specifier: ^7.24.4
         version: 7.24.4
       '@babel/types':
         specifier: ^7.24.0
@@ -90,7 +90,7 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       magic-string:
-        specifier: ^0.30.8
+        specifier: ^0.30.10
         version: 0.30.10
       markdown-table:
         specifier: ^3.0.3
@@ -171,7 +171,7 @@ importers:
   packages/compiler-core:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.1
+        specifier: ^7.24.4
         version: 7.24.4
       '@vue/shared':
         specifier: workspace:*
@@ -202,7 +202,7 @@ importers:
   packages/compiler-sfc:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.1
+        specifier: ^7.24.4
         version: 7.24.4
       '@vue/compiler-core':
         specifier: workspace:*
@@ -220,7 +220,7 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       magic-string:
-        specifier: ^0.30.8
+        specifier: ^0.30.10
         version: 0.30.10
       postcss:
         specifier: ^8.4.38
@@ -395,7 +395,7 @@ importers:
   packages/vue-compat:
     dependencies:
       '@babel/parser':
-        specifier: ^7.24.1
+        specifier: ^7.24.4
         version: 7.24.4
       estree-walker:
         specifier: ^2.0.2
