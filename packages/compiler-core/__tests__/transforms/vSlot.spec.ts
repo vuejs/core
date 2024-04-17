@@ -482,7 +482,7 @@ describe('compiler: transform component slots', () => {
   test('should only force dynamic slots when actually using scope vars w/ prefixIdentifiers: true', () => {
     function assertDynamicSlots(
       template: string,
-      expectedPatchFlag?: PatchFlags
+      expectedPatchFlag?: PatchFlags,
     ) {
       const { root } = parseWithSlots(template, { prefixIdentifiers: true })
       let flag: any

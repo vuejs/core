@@ -134,7 +134,7 @@ export function buildSlots(
   // it dynamic only when the slot children actually uses the scope variables.
   if (!__BROWSER__ && !context.ssr && context.prefixIdentifiers) {
     hasDynamicSlots = children.some(child =>
-      hasScopeRef(child, context.identifiers)
+      hasScopeRef(child, context.identifiers),
     )
   }
 
