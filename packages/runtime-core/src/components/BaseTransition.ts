@@ -19,7 +19,6 @@ import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
 import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
-import type { RawSlots, Slot } from '../componentSlots'
 
 type Hook<T = () => void> = T | T[]
 
@@ -460,16 +459,24 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
 }
 
 function getKeepAliveChild(vnode: VNode): VNode | undefined {
-  return isKeepAlive(vnode)
-    ? // #7121 ensure get the child component subtree in case
-      // it's been replaced during HMR
-      __DEV__ && vnode.component
-      ? vnode.component.subTree
-      : vnode.children
-        ? ((vnode.children as VNodeArrayChildren)[0] as VNode) ||
-          ((vnode.children as RawSlots).default as Slot)?.()
-        : undefined
-    : vnode
+  if (!isKeepAlive(vnode)) {
+    return vnode
+  }
+  // #7121 ensure get the child component subtree in case
+  // it's been replaced during HMR
+  if (__DEV__ && vnode.component) {
+    return vnode.component.subTree
+  }
+
+  if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    return (vnode.children as VNodeArrayChildren)?.[0] as VNode
+  }
+
+  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
+    return (vnode.children as any)?.default?.()
+  }
+
+  return undefined
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
