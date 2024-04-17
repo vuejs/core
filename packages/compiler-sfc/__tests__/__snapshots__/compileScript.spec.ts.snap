@@ -1362,3 +1362,24 @@ return { get foo() { return foo } }
 
 }"
 `;
+
+exports[`compileScript > should care about runtimeModuleName 1`] = `
+"import { withAsyncContext as _withAsyncContext } from "npm:vue"
+
+export default {
+  async setup(__props, { expose: __expose }) {
+  __expose();
+
+let __temp, __restore
+
+        ;(
+  ([__temp,__restore] = _withAsyncContext(() => Promise.resolve(1))),
+  await __temp,
+  __restore()
+)
+      
+return {  }
+}
+
+}"
+`;

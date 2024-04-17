@@ -24,6 +24,7 @@ import {
   isString,
 } from '@vue/shared'
 import {
+  ReactiveFlags,
   type ShallowUnwrapRef,
   TrackOpTypes,
   type UnwrapNestedRefs,
@@ -302,7 +303,6 @@ export const publicPropertiesMap: PublicPropertiesMap =
     $forceUpdate: i =>
       i.f ||
       (i.f = () => {
-        i.effect.dirty = true
         queueJob(i.update)
       }),
     $nextTick: i => i.n || (i.n = nextTick.bind(i.proxy!)),
@@ -333,6 +333,10 @@ const hasSetupBinding = (state: Data, key: string) =>
 
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
   get({ _: instance }: ComponentRenderContext, key: string) {
+    if (key === ReactiveFlags.SKIP) {
+      return true
+    }
+
     const { ctx, setupState, data, props, accessCache, type, appContext } =
       instance
 

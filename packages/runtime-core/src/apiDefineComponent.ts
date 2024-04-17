@@ -105,6 +105,30 @@ export type DefineComponent<
   > &
   PP
 
+export type DefineSetupFnComponent<
+  P extends Record<string, any>,
+  E extends EmitsOptions = {},
+  S extends SlotsType = SlotsType,
+  Props = P & EmitsToProps<E>,
+  PP = PublicProps,
+> = new (
+  props: Props & PP,
+) => CreateComponentPublicInstance<
+  Props,
+  {},
+  {},
+  {},
+  {},
+  ComponentOptionsMixin,
+  ComponentOptionsMixin,
+  E,
+  PP,
+  {},
+  false,
+  {},
+  S
+>
+
 // defineComponent is a utility that is primarily used for type inference
 // when declaring components. Type inference is provided in the component
 // options (provided as the argument). The returned value has artificial types
@@ -127,7 +151,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): (props: Props & EmitsToProps<E>) => any
+): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
   E extends EmitsOptions = {},
@@ -143,7 +167,7 @@ export function defineComponent<
     emits?: E | EE[]
     slots?: S
   },
-): (props: Props & EmitsToProps<E>) => any
+): DefineSetupFnComponent<Props, E, S>
 
 // overload 2: object format with no props
 // (uses user defined props interface)

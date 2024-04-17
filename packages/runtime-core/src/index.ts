@@ -252,7 +252,11 @@ export type {
   GlobalDirectives,
   ComponentInstance,
 } from './component'
-export type { DefineComponent, PublicProps } from './apiDefineComponent'
+export type {
+  DefineComponent,
+  DefineSetupFnComponent,
+  PublicProps,
+} from './apiDefineComponent'
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
