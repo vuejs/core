@@ -551,6 +551,20 @@ describe('compiler: transform component slots', () => {
       </div>`,
       PatchFlags.PROPS,
     )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot="{ value = i }"><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
+    )
+
+    assertDynamicSlots(
+      `<div v-for="i in list">
+        <Comp v-slot:[i]><button @click="fn()" /></Comp>
+      </div>`,
+      PatchFlags.DYNAMIC_SLOTS,
+    )
   })
 
   test('named slot with v-if', () => {
