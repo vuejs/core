@@ -2,7 +2,7 @@
   "name": "@vue/dts-built-test",
   "private": true,
   "version": "0.0.0",
-  "types": "dist/dts-built-test.d.ts",
+  "types": "dist/index.d.ts",
   "dependencies": {
     "@vue/shared": "workspace:*",
     "@vue/reactivity": "workspace:*",

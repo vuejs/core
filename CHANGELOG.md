@@ -1,3 +1,54 @@
+## [3.4.23](https://github.com/vuejs/core/compare/v3.4.22...v3.4.23) (2024-04-16)
+
+
+### Bug Fixes
+
+* **runtime-core:** fix regression for $attrs tracking in slots ([6930e60](https://github.com/vuejs/core/commit/6930e60787e4905a50417190263ae7dd46cf5409)), closes [#10710](https://github.com/vuejs/core/issues/10710)
+* **runtime-core:** use same internal object mechanism for slots ([6df53d8](https://github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add)), closes [#10709](https://github.com/vuejs/core/issues/10709)
+
+
+
+## [3.4.22](https://github.com/vuejs/core/compare/v3.4.21...v3.4.22) (2024-04-15)
+
+
+### Bug Fixes
+
+* **compat:** fix $options mutation + adjust private API initialization ([d58d133](https://github.com/vuejs/core/commit/d58d133b1cde5085cc5ab0012d544cafd62a6ee6)), closes [#10626](https://github.com/vuejs/core/issues/10626) [#10636](https://github.com/vuejs/core/issues/10636)
+* **compile-sfc:** analyze v-bind shorthand usage in template ([#10518](https://github.com/vuejs/core/issues/10518)) ([e5919d4](https://github.com/vuejs/core/commit/e5919d4658cfe0bb18c76611dd3c3432c57f94ab)), closes [#10515](https://github.com/vuejs/core/issues/10515)
+* **compiler-core:** fix loc.source for end tags with whitespace before > ([16174da](https://github.com/vuejs/core/commit/16174da21d6c8ac0aae027dd964fc35e221ded0a)), closes [#10694](https://github.com/vuejs/core/issues/10694) [#10695](https://github.com/vuejs/core/issues/10695)
+* **compiler-core:** fix v-bind shorthand for component :is ([04af950](https://github.com/vuejs/core/commit/04af9504a720c8e6de26c04b1282cf14fa1bcee3)), closes [#10469](https://github.com/vuejs/core/issues/10469) [#10471](https://github.com/vuejs/core/issues/10471)
+* **compiler-sfc:** :is() and :where() in compound selectors ([#10522](https://github.com/vuejs/core/issues/10522)) ([660cadc](https://github.com/vuejs/core/commit/660cadc7aadb909ef33a6055c4374902a82607a4)), closes [#10511](https://github.com/vuejs/core/issues/10511)
+* **compiler-sfc:** also search for `.tsx` when type import's extension is omitted  ([#10637](https://github.com/vuejs/core/issues/10637)) ([34106bc](https://github.com/vuejs/core/commit/34106bc9c715247211273bb9c64712f04bd4879d)), closes [#10635](https://github.com/vuejs/core/issues/10635)
+* **compiler-sfc:** fix defineModel coercion for boolean + string union types ([#9603](https://github.com/vuejs/core/issues/9603)) ([0cef65c](https://github.com/vuejs/core/commit/0cef65cee411356e721bbc90d731fc52fc8fce94)), closes [#9587](https://github.com/vuejs/core/issues/9587) [#10676](https://github.com/vuejs/core/issues/10676)
+* **compiler-sfc:** fix universal selector scope ([#10551](https://github.com/vuejs/core/issues/10551)) ([54a6afa](https://github.com/vuejs/core/commit/54a6afa75a546078e901ce0882da53b97420fe94)), closes [#10548](https://github.com/vuejs/core/issues/10548)
+* **compiler-sfc:** use options module name if options provide runtimeModuleName options ([#10457](https://github.com/vuejs/core/issues/10457)) ([e76d743](https://github.com/vuejs/core/commit/e76d7430aa7470342f3fe263145a0fa92f5898ca)), closes [#10454](https://github.com/vuejs/core/issues/10454)
+* **custom-element:** avoid setting attr to null if it is removed ([#9012](https://github.com/vuejs/core/issues/9012)) ([b49306a](https://github.com/vuejs/core/commit/b49306adff4572d90a42ccd231387f16eb966bbe)), closes [#9006](https://github.com/vuejs/core/issues/9006) [#10324](https://github.com/vuejs/core/issues/10324)
+* **hydration:** properly handle optimized mode during hydrate node ([#10638](https://github.com/vuejs/core/issues/10638)) ([2ec06fd](https://github.com/vuejs/core/commit/2ec06fd6c8383e11cdf4efcab1707f973bd6a54c)), closes [#10607](https://github.com/vuejs/core/issues/10607)
+* **reactivity:** computed should not be detected as true by isProxy ([#10401](https://github.com/vuejs/core/issues/10401)) ([9da34d7](https://github.com/vuejs/core/commit/9da34d7af81607fddd1f32f21b3b4002402ff1cc))
+* **reactivity:** fix hasOwnProperty key coercion edge cases ([969c5fb](https://github.com/vuejs/core/commit/969c5fb30f4c725757c7385abfc74772514eae4b))
+* **reactivity:** fix tracking when hasOwnProperty is called with non-string value ([c3c5dc9](https://github.com/vuejs/core/commit/c3c5dc93fbccc196771458f0b43cd5b7ad1863f4)), closes [#10455](https://github.com/vuejs/core/issues/10455) [#10464](https://github.com/vuejs/core/issues/10464)
+* **runtime-core:** fix errorHandler causes an infinite loop during execution ([#9575](https://github.com/vuejs/core/issues/9575)) ([ab59bed](https://github.com/vuejs/core/commit/ab59bedae4e5e40b28804d88a51305b236d4a873))
+* **runtime-core:** handle invalid values in callWithAsyncErrorHandling ([53d15d3](https://github.com/vuejs/core/commit/53d15d3f76184eed67a18d35e43d9a2062f8e121))
+* **runtime-core:** show hydration mismatch details for non-rectified mismatches too when __PROD_HYDRATION_MISMATCH_DETAILS__ is set ([#10599](https://github.com/vuejs/core/issues/10599)) ([0dea7f9](https://github.com/vuejs/core/commit/0dea7f9a260d93eb6c39aabac8c94c2c9b2042dd))
+* **runtime-dom:** `v-model` string/number coercion for multiselect options ([#10576](https://github.com/vuejs/core/issues/10576)) ([db374e5](https://github.com/vuejs/core/commit/db374e54c9f5e07324728b85c74eca84e28dd352))
+* **runtime-dom:** fix css v-bind for suspensed components ([#8523](https://github.com/vuejs/core/issues/8523)) ([67722ba](https://github.com/vuejs/core/commit/67722ba23b7c36ab8f3fa2d2b4df08e4ddc322e1)), closes [#8520](https://github.com/vuejs/core/issues/8520)
+* **runtime-dom:** force update v-model number with leading 0 ([#10506](https://github.com/vuejs/core/issues/10506)) ([15ffe8f](https://github.com/vuejs/core/commit/15ffe8f2c954359770c57e4d9e589b0b622e4a60)), closes [#10503](https://github.com/vuejs/core/issues/10503) [#10615](https://github.com/vuejs/core/issues/10615)
+* **runtime-dom:** sanitize wrongly passed string value as event handler ([#8953](https://github.com/vuejs/core/issues/8953)) ([7ccd453](https://github.com/vuejs/core/commit/7ccd453dd004076cad49ec9f56cd5fe97b7b6ed8)), closes [#8818](https://github.com/vuejs/core/issues/8818)
+* **ssr:** don't render v-if comments in TransitionGroup ([#6732](https://github.com/vuejs/core/issues/6732)) ([5a96267](https://github.com/vuejs/core/commit/5a9626708e970c6fc0b6f786e3c80c22273d126f)), closes [#6715](https://github.com/vuejs/core/issues/6715)
+* **Transition:** ensure the KeepAlive children unmount w/ out-in mode ([#10632](https://github.com/vuejs/core/issues/10632)) ([fc99e4d](https://github.com/vuejs/core/commit/fc99e4d3f01b190ef9fd3c218a668ba9124a32bc)), closes [#10620](https://github.com/vuejs/core/issues/10620)
+* **TransitionGroup:** avoid set transition hooks for comment nodes and text nodes ([#9421](https://github.com/vuejs/core/issues/9421)) ([140a768](https://github.com/vuejs/core/commit/140a7681cc3bba22f55d97fd85a5eafe97a1230f)), closes [#4621](https://github.com/vuejs/core/issues/4621) [#4622](https://github.com/vuejs/core/issues/4622) [#5153](https://github.com/vuejs/core/issues/5153) [#5168](https://github.com/vuejs/core/issues/5168) [#7898](https://github.com/vuejs/core/issues/7898) [#9067](https://github.com/vuejs/core/issues/9067)
+* **types:** avoid merging object union types when using withDefaults ([#10596](https://github.com/vuejs/core/issues/10596)) ([37ba93c](https://github.com/vuejs/core/commit/37ba93c213a81f99a68a99ef5d4065d61b150ba3)), closes [#10594](https://github.com/vuejs/core/issues/10594)
+
+
+### Performance Improvements
+
+* add `__NO_SIDE_EFFECTS__` comments ([#9053](https://github.com/vuejs/core/issues/9053)) ([d46df6b](https://github.com/vuejs/core/commit/d46df6bdb14b0509eb2134b3f85297a306821c61))
+* optimize component props/slots internal object checks ([6af733d](https://github.com/vuejs/core/commit/6af733d68eb400a3d2c5ef5f465fff32b72a324e))
+* **ssr:** avoid calling markRaw on component instance proxy ([4bc9f39](https://github.com/vuejs/core/commit/4bc9f39f028af7313e5cf24c16915a1985d27bf8))
+* **ssr:** optimize setup context creation for ssr in v8 ([ca84316](https://github.com/vuejs/core/commit/ca84316bfb3410efe21333670a6ad5cd21857396))
+
+
+
 ## [3.4.21](https://github.com/vuejs/core/compare/v3.4.20...v3.4.21) (2024-02-28)
 
 
