@@ -86,9 +86,10 @@ export const vModelText: ModelDirective<
     el[assignKey] = getModelAssigner(vnode)
     // avoid clearing unresolved text. #2302
     if ((el as any).composing) return
-
     const elValue =
-      number || el.type === 'number' ? looseToNumber(el.value) : el.value
+      (number || el.type === 'number') && !/^0\d/.test(el.value)
+        ? looseToNumber(el.value)
+        : el.value
     const newValue = value == null ? '' : value
 
     if (elValue === newValue) {

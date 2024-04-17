@@ -1,6 +1,6 @@
 {
   "name": "@vue/runtime-dom",
-  "version": "3.4.21",
+  "version": "3.4.23",
   "description": "@vue/runtime-dom",
   "main": "index.js",
   "module": "dist/runtime-dom.esm-bundler.js",

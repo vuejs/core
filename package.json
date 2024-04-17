@@ -1,12 +1,12 @@
 {
   "private": true,
-  "version": "3.4.21",
+  "version": "3.4.23",
   "packageManager": "pnpm@8.15.6",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.js",
     "build": "node scripts/build.js",
-    "build-dts": "tsc -p tsconfig.build.json && rollup -c rollup.dts.config.js",
+    "build-dts": "tsc -p tsconfig.build-browser.json && tsc -p tsconfig.build-node.json && rollup -c rollup.dts.config.js",
     "clean": "rimraf packages/*/dist temp .eslintcache",
     "size": "run-s \"size-*\" && tsx scripts/usage-size.ts",
     "size-global": "node scripts/build.js vue runtime-dom -f global -p --size",
@@ -20,7 +20,7 @@
     "test-unit": "vitest -c vitest.unit.config.ts",
     "test-e2e": "node scripts/build.js vue -f global -d && vitest -c vitest.e2e.config.ts",
     "test-dts": "run-s build-dts test-dts-only",
-    "test-dts-only": "tsc -p ./packages/dts-test/tsconfig.test.json",
+    "test-dts-only": "tsc -p packages/dts-built-test/tsconfig.json && tsc -p ./packages/dts-test/tsconfig.test.json",
     "test-coverage": "vitest -c vitest.unit.config.ts --coverage",
     "test-bench": "vitest bench",
     "release": "node scripts/release.js",
@@ -111,7 +111,7 @@
     "todomvc-app-css": "^2.4.3",
     "tslib": "^2.6.2",
     "tsx": "^4.7.2",
-    "typescript": "^5.2.2",
+    "typescript": "~5.4.5",
     "vite": "^5.2.7",
     "vitest": "^1.4.0"
   }

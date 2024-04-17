@@ -1,6 +1,6 @@
 {
   "name": "vue",
-  "version": "3.4.21",
+  "version": "3.4.23",
   "description": "The progressive JavaScript framework for building modern web UI.",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",

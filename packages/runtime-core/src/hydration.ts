@@ -120,6 +120,7 @@ export function createHydrationFunctions(
     slotScopeIds: string[] | null,
     optimized = false,
   ): Node | null => {
+    optimized = optimized || !!vnode.dynamicChildren
     const isFragmentStart = isComment(node) && node.data === '['
     const onMismatch = () =>
       handleMismatch(

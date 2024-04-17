@@ -13,7 +13,7 @@ import {
   type StylePreprocessorResults,
   processors,
 } from './style/preprocessors'
-import type { RawSourceMap } from 'source-map-js'
+import type { RawSourceMap } from '@vue/compiler-core'
 import { cssVarsPlugin } from './style/cssVars'
 import postcssModules from 'postcss-modules'
 
