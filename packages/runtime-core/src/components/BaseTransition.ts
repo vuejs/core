@@ -467,7 +467,7 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
       ? vnode.component.subTree
       : vnode.children
         ? ((vnode.children as VNodeArrayChildren)[0] as VNode) ||
-          ((vnode.children as RawSlots).default as Slot)()
+          ((vnode.children as RawSlots).default as Slot)?.()
         : undefined
     : vnode
 }
