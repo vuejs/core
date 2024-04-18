@@ -1,4 +1,4 @@
-import { isValidHTMLNesting } from 'validate-html-nesting'
+import { isValidHTMLNesting } from '../html-nesting'
 import {
   type AttributeNode,
   type ElementNode,
