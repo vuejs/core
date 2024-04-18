@@ -91,8 +91,7 @@ describe('compiler: vModel transform', () => {
       )
     })
 
-    // TODO: component
-    test.fails('plain elements with argument', () => {
+    test('plain elements with argument', () => {
       const onError = vi.fn()
       compileWithVModel('<input v-model:value="model" />', { onError })
 

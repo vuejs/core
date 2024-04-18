@@ -65,6 +65,7 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   let runtimeDirective: VaporHelper | undefined
 
   if (isComponent) {
+  } else {
     if (dir.arg)
       context.options.onError(
         createDOMCompilerError(
@@ -72,7 +73,6 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
           dir.arg.loc,
         ),
       )
-  } else {
     const { tag } = node
     const isCustomElement = context.options.isCustomElement(tag)
     runtimeDirective = 'vModelText'
