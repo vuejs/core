@@ -413,7 +413,6 @@ async function isInSyncWithRemote() {
     console.error(
       pico.red('Failed to check whether local HEAD is up-to-date with remote.'),
     )
-    console.error(e)
     return false
   }
 }

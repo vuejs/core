@@ -148,7 +148,6 @@ export function genCodeFragment(context: CodegenContext) {
       generatedLine: pos.line,
       generatedColumn: pos.column - 1,
       source: context.options.filename,
-      // @ts-expect-error it is possible to be null
       name,
     })
   }

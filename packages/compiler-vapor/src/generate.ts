@@ -1,6 +1,7 @@
 import type {
   CodegenOptions as BaseCodegenOptions,
   BaseCodegenResult,
+  CodegenSourceMapGenerator,
 } from '@vue/compiler-dom'
 import type { IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
@@ -24,7 +25,7 @@ export class CodegenContext {
   options: Required<CodegenOptions>
 
   code: CodeFragment[]
-  map?: SourceMapGenerator
+  map?: CodegenSourceMapGenerator
   push: (...args: CodeFragment[]) => void
 
   helpers = new Set<string>([])
@@ -93,7 +94,8 @@ export class CodegenContext {
     } = this
     if (!__BROWSER__ && sourceMap) {
       // lazy require source-map implementation, only in non-browser builds
-      this.map = new SourceMapGenerator()
+      this.map =
+        new SourceMapGenerator() as unknown as CodegenSourceMapGenerator
       this.map.setSourceContent(filename, ir.source)
       this.map._sources.add(filename)
     }
