@@ -16,7 +16,7 @@ import { warn } from '../warning'
 import { isKeepAlive } from './KeepAlive'
 import { toRaw } from '@vue/reactivity'
 import { ErrorCodes, callWithAsyncErrorHandling } from '../errorHandling'
-import { PatchFlags, ShapeFlags, isArray } from '@vue/shared'
+import { PatchFlags, ShapeFlags, isArray, isFunction } from '@vue/shared'
 import { onBeforeUnmount, onMounted } from '../apiLifecycle'
 import type { RendererElement } from '../renderer'
 
@@ -468,15 +468,18 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
     return vnode.component.subTree
   }
 
-  if (vnode.shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    return (vnode.children as VNodeArrayChildren)?.[0] as VNode
+  const { shapeFlag, children } = vnode
+
+  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+    return (children as VNodeArrayChildren)[0] as VNode
   }
 
-  if (vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
-    return (vnode.children as any)?.default?.()
+  if (
+    shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+    isFunction((children as any).default)
+  ) {
+    return (children as any).default()
   }
-
-  return undefined
 }
 
 export function setTransitionHooks(vnode: VNode, hooks: TransitionHooks) {
