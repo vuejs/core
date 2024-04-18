@@ -411,6 +411,7 @@ export function buildProps(
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
   const hasChildren = children.length > 0
+  const hasVFor = context.scopes.vFor > 0
   let shouldUseBlock = false
 
   // patchFlag analysis
@@ -502,7 +503,7 @@ export function buildProps(
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
-        if (context.scopes.vFor > 0) {
+        if (hasVFor) {
           properties.push(
             createObjectProperty(
               createSimpleExpression('ref_for', true),
@@ -601,7 +602,7 @@ export function buildProps(
         shouldUseBlock = true
       }
 
-      if (isVBind && isStaticArgOf(arg, 'ref') && context.scopes.vFor > 0) {
+      if (isVBind && isStaticArgOf(arg, 'ref') && hasVFor) {
         properties.push(
           createObjectProperty(
             createSimpleExpression('ref_for', true),
@@ -617,7 +618,7 @@ export function buildProps(
           if (isVBind) {
             // if in v-bind object will have a ref we should set ref_for to true
             // otherwise the ref will be set to a random element in the list
-            if (context.scopes.vFor > 0) properties.push(
+            if (hasVFor) properties.push(
               createObjectProperty(
                 createSimpleExpression('ref_for', true),
                 createSimpleExpression('true'),
