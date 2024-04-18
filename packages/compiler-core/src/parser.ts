@@ -613,7 +613,7 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
     // implied close, end should be backtracked to close
     setLocEnd(el.loc, backTrack(end, CharCodes.Lt))
   } else {
-    setLocEnd(el.loc, end + 1)
+    setLocEnd(el.loc, lookAhead(end, CharCodes.Gt) + 1)
   }
 
   if (tokenizer.inSFCRoot) {
@@ -734,6 +734,12 @@ function onCloseTag(el: ElementNode, end: number, isImplied = false) {
       }
     }
   }
+}
+
+function lookAhead(index: number, c: number) {
+  let i = index
+  while (currentInput.charCodeAt(i) !== c && i < currentInput.length - 1) i++
+  return i
 }
 
 function backTrack(index: number, c: number) {

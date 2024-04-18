@@ -84,7 +84,7 @@ export type OptionMergeFunction = (to: unknown, from: unknown) => any
 
 export interface AppConfig {
   // @private
-  readonly isNativeTag?: (tag: string) => boolean
+  readonly isNativeTag: (tag: string) => boolean
 
   performance: boolean
   optionMergeStrategies: Record<string, OptionMergeFunction>
@@ -110,6 +110,12 @@ export interface AppConfig {
    * @deprecated use config.compilerOptions.isCustomElement
    */
   isCustomElement?: (tag: string) => boolean
+
+  /**
+   * TODO document for 3.5
+   * Enable warnings for computed getters that recursively trigger itself.
+   */
+  warnRecursiveComputed?: boolean
 }
 
 export interface AppContext {
@@ -387,11 +393,12 @@ export function createAppAPI<HostElement>(
       },
 
       runWithContext(fn) {
+        const lastApp = currentApp
         currentApp = app
         try {
           return fn()
         } finally {
-          currentApp = null
+          currentApp = lastApp
         }
       },
     })

@@ -21,7 +21,13 @@ export {
   type StructuralDirectiveTransform,
   type DirectiveTransform,
 } from './transform'
-export { generate, type CodegenContext, type CodegenResult } from './codegen'
+export {
+  generate,
+  type CodegenContext,
+  type CodegenResult,
+  type CodegenSourceMapGenerator,
+  type RawSourceMap,
+} from './codegen'
 export {
   ErrorCodes,
   errorMessages,

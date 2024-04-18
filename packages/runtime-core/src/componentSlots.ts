@@ -1,6 +1,5 @@
 import { type ComponentInternalInstance, currentInstance } from './component'
 import {
-  InternalObjectKey,
   type VNode,
   type VNodeChild,
   type VNodeNormalizedChildren,
@@ -25,6 +24,7 @@ import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
 import { toRaw } from '@vue/reactivity'
 import { trigger } from '@vue/reactivity'
 import { TriggerOpTypes } from '@vue/reactivity'
+import { createInternalObject } from './internalObject'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
@@ -174,21 +174,20 @@ export const initSlots = (
       // we should avoid the proxy object polluting the slots of the internal instance
       instance.slots = toRaw(children as InternalSlots)
       // make compiler marker non-enumerable
-      def(children as InternalSlots, '_', type)
+      def(instance.slots, '_', type)
     } else {
       normalizeObjectSlots(
         children as RawSlots,
-        (instance.slots = {}),
+        (instance.slots = createInternalObject()),
         instance,
       )
     }
   } else {
-    instance.slots = {}
+    instance.slots = createInternalObject()
     if (children) {
       normalizeVNodeSlots(instance, children)
     }
   }
-  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (
