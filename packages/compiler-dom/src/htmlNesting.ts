@@ -58,9 +58,7 @@ const onlyValidChildren: Record<string, Set<string>> = {
     'template',
   ]),
   optgroup: new Set(['option']),
-  select: new Set(['optgroup', 'option']),
-  math: new Set(['mrow']),
-  script: new Set(),
+  select: new Set(['optgroup', 'option', 'hr']),
   // table
   table: new Set(['caption', 'colgroup', 'tbody', 'tfoot', 'thead']),
   tr: new Set(['td', 'th']),
@@ -69,6 +67,7 @@ const onlyValidChildren: Record<string, Set<string>> = {
   thead: new Set(['tr']),
   tfoot: new Set(['tr']),
   // these elements can not have any children elements
+  script: emptySet,
   iframe: emptySet,
   option: emptySet,
   textarea: emptySet,
