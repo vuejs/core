@@ -34,7 +34,7 @@
     {
       groupName: 'lint',
       matchPackageNames: ['simple-git-hooks', 'lint-staged'],
-      matchPackagePrefixes: ['@typescript-eslint', 'eslint', 'prettier'],
+      matchPackagePrefixes: ['typescript-eslint', 'eslint', 'prettier'],
     },
   ],
   ignoreDeps: [
