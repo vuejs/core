@@ -368,9 +368,10 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // public $xxx properties
     if (publicGetter) {
       if (key === '$attrs') {
-        track(instance, TrackOpTypes.GET, key)
+        track(instance.attrs, TrackOpTypes.GET, '')
         __DEV__ && markAttrsAccessed()
       } else if (__DEV__ && key === '$slots') {
+        // for HMR only
         track(instance, TrackOpTypes.GET, key)
       }
       return publicGetter(instance)
