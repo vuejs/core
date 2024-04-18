@@ -74,6 +74,7 @@ export interface ParserOptions
   delimiters?: [string, string]
   /**
    * Whitespace handling strategy
+   * @default 'condense'
    */
   whitespace?: 'preserve' | 'condense'
   /**

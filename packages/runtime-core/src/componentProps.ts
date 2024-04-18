@@ -13,7 +13,6 @@ import {
   PatchFlags,
   camelize,
   capitalize,
-  def,
   extend,
   hasOwn,
   hyphenate,
@@ -34,7 +33,6 @@ import {
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
@@ -187,6 +185,13 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
+/**
+ * Used during vnode props normalization to check if the vnode props is the
+ * attrs object of a component via `Object.getPrototypeOf`. This is more
+ * performant than defining a non-enumerable property.
+ */
+export const attrsProto = {}
+
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -194,8 +199,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = {}
-  def(attrs, InternalObjectKey, 1)
+  const attrs: Data = Object.create(attrsProto)
 
   instance.propsDefaults = Object.create(null)
 
@@ -361,7 +365,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance.attrs, TriggerOpTypes.SET, '')
   }
 
   if (__DEV__) {

@@ -26,13 +26,23 @@ module.exports = {
     'no-restricted-syntax': [
       'error',
       banConstEnum,
-      // since we target ES2015 for baseline support, we need to forbid object
-      // rest spread usage in destructure as it compiles into a verbose helper.
-      'ObjectPattern > RestElement',
-      // tsc compiles assignment spread into Object.assign() calls, but esbuild
-      // still generates verbose helpers, so spread assignment is also prohiboted
-      'ObjectExpression > SpreadElement',
-      'AwaitExpression',
+      {
+        selector: 'ObjectPattern > RestElement',
+        message:
+          'Our output target is ES2016, and object rest spread results in ' +
+          'verbose helpers and should be avoided.',
+      },
+      {
+        selector: 'ObjectExpression > SpreadElement',
+        message:
+          'esbuild transpiles object spread into very verbose inline helpers.\n' +
+          'Please use the `extend` helper from @vue/shared instead.',
+      },
+      {
+        selector: 'AwaitExpression',
+        message:
+          'Our output target is ES2016, so async/await syntax should be avoided.',
+      },
     ],
     'sort-imports': ['error', { ignoreDeclarationSort: true }],
 

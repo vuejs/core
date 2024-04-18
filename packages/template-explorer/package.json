@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@vue/compiler-vapor": "workspace:^",
-    "monaco-editor": "^0.46.0",
-    "source-map-js": "^1.0.2"
+    "monaco-editor": "^0.47.0",
+    "source-map-js": "^1.2.0"
   }
 }
