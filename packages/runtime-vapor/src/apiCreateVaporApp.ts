@@ -1,4 +1,4 @@
-import { isObject } from '@vue/shared'
+import { isFunction, isObject } from '@vue/shared'
 import {
   type Component,
   type ComponentInternalInstance,
@@ -14,8 +14,9 @@ export function createVaporApp(
   rootComponent: Component,
   rootProps: RawProps | null = null,
 ): App {
-  if (rootProps != null && !isObject(rootProps)) {
-    __DEV__ && warn(`root props passed to app.mount() must be an object.`)
+  if (rootProps != null && !isObject(rootProps) && !isFunction(rootProps)) {
+    __DEV__ &&
+      warn(`root props passed to app.mount() must be an object or function.`)
     rootProps = null
   }
 

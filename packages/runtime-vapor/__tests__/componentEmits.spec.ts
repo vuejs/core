@@ -3,81 +3,91 @@
 // Note: emits and listener fallthrough is tested in
 // ./rendererAttrsFallthrough.spec.ts.
 
-import { nextTick, onBeforeUnmount } from '../src'
+import { toHandlers } from '@vue/runtime-core'
+import {
+  createComponent,
+  defineComponent,
+  nextTick,
+  onBeforeUnmount,
+} from '../src'
 import { isEmitListener } from '../src/componentEmits'
 import { makeRender } from './_utils'
 
-const define = makeRender<any>()
+const define = makeRender()
 
-describe.todo('component: emit', () => {
+describe('component: emit', () => {
   test('trigger handlers', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('foo')
         emit('bar')
         emit('!baz')
       },
     })
-    const onfoo = vi.fn()
+    const onFoo = vi.fn()
     const onBar = vi.fn()
     const onBaz = vi.fn()
     render({
-      get onfoo() {
-        return onfoo
-      },
-      get onBar() {
-        return onBar
-      },
-      get ['on!baz']() {
-        return onBaz
-      },
+      onfoo: () => onFoo,
+      onBar: () => onBar,
+      ['on!baz']: () => onBaz,
     })
 
-    expect(onfoo).not.toHaveBeenCalled()
+    expect(onFoo).not.toHaveBeenCalled()
+    expect(onBar).toHaveBeenCalled()
+    expect(onBaz).toHaveBeenCalled()
+  })
+
+  test('trigger dynamic emits', () => {
+    const { render } = define({
+      setup(_, { emit }) {
+        emit('foo')
+        emit('bar')
+        emit('!baz')
+      },
+    })
+    const onFoo = vi.fn()
+    const onBar = vi.fn()
+    const onBaz = vi.fn()
+    render(() => ({
+      onfoo: onFoo,
+      onBar,
+      ['on!baz']: onBaz,
+    }))
+
+    expect(onFoo).not.toHaveBeenCalled()
     expect(onBar).toHaveBeenCalled()
     expect(onBaz).toHaveBeenCalled()
   })
 
   test('trigger camelCase handler', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('test-event')
       },
     })
 
     const fooSpy = vi.fn()
-    render({
-      get onTestEvent() {
-        return fooSpy
-      },
-    })
+    render({ onTestEvent: () => fooSpy })
     expect(fooSpy).toHaveBeenCalled()
   })
 
   test('trigger kebab-case handler', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('test-event')
       },
     })
 
     const fooSpy = vi.fn()
-    render({
-      get ['onTest-event']() {
-        return fooSpy
-      },
-    })
+    render({ ['onTest-event']: () => fooSpy })
     expect(fooSpy).toHaveBeenCalledTimes(1)
   })
 
   // #3527
-  test.todo('trigger mixed case handlers', () => {
+  test('trigger mixed case handlers', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('test-event')
         emit('testEvent')
       },
@@ -86,15 +96,10 @@ describe.todo('component: emit', () => {
     const fooSpy = vi.fn()
     const barSpy = vi.fn()
     render(
-      // TODO: impl `toHandlers`
-      {
-        get ['onTest-Event']() {
-          return fooSpy
-        },
-        get onTestEvent() {
-          return barSpy
-        },
-      },
+      toHandlers({
+        'test-event': () => fooSpy,
+        testEvent: () => barSpy,
+      }),
     )
     expect(fooSpy).toHaveBeenCalledTimes(1)
     expect(barSpy).toHaveBeenCalledTimes(1)
@@ -103,8 +108,7 @@ describe.todo('component: emit', () => {
   // for v-model:foo-bar usage in DOM templates
   test('trigger hyphenated events for update:xxx events', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('update:fooProp')
         emit('update:barProp')
       },
@@ -113,12 +117,8 @@ describe.todo('component: emit', () => {
     const fooSpy = vi.fn()
     const barSpy = vi.fn()
     render({
-      get ['onUpdate:fooProp']() {
-        return fooSpy
-      },
-      get ['onUpdate:bar-prop']() {
-        return barSpy
-      },
+      ['onUpdate:fooProp']: () => fooSpy,
+      ['onUpdate:bar-prop']: () => barSpy,
     })
 
     expect(fooSpy).toHaveBeenCalled()
@@ -127,8 +127,7 @@ describe.todo('component: emit', () => {
 
   test('should trigger array of listeners', async () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('foo', 1)
       },
     })
@@ -136,29 +135,49 @@ describe.todo('component: emit', () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
 
-    render({
-      onFoo: () => [fn1, fn2],
-    })
+    render({ onFoo: () => [fn1, fn2] })
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)
     expect(fn2).toHaveBeenCalledTimes(1)
     expect(fn2).toHaveBeenCalledWith(1)
   })
 
-  test.todo('warning for undeclared event (array)', () => {
-    // TODO: warning
+  test('warning for undeclared event (array)', () => {
+    const { render } = define({
+      emits: ['foo'],
+
+      setup(_, { emit }) {
+        emit('bar')
+      },
+    })
+    render()
+    expect(
+      `Component emitted event "bar" but it is neither declared`,
+    ).toHaveBeenWarned()
   })
 
-  test.todo('warning for undeclared event (object)', () => {
-    // TODO: warning
+  test('warning for undeclared event (object)', () => {
+    const { render } = define({
+      emits: {
+        foo: null,
+      },
+
+      setup(_, { emit }) {
+        emit('bar')
+      },
+    })
+    render()
+    expect(
+      `Component emitted event "bar" but it is neither declared`,
+    ).toHaveBeenWarned()
   })
 
   test('should not warn if has equivalent onXXX prop', () => {
     define({
       props: ['onFoo'],
       emits: [],
-      render() {},
-      setup(_: any, { emit }: any) {
+
+      setup(_, { emit }) {
         emit('foo')
       },
     }).render()
@@ -182,12 +201,11 @@ describe.todo('component: emit', () => {
 
   test('.once', () => {
     const { render } = define({
-      render() {},
       emits: {
         foo: null,
         bar: null,
       },
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('foo')
         emit('foo')
         emit('bar')
@@ -197,12 +215,8 @@ describe.todo('component: emit', () => {
     const fn = vi.fn()
     const barFn = vi.fn()
     render({
-      get onFooOnce() {
-        return fn
-      },
-      get onBarOnce() {
-        return barFn
-      },
+      onFooOnce: () => fn,
+      onBarOnce: () => barFn,
     })
     expect(fn).toHaveBeenCalledTimes(1)
     expect(barFn).toHaveBeenCalledTimes(1)
@@ -210,11 +224,10 @@ describe.todo('component: emit', () => {
 
   test('.once with normal listener of the same name', () => {
     const { render } = define({
-      render() {},
       emits: {
         foo: null,
       },
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('foo')
         emit('foo')
       },
@@ -222,12 +235,8 @@ describe.todo('component: emit', () => {
     const onFoo = vi.fn()
     const onFooOnce = vi.fn()
     render({
-      get onFoo() {
-        return onFoo
-      },
-      get onFooOnce() {
-        return onFooOnce
-      },
+      onFoo: () => onFoo,
+      onFooOnce: () => onFooOnce,
     })
     expect(onFoo).toHaveBeenCalledTimes(2)
     expect(onFooOnce).toHaveBeenCalledTimes(1)
@@ -235,8 +244,7 @@ describe.todo('component: emit', () => {
 
   test('.number modifier should work with v-model on component', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('update:modelValue', '1')
         emit('update:foo', '2')
       },
@@ -244,24 +252,12 @@ describe.todo('component: emit', () => {
     const fn1 = vi.fn()
     const fn2 = vi.fn()
     render({
-      modelValue() {
-        return null
-      },
-      modelModifiers() {
-        return { number: true }
-      },
-      ['onUpdate:modelValue']() {
-        return fn1
-      },
-      foo() {
-        return null
-      },
-      fooModifiers() {
-        return { number: true }
-      },
-      ['onUpdate:foo']() {
-        return fn2
-      },
+      modelValue: () => null,
+      modelModifiers: () => ({ number: true }),
+      ['onUpdate:modelValue']: () => fn1,
+      foo: () => null,
+      fooModifiers: () => ({ number: true }),
+      ['onUpdate:foo']: () => fn2,
     })
     expect(fn1).toHaveBeenCalledTimes(1)
     expect(fn1).toHaveBeenCalledWith(1)
@@ -271,8 +267,7 @@ describe.todo('component: emit', () => {
 
   test('.trim modifier should work with v-model on component', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('update:modelValue', ' one ')
         emit('update:foo', '  two  ')
       },
@@ -307,8 +302,7 @@ describe.todo('component: emit', () => {
 
   test('.trim and .number modifiers should work with v-model on component', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('update:modelValue', '    +01.2    ')
         emit('update:foo', '    1    ')
       },
@@ -343,8 +337,7 @@ describe.todo('component: emit', () => {
 
   test('only trim string parameter when work with v-model on component', () => {
     const { render } = define({
-      render() {},
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         emit('update:modelValue', ' foo ', { bar: ' bar ' })
       },
     })
@@ -395,20 +388,21 @@ describe.todo('component: emit', () => {
 
   test('does not emit after unmount', async () => {
     const fn = vi.fn()
-    const { app } = define({
+
+    const Foo = defineComponent({
       emits: ['closing'],
-      setup(_: any, { emit }: any) {
+      setup(_, { emit }) {
         onBeforeUnmount(async () => {
           await nextTick()
           emit('closing', true)
         })
       },
-      render() {},
-    }).render({
-      get onClosing() {
-        return fn
-      },
     })
+
+    const { app } = define(() =>
+      createComponent(Foo, { onClosing: () => fn }),
+    ).render()
+
     await nextTick()
     app.unmount()
     await nextTick()
