@@ -125,7 +125,7 @@ export function generate(
   }
 
   push(INDENT_START)
-  push(...genBlockContent(ir.block, context))
+  push(...genBlockContent(ir.block, context, true))
   push(INDENT_END, NEWLINE)
 
   if (isSetupInlined) {

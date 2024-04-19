@@ -42,7 +42,7 @@ export function genFor(
   ]
 
   const blockFn = context.withId(
-    () => genBlock(render, context, ['_block'], blockReturns),
+    () => genBlock(render, context, ['_block'], false, blockReturns),
     idMap,
   )
 

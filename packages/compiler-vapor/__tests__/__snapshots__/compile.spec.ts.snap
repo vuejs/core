@@ -125,9 +125,10 @@ const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
 export function render(_ctx) {
+  const _component_Comp = _resolveComponent("Comp")
   const n0 = t0()
   const n3 = t1()
-  const n1 = _createComponent(_resolveComponent("Comp"))
+  const n1 = _createComponent(_component_Comp)
   const n2 = _createTextNode()
   _insert([n1, n2], n3)
   _renderEffect(() => _setText(n2, _ctx.bar))

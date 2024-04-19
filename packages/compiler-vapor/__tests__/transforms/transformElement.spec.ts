@@ -198,7 +198,7 @@ describe('compiler: element transform', () => {
       )
 
       expect(code).toMatchSnapshot()
-      expect(code).contains('_createComponent(_resolveComponent("Foo"), [{')
+      expect(code).contains('_createComponent(_component_Foo, [{')
       expect(code).contains('  id: () => ("foo")')
       expect(code).contains('  class: () => ("bar")')
       expect(code).contains('}], true)')

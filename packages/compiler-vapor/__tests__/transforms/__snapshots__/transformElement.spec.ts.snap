@@ -4,7 +4,8 @@ exports[`compiler: element transform > component > do not resolve component from
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Example"), null, true)
+  const _component_Example = _resolveComponent("Example")
+  const n0 = _createComponent(_component_Example, null, true)
   return n0
 }"
 `;
@@ -33,7 +34,8 @@ exports[`compiler: element transform > component > import + resolve component 1`
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), null, true)
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, null, true)
   return n0
 }"
 `;
@@ -97,7 +99,8 @@ exports[`compiler: element transform > component > should wrap as function if v-
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [{
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [{
     onBar: () => $event => (_ctx.handleBar($event))
   }], true)
   return n0
@@ -108,7 +111,8 @@ exports[`compiler: element transform > component > static props 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [{
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [{
     id: () => ("foo"), 
     class: () => ("bar")
   }], true)
@@ -120,7 +124,8 @@ exports[`compiler: element transform > component > v-bind="obj" 1`] = `
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_ctx.obj)], true)
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [() => (_ctx.obj)], true)
   return n0
 }"
 `;
@@ -129,7 +134,8 @@ exports[`compiler: element transform > component > v-bind="obj" after static pro
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [{
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [{
     id: () => ("foo")
   }, () => (_ctx.obj)], true)
   return n0
@@ -140,7 +146,8 @@ exports[`compiler: element transform > component > v-bind="obj" before static pr
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_ctx.obj), {
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [() => (_ctx.obj), {
     id: () => ("foo")
   }], true)
   return n0
@@ -151,7 +158,8 @@ exports[`compiler: element transform > component > v-bind="obj" between static p
 "import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [{
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [{
     id: () => ("foo")
   }, () => (_ctx.obj), {
     class: () => ("bar")
@@ -165,7 +173,8 @@ exports[`compiler: element transform > component > v-on="obj" 1`] = `
 import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createComponent(_resolveComponent("Foo"), [() => (_toHandlers(_ctx.obj))], true)
+  const _component_Foo = _resolveComponent("Foo")
+  const n0 = _createComponent(_component_Foo, [() => (_toHandlers(_ctx.obj))], true)
   return n0
 }"
 `;

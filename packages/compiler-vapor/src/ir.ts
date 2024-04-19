@@ -57,6 +57,7 @@ export interface RootIRNode {
   node: RootNode
   source: string
   template: string[]
+  component: Set<string>
   block: BlockIRNode
 }
 

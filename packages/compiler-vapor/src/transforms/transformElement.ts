@@ -86,6 +86,9 @@ function transformComponentElement(
       }
     }
   }
+  if (resolve) {
+    context.component.add(tag)
+  }
 
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const root =

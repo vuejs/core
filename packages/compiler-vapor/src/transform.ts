@@ -77,6 +77,8 @@ export interface TransformContext<T extends AllNode = AllNode> {
   inVOnce: boolean
   inVFor: number
 
+  component: Set<string>
+
   enterBlock(ir: TransformContext['block'], isVFor?: boolean): () => void
   reference(): number
   increaseId(): number
@@ -149,6 +151,7 @@ function createRootContext(
     inVOnce: false,
     inVFor: 0,
     comment: [],
+    component: root.component,
 
     increaseId: () => globalId++,
     reference() {
@@ -213,6 +216,7 @@ export function transform(
     node: root,
     source: root.source,
     template: [],
+    component: new Set(),
     block: {
       type: IRNodeTypes.BLOCK,
       node: root,

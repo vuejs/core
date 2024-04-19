@@ -10,6 +10,7 @@ import {
   INDENT_START,
   NEWLINE,
   buildCodeFragment,
+  genCall,
 } from './utils'
 import type { CodegenContext } from '../generate'
 import { genWithDirective } from './directive'
@@ -21,6 +22,7 @@ export function genBlock(
   oper: BlockIRNode,
   context: CodegenContext,
   args: CodeFragment[] = [],
+  root?: boolean,
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   return [
@@ -28,7 +30,7 @@ export function genBlock(
     ...args,
     ') => {',
     INDENT_START,
-    ...genBlockContent(oper, context, customReturns),
+    ...genBlockContent(oper, context, root, customReturns),
     INDENT_END,
     NEWLINE,
     '}',
@@ -38,9 +40,22 @@ export function genBlock(
 export function genBlockContent(
   { dynamic, effect, operation, returns }: BlockIRNode,
   context: CodegenContext,
+  root?: boolean,
   customReturns?: (returns: CodeFragment[]) => CodeFragment[],
 ): CodeFragment[] {
   const [frag, push] = buildCodeFragment()
+
+  if (root)
+    for (const name of context.ir.component) {
+      push(
+        NEWLINE,
+        `const _component_${name} = `,
+        ...genCall(
+          context.vaporHelper('resolveComponent'),
+          JSON.stringify(name),
+        ),
+      )
+    }
 
   for (const child of dynamic.children) {
     push(...genChildren(child, context, child.id!))

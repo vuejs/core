@@ -40,7 +40,7 @@ export function genCreateComponent(
 
   function genTag() {
     if (oper.resolve) {
-      return genCall(vaporHelper('resolveComponent'), JSON.stringify(oper.tag))
+      return [`_component_${oper.tag}`]
     } else {
       return genExpression(
         extend(createSimpleExpression(oper.tag, false), { ast: null }),
