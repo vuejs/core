@@ -241,4 +241,24 @@ describe('defineModel()', () => {
       modelValue: BindingTypes.SETUP_REF,
     })
   })
+
+  test('w/ ReadonlyArray, ReadonlySet, ReadonlyMap and UnknownType', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<UnknownType | string | ReadonlyArray<string> | ReadonlySet<string> | ReadonlyMap<string, number>>()
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      ' "modelValue": { type: [String, ReadonlyArray, ReadonlySet, ReadonlyMap], skipCheck: true }',
+    )
+    expect(content).toMatch(
+      `const modelValue = _useModel<UnknownType | string | ReadonlyArray<string> | ReadonlySet<string> | ReadonlyMap<string, number>>(__props, "modelValue")`,
+    )
+    expect(bindings).toStrictEqual({
+      modelValue: BindingTypes.SETUP_REF,
+    })
+  })
 })

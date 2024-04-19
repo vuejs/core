@@ -1517,10 +1517,13 @@ export function inferRuntimeType(
         if (node.typeName.type === 'Identifier') {
           switch (node.typeName.name) {
             case 'Array':
+            case 'ReadonlyArray':
             case 'Function':
             case 'Object':
             case 'Set':
+            case 'ReadonlySet':
             case 'Map':
+            case 'ReadonlyMap':
             case 'WeakSet':
             case 'WeakMap':
             case 'Date':
