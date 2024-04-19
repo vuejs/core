@@ -53,7 +53,7 @@ export function queueJob(job: SchedulerJob) {
   }
 }
 
-export function queuePostRenderEffect(cb: SchedulerJobs) {
+export function queuePostFlushCb(cb: SchedulerJobs) {
   if (!isArray(cb)) {
     if (!(cb.flags! & SchedulerJobFlags.QUEUED)) {
       pendingPostFlushCbs.push(cb)
@@ -216,8 +216,8 @@ export const createVaporPreScheduler: SchedulerFactory =
 export const createVaporPostScheduler: SchedulerFactory =
   instance => (job, effect, immediateFirstRun, hasCb) => {
     if (!immediateFirstRun) {
-      queuePostRenderEffect(job)
+      queuePostFlushCb(job)
     } else if (!hasCb) {
-      queuePostRenderEffect(effect.run.bind(effect))
+      queuePostFlushCb(effect.run.bind(effect))
     }
   }

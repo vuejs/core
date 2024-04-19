@@ -11,7 +11,7 @@ import {
   getCurrentInstance,
   setCurrentInstance,
 } from './component'
-import { queueJob, queuePostRenderEffect } from './scheduler'
+import { queueJob, queuePostFlushCb } from './scheduler'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { invokeDirectiveHook } from './directives'
 
@@ -40,14 +40,14 @@ export function renderEffect(cb: () => void) {
 
       effect.run()
 
-      queuePostRenderEffect(() => {
+      queuePostFlushCb(() => {
         instance.isUpdating = false
         if (dirs) {
           invokeDirectiveHook(instance, 'updated')
         }
         // updated hook
         if (u) {
-          queuePostRenderEffect(u)
+          queuePostFlushCb(u)
         }
       })
     } else {

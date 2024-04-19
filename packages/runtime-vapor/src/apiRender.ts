@@ -5,7 +5,7 @@ import {
   setCurrentInstance,
 } from './component'
 import { insert, querySelector, remove } from './dom/element'
-import { flushPostFlushCbs, queuePostRenderEffect } from './scheduler'
+import { flushPostFlushCbs, queuePostFlushCb } from './scheduler'
 import { invokeLifecycle } from './componentLifecycle'
 import { VaporLifecycleHooks } from './apiLifecycle'
 import {
@@ -107,14 +107,15 @@ function mountComponent(
   invokeLifecycle(instance, VaporLifecycleHooks.BEFORE_MOUNT, 'beforeMount')
 
   insert(instance.block!, instance.container)
-  instance.isMounted = true
-  instance.comps.forEach(comp => {
-    comp.isMounted = true
-  })
 
   // hook: mounted
-  invokeLifecycle(instance, VaporLifecycleHooks.MOUNTED, 'mounted', true)
-
+  invokeLifecycle(
+    instance,
+    VaporLifecycleHooks.MOUNTED,
+    'mounted',
+    instance => (instance.isMounted = true),
+    true,
+  )
   return instance
 }
 
@@ -128,6 +129,12 @@ export function unmountComponent(instance: ComponentInternalInstance) {
   block && remove(block, container)
 
   // hook: unmounted
-  invokeLifecycle(instance, VaporLifecycleHooks.UNMOUNTED, 'unmounted', true)
-  queuePostRenderEffect(() => (instance.isUnmounted = true))
+  invokeLifecycle(
+    instance,
+    VaporLifecycleHooks.UNMOUNTED,
+    'unmounted',
+    instance => queuePostFlushCb(() => (instance.isUnmounted = true)),
+    true,
+  )
+  flushPostFlushCbs()
 }

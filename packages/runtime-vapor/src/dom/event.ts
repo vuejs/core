@@ -9,7 +9,7 @@ import {
   recordEventMetadata,
 } from '../componentMetadata'
 import { withKeys, withModifiers } from '@vue/runtime-dom'
-import { queuePostRenderEffect } from '../scheduler'
+import { queuePostFlushCb } from '../scheduler'
 
 export function addEventListener(
   el: Element,
@@ -35,7 +35,7 @@ export function on(
 ) {
   const handler: DelegatedHandler = eventHandler(handlerGetter, options)
   let cleanupEvent: (() => void) | undefined
-  queuePostRenderEffect(() => {
+  queuePostFlushCb(() => {
     cleanupEvent = addEventListener(el, event, handler, options)
   })
 

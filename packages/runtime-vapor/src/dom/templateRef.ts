@@ -15,7 +15,7 @@ import {
   remove,
 } from '@vue/shared'
 import { warn } from '../warning'
-import { queuePostRenderEffect } from '../scheduler'
+import { queuePostFlushCb } from '../scheduler'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
 
@@ -90,10 +90,10 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
         }
       }
       doSet.id = -1
-      queuePostRenderEffect(doSet)
+      queuePostFlushCb(doSet)
 
       onScopeDispose(() => {
-        queuePostRenderEffect(() => {
+        queuePostFlushCb(() => {
           if (isArray(existing)) {
             remove(existing, el)
           } else if (_isString) {
