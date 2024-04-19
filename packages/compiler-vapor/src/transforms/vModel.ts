@@ -65,6 +65,12 @@ export const transformVModel: DirectiveTransform = (dir, node, context) => {
   let runtimeDirective: VaporHelper | undefined
 
   if (isComponent) {
+    return {
+      key: arg ? arg : createSimpleExpression('modelValue', true),
+      value: exp,
+      model: true,
+      modelModifiers: dir.modifiers,
+    }
   } else {
     if (dir.arg)
       context.options.onError(

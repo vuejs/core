@@ -35,7 +35,7 @@ export function genWithDirective(
         ? NULL
         : false
     const modifiers = dir.modifiers.length
-      ? ['{ ', genDirectiveModifiers(), ' }']
+      ? ['{ ', genDirectiveModifiers(dir.modifiers), ' }']
       : false
 
     return genMulti(['[', ']', ', '], directive, value, argument, modifiers)
@@ -61,14 +61,14 @@ export function genWithDirective(
         }
       }
     }
-
-    function genDirectiveModifiers() {
-      return dir.modifiers
-        .map(
-          value =>
-            `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
-        )
-        .join(', ')
-    }
   }
+}
+
+export function genDirectiveModifiers(modifiers: string[]) {
+  return modifiers
+    .map(
+      value =>
+        `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
+    )
+    .join(', ')
 }

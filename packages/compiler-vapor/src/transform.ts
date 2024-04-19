@@ -44,6 +44,8 @@ export interface DirectiveTransformResult {
   modifier?: '.' | '^'
   runtimeCamelize?: boolean
   handler?: boolean
+  model?: boolean
+  modelModifiers?: string[]
 }
 
 // A structural directive transform is technically also a NodeTransform;

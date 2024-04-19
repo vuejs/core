@@ -1,5 +1,86 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`compiler: vModel transform > component > v-model for component should generate modelModifiers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => $event => (_ctx.foo = $event),
+    modelModifiers: () => ({ trim: true, "bar-baz": true })
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    modelValue: () => (_ctx.foo),
+    "onUpdate:modelValue": () => $event => (_ctx.foo = $event)
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with arguments for component should generate modelModifiers 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    foo: () => (_ctx.foo),
+    "onUpdate:foo": () => $event => (_ctx.foo = $event),
+    fooModifiers: () => ({ trim: true }), 
+    bar: () => (_ctx.bar),
+    "onUpdate:bar": () => $event => (_ctx.bar = $event),
+    barModifiers: () => ({ number: true })
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with arguments for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    bar: () => (_ctx.foo),
+    "onUpdate:bar": () => $event => (_ctx.foo = $event)
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should generate modelModifiers  1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    [_ctx.foo]: () => (_ctx.foo),
+    ["onUpdate:" + _ctx.foo]: () => $event => (_ctx.foo = $event),
+    [_ctx.foo + "Modifiers"]: () => ({ trim: true }), 
+    [_ctx.bar]: () => (_ctx.bar),
+    ["onUpdate:" + _ctx.bar]: () => $event => (_ctx.bar = $event),
+    [_ctx.bar + "Modifiers"]: () => ({ number: true })
+  }], true)
+  return n0
+}"
+`;
+
+exports[`compiler: vModel transform > component > v-model with dynamic arguments for component should work 1`] = `
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent } from 'vue/vapor';
+
+export function render(_ctx) {
+  const n0 = _createComponent(_resolveComponent("Comp"), [{
+    [_ctx.arg]: () => (_ctx.foo),
+    ["onUpdate:" + _ctx.arg]: () => $event => (_ctx.foo = $event)
+  }], true)
+  return n0
+}"
+`;
+
 exports[`compiler: vModel transform > modifiers > .lazy 1`] = `
 "import { vModelText as _vModelText, withDirectives as _withDirectives, delegate as _delegate, template as _template } from 'vue/vapor';
 const t0 = _template("<input>")
