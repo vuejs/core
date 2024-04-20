@@ -1,5 +1,5 @@
-import { EffectScope } from '@vue/reactivity'
-import { EMPTY_OBJ, NOOP, isFunction } from '@vue/shared'
+import { EffectScope, isRef } from '@vue/reactivity'
+import { EMPTY_OBJ, isArray, isFunction } from '@vue/shared'
 import type { Block } from './apiRender'
 import type { DirectiveBinding } from './directives'
 import {
@@ -45,6 +45,30 @@ export type SetupContext<E = EmitsOptions> = E extends any
 export function createSetupContext(
   instance: ComponentInternalInstance,
 ): SetupContext {
+  const expose: SetupContext['expose'] = exposed => {
+    if (__DEV__) {
+      if (instance.exposed) {
+        warn(`expose() should be called only once per setup().`)
+      }
+      if (exposed != null) {
+        let exposedType: string = typeof exposed
+        if (exposedType === 'object') {
+          if (isArray(exposed)) {
+            exposedType = 'array'
+          } else if (isRef(exposed)) {
+            exposedType = 'ref'
+          }
+        }
+        if (exposedType !== 'object') {
+          warn(
+            `expose() should be passed a plain object, received ${exposedType}.`,
+          )
+        }
+      }
+    }
+    instance.exposed = exposed || {}
+  }
+
   if (__DEV__) {
     // We use getters in dev in case libs like test-utils overwrite instance
     // properties (overwrites should not be done in prod)
@@ -58,7 +82,7 @@ export function createSetupContext(
       get emit() {
         return (event: string, ...args: any[]) => instance.emit(event, ...args)
       },
-      expose: NOOP,
+      expose,
     })
   } else {
     return {
@@ -67,7 +91,7 @@ export function createSetupContext(
       },
       emit: instance.emit,
       slots: instance.slots,
-      expose: NOOP,
+      expose,
     }
   }
 }
@@ -114,9 +138,12 @@ export interface ComponentInternalInstance {
   attrs: Data
   slots: InternalSlots
   refs: Data
+  // exposed properties via expose()
+  exposed?: Record<string, any>
 
   attrsProxy?: Data
   slotsProxy?: Slots
+  exposeProxy?: Record<string, any>
 
   // lifecycle
   isMounted: boolean
