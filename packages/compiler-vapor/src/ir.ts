@@ -159,6 +159,8 @@ export interface SetModelValueIRNode extends BaseIRNode {
 export interface CreateTextNodeIRNode extends BaseIRNode {
   type: IRNodeTypes.CREATE_TEXT_NODE
   id: number
+  values: SimpleExpressionNode[]
+  effect: boolean
 }
 
 export interface InsertNodeIRNode extends BaseIRNode {

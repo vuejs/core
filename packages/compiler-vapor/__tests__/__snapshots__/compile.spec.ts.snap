@@ -120,7 +120,7 @@ export function render(_ctx) {
 `;
 
 exports[`compile > directives > v-pre > should not affect siblings after it 1`] = `
-"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setText as _setText, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
+"import { resolveComponent as _resolveComponent, createComponent as _createComponent, createTextNode as _createTextNode, insert as _insert, renderEffect as _renderEffect, setDynamicProp as _setDynamicProp, template as _template } from 'vue/vapor';
 const t0 = _template("<div :id=\\"foo\\"><Comp></Comp>{{ bar }}</div>")
 const t1 = _template("<div></div>")
 
@@ -129,20 +129,18 @@ export function render(_ctx) {
   const n0 = t0()
   const n3 = t1()
   const n1 = _createComponent(_component_Comp)
-  const n2 = _createTextNode()
+  const n2 = _createTextNode(() => [_ctx.bar])
   _insert([n1, n2], n3)
-  _renderEffect(() => _setText(n2, _ctx.bar))
   _renderEffect(() => _setDynamicProp(n3, "id", _ctx.foo))
   return [n0, n3]
 }"
 `;
 
 exports[`compile > dynamic root 1`] = `
-"import { createTextNode as _createTextNode, setText as _setText } from 'vue/vapor';
+"import { createTextNode as _createTextNode } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createTextNode()
-  _setText(n0, 1, 2)
+  const n0 = _createTextNode([1, 2])
   return n0
 }"
 `;
@@ -163,8 +161,7 @@ export function render(_ctx) {
 
 exports[`compile > expression parsing > interpolation 1`] = `
 "(() => {
-  const n0 = _createTextNode()
-  _renderEffect(() => _setText(n0, a + b.value))
+  const n0 = _createTextNode(() => [a + b.value])
   return n0
 })()"
 `;
@@ -192,11 +189,10 @@ export function render(_ctx) {
 `;
 
 exports[`compile > static + dynamic root 1`] = `
-"import { createTextNode as _createTextNode, setText as _setText } from 'vue/vapor';
+"import { createTextNode as _createTextNode } from 'vue/vapor';
 
 export function render(_ctx) {
-  const n0 = _createTextNode()
-  _setText(n0, 1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B')
+  const n0 = _createTextNode([1, 2, "3", 4, 5, "6", 7, 8, "9", 'A', 'B'])
   return n0
 }"
 `;

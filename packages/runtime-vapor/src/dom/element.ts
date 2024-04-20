@@ -1,6 +1,8 @@
-import { isArray, toDisplayString } from '@vue/shared'
+import { isArray } from '@vue/shared'
 import type { Block } from '../apiRender'
 import { componentKey } from '../component'
+import { renderEffect } from '../renderEffect'
+import { setText } from './prop'
 
 /*! #__NO_SIDE_EFFECTS__ */
 export function normalizeBlock(block: Block): Node[] {
@@ -34,10 +36,16 @@ export function remove(block: Block, parent: ParentNode) {
   normalizeBlock(block).forEach(node => parent.removeChild(node))
 }
 
-/*! #__NO_SIDE_EFFECTS__ */
-export function createTextNode(val?: unknown): Text {
+export function createTextNode(values?: any[] | (() => any[])): Text {
   // eslint-disable-next-line no-restricted-globals
-  return document.createTextNode(val === undefined ? '' : toDisplayString(val))
+  const node = document.createTextNode('')
+  if (values)
+    if (isArray(values)) {
+      setText(node, ...values)
+    } else {
+      renderEffect(() => setText(node, ...values()))
+    }
+  return node
 }
 
 /*! #__NO_SIDE_EFFECTS__ */

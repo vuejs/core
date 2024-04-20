@@ -10,8 +10,7 @@ export function render(_ctx) {
   const n3 = _next(n0, 2)
   const n2 = n3.nextSibling
   _setText(n0, 'first')
-  const n1 = _createTextNode()
-  _setText(n1, 'second', " ", 'third', " ")
+  const n1 = _createTextNode(['second', " ", 'third', " "])
   _setText(n2, 'forth')
   _insert(n1, n4, n3)
   return n4

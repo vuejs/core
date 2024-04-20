@@ -31,10 +31,6 @@ describe('compiler: v-once', () => {
       {
         type: IRNodeTypes.CREATE_TEXT_NODE,
         id: 0,
-      },
-      {
-        element: 0,
-        type: IRNodeTypes.SET_TEXT,
         values: [
           {
             type: NodeTypes.SIMPLE_EXPRESSION,
@@ -47,6 +43,7 @@ describe('compiler: v-once', () => {
             isStatic: true,
           },
         ],
+        effect: false,
       },
       {
         element: 1,

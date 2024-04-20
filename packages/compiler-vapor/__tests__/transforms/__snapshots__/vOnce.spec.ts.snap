@@ -12,14 +12,13 @@ export function render(_ctx) {
 `;
 
 exports[`compiler: v-once > basic 1`] = `
-"import { createTextNode as _createTextNode, setText as _setText, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
+"import { createTextNode as _createTextNode, setClass as _setClass, prepend as _prepend, template as _template } from 'vue/vapor';
 const t0 = _template("<div><span></span></div>")
 
 export function render(_ctx) {
   const n2 = t0()
   const n1 = n2.firstChild
-  const n0 = _createTextNode()
-  _setText(n0, _ctx.msg, " ")
+  const n0 = _createTextNode([_ctx.msg, " "])
   _setClass(n1, _ctx.clz)
   _prepend(n2, n0)
   return n2
