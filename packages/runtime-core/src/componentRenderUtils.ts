@@ -116,7 +116,7 @@ export function renderComponentRoot(
                 ? {
                     get attrs() {
                       markAttrsAccessed()
-                      return attrs
+                      return shallowReadonly(attrs)
                     },
                     slots,
                     emit,
