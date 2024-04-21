@@ -362,6 +362,12 @@ export interface ComponentInternalInstance {
    */
   ceReload?: (newStyles?: string[]) => void
 
+  /**
+   * custom element set prop
+   * @internal
+   */
+  ceSetProp?: (prop: string, value: any) => void
+
   // the rest are only for stateful components ---------------------------------
 
   // main proxy that serves as the public instance (`this`)
