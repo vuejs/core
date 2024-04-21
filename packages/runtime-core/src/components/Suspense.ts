@@ -814,7 +814,6 @@ function hydrateSuspense(
     suspense.resolve(false, true)
   }
   return result
-  /* eslint-enable no-restricted-globals */
 }
 
 function normalizeSuspenseChildren(vnode: VNode) {

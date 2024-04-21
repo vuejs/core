@@ -1,6 +1,5 @@
 import { type ComponentInternalInstance, currentInstance } from './component'
 import {
-  InternalObjectKey,
   type VNode,
   type VNodeChild,
   type VNodeNormalizedChildren,
@@ -22,9 +21,8 @@ import { isKeepAlive } from './components/KeepAlive'
 import { type ContextualRenderFn, withCtx } from './componentRenderContext'
 import { isHmrUpdating } from './hmr'
 import { DeprecationTypes, isCompatEnabled } from './compat/compatConfig'
-import { toRaw } from '@vue/reactivity'
-import { trigger } from '@vue/reactivity'
-import { TriggerOpTypes } from '@vue/reactivity'
+import { TriggerOpTypes, trigger } from '@vue/reactivity'
+import { createInternalObject } from './internalObject'
 
 export type Slot<T extends any = any> = (
   ...args: IfAny<T, any[], [T] | (T extends undefined ? [] : never)>
@@ -167,28 +165,19 @@ export const initSlots = (
   instance: ComponentInternalInstance,
   children: VNodeNormalizedChildren,
 ) => {
+  const slots = (instance.slots = createInternalObject())
   if (instance.vnode.shapeFlag & ShapeFlags.SLOTS_CHILDREN) {
     const type = (children as RawSlots)._
     if (type) {
-      // users can get the shallow readonly version of the slots object through `this.$slots`,
-      // we should avoid the proxy object polluting the slots of the internal instance
-      instance.slots = toRaw(children as InternalSlots)
+      extend(slots, children as InternalSlots)
       // make compiler marker non-enumerable
-      def(children as InternalSlots, '_', type)
+      def(slots, '_', type)
     } else {
-      normalizeObjectSlots(
-        children as RawSlots,
-        (instance.slots = {}),
-        instance,
-      )
+      normalizeObjectSlots(children as RawSlots, slots, instance)
     }
-  } else {
-    instance.slots = {}
-    if (children) {
-      normalizeVNodeSlots(instance, children)
-    }
+  } else if (children) {
+    normalizeVNodeSlots(instance, children)
   }
-  def(instance.slots, InternalObjectKey, 1)
 }
 
 export const updateSlots = (
