@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+      - minor
 
 permissions:
   contents: read
@@ -22,12 +23,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v3.0.0
 
-      - name: Set node version to LTS
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version-file: '.node-version'
           cache: pnpm
 
       - name: Install dependencies
@@ -36,7 +37,7 @@ jobs:
       - run: pnpm run size
 
       - name: Upload Size Data
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: size-data
           path: temp/size
@@ -45,7 +46,7 @@ jobs:
         if: ${{github.event_name == 'pull_request'}}
         run: echo ${{ github.event.number }} > ./pr.txt
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: ${{github.event_name == 'pull_request'}}
         with:
           name: pr-number
