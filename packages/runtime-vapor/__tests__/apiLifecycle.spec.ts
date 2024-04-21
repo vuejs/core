@@ -6,6 +6,8 @@ import {
   getCurrentInstance,
   inject,
   nextTick,
+  onRenderTracked,
+  onRenderTriggered,
   onUpdated,
   provide,
   ref,
@@ -111,5 +113,48 @@ describe('apiLifecycle', () => {
     expect(host.innerHTML).toBe('11')
     expect(handleUpdated).toHaveBeenCalledTimes(1)
     expect(handleUpdatedChild).toHaveBeenCalledTimes(1)
+  })
+
+  test('onRenderTracked', async () => {
+    const onTrackedFn = vi.fn()
+    const count = ref(0)
+    const { host, render } = define({
+      setup() {
+        onRenderTracked(onTrackedFn)
+        return (() => {
+          const n0 = createTextNode()
+          renderEffect(() => {
+            setText(n0, count.value)
+          })
+          return n0
+        })()
+      },
+    })
+    render()
+    await nextTick()
+    expect(onTrackedFn).toBeCalled()
+    expect(host.innerHTML).toBe('0')
+  })
+  test('onRenderTrigger', async () => {
+    const onRenderTriggerFn = vi.fn()
+    const count = ref(0)
+    const { host, render } = define({
+      setup() {
+        onRenderTriggered(onRenderTriggerFn)
+        return (() => {
+          const n0 = createTextNode()
+          renderEffect(() => {
+            setText(n0, count.value)
+          })
+          return n0
+        })()
+      },
+    })
+    render()
+    count.value++
+    await nextTick()
+    expect(onRenderTriggerFn).toBeCalled()
+    expect(onRenderTriggerFn).toHaveBeenCalledOnce()
+    expect(host.innerHTML).toBe('1')
   })
 })

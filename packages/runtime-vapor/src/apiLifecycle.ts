@@ -4,7 +4,11 @@ import {
   setCurrentInstance,
 } from './component'
 import { warn } from './warning'
-import { pauseTracking, resetTracking } from '@vue/reactivity'
+import {
+  type DebuggerEvent,
+  pauseTracking,
+  resetTracking,
+} from '@vue/reactivity'
 import { ErrorTypeStrings, callWithAsyncErrorHandling } from './errorHandling'
 import { toHandlerKey } from '@vue/shared'
 
@@ -76,6 +80,14 @@ export const onBeforeUpdate = createHook(VaporLifecycleHooks.BEFORE_UPDATE)
 export const onUpdated = createHook(VaporLifecycleHooks.UPDATED)
 export const onBeforeUnmount = createHook(VaporLifecycleHooks.BEFORE_UNMOUNT)
 export const onUnmounted = createHook(VaporLifecycleHooks.UNMOUNTED)
+
+export type DebuggerHook = (e: DebuggerEvent) => void
+export const onRenderTriggered = createHook<DebuggerHook>(
+  VaporLifecycleHooks.RENDER_TRIGGERED,
+)
+export const onRenderTracked = createHook<DebuggerHook>(
+  VaporLifecycleHooks.RENDER_TRACKED,
+)
 
 export type ErrorCapturedHook<TError = unknown> = (
   err: TError,

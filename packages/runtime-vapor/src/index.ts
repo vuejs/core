@@ -106,8 +106,8 @@ export {
   onUnmounted,
   // onActivated,
   // onDeactivated,
-  // onRenderTracked,
-  // onRenderTriggered,
+  onRenderTracked,
+  onRenderTriggered,
   onErrorCaptured,
   // onServerPrefetch,
 } from './apiLifecycle'

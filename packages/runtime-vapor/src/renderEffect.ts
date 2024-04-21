@@ -18,7 +18,6 @@ import { invokeDirectiveHook } from './directives'
 export function renderEffect(cb: () => void) {
   const instance = getCurrentInstance()
   const scope = getCurrentScope()
-
   let effect: ReactiveEffect
 
   const job: SchedulerJob = () => {
@@ -77,7 +76,14 @@ export function renderEffect(cb: () => void) {
     if (instance) job.id = instance.uid
     queueJob(job)
   }
-
+  if (__DEV__) {
+    effect.onTrack = instance?.rtc
+      ? e => invokeArrayFns(instance.rtc!, e)
+      : void 0
+    effect.onTrigger = instance?.rtg
+      ? e => invokeArrayFns(instance.rtg!, e)
+      : void 0
+  }
   effect.run()
 }
 

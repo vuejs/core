@@ -7,6 +7,8 @@ import {
   getCurrentInstance,
   onBeforeUpdate,
   onUpdated,
+  onRenderTracked,
+  onRenderTriggered,
 } from 'vue/vapor'
 
 const instance = getCurrentInstance()!
@@ -34,6 +36,13 @@ onBeforeUpdate(() => {
 })
 onUpdated(() => {
   console.log('updated')
+})
+
+onRenderTracked(e => {
+  console.log(`Render Tracked:`, e.target)
+})
+onRenderTriggered(e => {
+  console.log(`Render trigger:`, e.target)
 })
 
 const log = (arg: any) => {
