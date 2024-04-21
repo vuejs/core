@@ -125,7 +125,7 @@ export function renderComponentRoot(
             )
           : render(
               __DEV__ ? shallowReadonly(props) : props,
-              null as any /* we know it doesn't need it */
+              null as any /* we know it doesn't need it */,
             ),
       )
       fallthroughAttrs = Component.props
