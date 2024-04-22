@@ -617,6 +617,9 @@ function _createVNode(
 
 export function guardReactiveProps(props: (Data & VNodeProps) | null) {
   if (!props) return null
+  if (isRef(props)) {
+    return  { value: props.value }
+  }
   return isProxy(props) || isInternalObject(props) ? extend({}, props) : props
 }
 
