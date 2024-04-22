@@ -411,7 +411,6 @@ export function buildProps(
   const mergeArgs: PropsExpression[] = []
   const runtimeDirectives: DirectiveNode[] = []
   const hasChildren = children.length > 0
-  const hasVFor = context.scopes.vFor > 0
   let shouldUseBlock = false
 
   // patchFlag analysis
@@ -432,6 +431,18 @@ export function buildProps(
       properties = []
     }
     if (arg) mergeArgs.push(arg)
+  }
+
+  // mark template ref on v-for
+  const pushRefVForMarker = () => {
+    if (context.scopes.vFor > 0) {
+      properties.push(
+        createObjectProperty(
+          createSimpleExpression('ref_for', true),
+          createSimpleExpression('true'),
+        ),
+      )
+    }
   }
 
   const analyzePatchFlag = ({ key, value }: Property) => {
@@ -503,14 +514,7 @@ export function buildProps(
       let isStatic = true
       if (name === 'ref') {
         hasRef = true
-        if (hasVFor) {
-          properties.push(
-            createObjectProperty(
-              createSimpleExpression('ref_for', true),
-              createSimpleExpression('true'),
-            ),
-          )
-        }
+        pushRefVForMarker()
         // in inline mode there is no setupState object, so we can't use string
         // keys to set the ref. Instead, we need to transform it to pass the
         // actual ref instead.
@@ -602,13 +606,8 @@ export function buildProps(
         shouldUseBlock = true
       }
 
-      if (isVBind && isStaticArgOf(arg, 'ref') && hasVFor) {
-        properties.push(
-          createObjectProperty(
-            createSimpleExpression('ref_for', true),
-            createSimpleExpression('true'),
-          ),
-        )
+      if (isVBind && isStaticArgOf(arg, 'ref')) {
+        pushRefVForMarker()
       }
 
       // special case for v-bind and v-on with no argument
@@ -616,15 +615,8 @@ export function buildProps(
         hasDynamicKeys = true
         if (exp) {
           if (isVBind) {
-            // if in v-bind object will have a ref we should set ref_for to true
-            // otherwise the ref will be set to a random element in the list
-            if (hasVFor)
-              properties.push(
-                createObjectProperty(
-                  createSimpleExpression('ref_for', true),
-                  createSimpleExpression('true'),
-                ),
-              )
+            // #10696 in case a v-bind object contains ref
+            pushRefVForMarker()
             // have to merge early for compat build check
             pushMergeArg()
             if (__COMPAT__) {

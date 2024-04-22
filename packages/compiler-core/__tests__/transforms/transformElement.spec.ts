@@ -39,6 +39,7 @@ import { transformBind } from '../../src/transforms/vBind'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 import { transformText } from '../../src/transforms/transformText'
+import { parseWithForTransform } from './vFor.spec'
 
 function parseWithElementTransform(
   template: string,
@@ -1336,6 +1337,44 @@ describe('compiler: element transform', () => {
       type: NodeTypes.VNODE_CALL,
       tag: '"span"',
       isBlock: false,
+    })
+  })
+
+  test('ref_for marker on static ref', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" ref="x"/>`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject(
+      createObjectMatcher({
+        ref_for: `[true]`,
+        ref: 'x',
+      }),
+    )
+  })
+
+  test('ref_for marker on dynamic ref', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" :ref="x"/>`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject(
+      createObjectMatcher({
+        ref_for: `[true]`,
+        ref: '[x]',
+      }),
+    )
+  })
+
+  test('ref_for marker on v-bind', () => {
+    const { node } = parseWithForTransform(`<div v-for="i in l" v-bind="x" />`)
+    expect((node.children[0] as any).codegenNode.props).toMatchObject({
+      type: NodeTypes.JS_CALL_EXPRESSION,
+      callee: MERGE_PROPS,
+      arguments: [
+        createObjectMatcher({
+          ref_for: `[true]`,
+        }),
+        {
+          type: NodeTypes.SIMPLE_EXPRESSION,
+          content: 'x',
+          isStatic: false,
+        },
+      ],
     })
   })
 })
