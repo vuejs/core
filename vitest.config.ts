@@ -24,6 +24,7 @@ export default defineConfig({
   },
   plugins: [codspeedPlugin()],
   test: {
+    pool: 'vmThreads',
     globals: true,
     setupFiles: 'scripts/setup-vitest.ts',
     environmentMatchGlobs: [
