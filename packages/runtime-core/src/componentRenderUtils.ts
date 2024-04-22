@@ -26,6 +26,7 @@ import {
   isCompatEnabled,
   warnDeprecation,
 } from './compat/compatConfig'
+import { shallowReadonly } from '@vue/reactivity'
 
 /**
  * dev only flag to track whether $attrs was used during render.
@@ -48,7 +49,6 @@ export function renderComponentRoot(
     vnode,
     proxy,
     withProxy,
-    props,
     propsOptions: [propsOptions],
     slots,
     attrs,
@@ -60,10 +60,11 @@ export function renderComponentRoot(
     ctx,
     inheritAttrs,
   } = instance
+  const props = __DEV__ ? shallowReadonly(instance.props) : instance.props
+  const prev = setCurrentRenderingInstance(instance)
 
   let result
   let fallthroughAttrs
-  const prev = setCurrentRenderingInstance(instance)
   if (__DEV__) {
     accessedAttrs = false
   }
