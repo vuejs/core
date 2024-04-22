@@ -11,15 +11,17 @@ import {
   getCurrentInstance,
   h,
   inject,
+  nextTick,
   nodeOps,
   provide,
   ref,
   render,
   serializeInner,
+  toRaw,
   toRefs,
   watch,
 } from '@vue/runtime-test'
-import { render as domRender, nextTick } from 'vue'
+import { render as domRender } from 'vue'
 
 describe('component props', () => {
   test('stateful', () => {
@@ -127,12 +129,12 @@ describe('component props', () => {
     render(h(Comp, { foo: 1 }), root)
     expect(props).toEqual({ foo: 1 })
     expect(attrs).toEqual({ foo: 1 })
-    expect(props).toBe(attrs)
+    expect(toRaw(props)).toBe(attrs)
 
     render(h(Comp, { bar: 2 }), root)
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
-    expect(props).toBe(attrs)
+    expect(toRaw(props)).toBe(attrs)
   })
 
   test('boolean casting', () => {
