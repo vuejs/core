@@ -48,7 +48,7 @@ importers:
         specifier: ^7.5.8
         version: 7.5.8
       '@vitest/coverage-istanbul':
-        specifier: ^1.4.0
+        specifier: ^1.5.0
         version: 1.5.0(vitest@1.5.0(@types/node@20.12.7)(jsdom@24.0.0)(sass@1.75.0)(terser@5.30.3))
       '@vue/consolidate':
         specifier: 1.0.0
@@ -117,7 +117,7 @@ importers:
         specifier: ^3.0.2
         version: 3.0.2
       puppeteer:
-        specifier: ~22.6.3
+        specifier: ~22.6.5
         version: 22.6.5(typescript@5.4.5)
       rimraf:
         specifier: ^5.0.5
@@ -165,7 +165,7 @@ importers:
         specifier: ^5.2.7
         version: 5.2.9(@types/node@20.12.7)(sass@1.75.0)(terser@5.30.3)
       vitest:
-        specifier: ^1.4.0
+        specifier: ^1.5.0
         version: 1.5.0(@types/node@20.12.7)(jsdom@24.0.0)(sass@1.75.0)(terser@5.30.3)
 
   packages/compiler-core:
