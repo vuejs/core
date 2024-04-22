@@ -55,12 +55,12 @@ export function renderComponentRoot(
     emit,
     render,
     renderCache,
+    props,
     data,
     setupState,
     ctx,
     inheritAttrs,
   } = instance
-  const props = __DEV__ ? shallowReadonly(instance.props) : instance.props
   const prev = setCurrentRenderingInstance(instance)
 
   let result
@@ -94,7 +94,7 @@ export function renderComponentRoot(
           thisProxy,
           proxyToUse!,
           renderCache,
-          props,
+          __DEV__ ? shallowReadonly(props) : props,
           setupState,
           data,
           ctx,
@@ -111,7 +111,7 @@ export function renderComponentRoot(
       result = normalizeVNode(
         render.length > 1
           ? render(
-              props,
+              __DEV__ ? shallowReadonly(props) : props,
               __DEV__
                 ? {
                     get attrs() {
@@ -123,7 +123,10 @@ export function renderComponentRoot(
                   }
                 : { attrs, slots, emit },
             )
-          : render(props, null as any /* we know it doesn't need it */),
+          : render(
+              __DEV__ ? shallowReadonly(props) : props,
+              null as any /* we know it doesn't need it */,
+            ),
       )
       fallthroughAttrs = Component.props
         ? attrs
