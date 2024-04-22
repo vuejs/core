@@ -133,12 +133,17 @@ export function genModelProps(ctx: ScriptCompileContext) {
       const hasUnknownType = runtimeTypes.includes(UNKNOWN_TYPE)
 
       if (isProd || hasUnknownType) {
-        runtimeTypes = runtimeTypes.filter(
-          t =>
-            t === 'Boolean' ||
-            (hasBoolean && t === 'String') ||
-            (t === 'Function' && options),
-        )
+        runtimeTypes = runtimeTypes.filter(t => {
+          if (isProd) {
+            return (
+              t === 'Boolean' ||
+              (hasBoolean && t === 'String') ||
+              (t === 'Function' && options)
+            )
+          }
+
+          return t !== UNKNOWN_TYPE
+        })
 
         skipCheck = !isProd && hasUnknownType && runtimeTypes.length > 0
       }

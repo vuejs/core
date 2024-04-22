@@ -241,4 +241,25 @@ describe('defineModel()', () => {
       modelValue: BindingTypes.SETUP_REF,
     })
   })
+
+  test('w/ UnknownType, non-production mode', () => {
+    const { content, bindings } = compile(
+      `
+      <script setup lang="ts">
+      const modelValue = defineModel<unknownType | Array<int> | string>()
+      </script>
+      `,
+    )
+    assertCode(content)
+    expect(content).toMatch(
+      '"modelValue": { type: [Array, String], skipCheck: true }',
+    )
+    expect(content).toMatch('emits: ["update:modelValue"]')
+    expect(content).toMatch(
+      `const modelValue = _useModel<unknownType | Array<int> | string>(__props, "modelValue")`,
+    )
+    expect(bindings).toStrictEqual({
+      modelValue: BindingTypes.SETUP_REF,
+    })
+  })
 })

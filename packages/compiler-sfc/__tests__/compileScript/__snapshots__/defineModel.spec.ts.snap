@@ -123,6 +123,26 @@ return { modelValue }
 })"
 `;
 
+exports[`defineModel() > w/ UnknownType, non-production mode 1`] = `
+"import { useModel as _useModel, defineComponent as _defineComponent } from 'vue'
+
+export default /*#__PURE__*/_defineComponent({
+  props: {
+    "modelValue": { type: [Array, String], skipCheck: true },
+    "modelModifiers": {},
+  },
+  emits: ["update:modelValue"],
+  setup(__props, { expose: __expose }) {
+  __expose();
+
+      const modelValue = _useModel<unknownType | Array<int> | string>(__props, "modelValue")
+      
+return { modelValue }
+}
+
+})"
+`;
+
 exports[`defineModel() > w/ array props 1`] = `
 "import { useModel as _useModel, mergeModels as _mergeModels } from 'vue'
 
