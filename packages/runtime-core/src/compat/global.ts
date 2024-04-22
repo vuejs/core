@@ -427,15 +427,14 @@ function applySingletonPrototype(app: App, Ctor: Function) {
     app.config.globalProperties = Object.create(Ctor.prototype)
   }
   let hasPrototypeAugmentations = false
-  const descriptors = Object.getOwnPropertyDescriptors(Ctor.prototype)
-  for (const key in descriptors) {
+  for (const key of Object.getOwnPropertyNames(Ctor.prototype)) {
     if (key !== 'constructor') {
       hasPrototypeAugmentations = true
       if (enabled) {
         Object.defineProperty(
           app.config.globalProperties,
           key,
-          descriptors[key],
+          Object.getOwnPropertyDescriptor(Ctor.prototype, key)!,
         )
       }
     }

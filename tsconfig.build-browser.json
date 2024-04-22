@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [],
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "stripInternal": true
+  },
+  "include": [
+    "packages/global.d.ts",
+    "packages/vue/src",
+    "packages/vue-compat/src",
+    "packages/compiler-core/src",
+    "packages/compiler-dom/src",
+    "packages/runtime-core/src",
+    "packages/runtime-dom/src",
+    "packages/reactivity/src",
+    "packages/shared/src"
+  ]
+}

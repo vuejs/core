@@ -7,6 +7,7 @@ import {
   h,
   nextTick,
   nodeOps,
+  onUnmounted,
   ref,
   render,
   serialize,
@@ -768,6 +769,42 @@ describe('BaseTransition', () => {
     test('w/ KeepAlive', async () => {
       await runTestWithKeepAlive(testOutIn)
     })
+
+    test('w/ KeepAlive + unmount innerChild', async () => {
+      const unmountSpy = vi.fn()
+      const includeRef = ref(['TrueBranch'])
+      const trueComp = {
+        name: 'TrueBranch',
+        setup() {
+          onUnmounted(unmountSpy)
+          const count = ref(0)
+          return () => h('div', count.value)
+        },
+      }
+
+      const toggle = ref(true)
+      const { props } = mockProps({ mode: 'out-in' }, true /*withKeepAlive*/)
+      const root = nodeOps.createElement('div')
+      const App = {
+        render() {
+          return h(BaseTransition, props, () => {
+            return h(
+              KeepAlive,
+              { include: includeRef.value },
+              toggle.value ? h(trueComp) : h('div'),
+            )
+          })
+        },
+      }
+      render(h(App), root)
+
+      // trigger toggle
+      toggle.value = false
+      includeRef.value = []
+
+      await nextTick()
+      expect(unmountSpy).toHaveBeenCalledTimes(1)
+    })
   })
 
   // #6835
@@ -1192,5 +1229,10 @@ describe('BaseTransition', () => {
     test('w/ KeepAlive', async () => {
       await runTestWithKeepAlive(testInOutBeforeFinish)
     })
+  })
+
+  // #10719
+  test('should not error on KeepAlive w/ function children', () => {
+    expect(() => mount({}, () => () => h('div'), true)).not.toThrow()
   })
 })
