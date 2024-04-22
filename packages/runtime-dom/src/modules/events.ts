@@ -74,7 +74,6 @@ function parseName(name: string): [string, AddEventListenerOptions] {
     passive: false,
   }
   if (optionsModifierRE.test(name)) {
-    options = {}
     let m
     while ((m = name.match(optionsModifierRE))) {
       name = name.slice(0, name.length - m[0].length)
