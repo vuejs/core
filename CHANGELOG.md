@@ -1,3 +1,13 @@
+## [3.4.23](https://github.com/vuejs/core/compare/v3.4.22...v3.4.23) (2024-04-16)
+
+
+### Bug Fixes
+
+* **runtime-core:** fix regression for $attrs tracking in slots ([6930e60](https://github.com/vuejs/core/commit/6930e60787e4905a50417190263ae7dd46cf5409)), closes [#10710](https://github.com/vuejs/core/issues/10710)
+* **runtime-core:** use same internal object mechanism for slots ([6df53d8](https://github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add)), closes [#10709](https://github.com/vuejs/core/issues/10709)
+
+
+
 ## [3.4.22](https://github.com/vuejs/core/compare/v3.4.21...v3.4.22) (2024-04-15)
 
 
