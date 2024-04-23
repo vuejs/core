@@ -12,7 +12,7 @@ import {
 import { isAsyncWrapper } from './apiAsyncComponent'
 import { getExposeProxy } from './component'
 import { warn } from './warning'
-import { isRef } from '@vue/reactivity'
+import { isReactive, isRef } from '@vue/reactivity'
 import { ErrorCodes, callWithErrorHandling } from './errorHandling'
 import type { SchedulerJob } from './scheduler'
 import { queuePostRenderEffect } from './renderer'
@@ -103,6 +103,20 @@ export function setRef(
                 if (rawRef.k) refs[rawRef.k] = ref.value
               }
             } else if (!existing.includes(refValue)) {
+              // #10655 warn if reactive array used as a ref
+              if (
+                __DEV__ &&
+                _isString &&
+                hasOwn(owner.devtoolsRawSetupState, ref) &&
+                !isRef(owner.devtoolsRawSetupState[ref]) &&
+                isReactive(owner.devtoolsRawSetupState[ref]) &&
+                hasOwn(setupState, '__isScriptSetup')
+              ) {
+                warn(
+                  'In production mode reactive ref array will not be filled. ' +
+                    'Use ref() instead.',
+                )
+              }
               existing.push(refValue)
             }
           }

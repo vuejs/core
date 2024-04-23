@@ -539,4 +539,42 @@ describe('api: template refs', () => {
       '<div><div>[object Object],[object Object]</div><ul><li>2</li><li>3</li></ul></div>',
     )
   })
+
+  // #10655 warn if reactive array used as a ref inside v-for
+  test('string ref pointing to reactive() in v-for, should warn that it will not work in prod for scripSetup', () => {
+    const list = ref([1, 2, 3])
+    const reactiveRef = reactive([])
+    const App = {
+      setup() {
+        return {
+          reactiveRef,
+          __isScriptSetup: true,
+        }
+      },
+      render() {
+        return h('div', null, [
+          h(
+            'ul',
+            list.value.map(i =>
+              h(
+                'li',
+                {
+                  ref: 'reactiveRef',
+                  ref_for: true,
+                },
+                i,
+              ),
+            ),
+          ),
+        ])
+      },
+    }
+    const root = nodeOps.createElement('div')
+    render(h(App), root)
+
+    expect(
+      'In production mode reactive ref array will not be filled. ' +
+        'Use ref() instead.',
+    ).toHaveBeenWarned()
+  })
 })
