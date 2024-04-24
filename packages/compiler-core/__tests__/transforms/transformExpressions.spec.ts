@@ -598,5 +598,33 @@ describe('compiler: expression transform', () => {
         `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`,
       )
     })
+
+    // #10754
+    test('await expression in right hand of assignment, inline mode', () => {
+      const node = parseWithExpressionTransform(
+        `{{ (async () => { x = await bar })() }}`,
+        {
+          inline: true,
+          bindingMetadata: {
+            x: BindingTypes.SETUP_LET,
+            bar: BindingTypes.SETUP_CONST,
+          },
+        },
+      ) as InterpolationNode
+      expect(node.content).toMatchObject({
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `(async () => { `,
+          {
+            content: `_isRef(x) ? x.value = await bar : x`,
+          },
+          ` = await `,
+          {
+            content: `bar`,
+          },
+          ` })()`,
+        ],
+      })
+    })
   })
 })
