@@ -1,6 +1,6 @@
 // @ts-check
-import fs from 'node:fs'
 import { execa } from 'execa'
+import fs from 'node:fs'
 
 execa('pnpm', ['build', 'vue', '-f', 'global-runtime']).then(() => {
   const errors = []

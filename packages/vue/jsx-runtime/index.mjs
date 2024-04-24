@@ -1,4 +1,4 @@
-import { h, Fragment } from 'vue'
+import { Fragment, h } from "vue";
 
 function jsx(type, props, key) {
   const { children } = props

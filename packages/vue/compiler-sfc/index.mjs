@@ -1,3 +1,3 @@
-export * from '@vue/compiler-sfc'
+export * from "@vue/compiler-sfc"
 
-import './register-ts.js'
+import "./register-ts.js";

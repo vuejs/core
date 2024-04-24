@@ -6,12 +6,12 @@ import {
   type CompilerOptions,
   compile,
 } from '@vue/compiler-dom'
+import * as runtimeDom from '@vue/runtime-dom'
 import {
   type RenderFunction,
   registerRuntimeCompiler,
   warn,
 } from '@vue/runtime-dom'
-import * as runtimeDom from '@vue/runtime-dom'
 import {
   EMPTY_OBJ,
   NOOP,

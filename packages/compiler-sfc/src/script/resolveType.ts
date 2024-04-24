@@ -1547,7 +1547,13 @@ export function inferRuntimeType(
 
             case 'Parameters':
             case 'ConstructorParameters':
+            case 'ReadonlyArray':
               return ['Array']
+
+            case 'ReadonlyMap':
+              return ['Map']
+            case 'ReadonlySet':
+              return ['Set']
 
             case 'NonNullable':
               if (node.typeParameters && node.typeParameters.params[0]) {
@@ -1632,6 +1638,11 @@ export function inferRuntimeType(
           }
         }
         break
+      }
+
+      // e.g. readonly
+      case 'TSTypeOperator': {
+        return inferRuntimeType(ctx, node.typeAnnotation, scope)
       }
     }
   } catch (e) {

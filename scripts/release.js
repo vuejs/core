@@ -1,13 +1,13 @@
 // @ts-check
-import minimist from 'minimist'
-import fs from 'node:fs'
-import path from 'node:path'
-import pico from 'picocolors'
-import semver from 'semver'
 import enquirer from 'enquirer'
 import { execa } from 'execa'
+import minimist from 'minimist'
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
+import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import pico from 'picocolors'
+import semver from 'semver'
 
 /**
  * @typedef {{

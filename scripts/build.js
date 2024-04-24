@@ -16,18 +16,18 @@ nr build core --formats cjs
 ```
 */
 
-import fs from 'node:fs/promises'
-import { existsSync } from 'node:fs'
-import path from 'node:path'
+import { execa, execaSync } from 'execa'
 import minimist from 'minimist'
+import { existsSync } from 'node:fs'
+import fs from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import { cpus } from 'node:os'
+import path from 'node:path'
 import { brotliCompressSync, gzipSync } from 'node:zlib'
 import pico from 'picocolors'
-import { execa, execaSync } from 'execa'
-import { cpus } from 'node:os'
-import { createRequire } from 'node:module'
-import { targets as allTargets, fuzzyMatchTarget } from './utils.js'
-import { scanEnums } from './inline-enums.js'
 import prettyBytes from 'pretty-bytes'
+import { scanEnums } from './inline-enums.js'
+import { fuzzyMatchTarget, targets as allTargets } from './utils.js'
 
 const require = createRequire(import.meta.url)
 const args = minimist(process.argv.slice(2))

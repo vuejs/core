@@ -1,7 +1,7 @@
 // @ts-check
 import fs from 'node:fs'
-import pico from 'picocolors'
 import { createRequire } from 'node:module'
+import pico from 'picocolors'
 
 const require = createRequire(import.meta.url)
 

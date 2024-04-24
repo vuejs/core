@@ -104,10 +104,12 @@ export function inject(
 }
 
 /**
+ * 检查当前执行环境是否有注入上下文
  * Returns true if `inject()` can be used without warning about being called in the wrong place (e.g. outside of
  * setup()). This is used by libraries that want to use `inject()` internally without triggering a warning to the end
  * user. One example is `useRoute()` in `vue-router`.
  */
 export function hasInjectionContext(): boolean {
+  // 判断当前实例、当前渲染实例或当前应用是否存在，存在则返回true
   return !!(currentInstance || currentRenderingInstance || currentApp)
 }

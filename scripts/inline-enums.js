@@ -11,6 +11,9 @@
  * This file is expected to be executed with project root as cwd.
  */
 
+import { parse } from '@babel/parser'
+import { execaSync } from 'execa'
+import MagicString from 'magic-string'
 import * as assert from 'node:assert'
 import {
   existsSync,
@@ -20,9 +23,6 @@ import {
   writeFileSync,
 } from 'node:fs'
 import * as path from 'node:path'
-import { parse } from '@babel/parser'
-import { execaSync } from 'execa'
-import MagicString from 'magic-string'
 
 /**
  * @typedef {{ readonly name: string, readonly value: string | number }} EnumMember

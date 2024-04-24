@@ -5,11 +5,11 @@
 // smaller files and provides better tree-shaking.
 
 import esbuild from 'esbuild'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import minimist from 'minimist'
+import { createRequire } from 'node:module'
 import { dirname, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
-import minimist from 'minimist'
-import { polyfillNode } from 'esbuild-plugin-polyfill-node'
 
 const require = createRequire(import.meta.url)
 const __dirname = dirname(fileURLToPath(import.meta.url))
