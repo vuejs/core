@@ -469,15 +469,17 @@ function getKeepAliveChild(vnode: VNode): VNode | undefined {
 
   const { shapeFlag, children } = vnode
 
-  if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
-    return (children as VNodeArrayChildren)[0] as VNode
-  }
+  if (children) {
+    if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+      return (children as VNodeArrayChildren)[0] as VNode
+    }
 
-  if (
-    shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
-    isFunction((children as any).default)
-  ) {
-    return (children as any).default()
+    if (
+      shapeFlag & ShapeFlags.SLOTS_CHILDREN &&
+      isFunction((children as any).default)
+    ) {
+      return (children as any).default()
+    }
   }
 }
 

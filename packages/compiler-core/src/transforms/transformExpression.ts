@@ -40,7 +40,7 @@ import type {
   UpdateExpression,
 } from '@babel/types'
 import { validateBrowserExpression } from '../validateExpression'
-import { parse } from '@babel/parser'
+import { parseExpression } from '@babel/parser'
 import { IS_REF, UNREF } from '../runtimeHelpers'
 import { BindingTypes } from '../options'
 
@@ -274,9 +274,10 @@ export function processExpression(
       ? ` ${rawExp} `
       : `(${rawExp})${asParams ? `=>{}` : ``}`
     try {
-      ast = parse(source, {
+      ast = parseExpression(source, {
+        sourceType: 'module',
         plugins: context.expressionPlugins,
-      }).program
+      })
     } catch (e: any) {
       context.onError(
         createCompilerError(
