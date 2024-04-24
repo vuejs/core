@@ -573,8 +573,8 @@ describe('api: template refs', () => {
     render(h(App), root)
 
     expect(
-      'In production mode reactive ref array will not be filled. ' +
-        'Use ref() instead.',
+      'In production mode ref array will not be filled. ' +
+        'Use ref() instead. Ref name: reactiveRef',
     ).toHaveBeenWarned()
   })
 })

@@ -113,8 +113,8 @@ export function setRef(
               if (wrongRefType) {
                 warn(
                   'In production mode ref array will not be filled. ' +
-                    'Use ref() instead. Ref name: ',
-                  ref,
+                    'Use ref() instead. Ref name: ' +
+                    ref,
                 )
               }
               existing.push(refValue)
