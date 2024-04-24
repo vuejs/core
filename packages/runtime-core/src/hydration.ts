@@ -838,6 +838,7 @@ function isSetEqual(a: Set<string>, b: Set<string>): boolean {
 
 function toStyleMap(str: string): Map<string, string> {
   const styleMap: Map<string, string> = new Map()
+  if (!str) return styleMap
   for (const item of str.split(';')) {
     let [key, value] = item.split(':')
     key = key?.trim()
