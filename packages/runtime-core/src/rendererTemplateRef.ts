@@ -104,14 +104,14 @@ export function setRef(
               }
             } else if (!existing.includes(refValue)) {
               // #10655 warn if reactive array used as a ref
-              if (
+              const reactiveAsRef =
                 __DEV__ &&
                 _isString &&
                 hasOwn(owner.devtoolsRawSetupState, ref) &&
                 !isRef(owner.devtoolsRawSetupState[ref]) &&
                 isReactive(owner.devtoolsRawSetupState[ref]) &&
                 hasOwn(setupState, '__isScriptSetup')
-              ) {
+              if (reactiveAsRef) {
                 warn(
                   'In production mode reactive ref array will not be filled. ' +
                     'Use ref() instead.',
