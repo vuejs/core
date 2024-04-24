@@ -4,7 +4,11 @@ import {
   isRef,
   onScopeDispose,
 } from '@vue/reactivity'
-import { currentInstance } from '../component'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  isVaporComponent,
+} from '../component'
 import { VaporErrorCodes, callWithErrorHandling } from '../errorHandling'
 import {
   EMPTY_OBJ,
@@ -18,11 +22,12 @@ import { warn } from '../warning'
 import { queuePostFlushCb } from '../scheduler'
 
 export type NodeRef = string | Ref | ((ref: Element) => void)
+export type RefEl = Element | ComponentInternalInstance
 
 /**
  * Function for handling a template ref
  */
-export function setRef(el: Element, ref: NodeRef, refFor = false) {
+export function setRef(el: RefEl, ref: NodeRef, refFor = false) {
   if (!currentInstance) return
   const { setupState, isUnmounted } = currentInstance
 
@@ -30,13 +35,15 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
     return
   }
 
+  const refValue = isVaporComponent(el) ? el.exposed || el : el
+
   const refs =
     currentInstance.refs === EMPTY_OBJ
       ? (currentInstance.refs = {})
       : currentInstance.refs
 
   if (isFunction(ref)) {
-    const invokeRefSetter = (value: Element | null) => {
+    const invokeRefSetter = (value?: Element | Record<string, any>) => {
       callWithErrorHandling(
         ref,
         currentInstance,
@@ -45,8 +52,8 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
       )
     }
 
-    invokeRefSetter(el)
-    onScopeDispose(() => invokeRefSetter(null))
+    invokeRefSetter(refValue)
+    onScopeDispose(() => invokeRefSetter())
   } else {
     const _isString = isString(ref)
     const _isRef = isRef(ref)
@@ -62,7 +69,7 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
             : ref.value
 
           if (!isArray(existing)) {
-            existing = [el]
+            existing = [refValue]
             if (_isString) {
               refs[ref] = existing
               if (hasOwn(setupState, ref)) {
@@ -75,16 +82,16 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
             } else {
               ref.value = existing
             }
-          } else if (!existing.includes(el)) {
-            existing.push(el)
+          } else if (!existing.includes(refValue)) {
+            existing.push(refValue)
           }
         } else if (_isString) {
-          refs[ref] = el
+          refs[ref] = refValue
           if (hasOwn(setupState, ref)) {
-            setupState[ref] = el
+            setupState[ref] = refValue
           }
         } else if (_isRef) {
-          ref.value = el
+          ref.value = refValue
         } else if (__DEV__) {
           warn('Invalid template ref type:', ref, `(${typeof ref})`)
         }
@@ -95,7 +102,7 @@ export function setRef(el: Element, ref: NodeRef, refFor = false) {
       onScopeDispose(() => {
         queuePostFlushCb(() => {
           if (isArray(existing)) {
-            remove(existing, el)
+            remove(existing, refValue)
           } else if (_isString) {
             refs[ref] = null
             if (hasOwn(setupState, ref)) {
