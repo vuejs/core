@@ -486,8 +486,8 @@ function getInnerChild(vnode: VNode): VNode | undefined {
     ) {
       return (children as any).default()
     }
-    
-    if(isTeleport(vnode.type)){
+
+    if (isTeleport(vnode.type)) {
       return findNonCommentChild(vnode.children as VNode[])
     }
   }
