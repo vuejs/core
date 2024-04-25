@@ -1,4 +1,5 @@
 import {
+  type Component,
   type ComponentInternalInstance,
   type Data,
   getExposeProxy,
@@ -35,6 +36,7 @@ import {
   type ComponentInjectOptions,
   type ComponentOptionsBase,
   type ComponentOptionsMixin,
+  type ComponentProvideOptions,
   type ComputedOptions,
   type ExtractComputedReturns,
   type InjectToObject,
@@ -51,6 +53,7 @@ import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
 import { warn } from './warning'
 import { installCompatInstanceProperties } from './compat/instance'
+import type { Directive } from './directives'
 
 /**
  * Custom properties added to component instances in any way and can be accessed through `this`
@@ -97,6 +100,10 @@ type MixinToOptionTypes<T> =
     any,
     any,
     infer Defaults,
+    any,
+    any,
+    any,
+    any,
     any,
     any,
     any
@@ -157,6 +164,9 @@ export type CreateComponentPublicInstance<
   MakeDefaultsOptional extends boolean = false,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
   PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>,
   PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>,
   PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>,
@@ -167,6 +177,7 @@ export type CreateComponentPublicInstance<
     EnsureNonVoid<M>,
   PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> &
     EnsureNonVoid<Defaults>,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > = ComponentPublicInstance<
   PublicP,
   PublicB,
@@ -190,11 +201,22 @@ export type CreateComponentPublicInstance<
     Defaults,
     {},
     string,
-    S
+    S,
+    LC,
+    Directives,
+    Exposed,
+    Provide
   >,
   I,
-  S
+  S,
+  Exposed
 >
+
+export type ExposedKeys<
+  T,
+  Exposed extends string & keyof T,
+> = '' extends Exposed ? T : Pick<T, Exposed>
+
 // public properties exposed on the proxy, which is used as the render context
 // in templates (as `this` in the render option)
 export type ComponentPublicInstance<
@@ -210,6 +232,7 @@ export type ComponentPublicInstance<
   Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>,
   I extends ComponentInjectOptions = {},
   S extends SlotsType = {},
+  Exposed extends string = '',
 > = {
   $: ComponentInternalInstance
   $data: D
@@ -233,13 +256,16 @@ export type ComponentPublicInstance<
       : (...args: any) => any,
     options?: WatchOptions,
   ): WatchStopHandle
-} & IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
-  ShallowUnwrapRef<B> &
-  UnwrapNestedRefs<D> &
-  ExtractComputedReturns<C> &
-  M &
-  ComponentCustomProperties &
-  InjectToObject<I>
+} & ExposedKeys<
+  IfAny<P, P, Omit<P, keyof ShallowUnwrapRef<B>>> &
+    ShallowUnwrapRef<B> &
+    UnwrapNestedRefs<D> &
+    ExtractComputedReturns<C> &
+    M &
+    ComponentCustomProperties &
+    InjectToObject<I>,
+  Exposed
+>
 
 export type PublicPropertiesMap = Record<
   string,

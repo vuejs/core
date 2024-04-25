@@ -248,6 +248,8 @@ export type {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
+  GlobalComponents,
+  GlobalDirectives,
   ComponentInstance,
 } from './component'
 export type {

@@ -112,7 +112,11 @@ export interface ComponentOptionsBase<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
-> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II>,
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+> extends LegacyOptions<Props, D, C, M, Mixin, Extends, I, II, Provide>,
     ComponentInternalOptions,
     ComponentCustomOptions {
   setup?: (
@@ -136,13 +140,16 @@ export interface ComponentOptionsBase<
   // Luckily `render()` doesn't need any arguments nor does it care about return
   // type.
   render?: Function
-  components?: Record<string, Component>
-  directives?: Record<string, Directive>
+  // NOTE: extending both LC and Record<string, Component> allows objects to be forced
+  // to be of type Component, while still inferring LC generic
+  components?: LC & Record<string, Component>
+  // NOTE: extending both Directives and Record<string, Directive> allows objects to be forced
+  // to be of type Directive, while still inferring Directives generic
+  directives?: Directives & Record<string, Directive>
   inheritAttrs?: boolean
   emits?: (E | EE[]) & ThisType<void>
   slots?: S
-  // TODO infer public instance type based on exposed keys
-  expose?: string[]
+  expose?: Exposed[]
   serverPrefetch?(): void | Promise<any>
 
   // Runtime compiler only -----------------------------------------------------
@@ -224,6 +231,10 @@ export type ComponentOptionsWithoutProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   PE = Props & EmitsToProps<E>,
 > = ComponentOptionsBase<
   PE,
@@ -238,7 +249,11 @@ export type ComponentOptionsWithoutProps<
   {},
   I,
   II,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 > & {
   props?: undefined
 } & ThisType<
@@ -255,7 +270,10 @@ export type ComponentOptionsWithoutProps<
       {},
       false,
       I,
-      S
+      S,
+      LC,
+      Directives,
+      Exposed
     >
   >
 
@@ -272,6 +290,10 @@ export type ComponentOptionsWithArrayProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Prettify<Readonly<{ [key in PropNames]?: any } & EmitsToProps<E>>>,
 > = ComponentOptionsBase<
   Props,
@@ -286,7 +308,11 @@ export type ComponentOptionsWithArrayProps<
   {},
   I,
   II,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 > & {
   props: PropNames[]
 } & ThisType<
@@ -303,7 +329,10 @@ export type ComponentOptionsWithArrayProps<
       {},
       false,
       I,
-      S
+      S,
+      LC,
+      Directives,
+      Exposed
     >
   >
 
@@ -320,6 +349,10 @@ export type ComponentOptionsWithObjectProps<
   I extends ComponentInjectOptions = {},
   II extends string = string,
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
   Props = Prettify<Readonly<ExtractPropTypes<PropsOptions> & EmitsToProps<E>>>,
   Defaults = ExtractDefaultPropTypes<PropsOptions>,
 > = ComponentOptionsBase<
@@ -335,7 +368,11 @@ export type ComponentOptionsWithObjectProps<
   Defaults,
   I,
   II,
-  S
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 > & {
   props: PropsOptions & ThisType<void>
 } & ThisType<
@@ -352,7 +389,9 @@ export type ComponentOptionsWithObjectProps<
       Defaults,
       false,
       I,
-      S
+      S,
+      LC,
+      Directives
     >
   >
 
@@ -365,7 +404,15 @@ export type ComponentOptions<
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
   E extends EmitsOptions = any,
-  S extends SlotsType = any,
+  EE extends string = string,
+  Defaults = {},
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > = ComponentOptionsBase<
   Props,
   RawBindings,
@@ -375,8 +422,15 @@ export type ComponentOptions<
   Mixin,
   Extends,
   E,
-  string,
-  S
+  EE,
+  Defaults,
+  I,
+  II,
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
 > &
   ThisType<
     CreateComponentPublicInstance<
@@ -388,11 +442,23 @@ export type ComponentOptions<
       Mixin,
       Extends,
       E,
-      Readonly<Props>
+      Readonly<Props>,
+      Defaults,
+      false,
+      I,
+      S,
+      LC,
+      Directives
     >
   >
 
 export type ComponentOptionsMixin = ComponentOptionsBase<
+  any,
+  any,
+  any,
+  any,
+  any,
+  any,
   any,
   any,
   any,
@@ -464,6 +530,7 @@ interface LegacyOptions<
   Extends extends ComponentOptionsMixin,
   I extends ComponentInjectOptions,
   II extends string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
 > {
   compatConfig?: CompatConfig
 
@@ -497,7 +564,7 @@ interface LegacyOptions<
   computed?: C
   methods?: M
   watch?: ComponentWatchOptions
-  provide?: ComponentProvideOptions
+  provide?: Provide
   inject?: I | II[]
 
   // assets
