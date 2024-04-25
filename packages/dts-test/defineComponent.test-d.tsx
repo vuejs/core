@@ -1623,3 +1623,36 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
+
+describe('__typeProps backdoor for union type for conditional props', () => {
+  interface CommonProps {
+    size?: 'xl' | 'l' | 'm' | 's' | 'xs'
+  }
+
+  type ConditionalProps =
+    | {
+        color?: 'normal' | 'primary' | 'secondary'
+        appearance?: 'normal' | 'outline' | 'text'
+      }
+    | {
+        color: 'white'
+        appearance: 'outline'
+      }
+
+  type Props = CommonProps & ConditionalProps
+
+  const Comp = defineComponent<Props>({
+    __typeProps: {} as Props,
+  })
+  // @ts-expect-error
+  ;<Comp color="white" />
+  // @ts-expect-error
+  ;<Comp color="white" appearance="normal" />
+
+  const c = new Comp()
+  // @ts-expect-error
+  c.$props = { color: 'white' }
+  // @ts-expect-error
+  c.$props = { color: 'white', appearance: 'text' }
+  c.$props = { color: 'white', appearance: 'outline' }
+})

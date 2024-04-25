@@ -218,6 +218,65 @@ export interface RuntimeCompilerOptions {
   delimiters?: [string, string]
 }
 
+export type ComponentOptionsWithTypeProps<
+  Props = {},
+  RawBindings = {},
+  D = {},
+  C extends ComputedOptions = {},
+  M extends MethodOptions = {},
+  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
+  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
+  E extends EmitsOptions = EmitsOptions,
+  EE extends string = string,
+  I extends ComponentInjectOptions = {},
+  II extends string = string,
+  S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  PE = Props & EmitsToProps<E>,
+> = ComponentOptionsBase<
+  PE,
+  RawBindings,
+  D,
+  C,
+  M,
+  Mixin,
+  Extends,
+  E,
+  EE,
+  {},
+  I,
+  II,
+  S,
+  LC,
+  Directives,
+  Exposed,
+  Provide
+> & {
+  __typeProps: Props
+} & ThisType<
+    CreateComponentPublicInstance<
+      PE,
+      RawBindings,
+      D,
+      C,
+      M,
+      Mixin,
+      Extends,
+      E,
+      EE,
+      {},
+      false,
+      I,
+      S,
+      LC,
+      Directives,
+      Exposed
+    >
+  >
+
 export type ComponentOptionsWithoutProps<
   Props = {},
   RawBindings = {},
