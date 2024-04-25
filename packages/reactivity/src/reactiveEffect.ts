@@ -146,5 +146,6 @@ export function trigger(
 }
 
 export function getDepFromReactive(object: any, key: string | number | symbol) {
-  return targetMap.get(object)?.get(key)
+  const depsMap = targetMap.get(object)
+  return depsMap && depsMap.get(key)
 }
