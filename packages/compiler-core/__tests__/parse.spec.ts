@@ -16,8 +16,6 @@ import {
 import { baseParse } from '../src/parser'
 import type { Program } from '@babel/types'
 
-/* eslint jest/no-disabled-tests: "off" */
-
 describe('compiler: parse', () => {
   describe('Text', () => {
     test('simple text', () => {

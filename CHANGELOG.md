@@ -1,3 +1,42 @@
+## [3.4.25](https://github.com/vuejs/core/compare/v3.4.24...v3.4.25) (2024-04-24)
+
+
+### Bug Fixes
+
+* **defineModel:** align prod mode runtime type generation with defineProps ([4253a57](https://github.com/vuejs/core/commit/4253a57f1703a7f1ac701d77e0a235689203461d)), closes [#10769](https://github.com/vuejs/core/issues/10769)
+* **runtime-core:** properly get keepAlive child ([#10772](https://github.com/vuejs/core/issues/10772)) ([3724693](https://github.com/vuejs/core/commit/3724693a25c3f2dd13d70a8a1af760b03a4fb783)), closes [#10771](https://github.com/vuejs/core/issues/10771)
+* **runtime-core:** use normal object as internal prototype for attrs and slots ([064e82f](https://github.com/vuejs/core/commit/064e82f5855f30fe0b77fe9b5e4dd22700fd634d)), closes [/github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add#r141304923](https://github.com//github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add/issues/r141304923)
+
+
+
+## [3.4.24](https://github.com/vuejs/core/compare/v3.4.23...v3.4.24) (2024-04-22)
+
+
+### Bug Fixes
+
+* **compiler-core:** handle template ref bound via v-bind object on v-for ([#10706](https://github.com/vuejs/core/issues/10706)) ([da7adef](https://github.com/vuejs/core/commit/da7adefa844265eecc9c336abfc727bc05b4f16e)), closes [#10696](https://github.com/vuejs/core/issues/10696)
+* **compiler-core:** properly parse await expressions in edge cases ([b92c25f](https://github.com/vuejs/core/commit/b92c25f53dff0fc1687f57ca4033d0ac25218940)), closes [#10754](https://github.com/vuejs/core/issues/10754)
+* **compiler-sfc:** handle readonly operator and ReadonlyArray/Map/Set types ([5cef52a](https://github.com/vuejs/core/commit/5cef52a5c23ba8ba3239e6def03b8ff008d3cc72)), closes [#10726](https://github.com/vuejs/core/issues/10726)
+* **compiler-ssr:** fix hydration mismatch for conditional slot in transition ([f12c81e](https://github.com/vuejs/core/commit/f12c81efca3fcf9a7ce478af2261ad6ab9b0bfd7)), closes [#10743](https://github.com/vuejs/core/issues/10743)
+* **compiler-ssr:** fix v-html SSR for nullish values ([1ff4076](https://github.com/vuejs/core/commit/1ff407676f9495883b459779a9b0370d7588b51f)), closes [#10725](https://github.com/vuejs/core/issues/10725)
+* **deps:** update compiler ([#10760](https://github.com/vuejs/core/issues/10760)) ([15df5c1](https://github.com/vuejs/core/commit/15df5c1b261b9b471eb811fd47ab7b3cfc41cf83))
+* **runtime-core:** fix edge case of KeepAlive inside Transition with slot children ([#10719](https://github.com/vuejs/core/issues/10719)) ([e51ca61](https://github.com/vuejs/core/commit/e51ca61ca060b2772e967d169548fc2f58fce6d1)), closes [#10708](https://github.com/vuejs/core/issues/10708)
+* **runtime-core:** further fix slots _ctx check ([cde7f05](https://github.com/vuejs/core/commit/cde7f05787d16dbb93d9419ef5331adf992816fd)), closes [#10724](https://github.com/vuejs/core/issues/10724)
+* **runtime-core:** props should be readonly via direct template access ([b93f264](https://github.com/vuejs/core/commit/b93f26464785de227b88c51a88328ae80e80d804)), closes [#8216](https://github.com/vuejs/core/issues/8216) [#10736](https://github.com/vuejs/core/issues/10736)
+* **transition:** transition is breaking/flickering when enter is canceled ([#10688](https://github.com/vuejs/core/issues/10688)) ([65109a7](https://github.com/vuejs/core/commit/65109a70f187473edae8cf4df11af3c33345e6f6))
+
+
+
+## [3.4.23](https://github.com/vuejs/core/compare/v3.4.22...v3.4.23) (2024-04-16)
+
+
+### Bug Fixes
+
+* **runtime-core:** fix regression for $attrs tracking in slots ([6930e60](https://github.com/vuejs/core/commit/6930e60787e4905a50417190263ae7dd46cf5409)), closes [#10710](https://github.com/vuejs/core/issues/10710)
+* **runtime-core:** use same internal object mechanism for slots ([6df53d8](https://github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add)), closes [#10709](https://github.com/vuejs/core/issues/10709)
+
+
+
 ## [3.4.22](https://github.com/vuejs/core/compare/v3.4.21...v3.4.22) (2024-04-15)
 
 
