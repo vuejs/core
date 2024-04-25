@@ -468,7 +468,7 @@ function getInnerChild(vnode: VNode): VNode | undefined {
     if (isTeleport(vnode.type) && vnode.children) {
       return findNonCommentChild(vnode.children as VNode[])
     }
-    
+
     return vnode
   }
   // #7121 ensure get the child component subtree in case
