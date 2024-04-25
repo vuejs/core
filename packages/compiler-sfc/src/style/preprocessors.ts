@@ -1,5 +1,5 @@
 import merge from 'merge-source-map'
-import type { RawSourceMap } from 'source-map-js'
+import type { RawSourceMap } from '@vue/compiler-core'
 import type { SFCStyleCompileOptions } from '../compileStyle'
 import { isFunction } from '@vue/shared'
 
