@@ -956,8 +956,10 @@ function resolveExt(filename: string, fs: FS) {
   return (
     tryResolve(filename) ||
     tryResolve(filename + `.ts`) ||
+    tryResolve(filename + `.tsx`) ||
     tryResolve(filename + `.d.ts`) ||
     tryResolve(joinPaths(filename, `index.ts`)) ||
+    tryResolve(joinPaths(filename, `index.tsx`)) ||
     tryResolve(joinPaths(filename, `index.d.ts`))
   )
 }
@@ -1545,7 +1547,13 @@ export function inferRuntimeType(
 
             case 'Parameters':
             case 'ConstructorParameters':
+            case 'ReadonlyArray':
               return ['Array']
+
+            case 'ReadonlyMap':
+              return ['Map']
+            case 'ReadonlySet':
+              return ['Set']
 
             case 'NonNullable':
               if (node.typeParameters && node.typeParameters.params[0]) {
@@ -1630,6 +1638,11 @@ export function inferRuntimeType(
           }
         }
         break
+      }
+
+      // e.g. readonly
+      case 'TSTypeOperator': {
+        return inferRuntimeType(ctx, node.typeAnnotation, scope)
       }
     }
   } catch (e) {
