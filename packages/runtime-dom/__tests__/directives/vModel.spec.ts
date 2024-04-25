@@ -1309,10 +1309,16 @@ describe('vModel', () => {
 
   // #10788
   test('should spy stepUp and stepDown on numberic type input', () => {
-    const fn = vi.fn()
+    const setNum1 = function (this: any, value: any) {
+      this.num1 = value
+    }
+    const setNum2 = function (this: any, value: any) {
+      this.num2 = value
+    }
+
     const component = defineComponent({
       data() {
-        return { num: 0 }
+        return { num1: 0, num2: 0 }
       },
       render() {
         return [
@@ -1320,19 +1326,39 @@ describe('vModel', () => {
             h('input', {
               id: 'input_num1',
               type: 'number',
-              'onUpdate:modelValue': fn,
+              'onUpdate:modelValue': setNum1.bind(this),
             }),
-            this.num,
+            this.num1,
+          ),
+          withVModel(
+            h('input', {
+              id: 'input_num2',
+              type: 'number',
+              'onUpdate:modelValue': setNum2.bind(this),
+            }),
+            this.num2,
+            {
+              lazy: true,
+            },
           ),
         ]
       },
     })
     render(h(component), root)
+    const data = root._vnode.component.data
     const inputNum1 = root.querySelector('#input_num1') as HTMLInputElement
-    expect(fn).toBeCalledTimes(0)
+    const inputNum2 = root.querySelector('#input_num2') as HTMLInputElement
+    expect(data.num1).toBe(0)
     inputNum1.stepUp()
-    expect(fn).toBeCalledTimes(1)
+    expect(data.num1).toBe(1)
     inputNum1.stepDown()
-    expect(fn).toBeCalledTimes(2)
+    expect(data.num1).toBe(0)
+
+    inputNum2.stepUp()
+    inputNum2.stepUp()
+    inputNum2.stepUp()
+    inputNum2.stepDown()
+    triggerEvent('change', inputNum2)
+    expect(data.num2).toBe(2)
   })
 })
