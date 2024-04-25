@@ -43,6 +43,24 @@ type ModelDirective<T> = ObjectDirective<
   T & { [assignKey]: AssignerFn; _assigning?: boolean }
 >
 
+// https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/stepUp
+const numbericInputTypes = new Set([
+  'date',
+  'month',
+  'week',
+  'time',
+  'datetime-local',
+  'number',
+  'range',
+])
+
+const isNumericTypeInput = (
+  el: HTMLInputElement | HTMLTextAreaElement,
+  props: Record<string, any> | null,
+): el is HTMLInputElement => {
+  return !!props && el.tagName === 'INPUT' && numbericInputTypes.has(props.type)
+}
+
 // We are exporting the v-model runtime directly as vnode hooks so that it can
 // be tree-shaken in case v-model is never used.
 export const vModelText: ModelDirective<
@@ -76,6 +94,20 @@ export const vModelText: ModelDirective<
       // this also fixes the issue where some browsers e.g. iOS Chrome
       // fires "change" instead of "input" on autocomplete.
       addEventListener(el, 'change', onCompositionEnd)
+    }
+
+    // To spy on `stepUp` and `stepDown` for HTMLInputElement numeric types, #10788
+    if (isNumericTypeInput(el, vnode.props)) {
+      const _stepUp = el.stepUp
+      const _stepDown = el.stepDown
+      el.stepUp = (...args: Parameters<typeof _stepUp>) => {
+        _stepUp.apply(el, args)
+        el.dispatchEvent(new Event('input'))
+      }
+      el.stepDown = (...args: Parameters<typeof _stepDown>) => {
+        _stepDown.apply(el, args)
+        el.dispatchEvent(new Event('input'))
+      }
     }
   },
   // set value on mounted so it's after min/max for type="range"

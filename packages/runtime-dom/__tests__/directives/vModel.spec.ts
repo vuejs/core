@@ -1306,4 +1306,33 @@ describe('vModel', () => {
 
     expect(inputNum1.value).toBe('1')
   })
+
+  // #10788
+  test('should spy stepUp and stepDown on numberic type input', () => {
+    const fn = vi.fn()
+    const component = defineComponent({
+      data() {
+        return { num: 0 }
+      },
+      render() {
+        return [
+          withVModel(
+            h('input', {
+              id: 'input_num1',
+              type: 'number',
+              'onUpdate:modelValue': fn,
+            }),
+            this.num,
+          ),
+        ]
+      },
+    })
+    render(h(component), root)
+    const inputNum1 = root.querySelector('#input_num1') as HTMLInputElement
+    expect(fn).toBeCalledTimes(0)
+    inputNum1.stepUp()
+    expect(fn).toBeCalledTimes(1)
+    inputNum1.stepDown()
+    expect(fn).toBeCalledTimes(2)
+  })
 })
