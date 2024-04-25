@@ -4,7 +4,7 @@
  * `Object.getPrototypeOf`. This is more performant than defining a
  * non-enumerable property. (one of the optimizations done for ssr-benchmark)
  */
-const internalObjectProto = Object.create(null)
+const internalObjectProto = {}
 
 export const createInternalObject = () => Object.create(internalObjectProto)
 
