@@ -465,6 +465,10 @@ function emptyPlaceholder(vnode: VNode): VNode | undefined {
 
 function getInnerChild(vnode: VNode): VNode | undefined {
   if (!isKeepAlive(vnode)) {
+    if (isTeleport(vnode.type) && vnode.children) {
+      return findNonCommentChild(vnode.children as VNode[])
+    }
+    
     return vnode
   }
   // #7121 ensure get the child component subtree in case
@@ -485,10 +489,6 @@ function getInnerChild(vnode: VNode): VNode | undefined {
       isFunction((children as any).default)
     ) {
       return (children as any).default()
-    }
-
-    if (isTeleport(vnode.type)) {
-      return findNonCommentChild(vnode.children as VNode[])
     }
   }
 }
