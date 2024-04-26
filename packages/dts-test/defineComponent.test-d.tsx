@@ -1641,7 +1641,7 @@ describe('__typeProps backdoor for union type for conditional props', () => {
 
   type Props = CommonProps & ConditionalProps
 
-  const Comp = defineComponent<Props>({
+  const Comp = defineComponent({
     __typeProps: {} as Props,
   })
   // @ts-expect-error
