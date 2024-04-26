@@ -1,3 +1,4 @@
+import { isGloballyAllowed } from '@vue/shared'
 import {
   BindingTypes,
   NewlineType,
@@ -167,7 +168,7 @@ function genIdentifier(
         raw = withAssignment(raw)
     }
   } else {
-    raw = withAssignment(`_ctx.${raw}`)
+    raw = withAssignment(canPrefix(raw) ? `_ctx.${raw}` : raw)
   }
   return [prefix, [raw, NewlineType.None, loc, name]]
 
@@ -177,4 +178,16 @@ function genIdentifier(
   function unref() {
     return `${vaporHelper('unref')}(${raw})`
   }
+}
+
+function canPrefix(name: string) {
+  // skip whitelisted globals
+  if (isGloballyAllowed(name)) {
+    return false
+  }
+  // special case for webpack compilation
+  if (name === 'require') {
+    return false
+  }
+  return true
 }
