@@ -5,7 +5,6 @@ import type {
   ComponentOptionsMixin,
   ComponentOptionsWithArrayProps,
   ComponentOptionsWithObjectProps,
-  ComponentOptionsWithTypeProps,
   ComponentOptionsWithoutProps,
   ComponentProvideOptions,
   ComputedOptions,
@@ -26,7 +25,11 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type { EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitsOptions,
+  EmitsToProps,
+  TypeEmitsToOptions,
+} from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
@@ -35,6 +38,7 @@ import type {
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
+import type { TypeEmits } from './apiSetupHelpers'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -171,7 +175,7 @@ export function defineComponent<
   },
 ): DefineSetupFnComponent<Props, E, S>
 
-// overload 2: object format with internal type props
+// overload 2: object format no props or internal type props
 // backdoor for Vue Language Service
 export function defineComponent<
   Props = {},
@@ -190,66 +194,10 @@ export function defineComponent<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
->(
-  options: ComponentOptionsWithTypeProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >,
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  S,
-  LC,
-  Directives,
-  Exposed,
-  Provide,
-  false
->
-
-// overload 3: object format with no props
-// (uses user defined props interface)
-// return type is for language-tools and TSX support
-export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  LC extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  TE extends TypeEmits = {},
+  ResolvedEmits extends EmitsOptions = {} extends E
+    ? TypeEmitsToOptions<TE>
+    : E,
 >(
   options: ComponentOptionsWithoutProps<
     Props,
@@ -267,7 +215,9 @@ export function defineComponent<
     LC,
     Directives,
     Exposed,
-    Provide
+    Provide,
+    TE,
+    ResolvedEmits
   >,
 ): DefineComponent<
   Props,
@@ -277,19 +227,20 @@ export function defineComponent<
   M,
   Mixin,
   Extends,
-  E,
+  ResolvedEmits,
   EE,
   PublicProps,
-  ResolveProps<Props, E>,
+  ResolveProps<Props, ResolvedEmits>,
   ExtractDefaultPropTypes<Props>,
   S,
   LC,
   Directives,
   Exposed,
-  Provide
+  Provide,
+  false
 >
 
-// overload 4: object format with array props declaration
+// overload 3: object format with array props declaration
 // props inferred as { [key in PropNames]?: any }
 // return type is for language-tools and TSX support
 export function defineComponent<
@@ -349,7 +300,7 @@ export function defineComponent<
   Provide
 >
 
-// overload 5: object format with object props declaration
+// overload 4: object format with object props declaration
 // see `ExtractPropTypes` in ./componentProps.ts
 export function defineComponent<
   // the Readonly constraint allows TS to treat the type of { required: true }

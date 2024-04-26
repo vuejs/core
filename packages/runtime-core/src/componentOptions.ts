@@ -54,7 +54,11 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type { EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitsOptions,
+  EmitsToProps,
+  TypeEmitsToOptions,
+} from './componentEmits'
 import type { Directive } from './directives'
 import {
   type ComponentPublicInstance,
@@ -76,7 +80,7 @@ import {
 import type { OptionMergeFunction } from './apiCreateApp'
 import { LifecycleHooks } from './enums'
 import type { SlotsType } from './componentSlots'
-import { normalizePropsOrEmits } from './apiSetupHelpers'
+import { type TypeEmits, normalizePropsOrEmits } from './apiSetupHelpers'
 
 /**
  * Interface for declaring custom options.
@@ -218,65 +222,10 @@ export interface RuntimeCompilerOptions {
   delimiters?: [string, string]
 }
 
-export type ComponentOptionsWithTypeProps<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  LC extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  PE = Props & EmitsToProps<E>,
-> = ComponentOptionsBase<
-  PE,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  {},
-  I,
-  II,
-  S,
-  LC,
-  Directives,
-  Exposed,
-  Provide
-> & {
-  __typeProps: Props
-} & ThisType<
-    CreateComponentPublicInstance<
-      PE,
-      RawBindings,
-      D,
-      C,
-      M,
-      Mixin,
-      Extends,
-      E,
-      EE,
-      {},
-      false,
-      I,
-      S,
-      LC,
-      Directives,
-      Exposed
-    >
-  >
-
+/**
+ * This is named "without props" but also handles the case of direct type
+ * inference using internal __typeProps and __typeEmits options.
+ */
 export type ComponentOptionsWithoutProps<
   Props = {},
   RawBindings = {},
@@ -285,7 +234,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
+  E extends EmitsOptions = {},
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
@@ -294,7 +243,11 @@ export type ComponentOptionsWithoutProps<
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  PE = Props & EmitsToProps<E>,
+  TE extends TypeEmits = {},
+  ResolvedEmits extends EmitsOptions = {} extends E
+    ? TypeEmitsToOptions<TE>
+    : E,
+  PE = Props & EmitsToProps<ResolvedEmits>,
 > = ComponentOptionsBase<
   PE,
   RawBindings,
@@ -314,7 +267,15 @@ export type ComponentOptionsWithoutProps<
   Exposed,
   Provide
 > & {
-  props?: undefined
+  props?: never
+  /**
+   * @private for language-tools use only
+   */
+  __typeProps?: Props
+  /**
+   * @private for language-tools use only
+   */
+  __typeEmits?: TE
 } & ThisType<
     CreateComponentPublicInstance<
       PE,
@@ -324,8 +285,8 @@ export type ComponentOptionsWithoutProps<
       M,
       Mixin,
       Extends,
-      E,
-      PE,
+      ResolvedEmits,
+      EE,
       {},
       false,
       I,

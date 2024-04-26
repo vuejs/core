@@ -16,8 +16,8 @@ import {
 } from './component'
 import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
+  ComponentOptionsBase,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
   ComputedOptions,
   MethodOptions,
 } from './componentOptions'
@@ -135,9 +135,11 @@ export function defineEmits<EE extends string = string>(
 export function defineEmits<E extends EmitsOptions = EmitsOptions>(
   emitOptions: E,
 ): EmitFn<E>
-export function defineEmits<
-  T extends ((...args: any[]) => any) | Record<string, any[]>,
->(): T extends (...args: any[]) => any ? T : ShortEmits<T>
+export function defineEmits<T extends TypeEmits>(): T extends (
+  ...args: any[]
+) => any
+  ? T
+  : ShortEmits<T>
 // implementation
 export function defineEmits() {
   if (__DEV__) {
@@ -145,6 +147,8 @@ export function defineEmits() {
   }
   return null as any
 }
+
+export type TypeEmits = ((...args: any[]) => any) | Record<string, any[]>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -191,15 +195,33 @@ export function defineOptions<
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
 >(
-  options?: ComponentOptionsWithoutProps<
+  options?: ComponentOptionsBase<
     {},
     RawBindings,
     D,
     C,
     M,
     Mixin,
-    Extends
-  > & { emits?: undefined; expose?: undefined; slots?: undefined },
+    Extends,
+    {}
+  > & {
+    /**
+     * props should be defined via defineProps().
+     */
+    props: never
+    /**
+     * emits should be defined via defineEmits().
+     */
+    emits?: never
+    /**
+     * expose should be defined via defineExpose().
+     */
+    expose?: never
+    /**
+     * slots should be defined via defineSlots().
+     */
+    slots?: never
+  },
 ): void {
   if (__DEV__) {
     warnRuntimeUsage(`defineOptions`)
