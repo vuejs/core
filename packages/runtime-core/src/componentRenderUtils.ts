@@ -167,6 +167,7 @@ export function renderComponentRoot(
           )
         }
         root = cloneVNode(root, fallthroughAttrs)
+        if (root.transition) root.transition = root.transition.clone(root)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []
