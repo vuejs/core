@@ -1,8 +1,14 @@
 import { isFunction } from '@vue/shared'
-import { type ComponentInternalInstance, currentInstance } from './component'
+import {
+  type ComponentInternalInstance,
+  currentInstance,
+  isVaporComponent,
+} from './component'
 import { pauseTracking, resetTracking, traverse } from '@vue/reactivity'
 import { VaporErrorCodes, callWithAsyncErrorHandling } from './errorHandling'
 import { renderEffect } from './renderEffect'
+import { warn } from './warning'
+import { normalizeBlock } from './dom/element'
 
 export type DirectiveModifiers<M extends string = string> = Record<M, boolean>
 
@@ -62,13 +68,22 @@ export type DirectiveArguments = Array<
     ]
 >
 
-export function withDirectives<T extends Node>(
-  node: T,
+export function withDirectives<T extends ComponentInternalInstance | Node>(
+  nodeOrComponent: T,
   directives: DirectiveArguments,
 ): T {
   if (!currentInstance) {
-    // TODO warning
-    return node
+    __DEV__ && warn(`withDirectives can only be used inside render functions.`)
+    return nodeOrComponent
+  }
+
+  let node: Node
+  if (isVaporComponent(nodeOrComponent)) {
+    const root = getComponentNode(nodeOrComponent)
+    if (!root) return nodeOrComponent
+    node = root
+  } else {
+    node = nodeOrComponent
   }
 
   const instance = currentInstance
@@ -109,7 +124,22 @@ export function withDirectives<T extends Node>(
     }
   }
 
-  return node
+  return nodeOrComponent
+}
+
+function getComponentNode(component: ComponentInternalInstance) {
+  if (!component.block) return
+
+  const nodes = normalizeBlock(component.block)
+  if (nodes.length !== 1) {
+    warn(
+      `Runtime directive used on component with non-element root node. ` +
+        `The directives will not function as intended.`,
+    )
+    return
+  }
+
+  return nodes[0]
 }
 
 export function invokeDirectiveHook(

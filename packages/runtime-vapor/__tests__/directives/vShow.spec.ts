@@ -1,4 +1,11 @@
-import { children, on, template, vShow, withDirectives } from '../../src'
+import {
+  children,
+  createComponent,
+  on,
+  template,
+  vShow,
+  withDirectives,
+} from '../../src'
 import { nextTick, ref } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { makeRender } from '../_utils'
@@ -42,5 +49,41 @@ describe('directive: v-show', () => {
     btn?.click()
     await nextTick()
     expect(h1?.style.display).toBe('')
+  })
+
+  test('should work on component', async () => {
+    const t0 = template('<div>child</div>')
+    const t1 = template('<button>toggle</button>')
+    const n0 = t0()
+    const visible = ref(true)
+
+    function handleClick() {
+      visible.value = !visible.value
+    }
+    const { component: Child } = define({
+      render() {
+        return n0
+      },
+    })
+
+    const { instance, host } = define({
+      render() {
+        const n1 = t1()
+        const n2 = createComponent(Child, [], null, null, true)
+        withDirectives(n2, [[vShow, () => visible.value]])
+        on(n1 as HTMLElement, 'click', () => handleClick)
+        return [n1, n2]
+      },
+    }).render()
+
+    expect(host.innerHTML).toBe('<button>toggle</button><div>child</div>')
+    expect(instance.dirs.get(n0)![0].dir).toBe(vShow)
+
+    const btn = host.querySelector('button')
+    btn?.click()
+    await nextTick()
+    expect(host.innerHTML).toBe(
+      '<button>toggle</button><div style="display: none;">child</div>',
+    )
   })
 })
