@@ -226,6 +226,7 @@ export function renderComponentRoot(
         class: cls,
         style: style,
       })
+      if (root.transition) root.transition = root.transition.clone(root)
     }
   }
 
