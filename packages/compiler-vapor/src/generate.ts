@@ -3,7 +3,7 @@ import type {
   BaseCodegenResult,
   CodegenSourceMapGenerator,
 } from '@vue/compiler-dom'
-import type { IREffect, RootIRNode, VaporHelper } from './ir'
+import type { BlockIRNode, IREffect, RootIRNode, VaporHelper } from './ir'
 import { SourceMapGenerator } from 'source-map-js'
 import { extend, remove } from '@vue/shared'
 import { genBlockContent } from './generators/block'
@@ -43,11 +43,12 @@ export class CodegenContext {
 
   identifiers: Record<string, string[]> = Object.create(null)
 
+  block: BlockIRNode
   genEffects: Array<
     (effects: IREffect[], context: CodegenContext) => CodeFragment[]
   > = []
 
-  withId = <T>(fn: () => T, map: Record<string, string | null>): T => {
+  withId<T>(fn: () => T, map: Record<string, string | null>): T {
     const { identifiers } = this
     const ids = Object.keys(map)
 
@@ -60,6 +61,12 @@ export class CodegenContext {
     ids.forEach(id => remove(identifiers[id], map[id] || id))
 
     return ret
+  }
+
+  enterBlock(block: BlockIRNode) {
+    const parent = this.block
+    this.block = block
+    return () => (this.block = parent)
   }
 
   constructor(
@@ -84,6 +91,7 @@ export class CodegenContext {
       expressionPlugins: [],
     }
     this.options = extend(defaultOptions, options)
+    this.block = ir.block
 
     const [code, push] = buildCodeFragment()
     this.code = code

@@ -13,7 +13,7 @@ import { genExpression } from './expression'
 import { genPropKey } from './prop'
 import { createSimpleExpression } from '@vue/compiler-dom'
 import { genEventHandler } from './event'
-import { genDirectiveModifiers } from './directive'
+import { genDirectiveModifiers, genDirectivesForElement } from './directive'
 import { genModelHandler } from './modelValue'
 
 // TODO: generate component slots
@@ -36,6 +36,7 @@ export function genCreateComponent(
       rawProps || (isRoot ? 'null' : false),
       isRoot && 'true',
     ),
+    ...genDirectivesForElement(oper.id, context),
   ]
 
   function genTag() {

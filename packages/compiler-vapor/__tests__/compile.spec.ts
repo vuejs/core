@@ -201,5 +201,16 @@ describe('compile', () => {
       const code = compile(`<div v-test v-hello.world />`)
       expect(code).matchSnapshot()
     })
+
+    test('component', () => {
+      const code = compile(`
+      <Comp v-test>
+        <div v-if="true">
+          <Bar v-hello.world />
+        </div>
+      </Comp>
+      `)
+      expect(code).matchSnapshot()
+    })
   })
 })

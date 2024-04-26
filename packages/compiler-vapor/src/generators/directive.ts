@@ -3,7 +3,16 @@ import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
 import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
-import type { WithDirectiveIRNode } from '../ir'
+import {
+  IRNodeTypes,
+  type OperationNode,
+  type WithDirectiveIRNode,
+} from '../ir'
+
+export function genDirectivesForElement(id: number, context: CodegenContext) {
+  const dirs = filterDirectives(id, context.block.operation)
+  return dirs.length ? genWithDirective(dirs, context) : []
+}
 
 export function genWithDirective(
   opers: WithDirectiveIRNode[],
@@ -71,4 +80,14 @@ export function genDirectiveModifiers(modifiers: string[]) {
         `${isSimpleIdentifier(value) ? value : JSON.stringify(value)}: true`,
     )
     .join(', ')
+}
+
+function filterDirectives(
+  id: number,
+  operations: OperationNode[],
+): WithDirectiveIRNode[] {
+  return operations.filter(
+    (oper): oper is WithDirectiveIRNode =>
+      oper.type === IRNodeTypes.WITH_DIRECTIVE && oper.element === id,
+  )
 }

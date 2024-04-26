@@ -1,5 +1,6 @@
 import type { CodegenContext } from '../generate'
 import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import { genDirectivesForElement } from './directive'
 import { type CodeFragment, NEWLINE, buildCodeFragment, genCall } from './utils'
 
 export function genTemplates(
@@ -27,6 +28,7 @@ export function genChildren(
 
   if (id !== undefined && template !== undefined) {
     push(NEWLINE, `const n${id} = t${template}()`)
+    push(...genDirectivesForElement(id, context))
   }
 
   let prev: [id: number, elementIndex: number] | undefined
@@ -71,6 +73,7 @@ export function genChildren(
         )
       }
     }
+    push(...genDirectivesForElement(id, context))
     prev = [id, elementIndex]
     push(...genChildren(child, context, id, []))
   }

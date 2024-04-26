@@ -177,10 +177,10 @@ const t0 = _template("<input>")
 
 export function render(_ctx) {
   const n0 = t0()
-  const n1 = t0()
-  const n2 = t0()
   _withDirectives(n0, [[_vModelText, () => _ctx.setupRef.child]])
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _ctx.setupLet.child]])
+  const n2 = t0()
   _withDirectives(n2, [[_vModelText, () => _ctx.setupMaybeRef.child]])
   _delegate(n0, "update:modelValue", () => $event => (_ctx.setupRef.child = $event))
   _delegate(n1, "update:modelValue", () => $event => (_ctx.setupLet.child = $event))
@@ -192,10 +192,10 @@ export function render(_ctx) {
 exports[`compiler: vModel transform > should support member expression w/ inline 1`] = `
 "(() => {
   const n0 = t0()
-  const n1 = t0()
-  const n2 = t0()
   _withDirectives(n0, [[_vModelText, () => setupRef.value.child]])
+  const n1 = t0()
   _withDirectives(n1, [[_vModelText, () => _unref(setupLet).child]])
+  const n2 = t0()
   _withDirectives(n2, [[_vModelText, () => _unref(setupMaybeRef).child]])
   _delegate(n0, "update:modelValue", () => $event => (setupRef.value.child = $event))
   _delegate(n1, "update:modelValue", () => $event => (_unref(setupLet).child = $event))
