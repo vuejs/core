@@ -1,6 +1,5 @@
 import {
   type Component,
-  type EmitsOptions as ComponentEmitsOptions,
   type ComponentInjectOptions,
   type ComponentInternalInstance,
   type ComponentObjectPropsOptions,
@@ -13,6 +12,7 @@ import {
   type CreateComponentPublicInstance,
   type DefineComponent,
   type Directive,
+  type EmitsOptions,
   type EmitsToProps,
   type ExtractPropTypes,
   type MethodOptions,
@@ -47,11 +47,11 @@ export function defineCustomElement<Props, RawBindings = object>(
 // overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
   // props
-  PropsOptions extends
+  RuntimePropsOptions extends
     ComponentObjectPropsOptions = ComponentObjectPropsOptions,
   PropsKeys extends string = string,
   // emits
-  EmitsOptions extends ComponentEmitsOptions = {},
+  RuntimeEmitsOptions extends EmitsOptions = {},
   EmitsKeys extends string = string,
   // other options
   Data = {},
@@ -69,14 +69,14 @@ export function defineCustomElement<
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // resolved types
   InferredProps = string extends PropsKeys
-    ? ComponentObjectPropsOptions extends PropsOptions
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
       ? {}
-      : ExtractPropTypes<PropsOptions>
+      : ExtractPropTypes<RuntimePropsOptions>
     : { [key in PropsKeys]?: any },
-  ResolvedProps = InferredProps & EmitsToProps<EmitsOptions>,
+  ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
 >(
   options: {
-    props?: (PropsOptions & ThisType<void>) | PropsKeys[]
+    props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
   } & ComponentOptionsBase<
     ResolvedProps,
     SetupBindings,
@@ -85,7 +85,7 @@ export function defineCustomElement<
     Methods,
     Mixin,
     Extends,
-    EmitsOptions,
+    RuntimeEmitsOptions,
     EmitsKeys,
     {}, // Defaults
     InjectOptions,
@@ -105,7 +105,7 @@ export function defineCustomElement<
         Methods,
         Mixin,
         Extends,
-        EmitsOptions,
+        RuntimeEmitsOptions,
         EmitsKeys,
         {},
         false,

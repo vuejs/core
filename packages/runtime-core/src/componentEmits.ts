@@ -36,9 +36,9 @@ export type ObjectEmitsOptions = Record<
   ((...args: any[]) => any) | null
 >
 
-export type ComponentEmitsOptions = ObjectEmitsOptions | string[]
+export type EmitsOptions = ObjectEmitsOptions | string[]
 
-export type EmitsToProps<T extends ComponentEmitsOptions | ComponentTypeEmits> =
+export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> =
   T extends string[]
     ? {
         [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any

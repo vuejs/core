@@ -14,11 +14,7 @@ import {
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-import type {
-  ComponentEmitsOptions,
-  EmitFn,
-  ObjectEmitsOptions,
-} from './componentEmits'
+import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
 import type {
   ComponentOptionsBase,
   ComponentOptionsMixin,
@@ -136,9 +132,9 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
 export function defineEmits<EE extends string = string>(
   emitOptions: EE[],
 ): EmitFn<EE[]>
-export function defineEmits<
-  E extends ComponentEmitsOptions = ComponentEmitsOptions,
->(emitOptions: E): EmitFn<E>
+export function defineEmits<E extends EmitsOptions = EmitsOptions>(
+  emitOptions: E,
+): EmitFn<E>
 export function defineEmits<T extends ComponentTypeEmits>(): T extends (
   ...args: any[]
 ) => any
@@ -398,7 +394,7 @@ function getContext(): SetupContext {
  * @internal
  */
 export function normalizePropsOrEmits(
-  props: ComponentPropsOptions | ComponentEmitsOptions,
+  props: ComponentPropsOptions | EmitsOptions,
 ) {
   return isArray(props)
     ? props.reduce(
@@ -445,8 +441,8 @@ export function mergeDefaults(
  * @internal
  */
 export function mergeModels(
-  a: ComponentPropsOptions | ComponentEmitsOptions,
-  b: ComponentPropsOptions | ComponentEmitsOptions,
+  a: ComponentPropsOptions | EmitsOptions,
+  b: ComponentPropsOptions | EmitsOptions,
 ) {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)

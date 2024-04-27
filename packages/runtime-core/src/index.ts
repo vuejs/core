@@ -271,7 +271,7 @@ export type {
   ComponentInjectOptions,
 } from './componentOptions'
 export type {
-  ComponentEmitsOptions as EmitsOptions,
+  EmitsOptions,
   ObjectEmitsOptions,
   EmitsToProps,
 } from './componentEmits'

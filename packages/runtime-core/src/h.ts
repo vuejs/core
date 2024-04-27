@@ -18,7 +18,7 @@ import type {
   ConcreteComponent,
   FunctionalComponent,
 } from './component'
-import type { ComponentEmitsOptions } from './componentEmits'
+import type { EmitsOptions } from './componentEmits'
 import type { DefineComponent } from './apiDefineComponent'
 
 // `h` is a more user-friendly version of `createVNode` that allows omitting the
@@ -139,7 +139,7 @@ export function h(
 // functional component
 export function h<
   P,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   S extends Record<string, any> = any,
 >(
   type: FunctionalComponent<P, any, S, any>,

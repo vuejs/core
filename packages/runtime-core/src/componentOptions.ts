@@ -55,7 +55,7 @@ import type {
   ExtractPropTypes,
 } from './componentProps'
 import type {
-  ComponentEmitsOptions,
+  EmitsOptions,
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
@@ -113,7 +113,7 @@ export interface ComponentOptionsBase<
   M extends MethodOptions,
   Mixin extends ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin,
-  E extends ComponentEmitsOptions,
+  E extends EmitsOptions,
   EE extends string = string,
   Defaults = {},
   I extends ComponentInjectOptions = {},
@@ -233,7 +233,7 @@ export type ComponentOptions<
   M extends MethodOptions = any,
   Mixin extends ComponentOptionsMixin = any,
   Extends extends ComponentOptionsMixin = any,
-  E extends ComponentEmitsOptions = any,
+  E extends EmitsOptions = any,
   EE extends string = string,
   Defaults = {},
   I extends ComponentInjectOptions = {},
@@ -1031,16 +1031,16 @@ function mergeObjectOptions(to: Object | undefined, from: Object | undefined) {
 }
 
 function mergeEmitsOrPropsOptions(
-  to: ComponentEmitsOptions | undefined,
-  from: ComponentEmitsOptions | undefined,
-): ComponentEmitsOptions | undefined
+  to: EmitsOptions | undefined,
+  from: EmitsOptions | undefined,
+): EmitsOptions | undefined
 function mergeEmitsOrPropsOptions(
   to: ComponentPropsOptions | undefined,
   from: ComponentPropsOptions | undefined,
 ): ComponentPropsOptions | undefined
 function mergeEmitsOrPropsOptions(
-  to: ComponentPropsOptions | ComponentEmitsOptions | undefined,
-  from: ComponentPropsOptions | ComponentEmitsOptions | undefined,
+  to: ComponentPropsOptions | EmitsOptions | undefined,
+  from: ComponentPropsOptions | EmitsOptions | undefined,
 ) {
   if (to) {
     if (isArray(to) && isArray(from)) {
@@ -1082,7 +1082,7 @@ export type ComponentOptionsWithoutProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
@@ -1092,7 +1092,7 @@ export type ComponentOptionsWithoutProps<
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   TE extends ComponentTypeEmits = {},
-  ResolvedEmits extends ComponentEmitsOptions = {} extends E
+  ResolvedEmits extends EmitsOptions = {} extends E
     ? TypeEmitsToOptions<TE>
     : E,
   PE = Props & EmitsToProps<ResolvedEmits>,
@@ -1156,7 +1156,7 @@ export type ComponentOptionsWithArrayProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends ComponentEmitsOptions = ComponentEmitsOptions,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,
@@ -1218,7 +1218,7 @@ export type ComponentOptionsWithObjectProps<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends ComponentEmitsOptions = ComponentEmitsOptions,
+  E extends EmitsOptions = EmitsOptions,
   EE extends string = string,
   I extends ComponentInjectOptions = {},
   II extends string = string,

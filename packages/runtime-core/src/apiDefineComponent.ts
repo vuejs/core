@@ -23,7 +23,7 @@ import type {
   ExtractPropTypes,
 } from './componentProps'
 import type {
-  ComponentEmitsOptions,
+  EmitsOptions,
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
@@ -41,10 +41,7 @@ export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-type ResolveProps<
-  PropsOrPropOptions,
-  E extends ComponentEmitsOptions,
-> = Readonly<
+type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
   PropsOrPropOptions extends ComponentPropsOptions
     ? ExtractPropTypes<PropsOrPropOptions>
     : PropsOrPropOptions
@@ -59,7 +56,7 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
@@ -113,7 +110,7 @@ export type DefineComponent<
 
 export type DefineSetupFnComponent<
   P extends Record<string, any>,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
@@ -144,7 +141,7 @@ export type DefineSetupFnComponent<
 // (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -160,7 +157,7 @@ export function defineComponent<
 ): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends ComponentEmitsOptions = {},
+  E extends EmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -179,13 +176,13 @@ export function defineComponent<
 export function defineComponent<
   // props
   TypeProps,
-  PropsOptions extends
+  RuntimePropsOptions extends
     ComponentObjectPropsOptions = ComponentObjectPropsOptions,
-  PropsKeys extends string = string,
+  RuntimePropsKeys extends string = string,
   // emits
   TypeEmits extends ComponentTypeEmits = {},
-  EmitsOptions extends ComponentEmitsOptions = {},
-  EmitsKeys extends string = string,
+  RuntimeEmitsOptions extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
   // other options
   Data = {},
   SetupBindings = {},
@@ -201,20 +198,20 @@ export function defineComponent<
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
   // resolved types
-  ResolvedEmits extends ComponentEmitsOptions = {} extends EmitsOptions
+  ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
     ? TypeEmitsToOptions<TypeEmits>
-    : EmitsOptions,
+    : RuntimeEmitsOptions,
   InferredProps = unknown extends TypeProps
-    ? string extends PropsKeys
-      ? ComponentObjectPropsOptions extends PropsOptions
+    ? string extends RuntimePropsKeys
+      ? ComponentObjectPropsOptions extends RuntimePropsOptions
         ? {}
-        : ExtractPropTypes<PropsOptions>
-      : { [key in PropsKeys]?: any }
+        : ExtractPropTypes<RuntimePropsOptions>
+      : { [key in RuntimePropsKeys]?: any }
     : TypeProps,
   ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
 >(
   options: {
-    props?: (PropsOptions & ThisType<void>) | PropsKeys[]
+    props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
     /**
      * @private for language-tools use only
      */
@@ -231,8 +228,8 @@ export function defineComponent<
     Methods,
     Mixin,
     Extends,
-    EmitsOptions,
-    EmitsKeys,
+    RuntimeEmitsOptions,
+    RuntimeEmitsKeys,
     {}, // Defaults
     InjectOptions,
     InjectKeys,
@@ -252,7 +249,7 @@ export function defineComponent<
         Mixin,
         Extends,
         ResolvedEmits,
-        EmitsKeys,
+        RuntimeEmitsKeys,
         {},
         false,
         InjectOptions,
@@ -271,10 +268,10 @@ export function defineComponent<
   Mixin,
   Extends,
   ResolvedEmits,
-  EmitsKeys,
+  RuntimeEmitsKeys,
   PublicProps,
   ResolvedProps,
-  ExtractDefaultPropTypes<PropsOptions>,
+  ExtractDefaultPropTypes<RuntimePropsOptions>,
   Slots,
   LocalComponents,
   Directives,
