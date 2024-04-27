@@ -2,7 +2,6 @@ import { type DebuggerOptions, ReactiveEffect } from './effect'
 import { type Ref, trackRefValue, triggerRefValue } from './ref'
 import { NOOP, hasChanged, isFunction } from '@vue/shared'
 import { toRaw } from './reactive'
-import type { Dep } from './dep'
 import { DirtyLevels, ReactiveFlags } from './constants'
 import { warn } from './warning'
 
@@ -32,8 +31,6 @@ export const COMPUTED_SIDE_EFFECT_WARN =
   ` Check the docs for more details: https://vuejs.org/guide/essentials/computed.html#getters-should-be-side-effect-free`
 
 export class ComputedRefImpl<T> {
-  public dep?: Dep = undefined
-
   private _value!: T
   public readonly effect: ReactiveEffect<T>
 
