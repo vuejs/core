@@ -11,13 +11,11 @@ import {
 import {
   type BlockIRNode,
   DynamicFlag,
-  type IRDynamicInfo,
   IRNodeTypes,
   type VaporDirectiveNode,
 } from '../ir'
-import { extend } from '@vue/shared'
 import { findProp, propToExpression } from '../utils'
-import { genDefaultDynamic, wrapTemplate } from './utils'
+import { newDynamic, wrapTemplate } from './utils'
 
 export const transformVFor = createStructuralDirectiveTransform(
   'for',
@@ -53,9 +51,7 @@ export function processFor(
   const render: BlockIRNode = {
     type: IRNodeTypes.BLOCK,
     node,
-    dynamic: extend(genDefaultDynamic(), {
-      flags: DynamicFlag.REFERENCED,
-    } satisfies Partial<IRDynamicInfo>),
+    dynamic: newDynamic(),
     effect: [],
     operation: [],
     returns: [],

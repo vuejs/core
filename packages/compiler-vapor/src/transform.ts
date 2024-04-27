@@ -25,7 +25,7 @@ import {
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression } from './utils'
-import { genDefaultDynamic } from './transforms/utils'
+import { newDynamic } from './transforms/utils'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -174,7 +174,7 @@ export class TransformContext<T extends AllNode = AllNode> {
 
       template: '',
       childrenTemplate: [],
-      dynamic: genDefaultDynamic(),
+      dynamic: newDynamic(),
     } satisfies Partial<TransformContext<T>>)
   }
 }
@@ -217,9 +217,7 @@ export function transform(
     block: {
       type: IRNodeTypes.BLOCK,
       node: root,
-      dynamic: extend(genDefaultDynamic(), {
-        flags: DynamicFlag.REFERENCED,
-      } satisfies Partial<IRDynamicInfo>),
+      dynamic: newDynamic(),
       effect: [],
       operation: [],
       returns: [],

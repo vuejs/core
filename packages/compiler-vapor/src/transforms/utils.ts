@@ -11,8 +11,8 @@ import {
 import { extend } from '@vue/shared'
 import { DynamicFlag, type IRDynamicInfo } from '../ir'
 
-export const genDefaultDynamic = (): IRDynamicInfo => ({
-  flags: DynamicFlag.NONE,
+export const newDynamic = (): IRDynamicInfo => ({
+  flags: DynamicFlag.REFERENCED,
   children: [],
 })
 
