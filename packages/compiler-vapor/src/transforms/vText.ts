@@ -18,14 +18,9 @@ export const transformVText: DirectiveTransform = (dir, node, context) => {
     context.childrenTemplate.length = 0
   }
 
-  context.registerEffect(
-    [exp],
-    [
-      {
-        type: IRNodeTypes.SET_TEXT,
-        element: context.reference(),
-        values: [exp],
-      },
-    ],
-  )
+  context.registerEffect([exp], {
+    type: IRNodeTypes.SET_TEXT,
+    element: context.reference(),
+    values: [exp],
+  })
 }

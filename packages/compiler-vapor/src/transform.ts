@@ -86,7 +86,7 @@ export interface TransformContext<T extends AllNode = AllNode> {
   registerTemplate(customTemplate?: string): number
   registerEffect(
     expressions: SimpleExpressionNode[],
-    operation: OperationNode[],
+    ...operation: OperationNode[]
   ): void
   registerOperation(...operations: OperationNode[]): void
 }
@@ -159,7 +159,7 @@ function createRootContext(
       this.dynamic.flags |= DynamicFlag.REFERENCED
       return (this.dynamic.id = this.increaseId())
     },
-    registerEffect(expressions, operations) {
+    registerEffect(expressions, ...operations) {
       expressions = expressions.filter(exp => !isConstantExpression(exp))
       if (this.inVOnce || expressions.length === 0) {
         return this.registerOperation(...operations)

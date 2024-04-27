@@ -135,13 +135,11 @@ function transformNativeElement(
 
   if (propsResult[0] /* dynamic props */) {
     const [, dynamicArgs, expressions] = propsResult
-    context.registerEffect(expressions, [
-      {
-        type: IRNodeTypes.SET_DYNAMIC_PROPS,
-        element: context.reference(),
-        props: dynamicArgs,
-      },
-    ])
+    context.registerEffect(expressions, {
+      type: IRNodeTypes.SET_DYNAMIC_PROPS,
+      element: context.reference(),
+      props: dynamicArgs,
+    })
   } else {
     for (const prop of propsResult[1]) {
       const { key, values } = prop
@@ -149,13 +147,11 @@ function transformNativeElement(
         template += ` ${key.content}`
         if (values[0].content) template += `="${values[0].content}"`
       } else {
-        context.registerEffect(values, [
-          {
-            type: IRNodeTypes.SET_PROP,
-            element: context.reference(),
-            prop,
-          },
-        ])
+        context.registerEffect(values, {
+          type: IRNodeTypes.SET_PROP,
+          element: context.reference(),
+          prop,
+        })
       }
     }
   }
@@ -226,13 +222,12 @@ function buildProps(
           } else {
             context.registerEffect(
               [prop.exp],
-              [
-                {
-                  type: IRNodeTypes.SET_DYNAMIC_EVENTS,
-                  element: context.reference(),
-                  event: prop.exp,
-                },
-              ],
+
+              {
+                type: IRNodeTypes.SET_DYNAMIC_EVENTS,
+                element: context.reference(),
+                event: prop.exp,
+              },
             )
           }
         } else {

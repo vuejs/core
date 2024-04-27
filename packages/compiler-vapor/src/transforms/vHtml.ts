@@ -18,14 +18,9 @@ export const transformVHtml: DirectiveTransform = (dir, node, context) => {
     context.childrenTemplate.length = 0
   }
 
-  context.registerEffect(
-    [exp],
-    [
-      {
-        type: IRNodeTypes.SET_HTML,
-        element: context.reference(),
-        value: exp,
-      },
-    ],
-  )
+  context.registerEffect([exp], {
+    type: IRNodeTypes.SET_HTML,
+    element: context.reference(),
+    value: exp,
+  })
 }

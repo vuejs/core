@@ -84,5 +84,5 @@ export const transformVOn: DirectiveTransform = (dir, node, context) => {
     effect: !arg.isStatic,
   }
 
-  context.registerEffect([arg], [operation])
+  context.registerEffect([arg], operation)
 }

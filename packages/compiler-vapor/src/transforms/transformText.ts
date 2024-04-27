@@ -65,13 +65,11 @@ function processTextLikeContainer(
   context: TransformContext<ElementNode>,
 ) {
   const values = children.map(child => createTextLikeExpression(child, context))
-  context.registerEffect(values, [
-    {
-      type: IRNodeTypes.SET_TEXT,
-      element: context.reference(),
-      values,
-    },
-  ])
+  context.registerEffect(values, {
+    type: IRNodeTypes.SET_TEXT,
+    element: context.reference(),
+    values,
+  })
 }
 
 function createTextLikeExpression(node: TextLike, context: TransformContext) {
