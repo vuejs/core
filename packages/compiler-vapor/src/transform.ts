@@ -89,10 +89,7 @@ export class TransformContext<T extends AllNode = AllNode> {
     this.root = this as TransformContext<RootNode>
   }
 
-  enterBlock(
-    ir: TransformContext['block'],
-    isVFor: boolean = false,
-  ): () => void {
+  enterBlock(ir: BlockIRNode, isVFor: boolean = false): () => void {
     const { block, template, dynamic, childrenTemplate } = this
     this.block = ir
     this.dynamic = ir.dynamic
@@ -205,18 +202,18 @@ const defaultOptions = {
 
 // AST -> IR
 export function transform(
-  root: RootNode,
+  node: RootNode,
   options: TransformOptions = {},
 ): RootIRNode {
   const ir: RootIRNode = {
     type: IRNodeTypes.ROOT,
-    node: root,
-    source: root.source,
+    node,
+    source: node.source,
     template: [],
     component: new Set(),
     block: {
       type: IRNodeTypes.BLOCK,
-      node: root,
+      node,
       dynamic: newDynamic(),
       effect: [],
       operation: [],
@@ -224,7 +221,7 @@ export function transform(
     },
   }
 
-  const context = new TransformContext(ir, root, options)
+  const context = new TransformContext(ir, node, options)
 
   transformNode(context)
 

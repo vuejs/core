@@ -23,16 +23,15 @@ import { transformVOn } from './transforms/vOn'
 import { transformVShow } from './transforms/vShow'
 import { transformRef } from './transforms/transformRef'
 import { transformText } from './transforms/transformText'
-import type { HackOptions } from './ir'
 import { transformVModel } from './transforms/vModel'
 import { transformVIf } from './transforms/vIf'
 import { transformVFor } from './transforms/vFor'
 import { transformComment } from './transforms/transformComment'
+import type { HackOptions } from './ir'
 
 export { wrapTemplate } from './transforms/utils'
 
-// TODO: copied from @vue/compiler-core
-// code/AST -> IR -> JS codegen
+// code/AST -> IR (transform) -> JS (generate)
 export function compile(
   source: string | RootNode,
   options: CompilerOptions = {},
