@@ -23,7 +23,7 @@ export type Awaited<T> = T extends null | undefined
     : T // non-object or non-thenable
 
 /**
- * Utility for extracting the paramteres from a function overload (for typed emits)
+ * Utility for extracting the parameters from a function overload (for typed emits)
  * https://github.com/microsoft/TypeScript/issues/32164#issuecomment-1146737709
  */
 export type OverloadParameters<T extends (...args: any[]) => any> = Parameters<
