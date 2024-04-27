@@ -166,8 +166,7 @@ export function renderComponentRoot(
             propsOptions,
           )
         }
-        root = cloneVNode(root, fallthroughAttrs)
-        if (root.transition) root.transition = root.transition.clone(root)
+        root = cloneVNode(root, fallthroughAttrs, false, true)
       } else if (__DEV__ && !accessedAttrs && root.type !== Comment) {
         const allAttrs = Object.keys(attrs)
         const eventAttrs: string[] = []
@@ -222,11 +221,15 @@ export function renderComponentRoot(
           getComponentName(instance.type),
         )
       }
-      root = cloneVNode(root, {
-        class: cls,
-        style: style,
-      })
-      if (root.transition) root.transition = root.transition.clone(root)
+      root = cloneVNode(
+        root,
+        {
+          class: cls,
+          style: style,
+        },
+        false,
+        true,
+      )
     }
   }
 
@@ -239,7 +242,7 @@ export function renderComponentRoot(
       )
     }
     // clone before mutating since the root may be a hoisted vnode
-    root = cloneVNode(root)
+    root = cloneVNode(root, undefined, false, true)
     root.dirs = root.dirs ? root.dirs.concat(vnode.dirs) : vnode.dirs
   }
   // inherit transition data

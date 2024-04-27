@@ -624,6 +624,7 @@ export function cloneVNode<T, U>(
   vnode: VNode<T, U>,
   extraProps?: (Data & VNodeProps) | null,
   mergeRef = false,
+  cloneTransition = false,
 ): VNode<T, U> {
   // This is intentionally NOT using spread or extend to avoid the runtime
   // key enumeration cost.
@@ -687,6 +688,10 @@ export function cloneVNode<T, U>(
   }
   if (__COMPAT__) {
     defineLegacyVNodeProperties(cloned as VNode)
+  }
+
+  if (cloneTransition && vnode.transition) {
+    cloned.transition = vnode.transition.clone(cloned as VNode)
   }
   return cloned
 }
