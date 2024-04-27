@@ -3,9 +3,9 @@ import type { CodegenContext } from '../generate'
 import type { CreateComponentIRNode, IRProp } from '../ir'
 import {
   type CodeFragment,
-  INDENT_END,
-  INDENT_START,
   NEWLINE,
+  SEGMENTS_ARRAY,
+  SEGMENTS_OBJECT_NEWLINE,
   genCall,
   genMulti,
 } from './utils'
@@ -64,17 +64,13 @@ export function genCreateComponent(
       })
       .filter(Boolean)
     if (props.length) {
-      return genMulti(['[', ']', ', '], ...props)
+      return genMulti(SEGMENTS_ARRAY, ...props)
     }
   }
 
   function genStaticProps(props: IRProp[]) {
     return genMulti(
-      [
-        ['{', INDENT_START, NEWLINE],
-        [INDENT_END, NEWLINE, '}'],
-        [', ', NEWLINE],
-      ],
+      SEGMENTS_OBJECT_NEWLINE,
       ...props.map(prop => {
         return [
           ...genPropKey(prop, context),

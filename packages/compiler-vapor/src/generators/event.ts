@@ -8,9 +8,8 @@ import type { SetDynamicEventsIRNode, SetEventIRNode } from '../ir'
 import { genExpression } from './expression'
 import {
   type CodeFragment,
-  INDENT_END,
-  INDENT_START,
   NEWLINE,
+  SEGMENTS_OBJECT_NEWLINE,
   genCall,
   genMulti,
 } from './utils'
@@ -60,11 +59,7 @@ export function genSetEvent(
     if (!options.length && !nonKeys.length && !keys.length && !effect) return
 
     return genMulti(
-      [
-        ['{', INDENT_START, NEWLINE],
-        [INDENT_END, NEWLINE, '}'],
-        [', ', NEWLINE],
-      ],
+      SEGMENTS_OBJECT_NEWLINE,
       !!nonKeys.length && ['modifiers: ', genArrayExpression(nonKeys)],
       !!keys.length && ['keys: ', genArrayExpression(keys)],
       effect && ['effect: true'],

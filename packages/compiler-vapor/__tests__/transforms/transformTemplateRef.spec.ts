@@ -5,7 +5,7 @@ import {
   type IfIRNode,
   transformChildren,
   transformElement,
-  transformRef,
+  transformTemplateRef,
   transformVFor,
   transformVIf,
 } from '../../src'
@@ -15,7 +15,7 @@ const compileWithTransformRef = makeCompile({
   nodeTransforms: [
     transformVIf,
     transformVFor,
-    transformRef,
+    transformTemplateRef,
     transformElement,
     transformChildren,
   ],
@@ -32,7 +32,7 @@ describe('compiler: template ref transform', () => {
     expect(ir.template).toEqual(['<div></div>'])
     expect(ir.block.operation).lengthOf(1)
     expect(ir.block.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_REF,
+      type: IRNodeTypes.SET_TEMPLATE_REF,
       element: 0,
       value: {
         content: 'foo',
@@ -58,7 +58,7 @@ describe('compiler: template ref transform', () => {
     expect(ir.template).toEqual(['<div></div>'])
     expect(ir.block.operation).lengthOf(1)
     expect(ir.block.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_REF,
+      type: IRNodeTypes.SET_TEMPLATE_REF,
       element: 0,
       value: {
         content: 'foo',
@@ -85,7 +85,7 @@ describe('compiler: template ref transform', () => {
 
     expect(positive.operation).lengthOf(1)
     expect(positive.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_REF,
+      type: IRNodeTypes.SET_TEMPLATE_REF,
       element: 2,
       value: {
         content: 'foo',
@@ -109,7 +109,7 @@ describe('compiler: template ref transform', () => {
     const { render } = ir.block.operation[0] as ForIRNode
     expect(render.operation).lengthOf(1)
     expect(render.operation[0]).toMatchObject({
-      type: IRNodeTypes.SET_REF,
+      type: IRNodeTypes.SET_TEMPLATE_REF,
       element: 2,
       value: {
         content: 'foo',

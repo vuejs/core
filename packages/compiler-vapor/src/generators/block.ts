@@ -4,13 +4,14 @@ import {
   INDENT_END,
   INDENT_START,
   NEWLINE,
+  SEGMENTS_ARRAY,
   buildCodeFragment,
   genCall,
+  genMulti,
 } from './utils'
 import type { CodegenContext } from '../generate'
 import { genEffects, genOperations } from './operation'
 import { genChildren } from './template'
-import { genMulti } from './utils'
 
 export function genBlock(
   oper: BlockIRNode,
@@ -68,7 +69,7 @@ export function genBlockContent(
 
   const returnsCode: CodeFragment[] =
     returns.length > 1
-      ? genMulti(['[', ']', ', '], ...returns.map(n => `n${n}`))
+      ? genMulti(SEGMENTS_ARRAY, ...returns.map(n => `n${n}`))
       : [`n${returns[0]}`]
   push(...(customReturns ? customReturns(returnsCode) : returnsCode))
 

@@ -30,22 +30,23 @@ export function buildCodeFragment(...frag: CodeFragment[]) {
   return [frag, push] as const
 }
 
+type Segments = [
+  left: CodeFragments,
+  right: CodeFragments,
+  segment: CodeFragments,
+]
 export function genMulti(
-  [left, right, seg]: [
-    left: CodeFragments,
-    right: CodeFragments,
-    segment: CodeFragments,
-  ],
-  ...fns: CodeFragments[]
+  [left, right, seg]: Segments,
+  ...frags: CodeFragments[]
 ): CodeFragment[] {
   const frag: CodeFragment[] = []
-  fns = fns.filter(Boolean)
+  frags = frags.filter(Boolean)
   push(left)
   for (let [i, fn] of (
-    fns as Array<Exclude<CodeFragments, FalsyValue>>
+    frags as Array<Exclude<CodeFragments, FalsyValue>>
   ).entries()) {
     push(fn)
-    if (i < fns.length - 1) push(seg)
+    if (i < frags.length - 1) push(seg)
   }
   push(right)
   return frag
@@ -55,12 +56,19 @@ export function genMulti(
     frag.push(...fn)
   }
 }
+export const SEGMENTS_ARRAY: Segments = ['[', ']', ', ']
+export const SEGMENTS_OBJECT: Segments = ['{ ', ' }', ', ']
+export const SEGMENTS_OBJECT_NEWLINE: Segments = [
+  ['{', INDENT_START, NEWLINE],
+  [INDENT_END, NEWLINE, '}'],
+  [', ', NEWLINE],
+]
 
 export function genCall(
   name: string,
-  ...args: CodeFragments[]
+  ...frags: CodeFragments[]
 ): CodeFragment[] {
-  return [name, ...genMulti(['(', ')', ', '], ...args)]
+  return [name, ...genMulti(['(', ')', ', '], ...frags)]
 }
 
 export function genCodeFragment(context: CodegenContext) {

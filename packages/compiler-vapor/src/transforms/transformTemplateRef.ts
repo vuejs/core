@@ -9,7 +9,7 @@ import { normalizeBindShorthand } from './vBind'
 import { findProp } from '../utils'
 import { EMPTY_EXPRESSION } from './utils'
 
-export const transformRef: NodeTransform = (node, context) => {
+export const transformTemplateRef: NodeTransform = (node, context) => {
   if (node.type !== NodeTypes.ELEMENT) return
 
   const dir = findProp(node, 'ref', false, true)
@@ -26,7 +26,7 @@ export const transformRef: NodeTransform = (node, context) => {
 
   return () =>
     context.registerOperation({
-      type: IRNodeTypes.SET_REF,
+      type: IRNodeTypes.SET_TEMPLATE_REF,
       element: context.reference(),
       value,
       refFor: !!context.inVFor,

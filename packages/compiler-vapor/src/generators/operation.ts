@@ -7,7 +7,7 @@ import { genSetHtml } from './html'
 import { genIf } from './if'
 import { genSetModelValue } from './modelValue'
 import { genDynamicProps, genSetProp } from './prop'
-import { genSetRef } from './ref'
+import { genSetTemplateRef } from './templateRef'
 import { genCreateTextNode, genSetText } from './text'
 import {
   type CodeFragment,
@@ -43,8 +43,8 @@ export function genOperation(
       return genSetDynamicEvents(oper, context)
     case IRNodeTypes.SET_HTML:
       return genSetHtml(oper, context)
-    case IRNodeTypes.SET_REF:
-      return genSetRef(oper, context)
+    case IRNodeTypes.SET_TEMPLATE_REF:
+      return genSetTemplateRef(oper, context)
     case IRNodeTypes.SET_MODEL_VALUE:
       return genSetModelValue(oper, context)
     case IRNodeTypes.CREATE_TEXT_NODE:

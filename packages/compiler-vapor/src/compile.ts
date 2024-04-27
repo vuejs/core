@@ -21,7 +21,7 @@ import { transformVText } from './transforms/vText'
 import { transformVBind } from './transforms/vBind'
 import { transformVOn } from './transforms/vOn'
 import { transformVShow } from './transforms/vShow'
-import { transformRef } from './transforms/transformRef'
+import { transformTemplateRef } from './transforms/transformTemplateRef'
 import { transformText } from './transforms/transformText'
 import { transformVModel } from './transforms/vModel'
 import { transformVIf } from './transforms/vIf'
@@ -103,7 +103,7 @@ export function getBaseTransformPreset(
       transformOnce,
       transformVIf,
       transformVFor,
-      transformRef,
+      transformTemplateRef,
       transformText,
       transformElement,
       transformComment,

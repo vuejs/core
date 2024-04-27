@@ -23,7 +23,7 @@ export enum IRNodeTypes {
   SET_EVENT,
   SET_DYNAMIC_EVENTS,
   SET_HTML,
-  SET_REF,
+  SET_TEMPLATE_REF,
   SET_MODEL_VALUE,
 
   INSERT_NODE,
@@ -140,8 +140,8 @@ export interface SetHtmlIRNode extends BaseIRNode {
   value: SimpleExpressionNode
 }
 
-export interface SetRefIRNode extends BaseIRNode {
-  type: IRNodeTypes.SET_REF
+export interface SetTemplateRefIRNode extends BaseIRNode {
+  type: IRNodeTypes.SET_TEMPLATE_REF
   element: number
   value: SimpleExpressionNode
   refFor: boolean
@@ -202,7 +202,7 @@ export type OperationNode =
   | SetEventIRNode
   | SetDynamicEventsIRNode
   | SetHtmlIRNode
-  | SetRefIRNode
+  | SetTemplateRefIRNode
   | SetModelValueIRNode
   | CreateTextNodeIRNode
   | InsertNodeIRNode

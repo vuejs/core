@@ -2,7 +2,13 @@ import { createSimpleExpression, isSimpleIdentifier } from '@vue/compiler-dom'
 import { camelize } from '@vue/shared'
 import { genExpression } from './expression'
 import type { CodegenContext } from '../generate'
-import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
+import {
+  type CodeFragment,
+  NEWLINE,
+  SEGMENTS_ARRAY,
+  genCall,
+  genMulti,
+} from './utils'
 import {
   IRNodeTypes,
   type OperationNode,
@@ -22,7 +28,7 @@ export function genWithDirective(
 
   const element = `n${opers[0].element}`
   const directiveItems = opers.map(genDirective)
-  const directives = genMulti(['[', ']', ', '], ...directiveItems)
+  const directives = genMulti(SEGMENTS_ARRAY, ...directiveItems)
 
   return [
     NEWLINE,
@@ -47,7 +53,7 @@ export function genWithDirective(
       ? ['{ ', genDirectiveModifiers(dir.modifiers), ' }']
       : false
 
-    return genMulti(['[', ']', ', '], directive, value, argument, modifiers)
+    return genMulti(SEGMENTS_ARRAY, directive, value, argument, modifiers)
 
     function genDirective() {
       const {

@@ -11,7 +11,14 @@ import type {
   VaporHelper,
 } from '../ir'
 import { genExpression } from './expression'
-import { type CodeFragment, NEWLINE, genCall, genMulti } from './utils'
+import {
+  type CodeFragment,
+  NEWLINE,
+  SEGMENTS_ARRAY,
+  SEGMENTS_OBJECT,
+  genCall,
+  genMulti,
+} from './utils'
 import { toHandlerKey } from '@vue/shared'
 
 // only the static key prop will reach here
@@ -77,7 +84,7 @@ function genLiteralObjectProps(
   context: CodegenContext,
 ): CodeFragment[] {
   return genMulti(
-    ['{ ', ' }', ', '],
+    SEGMENTS_OBJECT,
     ...props.map(prop => [
       ...genPropKey(prop, context),
       `: `,
@@ -120,7 +127,7 @@ function genPropValue(values: SimpleExpressionNode[], context: CodegenContext) {
     return genExpression(values[0], context)
   }
   return genMulti(
-    ['[', ']', ', '],
+    SEGMENTS_ARRAY,
     ...values.map(expr => genExpression(expr, context)),
   )
 }
