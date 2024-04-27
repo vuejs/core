@@ -11,8 +11,6 @@ import {
   transformNode,
 } from '../transform'
 import { DynamicFlag, type IRDynamicInfo, IRNodeTypes } from '../ir'
-import { extend } from '@vue/shared'
-import { genDefaultDynamic } from './utils'
 
 export const transformChildren: NodeTransform = (node, context) => {
   const isFragment =
@@ -102,13 +100,5 @@ function createContext<T extends TemplateChildNode>(
   parent: TransformContext<RootNode | ElementNode>,
   index: number,
 ): TransformContext<T> {
-  return extend({}, parent, {
-    node,
-    parent,
-    index,
-
-    template: '',
-    childrenTemplate: [],
-    dynamic: genDefaultDynamic(),
-  } satisfies Partial<TransformContext<T>>) satisfies TransformContext<T>
+  return parent.create(node, index)
 }
