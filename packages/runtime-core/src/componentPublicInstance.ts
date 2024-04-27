@@ -47,7 +47,7 @@ import {
   resolveMergedOptions,
   shouldCacheAccess,
 } from './componentOptions'
-import type { EmitFn, EmitsOptions } from './componentEmits'
+import type { ComponentEmitsOptions, EmitFn } from './componentEmits'
 import type { SlotsType, UnwrapSlotsType } from './componentSlots'
 import { markAttrsAccessed } from './componentRenderUtils'
 import { currentRenderingInstance } from './componentRenderContext'
@@ -158,7 +158,7 @@ export type CreateComponentPublicInstance<
   M extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,
@@ -225,7 +225,7 @@ export type ComponentPublicInstance<
   D = {}, // return from data()
   C extends ComputedOptions = {},
   M extends MethodOptions = {},
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   PublicProps = P,
   Defaults = {},
   MakeDefaultsOptional extends boolean = false,

@@ -88,10 +88,14 @@ describe('defineCustomElement', () => {
 
   describe('props', () => {
     const E = defineCustomElement({
-      props: ['foo', 'bar', 'bazQux'],
+      props: {
+        foo: [String, null],
+        bar: Object,
+        bazQux: null,
+      },
       render() {
         return [
-          h('div', null, this.foo),
+          h('div', null, this.foo || ''),
           h('div', null, this.bazQux || (this.bar && this.bar.x)),
         ]
       },

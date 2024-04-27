@@ -29,16 +29,16 @@ import {
   compatModelEmit,
   compatModelEventPrefix,
 } from './compat/componentVModel'
-import type { TypeEmits } from './apiSetupHelpers'
+import type { ComponentTypeEmits } from './apiSetupHelpers'
 
 export type ObjectEmitsOptions = Record<
   string,
   ((...args: any[]) => any) | null
 >
 
-export type EmitsOptions = ObjectEmitsOptions | string[]
+export type ComponentEmitsOptions = ObjectEmitsOptions | string[]
 
-export type EmitsToProps<T extends EmitsOptions | TypeEmits> =
+export type EmitsToProps<T extends ComponentEmitsOptions | ComponentTypeEmits> =
   T extends string[]
     ? {
         [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any
@@ -57,7 +57,7 @@ export type EmitsToProps<T extends EmitsOptions | TypeEmits> =
         }
       : {}
 
-export type TypeEmitsToOptions<T extends TypeEmits> =
+export type TypeEmitsToOptions<T extends ComponentTypeEmits> =
   T extends Record<string, any[]>
     ? {
         [K in keyof T]: T[K] extends [...args: infer Args]

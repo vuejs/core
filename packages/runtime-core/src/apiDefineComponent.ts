@@ -3,9 +3,6 @@ import type {
   ComponentOptions,
   ComponentOptionsBase,
   ComponentOptionsMixin,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithoutProps,
   ComponentProvideOptions,
   ComputedOptions,
   MethodOptions,
@@ -26,7 +23,7 @@ import type {
   ExtractPropTypes,
 } from './componentProps'
 import type {
-  EmitsOptions,
+  ComponentEmitsOptions,
   EmitsToProps,
   TypeEmitsToOptions,
 } from './componentEmits'
@@ -38,13 +35,16 @@ import type {
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
 import type { Directive } from './directives'
-import type { TypeEmits } from './apiSetupHelpers'
+import type { ComponentTypeEmits } from './apiSetupHelpers'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
   ComponentCustomProps
 
-type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<
+type ResolveProps<
+  PropsOrPropOptions,
+  E extends ComponentEmitsOptions,
+> = Readonly<
   PropsOrPropOptions extends ComponentPropsOptions
     ? ExtractPropTypes<PropsOrPropOptions>
     : PropsOrPropOptions
@@ -59,7 +59,7 @@ export type DefineComponent<
   M extends MethodOptions = MethodOptions,
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   EE extends string = string,
   PP = PublicProps,
   Props = ResolveProps<PropsOrPropOptions, E>,
@@ -113,7 +113,7 @@ export type DefineComponent<
 
 export type DefineSetupFnComponent<
   P extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   S extends SlotsType = SlotsType,
   Props = P & EmitsToProps<E>,
   PP = PublicProps,
@@ -144,7 +144,7 @@ export type DefineSetupFnComponent<
 // (uses user defined props interface)
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -160,7 +160,7 @@ export function defineComponent<
 ): DefineSetupFnComponent<Props, E, S>
 export function defineComponent<
   Props extends Record<string, any>,
-  E extends EmitsOptions = {},
+  E extends ComponentEmitsOptions = {},
   EE extends string = string,
   S extends SlotsType = {},
 >(
@@ -175,189 +175,114 @@ export function defineComponent<
   },
 ): DefineSetupFnComponent<Props, E, S>
 
-// overload 2: object format no props or internal type props
-// backdoor for Vue Language Service
+// overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
+  // props
+  TypeProps,
+  PropsOptions extends
+    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  PropsKeys extends string = string,
+  // emits
+  TypeEmits extends ComponentTypeEmits = {},
+  EmitsOptions extends ComponentEmitsOptions = {},
+  EmitsKeys extends string = string,
+  // other options
+  Data = {},
+  SetupBindings = {},
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  LC extends Record<string, Component> = {},
+  InjectOptions extends ComponentInjectOptions = {},
+  InjectKeys extends string = string,
+  Slots extends SlotsType = {},
+  LocalComponents extends Record<string, Component> = {},
   Directives extends Record<string, Directive> = {},
   Exposed extends string = string,
   Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  TE extends TypeEmits = {},
-  ResolvedEmits extends EmitsOptions = {} extends E
-    ? TypeEmitsToOptions<TE>
-    : E,
+  // resolved types
+  ResolvedEmits extends ComponentEmitsOptions = {} extends EmitsOptions
+    ? TypeEmitsToOptions<TypeEmits>
+    : EmitsOptions,
+  InferredProps = unknown extends TypeProps
+    ? string extends PropsKeys
+      ? ComponentObjectPropsOptions extends PropsOptions
+        ? {}
+        : ExtractPropTypes<PropsOptions>
+      : { [key in PropsKeys]?: any }
+    : TypeProps,
+  ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
 >(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
+  options: {
+    props?: (PropsOptions & ThisType<void>) | PropsKeys[]
+    /**
+     * @private for language-tools use only
+     */
+    __typeProps?: TypeProps
+    /**
+     * @private for language-tools use only
+     */
+    __typeEmits?: TypeEmits
+  } & ComponentOptionsBase<
+    ResolvedProps,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
     Mixin,
     Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    LC,
+    EmitsOptions,
+    EmitsKeys,
+    {}, // Defaults
+    InjectOptions,
+    InjectKeys,
+    Slots,
+    LocalComponents,
     Directives,
     Exposed,
-    Provide,
-    TE,
-    ResolvedEmits
-  >,
+    Provide
+  > &
+    ThisType<
+      CreateComponentPublicInstance<
+        ResolvedProps,
+        SetupBindings,
+        Data,
+        Computed,
+        Methods,
+        Mixin,
+        Extends,
+        ResolvedEmits,
+        EmitsKeys,
+        {},
+        false,
+        InjectOptions,
+        Slots,
+        LocalComponents,
+        Directives,
+        Exposed
+      >
+    >,
 ): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
+  InferredProps,
+  SetupBindings,
+  Data,
+  Computed,
+  Methods,
   Mixin,
   Extends,
   ResolvedEmits,
-  EE,
+  EmitsKeys,
   PublicProps,
-  ResolveProps<Props, ResolvedEmits>,
-  ExtractDefaultPropTypes<Props>,
-  S,
-  LC,
+  ResolvedProps,
+  ExtractDefaultPropTypes<PropsOptions>,
+  Slots,
+  LocalComponents,
   Directives,
   Exposed,
   Provide,
-  false
->
-
-// overload 3: object format with array props declaration
-// props inferred as { [key in PropNames]?: any }
-// return type is for language-tools and TSX support
-export function defineComponent<
-  PropNames extends string,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  LC extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
-  Props = Readonly<{ [key in PropNames]?: any }>,
->(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >,
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  S,
-  LC,
-  Directives,
-  Exposed,
-  Provide
->
-
-// overload 4: object format with object props declaration
-// see `ExtractPropTypes` in ./componentProps.ts
-export function defineComponent<
-  // the Readonly constraint allows TS to treat the type of { required: true }
-  // as constant instead of boolean.
-  PropsOptions extends Readonly<ComponentPropsOptions>,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
-  LC extends Record<string, Component> = {},
-  Directives extends Record<string, Directive> = {},
-  Exposed extends string = string,
-  Provide extends ComponentProvideOptions = ComponentProvideOptions,
->(
-  options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S,
-    LC,
-    Directives,
-    Exposed,
-    Provide
-  >,
-): DefineComponent<
-  PropsOptions,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<PropsOptions, E>,
-  ExtractDefaultPropTypes<PropsOptions>,
-  S,
-  LC,
-  Directives,
-  Exposed,
-  Provide
+  // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+  // user props types verbatim
+  unknown extends TypeProps ? true : false
 >
 
 // implementation, close to no-op

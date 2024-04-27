@@ -51,8 +51,8 @@ import {
   resolveMergedOptions,
 } from './componentOptions'
 import {
+  type ComponentEmitsOptions,
   type EmitFn,
-  type EmitsOptions,
   type EmitsToProps,
   type ObjectEmitsOptions,
   type ShortEmitsToObject,
@@ -211,9 +211,9 @@ export interface ComponentInternalOptions {
 
 export interface FunctionalComponent<
   P = {},
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends ComponentEmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
-  EE extends EmitsOptions = ShortEmitsToObject<E>,
+  EE extends ComponentEmitsOptions = ShortEmitsToObject<E>,
 > extends ComponentInternalOptions {
   // use of any here is intentional so it can be a valid JSX Element constructor
   (
@@ -245,7 +245,7 @@ export type ConcreteComponent<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends ComponentEmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
 > =
   | ComponentOptions<Props, RawBindings, D, C, M>
@@ -261,7 +261,7 @@ export type Component<
   D = any,
   C extends ComputedOptions = ComputedOptions,
   M extends MethodOptions = MethodOptions,
-  E extends EmitsOptions | Record<string, any[]> = {},
+  E extends ComponentEmitsOptions | Record<string, any[]> = {},
   S extends Record<string, any> = any,
 > =
   | ConcreteComponent<Props, RawBindings, D, C, M, E, S>
@@ -273,7 +273,7 @@ type LifecycleHook<TFn = Function> = TFn[] | null
 
 // use `E extends any` to force evaluating type to fix #2362
 export type SetupContext<
-  E = EmitsOptions,
+  E = ComponentEmitsOptions,
   S extends SlotsType = {},
 > = E extends any
   ? {

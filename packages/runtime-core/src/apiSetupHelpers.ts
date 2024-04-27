@@ -14,7 +14,11 @@ import {
   setCurrentInstance,
   unsetCurrentInstance,
 } from './component'
-import type { EmitFn, EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+import type {
+  ComponentEmitsOptions,
+  EmitFn,
+  ObjectEmitsOptions,
+} from './componentEmits'
 import type {
   ComponentOptionsBase,
   ComponentOptionsMixin,
@@ -132,10 +136,10 @@ type BooleanKey<T, K extends keyof T = keyof T> = K extends any
 export function defineEmits<EE extends string = string>(
   emitOptions: EE[],
 ): EmitFn<EE[]>
-export function defineEmits<E extends EmitsOptions = EmitsOptions>(
-  emitOptions: E,
-): EmitFn<E>
-export function defineEmits<T extends TypeEmits>(): T extends (
+export function defineEmits<
+  E extends ComponentEmitsOptions = ComponentEmitsOptions,
+>(emitOptions: E): EmitFn<E>
+export function defineEmits<T extends ComponentTypeEmits>(): T extends (
   ...args: any[]
 ) => any
   ? T
@@ -148,7 +152,9 @@ export function defineEmits() {
   return null as any
 }
 
-export type TypeEmits = ((...args: any[]) => any) | Record<string, any[]>
+export type ComponentTypeEmits =
+  | ((...args: any[]) => any)
+  | Record<string, any[]>
 
 type RecordToUnion<T extends Record<string, any>> = T[keyof T]
 
@@ -392,7 +398,7 @@ function getContext(): SetupContext {
  * @internal
  */
 export function normalizePropsOrEmits(
-  props: ComponentPropsOptions | EmitsOptions,
+  props: ComponentPropsOptions | ComponentEmitsOptions,
 ) {
   return isArray(props)
     ? props.reduce(
@@ -439,8 +445,8 @@ export function mergeDefaults(
  * @internal
  */
 export function mergeModels(
-  a: ComponentPropsOptions | EmitsOptions,
-  b: ComponentPropsOptions | EmitsOptions,
+  a: ComponentPropsOptions | ComponentEmitsOptions,
+  b: ComponentPropsOptions | ComponentEmitsOptions,
 ) {
   if (!a || !b) return a || b
   if (isArray(a) && isArray(b)) return a.concat(b)

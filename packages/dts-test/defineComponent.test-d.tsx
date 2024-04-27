@@ -15,7 +15,7 @@ import {
   withKeys,
   withModifiers,
 } from 'vue'
-import { type IsUnion, describe, expectType } from './utils'
+import { type IsAny, type IsUnion, describe, expectType } from './utils'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -1651,6 +1651,7 @@ describe('__typeProps backdoor for union type for conditional props', () => {
   ;<Comp color="white" appearance="outline" />
 
   const c = new Comp()
+
   // @ts-expect-error
   c.$props = { color: 'white' }
   // @ts-expect-error
@@ -1754,4 +1755,14 @@ describe('__typeEmits backdoor, call signature syntax', () => {
   c.$emit('update', 'test')
   // @ts-expect-error
   c.$emit('update', 123)
+})
+
+defineComponent({
+  props: {
+    foo: [String, null],
+  },
+  setup(props) {
+    expectType<IsAny<typeof props.foo>>(false)
+    expectType<string | null | undefined>(props.foo)
+  },
 })
