@@ -1,16 +1,19 @@
 import {
+  type Component,
   type ComponentInjectOptions,
   type ComponentInternalInstance,
+  type ComponentObjectPropsOptions,
   type ComponentOptions,
+  type ComponentOptionsBase,
   type ComponentOptionsMixin,
-  type ComponentOptionsWithArrayProps,
-  type ComponentOptionsWithObjectProps,
-  type ComponentOptionsWithoutProps,
-  type ComponentPropsOptions,
+  type ComponentProvideOptions,
   type ComputedOptions,
   type ConcreteComponent,
+  type CreateComponentPublicInstance,
   type DefineComponent,
+  type Directive,
   type EmitsOptions,
+  type EmitsToProps,
   type ExtractPropTypes,
   type MethodOptions,
   type RenderFunction,
@@ -41,98 +44,79 @@ export function defineCustomElement<Props, RawBindings = object>(
   ) => RawBindings | RenderFunction,
 ): VueElementConstructor<Props>
 
-// overload 2: object format with no props
+// overload 2: defineCustomElement with options object, infer props from options
 export function defineCustomElement<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
+  // props
+  RuntimePropsOptions extends
+    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  PropsKeys extends string = string,
+  // emits
+  RuntimeEmitsOptions extends EmitsOptions = {},
+  EmitsKeys extends string = string,
+  // other options
+  Data = {},
+  SetupBindings = {},
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = EmitsOptions,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
+  InjectOptions extends ComponentInjectOptions = {},
+  InjectKeys extends string = string,
+  Slots extends SlotsType = {},
+  LocalComponents extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  // resolved types
+  InferredProps = string extends PropsKeys
+    ? ComponentObjectPropsOptions extends RuntimePropsOptions
+      ? {}
+      : ExtractPropTypes<RuntimePropsOptions>
+    : { [key in PropsKeys]?: any },
+  ResolvedProps = InferredProps & EmitsToProps<RuntimeEmitsOptions>,
 >(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
+  options: {
+    props?: (RuntimePropsOptions & ThisType<void>) | PropsKeys[]
+  } & ComponentOptionsBase<
+    ResolvedProps,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
     Mixin,
     Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  > & { styles?: string[] },
-): VueElementConstructor<Props>
-
-// overload 3: object format with array props declaration
-export function defineCustomElement<
-  PropNames extends string,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
->(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  > & { styles?: string[] },
-): VueElementConstructor<{ [K in PropNames]: any }>
-
-// overload 4: object format with object props declaration
-export function defineCustomElement<
-  PropsOptions extends Readonly<ComponentPropsOptions>,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = Record<string, any>,
-  EE extends string = string,
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  S extends SlotsType = {},
->(
-  options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  > & { styles?: string[] },
-): VueElementConstructor<ExtractPropTypes<PropsOptions>>
+    RuntimeEmitsOptions,
+    EmitsKeys,
+    {}, // Defaults
+    InjectOptions,
+    InjectKeys,
+    Slots,
+    LocalComponents,
+    Directives,
+    Exposed,
+    Provide
+  > &
+    ThisType<
+      CreateComponentPublicInstance<
+        Readonly<ResolvedProps>,
+        SetupBindings,
+        Data,
+        Computed,
+        Methods,
+        Mixin,
+        Extends,
+        RuntimeEmitsOptions,
+        EmitsKeys,
+        {},
+        false,
+        InjectOptions,
+        Slots,
+        LocalComponents,
+        Directives,
+        Exposed
+      >
+    >,
+): VueElementConstructor<ResolvedProps>
 
 // overload 5: defining a custom element from the returned value of
 // `defineComponent`

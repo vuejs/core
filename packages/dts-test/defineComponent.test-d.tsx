@@ -15,7 +15,7 @@ import {
   withKeys,
   withModifiers,
 } from 'vue'
-import { type IsUnion, describe, expectType } from './utils'
+import { type IsAny, type IsUnion, describe, expectType } from './utils'
 
 describe('with object props', () => {
   interface ExpectedProps {
@@ -1623,3 +1623,146 @@ declare const MyButton: DefineComponent<
   {}
 >
 ;<MyButton class="x" />
+
+describe('__typeProps backdoor for union type for conditional props', () => {
+  interface CommonProps {
+    size?: 'xl' | 'l' | 'm' | 's' | 'xs'
+  }
+
+  type ConditionalProps =
+    | {
+        color?: 'normal' | 'primary' | 'secondary'
+        appearance?: 'normal' | 'outline' | 'text'
+      }
+    | {
+        color: 'white'
+        appearance: 'outline'
+      }
+
+  type Props = CommonProps & ConditionalProps
+
+  const Comp = defineComponent({
+    __typeProps: {} as Props,
+  })
+  // @ts-expect-error
+  ;<Comp color="white" />
+  // @ts-expect-error
+  ;<Comp color="white" appearance="normal" />
+  ;<Comp color="white" appearance="outline" />
+
+  const c = new Comp()
+
+  // @ts-expect-error
+  c.$props = { color: 'white' }
+  // @ts-expect-error
+  c.$props = { color: 'white', appearance: 'text' }
+  c.$props = { color: 'white', appearance: 'outline' }
+})
+
+describe('__typeEmits backdoor, 3.3+ object syntax', () => {
+  type Emits = {
+    change: [id: number]
+    update: [value: string]
+  }
+
+  const Comp = defineComponent({
+    __typeEmits: {} as Emits,
+    mounted() {
+      this.$props.onChange?.(123)
+      // @ts-expect-error
+      this.$props.onChange?.('123')
+      this.$props.onUpdate?.('foo')
+      // @ts-expect-error
+      this.$props.onUpdate?.(123)
+
+      // @ts-expect-error
+      this.$emit('foo')
+
+      this.$emit('change', 123)
+      // @ts-expect-error
+      this.$emit('change', '123')
+
+      this.$emit('update', 'test')
+      // @ts-expect-error
+      this.$emit('update', 123)
+    },
+  })
+
+  ;<Comp onChange={id => id.toFixed(2)} />
+  ;<Comp onUpdate={id => id.toUpperCase()} />
+  // @ts-expect-error
+  ;<Comp onChange={id => id.slice(1)} />
+  // @ts-expect-error
+  ;<Comp onUpdate={id => id.toFixed(2)} />
+
+  const c = new Comp()
+  // @ts-expect-error
+  c.$emit('foo')
+
+  c.$emit('change', 123)
+  // @ts-expect-error
+  c.$emit('change', '123')
+
+  c.$emit('update', 'test')
+  // @ts-expect-error
+  c.$emit('update', 123)
+})
+
+describe('__typeEmits backdoor, call signature syntax', () => {
+  type Emits = {
+    (e: 'change', id: number): void
+    (e: 'update', value: string): void
+  }
+
+  const Comp = defineComponent({
+    __typeEmits: {} as Emits,
+    mounted() {
+      this.$props.onChange?.(123)
+      // @ts-expect-error
+      this.$props.onChange?.('123')
+      this.$props.onUpdate?.('foo')
+      // @ts-expect-error
+      this.$props.onUpdate?.(123)
+
+      // @ts-expect-error
+      this.$emit('foo')
+
+      this.$emit('change', 123)
+      // @ts-expect-error
+      this.$emit('change', '123')
+
+      this.$emit('update', 'test')
+      // @ts-expect-error
+      this.$emit('update', 123)
+    },
+  })
+
+  ;<Comp onChange={id => id.toFixed(2)} />
+  ;<Comp onUpdate={id => id.toUpperCase()} />
+  // @ts-expect-error
+  ;<Comp onChange={id => id.slice(1)} />
+  // @ts-expect-error
+  ;<Comp onUpdate={id => id.toFixed(2)} />
+
+  const c = new Comp()
+  // @ts-expect-error
+  c.$emit('foo')
+
+  c.$emit('change', 123)
+  // @ts-expect-error
+  c.$emit('change', '123')
+
+  c.$emit('update', 'test')
+  // @ts-expect-error
+  c.$emit('update', 123)
+})
+
+defineComponent({
+  props: {
+    foo: [String, null],
+  },
+  setup(props) {
+    expectType<IsAny<typeof props.foo>>(false)
+    expectType<string | null | undefined>(props.foo)
+  },
+})
