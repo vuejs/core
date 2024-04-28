@@ -1,6 +1,6 @@
+import { SchedulerJobFlags } from '@vue/reactivity'
 import {
   type SchedulerJob,
-  SchedulerJobFlags,
   flushPostFlushCbs,
   flushPreFlushCbs,
   invalidateJob,
