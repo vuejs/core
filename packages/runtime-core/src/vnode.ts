@@ -671,7 +671,7 @@ export function cloneVNode<T, U>(
     dynamicChildren: vnode.dynamicChildren,
     appContext: vnode.appContext,
     dirs: vnode.dirs,
-    transition: vnode.transition,
+    transition: null,
 
     // These should technically only be non-null on mounted VNodes. However,
     // they *should* be copied for kept-alive vnodes. So we just always copy
@@ -690,8 +690,10 @@ export function cloneVNode<T, U>(
     defineLegacyVNodeProperties(cloned as VNode)
   }
 
-  if (cloneTransition && vnode.transition) {
-    cloned.transition = vnode.transition.clone(cloned as VNode)
+  if (vnode.transition) {
+    cloned.transition = cloneTransition
+      ? vnode.transition.clone(cloned as VNode)
+      : vnode.transition
   }
   return cloned
 }

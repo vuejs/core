@@ -1251,7 +1251,7 @@ describe('e2e: Transition', () => {
         expect(await html('#container')).toBe('<div foo="1">content</div>')
 
         await click('#toggleBtn')
-        // toggle before leave transition complete
+        // toggle again before leave finishes
         await nextTick()
         await click('#toggleBtn')
 
