@@ -171,7 +171,7 @@ export const initSlots = (
     if (type) {
       extend(slots, children as InternalSlots)
       // make compiler marker non-enumerable
-      def(slots, '_', type)
+      def(slots, '_', type, true)
     } else {
       normalizeObjectSlots(children as RawSlots, slots, instance)
     }
