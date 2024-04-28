@@ -688,8 +688,8 @@ export function cloneVNode<T, U>(
   }
 
   // if the vnode will be replaced by the cloned one, it is necessary
-  // to clone the transition to ensure that the vnode referenced within the transition hooks
-  // is refresh.
+  // to clone the transition to ensure that the vnode referenced within
+  // the transition hooks is refresh.
   if (vnode.transition) {
     cloned.transition = cloneTransition
       ? vnode.transition.clone(cloned as VNode)
