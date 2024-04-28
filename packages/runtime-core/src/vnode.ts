@@ -686,15 +686,20 @@ export function cloneVNode<T, U>(
     ctx: vnode.ctx,
     ce: vnode.ce,
   }
-  if (__COMPAT__) {
-    defineLegacyVNodeProperties(cloned as VNode)
-  }
 
+  // if the vnode will be replaced by the cloned one, it is necessary
+  // to clone the transition to ensure that the vnode referenced within the transition hooks
+  // is refresh.
   if (vnode.transition) {
     cloned.transition = cloneTransition
       ? vnode.transition.clone(cloned as VNode)
       : vnode.transition
   }
+
+  if (__COMPAT__) {
+    defineLegacyVNodeProperties(cloned as VNode)
+  }
+
   return cloned
 }
 
