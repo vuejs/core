@@ -239,9 +239,11 @@ export function resolveTransitionProps(
       if (__COMPAT__ && legacyClassEnabled && legacyLeaveFromClass) {
         addTransitionClass(el, legacyLeaveFromClass)
       }
+      // add *-leave-active class before reflow so in the case of a cancelled enter transition
+      // the css will not get the final state (#10677)
+      addTransitionClass(el, leaveActiveClass)
       // force reflow so *-leave-from classes immediately take effect (#2593)
       forceReflow()
-      addTransitionClass(el, leaveActiveClass)
       nextFrame(() => {
         if (!el._isLeaving) {
           // cancelled

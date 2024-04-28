@@ -265,6 +265,27 @@ describe('resolveType', () => {
     })
   })
 
+  test('utility type: ReadonlyArray', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyArray<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
+  test('utility type: ReadonlyMap & Readonly Set', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: ReadonlyMap<string, unknown>, bar: ReadonlySet<string> }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Map'],
+      bar: ['Set'],
+    })
+  })
+
   test('indexed access type (literal)', () => {
     expect(
       resolve(`
@@ -416,6 +437,16 @@ describe('resolveType', () => {
     })
   })
 
+  test('readonly', () => {
+    expect(
+      resolve(`
+    defineProps<{ foo: readonly unknown[] }>()
+    `).props,
+    ).toStrictEqual({
+      foo: ['Array'],
+    })
+  })
+
   test('ExtractPropTypes (element-plus)', () => {
     const { props, raw } = resolve(
       `
@@ -552,6 +583,27 @@ describe('resolveType', () => {
         import { Y as PP } from './bar'
         defineProps<P & PP>()
       `,
+        files,
+      )
+      expect(props).toStrictEqual({
+        foo: ['Number'],
+        bar: ['String'],
+      })
+      expect(deps && [...deps]).toStrictEqual(Object.keys(files))
+    })
+
+    // #10635
+    test('relative tsx', () => {
+      const files = {
+        '/foo.tsx': 'export type P = { foo: number }',
+        '/bar/index.tsx': 'export type PP = { bar: string }',
+      }
+      const { props, deps } = resolve(
+        `
+        import { P } from './foo'
+        import { PP } from './bar'
+        defineProps<P & PP>()
+        `,
         files,
       )
       expect(props).toStrictEqual({

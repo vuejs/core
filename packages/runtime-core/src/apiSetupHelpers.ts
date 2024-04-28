@@ -233,7 +233,7 @@ export type DefineModelOptions<T = any> = {
  * Otherwise the prop name will default to "modelValue". In both cases, you
  * can also pass an additional object which will be used as the prop's options.
  *
- * The the returned ref behaves differently depending on whether the parent
+ * The returned ref behaves differently depending on whether the parent
  * provided the corresponding v-model props or not:
  * - If yes, the returned ref's value will always be in sync with the parent
  *   prop.
@@ -284,6 +284,9 @@ export function defineModel(): any {
 }
 
 type NotUndefined<T> = T extends undefined ? never : T
+type MappedOmit<T, K extends keyof any> = {
+  [P in keyof T as P extends K ? never : P]: T[P]
+}
 
 type InferDefaults<T> = {
   [K in keyof T]?: InferDefault<T, T[K]>
@@ -299,7 +302,7 @@ type PropsWithDefaults<
   T,
   Defaults extends InferDefaults<T>,
   BKeys extends keyof T,
-> = Readonly<Omit<T, keyof Defaults>> & {
+> = Readonly<MappedOmit<T, keyof Defaults>> & {
   readonly [K in keyof Defaults]-?: K extends keyof T
     ? Defaults[K] extends undefined
       ? T[K]
