@@ -1,6 +1,6 @@
 {
   "name": "@vue/compat",
-  "version": "3.4.21",
+  "version": "3.4.25",
   "description": "Vue 3 compatibility build for Vue 2",
   "main": "index.js",
   "module": "dist/vue.runtime.esm-bundler.js",
@@ -52,7 +52,7 @@
   },
   "homepage": "https://github.com/vuejs/core/tree/main/packages/vue-compat#readme",
   "dependencies": {
-    "@babel/parser": "^7.24.1",
+    "@babel/parser": "^7.24.4",
     "estree-walker": "^2.0.2",
     "source-map-js": "^1.2.0"
   },

@@ -12,7 +12,6 @@ import {
   PatchFlags,
   camelize,
   capitalize,
-  def,
   extend,
   hasOwn,
   hyphenate,
@@ -34,12 +33,12 @@ import {
   setCurrentInstance,
 } from './component'
 import { isEmitListener } from './componentEmits'
-import { InternalObjectKey } from './vnode'
 import type { AppContext } from './apiCreateApp'
 import { createPropsDefaultThis } from './compat/props'
 import { isCompatEnabled, softAssertCompatEnabled } from './compat/compatConfig'
 import { DeprecationTypes } from './compat/compatConfig'
 import { shouldSkipAttr } from './compat/attrsFallthrough'
+import { createInternalObject } from './internalObject'
 
 export type ComponentPropsOptions<P = Data> =
   | ComponentObjectPropsOptions<P>
@@ -194,8 +193,7 @@ export function initProps(
   isSSR = false,
 ) {
   const props: Data = {}
-  const attrs: Data = {}
-  def(attrs, InternalObjectKey, 1)
+  const attrs: Data = createInternalObject()
 
   instance.propsDefaults = Object.create(null)
 
@@ -361,7 +359,7 @@ export function updateProps(
 
   // trigger updates for $attrs in case it's used in component slots
   if (hasAttrsChanged) {
-    trigger(instance, TriggerOpTypes.SET, '$attrs')
+    trigger(instance.attrs, TriggerOpTypes.SET, '')
   }
 
   if (__DEV__) {

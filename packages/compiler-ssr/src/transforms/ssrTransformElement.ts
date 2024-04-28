@@ -22,6 +22,7 @@ import {
   createAssignmentExpression,
   createCallExpression,
   createCompilerError,
+  createCompoundExpression,
   createConditionalExpression,
   createInterpolation,
   createSequenceExpression,
@@ -188,7 +189,10 @@ export const ssrTransformElement: NodeTransform = (node, context) => {
       // special cases with children override
       if (prop.type === NodeTypes.DIRECTIVE) {
         if (prop.name === 'html' && prop.exp) {
-          rawChildrenMap.set(node, prop.exp)
+          rawChildrenMap.set(
+            node,
+            createCompoundExpression([`(`, prop.exp, `) ?? ''`]),
+          )
         } else if (prop.name === 'text' && prop.exp) {
           node.children = [createInterpolation(prop.exp, prop.loc)]
         } else if (prop.name === 'slot') {
