@@ -9,11 +9,25 @@ import {
   createSimpleExpression,
 } from '@vue/compiler-dom'
 import { extend } from '@vue/shared'
-import { DynamicFlag, type IRDynamicInfo } from '../ir'
+import {
+  type BlockIRNode,
+  DynamicFlag,
+  type IRDynamicInfo,
+  IRNodeTypes,
+} from '../ir'
 
 export const newDynamic = (): IRDynamicInfo => ({
   flags: DynamicFlag.REFERENCED,
   children: [],
+})
+
+export const newBlock = (node: BlockIRNode['node']): BlockIRNode => ({
+  type: IRNodeTypes.BLOCK,
+  node,
+  dynamic: newDynamic(),
+  effect: [],
+  operation: [],
+  returns: [],
 })
 
 export function wrapTemplate(node: ElementNode, dirs: string[]): TemplateNode {

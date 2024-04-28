@@ -25,7 +25,7 @@ import {
   type VaporDirectiveNode,
 } from './ir'
 import { isConstantExpression } from './utils'
-import { newDynamic } from './transforms/utils'
+import { newBlock, newDynamic } from './transforms/utils'
 
 export type NodeTransform = (
   node: RootNode | TemplateChildNode,
@@ -211,14 +211,7 @@ export function transform(
     source: node.source,
     template: [],
     component: new Set(),
-    block: {
-      type: IRNodeTypes.BLOCK,
-      node,
-      dynamic: newDynamic(),
-      effect: [],
-      operation: [],
-      returns: [],
-    },
+    block: newBlock(node),
   }
 
   const context = new TransformContext(ir, node, options)

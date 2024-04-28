@@ -15,7 +15,7 @@ import {
   type VaporDirectiveNode,
 } from '../ir'
 import { findProp, propToExpression } from '../utils'
-import { newDynamic, wrapTemplate } from './utils'
+import { newBlock, wrapTemplate } from './utils'
 
 export const transformVFor = createStructuralDirectiveTransform(
   'for',
@@ -48,14 +48,7 @@ export function processFor(
   context.node = node = wrapTemplate(node, ['for'])
   context.dynamic.flags |= DynamicFlag.NON_TEMPLATE | DynamicFlag.INSERT
   const id = context.reference()
-  const render: BlockIRNode = {
-    type: IRNodeTypes.BLOCK,
-    node,
-    dynamic: newDynamic(),
-    effect: [],
-    operation: [],
-    returns: [],
-  }
+  const render: BlockIRNode = newBlock(node)
   const exitBlock = context.enterBlock(render, true)
   context.reference()
 
