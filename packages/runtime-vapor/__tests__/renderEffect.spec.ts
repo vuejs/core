@@ -180,7 +180,7 @@ describe('renderEffect', () => {
     }).rejects.toThrow('error in beforeUpdate')
 
     expect(
-      '[Vue warn] Unhandled error during execution of beforeUpdate hook',
+      '[Vue warn]: Unhandled error during execution of beforeUpdate hook',
     ).toHaveBeenWarned()
   })
 
@@ -210,7 +210,7 @@ describe('renderEffect', () => {
     }).rejects.toThrow('error in updated')
 
     expect(
-      '[Vue warn] Unhandled error during execution of updated',
+      '[Vue warn]: Unhandled error during execution of updated',
     ).toHaveBeenWarned()
   })
 
