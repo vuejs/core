@@ -105,6 +105,15 @@ export class EffectScope {
       this._active = false
     }
   }
+
+  /**
+   * Registers a cleanup function to be called when the effect scope is stopped.
+   *
+   * @param {() => void} fn - The cleanup function to be registered.
+   */
+  onDispose(fn: () => void) {
+    this.cleanups.push(fn)
+  }
 }
 
 /**
@@ -138,7 +147,7 @@ export function getCurrentScope() {
  */
 export function onScopeDispose(fn: () => void, failSilently = false) {
   if (activeEffectScope) {
-    activeEffectScope.cleanups.push(fn)
+    activeEffectScope.onDispose(fn)
   } else if (__DEV__ && !failSilently) {
     warn(
       `onScopeDispose() is called when there is no active effect scope` +
