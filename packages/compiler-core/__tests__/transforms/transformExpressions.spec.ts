@@ -421,6 +421,16 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  // #10807
+  test('should not bail constant on strings w/ ()', () => {
+    const node = parseWithExpressionTransform(
+      `{{ { foo: 'ok()' } }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      constType: ConstantTypes.CAN_STRINGIFY,
+    })
+  })
+
   describe('ES Proposals support', () => {
     test('bigInt', () => {
       const node = parseWithExpressionTransform(
@@ -597,6 +607,34 @@ describe('compiler: expression transform', () => {
       expect(code).toMatch(
         `${PatchFlags.TEXT} /* ${PatchFlagNames[PatchFlags.TEXT]} */`,
       )
+    })
+
+    // #10754
+    test('await expression in right hand of assignment, inline mode', () => {
+      const node = parseWithExpressionTransform(
+        `{{ (async () => { x = await bar })() }}`,
+        {
+          inline: true,
+          bindingMetadata: {
+            x: BindingTypes.SETUP_LET,
+            bar: BindingTypes.SETUP_CONST,
+          },
+        },
+      ) as InterpolationNode
+      expect(node.content).toMatchObject({
+        type: NodeTypes.COMPOUND_EXPRESSION,
+        children: [
+          `(async () => { `,
+          {
+            content: `_isRef(x) ? x.value = await bar : x`,
+          },
+          ` = await `,
+          {
+            content: `bar`,
+          },
+          ` })()`,
+        ],
+      })
     })
   })
 })

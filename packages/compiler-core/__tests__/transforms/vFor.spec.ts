@@ -21,7 +21,7 @@ import { FRAGMENT, RENDER_LIST, RENDER_SLOT } from '../../src/runtimeHelpers'
 import { PatchFlags } from '@vue/shared'
 import { createObjectMatcher, genFlagText } from '../testUtils'
 
-function parseWithForTransform(
+export function parseWithForTransform(
   template: string,
   options: CompilerOptions = {},
 ) {

@@ -139,10 +139,16 @@ export const invokeArrayFns = (fns: Function[], arg?: any) => {
   }
 }
 
-export const def = (obj: object, key: string | symbol, value: any) => {
+export const def = (
+  obj: object,
+  key: string | symbol,
+  value: any,
+  writable = false,
+) => {
   Object.defineProperty(obj, key, {
     configurable: true,
     enumerable: false,
+    writable,
     value,
   })
 }
@@ -164,6 +170,9 @@ export const toNumber = (val: any): any => {
   const n = isString(val) ? Number(val) : NaN
   return isNaN(n) ? val : n
 }
+
+// for typeof global checks without @types/node
+declare var global: {}
 
 let _globalThis: any
 export const getGlobalThis = (): any => {

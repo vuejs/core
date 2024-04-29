@@ -82,8 +82,6 @@ describe('transition-group', () => {
         })
         if (_ctx.ok) {
           _push(\`<div>ok</div>\`)
-        } else {
-          _push(\`<!---->\`)
         }
         _push(\`<!--]-->\`)
       }"

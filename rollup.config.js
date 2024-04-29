@@ -331,7 +331,7 @@ function createConfig(format, output, plugins = []) {
         tsconfig: path.resolve(__dirname, 'tsconfig.json'),
         sourceMap: output.sourcemap,
         minify: false,
-        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2015',
+        target: isServerRenderer || isCJSBuild ? 'es2019' : 'es2016',
         define: resolveDefine(),
       }),
       ...resolveNodePlugins(),
@@ -367,7 +367,7 @@ function createMinifiedConfig(/** @type {PackageFormat} */ format) {
       terser({
         module: /^esm/.test(format),
         compress: {
-          ecma: 2015,
+          ecma: 2016,
           pure_getters: true,
         },
         safari10: true,
