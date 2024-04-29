@@ -1,7 +1,6 @@
 import { E2E_TIMEOUT, setupPuppeteer } from './e2eUtils'
 import path from 'node:path'
 import { Transition, createApp, h, nextTick, ref } from 'vue'
-import { expect } from 'vitest'
 
 describe('e2e: Transition', () => {
   const { page, html, classList, isVisible, timeout, nextFrame, click } =
