@@ -431,6 +431,21 @@ describe('compiler: expression transform', () => {
     })
   })
 
+  test('should not bail constant on strings w/ ()', () => {
+    const node = parseWithExpressionTransform(
+      `{{ new Date().getFullYear() }}`,
+    ) as InterpolationNode
+    expect(node.content).toMatchObject({
+      children: [
+        'new ',
+        { constType: ConstantTypes.NOT_CONSTANT },
+        '().',
+        { constType: ConstantTypes.NOT_CONSTANT },
+        '()',
+      ],
+    })
+  })
+
   describe('ES Proposals support', () => {
     test('bigInt', () => {
       const node = parseWithExpressionTransform(
