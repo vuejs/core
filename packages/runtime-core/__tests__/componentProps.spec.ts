@@ -17,7 +17,6 @@ import {
   ref,
   render,
   serializeInner,
-  toRaw,
   toRefs,
   watch,
 } from '@vue/runtime-test'
@@ -129,12 +128,12 @@ describe('component props', () => {
     render(h(Comp, { foo: 1 }), root)
     expect(props).toEqual({ foo: 1 })
     expect(attrs).toEqual({ foo: 1 })
-    expect(toRaw(props)).toBe(attrs)
+    expect(props).toBe(attrs)
 
     render(h(Comp, { bar: 2 }), root)
     expect(props).toEqual({ bar: 2 })
     expect(attrs).toEqual({ bar: 2 })
-    expect(toRaw(props)).toBe(attrs)
+    expect(props).toBe(attrs)
   })
 
   test('boolean casting', () => {

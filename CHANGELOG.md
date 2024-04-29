@@ -1,3 +1,14 @@
+## [3.4.25](https://github.com/vuejs/core/compare/v3.4.24...v3.4.25) (2024-04-24)
+
+
+### Bug Fixes
+
+* **defineModel:** align prod mode runtime type generation with defineProps ([4253a57](https://github.com/vuejs/core/commit/4253a57f1703a7f1ac701d77e0a235689203461d)), closes [#10769](https://github.com/vuejs/core/issues/10769)
+* **runtime-core:** properly get keepAlive child ([#10772](https://github.com/vuejs/core/issues/10772)) ([3724693](https://github.com/vuejs/core/commit/3724693a25c3f2dd13d70a8a1af760b03a4fb783)), closes [#10771](https://github.com/vuejs/core/issues/10771)
+* **runtime-core:** use normal object as internal prototype for attrs and slots ([064e82f](https://github.com/vuejs/core/commit/064e82f5855f30fe0b77fe9b5e4dd22700fd634d)), closes [/github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add#r141304923](https://github.com//github.com/vuejs/core/commit/6df53d85a207986128159d88565e6e7045db2add/issues/r141304923)
+
+
+
 ## [3.4.24](https://github.com/vuejs/core/compare/v3.4.23...v3.4.24) (2024-04-22)
 
 
