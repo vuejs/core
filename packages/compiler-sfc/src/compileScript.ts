@@ -106,10 +106,11 @@ export interface SFCScriptCompileOptions {
    */
   hoistStatic?: boolean
   /**
-   * (**Experimental**) Enable reactive destructure for `defineProps`
-   * @default false
+   * Set to `false` to disable reactive destructure for `defineProps` (pre-3.5
+   * behavior), or set to `'error'` to throw hard error on props destructures.
+   * @default true
    */
-  propsDestructure?: boolean
+  propsDestructure?: boolean | 'error'
   /**
    * File system access methods to be used when resolving types
    * imported in SFC macros. Defaults to ts.sys in Node.js, can be overwritten
