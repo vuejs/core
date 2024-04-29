@@ -77,6 +77,7 @@ export {
   withDefaults,
   type DefineProps,
   type ModelRef,
+  type ComponentTypeEmits,
 } from './apiSetupHelpers'
 
 /**
@@ -249,6 +250,8 @@ export type {
   SetupContext,
   ComponentCustomProps,
   AllowedComponentProps,
+  GlobalComponents,
+  GlobalDirectives,
   ComponentInstance,
 } from './component'
 export type {
@@ -259,9 +262,6 @@ export type {
 export type {
   ComponentOptions,
   ComponentOptionsMixin,
-  ComponentOptionsWithoutProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithArrayProps,
   ComponentCustomOptions,
   ComponentOptionsBase,
   ComponentProvideOptions,
@@ -271,7 +271,11 @@ export type {
   RuntimeCompilerOptions,
   ComponentInjectOptions,
 } from './componentOptions'
-export type { EmitsOptions, ObjectEmitsOptions } from './componentEmits'
+export type {
+  EmitsOptions,
+  ObjectEmitsOptions,
+  EmitsToProps,
+} from './componentEmits'
 export type {
   ComponentPublicInstance,
   ComponentCustomProperties,

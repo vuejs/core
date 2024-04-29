@@ -87,6 +87,13 @@ import {
 import type { SchedulerJob } from './scheduler'
 import type { LifecycleHooks } from './enums'
 
+// Augment GlobalComponents
+import type { TeleportProps } from './components/Teleport'
+import type { SuspenseProps } from './components/Suspense'
+import type { KeepAliveProps } from './components/KeepAlive'
+import type { BaseTransitionProps } from './components/BaseTransition'
+import type { DefineComponent } from './apiDefineComponent'
+
 /**
  * Public utility type for extracting the instance type of a component.
  * Works with all valid component definition types. This is intended to replace
@@ -124,6 +131,45 @@ export type ComponentInstance<T> = T extends { new (): ComponentPublicInstance }
  * For extending allowed non-declared props on components in TSX
  */
 export interface ComponentCustomProps {}
+
+/**
+ * For globally defined Directives
+ * Here is an example of adding a directive `VTooltip` as global directive:
+ *
+ * @example
+ * ```ts
+ * import VTooltip from 'v-tooltip'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalDirectives {
+ *     VTooltip
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalDirectives extends Record<string, Directive> {}
+
+/**
+ * For globally defined Components
+ * Here is an example of adding a component `RouterView` as global component:
+ *
+ * @example
+ * ```ts
+ * import { RouterView } from 'vue-router'
+ *
+ * declare module '@vue/runtime-core' {
+ *   interface GlobalComponents {
+ *     RouterView
+ *   }
+ * }
+ * ```
+ */
+export interface GlobalComponents extends Record<string, Component> {
+  Teleport: DefineComponent<TeleportProps>
+  Suspense: DefineComponent<SuspenseProps>
+  KeepAlive: DefineComponent<KeepAliveProps>
+  BaseTransition: DefineComponent<BaseTransitionProps>
+}
 
 /**
  * Default allowed non-declared props on component in TSX

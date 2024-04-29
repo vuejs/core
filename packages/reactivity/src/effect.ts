@@ -375,12 +375,13 @@ export function refreshComputed(computed: ComputedRefImpl) {
     }
   } catch (err) {
     dep.version++
+    throw err
+  } finally {
+    activeSub = prevSub
+    shouldTrack = prevShouldTrack
+    cleanupDeps(computed)
+    computed.flags &= ~EffectFlags.RUNNING
   }
-
-  activeSub = prevSub
-  shouldTrack = prevShouldTrack
-  cleanupDeps(computed)
-  computed.flags &= ~EffectFlags.RUNNING
 }
 
 function removeSub(link: Link) {

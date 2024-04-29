@@ -3,16 +3,17 @@ import type {
   ComponentOptions,
   ComponentOptionsBase,
   ComponentOptionsMixin,
-  ComponentOptionsWithArrayProps,
-  ComponentOptionsWithObjectProps,
-  ComponentOptionsWithoutProps,
+  ComponentProvideOptions,
   ComputedOptions,
   MethodOptions,
   RenderFunction,
 } from './componentOptions'
 import type {
   AllowedComponentProps,
+  Component,
   ComponentCustomProps,
+  GlobalComponents,
+  GlobalDirectives,
   SetupContext,
 } from './component'
 import type {
@@ -21,7 +22,11 @@ import type {
   ExtractDefaultPropTypes,
   ExtractPropTypes,
 } from './componentProps'
-import type { EmitsOptions, EmitsToProps } from './componentEmits'
+import type {
+  EmitsOptions,
+  EmitsToProps,
+  TypeEmitsToOptions,
+} from './componentEmits'
 import { extend, isFunction } from '@vue/shared'
 import type { VNodeProps } from './vnode'
 import type {
@@ -29,6 +34,8 @@ import type {
   CreateComponentPublicInstance,
 } from './componentPublicInstance'
 import type { SlotsType } from './componentSlots'
+import type { Directive } from './directives'
+import type { ComponentTypeEmits } from './apiSetupHelpers'
 
 export type PublicProps = VNodeProps &
   AllowedComponentProps &
@@ -55,6 +62,11 @@ export type DefineComponent<
   Props = ResolveProps<PropsOrPropOptions, E>,
   Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>,
   S extends SlotsType = {},
+  LC extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  MakeDefaultsOptional extends boolean = true,
 > = ComponentPublicInstanceConstructor<
   CreateComponentPublicInstance<
     Props,
@@ -67,9 +79,12 @@ export type DefineComponent<
     E,
     PP & Props,
     Defaults,
-    true,
+    MakeDefaultsOptional,
     {},
-    S
+    S,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed
   >
 > &
   ComponentOptionsBase<
@@ -85,7 +100,11 @@ export type DefineComponent<
     Defaults,
     {},
     string,
-    S
+    S,
+    LC & GlobalComponents,
+    Directives & GlobalDirectives,
+    Exposed,
+    Provide
   > &
   PP
 
@@ -153,147 +172,114 @@ export function defineComponent<
   },
 ): DefineSetupFnComponent<Props, E, S>
 
-// overload 2: object format with no props
-// (uses user defined props interface)
-// return type is for Vetur and TSX support
+// overload 2: defineComponent with options object, infer props from options
 export function defineComponent<
-  Props = {},
-  RawBindings = {},
-  D = {},
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
+  // props
+  TypeProps,
+  RuntimePropsOptions extends
+    ComponentObjectPropsOptions = ComponentObjectPropsOptions,
+  RuntimePropsKeys extends string = string,
+  // emits
+  TypeEmits extends ComponentTypeEmits = {},
+  RuntimeEmitsOptions extends EmitsOptions = {},
+  RuntimeEmitsKeys extends string = string,
+  // other options
+  Data = {},
+  SetupBindings = {},
+  Computed extends ComputedOptions = {},
+  Methods extends MethodOptions = {},
   Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
   Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
+  InjectOptions extends ComponentInjectOptions = {},
+  InjectKeys extends string = string,
+  Slots extends SlotsType = {},
+  LocalComponents extends Record<string, Component> = {},
+  Directives extends Record<string, Directive> = {},
+  Exposed extends string = string,
+  Provide extends ComponentProvideOptions = ComponentProvideOptions,
+  // resolved types
+  ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions
+    ? TypeEmitsToOptions<TypeEmits>
+    : RuntimeEmitsOptions,
+  InferredProps = unknown extends TypeProps
+    ? string extends RuntimePropsKeys
+      ? ComponentObjectPropsOptions extends RuntimePropsOptions
+        ? {}
+        : ExtractPropTypes<RuntimePropsOptions>
+      : { [key in RuntimePropsKeys]?: any }
+    : TypeProps,
+  ResolvedProps = Readonly<InferredProps & EmitsToProps<ResolvedEmits>>,
 >(
-  options: ComponentOptionsWithoutProps<
-    Props,
-    RawBindings,
-    D,
-    C,
-    M,
+  options: {
+    props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[]
+    /**
+     * @private for language-tools use only
+     */
+    __typeProps?: TypeProps
+    /**
+     * @private for language-tools use only
+     */
+    __typeEmits?: TypeEmits
+  } & ComponentOptionsBase<
+    ResolvedProps,
+    SetupBindings,
+    Data,
+    Computed,
+    Methods,
     Mixin,
     Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >,
+    RuntimeEmitsOptions,
+    RuntimeEmitsKeys,
+    {}, // Defaults
+    InjectOptions,
+    InjectKeys,
+    Slots,
+    LocalComponents,
+    Directives,
+    Exposed,
+    Provide
+  > &
+    ThisType<
+      CreateComponentPublicInstance<
+        ResolvedProps,
+        SetupBindings,
+        Data,
+        Computed,
+        Methods,
+        Mixin,
+        Extends,
+        ResolvedEmits,
+        RuntimeEmitsKeys,
+        {},
+        false,
+        InjectOptions,
+        Slots,
+        LocalComponents,
+        Directives,
+        Exposed
+      >
+    >,
 ): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
+  InferredProps,
+  SetupBindings,
+  Data,
+  Computed,
+  Methods,
   Mixin,
   Extends,
-  E,
-  EE,
+  ResolvedEmits,
+  RuntimeEmitsKeys,
   PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  S
->
-
-// overload 3: object format with array props declaration
-// props inferred as { [key in PropNames]?: any }
-// return type is for Vetur and TSX support
-export function defineComponent<
-  PropNames extends string,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
-  Props = Readonly<{ [key in PropNames]?: any }>,
->(
-  options: ComponentOptionsWithArrayProps<
-    PropNames,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >,
-): DefineComponent<
-  Props,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<Props, E>,
-  ExtractDefaultPropTypes<Props>,
-  S
->
-
-// overload 4: object format with object props declaration
-// see `ExtractPropTypes` in ./componentProps.ts
-export function defineComponent<
-  // the Readonly constraint allows TS to treat the type of { required: true }
-  // as constant instead of boolean.
-  PropsOptions extends Readonly<ComponentPropsOptions>,
-  RawBindings,
-  D,
-  C extends ComputedOptions = {},
-  M extends MethodOptions = {},
-  Mixin extends ComponentOptionsMixin = ComponentOptionsMixin,
-  Extends extends ComponentOptionsMixin = ComponentOptionsMixin,
-  E extends EmitsOptions = {},
-  EE extends string = string,
-  S extends SlotsType = {},
-  I extends ComponentInjectOptions = {},
-  II extends string = string,
->(
-  options: ComponentOptionsWithObjectProps<
-    PropsOptions,
-    RawBindings,
-    D,
-    C,
-    M,
-    Mixin,
-    Extends,
-    E,
-    EE,
-    I,
-    II,
-    S
-  >,
-): DefineComponent<
-  PropsOptions,
-  RawBindings,
-  D,
-  C,
-  M,
-  Mixin,
-  Extends,
-  E,
-  EE,
-  PublicProps,
-  ResolveProps<PropsOptions, E>,
-  ExtractDefaultPropTypes<PropsOptions>,
-  S
+  ResolvedProps,
+  ExtractDefaultPropTypes<RuntimePropsOptions>,
+  Slots,
+  LocalComponents,
+  Directives,
+  Exposed,
+  Provide,
+  // MakeDefaultsOptional - if TypeProps is provided, set to false to use
+  // user props types verbatim
+  unknown extends TypeProps ? true : false
 >
 
 // implementation, close to no-op

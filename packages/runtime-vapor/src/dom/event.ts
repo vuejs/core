@@ -74,7 +74,7 @@ function eventHandler(
     let handler = getter()
     if (!handler) return
 
-    if (modifiers) handler = withModifiers(handler, modifiers)
+    if (modifiers) handler = withModifiers(handler, modifiers as any[])
     if (keys) handler = withKeys(handler, keys)
     handler && handler(...args)
   }
