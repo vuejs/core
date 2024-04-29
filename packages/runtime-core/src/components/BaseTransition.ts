@@ -206,7 +206,7 @@ const BaseTransitionImpl: ComponentOptions = {
         // update old tree's hooks in case of dynamic transition
         setTransitionHooks(oldInnerChild, leavingHooks)
         // switching between different views
-        if (mode === 'out-in') {
+        if (mode === 'out-in' && innerChild.type !== Comment) {
           state.isLeaving = true
           // return placeholder node and queue update when leave finishes
           leavingHooks.afterLeave = () => {
