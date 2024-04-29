@@ -431,7 +431,7 @@ describe('compiler: expression transform', () => {
     })
   })
 
-  test('should not bail constant on strings w/ ()', () => {
+  test('should bail constant for global identifiers w/ new or call expressions', () => {
     const node = parseWithExpressionTransform(
       `{{ new Date().getFullYear() }}`,
     ) as InterpolationNode
